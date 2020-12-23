@@ -22,6 +22,7 @@ class DuckPond(Cog):
         self.bot = bot
         self.webhook_id = constants.Webhooks.duck_pond
         self.webhook = None
+        self.ducked_messages = []
         self.bot.loop.create_task(self.fetch_webhook())
         self.relay_lock = None
 
@@ -145,6 +146,10 @@ class DuckPond(Cog):
         amount of ducks specified in the config under duck_pond/threshold, it will
         send the message off to the duck pond.
         """
+        # Ignore other guilds and DMs.
+        if payload.guild_id != constants.Guild.id:
+            return
+
         # Was this reaction issued in a blacklisted channel?
         if payload.channel_id in constants.DuckPond.channel_blacklist:
             return
@@ -154,6 +159,9 @@ class DuckPond(Cog):
             return
 
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        if channel is None:
+            return
+
         message = await channel.fetch_message(payload.message_id)
         member = discord.utils.get(message.guild.members, id=payload.user_id)
 
@@ -169,13 +177,20 @@ class DuckPond(Cog):
         duck_count = await self.count_ducks(message)
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
-        if duck_count >= constants.DuckPond.threshold:
+        if duck_count >= constants.DuckPond.threshold and message.id not in self.ducked_messages:
+            self.ducked_messages.append(message.id)
             await self.locked_relay(message)
 
     @Cog.listener()
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent) -> None:
         """Ensure that people don't remove the green checkmark from duck ponded messages."""
+        # Ignore other guilds and DMs.
+        if payload.guild_id != constants.Guild.id:
+            return
+
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        if channel is None:
+            return
 
         # Prevent the green checkmark from being removed
         if payload.emoji.name == "✅":

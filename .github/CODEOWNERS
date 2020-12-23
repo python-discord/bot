@@ -1,1 +1,37 @@
-* @python-discord/core-developers
+# Extensions
+**/bot/exts/backend/sync/**             @MarkKoz
+**/bot/exts/filters/*token_remover.py   @MarkKoz
+**/bot/exts/moderation/*silence.py      @MarkKoz
+bot/exts/info/codeblock/**              @MarkKoz
+bot/exts/utils/extensions.py            @MarkKoz
+bot/exts/utils/snekbox.py               @MarkKoz @Akarys42
+bot/exts/help_channels/**               @MarkKoz @Akarys42
+bot/exts/moderation/**                  @Akarys42 @mbaruh @Den4200 @ks129
+bot/exts/info/**                        @Akarys42 @mbaruh @Den4200
+bot/exts/filters/**                     @mbaruh
+bot/exts/fun/**                         @ks129
+bot/exts/utils/**                       @ks129
+
+# Utils
+bot/utils/extensions.py                 @MarkKoz
+bot/utils/function.py                   @MarkKoz
+bot/utils/lock.py                       @MarkKoz
+bot/utils/regex.py                      @Akarys42
+bot/utils/scheduling.py                 @MarkKoz
+
+# Tests
+tests/_autospec.py                      @MarkKoz
+tests/bot/exts/test_cogs.py             @MarkKoz
+tests/**                                @Akarys42
+
+# CI & Docker
+.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ @Den4200
+Dockerfile                              @MarkKoz @Akarys42 @Den4200
+docker-compose.yml                      @MarkKoz @Akarys42 @Den4200
+
+# Tools
+Pipfile*                                @Akarys42
+
+# Statistics
+bot/async_stats.py                      @jb3
+bot/exts/info/stats.py                  @jb3

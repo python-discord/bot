@@ -21,14 +21,12 @@ log = logging.getLogger(__name__)
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
-    r"^\s*"                                 # any leading whitespace from the beginning of the string
     r"(?P<delim>(?P<block>```)|``?)"        # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
     r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"    # if we're in a block, match optional language (only letters plus newline)
     r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
     r"(?P<code>.*?)"                        # extract all code inside the markup
     r"\s*"                                  # any more whitespace before the end of the code markup
-    r"(?P=delim)"                           # match the exact same delimiter from the start again
-    r"\s*$",                                # any trailing whitespace until the end of the string
+    r"(?P=delim)",                          # match the exact same delimiter from the start again
     re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
 )
 RAW_CODE_REGEX = re.compile(
@@ -38,11 +36,11 @@ RAW_CODE_REGEX = re.compile(
     re.DOTALL                               # "." also matches newlines
 )
 
-MAX_PASTE_LEN = 1000
+MAX_PASTE_LEN = 10000
 
 # `!eval` command whitelists
 EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
-EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use)
+EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use, Categories.voice)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 SIGKILL = 9
@@ -72,27 +70,36 @@ class Snekbox(Cog):
         if len(output) > MAX_PASTE_LEN:
             log.info("Full output is too long to upload")
             return "too long to upload"
-        return await send_to_paste_service(self.bot.http_session, output, extension="txt")
+        return await send_to_paste_service(output, extension="txt")
 
     @staticmethod
     def prepare_input(code: str) -> str:
-        """Extract code from the Markdown, format it, and insert it into the code template."""
-        match = FORMATTED_CODE_REGEX.fullmatch(code)
-        if match:
-            code, block, lang, delim = match.group("code", "block", "lang", "delim")
-            code = textwrap.dedent(code)
-            if block:
-                info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
-            else:
-                info = f"{delim}-enclosed inline code"
-            log.trace(f"Extracted {info} for evaluation:\n{code}")
-        else:
-            code = textwrap.dedent(RAW_CODE_REGEX.fullmatch(code).group("code"))
-            log.trace(
-                f"Eval message contains unformatted or badly formatted code, "
-                f"stripping whitespace only:\n{code}"
-            )
+        """
+        Extract code from the Markdown, format it, and insert it into the code template.
 
+        If there is any code block, ignore text outside the code block.
+        Use the first code block, but prefer a fenced code block.
+        If there are several fenced code blocks, concatenate only the fenced code blocks.
+        """
+        if match := list(FORMATTED_CODE_REGEX.finditer(code)):
+            blocks = [block for block in match if block.group("block")]
+
+            if len(blocks) > 1:
+                code = '\n'.join(block.group("code") for block in blocks)
+                info = "several code blocks"
+            else:
+                match = match[0] if len(blocks) == 0 else blocks[0]
+                code, block, lang, delim = match.group("code", "block", "lang", "delim")
+                if block:
+                    info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
+                else:
+                    info = f"{delim}-enclosed inline code"
+        else:
+            code = RAW_CODE_REGEX.fullmatch(code).group("code")
+            info = "unformatted or badly formatted code"
+
+        code = textwrap.dedent(code)
+        log.trace(f"Extracted {info} for evaluation:\n{code}")
         return code
 
     @staticmethod
@@ -212,7 +219,7 @@ class Snekbox(Cog):
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
                 response = await ctx.send(msg)
-            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,), ctx.bot))
+            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,)))
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response
@@ -241,12 +248,12 @@ class Snekbox(Cog):
                 )
 
                 code = await self.get_code(new_message)
-                await ctx.message.clear_reactions()
+                await ctx.message.clear_reaction(REEVAL_EMOJI)
                 with contextlib.suppress(HTTPException):
                     await response.delete()
 
             except asyncio.TimeoutError:
-                await ctx.message.clear_reactions()
+                await ctx.message.clear_reaction(REEVAL_EMOJI)
                 return None
 
             return code

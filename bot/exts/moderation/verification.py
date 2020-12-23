@@ -11,6 +11,7 @@ from discord.ext.commands import Cog, Context, command, group, has_any_role
 from discord.utils import snowflake_time
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
@@ -21,12 +22,15 @@ log = logging.getLogger(__name__)
 
 # Sent via DMs once user joins the guild
 ON_JOIN_MESSAGE = f"""
-Hello! Welcome to Python Discord!
+Welcome to Python Discord!
 
-As a new user, you have read-only access to a few select channels to give you a taste of what our server is like.
+To show you what kind of community we are, we've created this video:
+https://youtu.be/ZH26PuX3re0
 
-In order to see the rest of the channels and to send messages, you first have to accept our rules. To do so, \
-please visit <#{constants.Channels.verification}>. Thank you!
+As a new user, you have read-only access to a few select channels to give you a taste of what our server is like. \
+In order to see the rest of the channels and to send messages, you first have to accept our rules.
+
+Please visit <#{constants.Channels.verification}> to get started. Thank you!
 """
 
 # Sent via DMs once user verifies
@@ -48,6 +52,23 @@ to assign yourself the **Announcements** role. We'll mention this role every tim
 
 If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
 <#{constants.Channels.bot_commands}>.
+"""
+
+ALTERNATE_VERIFIED_MESSAGE = f"""
+Thanks for accepting our rules!
+
+You can find a copy of our rules for reference at <https://pythondiscord.com/pages/rules>.
+
+Additionally, if you'd like to receive notifications for the announcements \
+we post in <#{constants.Channels.announcements}>
+from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
+to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
+
+If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
+<#{constants.Channels.bot_commands}>.
+
+To introduce you to our community, we've made the following video:
+https://youtu.be/ZH26PuX3re0
 """
 
 # Sent via DMs to users kicked for failing to verify
@@ -106,6 +127,25 @@ def is_verified(member: discord.Member) -> bool:
     return len(set(member.roles) - unverified_roles) > 0
 
 
+async def safe_dm(coro: t.Coroutine) -> None:
+    """
+    Execute `coro` ignoring disabled DM warnings.
+
+    The 50_0007 error code indicates that the target user does not accept DMs.
+    As it turns out, this error code can appear on both 400 and 403 statuses,
+    we therefore catch any Discord exception.
+
+    If the request fails on any other error code, the exception propagates,
+    and must be handled by the caller.
+    """
+    try:
+        await coro
+    except discord.HTTPException as discord_exc:
+        log.trace(f"DM dispatch failed on status {discord_exc.status} with code: {discord_exc.code}")
+        if discord_exc.code != 50_007:  # If any reason other than disabled DMs
+            raise
+
+
 class Verification(Cog):
     """
     User verification and role management.
@@ -138,6 +178,8 @@ class Verification(Cog):
         """Start internal tasks."""
         self.bot = bot
         self.bot.loop.create_task(self._maybe_start_tasks())
+
+        self.pending_members = set()
 
     def cog_unload(self) -> None:
         """
@@ -313,6 +355,28 @@ class Verification(Cog):
 
         return n_success
 
+    async def _add_kick_note(self, member: discord.Member) -> None:
+        """
+        Post a note regarding `member` being kicked to site.
+
+        Allows keeping track of kicked members for auditing purposes.
+        """
+        payload = {
+            "active": False,
+            "actor": self.bot.user.id,  # Bot actions this autonomously
+            "expires_at": None,
+            "hidden": True,
+            "reason": "Verification kick",
+            "type": "note",
+            "user": member.id,
+        }
+
+        log.trace(f"Posting kick note for member {member} ({member.id})")
+        try:
+            await self.bot.api_client.post("bot/infractions", json=payload)
+        except ResponseCodeError as api_exc:
+            log.warning("Failed to post kick note", exc_info=api_exc)
+
     async def _kick_members(self, members: t.Collection[discord.Member]) -> int:
         """
         Kick `members` from the PyDis guild.
@@ -327,12 +391,11 @@ class Verification(Cog):
         async def kick_request(member: discord.Member) -> None:
             """Send `KICKED_MESSAGE` to `member` and kick them from the guild."""
             try:
-                await member.send(KICKED_MESSAGE)
-            except discord.Forbidden as exc_403:
-                log.trace(f"DM dispatch failed on 403 error with code: {exc_403.code}")
-                if exc_403.code != 50_007:  # 403 raised for any other reason than disabled DMs
-                    raise StopExecution(reason=exc_403)
+                await safe_dm(member.send(KICKED_MESSAGE))  # Suppress disabled DMs
+            except discord.HTTPException as suspicious_exception:
+                raise StopExecution(reason=suspicious_exception)
             await member.kick(reason=f"User has not verified in {constants.Verification.kicked_after} days")
+            await self._add_kick_note(member)
 
         n_kicked = await self._send_requests(members, kick_request, Limit(batch_size=2, sleep_secs=1))
         self.bot.stats.incr("verification.kicked", count=n_kicked)
@@ -499,9 +562,33 @@ class Verification(Cog):
         if member.guild.id != constants.Guild.id:
             return  # Only listen for PyDis events
 
+        raw_member = await self.bot.http.get_member(member.guild.id, member.id)
+
+        # If the user has the pending flag set, they will be using the alternate
+        # gate and will not need a welcome DM with verification instructions.
+        # We will send them an alternate DM once they verify with the welcome
+        # video when they pass the gate.
+        if raw_member.get("pending"):
+            return
+
         log.trace(f"Sending on join message to new member: {member.id}")
-        with suppress(discord.Forbidden):
-            await member.send(ON_JOIN_MESSAGE)
+        try:
+            await safe_dm(member.send(ON_JOIN_MESSAGE))
+        except discord.HTTPException:
+            log.exception("DM dispatch failed on unexpected error code")
+
+    @Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+        """Check if we need to send a verification DM to a gated user."""
+        if before.pending is True and after.pending is False:
+            try:
+                # If the member has not received a DM from our !accept command
+                # and has gone through the alternate gating system we should send
+                # our alternate welcome DM which includes info such as our welcome
+                # video.
+                await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
+            except discord.HTTPException:
+                log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -653,7 +740,7 @@ class Verification(Cog):
         log.trace(f"Bumping verification stats in category: {category}")
         self.bot.stats.incr(f"verification.{category}")
 
-    @command(name='accept', aliases=('verify', 'verified', 'accepted'), hidden=True)
+    @command(name='accept', aliases=('verified', 'accepted'), hidden=True)
     @has_no_roles(constants.Roles.verified)
     @in_whitelist(channels=(constants.Channels.verification,))
     async def accept_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
@@ -668,9 +755,9 @@ class Verification(Cog):
             await ctx.author.remove_roles(discord.Object(constants.Roles.unverified))
 
         try:
-            await ctx.author.send(VERIFIED_MESSAGE)
-        except discord.Forbidden:
-            log.info(f"Sending welcome message failed for {ctx.author}.")
+            await safe_dm(ctx.author.send(VERIFIED_MESSAGE))
+        except discord.HTTPException:
+            log.exception(f"Sending welcome message failed for {ctx.author}.")
         finally:
             log.trace(f"Deleting accept message by {ctx.author}.")
             with suppress(discord.NotFound):
@@ -744,6 +831,22 @@ class Verification(Cog):
             return ctx.command.name == "accept"
         else:
             return True
+
+    @command(name='verify')
+    @has_any_role(*constants.MODERATION_ROLES)
+    async def apply_developer_role(self, ctx: Context, user: discord.Member) -> None:
+        """Command for moderators to apply the Developer role to any user."""
+        log.trace(f'verify command called by {ctx.author} for {user.id}.')
+        developer_role = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.verified)
+
+        if developer_role in user.roles:
+            log.trace(f'{user.id} is already a developer, aborting.')
+            await ctx.send(f'{constants.Emojis.cross_mark} {user} is already a developer.')
+            return
+
+        await user.add_roles(developer_role)
+        log.trace(f'Developer role successfully applied to {user.id}')
+        await ctx.send(f'{constants.Emojis.check_mark} Developer role applied to {user}.')
 
     # endregion
 

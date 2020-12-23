@@ -12,11 +12,12 @@ from discord.ext.commands import Context
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours, MODERATION_CHANNELS
+from bot.constants import Colours
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.exts.moderation.modlog import ModLog
 from bot.utils import messages, scheduling, time
+from bot.utils.channel import is_mod_channel
 
 log = logging.getLogger(__name__)
 
@@ -81,14 +82,26 @@ class InfractionScheduler:
         ctx: Context,
         infraction: _utils.Infraction,
         user: UserSnowflake,
-        action_coro: t.Optional[t.Awaitable] = None
-    ) -> None:
-        """Apply an infraction to the user, log the infraction, and optionally notify the user."""
+        action_coro: t.Optional[t.Awaitable] = None,
+        user_reason: t.Optional[str] = None,
+        additional_info: str = "",
+    ) -> bool:
+        """
+        Apply an infraction to the user, log the infraction, and optionally notify the user.
+
+        `user_reason`, if provided, will be sent to the user in place of the infraction reason.
+        `additional_info` will be attached to the text field in the mod-log embed.
+
+        Returns whether or not the infraction succeeded.
+        """
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
         id_ = infraction['id']
+
+        if user_reason is None:
+            user_reason = reason
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
 
@@ -125,7 +138,7 @@ class InfractionScheduler:
                 log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
             else:
                 # Accordingly display whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type, expiry, reason, icon):
+                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
 
@@ -136,11 +149,7 @@ class InfractionScheduler:
             )
             if reason:
                 end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
-        elif ctx.channel.id not in MODERATION_CHANNELS:
-            log.trace(
-                f"Infraction #{id_} context is not in a mod channel; omitting infraction count."
-            )
-        else:
+        elif is_mod_channel(ctx.channel):
             log.trace(f"Fetching total infraction count for {user}.")
 
             infractions = await self.bot.api_client.get(
@@ -148,7 +157,7 @@ class InfractionScheduler:
                 params={"user__id": str(user.id)}
             )
             total = len(infractions)
-            end_msg = f" ({total} infraction{ngettext('', 's', total)} total)"
+            end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
@@ -166,7 +175,7 @@ class InfractionScheduler:
                 log_content = ctx.author.mention
                 log_title = "failed to apply"
 
-                log_msg = f"Failed to apply {infr_type} infraction #{id_} to {user}"
+                log_msg = f"Failed to apply {' '.join(infr_type.split('_'))} infraction #{id_} to {user}"
                 if isinstance(e, discord.Forbidden):
                     log.warning(f"{log_msg}: bot lacks permissions.")
                 else:
@@ -183,7 +192,7 @@ class InfractionScheduler:
                 log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
             infr_message = ""
         else:
-            infr_message = f" **{infr_type}** to {user.mention}{expiry_msg}{end_msg}"
+            infr_message = f" **{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -195,18 +204,20 @@ class InfractionScheduler:
         await self.mod_log.send_log_message(
             icon_url=icon,
             colour=Colours.soft_red,
-            title=f"Infraction {log_title}: {infr_type}",
+            title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text=textwrap.dedent(f"""
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
+                {additional_info}
             """),
             content=log_content,
             footer=f"ID {infraction['id']}"
         )
 
         log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
+        return not failed
 
     async def pardon_infraction(
             self,
@@ -272,7 +283,7 @@ class InfractionScheduler:
         if send_msg:
             log.trace(f"Sending infraction #{id_} pardon confirmation message.")
             await ctx.send(
-                f"{dm_emoji}{confirm_msg} infraction **{infr_type}** for {user.mention}. "
+                f"{dm_emoji}{confirm_msg} infraction **{' '.join(infr_type.split('_'))}** for {user.mention}. "
                 f"{log_text.get('Failure', '')}"
             )
 
@@ -283,7 +294,7 @@ class InfractionScheduler:
         await self.mod_log.send_log_message(
             icon_url=_utils.INFRACTION_ICONS[infr_type][1],
             colour=Colours.soft_green,
-            title=f"Infraction {log_title}: {infr_type}",
+            title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
             thumbnail=user.avatar_url_as(static_format="png"),
             text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
             footer=footer,

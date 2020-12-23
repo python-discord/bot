@@ -246,7 +246,7 @@ class Filtering(Cog):
                             filter_triggered = True
 
                         stats = self._add_stats(filter_name, match, result)
-                        await self._send_log(filter_name, _filter["type"], msg, stats, is_eval=True)
+                        await self._send_log(filter_name, _filter, msg, stats, is_eval=True)
 
                         break  # We don't want multiple filters to trigger
 

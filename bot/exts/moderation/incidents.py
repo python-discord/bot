@@ -319,7 +319,7 @@ class Incidents(Cog):
         try:
             await confirmation_task
         except asyncio.TimeoutError:
-            log.warning(f"Did not receive incident deletion confirmation within {timeout} seconds!")
+            log.info(f"Did not receive incident deletion confirmation within {timeout} seconds!")
         else:
             log.trace("Deletion was confirmed")
 

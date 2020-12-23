@@ -4,7 +4,7 @@ from typing import Any
 
 from discord.ext.commands import Context
 
-from bot.bot import Bot
+import bot
 
 CODE_TEMPLATE = """
 async def _func():
@@ -21,8 +21,8 @@ class Interpreter(InteractiveInterpreter):
 
     write_callable = None
 
-    def __init__(self, bot: Bot):
-        locals_ = {"bot": bot}
+    def __init__(self):
+        locals_ = {"bot": bot.instance}
         super().__init__(locals_)
 
     async def run(self, code: str, ctx: Context, io: StringIO, *args, **kwargs) -> Any:

@@ -10,7 +10,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Expiry, FetchedMember
+from bot.converters import Duration, Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -27,10 +27,11 @@ class Infractions(InfractionScheduler, commands.Cog):
     category_description = "Server moderation tools."
 
     def __init__(self, bot: Bot):
-        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning"})
+        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_ban"})
 
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
+        self._voice_verified_role = discord.Object(constants.Roles.voice_verified)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member) -> None:
@@ -71,11 +72,39 @@ class Infractions(InfractionScheduler, commands.Cog):
         """Permanently ban a user for the given reason and stop watching them with Big Brother."""
         await self.apply_ban(ctx, user, reason)
 
+    @command(aliases=('pban',))
+    async def purgeban(
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        purge_days: t.Optional[int] = 1,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
+        """
+        Same as ban but removes all their messages for the given number of days, default being 1.
+
+        `purge_days` can only be values between 0 and 7.
+        Anything outside these bounds are automatically adjusted to their respective limits.
+        """
+        await self.apply_ban(ctx, user, reason, max(min(purge_days, 7), 0))
+
+    @command(aliases=('vban',))
+    async def voiceban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str]) -> None:
+        """Permanently ban user from using voice channels."""
+        await self.apply_voice_ban(ctx, user, reason)
+
     # endregion
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: t.Optional[str] = None) -> None:
+    async def tempmute(
+        self, ctx: Context,
+        user: Member,
+        duration: t.Optional[Expiry] = None,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -90,7 +119,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         \u2003`s` - seconds
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
+
+        If no duration is given, a one hour duration is used by default.
         """
+        if duration is None:
+            duration = await Duration().convert(ctx, "1h")
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command()
@@ -119,41 +152,17 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
-    # endregion
-    # region: Permanent shadow infractions
-
-    @command(hidden=True)
-    async def note(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
-        """Create a private note for a user with the given reason without notifying the user."""
-        infraction = await _utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
-        if infraction is None:
-            return
-
-        await self.apply_infraction(ctx, infraction, user)
-
-    @command(hidden=True, aliases=['shadowkick', 'skick'])
-    async def shadow_kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
-        """Kick a user for the given reason without notifying the user."""
-        await self.apply_kick(ctx, user, reason, hidden=True)
-
-    @command(hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
-        """Permanently ban a user for the given reason without notifying the user."""
-        await self.apply_ban(ctx, user, reason, hidden=True)
-
-    # endregion
-    # region: Temporary shadow infractions
-
-    @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
-    async def shadow_tempmute(
-        self, ctx: Context,
-        user: Member,
-        duration: Expiry,
-        *,
-        reason: t.Optional[str] = None
+    @command(aliases=("tempvban", "tvban"))
+    async def tempvoiceban(
+            self,
+            ctx: Context,
+            user: FetchedMember,
+            duration: Expiry,
+            *,
+            reason: t.Optional[str]
     ) -> None:
         """
-        Temporarily mute a user for the given reason and duration without notifying the user.
+        Temporarily voice ban a user for the given reason and duration.
 
         A unit of time should be appended to the duration.
         Units (∗case-sensitive):
@@ -167,7 +176,27 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
+        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
+
+    # endregion
+    # region: Permanent shadow infractions
+
+    @command(hidden=True)
+    async def note(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
+        """Create a private note for a user with the given reason without notifying the user."""
+        infraction = await _utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
+        if infraction is None:
+            return
+
+        await self.apply_infraction(ctx, infraction, user)
+
+    @command(hidden=True, aliases=['shadowban', 'sban'])
+    async def shadow_ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
+        """Permanently ban a user for the given reason without notifying the user."""
+        await self.apply_ban(ctx, user, reason, hidden=True)
+
+    # endregion
+    # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempban, stempban"])
     async def shadow_tempban(
@@ -208,6 +237,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user)
 
+    @command(aliases=("uvban",))
+    async def unvoiceban(self, ctx: Context, user: FetchedMember) -> None:
+        """Prematurely end the active voice ban infraction for the user."""
+        await self.pardon_infraction(ctx, "voice_ban", user)
+
     # endregion
     # region: Base apply functions
 
@@ -230,7 +264,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         await self.apply_infraction(ctx, infraction, user, action())
 
-    @respect_role_hierarchy()
+    @respect_role_hierarchy(member_arg=2)
     async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
         infraction = await _utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
@@ -245,8 +279,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         action = user.kick(reason=reason)
         await self.apply_infraction(ctx, infraction, user, action)
 
-    @respect_role_hierarchy()
-    async def apply_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
+    @respect_role_hierarchy(member_arg=2)
+    async def apply_ban(
+        self,
+        ctx: Context,
+        user: UserSnowflake,
+        reason: t.Optional[str],
+        purge_days: t.Optional[int] = 0,
+        **kwargs
+    ) -> None:
         """
         Apply a ban infraction with kwargs passed to `post_infraction`.
 
@@ -278,7 +319,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=0)
+        action = ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
         await self.apply_infraction(ctx, infraction, user, action)
 
         if infraction.get('expires_at') is not None:
@@ -294,6 +335,26 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         bb_reason = "User has been permanently banned from the server. Automatically removed."
         await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
+
+    @respect_role_hierarchy(member_arg=2)
+    async def apply_voice_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
+        """Apply a voice ban infraction with kwargs passed to `post_infraction`."""
+        if await _utils.get_active_infraction(ctx, user, "voice_ban"):
+            return
+
+        infraction = await _utils.post_infraction(ctx, user, "voice_ban", reason, active=True, **kwargs)
+        if infraction is None:
+            return
+
+        self.mod_log.ignore(Event.member_update, user.id)
+
+        if reason:
+            reason = textwrap.shorten(reason, width=512, placeholder="...")
+
+        await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+
+        action = user.remove_roles(self._voice_verified_role, reason=reason)
+        await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
     # region: Base pardon functions
@@ -339,6 +400,27 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
+    async def pardon_voice_ban(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
+        """Add Voice Verified role back to user, DM them a notification, and return a log dict."""
+        user = guild.get_member(user_id)
+        log_text = {}
+
+        if user:
+            # DM user about infraction expiration
+            notified = await _utils.notify_pardon(
+                user=user,
+                title="Voice ban ended",
+                content="You have been unbanned and can verify yourself again in the server.",
+                icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
+            )
+
+            log_text["Member"] = format_user(user)
+            log_text["DM"] = "Sent" if notified else "**Failed**"
+        else:
+            log_text["Info"] = "User was not found in the guild."
+
+        return log_text
+
     async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
@@ -353,6 +435,8 @@ class Infractions(InfractionScheduler, commands.Cog):
             return await self.pardon_mute(user_id, guild, reason)
         elif infraction["type"] == "ban":
             return await self.pardon_ban(user_id, guild, reason)
+        elif infraction["type"] == "voice_ban":
+            return await self.pardon_voice_ban(user_id, guild, reason)
 
     # endregion
 
