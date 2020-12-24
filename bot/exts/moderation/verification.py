@@ -838,7 +838,7 @@ class Verification(Cog):
         """Command for moderators to verify any user."""
         log.trace(f'verify command called by {ctx.author} for {user.id}.')
 
-        if user.pending:
+        if not user.pending:
             log.trace(f'{user.id} is already verified, aborting.')
             await ctx.send(f'{constants.Emojis.cross_mark} {user.mention} is already verified.')
             return
