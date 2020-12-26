@@ -1,9 +1,21 @@
-JSON is a very handy way of storing values. But when starting out with JSON, you might run into the following error.
+When creating a new JSON file you might run into the following error.
 
 `JSONDecodeError: Expecting value: line 1 column 1 (char 0)`
 
-What this error means is that the decoder (the reading of the JSON file) is expecting a character on line 1 column 1. In other words, your JSON is missing a critical character at the start. So it's saying that your JSON is invalid.
-Looking at how JSON is set up, you can see that they require the following at minimum if you want to start out.
+In short this error means your JSON is invalid in it's current state.
+A JSON may never be completely empty and must always at least have one of the following items.
+
+```
+object
+array
+string
+number
+"true"
+"false"
+"null"
+```
+
+To resolve this issue, you create one of the above values in your JSON. It is very common to use `{}` to make an object. Adding the following to your JSON should resolve this issue.
 
 ```json
 {
@@ -12,4 +24,4 @@ Looking at how JSON is set up, you can see that they require the following at mi
 }
 ```
 
-If you add at least this to your JSON file, it should work. Make sure to put all your data between the `{}`, just like you would when making a dictionary.
+Make sure to put all your data between the `{}`, just like you would when making a dictionary.
