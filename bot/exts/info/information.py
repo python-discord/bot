@@ -423,6 +423,10 @@ class Information(Cog):
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
+        if ctx.author not in message.channel.members:
+            await ctx.send(":x: You can't get message from channel that you don't see.")
+            return
+
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
