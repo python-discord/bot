@@ -419,7 +419,7 @@ class Information(Cog):
         return out.rstrip()
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
-    @group(invoke_without_command=True, enabled=False)
+    @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
@@ -458,7 +458,7 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page)
 
-    @raw.command(enabled=False)
+    @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)
