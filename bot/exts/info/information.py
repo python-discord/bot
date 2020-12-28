@@ -424,7 +424,7 @@ class Information(Cog):
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         if ctx.author not in message.channel.members:
-            await ctx.send(":x: You can't get message from channel that you don't see.")
+            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
 
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
