@@ -586,7 +586,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel))
         self.assertFalse(self.voice_overwrite.speak)
 
-        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel, True))
+        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel, kick=True))
         self.assertFalse(self.voice_overwrite.speak or self.voice_overwrite.connect)
 
 

@@ -171,7 +171,7 @@ class Silence(commands.Cog):
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
 
-        if not await self._set_silence_overwrites(channel, kick):
+        if not await self._set_silence_overwrites(channel, kick=kick):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
             await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel)
             return
@@ -231,7 +231,7 @@ class Silence(commands.Cog):
         else:
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, alert_target=True)
 
-    async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, kick: bool = False) -> bool:
+    async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, *, kick: bool = False) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
         # Get the original channel overwrites
         if isinstance(channel, TextChannel):
