@@ -2,7 +2,7 @@ import json
 import logging
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Union
+from typing import Optional, OrderedDict, Union
 
 from async_rediscache import RedisCache
 from discord import Guild, PermissionOverwrite, TextChannel, VoiceChannel
@@ -81,6 +81,16 @@ class SilenceNotifier(tasks.Loop):
             )
 
 
+async def _select_lock_channel(args: OrderedDict[str, any]) -> TextOrVoiceChannel:
+    """Passes the channel to be silenced to the resource lock."""
+    channel = args["channel"]
+    if channel is not None:
+        return channel
+
+    else:
+        return args["ctx"].channel
+
+
 class Silence(commands.Cog):
     """Commands for stopping channel messages for `verified` role in a channel."""
 
@@ -118,7 +128,7 @@ class Silence(commands.Cog):
         message: str,
         source_channel: TextChannel,
         target_channel: TextOrVoiceChannel,
-        alert_target: bool = False
+        *, alert_target: bool = False
     ) -> None:
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
         # Reply to invocation channel
@@ -137,23 +147,14 @@ class Silence(commands.Cog):
             elif source_channel != target_channel:
                 await target_channel.send(message)
 
-    async def _select_lock_channel(*args) -> TextOrVoiceChannel:
-        """Passes the channel to be silenced to the resource lock."""
-        channel = args[0].get("channel")
-        if channel is not None:
-            return channel
-
-        else:
-            return args[0].get("ctx").channel
-
     @commands.command(aliases=("hush",))
     @lock(LOCK_NAMESPACE, _select_lock_channel, raise_error=True)
     async def silence(
         self,
         ctx: Context,
         duration: HushDurationConverter = 10,
-        kick: bool = False,
-        *, channel: TextOrVoiceChannel = None
+        channel: TextOrVoiceChannel = None,
+        *, kick: bool = False
     ) -> None:
         """
         Silence the current channel for `duration` minutes or `forever`.
@@ -186,11 +187,12 @@ class Silence(commands.Cog):
         if duration is None:
             self.notifier.add_channel(channel)
             log.info(f"Silenced {channel_info} indefinitely.")
-            await self.send_message(MSG_SILENCE_PERMANENT, ctx.channel, channel, True)
+            await self.send_message(MSG_SILENCE_PERMANENT, ctx.channel, channel, alert_target=True)
 
         else:
             log.info(f"Silenced {channel_info} for {duration} minute(s).")
-            await self.send_message(MSG_SILENCE_SUCCESS.format(duration=duration), ctx.channel, channel, True)
+            formatted_message = MSG_SILENCE_SUCCESS.format(duration=duration)
+            await self.send_message(formatted_message, ctx.channel, channel, alert_target=True)
 
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context, *, channel: TextOrVoiceChannel = None) -> None:
@@ -227,7 +229,7 @@ class Silence(commands.Cog):
                 await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel)
 
         else:
-            await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, True)
+            await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, alert_target=True)
 
     async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, kick: bool = False) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
