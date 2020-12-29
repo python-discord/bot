@@ -110,14 +110,13 @@ class PythonNews(Cog):
             )
             embed.set_footer(text=data["feed"]["title"], icon_url=AVATAR_URL)
 
-            webhook_msg = await send_webhook(
+            msg = await send_webhook(
                 webhook=self.webhook,
                 username=data["feed"]["title"],
                 embed=embed,
                 avatar_url=AVATAR_URL,
                 wait=True,
             )
-            msg = await self.webhook.channel.fetch_message(webhook_msg.id)
 
             payload["data"]["pep"].append(pep_nr)
 
@@ -126,7 +125,7 @@ class PythonNews(Cog):
 
             if msg.channel.is_news():
                 log.trace("Publishing PEP annnouncement because it was in a news channel")
-                await msg.publish()
+                await self.bot.http.publish_message(msg.channel.id, msg.id)
 
         # Apply new sent news to DB to avoid duplicate sending
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
@@ -190,14 +189,13 @@ class PythonNews(Cog):
                     icon_url=AVATAR_URL,
                 )
 
-                webhook_msg = await send_webhook(
+                msg = await send_webhook(
                     webhook=self.webhook,
                     username=self.webhook_names[maillist],
                     embed=embed,
                     avatar_url=AVATAR_URL,
                     wait=True,
                 )
-                msg = await self.webhook.channel.fetch_message(webhook_msg.id)
 
                 payload["data"][maillist].append(thread_information["thread_id"])
 
@@ -206,7 +204,7 @@ class PythonNews(Cog):
 
                 if msg.channel.is_news():
                     log.trace("Publishing mailing list message because it was in a news channel")
-                    await msg.publish()
+                    await self.bot.http.publish_message(msg.channel.id, msg.id)
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
 

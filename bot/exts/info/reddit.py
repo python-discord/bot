@@ -224,11 +224,10 @@ class Reddit(Cog):
         for subreddit in RedditConfig.subreddits:
             top_posts = await self.get_top_posts(subreddit=subreddit, time="day")
             username = sub_clyde(f"{subreddit} Top Daily Posts")
-            webhook_message = await self.webhook.send(username=username, embed=top_posts, wait=True)
-            message = await self.webhook.channel.fetch_message(webhook_message.id)
+            message = await self.webhook.send(username=username, embed=top_posts, wait=True)
 
             if message.channel.is_news():
-                await message.publish()
+                await self.bot.http.publish_message(message.channel.id, message.id)
 
     async def top_weekly_posts(self) -> None:
         """Post a summary of the top posts."""
