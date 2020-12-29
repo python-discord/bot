@@ -109,13 +109,16 @@ class PythonNews(Cog):
                 colour=constants.Colours.soft_green
             )
             embed.set_footer(text=data["feed"]["title"], icon_url=AVATAR_URL)
-            msg = await send_webhook(
+
+            webhook_msg = await send_webhook(
                 webhook=self.webhook,
                 username=data["feed"]["title"],
                 embed=embed,
                 avatar_url=AVATAR_URL,
                 wait=True,
             )
+            msg = await self.webhook.channel.fetch_message(webhook_msg.id)
+
             payload["data"]["pep"].append(pep_nr)
 
             # Increase overall PEP new stat
@@ -186,13 +189,16 @@ class PythonNews(Cog):
                     text=f"Posted to {self.webhook_names[maillist]}",
                     icon_url=AVATAR_URL,
                 )
-                msg = await send_webhook(
+
+                webhook_msg = await send_webhook(
                     webhook=self.webhook,
                     username=self.webhook_names[maillist],
                     embed=embed,
                     avatar_url=AVATAR_URL,
                     wait=True,
                 )
+                msg = await self.webhook.channel.fetch_message(webhook_msg.id)
+
                 payload["data"][maillist].append(thread_information["thread_id"])
 
                 # Increase this specific maillist counter in stats
