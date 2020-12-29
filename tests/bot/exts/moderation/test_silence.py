@@ -159,81 +159,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         role_check.assert_called_once_with(*(1, 2, 3))
         role_check.return_value.predicate.assert_awaited_once_with(ctx)
 
-    @mock.patch.object(silence, "VOICE_CHANNELS")
-    async def test_send_message(self, mock_voice_channels):
-        """Test the send function reports to the correct channels."""
-        text_channel_1 = MockTextChannel()
-        text_channel_2 = MockTextChannel()
-
-        voice_channel = MockVoiceChannel()
-        voice_channel.name = "General/Offtopic"
-        voice_channel.mention = f"#{voice_channel.name}"
-
-        mock_voice_channels.get.return_value = text_channel_2.id
-
-        def reset():
-            text_channel_1.reset_mock()
-            text_channel_2.reset_mock()
-            voice_channel.reset_mock()
-            mock_voice_channels.reset_mock()
-
-        with self.subTest("Basic One Channel Test"):
-            await self.cog.send_message("Text basic message.", text_channel_1, text_channel_2, alert_target=False)
-            text_channel_1.send.assert_called_once_with("Text basic message.")
-            text_channel_2.send.assert_not_called()
-
-        reset()
-        with self.subTest("Basic Two Channel Test"):
-            await self.cog.send_message("Text basic message.", text_channel_1, text_channel_2, alert_target=True)
-            text_channel_1.send.assert_called_once_with("Text basic message.")
-            text_channel_2.send.assert_called_once_with("Text basic message.")
-
-        reset()
-        with self.subTest("Replacement One Channel Test"):
-            message = "Current. The following should be replaced: current channel."
-            await self.cog.send_message(message, text_channel_1, text_channel_2, alert_target=False)
-
-            text_channel_1.send.assert_called_once_with(message.replace("current channel", text_channel_1.mention))
-            text_channel_2.send.assert_not_called()
-
-        reset()
-        with self.subTest("Replacement Two Channel Test"):
-            message = "Current. The following should be replaced: current channel."
-            await self.cog.send_message(message, text_channel_1, text_channel_2, alert_target=True)
-
-            text_channel_1.send.assert_called_once_with(message.replace("current channel", text_channel_1.mention))
-            text_channel_2.send.assert_called_once_with(message)
-
-        reset()
-        with self.subTest("Text and Voice"):
-            message = "This should show up just here"
-            await self.cog.send_message(message, text_channel_1, voice_channel, alert_target=False)
-            text_channel_1.send.assert_called_once_with(message)
-
-        with mock.patch.object(self.cog, "bot") as bot_mock:
-            bot_mock.get_channel.return_value = text_channel_2
-
-            reset()
-            with self.subTest("Text and Voice"):
-                message = "This should show up as current channel"
-                await self.cog.send_message(message, text_channel_1, voice_channel, alert_target=True)
-                text_channel_1.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
-                text_channel_2.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
-
-                mock_voice_channels.get.assert_called_once_with(voice_channel.id)
-                bot_mock.get_channel.assert_called_once_with(text_channel_2.id)
-                bot_mock.reset_mock()
-
-            reset()
-            with self.subTest("Text and Voice Same Invocation"):
-                message = "This should show up as current channel"
-                await self.cog.send_message(message, text_channel_2, voice_channel, alert_target=True)
-                text_channel_2.send.assert_called_once_with(message.replace("current channel", voice_channel.mention))
-
-                mock_voice_channels.get.assert_called_once_with(voice_channel.id)
-                bot_mock.get_channel.assert_called_once_with(text_channel_2.id)
-                bot_mock.reset_mock()
-
     async def test_force_voice_sync(self):
         """Tests the _force_voice_sync helper function."""
         await self.cog._async_init()
@@ -832,3 +757,84 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
                     ctx.channel.send.assert_not_called()
 
             await reset()
+
+
+class SendMessageTests(unittest.IsolatedAsyncioTestCase):
+    """Unittests for the send message helper function."""
+
+    def setUp(self) -> None:
+        self.bot = MockBot()
+        self.cog = silence.Silence(self.bot)
+
+        self.text_channels = [MockTextChannel() for _ in range(2)]
+        self.bot.get_channel.return_value = self.text_channels[1]
+
+        self.voice_channel = MockVoiceChannel(name="General/Offtopic")
+
+    async def test_send_to_channel(self):
+        """Tests a basic case for the send function."""
+        message = "Test basic message."
+        await self.cog.send_message(message, *self.text_channels, alert_target=False)
+
+        self.text_channels[0].send.assert_called_once_with(message)
+        self.text_channels[1].send.assert_not_called()
+
+    async def test_send_to_multiple_channels(self):
+        """Tests sending messages to two channels."""
+        message = "Test basic message."
+        await self.cog.send_message(message, *self.text_channels, alert_target=True)
+
+        self.text_channels[0].send.assert_called_once_with(message)
+        self.text_channels[1].send.assert_called_once_with(message)
+
+    async def test_duration_replacement(self):
+        """Tests that the channel name was set correctly for one target channel."""
+        message = "Current. The following should be replaced: current channel."
+        await self.cog.send_message(message, *self.text_channels, alert_target=False)
+
+        updated_message = message.replace("current channel", self.text_channels[0].mention)
+        self.text_channels[0].send.assert_called_once_with(updated_message)
+        self.text_channels[1].send.assert_not_called()
+
+    async def test_name_replacement_multiple_channels(self):
+        """Tests that the channel name was set correctly for two channels."""
+        message = "Current. The following should be replaced: current channel."
+        await self.cog.send_message(message, *self.text_channels, alert_target=True)
+
+        updated_message = message.replace("current channel", self.text_channels[0].mention)
+        self.text_channels[0].send.assert_called_once_with(updated_message)
+        self.text_channels[1].send.assert_called_once_with(message)
+
+    async def test_silence_voice(self):
+        """Tests that the correct message was sent when a voice channel is muted without alerting."""
+        message = "This should show up just here."
+        await self.cog.send_message(message, self.text_channels[0], self.voice_channel, alert_target=False)
+        self.text_channels[0].send.assert_called_once_with(message)
+
+    async def test_silence_voice_alert(self):
+        """Tests that the correct message was sent when a voice channel is muted with alerts."""
+        with unittest.mock.patch.object(silence, "VOICE_CHANNELS") as mock_voice_channels:
+            mock_voice_channels.get.return_value = self.text_channels[1].id
+
+            message = "This should show up as current channel."
+            await self.cog.send_message(message, self.text_channels[0], self.voice_channel, alert_target=True)
+
+        updated_message = message.replace("current channel", self.voice_channel.mention)
+        self.text_channels[0].send.assert_called_once_with(updated_message)
+        self.text_channels[1].send.assert_called_once_with(updated_message)
+
+        mock_voice_channels.get.assert_called_once_with(self.voice_channel.id)
+
+    async def test_silence_voice_sibling_channel(self):
+        """Tests silencing a voice channel from the related text channel."""
+        with unittest.mock.patch.object(silence, "VOICE_CHANNELS") as mock_voice_channels:
+            mock_voice_channels.get.return_value = self.text_channels[1].id
+
+            message = "This should show up as current channel."
+            await self.cog.send_message(message, self.text_channels[1], self.voice_channel, alert_target=True)
+
+            updated_message = message.replace("current channel", self.voice_channel.mention)
+            self.text_channels[1].send.assert_called_once_with(updated_message)
+
+            mock_voice_channels.get.assert_called_once_with(self.voice_channel.id)
+            self.bot.get_channel.assert_called_once_with(self.text_channels[1].id)
