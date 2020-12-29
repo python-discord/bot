@@ -224,7 +224,8 @@ class Reddit(Cog):
         for subreddit in RedditConfig.subreddits:
             top_posts = await self.get_top_posts(subreddit=subreddit, time="day")
             username = sub_clyde(f"{subreddit} Top Daily Posts")
-            message = await self.webhook.send(username=username, embed=top_posts, wait=True)
+            webhook_message = await self.webhook.send(username=username, embed=top_posts, wait=True)
+            message = await self.webhook.channel.fetch_message(webhook_message.id)
 
             if message.channel.is_news():
                 await message.publish()
