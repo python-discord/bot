@@ -277,7 +277,12 @@ class Silence(commands.Cog):
 
         for member in channel.members:
             if self._helper_role not in member.roles:
-                await member.move_to(None, reason="Kicking member from voice channel.")
+                try:
+                    await member.move_to(None, reason="Kicking member from voice channel.")
+                    log.debug(f"Kicked {member.name} from voice channel.")
+                except Exception as e:
+                    log.debug(f"Failed to move {member.name}. Reason: {e}")
+                    continue
 
         log.debug("Removed all members.")
 
@@ -298,11 +303,15 @@ class Silence(commands.Cog):
                 if self._helper_role in member.roles:
                     continue
 
-                await member.move_to(afk_channel, reason="Muting VC member.")
-                log.debug(f"Moved {member.name} to afk channel.")
+                try:
+                    await member.move_to(afk_channel, reason="Muting VC member.")
+                    log.debug(f"Moved {member.name} to afk channel.")
 
-                await member.move_to(channel, reason="Muting VC member.")
-                log.debug(f"Moved {member.name} to original voice channel.")
+                    await member.move_to(channel, reason="Muting VC member.")
+                    log.debug(f"Moved {member.name} to original voice channel.")
+                except Exception as e:
+                    log.debug(f"Failed to move {member.name}. Reason: {e}")
+                    continue
 
         finally:
             # Delete VC channel if it was created.
