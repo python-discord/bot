@@ -33,7 +33,7 @@ class Bot(commands.Bot):
 
         self.http_session: Optional[aiohttp.ClientSession] = None
         self.redis_session = redis_session
-        self.api_client = api.APIClient(loop=self.loop)
+        self.api_client: Optional[api.APIClient] = None
         self.filter_list_cache = defaultdict(dict)
 
         self._connector = None
@@ -80,46 +80,6 @@ class Bot(commands.Bot):
 
         for item in full_cache:
             self.insert_item_into_filter_list_cache(item)
-
-    def _recreate(self) -> None:
-        """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
-        # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
-        # Doesn't seem to have any state with regards to being closed, so no need to worry?
-        self._resolver = aiohttp.AsyncResolver()
-
-        # Its __del__ does send a warning but it doesn't always show up for some reason.
-        if self._connector and not self._connector._closed:
-            log.warning(
-                "The previous connector was not closed; it will remain open and be overwritten"
-            )
-
-        if self.redis_session.closed:
-            # If the RedisSession was somehow closed, we try to reconnect it
-            # here. Normally, this shouldn't happen.
-            self.loop.create_task(self.redis_session.connect())
-
-        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
-        # and in production.
-        self._connector = aiohttp.TCPConnector(
-            resolver=self._resolver,
-            family=socket.AF_INET,
-        )
-
-        # Client.login() will call HTTPClient.static_login() which will create a session using
-        # this connector attribute.
-        self.http.connector = self._connector
-
-        # Its __del__ does send a warning but it doesn't always show up for some reason.
-        if self.http_session and not self.http_session.closed:
-            log.warning(
-                "The previous session was not closed; it will remain open and be overwritten"
-            )
-
-        self.http_session = aiohttp.ClientSession(connector=self._connector)
-        self.api_client.recreate(force=True, connector=self._connector)
-
-        # Build the FilterList cache
-        self.loop.create_task(self.cache_filter_list_data())
 
     @classmethod
     def create(cls) -> "Bot":
@@ -184,15 +144,8 @@ class Bot(commands.Bot):
         return command
 
     def clear(self) -> None:
-        """
-        Clears the internal state of the bot and recreates the connector and sessions.
-
-        Will cause a DeprecationWarning if called outside a coroutine.
-        """
-        # Because discord.py recreates the HTTPClient session, may as well follow suit and recreate
-        # our own stuff here too.
-        self._recreate()
-        super().clear()
+        """Not implemented! Re-instantiate the bot instead of attempting to re-use a closed one."""
+        raise NotImplementedError("Re-using a Bot object after closing it is not supported.")
 
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
@@ -212,7 +165,8 @@ class Bot(commands.Bot):
         # Now actually do full close of bot
         await super().close()
 
-        await self.api_client.close()
+        if self.api_client:
+            await self.api_client.close()
 
         if self.http_session:
             await self.http_session.close()
@@ -247,7 +201,31 @@ class Bot(commands.Bot):
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
-        self._recreate()
+        # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
+        self._resolver = aiohttp.AsyncResolver()
+
+        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
+        # and in production.
+        self._connector = aiohttp.TCPConnector(
+            resolver=self._resolver,
+            family=socket.AF_INET,
+        )
+
+        # Client.login() will call HTTPClient.static_login() which will create a session using
+        # this connector attribute.
+        self.http.connector = self._connector
+
+        self.http_session = aiohttp.ClientSession(connector=self._connector)
+        self.api_client = api.APIClient(connector=self._connector)
+
+        if self.redis_session.closed:
+            # If the RedisSession was somehow closed, we try to reconnect it
+            # here. Normally, this shouldn't happen.
+            await self.redis_session.connect()
+
+        # Build the FilterList cache
+        await self.cache_filter_list_data()
+
         await self.stats.create_socket()
         await super().login(*args, **kwargs)
 

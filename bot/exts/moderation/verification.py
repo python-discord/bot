@@ -55,7 +55,7 @@ If you'd like to unsubscribe from the announcement notifications, simply send `!
 """
 
 ALTERNATE_VERIFIED_MESSAGE = f"""
-Thanks for accepting our rules!
+You are now verified!
 
 You can find a copy of our rules for reference at <https://pythondiscord.com/pages/rules>.
 
@@ -174,13 +174,12 @@ class Verification(Cog):
     # ]
     task_cache = RedisCache()
 
-    # Create a cache for storing recipients of the alternate welcome DM.
-    member_gating_cache = RedisCache()
-
     def __init__(self, bot: Bot) -> None:
         """Start internal tasks."""
         self.bot = bot
         self.bot.loop.create_task(self._maybe_start_tasks())
+
+        self.pending_members = set()
 
     def cog_unload(self) -> None:
         """
@@ -568,19 +567,8 @@ class Verification(Cog):
         # If the user has the pending flag set, they will be using the alternate
         # gate and will not need a welcome DM with verification instructions.
         # We will send them an alternate DM once they verify with the welcome
-        # video.
+        # video when they pass the gate.
         if raw_member.get("pending"):
-            await self.member_gating_cache.set(member.id, True)
-
-            # TODO: Temporary, remove soon after asking joe.
-            await self.mod_log.send_log_message(
-                icon_url=self.bot.user.avatar_url,
-                colour=discord.Colour.blurple(),
-                title="New native gated user",
-                channel_id=constants.Channels.user_log,
-                text=f"<@{member.id}> ({member.id})",
-            )
-
             return
 
         log.trace(f"Sending on join message to new member: {member.id}")
@@ -592,19 +580,15 @@ class Verification(Cog):
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Check if we need to send a verification DM to a gated user."""
-        before_roles = [role.id for role in before.roles]
-        after_roles = [role.id for role in after.roles]
-
-        if constants.Roles.verified not in before_roles and constants.Roles.verified in after_roles:
-            if await self.member_gating_cache.pop(after.id):
-                try:
-                    # If the member has not received a DM from our !accept command
-                    # and has gone through the alternate gating system we should send
-                    # our alternate welcome DM which includes info such as our welcome
-                    # video.
-                    await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
-                except discord.HTTPException:
-                    log.exception("DM dispatch failed on unexpected error code")
+        if before.pending is True and after.pending is False:
+            try:
+                # If the member has not received a DM from our !accept command
+                # and has gone through the alternate gating system we should send
+                # our alternate welcome DM which includes info such as our welcome
+                # video.
+                await safe_dm(after.send(ALTERNATE_VERIFIED_MESSAGE))
+            except discord.HTTPException:
+                log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -850,19 +834,21 @@ class Verification(Cog):
 
     @command(name='verify')
     @has_any_role(*constants.MODERATION_ROLES)
-    async def apply_developer_role(self, ctx: Context, user: discord.Member) -> None:
-        """Command for moderators to apply the Developer role to any user."""
+    async def perform_manual_verification(self, ctx: Context, user: discord.Member) -> None:
+        """Command for moderators to verify any user."""
         log.trace(f'verify command called by {ctx.author} for {user.id}.')
-        developer_role = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.verified)
 
-        if developer_role in user.roles:
-            log.trace(f'{user.id} is already a developer, aborting.')
-            await ctx.send(f'{constants.Emojis.cross_mark} {user} is already a developer.')
+        if not user.pending:
+            log.trace(f'{user.id} is already verified, aborting.')
+            await ctx.send(f'{constants.Emojis.cross_mark} {user.mention} is already verified.')
             return
 
-        await user.add_roles(developer_role)
-        log.trace(f'Developer role successfully applied to {user.id}')
-        await ctx.send(f'{constants.Emojis.check_mark} Developer role applied to {user}.')
+        # Adding a role automatically verifies the user, so we add and remove the Announcements role.
+        temporary_role = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.announcements)
+        await user.add_roles(temporary_role)
+        await user.remove_roles(temporary_role)
+        log.trace(f'{user.id} manually verified.')
+        await ctx.send(f'{constants.Emojis.check_mark} {user.mention} is now verified.')
 
     # endregion
 

@@ -6,7 +6,6 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from dateutil import parser
 from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
@@ -225,14 +224,14 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
-        verified_at, activity = await self.user_verification_and_messages(user)
+        activity = await self.user_messages(user)
 
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
-            membership = {"Joined": joined, "Verified": verified_at or "False", "Roles": roles or None}
+            membership = {"Joined": joined, "Pending": user.pending, "Roles": roles or None}
             if not is_mod_channel(ctx.channel):
-                membership.pop("Verified")
+                membership.pop("Pending")
 
             membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
@@ -360,30 +359,21 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
-    async def user_verification_and_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
+    async def user_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
         """
-        Gets the time of verification and amount of messages for `member`.
+        Gets the amount of messages for `member`.
 
         Fetches information from the metricity database that's hosted by the site.
         If the database returns a code besides a 404, then many parts of the bot are broken including this one.
         """
         activity_output = []
-        verified_at = False
 
         try:
             user_activity = await self.bot.api_client.get(f"bot/users/{user.id}/metricity_data")
         except ResponseCodeError as e:
             if e.status == 404:
                 activity_output = "No activity"
-
         else:
-            try:
-                if (verified_at := user_activity["verified_at"]) is not None:
-                    verified_at = time_since(parser.isoparse(verified_at), max_units=3)
-            except ValueError:
-                log.warning(f"Could not parse ISO string correctly for user {user.id} verification date.")
-                verified_at = None
-
             activity_output.append(user_activity["total_messages"] or "No messages")
             activity_output.append(user_activity["activity_blocks"] or "No activity")
 
@@ -391,7 +381,7 @@ class Information(Cog):
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
             )
 
-        return verified_at, ("Activity", activity_output)
+        return ("Activity", activity_output)
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""

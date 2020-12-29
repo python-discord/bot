@@ -493,6 +493,7 @@ class Keys(metaclass=YAMLGetter):
     section = "keys"
 
     site_api: Optional[str]
+    github: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -606,7 +607,7 @@ class Verification(metaclass=YAMLGetter):
 class VoiceGate(metaclass=YAMLGetter):
     section = "voice_gate"
 
-    minimum_days_verified: int
+    minimum_days_member: int
     minimum_messages: int
     bot_message_delete_delay: int
     minimum_activity_blocks: int
@@ -655,6 +656,9 @@ MODERATION_CHANNELS = Guild.moderation_channels
 
 # Category combinations
 MODERATION_CATEGORIES = Guild.moderation_categories
+
+# Git SHA for Sentry
+GIT_SHA = os.environ.get("GIT_SHA", "development")
 
 # Bot replies
 NEGATIVE_REPLIES = [
