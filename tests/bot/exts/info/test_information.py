@@ -355,7 +355,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             textwrap.dedent(f"""
                 Joined: {"1 year ago"}
-                Pending: {"False"}
+                Verified: {"True"}
                 Roles: &Moderators
             """).strip(),
             embed.fields[1].value

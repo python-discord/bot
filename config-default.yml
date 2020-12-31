@@ -323,6 +323,7 @@ filter:
 
 keys:
     site_api:    !ENV "BOT_API_KEY"
+    github:      !ENV "GITHUB_API_KEY"
 
 
 urls:
