@@ -342,11 +342,14 @@ class WatchChannel(metaclass=CogABCMeta):
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace("Unloading the cog")
         if self._consume_task and not self._consume_task.done():
+            def done_callback(task: asyncio.Task) -> None:
+                """Send exception when consuming task have been cancelled."""
+                try:
+                    task.result()
+                except asyncio.CancelledError:
+                    self.log.info(
+                        f"The consume task of {type(self).__name__} was canceled. Messages may be lost."
+                    )
+
+            self._consume_task.add_done_callback(done_callback)
             self._consume_task.cancel()
-            try:
-                self._consume_task.result()
-            except asyncio.CancelledError as e:
-                self.log.exception(
-                    "The consume task was canceled. Messages may be lost.",
-                    exc_info=e
-                )
