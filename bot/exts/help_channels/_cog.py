@@ -462,9 +462,10 @@ class HelpChannels(commands.Cog):
         if message.author.bot:
             return  # Ignore messages sent by bots.
 
+        await self.init_task
+
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
-                await self.init_task
                 await self.claim_channel(message)
                 await self.move_to_available()  # Not in a lock because it may wait indefinitely.
         else:
@@ -477,14 +478,13 @@ class HelpChannels(commands.Cog):
 
         The new time for the dormant task is configured with `HelpChannels.deleted_idle_minutes`.
         """
+        await self.init_task
+
         if not channel_utils.is_in_category(msg.channel, constants.Categories.help_in_use):
             return
 
         if not await _message.is_empty(msg.channel):
             return
-
-        log.trace("Waiting for the cog to be ready before processing deleted messages.")
-        await self.init_task
 
         log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
 
