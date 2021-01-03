@@ -243,8 +243,6 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         actor = guild.get_member(actor_id)
 
         active = nomination_object["active"]
-        log.debug(active)
-        log.debug(type(nomination_object["inserted_at"]))
 
         reason = nomination_object["reason"] or "*None*"
 
