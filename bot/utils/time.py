@@ -20,7 +20,9 @@ def _stringify_time_unit(value: int, unit: str) -> str:
     >>> _stringify_time_unit(0, "minutes")
     "less than a minute"
     """
-    if value == 1:
+    if unit == "seconds" and value == 0:
+        return "0 seconds"
+    elif value == 1:
         return f"{value} {unit[:-1]}"
     elif value == 0:
         return f"less than a {unit[:-1]}"

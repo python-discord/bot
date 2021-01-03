@@ -15,7 +15,7 @@ import os
 from collections.abc import Mapping
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -186,6 +186,11 @@ class YAMLGetter(type):
     def __getitem__(cls, name):
         return cls.__getattr__(name)
 
+    def __iter__(cls):
+        """Return generator of key: value pairs of current constants class' config values."""
+        for name in cls.__annotations__:
+            yield name, getattr(cls, name)
+
 
 # Dataclasses
 class Bot(metaclass=YAMLGetter):
@@ -193,7 +198,18 @@ class Bot(metaclass=YAMLGetter):
 
     prefix: str
     token: str
-    sentry_dsn: str
+    sentry_dsn: Optional[str]
+
+
+class Redis(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "redis"
+
+    host: str
+    port: int
+    password: Optional[str]
+    use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
+
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
@@ -201,20 +217,18 @@ class Filter(metaclass=YAMLGetter):
     filter_zalgo: bool
     filter_invites: bool
     filter_domains: bool
+    filter_everyone_ping: bool
+    watch_regex: bool
     watch_rich_embeds: bool
-    watch_words: bool
-    watch_tokens: bool
 
     # Notifications are not expected for "watchlist" type filters
     notify_user_zalgo: bool
     notify_user_invites: bool
     notify_user_domains: bool
+    notify_user_everyone_ping: bool
 
     ping_everyone: bool
-    guild_invite_whitelist: List[int]
-    domain_blacklist: List[str]
-    word_watchlist: List[str]
-    token_watchlist: List[str]
+    offensive_msg_delete_days: int
 
     channel_whitelist: List[int]
     role_whitelist: List[int]
@@ -234,13 +248,14 @@ class Colours(metaclass=YAMLGetter):
     soft_red: int
     soft_green: int
     soft_orange: int
+    bright_green: int
 
 
 class DuckPond(metaclass=YAMLGetter):
     section = "duck_pond"
 
     threshold: int
-    custom_emojis: List[int]
+    channel_blacklist: List[int]
 
 
 class Emojis(metaclass=YAMLGetter):
@@ -256,6 +271,21 @@ class Emojis(metaclass=YAMLGetter):
     status_idle: str
     status_dnd: str
 
+    badge_staff: str
+    badge_partner: str
+    badge_hypesquad: str
+    badge_bug_hunter: str
+    badge_hypesquad_bravery: str
+    badge_hypesquad_brilliance: str
+    badge_hypesquad_balance: str
+    badge_early_supporter: str
+    badge_bug_hunter_level_2: str
+    badge_verified_bot_developer: str
+
+    incident_actioned: str
+    incident_unactioned: str
+    incident_investigating: str
+
     failmail: str
     trashcan: str
 
@@ -263,20 +293,7 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
     cross_mark: str
-
-    ducky_yellow: int
-    ducky_blurple: int
-    ducky_regal: int
-    ducky_camo: int
-    ducky_ninja: int
-    ducky_devil: int
-    ducky_tube: int
-    ducky_hunt: int
-    ducky_wizard: int
-    ducky_party: int
-    ducky_angel: int
-    ducky_maul: int
-    ducky_santa: int
+    check_mark: str
 
     upvotes: str
     comments: str
@@ -338,6 +355,8 @@ class Icons(metaclass=YAMLGetter):
     voice_state_green: str
     voice_state_red: str
 
+    green_checkmark: str
+
 
 class CleanMessages(metaclass=YAMLGetter):
     section = "bot"
@@ -346,53 +365,78 @@ class CleanMessages(metaclass=YAMLGetter):
     message_limit: int
 
 
+class Stats(metaclass=YAMLGetter):
+    section = "bot"
+    subsection = "stats"
+
+    presence_update_timeout: int
+    statsd_host: str
+
+
 class Categories(metaclass=YAMLGetter):
     section = "guild"
     subsection = "categories"
 
-    python_help: int
+    help_available: int
+    help_in_use: int
+    help_dormant: int
+    modmail: int
+    voice: int
 
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
-    admins: int
+    admin_announcements: int
     admin_spam: int
+    admins: int
+    admins_voice: int
     announcements: int
     attachment_log: int
     big_brother_logs: int
-    bot: int
-    checkpoint_test: int
+    bot_commands: int
+    change_log: int
+    code_help_chat_1: int
+    code_help_chat_2: int
+    code_help_voice_1: int
+    code_help_voice_2: int
+    cooldown: int
     defcon: int
-    devlog: int
-    devtest: int
+    dev_contrib: int
+    dev_core: int
+    dev_log: int
+    dm_log: int
     esoteric: int
-    help_0: int
-    help_1: int
-    help_2: int
-    help_3: int
-    help_4: int
-    help_5: int
-    help_6: int
-    help_7: int
+    general_voice: int
     helpers: int
+    incidents: int
+    incidents_archive: int
+    mailing_lists: int
     message_log: int
     meta: int
+    mod_alerts: int
+    mod_announcements: int
+    mod_log: int
     mod_spam: int
     mods: int
-    mod_alerts: int
-    modlog: int
     off_topic_0: int
     off_topic_1: int
     off_topic_2: int
     organisation: int
-    python: int
+    python_discussion: int
+    python_events: int
+    python_news: int
     reddit: int
+    staff_announcements: int
+    staff_voice: int
+    staff_voice_chat: int
     talent_pool: int
-    userlog: int
-    user_event_a: int
+    user_event_announcements: int
+    user_log: int
     verification: int
+    voice_chat: int
+    voice_gate: int
     voice_log: int
 
 
@@ -400,44 +444,56 @@ class Webhooks(metaclass=YAMLGetter):
     section = "guild"
     subsection = "webhooks"
 
-    talent_pool: int
     big_brother: int
-    reddit: int
+    dev_log: int
+    dm_log: int
     duck_pond: int
+    incidents_archive: int
+    reddit: int
+    talent_pool: int
 
 
 class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
-    admin: int
+    admins: int
     announcements: int
-    champion: int
-    contributor: int
-    core_developer: int
+    contributors: int
+    core_developers: int
+    help_cooldown: int
     helpers: int
-    jammer: int
-    moderator: int
+    jammers: int
+    moderators: int
     muted: int
-    owner: int
+    owners: int
     partners: int
-    rockstars: int
-    team_leader: int
+    python_community: int
+    sprinters: int
+    team_leaders: int
+    unverified: int
     verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
+    voice_verified: int
 
 
 class Guild(metaclass=YAMLGetter):
     section = "guild"
 
     id: int
-    ignored: List[int]
-    staff_channels: List[int]
+    invite: str  # Discord invite, gets embedded in chat
+    moderation_channels: List[int]
+    moderation_categories: List[int]
+    moderation_roles: List[int]
+    modlog_blacklist: List[int]
+    reminder_whitelist: List[int]
+    staff_roles: List[int]
 
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
-    site_api: str
+    site_api: Optional[str]
+    github: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -454,25 +510,13 @@ class URLs(metaclass=YAMLGetter):
     bot_avatar: str
     github_bot_repo: str
 
-    # Site endpoints
+    # Base site vars
     site: str
     site_api: str
-    site_superstarify_api: str
-    site_logs_api: str
-    site_logs_view: str
-    site_reminders_api: str
-    site_reminders_user_api: str
     site_schema: str
-    site_settings_api: str
-    site_tags_api: str
-    site_user_api: str
-    site_user_complete_api: str
-    site_infractions: str
-    site_infractions_user: str
-    site_infractions_type: str
-    site_infractions_by_id: str
-    site_infractions_user_type_current: str
-    site_infractions_user_type: str
+
+    # Site endpoints
+    site_logs_view: str
     paste_service: str
 
 
@@ -480,16 +524,8 @@ class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
     subreddits: list
-    client_id: str
-    secret: str
-
-
-class Wolfram(metaclass=YAMLGetter):
-    section = "wolfram"
-
-    user_limit_day: int
-    guild_limit_day: int
-    key: str
+    client_id: Optional[str]
+    secret: Optional[str]
 
 
 class AntiSpam(metaclass=YAMLGetter):
@@ -502,17 +538,20 @@ class AntiSpam(metaclass=YAMLGetter):
     rules: Dict[str, Dict[str, int]]
 
 
-class AntiMalware(metaclass=YAMLGetter):
-    section = "anti_malware"
-
-    whitelist: list
-
-
 class BigBrother(metaclass=YAMLGetter):
     section = 'big_brother'
 
     log_delay: int
     header_message_limit: int
+
+
+class CodeBlock(metaclass=YAMLGetter):
+    section = 'code_block'
+
+    channel_whitelist: List[int]
+    cooldown_channels: List[int]
+    cooldown_seconds: int
+    minimum_lines: int
 
 
 class Free(metaclass=YAMLGetter):
@@ -523,11 +562,21 @@ class Free(metaclass=YAMLGetter):
     cooldown_per: float
 
 
-class Mention(metaclass=YAMLGetter):
-    section = 'mention'
+class HelpChannels(metaclass=YAMLGetter):
+    section = 'help_channels'
 
-    message_timeout: int
-    reset_delay: int
+    enable: bool
+    claim_minutes: int
+    cmd_whitelist: List[int]
+    idle_minutes: int
+    deleted_idle_minutes: int
+    max_available: int
+    max_total_channels: int
+    name_prefix: str
+    notify: bool
+    notify_channel: int
+    notify_minutes: int
+    notify_roles: List[int]
 
 
 class RedirectOutput(metaclass=YAMLGetter):
@@ -535,6 +584,34 @@ class RedirectOutput(metaclass=YAMLGetter):
 
     delete_invocation: bool
     delete_delay: int
+
+
+class PythonNews(metaclass=YAMLGetter):
+    section = 'python_news'
+
+    mail_lists: List[str]
+    channel: int
+    webhook: int
+
+
+class Verification(metaclass=YAMLGetter):
+    section = "verification"
+
+    unverified_after: int
+    kicked_after: int
+    reminder_frequency: int
+    bot_message_delete_delay: int
+    kick_confirmation_threshold: float
+
+
+class VoiceGate(metaclass=YAMLGetter):
+    section = "voice_gate"
+
+    minimum_days_member: int
+    minimum_messages: int
+    bot_message_delete_delay: int
+    minimum_activity_blocks: int
+    voice_ping_delete_delay: int
 
 
 class Event(Enum):
@@ -564,22 +641,24 @@ class Event(Enum):
 
 
 # Debug mode
-DEBUG_MODE = True if 'local' in os.environ.get("SITE_URL", "local") else False
+DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
 PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 
 # Default role combinations
-MODERATION_ROLES = Roles.moderator, Roles.admin, Roles.owner
-STAFF_ROLES = Roles.helpers, Roles.moderator, Roles.admin, Roles.owner
+MODERATION_ROLES = Guild.moderation_roles
+STAFF_ROLES = Guild.staff_roles
 
-# Roles combinations
-STAFF_CHANNELS = Guild.staff_channels
+# Channel combinations
+MODERATION_CHANNELS = Guild.moderation_channels
 
-# Default Channel combinations
-MODERATION_CHANNELS = Channels.admins, Channels.admin_spam, Channels.mod_alerts, Channels.mods, Channels.mod_spam
+# Category combinations
+MODERATION_CATEGORIES = Guild.moderation_categories
 
+# Git SHA for Sentry
+GIT_SHA = os.environ.get("GIT_SHA", "development")
 
 # Bot replies
 NEGATIVE_REPLIES = [

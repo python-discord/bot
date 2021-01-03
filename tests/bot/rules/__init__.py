@@ -12,7 +12,7 @@ class DisallowedCase(NamedTuple):
     n_violations: int
 
 
-class RuleTest(unittest.TestCase, metaclass=ABCMeta):
+class RuleTest(unittest.IsolatedAsyncioTestCase, metaclass=ABCMeta):
     """
     Abstract class for antispam rule test cases.
 
@@ -68,9 +68,9 @@ class RuleTest(unittest.TestCase, metaclass=ABCMeta):
     @abstractmethod
     def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
         """Give expected relevant messages for `case`."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def get_report(self, case: DisallowedCase) -> str:
         """Give expected error report for `case`."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover

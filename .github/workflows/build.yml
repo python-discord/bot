@@ -1,0 +1,59 @@
+name: Build
+
+on:
+  workflow_run:
+    workflows: ["Lint & Test"]
+    branches:
+      - master
+    types:
+      - completed
+
+jobs:
+  build:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    name: Build & Push
+    runs-on: ubuntu-latest
+
+    steps:
+      # Create a commit SHA-based tag for the container repositories
+      - name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # The current version (v2) of Docker's build-push action uses
+      # buildx, which comes with BuildKit features that help us speed
+      # up our builds using additional cache features. Buildx also
+      # has a lot of other features that are not as relevant to us.
+      #
+      # See https://github.com/docker/build-push-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN  }}
+
+      # Build and push the container to the GitHub Container
+      # Repository. The container will be tagged as "latest"
+      # and with the short SHA of the commit.
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          cache-from: type=registry,ref=ghcr.io/python-discord/bot:latest
+          cache-to: type=inline
+          tags: |
+            ghcr.io/python-discord/bot:latest
+            ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}
+          build-args: |
+            git_sha=${{ github.sha }}

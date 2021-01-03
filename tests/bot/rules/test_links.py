@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import links
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str, total_links: int) -> MockMessage:
@@ -21,7 +21,6 @@ class LinksTests(RuleTest):
             "interval": 10
         }
 
-    @async_test
     async def test_links_within_limit(self):
         """Messages with an allowed amount of links."""
         cases = (
@@ -34,7 +33,6 @@ class LinksTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_links_exceeding_limit(self):
         """Messages with a a higher than allowed amount of links."""
         cases = (

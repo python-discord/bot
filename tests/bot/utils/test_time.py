@@ -1,12 +1,11 @@
 import asyncio
 import unittest
 from datetime import datetime, timezone
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from dateutil.relativedelta import relativedelta
 
 from bot.utils import time
-from tests.helpers import AsyncMock
 
 
 class TimeTests(unittest.TestCase):
@@ -44,7 +43,7 @@ class TimeTests(unittest.TestCase):
         for max_units in test_cases:
             with self.subTest(max_units=max_units), self.assertRaises(ValueError) as error:
                 time.humanize_delta(relativedelta(days=2, hours=2), 'hours', max_units)
-                self.assertEqual(str(error), 'max_units must be positive')
+            self.assertEqual(str(error.exception), 'max_units must be positive')
 
     def test_parse_rfc1123(self):
         """Testing parse_rfc1123."""

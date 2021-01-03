@@ -2,14 +2,15 @@ from typing import Iterable
 
 from bot.rules import discord_emojis
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 discord_emoji = "<:abcd:1234>"  # Discord emojis follow the format <:name:id>
+unicode_emoji = "🧪"
 
 
-def make_msg(author: str, n_emojis: int) -> MockMessage:
+def make_msg(author: str, n_emojis: int, emoji: str = discord_emoji) -> MockMessage:
     """Build a MockMessage instance with content containing `n_emojis` arbitrary emojis."""
-    return MockMessage(author=author, content=discord_emoji * n_emojis)
+    return MockMessage(author=author, content=emoji * n_emojis)
 
 
 class DiscordEmojisRuleTests(RuleTest):
@@ -19,19 +20,23 @@ class DiscordEmojisRuleTests(RuleTest):
         self.apply = discord_emojis.apply
         self.config = {"max": 2, "interval": 10}
 
-    @async_test
     async def test_allows_messages_within_limit(self):
-        """Cases with a total amount of discord emojis within limit."""
+        """Cases with a total amount of discord and unicode emojis within limit."""
         cases = (
             [make_msg("bob", 2)],
             [make_msg("alice", 1), make_msg("bob", 2), make_msg("alice", 1)],
+            [make_msg("bob", 2, unicode_emoji)],
+            [
+                make_msg("alice", 1, unicode_emoji),
+                make_msg("bob", 2, unicode_emoji),
+                make_msg("alice", 1, unicode_emoji)
+            ],
         )
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_beyond_limit(self):
-        """Cases with more than the allowed amount of discord emojis."""
+        """Cases with more than the allowed amount of discord and unicode emojis."""
         cases = (
             DisallowedCase(
                 [make_msg("bob", 3)],
@@ -43,6 +48,20 @@ class DiscordEmojisRuleTests(RuleTest):
                 ("alice",),
                 4,
             ),
+            DisallowedCase(
+                [make_msg("bob", 3, unicode_emoji)],
+                ("bob",),
+                3,
+            ),
+            DisallowedCase(
+                [
+                    make_msg("alice", 2, unicode_emoji),
+                    make_msg("bob", 2, unicode_emoji),
+                    make_msg("alice", 2, unicode_emoji)
+                ],
+                ("alice",),
+                4
+            )
         )
 
         await self.run_disallowed(cases)

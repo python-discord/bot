@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import role_mentions
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str, n_mentions: int) -> MockMessage:
@@ -17,7 +17,6 @@ class RoleMentionsRuleTests(RuleTest):
         self.apply = role_mentions.apply
         self.config = {"max": 2, "interval": 10}
 
-    @async_test
     async def test_allows_messages_within_limit(self):
         """Cases with a total amount of role mentions within limit."""
         cases = (
@@ -27,7 +26,6 @@ class RoleMentionsRuleTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_beyond_limit(self):
         """Cases with more than the allowed amount of role mentions."""
         cases = (

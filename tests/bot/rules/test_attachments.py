@@ -2,7 +2,7 @@ from typing import Iterable
 
 from bot.rules import attachments
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage, async_test
+from tests.helpers import MockMessage
 
 
 def make_msg(author: str, total_attachments: int) -> MockMessage:
@@ -17,7 +17,6 @@ class AttachmentRuleTests(RuleTest):
         self.apply = attachments.apply
         self.config = {"max": 5, "interval": 10}
 
-    @async_test
     async def test_allows_messages_without_too_many_attachments(self):
         """Messages without too many attachments are allowed as-is."""
         cases = (
@@ -28,7 +27,6 @@ class AttachmentRuleTests(RuleTest):
 
         await self.run_allowed(cases)
 
-    @async_test
     async def test_disallows_messages_with_too_many_attachments(self):
         """Messages with too many attachments trigger the rule."""
         cases = (

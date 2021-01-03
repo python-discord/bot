@@ -12,8 +12,21 @@ services:
       POSTGRES_PASSWORD: pysite
       POSTGRES_USER: pysite
 
+  redis:
+    image: redis:5.0.9
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  snekbox:
+    image: ghcr.io/python-discord/snekbox:latest
+    init: true
+    ipc: none
+    ports:
+     - "127.0.0.1:8060:8060"
+    privileged: true
+
   web:
-    image: pythondiscord/site:latest
+    image: ghcr.io/python-discord/site:latest
     command: ["run", "--debug"]
     networks:
       default:
@@ -23,10 +36,12 @@ services:
           - staff.web
     ports:
       - "127.0.0.1:8000:8000"
+    tty: true
     depends_on:
       - postgres
     environment:
       DATABASE_URL: postgres://pysite:pysite@postgres:5432/pysite
+      METRICITY_DB_URL: postgres://pysite:pysite@postgres:5432/metricity
       SECRET_KEY: suitable-for-development-only
       STATIC_ROOT: /var/www/static
 
@@ -37,8 +52,11 @@ services:
     volumes:
       - ./logs:/bot/logs
       - .:/bot:ro
+    tty: true
     depends_on:
       - web
+      - redis
+      - snekbox
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       BOT_API_KEY: badbot13m0n8f570f942013fc818f234916ca531
