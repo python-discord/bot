@@ -285,10 +285,7 @@ class WatchChannel(metaclass=CogABCMeta):
         else:
             message_jump = f"in [#{msg.channel.name}]({msg.jump_url})"
 
-        # Add reason to the footer if it exists.
-        footer = f"Added {time_delta} by {actor}"
-        if reason:
-            footer += f" | Reason: {reason}"
+        footer = f"Added {time_delta} by {actor} | Reason: {reason}"
         embed = Embed(description=f"{msg.author.mention} {message_jump}")
         embed.set_footer(text=textwrap.shorten(footer, width=128, placeholder="..."))
 
