@@ -3,6 +3,7 @@ import logging
 import random
 import typing as t
 from datetime import datetime, timezone
+from operator import attrgetter
 
 import discord
 import discord.abc
@@ -11,11 +12,12 @@ from discord.ext import commands
 from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name
-from bot.utils import channel as channel_utils
+from bot.utils import channel as channel_utils, lock
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
+NAMESPACE = "help"
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
@@ -73,7 +75,6 @@ class HelpChannels(commands.Cog):
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
-        self.on_message_lock = asyncio.Lock()
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
     def cog_unload(self) -> None:
@@ -86,6 +87,31 @@ class HelpChannels(commands.Cog):
             task.cancel()
 
         self.scheduler.cancel_all()
+
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
+    async def claim_channel(self, message: discord.Message) -> None:
+        """
+        Claim the channel in which the question `message` was sent.
+
+        Move the channel to the In Use category and pin the `message`. Add a cooldown to the
+        claimant to prevent them from asking another question.
+        """
+        log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
+        await self.move_to_in_use(message.channel)
+        await _cooldown.revoke_send_permissions(message.author, self.scheduler)
+
+        await _message.pin(message)
+
+        # Add user with channel for dormant check.
+        await _caches.claimants.set(message.channel.id, message.author.id)
+
+        self.bot.stats.incr("help.claimed")
+
+        # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
+        timestamp = datetime.now(timezone.utc).timestamp()
+        await _caches.claim_times.set(message.channel.id, timestamp)
+
+        await _caches.unanswered.set(message.channel.id, True)
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
@@ -436,51 +462,13 @@ class HelpChannels(commands.Cog):
         if message.author.bot:
             return  # Ignore messages sent by bots.
 
-        channel = message.channel
-
-        await _message.check_for_answer(message)
-
-        is_available = channel_utils.is_in_category(channel, constants.Categories.help_available)
-        if not is_available or _channel.is_excluded_channel(channel):
-            return  # Ignore messages outside the Available category or in excluded channels.
-
-        log.trace("Waiting for the cog to be ready before processing messages.")
-        await self.init_task
-
-        log.trace("Acquiring lock to prevent a channel from being processed twice...")
-        async with self.on_message_lock:
-            log.trace(f"on_message lock acquired for {message.id}.")
-
-            if not channel_utils.is_in_category(channel, constants.Categories.help_available):
-                log.debug(
-                    f"Message {message.id} will not make #{channel} ({channel.id}) in-use "
-                    f"because another message in the channel already triggered that."
-                )
-                return
-
-            log.info(f"Channel #{channel} was claimed by `{message.author.id}`.")
-            await self.move_to_in_use(channel)
-            await _cooldown.revoke_send_permissions(message.author, self.scheduler)
-
-            await _message.pin(message)
-
-            # Add user with channel for dormant check.
-            await _caches.claimants.set(channel.id, message.author.id)
-
-            self.bot.stats.incr("help.claimed")
-
-            # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
-            timestamp = datetime.now(timezone.utc).timestamp()
-            await _caches.claim_times.set(channel.id, timestamp)
-
-            await _caches.unanswered.set(channel.id, True)
-
-            log.trace(f"Releasing on_message lock for {message.id}.")
-
-        # Move a dormant channel to the Available category to fill in the gap.
-        # This is done last and outside the lock because it may wait indefinitely for a channel to
-        # be put in the queue.
-        await self.move_to_available()
+        if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
+            if not _channel.is_excluded_channel(message.channel):
+                await self.init_task
+                await self.claim_channel(message)
+                await self.move_to_available()  # Not in a lock because it may wait indefinitely.
+        else:
+            await _message.check_for_answer(message)
 
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message) -> None:
