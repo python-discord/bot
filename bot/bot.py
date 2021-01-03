@@ -3,25 +3,26 @@ import logging
 import socket
 import warnings
 from collections import defaultdict
-from typing import Dict, Optional
+from contextlib import suppress
+from typing import Dict, List, Optional
 
 import aiohttp
-import aioredis
 import discord
-import fakeredis.aioredis
+from async_rediscache import RedisSession
 from discord.ext import commands
 from sentry_sdk import push_scope
 
-from bot import DEBUG_MODE, api, constants
+from bot import api, constants
 from bot.async_stats import AsyncStatsClient
 
 log = logging.getLogger('bot')
+LOCALHOST = "127.0.0.1"
 
 
 class Bot(commands.Bot):
     """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, redis_session: RedisSession, **kwargs):
         if "connector" in kwargs:
             warnings.warn(
                 "If login() is called (or the bot is started), the connector will be overwritten "
@@ -31,25 +32,47 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
 
         self.http_session: Optional[aiohttp.ClientSession] = None
-        self.redis_session: Optional[aioredis.Redis] = None
-        self.redis_ready = asyncio.Event()
-        self.redis_closed = False
-        self.api_client = api.APIClient(loop=self.loop)
+        self.redis_session = redis_session
+        self.api_client: Optional[api.APIClient] = None
         self.filter_list_cache = defaultdict(dict)
 
         self._connector = None
         self._resolver = None
+        self._statsd_timerhandle: asyncio.TimerHandle = None
         self._guild_available = asyncio.Event()
 
         statsd_url = constants.Stats.statsd_host
 
-        if DEBUG_MODE:
+        if constants.DEBUG_MODE:
             # Since statsd is UDP, there are no errors for sending to a down port.
             # For this reason, setting the statsd host to 127.0.0.1 for development
             # will effectively disable stats.
-            statsd_url = "127.0.0.1"
+            statsd_url = LOCALHOST
 
-        self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        self.stats = AsyncStatsClient(self.loop, LOCALHOST)
+        self._connect_statsd(statsd_url)
+
+    def _connect_statsd(self, statsd_url: str, retry_after: int = 2, attempt: int = 1) -> None:
+        """Callback used to retry a connection to statsd if it should fail."""
+        if attempt >= 8:
+            log.error("Reached 8 attempts trying to reconnect AsyncStatsClient. Aborting")
+            return
+
+        try:
+            self.stats = AsyncStatsClient(self.loop, statsd_url, 8125, prefix="bot")
+        except socket.gaierror:
+            log.warning(f"Statsd client failed to connect (Attempt(s): {attempt})")
+            # Use a fallback strategy for retrying, up to 8 times.
+            self._statsd_timerhandle = self.loop.call_later(
+                retry_after,
+                self._connect_statsd,
+                statsd_url,
+                retry_after * 2,
+                attempt + 1
+            )
+
+        # All tasks that need to block closing until finished
+        self.closing_tasks: List[asyncio.Task] = []
 
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
@@ -58,72 +81,42 @@ class Bot(commands.Bot):
         for item in full_cache:
             self.insert_item_into_filter_list_cache(item)
 
-    async def _create_redis_session(self) -> None:
-        """
-        Create the Redis connection pool, and then open the redis event gate.
+    @classmethod
+    def create(cls) -> "Bot":
+        """Create and return an instance of a Bot."""
+        loop = asyncio.get_event_loop()
+        allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
 
-        If constants.Redis.use_fakeredis is True, we'll set up a fake redis pool instead
-        of attempting to communicate with a real Redis server. This is useful because it
-        means contributors don't necessarily need to get Redis running locally just
-        to run the bot.
+        intents = discord.Intents().all()
+        intents.presences = False
+        intents.dm_typing = False
+        intents.dm_reactions = False
+        intents.invites = False
+        intents.webhooks = False
+        intents.integrations = False
 
-        The fakeredis cache won't have persistence across restarts, but that
-        usually won't matter for local bot testing.
-        """
-        if constants.Redis.use_fakeredis:
-            log.info("Using fakeredis instead of communicating with a real Redis server.")
-            self.redis_session = await fakeredis.aioredis.create_redis_pool()
-        else:
-            self.redis_session = await aioredis.create_redis_pool(
-                address=(constants.Redis.host, constants.Redis.port),
-                password=constants.Redis.password,
-            )
-
-        self.redis_closed = False
-        self.redis_ready.set()
-
-    def _recreate(self) -> None:
-        """Re-create the connector, aiohttp session, the APIClient and the Redis session."""
-        # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
-        # Doesn't seem to have any state with regards to being closed, so no need to worry?
-        self._resolver = aiohttp.AsyncResolver()
-
-        # Its __del__ does send a warning but it doesn't always show up for some reason.
-        if self._connector and not self._connector._closed:
-            log.warning(
-                "The previous connector was not closed; it will remain open and be overwritten"
-            )
-
-        if self.redis_session and not self.redis_session.closed:
-            log.warning(
-                "The previous redis pool was not closed; it will remain open and be overwritten"
-            )
-
-        # Create the redis session
-        self.loop.create_task(self._create_redis_session())
-
-        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
-        # and in production.
-        self._connector = aiohttp.TCPConnector(
-            resolver=self._resolver,
-            family=socket.AF_INET,
+        return cls(
+            redis_session=_create_redis_session(loop),
+            loop=loop,
+            command_prefix=commands.when_mentioned_or(constants.Bot.prefix),
+            activity=discord.Game(name=f"Commands: {constants.Bot.prefix}help"),
+            case_insensitive=True,
+            max_messages=10_000,
+            allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
+            intents=intents,
         )
 
-        # Client.login() will call HTTPClient.static_login() which will create a session using
-        # this connector attribute.
-        self.http.connector = self._connector
+    def load_extensions(self) -> None:
+        """Load all enabled extensions."""
+        # Must be done here to avoid a circular import.
+        from bot.utils.extensions import EXTENSIONS
 
-        # Its __del__ does send a warning but it doesn't always show up for some reason.
-        if self.http_session and not self.http_session.closed:
-            log.warning(
-                "The previous session was not closed; it will remain open and be overwritten"
-            )
+        extensions = set(EXTENSIONS)  # Create a mutable copy.
+        if not constants.HelpChannels.enable:
+            extensions.remove("bot.exts.help_channels")
 
-        self.http_session = aiohttp.ClientSession(connector=self._connector)
-        self.api_client.recreate(force=True, connector=self._connector)
-
-        # Build the FilterList cache
-        self.loop.create_task(self.cache_filter_list_data())
+        for extension in extensions:
+            self.load_extension(extension)
 
     def add_cog(self, cog: commands.Cog) -> None:
         """Adds a "cog" to the bot and logs the operation."""
@@ -151,21 +144,29 @@ class Bot(commands.Bot):
         return command
 
     def clear(self) -> None:
-        """
-        Clears the internal state of the bot and recreates the connector and sessions.
-
-        Will cause a DeprecationWarning if called outside a coroutine.
-        """
-        # Because discord.py recreates the HTTPClient session, may as well follow suit and recreate
-        # our own stuff here too.
-        self._recreate()
-        super().clear()
+        """Not implemented! Re-instantiate the bot instead of attempting to re-use a closed one."""
+        raise NotImplementedError("Re-using a Bot object after closing it is not supported.")
 
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
+        # Done before super().close() to allow tasks finish before the HTTP session closes.
+        for ext in list(self.extensions):
+            with suppress(Exception):
+                self.unload_extension(ext)
+
+        for cog in list(self.cogs):
+            with suppress(Exception):
+                self.remove_cog(cog)
+
+        # Wait until all tasks that have to be completed before bot is closing is done
+        log.trace("Waiting for tasks before closing.")
+        await asyncio.gather(*self.closing_tasks)
+
+        # Now actually do full close of bot
         await super().close()
 
-        await self.api_client.close()
+        if self.api_client:
+            await self.api_client.close()
 
         if self.http_session:
             await self.http_session.close()
@@ -180,10 +181,10 @@ class Bot(commands.Bot):
             self.stats._transport.close()
 
         if self.redis_session:
-            self.redis_closed = True
-            self.redis_session.close()
-            self.redis_ready.clear()
-            await self.redis_session.wait_closed()
+            await self.redis_session.close()
+
+        if self._statsd_timerhandle:
+            self._statsd_timerhandle.cancel()
 
     def insert_item_into_filter_list_cache(self, item: Dict[str, str]) -> None:
         """Add an item to the bots filter_list_cache."""
@@ -200,7 +201,31 @@ class Bot(commands.Bot):
 
     async def login(self, *args, **kwargs) -> None:
         """Re-create the connector and set up sessions before logging into Discord."""
-        self._recreate()
+        # Use asyncio for DNS resolution instead of threads so threads aren't spammed.
+        self._resolver = aiohttp.AsyncResolver()
+
+        # Use AF_INET as its socket family to prevent HTTPS related problems both locally
+        # and in production.
+        self._connector = aiohttp.TCPConnector(
+            resolver=self._resolver,
+            family=socket.AF_INET,
+        )
+
+        # Client.login() will call HTTPClient.static_login() which will create a session using
+        # this connector attribute.
+        self.http.connector = self._connector
+
+        self.http_session = aiohttp.ClientSession(connector=self._connector)
+        self.api_client = api.APIClient(connector=self._connector)
+
+        if self.redis_session.closed:
+            # If the RedisSession was somehow closed, we try to reconnect it
+            # here. Normally, this shouldn't happen.
+            await self.redis_session.connect()
+
+        # Build the FilterList cache
+        await self.cache_filter_list_data()
+
         await self.stats.create_socket()
         await super().login(*args, **kwargs)
 
@@ -276,3 +301,22 @@ class Bot(commands.Bot):
 
         for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
+
+
+def _create_redis_session(loop: asyncio.AbstractEventLoop) -> RedisSession:
+    """
+    Create and connect to a redis session.
+
+    Ensure the connection is established before returning to prevent race conditions.
+    `loop` is the event loop on which to connect. The Bot should use this same event loop.
+    """
+    redis_session = RedisSession(
+        address=(constants.Redis.host, constants.Redis.port),
+        password=constants.Redis.password,
+        minsize=1,
+        maxsize=20,
+        use_fakeredis=constants.Redis.use_fakeredis,
+        global_namespace="bot",
+    )
+    loop.run_until_complete(redis_session.connect())
+    return redis_session

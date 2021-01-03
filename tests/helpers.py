@@ -5,7 +5,7 @@ import itertools
 import logging
 import unittest.mock
 from asyncio import AbstractEventLoop
-from typing import Callable, Iterable, Optional
+from typing import Iterable, Optional
 
 import discord
 from aiohttp import ClientSession
@@ -14,6 +14,7 @@ from discord.ext.commands import Context
 from bot.api import APIClient
 from bot.async_stats import AsyncStatsClient
 from bot.bot import Bot
+from tests._autospec import autospec  # noqa: F401 other modules import it via this module
 
 
 for logger in logging.Logger.manager.loggerDict.values():
@@ -24,24 +25,6 @@ for logger in logging.Logger.manager.loggerDict.values():
         continue
 
     logger.setLevel(logging.CRITICAL)
-
-
-def autospec(target, *attributes: str, **kwargs) -> Callable:
-    """Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True."""
-    # Caller's kwargs should take priority and overwrite the defaults.
-    kwargs = {'spec_set': True, 'autospec': True, **kwargs}
-
-    # Import the target if it's a string.
-    # This is to support both object and string targets like patch.multiple.
-    if type(target) is str:
-        target = unittest.mock._importer(target)
-
-    def decorator(func):
-        for attribute in attributes:
-            patcher = unittest.mock.patch.object(target, attribute, **kwargs)
-            func = patcher(func)
-        return func
-    return decorator
 
 
 class HashableMixin(discord.mixins.EqualityComparable):
@@ -247,7 +230,7 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
     spec_set = member_instance
 
     def __init__(self, roles: Optional[Iterable[MockRole]] = None, **kwargs) -> None:
-        default_kwargs = {'name': 'member', 'id': next(self.discord_id), 'bot': False}
+        default_kwargs = {'name': 'member', 'id': next(self.discord_id), 'bot': False, "pending": False}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
         self.roles = [MockRole(name="@everyone", position=1, id=0)]
@@ -308,7 +291,11 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.ext.commands.Bot` instances.
     For more information, see the `MockGuild` docstring.
     """
-    spec_set = Bot(command_prefix=unittest.mock.MagicMock(), loop=_get_mock_loop())
+    spec_set = Bot(
+        command_prefix=unittest.mock.MagicMock(),
+        loop=_get_mock_loop(),
+        redis_session=unittest.mock.MagicMock(),
+    )
     additional_spec_asyncs = ("wait_for", "redis_ready")
 
     def __init__(self, **kwargs) -> None:
