@@ -246,6 +246,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         log.debug(active)
         log.debug(type(nomination_object["inserted_at"]))
 
+        reason = nomination_object["reason"] or "*None*"
+
         start_date = time.format_infraction(nomination_object["inserted_at"])
         if active:
             lines = textwrap.dedent(
@@ -254,7 +256,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: **Active**
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {nomination_object["reason"]}
+                Reason: {reason}
                 Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """
@@ -267,7 +269,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: Inactive
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {nomination_object["reason"]}
+                Reason: {reason}
 
                 End date: {end_date}
                 Unwatch reason: {nomination_object["end_reason"]}
