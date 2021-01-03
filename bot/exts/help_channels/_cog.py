@@ -181,7 +181,7 @@ class HelpChannels(commands.Cog):
             return
 
         if await self.dormant_check(ctx):
-            await self.move_to_dormant(ctx.channel, "command")
+            await self.unclaim_channel(ctx.channel, "command")
             self.scheduler.cancel(ctx.channel.id)
 
     async def get_available_candidate(self) -> discord.TextChannel:
@@ -228,7 +228,7 @@ class HelpChannels(commands.Cog):
         elif missing < 0:
             log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
             for channel in channels[:abs(missing)]:
-                await self.move_to_dormant(channel, "auto")
+                await self.unclaim_channel(channel, "auto")
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
@@ -301,7 +301,7 @@ class HelpChannels(commands.Cog):
                 f"and will be made dormant."
             )
 
-            await self.move_to_dormant(channel, "auto")
+            await self.unclaim_channel(channel, "auto")
         else:
             # Cancel the existing task, if any.
             if has_task:
@@ -333,42 +333,36 @@ class HelpChannels(commands.Cog):
 
         _stats.report_counts()
 
-    async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
-        """
-        Make the `channel` dormant.
-
-        A caller argument is provided for metrics.
-        """
+    async def move_to_dormant(self, channel: discord.TextChannel) -> None:
+        """Make the `channel` dormant."""
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
-
         await _channel.move_to_bottom(
             channel=channel,
             category_id=constants.Categories.help_dormant,
         )
 
-        await self.unclaim_channel(channel)
-        await _stats.report_complete_session(channel.id, caller)
-
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
         embed = discord.Embed(description=_message.DORMANT_MSG)
         await channel.send(embed=embed)
 
-        await _message.unpin(channel)
-
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
+
         _stats.report_counts()
 
-    async def unclaim_channel(self, channel: discord.TextChannel) -> None:
+    async def unclaim_channel(self, channel: discord.TextChannel, caller: str) -> None:
         """
-        Mark the channel as unclaimed and remove the cooldown role from the claimant if needed.
+        Unclaim an in-use help `channel` to make it dormant.
 
-        The role is only removed if they have no claimed channels left once the current one is unclaimed.
-        This method also handles canceling the automatic removal of the cooldown role.
+        Unpin the claimant's question message and move the channel to the Dormant category.
+        Remove the cooldown role from the channel claimant if they have no other channels claimed.
+        Cancel the scheduled cooldown role removal task.
+
+        `caller` is used to track stats on how `channel` was unclaimed (either 'auto' or 'command').
         """
         claimant_id = await _caches.claimants.pop(channel.id)
 
-        # Ignore missing task when cooldown has passed but the channel still isn't dormant.
+        # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
         if claimant_id in self.scheduler:
             self.scheduler.cancel(claimant_id)
 
@@ -380,6 +374,11 @@ class HelpChannels(commands.Cog):
         # Remove the cooldown role if the claimant has no other channels left
         if not any(claimant.id == user_id for _, user_id in await _caches.claimants.items()):
             await _cooldown.remove_cooldown_role(claimant)
+
+        await _message.unpin(channel)
+        await _stats.report_complete_session(channel.id, caller)
+
+        await self.move_to_dormant(channel)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
