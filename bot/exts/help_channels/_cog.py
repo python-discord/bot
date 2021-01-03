@@ -11,7 +11,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name
+from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock
 from bot.utils.scheduling import Scheduler
 
@@ -275,19 +275,9 @@ class HelpChannels(commands.Cog):
         self.close_command.enabled = True
 
         await self.init_available()
-        self.report_stats()
+        _stats.report_counts()
 
         log.info("Cog is ready!")
-
-    def report_stats(self) -> None:
-        """Report the channel count stats."""
-        total_in_use = sum(1 for _ in _channel.get_category_channels(self.in_use_category))
-        total_available = sum(1 for _ in _channel.get_category_channels(self.available_category))
-        total_dormant = sum(1 for _ in _channel.get_category_channels(self.dormant_category))
-
-        self.bot.stats.gauge("help.total.in_use", total_in_use)
-        self.bot.stats.gauge("help.total.available", total_available)
-        self.bot.stats.gauge("help.total.dormant", total_dormant)
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
         """
@@ -341,7 +331,7 @@ class HelpChannels(commands.Cog):
             category_id=constants.Categories.help_available,
         )
 
-        self.report_stats()
+        _stats.report_counts()
 
     async def move_to_dormant(self, channel: discord.TextChannel, caller: str) -> None:
         """
@@ -357,18 +347,7 @@ class HelpChannels(commands.Cog):
         )
 
         await self.unclaim_channel(channel)
-
-        self.bot.stats.incr(f"help.dormant_calls.{caller}")
-
-        in_use_time = await _channel.get_in_use_time(channel.id)
-        if in_use_time:
-            self.bot.stats.timing("help.in_use_time", in_use_time)
-
-        unanswered = await _caches.unanswered.get(channel.id)
-        if unanswered:
-            self.bot.stats.incr("help.sessions.unanswered")
-        elif unanswered is not None:
-            self.bot.stats.incr("help.sessions.answered")
+        await _stats.report_complete_session(channel.id, caller)
 
         log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
@@ -379,7 +358,7 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
-        self.report_stats()
+        _stats.report_counts()
 
     async def unclaim_channel(self, channel: discord.TextChannel) -> None:
         """
@@ -416,7 +395,7 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
         self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
-        self.report_stats()
+        _stats.report_counts()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
