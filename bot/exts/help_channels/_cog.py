@@ -325,45 +325,6 @@ class HelpChannels(commands.Cog):
 
             self.scheduler.schedule_later(delay, channel.id, self.move_idle_channel(channel))
 
-    async def move_to_bottom_position(self, channel: discord.TextChannel, category_id: int, **options) -> None:
-        """
-        Move the `channel` to the bottom position of `category` and edit channel attributes.
-
-        To ensure "stable sorting", we use the `bulk_channel_update` endpoint and provide the current
-        positions of the other channels in the category as-is. This should make sure that the channel
-        really ends up at the bottom of the category.
-
-        If `options` are provided, the channel will be edited after the move is completed. This is the
-        same order of operations that `discord.TextChannel.edit` uses. For information on available
-        options, see the documentation on `discord.TextChannel.edit`. While possible, position-related
-        options should be avoided, as it may interfere with the category move we perform.
-        """
-        # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
-        category = await channel_utils.try_get_channel(category_id)
-
-        payload = [{"id": c.id, "position": c.position} for c in category.channels]
-
-        # Calculate the bottom position based on the current highest position in the category. If the
-        # category is currently empty, we simply use the current position of the channel to avoid making
-        # unnecessary changes to positions in the guild.
-        bottom_position = payload[-1]["position"] + 1 if payload else channel.position
-
-        payload.append(
-            {
-                "id": channel.id,
-                "position": bottom_position,
-                "parent_id": category.id,
-                "lock_permissions": True,
-            }
-        )
-
-        # We use d.py's method to ensure our request is processed by d.py's rate limit manager
-        await self.bot.http.bulk_channel_update(category.guild.id, payload)
-
-        # Now that the channel is moved, we can edit the other attributes
-        if options:
-            await channel.edit(**options)
-
     async def move_to_available(self) -> None:
         """Make a channel available."""
         log.trace("Making a channel available.")
@@ -375,7 +336,7 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
 
-        await self.move_to_bottom_position(
+        await _channel.move_to_bottom(
             channel=channel,
             category_id=constants.Categories.help_available,
         )
@@ -390,7 +351,7 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
-        await self.move_to_bottom_position(
+        await _channel.move_to_bottom(
             channel=channel,
             category_id=constants.Categories.help_dormant,
         )
@@ -446,7 +407,7 @@ class HelpChannels(commands.Cog):
         """Make a channel in-use and schedule it to be made dormant."""
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
-        await self.move_to_bottom_position(
+        await _channel.move_to_bottom(
             channel=channel,
             category_id=constants.Categories.help_in_use,
         )
