@@ -89,6 +89,7 @@ class HelpChannels(commands.Cog):
         self.scheduler.cancel_all()
 
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
     async def claim_channel(self, message: discord.Message) -> None:
         """
         Claim the channel in which the question `message` was sent.
