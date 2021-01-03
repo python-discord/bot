@@ -349,7 +349,6 @@ class HelpChannels(commands.Cog):
         await self.unclaim_channel(channel)
         await _stats.report_complete_session(channel.id, caller)
 
-        log.trace(f"Position of #{channel} ({channel.id}) is actually {channel.position}.")
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
         embed = discord.Embed(description=_message.DORMANT_MSG)
         await channel.send(embed=embed)
