@@ -64,7 +64,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: Optional[str] = '') -> None:
+    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
