@@ -90,6 +90,7 @@ class HelpChannels(commands.Cog):
 
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
+    @lock.lock_arg(f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True)
     async def claim_channel(self, message: discord.Message) -> None:
         """
         Claim the channel in which the question `message` was sent.
@@ -360,7 +361,20 @@ class HelpChannels(commands.Cog):
 
         `caller` is used to track stats on how `channel` was unclaimed (either 'auto' or 'command').
         """
-        claimant_id = await _caches.claimants.pop(channel.id)
+        claimant_id = await _caches.claimants.get(channel.id)
+        coroutine = self._unclaim_channel(channel, claimant_id, caller)
+
+        # It could be possible that there is no claimant cached. In such case, it'd be useless and
+        # possibly incorrect to lock on None. Therefore, the lock is applied conditionally.
+        if claimant_id is not None:
+            decorator = lock.lock_arg(f"{NAMESPACE}.unclaim", "claimant_id", wait=True)
+            coroutine = decorator(coroutine)
+
+        return await coroutine
+
+    async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, caller: str) -> None:
+        """Actual implementation of `unclaim_channel`. See that for full documentation."""
+        await _caches.claimants.delete(channel.id)
 
         # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
         if claimant_id in self.scheduler:
