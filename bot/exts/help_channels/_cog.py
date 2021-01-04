@@ -183,7 +183,7 @@ class HelpChannels(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await self.unclaim_channel(ctx.channel, "command")
+            await self.unclaim_channel(ctx.channel, is_auto=False)
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
@@ -229,7 +229,7 @@ class HelpChannels(commands.Cog):
         elif missing < 0:
             log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
             for channel in channels[:abs(missing)]:
-                await self.unclaim_channel(channel, "auto")
+                await self.unclaim_channel(channel)
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
@@ -302,7 +302,7 @@ class HelpChannels(commands.Cog):
                 f"and will be made dormant."
             )
 
-            await self.unclaim_channel(channel, "auto")
+            await self.unclaim_channel(channel)
         else:
             # Cancel the existing task, if any.
             if has_task:
@@ -351,7 +351,7 @@ class HelpChannels(commands.Cog):
 
         _stats.report_counts()
 
-    async def unclaim_channel(self, channel: discord.TextChannel, caller: str) -> None:
+    async def unclaim_channel(self, channel: discord.TextChannel, *, is_auto: bool = True) -> None:
         """
         Unclaim an in-use help `channel` to make it dormant.
 
@@ -359,10 +359,10 @@ class HelpChannels(commands.Cog):
         Remove the cooldown role from the channel claimant if they have no other channels claimed.
         Cancel the scheduled cooldown role removal task.
 
-        `caller` is used to track stats on how `channel` was unclaimed (either 'auto' or 'command').
+        Set `is_auto` to True if the channel was automatically closed or False if manually closed.
         """
         claimant_id = await _caches.claimants.get(channel.id)
-        coroutine = self._unclaim_channel(channel, claimant_id, caller)
+        coroutine = self._unclaim_channel(channel, claimant_id, is_auto)
 
         # It could be possible that there is no claimant cached. In such case, it'd be useless and
         # possibly incorrect to lock on None. Therefore, the lock is applied conditionally.
@@ -372,7 +372,7 @@ class HelpChannels(commands.Cog):
 
         return await coroutine
 
-    async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, caller: str) -> None:
+    async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, is_auto: bool) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
 
@@ -390,12 +390,12 @@ class HelpChannels(commands.Cog):
             await _cooldown.remove_cooldown_role(claimant)
 
         await _message.unpin(channel)
-        await _stats.report_complete_session(channel.id, caller)
+        await _stats.report_complete_session(channel.id, is_auto)
         await self.move_to_dormant(channel)
 
         # Cancel the task that makes the channel dormant only if called by the close command.
         # In other cases, the task is either already done or not-existent.
-        if caller == "command":
+        if not is_auto:
             self.scheduler.cancel(channel.id)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
