@@ -351,6 +351,7 @@ class HelpChannels(commands.Cog):
 
         _stats.report_counts()
 
+    @lock.lock_arg(f"{NAMESPACE}.unclaim", "channel")
     async def unclaim_channel(self, channel: discord.TextChannel, *, is_auto: bool = True) -> None:
         """
         Unclaim an in-use help `channel` to make it dormant.
