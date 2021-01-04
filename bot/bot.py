@@ -3,7 +3,8 @@ import logging
 import socket
 import warnings
 from collections import defaultdict
-from typing import Dict, Optional
+from contextlib import suppress
+from typing import Dict, List, Optional
 
 import aiohttp
 import discord
@@ -69,6 +70,9 @@ class Bot(commands.Bot):
                 retry_after * 2,
                 attempt + 1
             )
+
+        # All tasks that need to block closing until finished
+        self.closing_tasks: List[asyncio.Task] = []
 
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
@@ -145,6 +149,20 @@ class Bot(commands.Bot):
 
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
+        # Done before super().close() to allow tasks finish before the HTTP session closes.
+        for ext in list(self.extensions):
+            with suppress(Exception):
+                self.unload_extension(ext)
+
+        for cog in list(self.cogs):
+            with suppress(Exception):
+                self.remove_cog(cog)
+
+        # Wait until all tasks that have to be completed before bot is closing is done
+        log.trace("Waiting for tasks before closing.")
+        await asyncio.gather(*self.closing_tasks)
+
+        # Now actually do full close of bot
         await super().close()
 
         if self.api_client:
