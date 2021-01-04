@@ -154,8 +154,12 @@ class HelpChannels(commands.Cog):
         log.debug(f"Creating a new dormant channel named {name}.")
         return await self.dormant_category.create_text_channel(name, topic=HELP_CHANNEL_TOPIC)
 
-    async def dormant_check(self, ctx: commands.Context) -> bool:
-        """Return True if the user is the help channel claimant or passes the role check."""
+    async def close_check(self, ctx: commands.Context) -> bool:
+        """Return True if the channel is in use and the user is the claimant or has a whitelisted role."""
+        if ctx.channel.category != self.in_use_category:
+            log.debug(f"{ctx.author} invoked command 'close' outside an in-use help channel")
+            return False
+
         if await _caches.claimants.get(ctx.channel.id) == ctx.author.id:
             log.trace(f"{ctx.author} is the help channel claimant, passing the check for dormant.")
             self.bot.stats.incr("help.dormant_invoke.claimant")
@@ -174,16 +178,12 @@ class HelpChannels(commands.Cog):
         """
         Make the current in-use help channel dormant.
 
-        Make the channel dormant if the user passes the `dormant_check`,
+        Make the channel dormant if the user passes the `close_check`,
         delete the message that invoked this.
         """
-        log.trace("close command invoked; checking if the channel is in-use.")
-
-        if ctx.channel.category != self.in_use_category:
-            log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
-            return
-
-        if await self.dormant_check(ctx):
+        # Don't use a discord.py check because the check needs to fail silently.
+        if await self.close_check(ctx):
+            log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
             await self.unclaim_channel(ctx.channel, "command")
             self.scheduler.cancel(ctx.channel.id)
 
