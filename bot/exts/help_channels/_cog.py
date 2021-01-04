@@ -12,8 +12,7 @@ from discord.ext import commands
 from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name, _stats
-from bot.utils import channel as channel_utils, lock
-from bot.utils.scheduling import Scheduler
+from bot.utils import channel as channel_utils, lock, scheduling
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +59,7 @@ class HelpChannels(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
         # Categories
         self.available_category: discord.CategoryChannel = None
@@ -96,7 +95,7 @@ class HelpChannels(commands.Cog):
         Claim the channel in which the question `message` was sent.
 
         Move the channel to the In Use category and pin the `message`. Add a cooldown to the
-        claimant to prevent them from asking another question.
+        claimant to prevent them from asking another question. Lastly, make a new channel available.
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
         await self.move_to_in_use(message.channel)
@@ -114,6 +113,9 @@ class HelpChannels(commands.Cog):
         await _caches.claim_times.set(message.channel.id, timestamp)
 
         await _caches.unanswered.set(message.channel.id, True)
+
+        # Not awaited because it may indefinitely hold the lock while waiting for a channel.
+        scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
@@ -420,7 +422,6 @@ class HelpChannels(commands.Cog):
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
-                await self.move_to_available()  # Not in a lock because it may wait indefinitely.
         else:
             await _message.check_for_answer(message)
 
