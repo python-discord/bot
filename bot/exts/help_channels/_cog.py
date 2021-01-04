@@ -184,7 +184,6 @@ class HelpChannels(commands.Cog):
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
             await self.unclaim_channel(ctx.channel, "command")
-            self.scheduler.cancel(ctx.channel.id)
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
@@ -392,8 +391,12 @@ class HelpChannels(commands.Cog):
 
         await _message.unpin(channel)
         await _stats.report_complete_session(channel.id, caller)
-
         await self.move_to_dormant(channel)
+
+        # Cancel the task that makes the channel dormant only if called by the close command.
+        # In other cases, the task is either already done or not-existent.
+        if caller == "command":
+            self.scheduler.cancel(channel.id)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
