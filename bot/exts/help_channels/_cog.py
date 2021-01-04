@@ -178,8 +178,7 @@ class HelpChannels(commands.Cog):
         """
         Make the current in-use help channel dormant.
 
-        Make the channel dormant if the user passes the `close_check`,
-        delete the message that invoked this.
+        May only be invoked by the channel's claimant or by staff.
         """
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
