@@ -419,10 +419,14 @@ class Information(Cog):
         return out.rstrip()
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
-    @group(invoke_without_command=True, enabled=False)
+    @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
+        if ctx.author not in message.channel.members:
+            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
+            return
+
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
@@ -454,7 +458,7 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page)
 
-    @raw.command(enabled=False)
+    @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)

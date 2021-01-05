@@ -64,12 +64,12 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
-        A `reason` for adding the user to the talent pool is required and will be displayed
-        in the header when relaying messages of this user to the channel.
+        A `reason` for adding the user to the talent pool is optional.
+        If given, it will be displayed in the header when relaying messages of this user to the channel.
         """
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
@@ -202,7 +202,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             f"{self.api_endpoint}/{nomination_id}",
             json={field: reason}
         )
-
+        await self.fetch_user_cache()  # Update cache.
         await ctx.send(f":white_check_mark: Updated the {field} of the nomination!")
 
     @Cog.listener()
@@ -243,8 +243,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         actor = guild.get_member(actor_id)
 
         active = nomination_object["active"]
-        log.debug(active)
-        log.debug(type(nomination_object["inserted_at"]))
+
+        reason = nomination_object["reason"] or "*None*"
 
         start_date = time.format_infraction(nomination_object["inserted_at"])
         if active:
@@ -254,7 +254,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: **Active**
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {nomination_object["reason"]}
+                Reason: {reason}
                 Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """
@@ -267,7 +267,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 Status: Inactive
                 Date: {start_date}
                 Actor: {actor.mention if actor else actor_id}
-                Reason: {nomination_object["reason"]}
+                Reason: {reason}
 
                 End date: {end_date}
                 Unwatch reason: {nomination_object["end_reason"]}
