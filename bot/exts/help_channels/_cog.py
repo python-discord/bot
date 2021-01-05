@@ -363,15 +363,15 @@ class HelpChannels(commands.Cog):
         Set `is_auto` to True if the channel was automatically closed or False if manually closed.
         """
         claimant_id = await _caches.claimants.get(channel.id)
-        coroutine = self._unclaim_channel(channel, claimant_id, is_auto)
+        _unclaim_channel = self._unclaim_channel
 
         # It could be possible that there is no claimant cached. In such case, it'd be useless and
         # possibly incorrect to lock on None. Therefore, the lock is applied conditionally.
         if claimant_id is not None:
             decorator = lock.lock_arg(f"{NAMESPACE}.unclaim", "claimant_id", wait=True)
-            coroutine = decorator(coroutine)
+            _unclaim_channel = decorator(_unclaim_channel)
 
-        return await coroutine
+        return await _unclaim_channel(channel, claimant_id, is_auto)
 
     async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, is_auto: bool) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
