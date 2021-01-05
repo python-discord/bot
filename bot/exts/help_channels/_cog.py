@@ -384,10 +384,8 @@ class HelpChannels(commands.Cog):
         claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
         if claimant is None:
             log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
-            return
-
-        # Remove the cooldown role if the claimant has no other channels left
-        if not any(claimant.id == user_id for _, user_id in await _caches.claimants.items()):
+        elif not any(claimant.id == user_id for _, user_id in await _caches.claimants.items()):
+            # Remove the cooldown role if the claimant has no other channels left
             await _cooldown.remove_cooldown_role(claimant)
 
         await _message.unpin(channel)
