@@ -2,8 +2,9 @@ import logging
 import typing as t
 from datetime import datetime
 
-from bot.constants import Colours, Month
-from bot.errors import BrandingError
+from ._constants import Month
+from ._errors import BrandingError
+from bot.constants import Colours
 
 log = logging.getLogger(__name__)
 

@@ -18,7 +18,3 @@ class LockedResourceError(RuntimeError):
             f"Cannot operate on {self.type.lower()} `{self.id}`; "
             "it is currently locked and in use by another operation."
         )
-
-
-class BrandingError(Exception):
-    """Exception raised by the BrandingManager cog."""
