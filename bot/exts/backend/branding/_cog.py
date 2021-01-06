@@ -12,28 +12,11 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import AssetType, Branding, Colours, Emojis, Guild, Keys, MODERATION_ROLES
-from bot.decorators import in_whitelist, mock_in_debug
-from bot.errors import BrandingError
-from bot.seasons import SeasonBase, get_all_seasons, get_current_season, get_season
+from bot.constants import Branding, Colours, Emojis, Guild, MODERATION_ROLES
+from bot.decorators import in_whitelist
+from bot.exts.backend.branding import _constants, _decorators, _errors, _seasons
 
 log = logging.getLogger(__name__)
-
-STATUS_OK = 200  # HTTP status code
-
-FILE_BANNER = "banner.png"
-FILE_AVATAR = "avatar.png"
-SERVER_ICONS = "server_icons"
-
-BRANDING_URL = "https://api.github.com/repos/python-discord/branding/contents"
-
-PARAMS = {"ref": "master"}  # Target branch
-HEADERS = {"Accept": "application/vnd.github.v3+json"}  # Ensure we use API v3
-
-# A GitHub token is not necessary for the cog to operate,
-# unauthorized requests are however limited to 60 per hour
-if Keys.github:
-    HEADERS["Authorization"] = f"token {Keys.github}"
 
 
 class GitHubFile(t.NamedTuple):
@@ -120,7 +103,7 @@ class BrandingManager(commands.Cog):
     to test this cog's behaviour.
     """
 
-    current_season: t.Type[SeasonBase]
+    current_season: t.Type[_seasons.SeasonBase]
 
     banner: t.Optional[GitHubFile]
 
@@ -143,7 +126,7 @@ class BrandingManager(commands.Cog):
         the `refresh` command is used.
         """
         self.bot = bot
-        self.current_season = get_current_season()
+        self.current_season = _seasons.get_current_season()
 
         self.banner = None
 
@@ -183,7 +166,7 @@ class BrandingManager(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         while True:
-            self.current_season = get_current_season()
+            self.current_season = _seasons.get_current_season()
             branding_changed = await self.refresh()
 
             if branding_changed:
@@ -200,7 +183,7 @@ class BrandingManager(commands.Cog):
         info_embed = discord.Embed(description=self.current_season.description, colour=self.current_season.colour)
 
         # If we're in a non-evergreen season, also show active months
-        if self.current_season is not SeasonBase:
+        if self.current_season is not _seasons.SeasonBase:
             title = f"{self.current_season.season_name} ({', '.join(str(m) for m in self.current_season.months)})"
         else:
             title = self.current_season.season_name
@@ -252,10 +235,12 @@ class BrandingManager(commands.Cog):
         This may return an empty dict if the response status is non-200,
         or if the target directory is empty.
         """
-        url = f"{BRANDING_URL}/{path}"
-        async with self.bot.http_session.get(url, headers=HEADERS, params=PARAMS) as resp:
+        url = f"{_constants.BRANDING_URL}/{path}"
+        async with self.bot.http_session.get(
+            url, headers=_constants.HEADERS, params=_constants.PARAMS
+        ) as resp:
             # Short-circuit if we get non-200 response
-            if resp.status != STATUS_OK:
+            if resp.status != _constants.STATUS_OK:
                 log.error(f"GitHub API returned non-200 response: {resp}")
                 return {}
             directory = await resp.json()  # Directory at `path`
@@ -287,23 +272,32 @@ class BrandingManager(commands.Cog):
         # Only make a call to the fallback directory if there is something to be gained
         branding_incomplete = any(
             asset not in seasonal_dir
-            for asset in (FILE_BANNER, FILE_AVATAR, SERVER_ICONS)
+            for asset in (_constants.FILE_BANNER, _constants.FILE_AVATAR, _constants.SERVER_ICONS)
         )
-        if branding_incomplete and self.current_season is not SeasonBase:
-            fallback_dir = await self._get_files(SeasonBase.branding_path, include_dirs=True)
+        if branding_incomplete and self.current_season is not _seasons.SeasonBase:
+            fallback_dir = await self._get_files(
+                _seasons.SeasonBase.branding_path, include_dirs=True
+            )
         else:
             fallback_dir = {}
 
         # Resolve assets in this directory, None is a safe value
-        self.banner = seasonal_dir.get(FILE_BANNER) or fallback_dir.get(FILE_BANNER)
+        self.banner = (
+            seasonal_dir.get(_constants.FILE_BANNER)
+            or fallback_dir.get(_constants.FILE_BANNER)
+        )
 
         # Now resolve server icons by making a call to the proper sub-directory
-        if SERVER_ICONS in seasonal_dir:
-            icons_dir = await self._get_files(f"{self.current_season.branding_path}/{SERVER_ICONS}")
+        if _constants.SERVER_ICONS in seasonal_dir:
+            icons_dir = await self._get_files(
+                f"{self.current_season.branding_path}/{_constants.SERVER_ICONS}"
+            )
             self.available_icons = list(icons_dir.values())
 
-        elif SERVER_ICONS in fallback_dir:
-            icons_dir = await self._get_files(f"{SeasonBase.branding_path}/{SERVER_ICONS}")
+        elif _constants.SERVER_ICONS in fallback_dir:
+            icons_dir = await self._get_files(
+                f"{_seasons.SeasonBase.branding_path}/{_constants.SERVER_ICONS}"
+            )
             self.available_icons = list(icons_dir.values())
 
         else:
@@ -373,8 +367,8 @@ class BrandingManager(commands.Cog):
         """List all available seasons and branding sources."""
         embed = discord.Embed(title="Available seasons", colour=Colours.soft_green)
 
-        for season in get_all_seasons():
-            if season is SeasonBase:
+        for season in _seasons.get_all_seasons():
+            if season is _seasons.SeasonBase:
                 active_when = "always"
             else:
                 active_when = f"in {', '.join(str(m) for m in season.months)}"
@@ -407,14 +401,14 @@ class BrandingManager(commands.Cog):
         what it should be - the daemon will make sure that it's set back properly.
         """
         if season_name is None:
-            new_season = get_current_season()
+            new_season = _seasons.get_current_season()
         else:
-            new_season = get_season(season_name)
+            new_season = _seasons.get_season(season_name)
             if new_season is None:
-                raise BrandingError("No such season exists")
+                raise _errors.BrandingError("No such season exists")
 
         if self.current_season is new_season:
-            raise BrandingError(f"Season {self.current_season.season_name} already active")
+            raise _errors.BrandingError(f"Season {self.current_season.season_name} already active")
 
         self.current_season = new_season
         await self.branding_refresh(ctx)
@@ -447,7 +441,9 @@ class BrandingManager(commands.Cog):
         async with ctx.typing():
             failed_assets = await self.apply()
             if failed_assets:
-                raise BrandingError(f"Failed to apply following assets: {', '.join(failed_assets)}")
+                raise _errors.BrandingError(
+                    f"Failed to apply following assets: {', '.join(failed_assets)}"
+                )
 
             response = discord.Embed(description=f"All assets applied {Emojis.ok_hand}", colour=Colours.soft_green)
             await ctx.send(embed=response)
@@ -462,7 +458,7 @@ class BrandingManager(commands.Cog):
         async with ctx.typing():
             success = await self.cycle()
             if not success:
-                raise BrandingError("Failed to cycle icon")
+                raise _errors.BrandingError("Failed to cycle icon")
 
             response = discord.Embed(description=f"Success {Emojis.ok_hand}", colour=Colours.soft_green)
             await ctx.send(embed=response)
@@ -489,7 +485,7 @@ class BrandingManager(commands.Cog):
     async def daemon_start(self, ctx: commands.Context) -> None:
         """If the daemon isn't running, start it."""
         if self._daemon_running:
-            raise BrandingError("Daemon already running!")
+            raise _errors.BrandingError("Daemon already running!")
 
         self.daemon = self.bot.loop.create_task(self._daemon_func())
         await self.branding_configuration.set("daemon_active", True)
@@ -501,7 +497,7 @@ class BrandingManager(commands.Cog):
     async def daemon_stop(self, ctx: commands.Context) -> None:
         """If the daemon is running, stop it."""
         if not self._daemon_running:
-            raise BrandingError("Daemon not running!")
+            raise _errors.BrandingError("Daemon not running!")
 
         self.daemon.cancel()
         await self.branding_configuration.set("daemon_active", False)
@@ -515,7 +511,7 @@ class BrandingManager(commands.Cog):
         async with self.bot.http_session.get(url) as resp:
             return await resp.read()
 
-    async def _apply_asset(self, target: discord.Guild, asset: AssetType, url: str) -> bool:
+    async def _apply_asset(self, target: discord.Guild, asset: _constants.AssetType, url: str) -> bool:
         """
         Internal method for applying media assets to the guild.
 
@@ -543,7 +539,7 @@ class BrandingManager(commands.Cog):
             log.info("Asset successfully applied")
             return True
 
-    @mock_in_debug(return_value=True)
+    @_decorators.mock_in_debug(return_value=True)
     async def set_banner(self, url: str) -> bool:
         """Set the guild's banner to image at `url`."""
         guild = self.bot.get_guild(Guild.id)
@@ -551,9 +547,9 @@ class BrandingManager(commands.Cog):
             log.info("Failed to get guild instance, aborting asset upload")
             return False
 
-        return await self._apply_asset(guild, AssetType.BANNER, url)
+        return await self._apply_asset(guild, _constants.AssetType.BANNER, url)
 
-    @mock_in_debug(return_value=True)
+    @_decorators.mock_in_debug(return_value=True)
     async def set_icon(self, url: str) -> bool:
         """Sets the guild's icon to image at `url`."""
         guild = self.bot.get_guild(Guild.id)
@@ -561,9 +557,4 @@ class BrandingManager(commands.Cog):
             log.info("Failed to get guild instance, aborting asset upload")
             return False
 
-        return await self._apply_asset(guild, AssetType.SERVER_ICON, url)
-
-
-def setup(bot: Bot) -> None:
-    """Load BrandingManager cog."""
-    bot.add_cog(BrandingManager(bot))
+        return await self._apply_asset(guild, _constants.AssetType.SERVER_ICON, url)
