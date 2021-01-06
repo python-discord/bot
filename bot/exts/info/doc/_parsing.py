@@ -263,9 +263,8 @@ def _get_truncated_description(
             else:
                 element_markdown = markdown_converter.process_text(element)
 
-            element_markdown_length = len(element_markdown)
             rendered_length += element_length
-            tag_end_index += element_markdown_length
+            tag_end_index += len(element_markdown)
 
             if not element_markdown.isspace():
                 markdown_element_ends.append(tag_end_index)
