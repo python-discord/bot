@@ -144,7 +144,8 @@ class CachedParser:
                         None,
                         partial(get_symbol_markdown, soup, item),
                     )
-                    await doc_cache.set(item, markdown)
+                    if markdown is not None:
+                        await doc_cache.set(item, markdown)
                 except Exception:
                     log.exception(f"Unexpected error when handling {item}")
                 else:
