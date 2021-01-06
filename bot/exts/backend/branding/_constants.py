@@ -4,6 +4,8 @@ from bot.constants import Keys
 
 
 class Month(IntEnum):
+    """All month constants for seasons."""
+
     JANUARY = 1
     FEBRUARY = 2
     MARCH = 3
