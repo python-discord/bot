@@ -135,12 +135,13 @@ class BrandingManager(commands.Cog):
 
         self.days_since_cycle = itertools.cycle([None])
 
-        should_run = self.bot.loop.run_until_complete(self.branding_configuration.get("daemon_active"))
+        self.daemon = None
+        self._startup_task = self.bot.loop.create_task(self._initial_start_daemon())
 
-        if should_run:
+    async def _initial_start_daemon(self) -> None:
+        """Checks is daemon active and when is, start it at cog load."""
+        if await self.branding_configuration.get("daemon_active"):
             self.daemon = self.bot.loop.create_task(self._daemon_func())
-        else:
-            self.daemon = None
 
     @property
     def _daemon_running(self) -> bool:
