@@ -20,7 +20,6 @@ class SeasonBase:
     """
 
     season_name: str = "Evergreen"
-    bot_name: str = "SeasonalBot"
 
     colour: str = Colours.soft_green
     description: str = "The default season!"
@@ -34,7 +33,6 @@ class Christmas(SeasonBase):
     """Branding for December."""
 
     season_name = "Festive season"
-    bot_name = "MerryBot"
 
     colour = Colours.soft_red
     description = (
@@ -51,7 +49,6 @@ class Easter(SeasonBase):
     """Branding for April."""
 
     season_name = "Easter"
-    bot_name = "BunnyBot"
 
     colour = Colours.bright_green
     description = (
@@ -68,7 +65,6 @@ class Halloween(SeasonBase):
     """Branding for October."""
 
     season_name = "Halloween"
-    bot_name = "NeonBot"
 
     colour = Colours.orange
     description = "Trick or treat?!"
@@ -82,7 +78,6 @@ class Pride(SeasonBase):
     """Branding for June."""
 
     season_name = "Pride"
-    bot_name = "ProudBot"
 
     colour = Colours.pink
     description = (
@@ -102,7 +97,6 @@ class Valentines(SeasonBase):
     """Branding for February."""
 
     season_name = "Valentines"
-    bot_name = "TenderBot"
 
     colour = Colours.pink
     description = "Love is in the air!"
@@ -116,7 +110,6 @@ class Wildcard(SeasonBase):
     """Branding for August."""
 
     season_name = "Wildcard"
-    bot_name = "RetroBot"
 
     colour = Colours.purple
     description = "A season full of surprises!"
