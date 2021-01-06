@@ -276,15 +276,21 @@ def _get_truncated_description(
     if not markdown_element_ends:
         return ""
 
+    # Determine the "hard" truncation index.
     newline_truncate_index = find_nth_occurrence(result, "\n", max_lines)
     if newline_truncate_index is not None and newline_truncate_index < _MAX_DESCRIPTION_LENGTH:
+        # Truncate based on maximum lines if there are more than the maximum number of lines.
         truncate_index = newline_truncate_index
     else:
+        # There are less than the maximum number of lines; truncate based on the max char length.
         truncate_index = _MAX_DESCRIPTION_LENGTH
 
+    # Nothing needs to be truncated if the last element ends before the truncation index.
     if truncate_index >= markdown_element_ends[-1]:
         return result
 
+    # Determine the actual truncation index.
+    # Truncate at the last Markdown element that comes before the truncation index.
     markdown_truncate_index = max(cut for cut in markdown_element_ends if cut < truncate_index)
     return result[:markdown_truncate_index].strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
