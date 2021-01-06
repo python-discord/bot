@@ -9,7 +9,7 @@ from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Icons
+from bot.constants import Channels, Colours, Icons, STAFF_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import LockedResourceError
 from bot.utils.checks import InWhitelistCheckFailure
@@ -159,12 +159,13 @@ class ErrorHandler(Cog):
             with contextlib.suppress(ResponseCodeError):
                 await ctx.invoke(tags_get_command, tag_name=tag_name)
 
-        tags_cog = self.bot.get_cog("Tags")
-        command_name = ctx.invoked_with
-        sent = await tags_cog.display_tag(ctx, command_name)
+        if not any(role.id in STAFF_ROLES for role in ctx.author.roles):
+            tags_cog = self.bot.get_cog("Tags")
+            command_name = ctx.invoked_with
+            sent = await tags_cog.display_tag(ctx, command_name)
 
-        if not sent:
-            await self.send_command_suggestion(ctx, command_name)
+            if not sent:
+                await self.send_command_suggestion(ctx, command_name)
 
         # Return to not raise the exception
         return
