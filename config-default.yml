@@ -489,7 +489,7 @@ redirect_output:
 
 
 duck_pond:
-    threshold: 4
+    threshold: 5
     channel_blacklist:
         - *ANNOUNCEMENTS
         - *PYNEWS_CHANNEL
