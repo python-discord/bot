@@ -157,6 +157,11 @@ class CachedParser:
             while self._queue:
                 item, soup = self._queue.pop()
                 try:
+                    if (future := self._item_futures[item]).done():
+                        # Some items are present in the inventories multiple times under different symbols,
+                        # if we already parsed an equal item, we can just skip it.
+                        continue
+
                     markdown = await bot_instance.loop.run_in_executor(
                         None,
                         partial(get_symbol_markdown, soup, item),
@@ -166,8 +171,7 @@ class CachedParser:
                 except Exception:
                     log.exception(f"Unexpected error when handling {item}")
                 else:
-                    if (future := self._item_futures.get(item)) is not None:
-                        future.set_result(markdown)
+                    future.set_result(markdown)
                 await asyncio.sleep(0.1)
         finally:
             self._parse_task = None
