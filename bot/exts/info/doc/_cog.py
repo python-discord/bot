@@ -567,3 +567,9 @@ class DocCog(commands.Cog):
             await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
         else:
             await ctx.send("No keys matching the package found.")
+
+    def cog_unload(self) -> None:
+        """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
+        self.inventory_scheduler.cancel_all()
+        self.item_fetcher.cleanup_futures_task.cancel()
+        asyncio.create_task(self.item_fetcher.clear())
