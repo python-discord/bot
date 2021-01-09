@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 import sys
+import time
 from collections import defaultdict
 from contextlib import suppress
 from functools import partial
@@ -80,11 +81,25 @@ class QueueItem(NamedTuple):
 
 
 class ParseResultFuture(asyncio.Future):
-    """Future with the user_requested attribute to know which futures need to be waited for before clearing."""
+    """
+    Future with metadata for the parser class.
+
+    `user_requested` is set by the parser when a Future is requested by an user and moved to the front,
+    allowing the futures to only be waited for when clearing if they were user requested.
+
+    `result_set_time` provides the time at which the future's result has been set,
+    or -inf if the result hasn't been set yet
+    """
 
     def __init__(self):
         super().__init__()
         self.user_requested = False
+        self.result_set_time = float("inf")
+
+    def set_result(self, result: str, /) -> None:
+        """Set `self.result_set_time` to current time when the result is set."""
+        self.result_set_time = time.time()
+        super().set_result(result)
 
 
 class CachedParser:
@@ -101,6 +116,8 @@ class CachedParser:
         self._page_symbols: Dict[str, List[DocItem]] = defaultdict(list)
         self._item_futures: Dict[DocItem, ParseResultFuture] = {}
         self._parse_task = None
+
+        self.cleanup_futures_task = bot_instance.loop.create_task(self._cleanup_futures())
 
     async def get_markdown(self, doc_item: DocItem) -> str:
         """
@@ -182,6 +199,21 @@ class CachedParser:
         self._queue.clear()
         self._page_symbols.clear()
         self._item_futures.clear()
+
+    async def _cleanup_futures(self) -> None:
+        """
+        Clear old futures from internal results.
+
+        After a future is set, we only need to wait for old requests to its associated DocItem to finish
+        as all new requests will get the value from the redis cache in the cog first.
+        Keeping them around for longer than a second is unnecessary and keeps the parsed Markdown strings alive.
+        """
+        while True:
+            current_time = time.time()
+            for key, future in self._item_futures.copy().items():
+                if current_time - future.result_set_time > 5:
+                    del self._item_futures[key]
+            await asyncio.sleep(5)
 
 
 class DocCog(commands.Cog):
