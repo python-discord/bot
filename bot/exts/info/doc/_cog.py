@@ -319,9 +319,18 @@ class DocCog(commands.Cog):
             self.doc_symbols[overridden_symbol] = original_item
             self.renamed_symbols.add(overridden_symbol)
 
+        # If we can't specially handle the symbol through its group or package,
+        # fall back to prepending its package name to the front.
         else:
-            self.renamed_symbols.add(symbol_name)
-            return f"{package_name}.{symbol_name}"
+            if symbol_name.startswith(package_name):
+                # If the symbol already starts with the package name, insert the group name after it.
+                split_symbol_name = symbol_name.split(".", maxsplit=1)
+                split_symbol_name.insert(1, group_name)
+                overridden_symbol = ".".join(split_symbol_name)
+            else:
+                overridden_symbol = f"{package_name}.{symbol_name}"
+            self.renamed_symbols.add(overridden_symbol)
+            return overridden_symbol
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
