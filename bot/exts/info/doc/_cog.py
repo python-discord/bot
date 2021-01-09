@@ -222,27 +222,19 @@ class DocCog(commands.Cog):
                 if "/" in symbol:
                     continue  # skip unreachable symbols with slashes
 
+                # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
-                if (original_symbol := self.doc_symbols.get(symbol)) is not None:
-                    if group_name in FORCE_PREFIX_GROUPS:
-                        symbol = f"{group_name}.{symbol}"
-                        self.renamed_symbols.add(symbol)
-
-                    elif (original_symbol_group := original_symbol.group) in FORCE_PREFIX_GROUPS:
-                        overridden_symbol = f"{original_symbol_group}.{symbol}"
-                        if overridden_symbol in self.renamed_symbols:
-                            overridden_symbol = f"{api_package_name}.{overridden_symbol}"
-
-                        self.doc_symbols[overridden_symbol] = original_symbol
-                        self.renamed_symbols.add(overridden_symbol)
-
-                    elif api_package_name in PRIORITY_PACKAGES:
-                        self.doc_symbols[f"{original_symbol.package}.{symbol}"] = original_symbol
-                        self.renamed_symbols.add(symbol)
-
+                while (original_symbol := self.doc_symbols.get(symbol)) is not None:
+                    replaced_symbol_name = self.ensure_unique_symbol_name(
+                        api_package_name,
+                        group_name,
+                        original_symbol,
+                        symbol,
+                    )
+                    if replaced_symbol_name is None:
+                        break
                     else:
-                        symbol = f"{api_package_name}.{symbol}"
-                        self.renamed_symbols.add(symbol)
+                        symbol = replaced_symbol_name
 
                 relative_url_path, _, symbol_id = relative_doc_url.partition("#")
                 # Intern fields that have shared content so we're not storing unique strings for every object
@@ -288,6 +280,50 @@ class DocCog(commands.Cog):
 
         self.scheduled_inventories.discard(api_package_name)
         await self.update_single(api_package_name, base_url, package)
+
+    def ensure_unique_symbol_name(
+            self,
+            package_name: str,
+            group_name: str,
+            original_item: DocItem,
+            symbol_name: str
+    ) -> Optional[str]:
+        """
+        Ensure `symbol_name` doesn't overwrite an another symbol in `doc_symbols`.
+
+        Should only be called with symbol names that already have a conflict in `doc_symbols`.
+
+        If None is returned, space was created for `symbol_name` in `doc_symbols` instead of
+        the symbol name being changed.
+        """
+        # Certain groups are added as prefixes to disambiguate the symbols.
+        if group_name in FORCE_PREFIX_GROUPS:
+            self.renamed_symbols.add(symbol_name)
+            return f"{group_name}.{symbol_name}"
+
+        # The existing symbol with which the current symbol conflicts should have a group prefix.
+        # It currently doesn't have the group prefix because it's only added once there's a conflict.
+        elif (original_symbol_group := original_item.group) in FORCE_PREFIX_GROUPS:
+            overridden_symbol = f"{original_symbol_group}.{symbol_name}"
+            if overridden_symbol in self.doc_symbols:
+                # If there's still a conflict, prefix with package name.
+                overridden_symbol = f"{original_item.package}.{overridden_symbol}"
+
+            self.doc_symbols[overridden_symbol] = original_item
+            self.renamed_symbols.add(overridden_symbol)
+
+        elif package_name in PRIORITY_PACKAGES:
+            overridden_symbol = f"{original_item.package}.{symbol_name}"
+            if overridden_symbol in self.doc_symbols:
+                # If there's still a conflict, add the symbol's group in the middle.
+                overridden_symbol = f"{original_item.package}.{original_item.group}.{symbol_name}"
+
+            self.doc_symbols[overridden_symbol] = original_item
+            self.renamed_symbols.add(overridden_symbol)
+
+        else:
+            self.renamed_symbols.add(symbol_name)
+            return f"{package_name}.{symbol_name}"
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
