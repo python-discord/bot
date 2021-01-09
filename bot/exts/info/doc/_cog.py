@@ -219,8 +219,6 @@ class DocCog(commands.Cog):
 
         for group, items in package.items():
             for symbol, relative_doc_url in items:
-                if "/" in symbol:
-                    continue  # skip unreachable symbols with slashes
 
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
