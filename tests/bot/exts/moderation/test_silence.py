@@ -291,6 +291,17 @@ class RescheduleTests(unittest.IsolatedAsyncioTestCase):
         self.cog.notifier.add_channel.assert_not_called()
 
 
+def voice_sync_helper(function):
+    """Helper wrapper to test the sync and kick functions for voice channels."""
+    @autospec(silence.Silence, "_force_voice_sync", "_kick_voice_members", "_set_silence_overwrites")
+    async def inner(self, sync, kick, overwrites):
+        overwrites.return_value = True
+        await function(self, MockContext(),
+                       sync, kick)
+
+    return inner
+
+
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
 class SilenceTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the silence command and its related helper methods."""
@@ -363,29 +374,41 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             if target is not None and isinstance(target, MockTextChannel):
                 target.send.reset_mock()
 
-    @mock.patch.object(silence.Silence, "_set_silence_overwrites", return_value=True)
-    @mock.patch.object(silence.Silence, "_kick_voice_members")
-    @mock.patch.object(silence.Silence, "_force_voice_sync")
-    async def test_sync_or_kick_called(self, sync, kick, _):
-        """Tests if silence command calls kick or sync on voice channels when appropriate."""
+    @voice_sync_helper
+    async def test_sync_called(self, ctx, sync, kick):
+        """Tests if silence command calls sync on a voice channel."""
         channel = MockVoiceChannel()
-        ctx = MockContext()
+        await self.cog.silence.callback(self.cog, ctx, 10, channel, kick=False)
 
-        with mock.patch.object(self.cog, "bot") as bot_mock:
-            bot_mock.get_channel.return_value = AsyncMock()
+        sync.assert_called_once_with(self.cog, channel)
+        kick.assert_not_called()
 
-            with self.subTest("Test calls kick"):
-                await self.cog.silence.callback(self.cog, ctx, 10, kick=True, channel=channel)
-                kick.assert_called_once_with(channel)
-                sync.assert_not_called()
+    @voice_sync_helper
+    async def test_kick_called(self, ctx, sync, kick):
+        """Tests if silence command calls kick on a voice channel."""
+        channel = MockVoiceChannel()
+        await self.cog.silence.callback(self.cog, ctx, 10, channel, kick=True)
 
-            kick.reset_mock()
-            sync.reset_mock()
+        kick.assert_called_once_with(self.cog, channel)
+        sync.assert_not_called()
 
-            with self.subTest("Test calls sync"):
-                await self.cog.silence.callback(self.cog, ctx, 10, kick=False, channel=channel)
-                sync.assert_called_once_with(channel)
-                kick.assert_not_called()
+    @voice_sync_helper
+    async def test_sync_not_called(self, ctx, sync, kick):
+        """Tests that silence command does not call sync on a text channel."""
+        channel = MockTextChannel()
+        await self.cog.silence.callback(self.cog, ctx, 10, channel, kick=False)
+
+        sync.assert_not_called()
+        kick.assert_not_called()
+
+    @voice_sync_helper
+    async def test_kick_not_called(self, ctx, sync, kick):
+        """Tests that silence command does not call kick on a text channel."""
+        channel = MockTextChannel()
+        await self.cog.silence.callback(self.cog, ctx, 10, channel, kick=True)
+
+        sync.assert_not_called()
+        kick.assert_not_called()
 
     async def test_skipped_already_silenced(self):
         """Permissions were not set and `False` was returned for an already silenced channel."""
