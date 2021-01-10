@@ -168,8 +168,9 @@ class CachedParser:
                     )
                     if markdown is not None:
                         await doc_cache.set(item, markdown)
-                except Exception:
+                except Exception as e:
                     log.exception(f"Unexpected error when handling {item}")
+                    future.set_exception(e)
                 else:
                     future.set_result(markdown)
                 await asyncio.sleep(0.1)
