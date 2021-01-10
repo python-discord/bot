@@ -259,7 +259,7 @@ def _get_truncated_description(
 
         if rendered_length + element_length < max_length:
             if is_tag:
-                element_markdown = markdown_converter.process_tag(element)
+                element_markdown = markdown_converter.process_tag(element, convert_as_inline=False)
             else:
                 element_markdown = markdown_converter.process_text(element)
 
