@@ -1,9 +1,26 @@
 import logging
-from typing import List, Union
+import re
+from functools import partial
+from typing import Callable, Container, Iterable, List, Union
 
-from bs4.element import PageElement, SoupStrainer
+from bs4 import BeautifulSoup
+from bs4.element import NavigableString, PageElement, SoupStrainer, Tag
+
+from . import MAX_SIGNATURE_AMOUNT
 
 log = logging.getLogger(__name__)
+
+_UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
+_SEARCH_END_TAG_ATTRS = (
+    "data",
+    "function",
+    "class",
+    "exception",
+    "seealso",
+    "section",
+    "rubric",
+    "sphinxsidebar",
+)
 
 
 class Strainer(SoupStrainer):
@@ -26,3 +43,94 @@ class Strainer(SoupStrainer):
                 return markup
         else:
             return super().search(markup)
+
+
+def _find_elements_until_tag(
+        start_element: PageElement,
+        end_tag_filter: Union[Container[str], Callable[[Tag], bool]],
+        *,
+        func: Callable,
+        include_strings: bool = False,
+        limit: int = None,
+) -> List[Union[Tag, NavigableString]]:
+    """
+    Get all elements up to `limit` or until a tag matching `tag_filter` is found.
+
+    `end_tag_filter` can be either a container of string names to check against,
+    or a filtering callable that's applied to tags.
+
+    When `include_strings` is True, `NavigableString`s from the document will be included in the result along `Tag`s.
+
+    `func` takes in a BeautifulSoup unbound method for finding multiple elements, such as `BeautifulSoup.find_all`.
+    The method is then iterated over and all elements until the matching tag or the limit are added to the return list.
+    """
+    use_container_filter = not callable(end_tag_filter)
+    elements = []
+
+    for element in func(start_element, name=Strainer(include_strings=include_strings), limit=limit):
+        if isinstance(element, Tag):
+            if use_container_filter:
+                if element.name in end_tag_filter:
+                    break
+            elif end_tag_filter(element):
+                break
+        elements.append(element)
+
+    return elements
+
+
+_find_next_children_until_tag = partial(_find_elements_until_tag, func=partial(BeautifulSoup.find_all, recursive=False))
+_find_recursive_children_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_all)
+_find_next_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_next_siblings)
+_find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
+
+
+def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
+    """Create callable that returns True when the passed in tag's class is in `class_names` or when it's is a table."""
+    def match_tag(tag: Tag) -> bool:
+        for attr in class_names:
+            if attr in tag.get("class", ()):
+                return True
+        return tag.name == "table"
+
+    return match_tag
+
+
+def get_general_description(start_element: Tag) -> List[Union[Tag, NavigableString]]:
+    """
+    Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
+
+    A headerlink a tag is attempted to be found to skip repeating the symbol information in the description,
+    if it's found it's used as the tag to start the search from instead of the `start_element`.
+    """
+    child_tags = _find_recursive_children_until_tag(start_element, _class_filter_factory(["section"]), limit=100)
+    header = next(filter(_class_filter_factory(["headerlink"]), child_tags), None)
+    start_tag = header.parent if header is not None else start_element
+    return _find_next_siblings_until_tag(start_tag, _class_filter_factory(_SEARCH_END_TAG_ATTRS), include_strings=True)
+
+
+def get_dd_description(symbol: PageElement) -> List[Union[Tag, NavigableString]]:
+    """Get the contents of the next dd tag, up to a dt or a dl tag."""
+    description_tag = symbol.find_next("dd")
+    return _find_next_children_until_tag(description_tag, ("dt", "dl"), include_strings=True)
+
+
+def get_signatures(start_signature: PageElement) -> List[str]:
+    """
+    Collect up to `_MAX_SIGNATURE_AMOUNT` signatures from dt tags around the `start_signature` dt tag.
+
+    First the signatures under the `start_signature` are included;
+    if less than 2 are found, tags above the start signature are added to the result if any are present.
+    """
+    signatures = []
+    for element in (
+            *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
+            start_signature,
+            *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
+    )[-MAX_SIGNATURE_AMOUNT:]:
+        signature = _UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
+
+        if signature:
+            signatures.append(signature)
+
+    return signatures

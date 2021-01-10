@@ -24,6 +24,7 @@ from bot.pagination import LinePaginator
 from bot.utils.lock import lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
+from . import PRIORITY_PACKAGES
 from ._inventory_parser import INVENTORY_DICT, fetch_inventory
 from ._parsing import get_symbol_markdown
 from ._redis_cache import DocRedisCache
@@ -37,9 +38,6 @@ FORCE_PREFIX_GROUPS = (
     "label",
     "pdbcommand",
     "term",
-)
-PRIORITY_PACKAGES = (
-    "python",
 )
 WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
