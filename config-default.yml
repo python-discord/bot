@@ -173,7 +173,6 @@ guild:
         # Special
         bot_commands:       &BOT_CMD        267659945086812160
         esoteric:                           470884583684964352
-        verification:                       352442727016693763
         voice_gate:                         764802555427029012
 
         # Staff
@@ -244,8 +243,6 @@ guild:
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
         sprinters:          &SPRINTERS          758422482289426471
 
-        unverified:                             739794855945044069
-        verified:                               352427296948486144  # @Developers on PyDis
         voice_verified:                         764802720779337729
 
         # Staff
@@ -512,18 +509,6 @@ python_news:
         - 'python-dev'
     channel: *PYNEWS_CHANNEL
     webhook: *PYNEWS_WEBHOOK
-
-
-verification:
-    unverified_after: 3  # Days after which non-Developers receive the @Unverified role
-    kicked_after: 30  # Days after which non-Developers get kicked from the guild
-    reminder_frequency: 28  # Hours between @Unverified pings
-    bot_message_delete_delay: 10  # Seconds before deleting bots response in #verification
-
-    # Number in range [0, 1] determining the percentage of unverified users that are safe
-    # to be kicked from the guild in one batch, any larger amount will require staff confirmation,
-    # set this to 0 to require explicit approval for batches of any size
-    kick_confirmation_threshold: 0.01  # 1%
 
 
 voice_gate:
