@@ -635,6 +635,12 @@ class Event(Enum):
     voice_state_update = "voice_state_update"
 
 
+class VideoPermission(metaclass=YAMLGetter):
+    section = "video_permission"
+
+    default_permission_duration: int
+
+
 # Debug mode
 DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 

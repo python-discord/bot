@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Emojis, Roles, STAFF_ROLES
+from bot.constants import Emojis, Roles, STAFF_ROLES, VideoPermission
 from bot.converters import Expiry
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
@@ -34,7 +34,8 @@ class Stream(commands.Cog):
             self,
             ctx: commands.Context,
             user: discord.Member,
-            duration: Expiry = datetime.datetime.utcnow() + datetime.timedelta(minutes=30),
+            duration: Expiry =
+            datetime.datetime.utcnow() + datetime.timedelta(minutes=VideoPermission.default_permission_duration),
             *_
     ) -> None:
         """
