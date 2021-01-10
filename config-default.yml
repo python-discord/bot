@@ -255,7 +255,7 @@ guild:
         team_leaders:   737250302834638889
 
         # Streaming
-        video: 764245844798079016
+        video:          764245844798079016
 
     moderation_roles:
         - *OWNERS_ROLE
