@@ -1,3 +1,5 @@
+import datetime
+
 import discord
 from discord.ext import commands
 
@@ -32,7 +34,7 @@ class Stream(commands.Cog):
             self,
             ctx: commands.Context,
             user: discord.Member,
-            duration: Expiry,
+            duration: Expiry = datetime.datetime.utcnow() + datetime.timedelta(minutes=30),
             *_
     ) -> None:
         """
