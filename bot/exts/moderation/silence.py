@@ -209,7 +209,12 @@ class Silence(commands.Cog):
 
     @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
     async def _unsilence_wrapper(self, channel: TextOrVoiceChannel, ctx: Optional[Context] = None) -> None:
-        """Unsilence `channel` and send a success/failure message."""
+        """
+        Unsilence `channel` and send a success/failure message to ctx.channel.
+
+        If ctx is None or not passed, `channel` is used in its place.
+        If `channel` and ctx.channel are the same, only one message is sent.
+        """
         msg_channel = channel
         if ctx is not None:
             msg_channel = ctx.channel
