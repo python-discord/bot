@@ -231,7 +231,6 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     """
     symbol_heading = soup.find(id=symbol_data.symbol_id)
     if symbol_heading is None:
-        log.warning("Symbol present in loaded inventories not found on site, consider refreshing inventories.")
         return None
     signature = None
     # Modules, doc pages and labels don't point to description list tags but to tags like divs,

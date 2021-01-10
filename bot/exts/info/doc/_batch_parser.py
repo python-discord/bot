@@ -9,15 +9,41 @@ from functools import partial
 from operator import attrgetter
 from typing import Dict, List, NamedTuple, TYPE_CHECKING, Union
 
+import discord
 from bs4 import BeautifulSoup
 
 import bot
+from bot.constants import Channels
 from . import doc_cache
 from ._parsing import get_symbol_markdown
 if TYPE_CHECKING:
     from ._cog import DocItem
 
 log = logging.getLogger(__name__)
+
+
+class StaleInventoryNotifier:
+    """Handle sending notifications about stale inventories through `DocItem`s to dev log."""
+
+    def __init__(self):
+        self._init_task = bot.instance.loop.create_task(self._init_channel())
+        self._warned_urls = set()
+
+    async def _init_channel(self) -> None:
+        """Wait for guild and get channel."""
+        await bot.instance.wait_until_guild_available()
+        self._dev_log = bot.instance.get_channel(Channels.dev_log)
+
+    async def send_warning(self, item: DocItem) -> None:
+        """Send a warning to dev log is one wasn't already sent for `item`'s url."""
+        if item.url not in self._warned_urls:
+            self._warned_urls.add(item.url)
+            await self._init_task
+            embed = discord.Embed(
+                description=f"Doc item `{item.symbol_id=}` present in loaded documentation inventories "
+                            f"not found on [site]({item.url}), inventories may need to be refreshed."
+            )
+            await self._dev_log.send(embed=embed)
 
 
 class QueueItem(NamedTuple):
@@ -71,6 +97,8 @@ class BatchParser:
 
         self.cleanup_futures_task = bot.instance.loop.create_task(self._cleanup_futures())
 
+        self.stale_inventory_notifier = StaleInventoryNotifier()
+
     async def get_markdown(self, doc_item: DocItem) -> str:
         """
         Get the result Markdown of `doc_item`.
@@ -120,6 +148,8 @@ class BatchParser:
                     )
                     if markdown is not None:
                         await doc_cache.set(item, markdown)
+                    else:
+                        asyncio.create_task(self.stale_inventory_notifier.send_warning(item))
                 except Exception as e:
                     log.exception(f"Unexpected error when handling {item}")
                     future.set_exception(e)
