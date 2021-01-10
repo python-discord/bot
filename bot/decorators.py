@@ -1,8 +1,8 @@
 import asyncio
 import logging
+import types
 import typing as t
 from contextlib import suppress
-from functools import update_wrapper
 
 from discord import Member, NotFound
 from discord.ext import commands
@@ -11,6 +11,7 @@ from discord.ext.commands import Cog, Context
 from bot.constants import Channels, RedirectOutput
 from bot.utils import function
 from bot.utils.checks import in_whitelist_check
+from bot.utils.function import command_wraps
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +71,8 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
 
     This decorator must go before (below) the `command` decorator.
     """
-    def wrap(func: t.Callable) -> t.Callable:
+    def wrap(func: types.FunctionType) -> types.FunctionType:
+        @command_wraps(func)
         async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             if ctx.channel.id == destination_channel:
                 log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
@@ -104,8 +106,7 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
                 with suppress(NotFound):
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
-
-        return update_wrapper(function.update_wrapper_globals(inner, func), func)
+        return inner
     return wrap
 
 
@@ -121,7 +122,8 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
     This decorator must go before (below) the `command` decorator.
     """
-    def decorator(func: t.Callable) -> t.Callable:
+    def decorator(func: types.FunctionType) -> types.FunctionType:
+        @command_wraps(func)
         async def wrapper(*args, **kwargs) -> None:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
@@ -149,5 +151,5 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
                 await func(*args, **kwargs)
-        return update_wrapper(function.update_wrapper_globals(wrapper, func), func)
+        return wrapper
     return decorator

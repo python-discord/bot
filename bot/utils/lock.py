@@ -1,12 +1,14 @@
 import inspect
 import logging
+import types
 from collections import defaultdict
-from functools import partial, update_wrapper
+from functools import partial
 from typing import Any, Awaitable, Callable, Hashable, Union
 from weakref import WeakValueDictionary
 
 from bot.errors import LockedResourceError
 from bot.utils import function
+from bot.utils.function import command_wraps
 
 log = logging.getLogger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
@@ -58,9 +60,10 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
 
     If decorating a command, this decorator must go before (below) the `command` decorator.
     """
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: types.FunctionType) -> types.FunctionType:
         name = func.__name__
 
+        @command_wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
             log.trace(f"{name}: mutually exclusive decorator called")
 
@@ -91,7 +94,8 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
-        return update_wrapper(function.update_wrapper_globals(wrapper, func), func)
+        return wrapper
+
     return decorator
 
 

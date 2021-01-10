@@ -1,5 +1,6 @@
 """Utilities for interaction with functions."""
 
+import functools
 import inspect
 import types
 import typing as t
@@ -100,3 +101,17 @@ def update_wrapper_globals(wrapper: types.FunctionType, wrapped: types.FunctionT
         argdefs=wrapper.__defaults__,
         closure=wrapper.__closure__,
     )
+
+
+def command_wraps(
+        wrapped: types.FunctionType,
+        assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
+        updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
+) -> t.Callable[[types.FunctionType], types.FunctionType]:
+    """Update `wrapped` to look like the decorated function and update globals for discordpy forwardref evaluation."""
+    def decorator(wrapper: types.FunctionType) -> types.FunctionType:
+        return functools.update_wrapper(
+            update_wrapper_globals(wrapper, wrapped), wrapped, assigned, updated
+        )
+
+    return decorator
