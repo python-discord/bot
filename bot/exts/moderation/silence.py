@@ -229,9 +229,9 @@ class Silence(commands.Cog):
 
             # Send fail message to muted channel or voice chat channel, and invocation channel
             if manual:
-                await self.send_message(MSG_UNSILENCE_MANUAL, msg_channel, channel)
+                await self.send_message(MSG_UNSILENCE_MANUAL, msg_channel, channel, alert_target=False)
             else:
-                await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel)
+                await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel, alert_target=False)
 
         else:
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, alert_target=True)

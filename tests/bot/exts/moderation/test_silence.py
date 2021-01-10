@@ -163,29 +163,22 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         """Tests the _force_voice_sync helper function."""
         await self.cog._async_init()
 
-        members = []
-        for _ in range(10):
-            members.append(MockMember())
+        members = [MockMember() for _ in range(10)]
+        members.extend([MockMember(roles=[self.cog._helper_role]) for _ in range(3)])
 
-        afk_channel = MockVoiceChannel()
-        channel = MockVoiceChannel(guild=MockGuild(afk_channel=afk_channel), members=members)
+        channel = MockVoiceChannel(members=members)
 
         await self.cog._force_voice_sync(channel)
         for member in members:
-            self.assertEqual(member.move_to.call_count, 2)
-            calls = [
-                mock.call(afk_channel, reason="Muting VC member."),
-                mock.call(channel, reason="Muting VC member.")
-            ]
-            member.move_to.assert_has_calls(calls, any_order=False)
+            if self.cog._helper_role in member.roles:
+                member.move_to.assert_not_called()
+            else:
+                self.assertEqual(member.move_to.call_count, 2)
+                calls = member.move_to.call_args_list
 
-    async def test_force_voice_sync_staff(self):
-        """Tests to ensure _force_voice_sync does not kick staff members."""
-        await self.cog._async_init()
-        member = MockMember(roles=[self.cog._helper_role])
-
-        await self.cog._force_voice_sync(MockVoiceChannel(members=[member]))
-        member.move_to.assert_not_called()
+                # Tests that the member was moved to the afk channel, and back.
+                self.assertEqual((channel.guild.afk_channel,), calls[0].args)
+                self.assertEqual((channel,), calls[1].args)
 
     async def test_force_voice_sync_no_channel(self):
         """Test to ensure _force_voice_sync can create its own voice channel if one is not available."""
@@ -204,29 +197,23 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         channel.guild.create_voice_channel.assert_called_once_with("mute-temp", overwrites=overwrites)
 
         # Check bot deleted channel
-        new_channel.delete.assert_called_once_with(reason="Deleting temp mute channel.")
+        new_channel.delete.assert_called_once()
 
     async def test_voice_kick(self):
         """Test to ensure kick function can remove all members from a voice channel."""
         await self.cog._async_init()
 
-        members = []
-        for _ in range(10):
-            members.append(MockMember())
+        members = [MockMember() for _ in range(10)]
+        members.extend([MockMember(roles=[self.cog._helper_role]) for _ in range(3)])
 
         channel = MockVoiceChannel(members=members)
         await self.cog._kick_voice_members(channel)
 
         for member in members:
-            member.move_to.assert_called_once_with(None, reason="Kicking member from voice channel.")
-
-    async def test_voice_kick_staff(self):
-        """Test to ensure voice kick skips staff members."""
-        await self.cog._async_init()
-        member = MockMember(roles=[self.cog._helper_role])
-
-        await self.cog._kick_voice_members(MockVoiceChannel(members=[member]))
-        member.move_to.assert_not_called()
+            if self.cog._helper_role in member.roles:
+                member.move_to.assert_not_called()
+            else:
+                self.assertEqual((None,), member.move_to.call_args_list[0].args)
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
@@ -311,7 +298,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     @autospec(silence.Silence, "_reschedule", pass_mocks=False)
     @autospec(silence, "Scheduler", "SilenceNotifier", pass_mocks=False)
     def setUp(self) -> None:
-        self.bot = MockBot()
+        self.bot = MockBot(get_channel=lambda _: MockTextChannel())
         self.cog = silence.Silence(self.bot)
         self.cog._init_task = asyncio.Future()
         self.cog._init_task.set_result(None)
@@ -360,9 +347,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
         for target, message in test_cases:
             with self.subTest(target_channel=target, message=message):
-                with mock.patch.object(self.cog, "bot") as bot_mock:
-                    bot_mock.get_channel.return_value = AsyncMock()
-                    await self.cog.silence.callback(self.cog, ctx, 10, target, kick=False)
+                await self.cog.silence.callback(self.cog, ctx, 10, target, kick=False)
 
                 if ctx.channel == target or target is None:
                     ctx.channel.send.assert_called_once_with(message)
@@ -505,9 +490,6 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_correct_permission_updates(self):
         """Tests if _set_silence_overwrites can correctly get and update permissions."""
-        self.assertTrue(await self.cog._set_silence_overwrites(self.text_channel))
-        self.assertFalse(self.text_overwrite.send_messages or self.text_overwrite.add_reactions)
-
         self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel))
         self.assertFalse(self.voice_overwrite.speak)
 
@@ -548,49 +530,22 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
             (False, silence.MSG_UNSILENCE_MANUAL, PermissionOverwrite(send_messages=False)),
             (False, silence.MSG_UNSILENCE_MANUAL, PermissionOverwrite(add_reactions=False)),
         )
+
         for was_unsilenced, message, overwrite in test_cases:
             ctx = MockContext()
-            with self.subTest(was_unsilenced=was_unsilenced, message=message, overwrite=overwrite):
+
+            for target in [None, MockTextChannel()]:
+                ctx.channel.overwrites_for.return_value = overwrite
+                if target:
+                    target.overwrites_for.return_value = overwrite
+
                 with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
-                    ctx.channel.overwrites_for.return_value = overwrite
-                    await self.cog.unsilence.callback(self.cog, ctx)
-                    ctx.channel.send.assert_called_once_with(message)
+                    with mock.patch.object(self.cog, "send_message") as send_message:
+                        with self.subTest(was_unsilenced=was_unsilenced, overwrite=overwrite, target=target):
+                            await self.cog.unsilence.callback(self.cog, ctx, channel=target)
 
-    async def test_sent_to_correct_channel(self):
-        """Test function sends messages to the correct channels."""
-        unsilenced_overwrite = PermissionOverwrite(send_messages=True, add_reactions=True)
-        text_channel = MockTextChannel()
-        ctx = MockContext()
-
-        test_cases = (
-            (None, silence.MSG_UNSILENCE_SUCCESS.format(duration=10)),
-            (text_channel, silence.MSG_UNSILENCE_SUCCESS.format(duration=10)),
-            (ctx.channel, silence.MSG_UNSILENCE_SUCCESS.format(duration=10)),
-        )
-
-        for target, message in test_cases:
-            with self.subTest(target_channel=target, message=message):
-                with mock.patch.object(self.cog, "_unsilence", return_value=True):
-                    # Assign Return
-                    if ctx.channel == target or target is None:
-                        ctx.channel.overwrites_for.return_value = unsilenced_overwrite
-                    else:
-                        target.overwrites_for.return_value = unsilenced_overwrite
-
-                    await self.cog.unsilence.callback(self.cog, ctx, channel=target)
-
-                    # Check Messages
-                    if ctx.channel == target or target is None:
-                        ctx.channel.send.assert_called_once_with(message)
-                    else:
-                        ctx.channel.send.assert_called_once_with(
-                            message.replace("current channel", text_channel.mention)
-                        )
-                        target.send.assert_called_once_with(message)
-
-            ctx.channel.send.reset_mock()
-            if target is not None:
-                target.send.reset_mock()
+                            call_args = (message, ctx.channel, target or ctx.channel)
+                            send_message.assert_called_once_with(*call_args, alert_target=was_unsilenced)
 
     async def test_skipped_already_unsilenced(self):
         """Permissions were not set and `False` was returned for an already unsilenced channel."""
@@ -708,7 +663,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
                     await self.cog._unsilence_wrapper(channel, context)
 
                     overwrites.assert_called_once_with(role)
-                    send_message.assert_called_once_with(message, ctx.channel, channel)
+                    send_message.assert_called_once_with(message, ctx.channel, channel, alert_target=False)
 
                     send_message.reset_mock()
 
@@ -769,7 +724,7 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         self.text_channels = [MockTextChannel() for _ in range(2)]
         self.bot.get_channel.return_value = self.text_channels[1]
 
-        self.voice_channel = MockVoiceChannel(name="General/Offtopic")
+        self.voice_channel = MockVoiceChannel()
 
     async def test_send_to_channel(self):
         """Tests a basic case for the send function."""
