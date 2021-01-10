@@ -95,7 +95,12 @@ async def _fetch_inventory(url: str) -> INVENTORY_DICT:
 
 
 async def fetch_inventory(url: str) -> Optional[INVENTORY_DICT]:
-    """Get inventory from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors."""
+    """
+    Get an inventory dict from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors.
+
+    `url` should point at a valid sphinx objects.inv inventory file, which will be parsed into the
+    inventory dict in the format of {"domain:role": [("symbol_name", "relative_url_to_symbol"), ...], ...}
+    """
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS+1):
         try:
             inventory = await _fetch_inventory(url)
