@@ -33,8 +33,8 @@ _NO_SIGNATURE_GROUPS = {
 _EMBED_CODE_BLOCK_LINE_LENGTH = 61
 # _MAX_SIGNATURE_AMOUNT code block wrapped lines with py syntax highlight
 _MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LINE_LENGTH + 8) * MAX_SIGNATURE_AMOUNT
-# Maximum discord message length - signatures on top
-_MAX_DESCRIPTION_LENGTH = 2000 - _MAX_SIGNATURES_LENGTH
+# Maximum discord message length - signatures on top - space for footer
+_MAX_DESCRIPTION_LENGTH = 1900 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
 
 BracketPair = namedtuple("BracketPair", ["opening_bracket", "closing_bracket"])

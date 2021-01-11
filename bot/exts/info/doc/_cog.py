@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 import sys
+import textwrap
 from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
@@ -266,7 +267,11 @@ class DocCog(commands.Cog):
             description=markdown
         )
         # Show all symbols with the same name that were renamed in the footer.
-        embed.set_footer(text=", ".join(self.renamed_symbols[symbol]))
+        if renamed_symbols := self.renamed_symbols[symbol]:
+            footer_text = f"Moved: {textwrap.shorten(', '.join(renamed_symbols), 100, placeholder=' ...')}"
+        else:
+            footer_text = ""
+        embed.set_footer(text=footer_text)
         return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
