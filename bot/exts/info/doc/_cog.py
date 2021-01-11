@@ -95,16 +95,14 @@ class DocCog(commands.Cog):
 
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
-                while (original_symbol := self.doc_symbols.get(symbol)) is not None:
+                if (original_symbol := self.doc_symbols.get(symbol)) is not None:
                     replaced_symbol_name = self.ensure_unique_symbol_name(
                         api_package_name,
                         group_name,
                         original_symbol,
                         symbol,
                     )
-                    if replaced_symbol_name is None:
-                        break
-                    else:
+                    if replaced_symbol_name is not None:
                         symbol = replaced_symbol_name
 
                 relative_url_path, _, symbol_id = relative_doc_url.partition("#")
@@ -169,8 +167,12 @@ class DocCog(commands.Cog):
         """
         # Certain groups are added as prefixes to disambiguate the symbols.
         if group_name in FORCE_PREFIX_GROUPS:
-            self.renamed_symbols.add(symbol_name)
-            return f"{group_name}.{symbol_name}"
+            new_symbol = f"{group_name}.{symbol_name}"
+            if new_symbol in self.doc_symbols:
+                # If there's still a conflict, prefix with package name.
+                new_symbol = f"{package_name}.{new_symbol}"
+            self.renamed_symbols.add(new_symbol)
+            return new_symbol
 
         # The existing symbol with which the current symbol conflicts should have a group prefix.
         # It currently doesn't have the group prefix because it's only added once there's a conflict.
@@ -195,15 +197,12 @@ class DocCog(commands.Cog):
         # If we can't specially handle the symbol through its group or package,
         # fall back to prepending its package name to the front.
         else:
-            if symbol_name.startswith(package_name):
-                # If the symbol already starts with the package name, insert the group name after it.
-                split_symbol_name = symbol_name.split(".", maxsplit=1)
-                split_symbol_name.insert(1, group_name)
-                overridden_symbol = ".".join(split_symbol_name)
-            else:
-                overridden_symbol = f"{package_name}.{symbol_name}"
-            self.renamed_symbols.add(overridden_symbol)
-            return overridden_symbol
+            new_symbol = f"{package_name}.{symbol_name}"
+            if new_symbol in self.doc_symbols:
+                # If there's still a conflict, add the symbol's group in the middle.
+                new_symbol = f"{package_name}.{group_name}.{symbol_name}"
+            self.renamed_symbols.add(new_symbol)
+            return new_symbol
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
