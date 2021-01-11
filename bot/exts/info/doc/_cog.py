@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 import sys
 import textwrap
 from collections import defaultdict
@@ -34,7 +33,6 @@ FORCE_PREFIX_GROUPS = (
     "pdbcommand",
     "term",
 )
-WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 # Delay to wait before trying to reach a rescheduled inventory again, in minutes
 FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
@@ -238,8 +236,7 @@ class DocCog(commands.Cog):
 
         If the symbol is known, an Embed with documentation about it is returned.
 
-        First check the DocRedisCache before querying the cog's `CachedParser`,
-        if not present also create a redis entry for the symbol.
+        First check the DocRedisCache before querying the cog's `BatchParser`.
         """
         log.trace(f"Building embed for symbol `{symbol}`")
         if not REFRESH_EVENT.is_set():
