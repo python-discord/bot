@@ -37,8 +37,6 @@ NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 # Delay to wait before trying to reach a rescheduled inventory again, in minutes
 FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 
-REFRESH_EVENT = asyncio.Event()
-REFRESH_EVENT.set()
 COMMAND_LOCK_SINGLETON = "inventory refresh"
 
 
@@ -70,6 +68,8 @@ class DocCog(commands.Cog):
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
         self.scheduled_inventories = set()
 
+        self.refresh_event = asyncio.Event()
+        self.refresh_event.set()
         self.bot.loop.create_task(self.init_refresh_inventory())
 
     @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
@@ -206,7 +206,7 @@ class DocCog(commands.Cog):
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
-        REFRESH_EVENT.clear()
+        self.refresh_event.clear()
         log.debug("Refreshing documentation inventory...")
         self.inventory_scheduler.cancel_all()
 
@@ -228,7 +228,7 @@ class DocCog(commands.Cog):
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
-        REFRESH_EVENT.set()
+        self.refresh_event.set()
 
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
@@ -239,9 +239,9 @@ class DocCog(commands.Cog):
         First check the DocRedisCache before querying the cog's `BatchParser`.
         """
         log.trace(f"Building embed for symbol `{symbol}`")
-        if not REFRESH_EVENT.is_set():
+        if not self.refresh_event.is_set():
             log.debug("Waiting for inventories to be refreshed before processing item.")
-            await REFRESH_EVENT.wait()
+            await self.refresh_event.wait()
 
         symbol_info = self.doc_symbols.get(symbol)
         if symbol_info is None:
