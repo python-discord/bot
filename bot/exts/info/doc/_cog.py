@@ -267,8 +267,9 @@ class DocCog(commands.Cog):
             description=markdown
         )
         # Show all symbols with the same name that were renamed in the footer.
-        if renamed_symbols := self.renamed_symbols[symbol]:
-            footer_text = f"Moved: {textwrap.shorten(', '.join(renamed_symbols), 100, placeholder=' ...')}"
+        if symbol in self.renamed_symbols:
+            renamed_symbols = ', '.join(self.renamed_symbols[symbol])
+            footer_text = f"Moved: {textwrap.shorten(renamed_symbols, 100, placeholder=' ...')}"
         else:
             footer_text = ""
         embed.set_footer(text=footer_text)
