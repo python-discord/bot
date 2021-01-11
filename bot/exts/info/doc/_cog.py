@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 import sys
+from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
 from typing import Dict, NamedTuple, Optional
@@ -65,7 +66,7 @@ class DocCog(commands.Cog):
         self.bot = bot
         self.doc_symbols: Dict[str, DocItem] = {}
         self.item_fetcher = BatchParser()
-        self.renamed_symbols = set()
+        self.renamed_symbols = defaultdict(list)
 
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
         self.scheduled_inventories = set()
@@ -171,7 +172,7 @@ class DocCog(commands.Cog):
             if new_symbol in self.doc_symbols:
                 # If there's still a conflict, prefix with package name.
                 new_symbol = f"{package_name}.{new_symbol}"
-            self.renamed_symbols.add(new_symbol)
+            self.renamed_symbols[symbol_name].append(new_symbol)
             return new_symbol
 
         # The existing symbol with which the current symbol conflicts should have a group prefix.
@@ -183,7 +184,7 @@ class DocCog(commands.Cog):
                 overridden_symbol = f"{original_item.package}.{overridden_symbol}"
 
             self.doc_symbols[overridden_symbol] = original_item
-            self.renamed_symbols.add(overridden_symbol)
+            self.renamed_symbols[symbol_name].append(overridden_symbol)
 
         elif package_name in PRIORITY_PACKAGES:
             overridden_symbol = f"{original_item.package}.{symbol_name}"
@@ -192,7 +193,7 @@ class DocCog(commands.Cog):
                 overridden_symbol = f"{original_item.package}.{original_item.group}.{symbol_name}"
 
             self.doc_symbols[overridden_symbol] = original_item
-            self.renamed_symbols.add(overridden_symbol)
+            self.renamed_symbols[symbol_name].append(overridden_symbol)
 
         # If we can't specially handle the symbol through its group or package,
         # fall back to prepending its package name to the front.
@@ -201,7 +202,7 @@ class DocCog(commands.Cog):
             if new_symbol in self.doc_symbols:
                 # If there's still a conflict, add the symbol's group in the middle.
                 new_symbol = f"{package_name}.{group_name}.{symbol_name}"
-            self.renamed_symbols.add(new_symbol)
+            self.renamed_symbols[symbol_name].append(new_symbol)
             return new_symbol
 
     async def refresh_inventory(self) -> None:
@@ -265,9 +266,7 @@ class DocCog(commands.Cog):
             description=markdown
         )
         # Show all symbols with the same name that were renamed in the footer.
-        embed.set_footer(
-            text=", ".join(renamed for renamed in self.renamed_symbols - {symbol} if renamed.endswith(f".{symbol}"))
-        )
+        embed.set_footer(text=", ".join(self.renamed_symbols[symbol]))
         return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
