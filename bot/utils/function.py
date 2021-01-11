@@ -108,7 +108,7 @@ def command_wraps(
         assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
         updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
 ) -> t.Callable[[types.FunctionType], types.FunctionType]:
-    """Update `wrapped` to look like the decorated function and update globals for discordpy forwardref evaluation."""
+    """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
     def decorator(wrapper: types.FunctionType) -> types.FunctionType:
         return functools.update_wrapper(
             update_wrapper_globals(wrapper, wrapped), wrapped, assigned, updated
