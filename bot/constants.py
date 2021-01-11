@@ -434,7 +434,6 @@ class Channels(metaclass=YAMLGetter):
     talent_pool: int
     user_event_announcements: int
     user_log: int
-    verification: int
     voice_chat: int
     voice_gate: int
     voice_log: int
@@ -471,8 +470,6 @@ class Roles(metaclass=YAMLGetter):
     python_community: int
     sprinters: int
     team_leaders: int
-    unverified: int
-    verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
     voice_verified: int
 
 
@@ -493,6 +490,7 @@ class Keys(metaclass=YAMLGetter):
     section = "keys"
 
     site_api: Optional[str]
+    github: Optional[str]
 
 
 class URLs(metaclass=YAMLGetter):
@@ -593,20 +591,10 @@ class PythonNews(metaclass=YAMLGetter):
     webhook: int
 
 
-class Verification(metaclass=YAMLGetter):
-    section = "verification"
-
-    unverified_after: int
-    kicked_after: int
-    reminder_frequency: int
-    bot_message_delete_delay: int
-    kick_confirmation_threshold: float
-
-
 class VoiceGate(metaclass=YAMLGetter):
     section = "voice_gate"
 
-    minimum_days_verified: int
+    minimum_days_member: int
     minimum_messages: int
     bot_message_delete_delay: int
     minimum_activity_blocks: int
@@ -655,6 +643,9 @@ MODERATION_CHANNELS = Guild.moderation_channels
 
 # Category combinations
 MODERATION_CATEGORIES = Guild.moderation_categories
+
+# Git SHA for Sentry
+GIT_SHA = os.environ.get("GIT_SHA", "development")
 
 # Bot replies
 NEGATIVE_REPLIES = [

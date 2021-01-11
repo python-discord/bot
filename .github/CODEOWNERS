@@ -6,9 +6,11 @@ bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
 bot/exts/utils/snekbox.py               @MarkKoz @Akarys42
 bot/exts/help_channels/**               @MarkKoz @Akarys42
-bot/exts/moderation/**                  @Akarys42 @mbaruh @Den4200
+bot/exts/moderation/**                  @Akarys42 @mbaruh @Den4200 @ks129
 bot/exts/info/**                        @Akarys42 @mbaruh @Den4200
 bot/exts/filters/**                     @mbaruh
+bot/exts/fun/**                         @ks129
+bot/exts/utils/**                       @ks129
 
 # Utils
 bot/utils/extensions.py                 @MarkKoz

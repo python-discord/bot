@@ -14,7 +14,7 @@ beautifulsoup4 = "~=4.9"
 colorama = {version = "~=0.4.3",sys_platform = "== 'win32'"}
 coloredlogs = "~=14.0"
 deepdiff = "~=4.0"
-"discord.py" = "~=1.5.0"
+"discord.py" = {git = "https://github.com/Rapptz/discord.py.git", ref = "94f76e63947b102e5de6dae9a2cd687b308033"}
 feedparser = "~=5.2"
 fuzzywuzzy = "~=0.17"
 lxml = "~=4.4"
@@ -22,7 +22,7 @@ markdownify = "~=0.6.1"
 more_itertools = "~=8.2"
 python-dateutil = "~=2.8"
 pyyaml = "~=5.1"
-sentry-sdk = "~=0.14"
+sentry-sdk = "~=0.19"
 statsd = "~=3.3"
 emoji = "~=0.6"
 

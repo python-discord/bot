@@ -118,11 +118,9 @@ class JamCreateTeamTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(overwrites[member].read_messages)
             self.assertTrue(overwrites[member].connect)
 
-        # Everyone and verified role overwrite
+        # Everyone role overwrite
         self.assertFalse(overwrites[self.guild.default_role].read_messages)
         self.assertFalse(overwrites[self.guild.default_role].connect)
-        self.assertFalse(overwrites[self.guild.get_role(Roles.verified)].read_messages)
-        self.assertFalse(overwrites[self.guild.get_role(Roles.verified)].connect)
 
     async def test_team_channels_creation(self):
         """Should create new voice and text channel for team."""
