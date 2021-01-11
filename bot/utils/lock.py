@@ -94,8 +94,8 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
-        return wrapper
 
+        return wrapper
     return decorator
 
 
