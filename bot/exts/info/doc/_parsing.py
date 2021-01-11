@@ -225,7 +225,7 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
 
 def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:
     """
-    Return parsed markdown of the passed symbol using the passed in soup, truncated to 1000 characters.
+    Return parsed markdown of the passed symbol using the passed in soup, truncated to fit within a discord message.
 
     The method of parsing and what information gets included depends on the symbol's group.
     """
