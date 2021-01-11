@@ -250,7 +250,7 @@ class DocCog(commands.Cog):
         if symbol_info is None:
             log.debug("Symbol does not exist.")
             return None
-        self.bot.stats.incr(f"doc_fetches.{symbol_info.package.lower()}")
+        self.bot.stats.incr(f"doc_fetches.{symbol_info.package}")
 
         markdown = await doc_cache.get(symbol_info)
         if markdown is None:
