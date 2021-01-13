@@ -78,7 +78,7 @@ class DocCog(commands.Cog):
         await self.bot.wait_until_guild_available()
         await self.refresh_inventory()
 
-    async def update_single(self, api_package_name: str, base_url: str, package: INVENTORY_DICT) -> None:
+    def update_single(self, api_package_name: str, base_url: str, package: INVENTORY_DICT) -> None:
         """
         Rebuild the inventory for a single package.
 
@@ -148,7 +148,7 @@ class DocCog(commands.Cog):
             return
 
         self.scheduled_inventories.discard(api_package_name)
-        await self.update_single(api_package_name, base_url, package)
+        self.update_single(api_package_name, base_url, package)
 
     def ensure_unique_symbol_name(
             self,
@@ -357,7 +357,7 @@ class DocCog(commands.Cog):
             + "\n".join(f"{key}: {value}" for key, value in body.items())
         )
 
-        await self.update_single(package_name, base_url, inventory_dict)
+        self.update_single(package_name, base_url, inventory_dict)
         await ctx.send(f"Added the package `{package_name}` to the database and refreshed the inventory.")
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
