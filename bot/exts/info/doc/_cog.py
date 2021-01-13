@@ -124,7 +124,7 @@ class DocCog(commands.Cog):
             api_package_name: str,
             base_url: str,
             inventory_url: str
-    ) -> Optional[INVENTORY_DICT]:
+    ) -> None:
         """
         Update the cog's inventory, or reschedule this method to execute again if the remote inventory unreachable.
 
