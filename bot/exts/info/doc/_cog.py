@@ -146,9 +146,8 @@ class DocCog(commands.Cog):
                 (attempt, api_package_name),
                 self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url)
             )
-            return
-
-        self.update_single(api_package_name, base_url, package)
+        else:
+            self.update_single(api_package_name, base_url, package)
 
     def ensure_unique_symbol_name(
             self,
