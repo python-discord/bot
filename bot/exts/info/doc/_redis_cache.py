@@ -27,8 +27,8 @@ class DocRedisCache(RedisObject):
         needs_expire = False
 
         with await self._get_pool_connection() as connection:
-            if item.package+url_key not in self._set_expires:
-                self._set_expires.add(item.package+url_key)
+            if redis_key not in self._set_expires:
+                self._set_expires.add(redis_key)
                 needs_expire = not await connection.exists(redis_key)
 
             await connection.hset(redis_key, item.symbol_id, value)
