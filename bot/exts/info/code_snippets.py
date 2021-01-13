@@ -3,6 +3,7 @@ import re
 import textwrap
 from urllib.parse import quote_plus
 
+from aiohttp import ClientResponseError
 from discord import Message
 from discord.ext.commands import Cog
 
@@ -46,13 +47,13 @@ class CodeSnippets(Cog):
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> str:
         """Makes http requests using aiohttp."""
         try:
-            async with self.bot.http_session.get(url, **kwargs) as response:
+            async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
                 if response_format == 'text':
                     return await response.text()
                 elif response_format == 'json':
                     return await response.json()
-        except Exception:
-            log.exception(f'Failed to fetch code snippet from {url}.')
+        except ClientResponseError as error:
+            log.error(f'Failed to fetch code snippet from {url}. HTTP Status: {error.status}. Message: {str(error)}.')
 
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
