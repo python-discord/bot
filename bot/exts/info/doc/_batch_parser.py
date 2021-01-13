@@ -108,6 +108,7 @@ class BatchParser:
 
         Not safe to run while `self.clear` is running.
         """
+        self._item_futures[doc_item].user_requested = True
         if (symbols_to_queue := self._page_symbols.get(doc_item.url)) is not None:
             async with bot.instance.http_session.get(doc_item.url) as response:
                 soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
@@ -123,7 +124,6 @@ class BatchParser:
         with suppress(ValueError):
             # If the item is not in the list then the item is already parsed or is being parsed
             self._move_to_front(doc_item)
-        self._item_futures[doc_item].user_requested = True
         return await self._item_futures[doc_item]
 
     async def _parse_queue(self) -> None:
