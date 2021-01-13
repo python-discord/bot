@@ -11,8 +11,9 @@ import bot
 log = logging.getLogger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
-INVENTORY_DICT = DefaultDict[str, List[Tuple[str, str]]]
 _V2_LINE_RE = re.compile(r'(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)')
+
+InventoryDict = DefaultDict[str, List[Tuple[str, str]]]
 
 
 class ZlibStreamReader:
@@ -43,7 +44,7 @@ class ZlibStreamReader:
                 pos = buf.find(b'\n')
 
 
-async def _load_v1(stream: aiohttp.StreamReader) -> INVENTORY_DICT:
+async def _load_v1(stream: aiohttp.StreamReader) -> InventoryDict:
     invdata = defaultdict(list)
 
     async for line in stream:
@@ -59,7 +60,7 @@ async def _load_v1(stream: aiohttp.StreamReader) -> INVENTORY_DICT:
     return invdata
 
 
-async def _load_v2(stream: aiohttp.StreamReader) -> INVENTORY_DICT:
+async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
     invdata = defaultdict(list)
 
     async for line in ZlibStreamReader(stream):
@@ -72,7 +73,7 @@ async def _load_v2(stream: aiohttp.StreamReader) -> INVENTORY_DICT:
     return invdata
 
 
-async def _fetch_inventory(url: str) -> INVENTORY_DICT:
+async def _fetch_inventory(url: str) -> InventoryDict:
     """Fetch, parse and return an intersphinx inventory file from an url."""
     timeout = aiohttp.ClientTimeout(sock_connect=5, sock_read=5)
     async with bot.instance.http_session.get(url, timeout=timeout, raise_for_status=True) as response:
@@ -94,7 +95,7 @@ async def _fetch_inventory(url: str) -> INVENTORY_DICT:
         raise ValueError(f"Invalid inventory file at url {url}.")
 
 
-async def fetch_inventory(url: str) -> Optional[INVENTORY_DICT]:
+async def fetch_inventory(url: str) -> Optional[InventoryDict]:
     """
     Get an inventory dict from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors.
 

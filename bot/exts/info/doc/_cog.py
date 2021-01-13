@@ -21,7 +21,7 @@ from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
 from . import PRIORITY_PACKAGES, doc_cache
 from ._batch_parser import BatchParser
-from ._inventory_parser import INVENTORY_DICT, fetch_inventory
+from ._inventory_parser import InventoryDict, fetch_inventory
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class DocCog(commands.Cog):
         await self.bot.wait_until_guild_available()
         await self.refresh_inventory()
 
-    def update_single(self, api_package_name: str, base_url: str, package: INVENTORY_DICT) -> None:
+    def update_single(self, api_package_name: str, base_url: str, package: InventoryDict) -> None:
         """
         Rebuild the inventory for a single package.
 

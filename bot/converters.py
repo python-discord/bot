@@ -187,7 +187,7 @@ class Inventory(Converter):
     """
 
     @staticmethod
-    async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.INVENTORY_DICT]:
+    async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
         if (inventory := await _inventory_parser.fetch_inventory(url)) is None:
