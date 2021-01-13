@@ -12,24 +12,27 @@ from bot.utils.messages import wait_for_deletion
 log = logging.getLogger(__name__)
 
 GITHUB_RE = re.compile(
-    r'https://github\.com/(?P<repo>.+?)/blob/(?P<path>.+/.+)'
-    r'#L(?P<start_line>\d+)([-~]L(?P<end_line>\d+))?\b'
+    r'https://github\.com/(?P<repo>\S+?)/blob/(?P<path>\S+/[^\s#]+)'
+    r'(#L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)?($|\s)'
 )
 
 GITHUB_GIST_RE = re.compile(
     r'https://gist\.github\.com/([^/]+)/(?P<gist_id>[^\W_]+)/*'
-    r'(?P<revision>[^\W_]*)/*#file-(?P<file_path>.+?)'
-    r'-L(?P<start_line>\d+)([-~]L(?P<end_line>\d+))?\b'
+    r'(?P<revision>[^\W_]*)/*#file-(?P<file_path>\S+?)'
+    r'(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)?($|\s)'
 )
 
+GITHUB_HEADERS = {'Accept': 'application/vnd.github.v3.raw'}
+
 GITLAB_RE = re.compile(
-    r'https://gitlab\.com/(?P<repo>.+?)/\-/blob/(?P<path>.+/.+)'
-    r'#L(?P<start_line>\d+)([-](?P<end_line>\d+))?\b'
+    r'https://gitlab\.com/(?P<repo>\S+?)/\-/blob/(?P<path>\S+/[^\s#]+)'
+    r'(#L(?P<start_line>\d+)([-](?P<end_line>\d+))?)?($|\s)'
 )
 
 BITBUCKET_RE = re.compile(
-    r'https://bitbucket\.org/(?P<repo>.+?)/src/(?P<ref>.+?)/'
-    r'(?P<file_path>.+?)#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?\b'
+    r'https://bitbucket\.org/(?P<repo>\S+?)/src/'
+    r'(?P<ref>\S+?)/(?P<file_path>[^\s#]+)'
+    r'(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)?($|\s)'
 )
 
 
@@ -71,18 +74,20 @@ class CodeSnippets(Cog):
         end_line: str
     ) -> str:
         """Fetches a snippet from a GitHub repo."""
-        headers = {'Accept': 'application/vnd.github.v3.raw'}
-
         # Search the GitHub API for the specified branch
-        branches = await self._fetch_response(f'https://api.github.com/repos/{repo}/branches', 'json', headers=headers)
-        tags = await self._fetch_response(f'https://api.github.com/repos/{repo}/tags', 'json', headers=headers)
+        branches = await self._fetch_response(
+            f'https://api.github.com/repos/{repo}/branches',
+            'json',
+            headers=GITHUB_HEADERS
+        )
+        tags = await self._fetch_response(f'https://api.github.com/repos/{repo}/tags', 'json', headers=GITHUB_HEADERS)
         refs = branches + tags
         ref, file_path = self._find_ref(path, refs)
 
         file_contents = await self._fetch_response(
             f'https://api.github.com/repos/{repo}/contents/{file_path}?ref={ref}',
             'text',
-            headers=headers,
+            headers=GITHUB_HEADERS,
         )
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
@@ -95,12 +100,10 @@ class CodeSnippets(Cog):
         end_line: str
     ) -> str:
         """Fetches a snippet from a GitHub gist."""
-        headers = {'Accept': 'application/vnd.github.v3.raw'}
-
         gist_json = await self._fetch_response(
             f'https://api.github.com/gists/{gist_id}{f"/{revision}" if len(revision) > 0 else ""}',
             'json',
-            headers=headers,
+            headers=GITHUB_HEADERS,
         )
 
         # Check each file in the gist for the specified file
@@ -207,19 +210,20 @@ class CodeSnippets(Cog):
         """Initializes the cog's bot."""
         self.bot = bot
 
+        self.pattern_handlers = [
+            (GITHUB_RE, self._fetch_github_snippet),
+            (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
+            (GITLAB_RE, self._fetch_gitlab_snippet),
+            (BITBUCKET_RE, self._fetch_bitbucket_snippet)
+        ]
+
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if not message.author.bot:
             message_to_send = ''
-            pattern_handlers = [
-                (GITHUB_RE, self._fetch_github_snippet),
-                (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
-                (GITLAB_RE, self._fetch_gitlab_snippet),
-                (BITBUCKET_RE, self._fetch_bitbucket_snippet)
-            ]
 
-            for pattern, handler in pattern_handlers:
+            for pattern, handler in self.pattern_handlers:
                 for match in pattern.finditer(message.content):
                     message_to_send += await handler(**match.groupdict())
 
