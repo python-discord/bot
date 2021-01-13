@@ -12,27 +12,27 @@ from bot.utils.messages import wait_for_deletion
 log = logging.getLogger(__name__)
 
 GITHUB_RE = re.compile(
-    r'https://github\.com/(?P<repo>\S+?)/blob/(?P<path>\S+/[^\s#]+)'
-    r'(#L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)?($|\s)'
+    r'https://github\.com/(?P<repo>\S+?)/blob/(?P<path>\S+/[^\s#,>]+)'
+    r'(#L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)?($|\s|,|>)'
 )
 
 GITHUB_GIST_RE = re.compile(
     r'https://gist\.github\.com/([^/]+)/(?P<gist_id>[^\W_]+)/*'
     r'(?P<revision>[^\W_]*)/*#file-(?P<file_path>\S+?)'
-    r'(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)?($|\s)'
+    r'(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)?($|\s|,|>)'
 )
 
 GITHUB_HEADERS = {'Accept': 'application/vnd.github.v3.raw'}
 
 GITLAB_RE = re.compile(
-    r'https://gitlab\.com/(?P<repo>\S+?)/\-/blob/(?P<path>\S+/[^\s#]+)'
-    r'(#L(?P<start_line>\d+)([-](?P<end_line>\d+))?)?($|\s)'
+    r'https://gitlab\.com/(?P<repo>\S+?)/\-/blob/(?P<path>\S+/[^\s#,>]+)'
+    r'(#L(?P<start_line>\d+)([-](?P<end_line>\d+))?)?($|\s|,|>)'
 )
 
 BITBUCKET_RE = re.compile(
     r'https://bitbucket\.org/(?P<repo>\S+?)/src/'
-    r'(?P<ref>\S+?)/(?P<file_path>[^\s#]+)'
-    r'(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)?($|\s)'
+    r'(?P<ref>\S+?)/(?P<file_path>[^\s#,>]+)'
+    r'(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)?($|\s|,|>)'
 )
 
 
