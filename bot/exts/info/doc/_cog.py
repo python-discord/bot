@@ -66,7 +66,7 @@ class DocCog(commands.Cog):
         self.renamed_symbols = defaultdict(list)
 
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
-        self.scheduled_inventories = set()
+        self.inventory_reschedule_attempts = defaultdict(int)
 
         self.refresh_event = asyncio.Event()
         self.refresh_event.set()
@@ -134,20 +134,20 @@ class DocCog(commands.Cog):
         package = await fetch_inventory(inventory_url)
 
         if not package:
-            if inventory_url not in self.scheduled_inventories:
+            attempt = self.inventory_reschedule_attempts[package]
+            self.inventory_reschedule_attempts[package] += 1
+            if attempt == 0:
                 delay = FETCH_RESCHEDULE_DELAY.first
             else:
                 delay = FETCH_RESCHEDULE_DELAY.repeated
             log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
             self.inventory_scheduler.schedule_later(
                 delay*60,
-                api_package_name,
+                (attempt, api_package_name),
                 self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url)
             )
-            self.scheduled_inventories.add(api_package_name)
             return
 
-        self.scheduled_inventories.discard(api_package_name)
         self.update_single(api_package_name, base_url, package)
 
     def ensure_unique_symbol_name(
@@ -209,6 +209,7 @@ class DocCog(commands.Cog):
         self.refresh_event.clear()
         log.debug("Refreshing documentation inventory...")
         self.inventory_scheduler.cancel_all()
+        self.inventory_reschedule_attempts.clear()
 
         # Clear the old base URLS and doc symbols to ensure
         # that we start from a fresh local dataset.
@@ -216,7 +217,6 @@ class DocCog(commands.Cog):
         self.base_urls.clear()
         self.doc_symbols.clear()
         self.renamed_symbols.clear()
-        self.scheduled_inventories.clear()
         await self.item_fetcher.clear()
 
         # Run all coroutines concurrently - since each of them performs an HTTP
