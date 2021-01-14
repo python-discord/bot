@@ -262,10 +262,11 @@ class DocCog(commands.Cog):
             url=f"{symbol_info.url}#{symbol_info.symbol_id}",
             description=markdown
         )
-        # Show all symbols with the same name that were renamed in the footer.
+        # Show all symbols with the same name that were renamed in the footer,
+        # with a max of 100 chars.
         if symbol in self.renamed_symbols:
             renamed_symbols = ', '.join(self.renamed_symbols[symbol])
-            footer_text = f"Moved: {textwrap.shorten(renamed_symbols, 100, placeholder=' ...')}"
+            footer_text = f"Moved: {textwrap.shorten(renamed_symbols, 100-7, placeholder=' ...')}"
         else:
             footer_text = ""
         embed.set_footer(text=footer_text)
