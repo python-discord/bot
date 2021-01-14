@@ -70,6 +70,9 @@ class DocCog(commands.Cog):
 
         self.refresh_event = asyncio.Event()
         self.refresh_event.set()
+        self.symbol_get_event = asyncio.Event()
+        self.symbol_get_event.set()
+
         self.init_refresh_task = self.bot.loop.create_task(self.init_refresh_inventory())
 
     @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
@@ -206,6 +209,7 @@ class DocCog(commands.Cog):
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
         self.refresh_event.clear()
+        await self.symbol_get_event.wait()
         log.debug("Refreshing documentation inventory...")
         self.inventory_scheduler.cancel_all()
         self.inventory_reschedule_attempts.clear()
@@ -248,7 +252,10 @@ class DocCog(commands.Cog):
             return None
         self.bot.stats.incr(f"doc_fetches.{symbol_info.package}")
 
+        self.symbol_get_event.clear()
         markdown = await doc_cache.get(symbol_info)
+        self.symbol_get_event.set()
+
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
             markdown = await self.item_fetcher.get_markdown(symbol_info)
