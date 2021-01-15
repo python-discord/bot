@@ -92,7 +92,7 @@ class BatchParser:
     def __init__(self):
         self._queue: List[QueueItem] = []
         self._page_symbols: Dict[str, List[DocItem]] = defaultdict(list)
-        self._item_futures: Dict[DocItem, ParseResultFuture] = {}
+        self._item_futures: Dict[DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
         self._parse_task = None
 
         self.cleanup_futures_task = bot.instance.loop.create_task(self._cleanup_futures())
@@ -114,7 +114,6 @@ class BatchParser:
                 soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
 
             self._queue.extend(QueueItem(symbol, soup) for symbol in symbols_to_queue)
-            self._item_futures.update((symbol, ParseResultFuture()) for symbol in symbols_to_queue)
             del self._page_symbols[doc_item.url]
             log.debug(f"Added symbols from {doc_item.url} to parse queue.")
 
@@ -168,6 +167,7 @@ class BatchParser:
         queue_item = self._queue.pop(item_index)
 
         self._queue.append(queue_item)
+        log.trace(f"Moved {item} to the front of the queue.")
 
     def add_item(self, doc_item: DocItem) -> None:
         """Map a DocItem to its page so that the symbol will be parsed once the page is requested."""
