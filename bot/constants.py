@@ -397,10 +397,10 @@ class Channels(metaclass=YAMLGetter):
     big_brother_logs: int
     bot_commands: int
     change_log: int
+    code_help_chat_0: int
     code_help_chat_1: int
-    code_help_chat_2: int
+    code_help_voice_0: int
     code_help_voice_1: int
-    code_help_voice_2: int
     cooldown: int
     defcon: int
     dev_contrib: int
@@ -408,7 +408,8 @@ class Channels(metaclass=YAMLGetter):
     dev_log: int
     dm_log: int
     esoteric: int
-    general_voice: int
+    general_voice_0: int
+    general_voice_1: int
     helpers: int
     incidents: int
     incidents_archive: int
@@ -434,7 +435,8 @@ class Channels(metaclass=YAMLGetter):
     talent_pool: int
     user_event_announcements: int
     user_log: int
-    voice_chat: int
+    voice_chat_0: int
+    voice_chat_1: int
     voice_gate: int
     voice_log: int
 
