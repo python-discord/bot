@@ -3,10 +3,9 @@ import functools
 import logging
 import re
 import textwrap
-from collections import OrderedDict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Any, Callable, Optional, Tuple
+from typing import Optional, Tuple
 
 import discord
 from bs4 import BeautifulSoup
@@ -22,6 +21,7 @@ from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import ValidPythonIdentifier, ValidURL
 from bot.pagination import LinePaginator
+from bot.utils.cache import AsyncCache
 from bot.utils.messages import wait_for_deletion
 
 
@@ -65,34 +65,7 @@ WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 FAILED_REQUEST_RETRY_AMOUNT = 3
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 
-
-def async_cache(max_size: int = 128, arg_offset: int = 0) -> Callable:
-    """
-    LRU cache implementation for coroutines.
-
-    Once the cache exceeds the maximum size, keys are deleted in FIFO order.
-
-    An offset may be optionally provided to be applied to the coroutine's arguments when creating the cache key.
-    """
-    # Assign the cache to the function itself so we can clear it from outside.
-    async_cache.cache = OrderedDict()
-
-    def decorator(function: Callable) -> Callable:
-        """Define the async_cache decorator."""
-        @functools.wraps(function)
-        async def wrapper(*args) -> Any:
-            """Decorator wrapper for the caching logic."""
-            key = ':'.join(args[arg_offset:])
-
-            value = async_cache.cache.get(key)
-            if value is None:
-                if len(async_cache.cache) > max_size:
-                    async_cache.cache.popitem(last=False)
-
-                async_cache.cache[key] = await function(*args)
-            return async_cache.cache[key]
-        return wrapper
-    return decorator
+symbol_cache = AsyncCache()
 
 
 class DocMarkdownConverter(MarkdownConverter):
@@ -215,7 +188,7 @@ class Doc(commands.Cog):
         self.base_urls.clear()
         self.inventories.clear()
         self.renamed_symbols.clear()
-        async_cache.cache = OrderedDict()
+        symbol_cache.clear()
 
         # Run all coroutines concurrently - since each of them performs a HTTP
         # request, this speeds up fetching the inventory data heavily.
@@ -280,7 +253,7 @@ class Doc(commands.Cog):
 
         return signatures, description.replace('¶', '')
 
-    @async_cache(arg_offset=1)
+    @symbol_cache(arg_offset=1)
     async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol`, and build an embed from its contents.
@@ -392,7 +365,7 @@ class Doc(commands.Cog):
                     await ctx.message.delete(delay=NOT_FOUND_DELETE_DELAY)
             else:
                 msg = await ctx.send(embed=doc_embed)
-                await wait_for_deletion(msg, (ctx.author.id,), client=self.bot)
+                await wait_for_deletion(msg, (ctx.author.id,))
 
     @docs_group.command(name='set', aliases=('s',))
     @commands.has_any_role(*MODERATION_ROLES)

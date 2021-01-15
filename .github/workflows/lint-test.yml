@@ -1,0 +1,137 @@
+name: Lint & Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values for required bot environment variables
+      BOT_API_KEY: foo
+      BOT_SENTRY_DSN: blah
+      BOT_TOKEN: bar
+      REDDIT_CLIENT_ID: spam
+      REDDIT_SECRET: ham
+      REDIS_PASSWORD: ''
+
+      # Configure pip to cache dependencies and do a user install
+      PIP_NO_CACHE_DIR: false
+      PIP_USER: 1
+
+      # Hide the graphical elements from pipenv's output
+      PIPENV_HIDE_EMOJIS: 1
+      PIPENV_NOSPIN: 1
+
+      # Make sure pipenv does not try reuse an environment it's running in
+      PIPENV_IGNORE_VIRTUALENVS: 1
+
+      # Specify explicit paths for python dependencies and the pre-commit
+      # environment so we know which directories to cache
+      PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
+      PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
+
+    steps:
+      - name: Add custom PYTHONUSERBASE to PATH
+        run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup python
+        id: python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      # This step caches our Python dependencies. To make sure we
+      # only restore a cache when the dependencies, the python version,
+      # the runner operating system, and the dependency location haven't
+      # changed, we create a cache key that is a composite of those states.
+      #
+      # Only when the context is exactly the same, we will restore the cache.
+      - name: Python Dependency Caching
+        uses: actions/cache@v2
+        id: python_cache
+        with:
+          path: ${{ env.PYTHONUSERBASE }}
+          key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
+          ${{ steps.python.outputs.python-version }}-\
+          ${{ hashFiles('./Pipfile', './Pipfile.lock') }}"
+
+      # Install our dependencies if we did not restore a dependency cache
+      - name: Install dependencies using pipenv
+        if: steps.python_cache.outputs.cache-hit != 'true'
+        run: |
+          pip install pipenv
+          pipenv install --dev --deploy --system
+
+      # This step caches our pre-commit environment. To make sure we
+      # do create a new environment when our pre-commit setup changes,
+      # we create a cache key based on relevant factors.
+      - name: Pre-commit Environment Caching
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.PRE_COMMIT_HOME }}
+          key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
+          ${{ steps.python.outputs.python-version }}-\
+          ${{ hashFiles('./.pre-commit-config.yaml') }}"
+
+      # We will not run `flake8` here, as we will use a separate flake8
+      # action. As pre-commit does not support user installs, we set
+      # PIP_USER=0 to not do a user install.
+      - name: Run pre-commit hooks
+        run: export PIP_USER=0; SKIP=flake8 pre-commit run --all-files
+
+      # Run flake8 and have it format the linting errors in the format of
+      # the GitHub Workflow command to register error annotations. This
+      # means that our flake8 output is automatically added as an error
+      # annotation to both the run result and in the "Files" tab of a
+      # pull request.
+      #
+      # Format used:
+      # ::error file={filename},line={line},col={col}::{message}
+      - name: Run flake8
+        run: "flake8 \
+        --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
+        [flake8] %(code)s: %(text)s'"
+
+      # We run `coverage` using the `python` command so we can suppress
+      # irrelevant warnings in our CI output.
+      - name: Run tests and generate coverage report
+        run: |
+            python -Wignore -m coverage run -m unittest
+            coverage report -m
+
+      # This step will publish the coverage reports coveralls.io and
+      # print a "job" link in the output of the GitHub Action
+      - name: Publish coverage report to coveralls.io
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: coveralls
+
+      # Prepare the Pull Request Payload artifact. If this fails, we
+      # we fail silently using the `continue-on-error` option. It's
+      # nice if this succeeds, but if it fails for any reason, it
+      # does not mean that our lint-test checks failed.
+      - name: Prepare Pull Request Payload artifact
+        id: prepare-artifact
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        run: cat $GITHUB_EVENT_PATH | jq '.pull_request' > pull_request_payload.json
+
+      # This only makes sense if the previous step succeeded. To
+      # get the original outcome of the previous step before the
+      # `continue-on-error` conclusion is applied, we use the
+      # `.outcome` value. This step also fails silently.
+      - name: Upload a Build Artifact
+        if: always() && steps.prepare-artifact.outcome == 'success'
+        continue-on-error: true
+        uses: actions/upload-artifact@v2
+        with:
+          name: pull-request-payload
+          path: pull_request_payload.json
