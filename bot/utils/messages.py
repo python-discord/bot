@@ -11,7 +11,7 @@ from discord.errors import HTTPException
 from discord.ext.commands import Context
 
 import bot
-from bot.constants import Emojis, NEGATIVE_REPLIES
+from bot.constants import Emojis, NEGATIVE_REPLIES, MODERATION_ROLES
 
 log = logging.getLogger(__name__)
 
@@ -22,12 +22,15 @@ async def wait_for_deletion(
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
+    allow_moderation_roles: bool = True
 ) -> None:
     """
     Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
 
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`.
+    An `allow_moderation_roles` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
+    the message.
     """
     if message.guild is None:
         raise ValueError("Message must be sent on a guild")
@@ -46,6 +49,7 @@ async def wait_for_deletion(
             reaction.message.id == message.id
             and str(reaction.emoji) in deletion_emojis
             and user.id in user_ids
+            or allow_moderation_roles and any(role.id in MODERATION_ROLES for role in user.roles)
         )
 
     with contextlib.suppress(asyncio.TimeoutError):
