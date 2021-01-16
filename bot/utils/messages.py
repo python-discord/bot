@@ -11,7 +11,7 @@ from discord.errors import HTTPException
 from discord.ext.commands import Context
 
 import bot
-from bot.constants import Emojis, NEGATIVE_REPLIES, MODERATION_ROLES
+from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
 
 log = logging.getLogger(__name__)
 
