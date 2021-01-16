@@ -122,8 +122,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         if history:
             total = f"({len(history)} previous nominations in total)"
             start_reason = f"Watched: {textwrap.shorten(history[0]['reason'], width=500, placeholder='...')}"
-            end_reason = f"Unwatched: {textwrap.shorten(history[0]['end_reason'], width=500, placeholder='...')}"
-            msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
+            msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}```"
 
         await ctx.send(msg)
 
