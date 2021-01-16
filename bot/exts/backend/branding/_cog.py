@@ -559,3 +559,9 @@ class BrandingManager(commands.Cog):
             return False
 
         return await self._apply_asset(guild, _constants.AssetType.SERVER_ICON, url)
+
+    def cog_unload(self) -> None:
+        """Cancels startup and daemon task."""
+        self._startup_task.cancel()
+        if self.daemon is not None:
+            self.daemon.cancel()
