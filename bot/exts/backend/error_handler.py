@@ -159,12 +159,7 @@ class ErrorHandler(Cog):
                     return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
-            tags_cog = self.bot.get_cog("Tags")
-            command_name = ctx.invoked_with
-            sent = await tags_cog.display_tag(ctx, command_name)
-
-            if not sent:
-                await self.send_command_suggestion(ctx, command_name)
+            await self.send_command_suggestion(ctx, ctx.invoked_with)
 
         # Return to not raise the exception
         return
