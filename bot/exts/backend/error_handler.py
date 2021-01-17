@@ -155,7 +155,8 @@ class ErrorHandler(Cog):
             )
         else:
             with contextlib.suppress(ResponseCodeError):
-                await ctx.invoke(tags_get_command, tag_name=tag_name)
+                if await ctx.invoke(tags_get_command, tag_name=tag_name):
+                    return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             tags_cog = self.bot.get_cog("Tags")
