@@ -281,9 +281,13 @@ class Tags(Cog):
         return False
 
     @tags_group.command(name='get', aliases=('show', 'g'))
-    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
-        """Get a specified tag, or a list of all tags if no tag is specified."""
-        await self.display_tag(ctx, tag_name)
+    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> bool:
+        """
+        Get a specified tag, or a list of all tags if no tag is specified.
+
+        Returns False if a tag is on cooldown, or if no matches are found.
+        """
+        return await self.display_tag(ctx, tag_name)
 
 
 def setup(bot: Bot) -> None:

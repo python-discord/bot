@@ -155,7 +155,8 @@ class ErrorHandler(Cog):
             )
         else:
             with contextlib.suppress(ResponseCodeError):
-                await ctx.invoke(tags_get_command, tag_name=tag_name)
+                if await ctx.invoke(tags_get_command, tag_name=tag_name):
+                    return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             tags_cog = self.bot.get_cog("Tags")
@@ -179,6 +180,9 @@ class ErrorHandler(Cog):
         if similar_command_data := difflib.get_close_matches(command_name, raw_commands, 1):
             similar_command_name = similar_command_data[0]
             similar_command = self.bot.get_command(similar_command_name)
+
+            if not similar_command:
+                return
 
             log_msg = "Cancelling attempt to suggest a command due to failed checks."
             try:
