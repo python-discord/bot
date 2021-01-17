@@ -9,7 +9,7 @@ from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Icons, MODERATION_ROLES
+from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import LockedResourceError
 from bot.utils.checks import InWhitelistCheckFailure
