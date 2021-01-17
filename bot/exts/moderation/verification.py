@@ -81,13 +81,11 @@ class Verification(Cog):
         if member.guild.id != constants.Guild.id:
             return  # Only listen for PyDis events
 
-        raw_member = await self.bot.http.get_member(member.guild.id, member.id)
-
         # If the user has the pending flag set, they will be using the alternate
         # gate and will not need a welcome DM with verification instructions.
         # We will send them an alternate DM once they verify with the welcome
         # video when they pass the gate.
-        if raw_member.get("pending"):
+        if member.pending:
             return
 
         log.trace(f"Sending on join message to new member: {member.id}")
