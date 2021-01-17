@@ -181,6 +181,9 @@ class ErrorHandler(Cog):
             similar_command_name = similar_command_data[0]
             similar_command = self.bot.get_command(similar_command_name)
 
+            if not similar_command:
+                return
+
             log_msg = "Cancelling attempt to suggest a command due to failed checks."
             try:
                 if not await similar_command.can_run(ctx):
