@@ -42,9 +42,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_upload_output(self, mock_paste_util):
         """Upload the eval output to the URLs.paste_service.format(key="documents") endpoint."""
         await self.cog.upload_output("Test output.")
-        mock_paste_util.assert_called_once_with(
-            self.bot.http_session, "Test output.", extension="txt"
-        )
+        mock_paste_util.assert_called_once_with("Test output.", extension="txt")
 
     def test_prepare_input(self):
         cases = (
@@ -52,6 +50,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             ('`print("Hello world!")`', 'print("Hello world!")', 'one line code block'),
             ('```\nprint("Hello world!")```', 'print("Hello world!")', 'multiline code block'),
             ('```py\nprint("Hello world!")```', 'print("Hello world!")', 'multiline python code block'),
+            ('text```print("Hello world!")```text', 'print("Hello world!")', 'code block surrounded by text'),
+            ('```print("Hello world!")```\ntext\n```py\nprint("Hello world!")```',
+             'print("Hello world!")\nprint("Hello world!")', 'two code blocks with text in-between'),
+            ('`print("Hello world!")`\ntext\n```print("How\'s it going?")```',
+             'print("How\'s it going?")', 'code block preceded by inline code'),
+            ('`print("Hello world!")`\ntext\n`print("Hello world!")`',
+             'print("Hello world!")', 'one inline code block of two')
         )
         for case, expected, testname in cases:
             with self.subTest(msg=f'Extract code from {testname}.'):

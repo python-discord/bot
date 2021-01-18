@@ -46,7 +46,7 @@ class Tags(Cog):
                     "embed": {
                         "description": file.read_text(encoding="utf8"),
                     },
-                    "restricted_to": "developers",
+                    "restricted_to": None,
                     "location": f"/bot/{file}"
                 }
 
@@ -63,7 +63,7 @@ class Tags(Cog):
     @staticmethod
     def check_accessibility(user: Member, tag: dict) -> bool:
         """Check if user can access a tag."""
-        return tag["restricted_to"].lower() in [role.name.lower() for role in user.roles]
+        return not tag["restricted_to"] or tag["restricted_to"].lower() in [role.name.lower() for role in user.roles]
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> float:
@@ -236,7 +236,6 @@ class Tags(Cog):
                 await wait_for_deletion(
                     await ctx.send(embed=Embed.from_dict(tag['embed'])),
                     [ctx.author.id],
-                    self.bot
                 )
             elif founds and len(tag_name) >= 3:
                 await wait_for_deletion(
@@ -247,7 +246,6 @@ class Tags(Cog):
                         )
                     ),
                     [ctx.author.id],
-                    self.bot
                 )
 
         else:

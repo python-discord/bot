@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from bot.exts.backend.sync._syncers import UserSyncer, _Diff
 from tests import helpers
@@ -19,8 +20,9 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
     """Tests for determining differences between users in the DB and users in the Guild cache."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = UserSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
 
     @staticmethod
     def get_guild(*members):
@@ -57,7 +59,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         }
         guild = self.get_guild()
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([], [], None)
 
         self.assertEqual(actual_diff, expected_diff)
@@ -73,7 +75,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         guild = self.get_guild(fake_user())
 
         guild.get_member.return_value = self.get_mock_member(fake_user())
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([], [], None)
 
         self.assertEqual(actual_diff, expected_diff)
@@ -94,7 +96,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             self.get_mock_member(fake_user())
         ]
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([], [{"id": 99, "name": "new"}], None)
 
         self.assertEqual(actual_diff, expected_diff)
@@ -114,7 +116,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             self.get_mock_member(fake_user()),
             self.get_mock_member(new_user)
         ]
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([new_user], [], None)
 
         self.assertEqual(actual_diff, expected_diff)
@@ -133,7 +135,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             None
         ]
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([], [{"id": 63, "in_guild": False}], None)
 
         self.assertEqual(actual_diff, expected_diff)
@@ -157,7 +159,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             None
         ]
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([new_user], [{"id": 55, "name": "updated"}, {"id": 63, "in_guild": False}], None)
 
         self.assertEqual(actual_diff, expected_diff)
@@ -176,7 +178,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             None
         ]
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([], [], None)
 
         self.assertEqual(actual_diff, expected_diff)
@@ -186,15 +188,16 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the API requests that sync users."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = UserSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
 
     async def test_sync_created_users(self):
         """Only POST requests should be made with the correct payload."""
         users = [fake_user(id=111), fake_user(id=222)]
 
         diff = _Diff(users, [], None)
-        await self.syncer._sync(diff)
+        await UserSyncer._sync(diff)
 
         self.bot.api_client.post.assert_called_once_with("bot/users", json=diff.created)
 
@@ -206,7 +209,7 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         users = [fake_user(id=111), fake_user(id=222)]
 
         diff = _Diff([], users, None)
-        await self.syncer._sync(diff)
+        await UserSyncer._sync(diff)
 
         self.bot.api_client.patch.assert_called_once_with("bot/users/bulk_patch", json=diff.updated)
 

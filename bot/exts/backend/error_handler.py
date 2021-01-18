@@ -8,7 +8,7 @@ from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours
+from bot.constants import Colours
 from bot.converters import TagNameConverter
 from bot.errors import LockedResourceError
 from bot.utils.checks import InWhitelistCheckFailure
@@ -47,7 +47,6 @@ class ErrorHandler(Cog):
             * If CommandNotFound is raised when invoking the tag (determined by the presence of the
               `invoked_from_error_handler` attribute), this error is treated as being unexpected
               and therefore sends an error message
-            * Commands in the verification channel are ignored
         2. UserInputError: see `handle_user_input_error`
         3. CheckFailure: see `handle_check_failure`
         4. CommandOnCooldown: send an error message in the invoking context
@@ -63,10 +62,9 @@ class ErrorHandler(Cog):
         if isinstance(e, errors.CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
             if await self.try_silence(ctx):
                 return
-            if ctx.channel.id != Channels.verification:
-                # Try to look for a tag with the command's name
-                await self.try_get_tag(ctx)
-                return  # Exit early to avoid logging.
+            # Try to look for a tag with the command's name
+            await self.try_get_tag(ctx)
+            return  # Exit early to avoid logging.
         elif isinstance(e, errors.UserInputError):
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):

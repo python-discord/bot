@@ -22,8 +22,9 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
     """Tests for determining differences between roles in the DB and roles in the Guild cache."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = RoleSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
 
     @staticmethod
     def get_guild(*roles):
@@ -44,7 +45,7 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         self.bot.api_client.get.return_value = [fake_role()]
         guild = self.get_guild(fake_role())
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await RoleSyncer._get_diff(guild)
         expected_diff = (set(), set(), set())
 
         self.assertEqual(actual_diff, expected_diff)
@@ -56,7 +57,7 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         self.bot.api_client.get.return_value = [fake_role(id=41, name="old"), fake_role()]
         guild = self.get_guild(updated_role, fake_role())
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await RoleSyncer._get_diff(guild)
         expected_diff = (set(), {_Role(**updated_role)}, set())
 
         self.assertEqual(actual_diff, expected_diff)
@@ -68,7 +69,7 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         self.bot.api_client.get.return_value = [fake_role()]
         guild = self.get_guild(fake_role(), new_role)
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await RoleSyncer._get_diff(guild)
         expected_diff = ({_Role(**new_role)}, set(), set())
 
         self.assertEqual(actual_diff, expected_diff)
@@ -80,7 +81,7 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         self.bot.api_client.get.return_value = [fake_role(), deleted_role]
         guild = self.get_guild(fake_role())
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await RoleSyncer._get_diff(guild)
         expected_diff = (set(), set(), {_Role(**deleted_role)})
 
         self.assertEqual(actual_diff, expected_diff)
@@ -98,7 +99,7 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         ]
         guild = self.get_guild(fake_role(), new, updated)
 
-        actual_diff = await self.syncer._get_diff(guild)
+        actual_diff = await RoleSyncer._get_diff(guild)
         expected_diff = ({_Role(**new)}, {_Role(**updated)}, {_Role(**deleted)})
 
         self.assertEqual(actual_diff, expected_diff)
@@ -108,8 +109,9 @@ class RoleSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the API requests that sync roles."""
 
     def setUp(self):
-        self.bot = helpers.MockBot()
-        self.syncer = RoleSyncer(self.bot)
+        patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = patcher.start()
+        self.addCleanup(patcher.stop)
 
     async def test_sync_created_roles(self):
         """Only POST requests should be made with the correct payload."""
@@ -117,7 +119,7 @@ class RoleSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
 
         role_tuples = {_Role(**role) for role in roles}
         diff = _Diff(role_tuples, set(), set())
-        await self.syncer._sync(diff)
+        await RoleSyncer._sync(diff)
 
         calls = [mock.call("bot/roles", json=role) for role in roles]
         self.bot.api_client.post.assert_has_calls(calls, any_order=True)
@@ -132,7 +134,7 @@ class RoleSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
 
         role_tuples = {_Role(**role) for role in roles}
         diff = _Diff(set(), role_tuples, set())
-        await self.syncer._sync(diff)
+        await RoleSyncer._sync(diff)
 
         calls = [mock.call(f"bot/roles/{role['id']}", json=role) for role in roles]
         self.bot.api_client.put.assert_has_calls(calls, any_order=True)
@@ -147,7 +149,7 @@ class RoleSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
 
         role_tuples = {_Role(**role) for role in roles}
         diff = _Diff(set(), set(), role_tuples)
-        await self.syncer._sync(diff)
+        await RoleSyncer._sync(diff)
 
         calls = [mock.call(f"bot/roles/{role['id']}") for role in roles]
         self.bot.api_client.delete.assert_has_calls(calls, any_order=True)

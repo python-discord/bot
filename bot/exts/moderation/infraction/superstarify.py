@@ -5,7 +5,7 @@ import textwrap
 import typing as t
 from pathlib import Path
 
-from discord import Colour, Embed, Member
+from discord import Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
 from discord.utils import escape_markdown
 
@@ -104,14 +104,14 @@ class Superstarify(InfractionScheduler, Cog):
 
             await self.reapply_infraction(infraction, action)
 
-    @command(name="superstarify", aliases=("force_nick", "star"))
+    @command(name="superstarify", aliases=("force_nick", "star", "starify"))
     async def superstarify(
         self,
         ctx: Context,
         member: Member,
         duration: Expiry,
         *,
-        reason: str = None,
+        reason: str = '',
     ) -> None:
         """
         Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
@@ -128,74 +128,62 @@ class Superstarify(InfractionScheduler, Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
 
-        An optional reason can be provided. If no reason is given, the original name will be shown
-        in a generated reason.
+        An optional reason can be provided, which would be added to a message stating their old nickname
+        and linking to the nickname policy.
         """
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
 
         # Post the infraction to the API
         old_nick = member.display_name
-        reason = reason or f"old nick: {old_nick}"
-        infraction = await _utils.post_infraction(ctx, member, "superstar", reason, duration, active=True)
+        infraction_reason = f'Old nickname: {old_nick}. {reason}'
+        infraction = await _utils.post_infraction(ctx, member, "superstar", infraction_reason, duration, active=True)
         id_ = infraction["id"]
 
         forced_nick = self.get_nick(id_, member.id)
         expiry_str = format_infraction(infraction["expires_at"])
 
-        # Apply the infraction and schedule the expiration task.
-        log.debug(f"Changing nickname of {member} to {forced_nick}.")
-        self.mod_log.ignore(constants.Event.member_update, member.id)
-        await member.edit(nick=forced_nick, reason=reason)
-        self.schedule_expiration(infraction)
+        # Apply the infraction
+        async def action() -> None:
+            log.debug(f"Changing nickname of {member} to {forced_nick}.")
+            self.mod_log.ignore(constants.Event.member_update, member.id)
+            await member.edit(nick=forced_nick, reason=reason)
 
         old_nick = escape_markdown(old_nick)
         forced_nick = escape_markdown(forced_nick)
 
-        # Send a DM to the user to notify them of their new infraction.
-        await _utils.notify_infraction(
-            user=member,
-            infr_type="Superstarify",
-            expires_at=expiry_str,
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0],
-            reason=f"Your nickname didn't comply with our [nickname policy]({NICKNAME_POLICY_URL})."
+        nickname_info = textwrap.dedent(f"""
+            Old nickname: `{old_nick}`
+            New nickname: `{forced_nick}`
+        """).strip()
+
+        user_message = (
+            f"Your previous nickname, **{old_nick}**, "
+            f"was so bad that we have decided to change it. "
+            f"Your new nickname will be **{forced_nick}**.\n\n"
+            "{reason}"
+            f"You will be unable to change your nickname until **{expiry_str}**. "
+            "If you're confused by this, please read our "
+            f"[official nickname policy]({NICKNAME_POLICY_URL})."
+        ).format
+
+        successful = await self.apply_infraction(
+            ctx, infraction, member, action(),
+            user_reason=user_message(reason=f'**Additional details:** {reason}\n\n' if reason else ''),
+            additional_info=nickname_info
         )
 
-        # Send an embed with the infraction information to the invoking context.
-        log.trace(f"Sending superstar #{id_} embed.")
-        embed = Embed(
-            title="Congratulations!",
-            colour=constants.Colours.soft_orange,
-            description=(
-                f"Your previous nickname, **{old_nick}**, "
-                f"was so bad that we have decided to change it. "
-                f"Your new nickname will be **{forced_nick}**.\n\n"
-                f"You will be unable to change your nickname until **{expiry_str}**.\n\n"
-                "If you're confused by this, please read our "
-                f"[official nickname policy]({NICKNAME_POLICY_URL})."
+        # Send an embed with to the invoking context if superstar was successful.
+        if successful:
+            log.trace(f"Sending superstar #{id_} embed.")
+            embed = Embed(
+                title="Superstarified!",
+                colour=constants.Colours.soft_orange,
+                description=user_message(reason='')
             )
-        )
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
-        # Log to the mod log channel.
-        log.trace(f"Sending apply mod log for superstar #{id_}.")
-        await self.mod_log.send_log_message(
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0],
-            colour=Colour.gold(),
-            title="Member achieved superstardom",
-            thumbnail=member.avatar_url_as(static_format="png"),
-            text=textwrap.dedent(f"""
-                Member: {member.mention}
-                Actor: {ctx.message.author.mention}
-                Expires: {expiry_str}
-                Old nickname: `{old_nick}`
-                New nickname: `{forced_nick}`
-                Reason: {reason}
-            """),
-            footer=f"ID {id_}"
-        )
-
-    @command(name="unsuperstarify", aliases=("release_nick", "unstar"))
+    @command(name="unsuperstarify", aliases=("release_nick", "unstar", "unstarify"))
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)

@@ -23,7 +23,7 @@ from bot.utils.time import humanize_delta
 
 log = logging.getLogger(__name__)
 
-NAMESPACE = "reminder"  # Used for the mutually_exclusive decorator; constant to prevent typos
+LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
@@ -170,7 +170,7 @@ class Reminders(Cog):
         log.trace(f"Scheduling new task #{reminder['id']}")
         self.schedule_reminder(reminder)
 
-    @lock_arg(NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
+    @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
         """Send the reminder."""
         is_valid, user, channel = self.ensure_valid_reminder(reminder)
@@ -378,7 +378,7 @@ class Reminders(Cog):
         mention_ids = [mention.id for mention in mentions]
         await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
 
-    @lock_arg(NAMESPACE, "id_", raise_error=True)
+    @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
     async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
         """Edits a reminder with the given payload, then sends a confirmation message."""
         if not await self._can_modify(ctx, id_):
@@ -398,7 +398,7 @@ class Reminders(Cog):
         await self._reschedule_reminder(reminder)
 
     @remind_group.command("delete", aliases=("remove", "cancel"))
-    @lock_arg(NAMESPACE, "id_", raise_error=True)
+    @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
     async def delete_reminder(self, ctx: Context, id_: int) -> None:
         """Delete one of your active reminders."""
         if not await self._can_modify(ctx, id_):

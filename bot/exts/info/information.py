@@ -7,19 +7,21 @@ from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import fuzzywuzzy
-from discord import ChannelType, Colour, Embed, Guild, Member, Message, Role, Status, utils
+from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
+from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
+from bot.utils.channel import is_mod_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
-
 
 STATUS_EMOTES = {
     Status.offline: constants.Emojis.status_offline,
@@ -198,7 +200,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info"])
-    async def user_info(self, ctx: Context, user: Member = None) -> None:
+    async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
         """Returns info about a user."""
         if user is None:
             user = ctx.author
@@ -213,12 +215,14 @@ class Information(Cog):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: Member) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: FetchedMember) -> Embed:
         """Creates an embed containing information on the `user`."""
+        on_server = bool(ctx.guild.get_member(user.id))
+
         created = time_since(user.created_at, max_units=3)
 
         name = str(user)
-        if user.nick:
+        if on_server and user.nick:
             name = f"{user.nick} ({name})"
 
         badges = []
@@ -227,8 +231,19 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
-        joined = time_since(user.joined_at, max_units=3)
-        roles = ", ".join(role.mention for role in user.roles[1:])
+        activity = await self.user_messages(user)
+
+        if on_server:
+            joined = time_since(user.joined_at, max_units=3)
+            roles = ", ".join(role.mention for role in user.roles[1:])
+            membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
+            if not is_mod_channel(ctx.channel):
+                membership.pop("Verified")
+
+            membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
+        else:
+            roles = None
+            membership = "The user is not a member of the server"
 
         fields = [
             (
@@ -241,21 +256,14 @@ class Information(Cog):
             ),
             (
                 "Member information",
-                textwrap.dedent(f"""
-                    Joined: {joined}
-                    Roles: {roles or None}
-                """).strip()
+                membership
             ),
         ]
 
-        # Use getattr to future-proof for commands invoked via DMs.
-        show_verbose = (
-            ctx.channel.id in constants.MODERATION_CHANNELS
-            or getattr(ctx.channel, "category_id", None) == constants.Categories.modmail
-        )
-
         # Show more verbose output in moderation channels for infractions and nominations
-        if show_verbose:
+        if is_mod_channel(ctx.channel):
+            fields.append(activity)
+
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
@@ -275,13 +283,13 @@ class Information(Cog):
 
         return embed
 
-    async def basic_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
+    async def basic_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
             params={
                 'hidden': 'False',
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
@@ -292,7 +300,7 @@ class Information(Cog):
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, member: Member) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -302,7 +310,7 @@ class Information(Cog):
         infractions = await self.bot.api_client.get(
             'bot/infractions',
             params={
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
@@ -333,12 +341,12 @@ class Information(Cog):
 
         return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, member: Member) -> Tuple[str, str]:
+    async def user_nomination_counts(self, user: FetchedMember) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
             params={
-                'user__id': str(member.id)
+                'user__id': str(user.id)
             }
         )
 
@@ -357,6 +365,30 @@ class Information(Cog):
                 output.append(f"This user has {count} historical {nomination_noun}, but is currently not nominated.")
 
         return "Nominations", "\n".join(output)
+
+    async def user_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
+        """
+        Gets the amount of messages for `member`.
+
+        Fetches information from the metricity database that's hosted by the site.
+        If the database returns a code besides a 404, then many parts of the bot are broken including this one.
+        """
+        activity_output = []
+
+        try:
+            user_activity = await self.bot.api_client.get(f"bot/users/{user.id}/metricity_data")
+        except ResponseCodeError as e:
+            if e.status == 404:
+                activity_output = "No activity"
+        else:
+            activity_output.append(user_activity["total_messages"] or "No messages")
+            activity_output.append(user_activity["activity_blocks"] or "No activity")
+
+            activity_output = "\n".join(
+                f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
+            )
+
+        return ("Activity", activity_output)
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
@@ -394,10 +426,14 @@ class Information(Cog):
         return out.rstrip()
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
-    @group(invoke_without_command=True, enabled=False)
+    @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
+        if ctx.author not in message.channel.members:
+            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
+            return
+
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
@@ -429,7 +465,7 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page)
 
-    @raw.command(enabled=False)
+    @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)
