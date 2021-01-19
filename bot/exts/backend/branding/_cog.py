@@ -13,7 +13,6 @@ from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import Branding, Colours, Emojis, Guild, MODERATION_ROLES
-from bot.decorators import in_whitelist
 from bot.exts.backend.branding import _constants, _decorators, _errors, _seasons
 
 log = logging.getLogger(__name__)
@@ -356,7 +355,7 @@ class BrandingManager(commands.Cog):
         failed_assets = [asset for asset, succeeded in report.items() if not succeeded]
         return failed_assets
 
-    @in_whitelist(roles=MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     @commands.group(name="branding")
     async def branding_cmds(self, ctx: commands.Context) -> None:
         """Manual branding control."""
