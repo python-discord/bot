@@ -36,7 +36,7 @@ _RE_CODE_BLOCK = re.compile(
         (?P<tick>[{''.join(_TICKS)}]) # Put all ticks into a character class within a group.
         \2{{2}}                       # Match previous group 2 more times to ensure the same char.
     )
-    (?P<lang>[^\W_]+\n)?              # Optionally match a language specifier followed by a newline.
+    (?P<lang>[A-Za-z0-9\+\-\.]+\n)?   # Optionally match a language specifier followed by a newline.
     (?P<code>.+?)                     # Match the actual code within the block.
     \1                                # Match the same 3 ticks used at the start of the block.
     """,

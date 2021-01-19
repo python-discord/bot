@@ -46,7 +46,7 @@ class Tags(Cog):
                     "embed": {
                         "description": file.read_text(encoding="utf8"),
                     },
-                    "restricted_to": "developers",
+                    "restricted_to": None,
                     "location": f"/bot/{file}"
                 }
 
@@ -63,7 +63,7 @@ class Tags(Cog):
     @staticmethod
     def check_accessibility(user: Member, tag: dict) -> bool:
         """Check if user can access a tag."""
-        return tag["restricted_to"].lower() in [role.name.lower() for role in user.roles]
+        return not tag["restricted_to"] or tag["restricted_to"].lower() in [role.name.lower() for role in user.roles]
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> float:
@@ -182,10 +182,15 @@ class Tags(Cog):
         matching_tags = self._get_tags_via_content(any, keywords or 'any', ctx.author)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
-    @tags_group.command(name='get', aliases=('show', 'g'))
-    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
-        """Get a specified tag, or a list of all tags if no tag is specified."""
+    async def display_tag(self, ctx: Context, tag_name: str = None) -> bool:
+        """
+        If a tag is not found, display similar tag names as suggestions.
 
+        If a tag is not specified, display a paginated embed of all tags.
+
+        Tags are on cooldowns on a per-tag, per-channel basis. If a tag is on cooldown, display
+        nothing and return False.
+        """
         def _command_on_cooldown(tag_name: str) -> bool:
             """
             Check if the command is currently on cooldown, on a per-tag, per-channel basis.
@@ -212,7 +217,7 @@ class Tags(Cog):
                 f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                 f"Cooldown ends in {time_left:.1f} seconds."
             )
-            return
+            return False
 
         if tag_name is not None:
             temp_founds = self._get_tag(tag_name)
@@ -236,8 +241,8 @@ class Tags(Cog):
                 await wait_for_deletion(
                     await ctx.send(embed=Embed.from_dict(tag['embed'])),
                     [ctx.author.id],
-                    self.bot
                 )
+                return True
             elif founds and len(tag_name) >= 3:
                 await wait_for_deletion(
                     await ctx.send(
@@ -247,8 +252,8 @@ class Tags(Cog):
                         )
                     ),
                     [ctx.author.id],
-                    self.bot
                 )
+                return True
 
         else:
             tags = self._cache.values()
@@ -257,6 +262,7 @@ class Tags(Cog):
                     description="**There are no tags in the database!**",
                     colour=Colour.red()
                 ))
+                return True
             else:
                 embed: Embed = Embed(title="**Current tags**")
                 await LinePaginator.paginate(
@@ -270,6 +276,18 @@ class Tags(Cog):
                     empty=False,
                     max_lines=15
                 )
+                return True
+
+        return False
+
+    @tags_group.command(name='get', aliases=('show', 'g'))
+    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> bool:
+        """
+        Get a specified tag, or a list of all tags if no tag is specified.
+
+        Returns False if a tag is on cooldown, or if no matches are found.
+        """
+        return await self.display_tag(ctx, tag_name)
 
 
 def setup(bot: Bot) -> None:

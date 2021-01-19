@@ -92,7 +92,6 @@ class ModLog(Cog, name="ModLog"):
         files: t.Optional[t.List[discord.File]] = None,
         content: t.Optional[str] = None,
         additional_embeds: t.Optional[t.List[discord.Embed]] = None,
-        additional_embeds_msg: t.Optional[str] = None,
         timestamp_override: t.Optional[datetime] = None,
         footer: t.Optional[str] = None,
     ) -> Context:
@@ -133,8 +132,6 @@ class ModLog(Cog, name="ModLog"):
         )
 
         if additional_embeds:
-            if additional_embeds_msg:
-                await channel.send(additional_embeds_msg)
             for additional_embed in additional_embeds:
                 await channel.send(embed=additional_embed)
 
