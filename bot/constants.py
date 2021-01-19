@@ -13,7 +13,7 @@ their default values from `config-default.yml`.
 import logging
 import os
 from collections.abc import Mapping
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -249,6 +249,9 @@ class Colours(metaclass=YAMLGetter):
     soft_green: int
     soft_orange: int
     bright_green: int
+    orange: int
+    pink: int
+    purple: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -298,6 +301,8 @@ class Emojis(metaclass=YAMLGetter):
     upvotes: str
     comments: str
     user: str
+
+    ok_hand: str
 
 
 class Icons(metaclass=YAMLGetter):
@@ -599,6 +604,12 @@ class VoiceGate(metaclass=YAMLGetter):
     bot_message_delete_delay: int
     minimum_activity_blocks: int
     voice_ping_delete_delay: int
+
+
+class Branding(metaclass=YAMLGetter):
+    section = "branding"
+
+    cycle_frequency: int
 
 
 class Event(Enum):
