@@ -28,6 +28,9 @@ style:
         soft_green: 0x68c290
         soft_orange: 0xf9cb54
         bright_green: 0x01d277
+        orange: 0xe67e22
+        pink: 0xcf84e0
+        purple: 0xb734eb
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"
@@ -67,6 +70,8 @@ style:
         upvotes:        "<:reddit_upvotes:755845219890757644>"
         comments:       "<:reddit_comments:755845255001014384>"
         user:           "<:reddit_users:755845303822974997>"
+
+        ok_hand: ":ok_hand:"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -185,6 +190,8 @@ guild:
         mods:               &MODS           305126844661760000
         mod_alerts:                         473092532147060736
         mod_spam:           &MOD_SPAM       620607373828030464
+        mod_tools:          &MOD_TOOLS      775413915391098921
+        mod_meta:           &MOD_META       775412552795947058
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
         duck_pond:          &DUCK_POND      637820308341915648
@@ -218,6 +225,8 @@ guild:
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
+        - *MOD_META
+        - *MOD_TOOLS
         - *MODS
         - *MOD_SPAM
 
@@ -517,6 +526,10 @@ voice_gate:
     bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
     minimum_activity_blocks: 3  # Number of 10 minute blocks during which a user must have been active
     voice_ping_delete_delay: 60  # Seconds before deleting the bot's ping to user in Voice Gate
+
+
+branding:
+    cycle_frequency: 3  # How many days bot wait before refreshing server icon
 
 
 config:
