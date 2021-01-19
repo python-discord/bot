@@ -1,6 +1,7 @@
 import contextlib
 import difflib
 import logging
+import random
 import typing as t
 
 from discord import Embed
@@ -9,9 +10,10 @@ from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours, Icons, MODERATION_ROLES
+from bot.constants import Colours, ERROR_REPLIES, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import LockedResourceError
+from bot.exts.backend.branding._errors import BrandingError
 from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
@@ -77,6 +79,9 @@ class ErrorHandler(Cog):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
+            elif isinstance(e.original, BrandingError):
+                await ctx.send(embed=self._get_error_embed(random.choice(ERROR_REPLIES), str(e.original)))
+                return
             else:
                 await self.handle_unexpected_error(ctx, e.original)
             return  # Exit early to avoid logging.

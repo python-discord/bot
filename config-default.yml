@@ -28,6 +28,9 @@ style:
         soft_green: 0x68c290
         soft_orange: 0xf9cb54
         bright_green: 0x01d277
+        orange: 0xe67e22
+        pink: 0xcf84e0
+        purple: 0xb734eb
 
     emojis:
         defcon_disabled: "<:defcondisabled:470326273952972810>"
@@ -67,6 +70,8 @@ style:
         upvotes:        "<:reddit_upvotes:755845219890757644>"
         comments:       "<:reddit_comments:755845255001014384>"
         user:           "<:reddit_users:755845303822974997>"
+
+        ok_hand: ":ok_hand:"
 
     icons:
         crown_blurple: "https://cdn.discordapp.com/emojis/469964153289965568.png"
@@ -521,6 +526,10 @@ voice_gate:
     bot_message_delete_delay: 10  # Seconds before deleting bot's response in Voice Gate
     minimum_activity_blocks: 3  # Number of 10 minute blocks during which a user must have been active
     voice_ping_delete_delay: 60  # Seconds before deleting the bot's ping to user in Voice Gate
+
+
+branding:
+    cycle_frequency: 3  # How many days bot wait before refreshing server icon
 
 
 config:
