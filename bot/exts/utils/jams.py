@@ -93,10 +93,6 @@ class CodeJams(commands.Cog):
                 connect=True
             ),
             guild.default_role: PermissionOverwrite(read_messages=False, connect=False),
-            guild.get_role(Roles.verified): PermissionOverwrite(
-                read_messages=False,
-                connect=False
-            )
         }
 
         # Rest of members should just have read_messages

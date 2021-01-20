@@ -145,22 +145,17 @@ class HelpChannels(commands.Cog):
         Make the current in-use help channel dormant.
 
         Make the channel dormant if the user passes the `dormant_check`,
-        delete the message that invoked this,
-        and reset the send permissions cooldown for the user who started the session.
+        delete the message that invoked this.
         """
         log.trace("close command invoked; checking if the channel is in-use.")
-        if ctx.channel.category == self.in_use_category:
-            if await self.dormant_check(ctx):
-                await _cooldown.remove_cooldown_role(ctx.author)
 
-                # Ignore missing task when cooldown has passed but the channel still isn't dormant.
-                if ctx.author.id in self.scheduler:
-                    self.scheduler.cancel(ctx.author.id)
-
-                await self.move_to_dormant(ctx.channel, "command")
-                self.scheduler.cancel(ctx.channel.id)
-        else:
+        if ctx.channel.category != self.in_use_category:
             log.debug(f"{ctx.author} invoked command 'dormant' outside an in-use help channel")
+            return
+
+        if await self.dormant_check(ctx):
+            await self.move_to_dormant(ctx.channel, "command")
+            self.scheduler.cancel(ctx.channel.id)
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
@@ -368,11 +363,12 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
 
-        await _caches.claimants.delete(channel.id)
         await self.move_to_bottom_position(
             channel=channel,
             category_id=constants.Categories.help_dormant,
         )
+
+        await self.unclaim_channel(channel)
 
         self.bot.stats.incr(f"help.dormant_calls.{caller}")
 
@@ -396,6 +392,28 @@ class HelpChannels(commands.Cog):
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
         self.channel_queue.put_nowait(channel)
         self.report_stats()
+
+    async def unclaim_channel(self, channel: discord.TextChannel) -> None:
+        """
+        Mark the channel as unclaimed and remove the cooldown role from the claimant if needed.
+
+        The role is only removed if they have no claimed channels left once the current one is unclaimed.
+        This method also handles canceling the automatic removal of the cooldown role.
+        """
+        claimant_id = await _caches.claimants.pop(channel.id)
+
+        # Ignore missing task when cooldown has passed but the channel still isn't dormant.
+        if claimant_id in self.scheduler:
+            self.scheduler.cancel(claimant_id)
+
+        claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
+        if claimant is None:
+            log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+            return
+
+        # Remove the cooldown role if the claimant has no other channels left
+        if not any(claimant.id == user_id for _, user_id in await _caches.claimants.items()):
+            await _cooldown.remove_cooldown_role(claimant)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""

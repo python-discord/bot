@@ -6,7 +6,6 @@ from pathlib import Path
 
 import coloredlogs
 import sentry_sdk
-from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
@@ -67,9 +66,9 @@ def setup_sentry() -> None:
         dsn=constants.Bot.sentry_dsn,
         integrations=[
             sentry_logging,
-            AioHttpIntegration(),
             RedisIntegration(),
-        ]
+        ],
+        release=f"bot@{constants.GIT_SHA}"
     )
 
 
