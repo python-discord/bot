@@ -355,14 +355,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = None
+        async def action() -> None:
+            # Skip members that left the server
+            if not isinstance(user, Member):
+                return
 
-        # Skip members that left the server
-        if isinstance(user, Member):
             await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
-            action = user.remove_roles(self._voice_verified_role, reason=reason)
+            await user.remove_roles(self._voice_verified_role, reason=reason)
 
-        await self.apply_infraction(ctx, infraction, user, action)
+        await self.apply_infraction(ctx, infraction, user, action())
 
     # endregion
     # region: Base pardon functions
