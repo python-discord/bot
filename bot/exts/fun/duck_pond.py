@@ -3,7 +3,7 @@ import logging
 from typing import Union
 
 import discord
-from discord import Color, Embed, Member, Message, RawReactionActionEvent, User, errors
+from discord import Color, Embed, Member, Message, RawReactionActionEvent, TextChannel, User, errors
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
@@ -43,6 +43,17 @@ class DuckPond(Cog):
                 if role.id in constants.STAFF_ROLES:
                     return True
         return False
+
+    @staticmethod
+    def is_helper_viewable(channel: TextChannel) -> bool:
+        """Check if helpers can view a specific channel."""
+        guild = channel.guild
+        helper_role = guild.get_role(constants.Roles.helpers)
+        # check channel overwrites for both the Helper role and @everyone and
+        # return True for channels that they have explicit permissions to view.
+        helper_overwrites = channel.overwrites_for(helper_role)
+        default_overwrites = channel.overwrites_for(guild.default_role)
+        return default_overwrites.view_channel or helper_overwrites.view_channel
 
     async def has_green_checkmark(self, message: Message) -> bool:
         """Check if the message has a green checkmark reaction."""
@@ -164,6 +175,10 @@ class DuckPond(Cog):
 
         message = await channel.fetch_message(payload.message_id)
         member = discord.utils.get(message.guild.members, id=payload.user_id)
+
+        # Was the message sent in a channel Helpers can see?
+        if not self.is_helper_viewable(channel):
+            return
 
         # Was the message sent by a human staff member?
         if not self.is_staff(message.author) or message.author.bot:
