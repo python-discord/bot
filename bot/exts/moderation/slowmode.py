@@ -75,16 +75,7 @@ class Slowmode(Cog):
     @slowmode_group.command(name='reset', aliases=['r'])
     async def reset_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
         """Reset the slowmode delay for a text channel to 0 seconds."""
-        # Use the channel this command was invoked in if one was not given
-        if channel is None:
-            channel = ctx.channel
-
-        log.info(f'{ctx.author} reset the slowmode delay for #{channel} to 0 seconds.')
-
-        await channel.edit(slowmode_delay=0)
-        await ctx.send(
-            f'{Emojis.check_mark} The slowmode delay for {channel.mention} has been reset to 0 seconds.'
-        )
+        await self.set_slowmode(ctx, channel, relativedelta(seconds=0))
 
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
