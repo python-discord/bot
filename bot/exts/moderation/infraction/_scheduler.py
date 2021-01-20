@@ -102,6 +102,7 @@ class InfractionScheduler:
         """
         Apply an infraction to the user, log the infraction, and optionally notify the user.
 
+        `action_coro`, if not provided, will result in the infraction not getting scheduled for deletion.
         `user_reason`, if provided, will be sent to the user in place of the infraction reason.
         `additional_info` will be attached to the text field in the mod-log embed.
 
