@@ -9,9 +9,9 @@ To see the current environment in use by Python, you can run:
 /usr/bin/python3
 ```
 
-To see the environment in use by pip, you can do `pip debug` (`pip3 debug` for Linux/macOS). The 3rd line of the output will contain the path in use. e.g. `sys.executable: /usr/bin/python3`.
+To see the environment in use by pip, you can do `pip debug` (`pip3 debug` for Linux/macOS). The 3rd line of the output will contain the path in use e.g. `sys.executable: /usr/bin/python3`.
 
-If Python's `sys.executable` doesn't match pip's then they are currently using different environments! This may cause Python to raise a `ModuleNotFoundError` when you try to use a package you just installed with pip, as it was installed to a different environment.
+If Python's `sys.executable` doesn't match pip's, then they are currently using different environments! This may cause Python to raise a `ModuleNotFoundError` when you try to use a package you just installed with pip, as it was installed to a different environment.
 
 **Why use a virtual environment?**
 
