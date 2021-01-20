@@ -118,7 +118,7 @@ class DuckPond(Cog):
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
 
-    async def locked_relay(self, message: discord.Message) -> bool:
+    async def locked_relay(self, message: Message) -> bool:
         """Relay a message after obtaining the relay lock."""
         if self.relay_lock is None:
             # Lazily load the lock to ensure it's created within the
@@ -216,7 +216,7 @@ class DuckPond(Cog):
 
     @command(name="duckify", aliases=("duckpond", "pondify"))
     @has_any_role(constants.Roles.admins)
-    async def duckify(self, ctx: Context, message: discord.Message) -> None:
+    async def duckify(self, ctx: Context, message: Message) -> None:
         """Relay a message to the duckpond, no ducks required!"""
         if await self.locked_relay(message):
             await ctx.message.add_reaction("🦆")
