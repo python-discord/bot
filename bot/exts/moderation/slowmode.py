@@ -7,7 +7,7 @@ from discord import TextChannel
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES
+from bot.constants import Channels, Emojis, MODERATION_ROLES
 from bot.converters import DurationDelta
 from bot.utils import time
 
@@ -58,6 +58,10 @@ class Slowmode(Cog):
             log.info(f'{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.')
 
             await channel.edit(slowmode_delay=slowmode_delay)
+            if channel.id == Channels.python_general:
+                log.info(f'Recording slowmode change in stats for {channel.name}.')
+                self.bot.stats.gauge(f"slowmode.{channel.name}", slowmode_delay)
+
             await ctx.send(
                 f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {humanized_delay}.'
             )
