@@ -68,9 +68,7 @@ class BotSource(commands.Cog):
         Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
         """
         if isinstance(source_item, commands.Command):
-            source_item = source_item.callback
-            while hasattr(source_item, "__wrapped__"):
-                source_item = source_item.__wrapped__
+            source_item = inspect.unwrap(source_item.callback)
             src = source_item.__code__
             filename = src.co_filename
         elif isinstance(source_item, str):
