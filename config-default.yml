@@ -157,6 +157,9 @@ guild:
         # Python Help: Available
         cooldown:           720603994149486673
 
+        # Topical
+        discord_py:         343944376055103488
+
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
         message_log:        &MESSAGE_LOG    467752170159079424

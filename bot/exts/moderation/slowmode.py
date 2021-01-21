@@ -15,6 +15,12 @@ log = logging.getLogger(__name__)
 
 SLOWMODE_MAX_DELAY = 21600  # seconds
 
+COMMONLY_SLOWMODED_CHANNELS = {
+    Channels.python_general: "python_general",
+    Channels.discord_py: "discordpy",
+    Channels.off_topic_0: "ot0",
+}
+
 
 class Slowmode(Cog):
     """Commands for getting and setting slowmode delays of text channels."""
@@ -58,9 +64,9 @@ class Slowmode(Cog):
             log.info(f'{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.')
 
             await channel.edit(slowmode_delay=slowmode_delay)
-            if channel.id == Channels.python_general:
+            if channel.id in COMMONLY_SLOWMODED_CHANNELS:
                 log.info(f'Recording slowmode change in stats for {channel.name}.')
-                self.bot.stats.gauge(f"slowmode.{channel.name}", slowmode_delay)
+                self.bot.stats.gauge(f"slowmode.{COMMONLY_SLOWMODED_CHANNELS[channel.id]}", slowmode_delay)
 
             await ctx.send(
                 f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {humanized_delay}.'
