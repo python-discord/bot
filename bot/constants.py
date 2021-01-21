@@ -408,6 +408,7 @@ class Channels(metaclass=YAMLGetter):
     code_help_voice_2: int
     cooldown: int
     defcon: int
+    discord_py: int
     dev_contrib: int
     dev_core: int
     dev_log: int
