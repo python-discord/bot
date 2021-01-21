@@ -429,7 +429,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
     organisation: int
-    python_discussion: int
+    python_general: int
     python_events: int
     python_news: int
     reddit: int

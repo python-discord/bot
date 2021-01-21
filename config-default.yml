@@ -157,7 +157,7 @@ guild:
 
         # Discussion
         meta:                               429409067623251969
-        python_discussion:  &PY_DISCUSSION  267624335836053506
+        python_general:     &PY_GENERAL     267624335836053506
 
         # Python Help: Available
         cooldown:           720603994149486673
@@ -430,7 +430,7 @@ code_block:
 
     # The channels which will be affected by a cooldown. These channels are also whitelisted.
     cooldown_channels:
-        - *PY_DISCUSSION
+        - *PY_GENERAL
 
     # Sending instructions triggers a cooldown on a per-channel basis.
     # More instruction messages will not be sent in the same channel until the cooldown has elapsed.
