@@ -173,12 +173,12 @@ class DuckPond(Cog):
         if channel is None:
             return
 
-        message = await channel.fetch_message(payload.message_id)
-        member = discord.utils.get(message.guild.members, id=payload.user_id)
-
         # Was the message sent in a channel Helpers can see?
         if not self.is_helper_viewable(channel):
             return
+
+        message = await channel.fetch_message(payload.message_id)
+        member = discord.utils.get(message.guild.members, id=payload.user_id)
 
         # Was the message sent by a human staff member?
         if not self.is_staff(message.author) or message.author.bot:
