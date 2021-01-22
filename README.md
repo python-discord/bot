@@ -18,5 +18,5 @@ Read the [Contributing Guide](https://pythondiscord.com/pages/contributing/bot/)
 [4]: https://github.com/python-discord/bot/actions?query=workflow%3ABuild+branch%3Amaster
 [5]: https://github.com/python-discord/bot/workflows/Deploy/badge.svg?branch=master
 [6]: https://github.com/python-discord/bot/actions?query=workflow%3ADeploy+branch%3Amaster
-[7]: https://raw.githubusercontent.com/python-discord/branding/master/logos/badge/badge_github.png
+[7]: https://raw.githubusercontent.com/python-discord/branding/master/logos/badge/badge_github.svg
 [8]: https://discord.gg/python
