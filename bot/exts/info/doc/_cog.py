@@ -16,7 +16,7 @@ from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL
 from bot.pagination import LinePaginator
-from bot.utils.lock import lock
+from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
 from . import PRIORITY_PACKAGES, doc_cache
@@ -70,8 +70,7 @@ class DocCog(commands.Cog):
 
         self.refresh_event = asyncio.Event()
         self.refresh_event.set()
-        self.symbol_get_event = asyncio.Event()
-        self.symbol_get_event.set()
+        self.symbol_get_event = SharedEvent()
 
         self.init_refresh_task = self.bot.loop.create_task(self.init_refresh_inventory())
 
@@ -252,9 +251,8 @@ class DocCog(commands.Cog):
             return None
         self.bot.stats.incr(f"doc_fetches.{symbol_info.package}")
 
-        self.symbol_get_event.clear()
-        markdown = await doc_cache.get(symbol_info)
-        self.symbol_get_event.set()
+        with self.symbol_get_event:
+            markdown = await doc_cache.get(symbol_info)
 
         if markdown is None:
             log.debug(f"Redis cache miss for symbol `{symbol}`.")
