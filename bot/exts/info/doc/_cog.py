@@ -271,7 +271,7 @@ class DocCog(commands.Cog):
         # with a max of 100 chars.
         if symbol in self.renamed_symbols:
             renamed_symbols = ', '.join(self.renamed_symbols[symbol])
-            footer_text = f"Moved: {textwrap.shorten(renamed_symbols, 100-7, placeholder=' ...')}"
+            footer_text = textwrap.shorten("Moved: " + renamed_symbols, 100, placeholder=' ...')
         else:
             footer_text = ""
         embed.set_footer(text=footer_text)
