@@ -53,19 +53,26 @@ class Information(Cog):
 
     def get_extended_server_info(self) -> str:
         """Return additional server info only visible in moderation channels."""
-        talentpool_count = len(self.bot.get_cog("Talentpool").watched_users)
-        bb_count = len(self.bot.get_cog("Big Brother").watched_users)
+        talentpool_info = ""
+        if (cog := self.bot.get_cog("Talentpool")):
+            talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
 
-        defcon_cog = self.bot.get_cog("Defcon")
-        defcon_status = "Enabled" if defcon_cog.enabled else "Disabled"
-        defcon_days = defcon_cog.days.days if defcon_cog.enabled else "-"
+        bb_info = ""
+        if (cog := self.bot.get_cog("Big Brother")):
+            bb_info = f"BB-watched: {len(cog.watched_users)}\n"
+
+        defcon_info = ""
+        if (cog := self.bot.get_cog("Defcon")):
+            defcon_status = "Enabled" if cog.enabled else "Disabled"
+            defcon_days = cog.days.days if cog.enabled else "-"
+            defcon_info = f"Defcon status: {defcon_status}\nDefcon days: {defcon_days}\n"
+
         python_general = self.bot.get_channel(constants.Channels.python_discussion)
 
         return textwrap.dedent(f"""
-            Nominated: {talentpool_count}
-            BB-watched: {bb_count}
-            Defcon status: {defcon_status}
-            Defcon days: {defcon_days}
+            {talentpool_info}\
+            {bb_info}\
+            {defcon_info}\
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
         """)
 
