@@ -51,7 +51,7 @@ class Information(Cog):
         )
         return {role.name.title(): len(role.members) for role in roles}
 
-    def get_extended_server_info(self, guild: Guild) -> str:
+    def get_extended_server_info(self) -> str:
         """Return additional server info only visible in moderation channels."""
         talentpool_count = len(self.bot.get_cog("Talentpool").watched_users)
         bb_count = len(self.bot.get_cog("Big Brother").watched_users)
@@ -136,10 +136,7 @@ class Information(Cog):
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context) -> None:
         """Returns an embed full of server information."""
-        embed = Embed(
-            colour=Colour.blurple(),
-            title="Server Information",
-        )
+        embed = Embed(colour=Colour.blurple(), title="Server Information")
 
         created = time_since(ctx.guild.created_at, precision="days")
         region = ctx.guild.region
@@ -164,7 +161,8 @@ class Information(Cog):
 
         embed.description = textwrap.dedent(f"""
             Created: {created}
-            Voice region: {region}{features}
+            Voice region: {region}\
+            {features}
             Roles: {num_roles}
             Member status: {member_status}
         """)
@@ -173,9 +171,7 @@ class Information(Cog):
         # Members
         total_members = ctx.guild.member_count
         member_counts = self.get_member_counts(ctx.guild)
-        member_info = "\n".join(
-            f"{role}: {count}" for role, count in member_counts.items()
-        )
+        member_info = "\n".join(f"{role}: {count}" for role, count in member_counts.items())
         embed.add_field(name=f"Members: {total_members}", value=member_info)
 
         # Channels
@@ -188,9 +184,7 @@ class Information(Cog):
 
         # Additional info if ran in moderation channels
         if is_mod_channel(ctx.channel):
-            embed.add_field(
-                name="Moderation:", value=self.get_extended_server_info(ctx.guild)
-            )
+            embed.add_field(name="Moderation:", value=self.get_extended_server_info())
 
         await ctx.send(embed=embed)
 
