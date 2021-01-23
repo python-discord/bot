@@ -52,6 +52,10 @@ class DMRelay(Cog):
             await ctx.message.add_reaction("❌")
             return
 
+        if member.id == self.bot.user.id:
+            log.debug("Not sending message to bot user")
+            return await ctx.send("🚫 I can't send messages to myself!")
+
         try:
             await member.send(message)
         except discord.errors.Forbidden:
