@@ -195,9 +195,16 @@ def _get_truncated_description(
         return result
 
     # Determine the actual truncation index.
-    # Truncate at the last Markdown element that comes before the truncation index.
-    markdown_truncate_index = max(cut for cut in markdown_element_ends if cut < truncate_index)
-    return result[:markdown_truncate_index].strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
+    possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
+    if not possible_truncation_indices:
+        # In case there is no Markdown element ending before the truncation index, use shorten as a fallback.
+        truncated_result = textwrap.shorten(result, truncate_index)
+    else:
+        # Truncate at the last Markdown element that comes before the truncation index.
+        markdown_truncate_index = max(possible_truncation_indices)
+        truncated_result = result[:markdown_truncate_index]
+
+    return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
 
 def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
