@@ -5,8 +5,7 @@ import textwrap
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, Embed, Guild, Message, Role, utils
-from discord.abc import GuildChannel
+from discord import Colour, Embed, Guild, Message, Role, utils
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
@@ -15,7 +14,7 @@ from bot.bot import Bot
 from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
-from bot.utils.channel import is_mod_channel
+from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.time import time_since
 
@@ -29,26 +28,12 @@ class Information(Cog):
         self.bot = bot
 
     @staticmethod
-    def is_staff_channel(guild: Guild, channel: GuildChannel) -> bool:
-        """Determines if a given channel is staff-only."""
-        if channel.type is ChannelType.category:
-            return False
-
-        # Channel is staff-only if staff have explicit read allow perms
-        # and @everyone has explicit read deny perms
-        return any(
-            channel.overwrites_for(guild.get_role(staff_role)).read_messages is True
-            and channel.overwrites_for(guild.default_role).read_messages is False
-            for staff_role in constants.STAFF_ROLES
-        )
-
-    @staticmethod
     def get_channel_type_counts(guild: Guild) -> DefaultDict[str, int]:
         """Return the total amounts of the various types of channels in `guild`."""
         channel_counter = defaultdict(int)
 
         for channel in guild.channels:
-            if Information.is_staff_channel(guild, channel):
+            if is_staff_channel(channel):
                 channel_counter["staff"] += 1
             else:
                 channel_counter[str(channel.type)] += 1
