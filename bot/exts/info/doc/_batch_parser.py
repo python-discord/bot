@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 import bot
 from bot.constants import Channels
+from bot.utils.lock import lock_arg
 from . import doc_cache
 from ._parsing import get_symbol_markdown
 if TYPE_CHECKING:
@@ -92,13 +93,14 @@ class BatchParser:
     def __init__(self):
         self._queue: List[QueueItem] = []
         self._page_symbols: Dict[str, List[DocItem]] = defaultdict(list)
-        self._item_futures: Dict[DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
+        self._item_futures: Dict[DocItem, ParseResultFuture] = {}
         self._parse_task = None
 
         self.cleanup_futures_task = bot.instance.loop.create_task(self._cleanup_futures())
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
+    @lock_arg("doc.get_markdown", "doc_item", attrgetter("url"), wait=True)
     async def get_markdown(self, doc_item: DocItem) -> str:
         """
         Get the result Markdown of `doc_item`.
@@ -108,18 +110,20 @@ class BatchParser:
 
         Not safe to run while `self.clear` is running.
         """
-        self._item_futures[doc_item].user_requested = True
-        if (symbols_to_queue := self._page_symbols.get(doc_item.url)) is not None:
+        if doc_item not in self._item_futures:
+            self._item_futures.update((symbol, ParseResultFuture()) for symbol in self._page_symbols[doc_item.url])
+            self._item_futures[doc_item].user_requested = True
+
             async with bot.instance.http_session.get(doc_item.url) as response:
                 soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
 
-            self._queue.extend(QueueItem(symbol, soup) for symbol in symbols_to_queue)
-            del self._page_symbols[doc_item.url]
+            self._queue.extend(QueueItem(symbol, soup) for symbol in self._page_symbols[doc_item.url])
             log.debug(f"Added symbols from {doc_item.url} to parse queue.")
 
             if self._parse_task is None:
                 self._parse_task = asyncio.create_task(self._parse_queue())
-
+        else:
+            self._item_futures[doc_item].user_requested = True
         with suppress(ValueError):
             # If the item is not in the list then the item is already parsed or is being parsed
             self._move_to_front(doc_item)
@@ -196,8 +200,9 @@ class BatchParser:
         Keeping them around for longer than a second is unnecessary and keeps the parsed Markdown strings alive.
         """
         while True:
-            current_time = time.time()
-            for key, future in self._item_futures.copy().items():
-                if current_time - future.result_set_time > 5:
-                    del self._item_futures[key]
+            if not self._queue:
+                current_time = time.time()
+                for key, future in self._item_futures.copy().items():
+                    if current_time - future.result_set_time > 5:
+                        del self._item_futures[key]
             await asyncio.sleep(5)
