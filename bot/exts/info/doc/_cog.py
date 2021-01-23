@@ -66,7 +66,6 @@ class DocCog(commands.Cog):
         self.renamed_symbols = defaultdict(list)
 
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
-        self.inventory_reschedule_attempts = defaultdict(int)
 
         self.refresh_event = asyncio.Event()
         self.refresh_event.set()
@@ -136,16 +135,15 @@ class DocCog(commands.Cog):
         package = await fetch_inventory(inventory_url)
 
         if not package:
-            attempt = self.inventory_reschedule_attempts[package]
-            self.inventory_reschedule_attempts[package] += 1
-            if attempt == 0:
-                delay = FETCH_RESCHEDULE_DELAY.first
-            else:
+            if api_package_name in self.inventory_scheduler:
+                self.inventory_scheduler.cancel(api_package_name)
                 delay = FETCH_RESCHEDULE_DELAY.repeated
+            else:
+                delay = FETCH_RESCHEDULE_DELAY.first
             log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
             self.inventory_scheduler.schedule_later(
                 delay*60,
-                (attempt, api_package_name),
+                api_package_name,
                 self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url)
             )
         else:
@@ -211,7 +209,6 @@ class DocCog(commands.Cog):
         await self.symbol_get_event.wait()
         log.debug("Refreshing documentation inventory...")
         self.inventory_scheduler.cancel_all()
-        self.inventory_reschedule_attempts.clear()
 
         # Clear the old base URLS and doc symbols to ensure
         # that we start from a fresh local dataset.
