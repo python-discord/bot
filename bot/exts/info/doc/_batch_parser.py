@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 import bot
 from bot.constants import Channels
 from bot.utils.lock import lock_arg
-from . import doc_cache
+from . import NAMESPACE, doc_cache
 from ._parsing import get_symbol_markdown
 if TYPE_CHECKING:
     from ._cog import DocItem
@@ -100,7 +100,7 @@ class BatchParser:
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
-    @lock_arg("doc.get_markdown", "doc_item", attrgetter("url"), wait=True)
+    @lock_arg(NAMESPACE, "doc_item", attrgetter("url"), wait=True)
     async def get_markdown(self, doc_item: DocItem) -> str:
         """
         Get the result Markdown of `doc_item`.

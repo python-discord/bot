@@ -5,8 +5,9 @@ MAX_SIGNATURE_AMOUNT = 3
 PRIORITY_PACKAGES = (
     "python",
 )
+NAMESPACE = "doc"
 
-doc_cache = DocRedisCache(namespace="Docs")
+doc_cache = DocRedisCache(namespace=NAMESPACE)
 
 
 def setup(bot: Bot) -> None:

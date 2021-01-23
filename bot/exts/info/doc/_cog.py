@@ -19,7 +19,7 @@ from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
-from . import PRIORITY_PACKAGES, doc_cache
+from . import NAMESPACE, PRIORITY_PACKAGES, doc_cache
 from ._batch_parser import BatchParser
 from ._inventory_parser import InventoryDict, fetch_inventory
 
@@ -74,7 +74,7 @@ class DocCog(commands.Cog):
 
         self.init_refresh_task = self.bot.loop.create_task(self.init_refresh_inventory())
 
-    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
+    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""
         await self.bot.wait_until_guild_available()
@@ -330,7 +330,7 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name='setdoc', aliases=('s',))
     @commands.has_any_role(*MODERATION_ROLES)
-    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
+    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def set_command(
         self,
         ctx: commands.Context,
@@ -367,7 +367,7 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @commands.has_any_role(*MODERATION_ROLES)
-    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
+    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
         """
         Removes the specified package from the database.
@@ -386,7 +386,7 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.has_any_role(*MODERATION_ROLES)
-    @lock("doc", COMMAND_LOCK_SINGLETON, raise_error=True)
+    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
