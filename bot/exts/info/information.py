@@ -187,7 +187,7 @@ class Information(Cog):
         embed.add_field(name=f"Channels: {total_channels}", value=channel_info)
 
         # Additional info if ran in moderation channels
-        if ctx.channel.id in constants.MODERATION_CHANNELS:
+        if is_mod_channel(ctx.channel):
             embed.add_field(
                 name="Moderation:", value=self.get_extended_server_info(ctx.guild)
             )
