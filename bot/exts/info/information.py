@@ -68,7 +68,7 @@ class Information(Cog):
             defcon_days = cog.days.days if cog.enabled else "-"
             defcon_info = f"Defcon status: {defcon_status}\nDefcon days: {defcon_days}\n"
 
-        python_general = self.bot.get_channel(constants.Channels.python_discussion)
+        python_general = self.bot.get_channel(constants.Channels.python_general)
 
         return textwrap.dedent(f"""
             {talentpool_info}\
