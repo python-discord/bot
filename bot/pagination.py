@@ -4,6 +4,7 @@ import typing as t
 from contextlib import suppress
 
 import discord
+from discord import Member
 from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
@@ -225,7 +226,7 @@ class LinePaginator(Paginator):
                 # The reaction was by a whitelisted user
                 user_.id == restrict_to_user.id
                 # The reaction was by a moderator
-                or any(role.id in MODERATION_ROLES for role in user_.roles)
+                or isinstance(user_, Member) and any(role.id in MODERATION_ROLES for role in user_.roles)
             )
 
             return (
