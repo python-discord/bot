@@ -6,7 +6,8 @@ from collections import Counter, defaultdict
 from string import Template
 from typing import Any, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
+import fuzzywuzzy
+from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status
 from discord.abc import GuildChannel
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
@@ -106,22 +107,28 @@ class Information(Cog):
 
         To specify multiple roles just add to the arguments, delimit roles with spaces in them using quotation marks.
         """
-        parsed_roles = []
-        failed_roles = []
+        parsed_roles = set()
+        failed_roles = set()
 
+        all_roles = {role.id: role.name for role in ctx.guild.roles}
         for role_name in roles:
             if isinstance(role_name, Role):
                 # Role conversion has already succeeded
-                parsed_roles.append(role_name)
+                parsed_roles.add(role_name)
                 continue
 
-            role = utils.find(lambda r: r.name.lower() == role_name.lower(), ctx.guild.roles)
+            match = fuzzywuzzy.process.extractOne(
+                role_name, all_roles, score_cutoff=80,
+                scorer=fuzzywuzzy.fuzz.ratio
+            )
 
-            if not role:
-                failed_roles.append(role_name)
+            if not match:
+                failed_roles.add(role_name)
                 continue
 
-            parsed_roles.append(role)
+            # `match` is a (role name, score, role id) tuple
+            role = ctx.guild.get_role(match[2])
+            parsed_roles.add(role)
 
         if failed_roles:
             await ctx.send(f":x: Could not retrieve the following roles: {', '.join(failed_roles)}")
@@ -419,10 +426,14 @@ class Information(Cog):
         return out.rstrip()
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
-    @group(invoke_without_command=True, enabled=False)
+    @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
+        if ctx.author not in message.channel.members:
+            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
+            return
+
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
@@ -454,7 +465,7 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page)
 
-    @raw.command(enabled=False)
+    @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)

@@ -13,7 +13,7 @@ their default values from `config-default.yml`.
 import logging
 import os
 from collections.abc import Mapping
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -249,6 +249,9 @@ class Colours(metaclass=YAMLGetter):
     soft_green: int
     soft_orange: int
     bright_green: int
+    orange: int
+    pink: int
+    purple: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -298,6 +301,8 @@ class Emojis(metaclass=YAMLGetter):
     upvotes: str
     comments: str
     user: str
+
+    ok_hand: str
 
 
 class Icons(metaclass=YAMLGetter):
@@ -403,6 +408,7 @@ class Channels(metaclass=YAMLGetter):
     code_help_voice_2: int
     cooldown: int
     defcon: int
+    discord_py: int
     dev_contrib: int
     dev_core: int
     dev_log: int
@@ -424,7 +430,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
     organisation: int
-    python_discussion: int
+    python_general: int
     python_events: int
     python_news: int
     reddit: int
@@ -434,7 +440,6 @@ class Channels(metaclass=YAMLGetter):
     talent_pool: int
     user_event_announcements: int
     user_log: int
-    verification: int
     voice_chat: int
     voice_gate: int
     voice_log: int
@@ -471,8 +476,6 @@ class Roles(metaclass=YAMLGetter):
     python_community: int
     sprinters: int
     team_leaders: int
-    unverified: int
-    verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
     voice_verified: int
 
 
@@ -594,16 +597,6 @@ class PythonNews(metaclass=YAMLGetter):
     webhook: int
 
 
-class Verification(metaclass=YAMLGetter):
-    section = "verification"
-
-    unverified_after: int
-    kicked_after: int
-    reminder_frequency: int
-    bot_message_delete_delay: int
-    kick_confirmation_threshold: float
-
-
 class VoiceGate(metaclass=YAMLGetter):
     section = "voice_gate"
 
@@ -612,6 +605,12 @@ class VoiceGate(metaclass=YAMLGetter):
     bot_message_delete_delay: int
     minimum_activity_blocks: int
     voice_ping_delete_delay: int
+
+
+class Branding(metaclass=YAMLGetter):
+    section = "branding"
+
+    cycle_frequency: int
 
 
 class Event(Enum):
