@@ -19,7 +19,7 @@ GITHUB_RE = re.compile(
 
 GITHUB_GIST_RE = re.compile(
     r'https://gist\.github\.com/([a-zA-Z0-9-]+)/(?P<gist_id>[a-zA-Z0-9]+)/*'
-    r'(?P<revision>[a-zA-Z0-9-]*)/*#file-(?P<file_path>[^#>]+?)'
+    r'(?P<revision>[a-zA-Z0-9]*)/*#file-(?P<file_path>[^#>]+?)'
     r'(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)'
 )
 
