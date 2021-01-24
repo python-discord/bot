@@ -26,7 +26,7 @@ GITHUB_GIST_RE = re.compile(
 GITHUB_HEADERS = {'Accept': 'application/vnd.github.v3.raw'}
 
 GITLAB_RE = re.compile(
-    r'https://gitlab\.com/(?P<repo>[a-zA-Z0-9-]+?)/\-/blob/(?P<path>[^#>]+/{0,1})'
+    r'https://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+/{0,1})'
     r'(\?[^#>]+)?(#L(?P<start_line>\d+)(-(?P<end_line>\d+))?)'
 )
 
