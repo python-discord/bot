@@ -5,11 +5,14 @@ from collections import namedtuple
 
 from discord import Guild
 from discord.ext.commands import Context
+from more_itertools import chunked
 
 import bot
 from bot.api import ResponseCodeError
 
 log = logging.getLogger(__name__)
+
+CHUNK_SIZE = 1000
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
@@ -207,10 +210,13 @@ class UserSyncer(Syncer):
     @staticmethod
     async def _sync(diff: _Diff) -> None:
         """Synchronise the database with the user cache of `guild`."""
+        # Using asyncio.gather would still consume too many resources on the site.
         log.trace("Syncing created users...")
         if diff.created:
-            await bot.instance.api_client.post("bot/users", json=diff.created)
+            for chunk in chunked(diff.created, CHUNK_SIZE):
+                await bot.instance.api_client.post("bot/users", json=chunk)
 
         log.trace("Syncing updated users...")
         if diff.updated:
-            await bot.instance.api_client.patch("bot/users/bulk_patch", json=diff.updated)
+            for chunk in chunked(diff.updated, CHUNK_SIZE):
+                await bot.instance.api_client.patch("bot/users/bulk_patch", json=chunk)
