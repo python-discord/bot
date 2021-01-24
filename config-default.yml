@@ -289,9 +289,9 @@ filter:
     filter_domains:        true
     filter_everyone_ping:  true
     filter_invites:        true
+    filter_zalgo:          false
     watch_regex:           true
     watch_rich_embeds:     true
-    filter_zalgo:          false
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
