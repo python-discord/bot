@@ -55,15 +55,15 @@ class Information(Cog):
     def get_extended_server_info(self) -> str:
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
-        if (cog := self.bot.get_cog("Talentpool")):
+        if cog := self.bot.get_cog("Talentpool"):
             talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
 
         bb_info = ""
-        if (cog := self.bot.get_cog("Big Brother")):
+        if cog := self.bot.get_cog("Big Brother"):
             bb_info = f"BB-watched: {len(cog.watched_users)}\n"
 
         defcon_info = ""
-        if (cog := self.bot.get_cog("Defcon")):
+        if cog := self.bot.get_cog("Defcon"):
             defcon_status = "Enabled" if cog.enabled else "Disabled"
             defcon_days = cog.days.days if cog.enabled else "-"
             defcon_info = f"Defcon status: {defcon_status}\nDefcon days: {defcon_days}\n"
