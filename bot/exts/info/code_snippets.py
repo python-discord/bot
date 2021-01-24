@@ -14,12 +14,12 @@ log = logging.getLogger(__name__)
 
 GITHUB_RE = re.compile(
     r'https://github\.com/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/blob/'
-    r'(?P<path>[^#>]+/{0,1})(#L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)'
+    r'(?P<path>[^#>]+/{0,1})(\?[^#>]+)?(#L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)'
 )
 
 GITHUB_GIST_RE = re.compile(
     r'https://gist\.github\.com/([a-zA-Z0-9-]+)/(?P<gist_id>[a-zA-Z0-9]+)/*'
-    r'(?P<revision>[a-zA-Z0-9]*)/*#file-(?P<file_path>[^#>]+?)'
+    r'(?P<revision>[a-zA-Z0-9]*)/*#file-(?P<file_path>[^#>]+?)(\?[^#>]+)?'
     r'(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)'
 )
 
@@ -27,7 +27,7 @@ GITHUB_HEADERS = {'Accept': 'application/vnd.github.v3.raw'}
 
 GITLAB_RE = re.compile(
     r'https://gitlab\.com/(?P<repo>[a-zA-Z0-9-]+?)/\-/blob/(?P<path>[^#>]+/{0,1})'
-    r'(#L(?P<start_line>\d+)(-(?P<end_line>\d+))?)'
+    r'(\?[^#>]+)?(#L(?P<start_line>\d+)(-(?P<end_line>\d+))?)'
 )
 
 BITBUCKET_RE = re.compile(
