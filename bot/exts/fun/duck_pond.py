@@ -50,10 +50,10 @@ class DuckPond(Cog):
         guild = channel.guild
         helper_role = guild.get_role(constants.Roles.helpers)
         # check channel overwrites for both the Helper role and @everyone and
-        # return True for channels that they have explicit permissions to view.
+        # return True for channels that they have permissions to view.
         helper_overwrites = channel.overwrites_for(helper_role)
         default_overwrites = channel.overwrites_for(guild.default_role)
-        return default_overwrites.view_channel or helper_overwrites.view_channel
+        return default_overwrites.view_channel is None or helper_overwrites.view_channel is True
 
     async def has_green_checkmark(self, message: Message) -> bool:
         """Check if the message has a green checkmark reaction."""
