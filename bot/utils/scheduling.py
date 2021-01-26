@@ -155,3 +155,20 @@ class Scheduler:
             # Log the exception if one exists.
             if exception:
                 self._log.error(f"Error in task #{task_id} {id(done_task)}!", exc_info=exception)
+
+
+def create_task(*args, **kwargs) -> asyncio.Task:
+    """Wrapper for `asyncio.create_task` which logs exceptions raised in the task."""
+    task = asyncio.create_task(*args, **kwargs)
+    task.add_done_callback(_log_task_exception)
+    return task
+
+
+def _log_task_exception(task: asyncio.Task) -> None:
+    """Retrieve and log the exception raised in `task` if one exists."""
+    with contextlib.suppress(asyncio.CancelledError):
+        exception = task.exception()
+        # Log the exception if one exists.
+        if exception:
+            log = logging.getLogger(__name__)
+            log.error(f"Error in task {task.get_name()} {id(task)}!", exc_info=exception)
