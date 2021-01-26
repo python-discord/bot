@@ -15,7 +15,6 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Roles
-from bot.interpreter import Interpreter
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
 log = logging.getLogger(__name__)
@@ -29,8 +28,6 @@ class Internal(Cog):
         self.env = {}
         self.ln = 0
         self.stdout = StringIO()
-
-        self.interpreter = Interpreter(bot)
 
         self.socket_since = datetime.utcnow()
         self.socket_event_total = 0
@@ -195,7 +192,7 @@ async def func():  # (None,) -> Any
             truncate_index = newline_truncate_index
 
         if len(out) > truncate_index:
-            paste_link = await send_to_paste_service(self.bot.http_session, out, extension="py")
+            paste_link = await send_to_paste_service(out, extension="py")
             if paste_link is not None:
                 paste_text = f"full contents at {paste_link}"
             else:
