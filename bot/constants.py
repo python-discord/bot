@@ -405,7 +405,7 @@ class Channels(metaclass=YAMLGetter):
     dev_log: int
 
     meta: int
-    python_discussion: int
+    python_general: int
 
     cooldown: int
 
@@ -421,6 +421,7 @@ class Channels(metaclass=YAMLGetter):
     off_topic_2: int
 
     bot_commands: int
+    discord_py: int
     esoteric: int
     voice_gate: int
 
