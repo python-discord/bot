@@ -59,7 +59,10 @@ class Defcon(Cog):
 
     async def sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
+        log.trace("Waiting for the guild to become available before syncing.")
         await self.bot.wait_until_guild_available()
+
+        log.trace("Syncing settings.")
         self.channel = await self.bot.fetch_channel(Channels.defcon)
 
         try:
@@ -267,6 +270,11 @@ class Defcon(Cog):
     async def defcon_notifier(self) -> None:
         """Routinely notify moderators that DEFCON is active."""
         await self.channel.send(f"Defcon is on and is set to {self.days.days} day{ngettext('', 's', self.days.days)}.")
+
+    def cog_unload(self) -> None:
+        """Cancel the notifer task when the cog unloads."""
+        log.trace("Cog unload: canceling defcon notifier task.")
+        self.defcon_notifier.cancel()
 
 
 def setup(bot: Bot) -> None:
