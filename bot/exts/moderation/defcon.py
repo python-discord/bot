@@ -44,13 +44,11 @@ class Action(Enum):
 class Defcon(Cog):
     """Time-sensitive server defense mechanisms."""
 
-    days = None  # type: timedelta
-    enabled = False  # type: bool
-
     def __init__(self, bot: Bot):
         self.bot = bot
         self.channel = None
         self.days = timedelta(days=0)
+        self.enabled = False
 
         self.bot.loop.create_task(self.sync_settings())
 
@@ -142,6 +140,9 @@ class Defcon(Cog):
         except Exception:
             pass
 
+        self.days = timedelta(days=days)
+        self.enabled = action != Action.DISABLED
+
         error = None
         try:
             await self.bot.api_client.put(
@@ -150,8 +151,8 @@ class Defcon(Cog):
                     'name': 'defcon',
                     'data': {
                         # TODO: retrieve old days count
-                        'days': days,
-                        'enabled': action is not Action.DISABLED,
+                        'days': self.days.days,
+                        'enabled': self.enabled,
                         'enable_date': datetime.now().isoformat()
                     }
                 }
@@ -161,7 +162,6 @@ class Defcon(Cog):
             log.exception("Unable to update DEFCON settings.")
             error = err
         finally:
-            self.days = timedelta(days=days)
             self.update_notifier()
 
             await ctx.send(self.build_defcon_msg(action, error))
@@ -178,7 +178,6 @@ class Defcon(Cog):
         Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must be,
         in days.
         """
-        self.enabled = True
         await self._defcon_action(ctx, days=0, action=Action.ENABLED)
         await self.update_channel_topic()
 
@@ -186,7 +185,6 @@ class Defcon(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def disable_command(self, ctx: Context) -> None:
         """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
-        self.enabled = False
         await self._defcon_action(ctx, days=0, action=Action.DISABLED)
         await self.update_channel_topic()
 
@@ -206,7 +204,6 @@ class Defcon(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def days_command(self, ctx: Context, days: int) -> None:
         """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
-        self.enabled = True
         await self._defcon_action(ctx, days=days, action=Action.UPDATED)
         await self.update_channel_topic()
 
