@@ -182,7 +182,7 @@ class Defcon(Cog):
         Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must be,
         in days.
         """
-        await self._defcon_action(ctx, days=0, action=Action.ENABLED)
+        await self._defcon_action(ctx, days=self.days, action=Action.ENABLED)
 
     @defcon_group.command(name='disable', aliases=('off', 'd'), root_aliases=("defoff",))
     @has_any_role(*MODERATION_ROLES)
