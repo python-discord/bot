@@ -157,13 +157,13 @@ class Defcon(Cog):
                 }
             )
 
-            self.days = timedelta(days=days)
-            self.update_notifier()
-
         except Exception as err:
             log.exception("Unable to update DEFCON settings.")
             error = err
         finally:
+            self.days = timedelta(days=days)
+            self.update_notifier()
+
             await ctx.send(self.build_defcon_msg(action, error))
             await self.send_defcon_log(action, ctx.author, error)
 
