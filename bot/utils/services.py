@@ -1,8 +1,9 @@
 import logging
 from typing import Optional
 
-from aiohttp import ClientConnectorError, ClientSession
+from aiohttp import ClientConnectorError
 
+import bot
 from bot.constants import URLs
 
 log = logging.getLogger(__name__)
@@ -10,11 +11,10 @@ log = logging.getLogger(__name__)
 FAILED_REQUEST_ATTEMPTS = 3
 
 
-async def send_to_paste_service(http_session: ClientSession, contents: str, *, extension: str = "") -> Optional[str]:
+async def send_to_paste_service(contents: str, *, extension: str = "") -> Optional[str]:
     """
     Upload `contents` to the paste service.
 
-    `http_session` should be the current running ClientSession from aiohttp
     `extension` is added to the output URL
 
     When an error occurs, `None` is returned, otherwise the generated URL with the suffix.
@@ -24,7 +24,7 @@ async def send_to_paste_service(http_session: ClientSession, contents: str, *, e
     paste_url = URLs.paste_service.format(key="documents")
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
-            async with http_session.post(paste_url, data=contents) as response:
+            async with bot.instance.http_session.post(paste_url, data=contents) as response:
                 response_json = await response.json()
         except ClientConnectorError:
             log.warning(

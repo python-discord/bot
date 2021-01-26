@@ -85,22 +85,14 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
 
             self.ctx.reset_mock()
 
-    async def test_reset_slowmode_no_channel(self) -> None:
-        """Reset slowmode without a given channel."""
-        self.ctx.channel = MockTextChannel(name='careers', slowmode_delay=6)
-
-        await self.cog.reset_slowmode(self.cog, self.ctx, None)
-        self.ctx.send.assert_called_once_with(
-            f'{Emojis.check_mark} The slowmode delay for #careers has been reset to 0 seconds.'
-        )
-
-    async def test_reset_slowmode_with_channel(self) -> None:
+    async def test_reset_slowmode_sets_delay_to_zero(self) -> None:
         """Reset slowmode with a given channel."""
         text_channel = MockTextChannel(name='meta', slowmode_delay=1)
+        self.cog.set_slowmode = mock.AsyncMock()
 
         await self.cog.reset_slowmode(self.cog, self.ctx, text_channel)
-        self.ctx.send.assert_called_once_with(
-            f'{Emojis.check_mark} The slowmode delay for #meta has been reset to 0 seconds.'
+        self.cog.set_slowmode.assert_awaited_once_with(
+            self.ctx, text_channel, relativedelta(seconds=0)
         )
 
     @mock.patch("bot.exts.moderation.slowmode.has_any_role")

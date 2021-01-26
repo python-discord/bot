@@ -2,6 +2,7 @@ import logging
 
 import discord
 
+import bot
 from bot import constants
 from bot.constants import Categories
 
@@ -31,19 +32,35 @@ def is_mod_channel(channel: discord.TextChannel) -> bool:
         return False
 
 
+def is_staff_channel(channel: discord.TextChannel) -> bool:
+    """True if `channel` is considered a staff channel."""
+    guild = bot.instance.get_guild(constants.Guild.id)
+
+    if channel.type is discord.ChannelType.category:
+        return False
+
+    # Channel is staff-only if staff have explicit read allow perms
+    # and @everyone has explicit read deny perms
+    return any(
+        channel.overwrites_for(guild.get_role(staff_role)).read_messages is True
+        and channel.overwrites_for(guild.default_role).read_messages is False
+        for staff_role in constants.STAFF_ROLES
+    )
+
+
 def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     """Return True if `channel` is within a category with `category_id`."""
     return getattr(channel, "category_id", None) == category_id
 
 
-async def try_get_channel(channel_id: int, client: discord.Client) -> discord.abc.GuildChannel:
+async def try_get_channel(channel_id: int) -> discord.abc.GuildChannel:
     """Attempt to get or fetch a channel and return it."""
     log.trace(f"Getting the channel {channel_id}.")
 
-    channel = client.get_channel(channel_id)
+    channel = bot.instance.get_channel(channel_id)
     if not channel:
         log.debug(f"Channel {channel_id} is not in cache; fetching from API.")
-        channel = await client.fetch_channel(channel_id)
+        channel = await bot.instance.fetch_channel(channel_id)
 
     log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
     return channel
