@@ -85,6 +85,12 @@ class ErrorHandler(Cog):
             else:
                 await self.handle_unexpected_error(ctx, e.original)
             return  # Exit early to avoid logging.
+        elif isinstance(e, errors.ConversionError):
+            if isinstance(e.original, ResponseCodeError):
+                await self.handle_api_error(ctx, e.original)
+            else:
+                await self.handle_unexpected_error(ctx, e.original)
+            return  # Exit early to avoid logging.
         elif not isinstance(e, errors.DisabledCommand):
             # ConversionError, MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
