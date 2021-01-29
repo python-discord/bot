@@ -92,7 +92,7 @@ class ErrorHandler(Cog):
                 await self.handle_unexpected_error(ctx, e.original)
             return  # Exit early to avoid logging.
         elif not isinstance(e, errors.DisabledCommand):
-            # ConversionError, MaxConcurrencyReached, ExtensionError
+            # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
             return  # Exit early to avoid logging.
 
