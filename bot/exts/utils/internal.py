@@ -15,7 +15,6 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Roles
-from bot.interpreter import Interpreter
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
 log = logging.getLogger(__name__)
@@ -29,8 +28,6 @@ class Internal(Cog):
         self.env = {}
         self.ln = 0
         self.stdout = StringIO()
-
-        self.interpreter = Interpreter()
 
         self.socket_since = datetime.utcnow()
         self.socket_event_total = 0

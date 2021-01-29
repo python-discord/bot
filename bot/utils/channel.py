@@ -32,6 +32,22 @@ def is_mod_channel(channel: discord.TextChannel) -> bool:
         return False
 
 
+def is_staff_channel(channel: discord.TextChannel) -> bool:
+    """True if `channel` is considered a staff channel."""
+    guild = bot.instance.get_guild(constants.Guild.id)
+
+    if channel.type is discord.ChannelType.category:
+        return False
+
+    # Channel is staff-only if staff have explicit read allow perms
+    # and @everyone has explicit read deny perms
+    return any(
+        channel.overwrites_for(guild.get_role(staff_role)).read_messages is True
+        and channel.overwrites_for(guild.default_role).read_messages is False
+        for staff_role in constants.STAFF_ROLES
+    )
+
+
 def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     """Return True if `channel` is within a category with `category_id`."""
     return getattr(channel, "category_id", None) == category_id
