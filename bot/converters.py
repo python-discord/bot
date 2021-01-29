@@ -575,10 +575,7 @@ class Infraction(Converter):
                 return infractions[0]
 
         else:
-            try:
-                return await ctx.bot.api_client.get(f"bot/infractions/{arg}")
-            except ResponseCodeError:
-                raise BadArgument("The provided infraction could not be found.")
+            return await ctx.bot.api_client.get(f"bot/infractions/{arg}")
 
 
 Expiry = t.Union[Duration, ISODateTime]
