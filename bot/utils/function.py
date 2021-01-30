@@ -88,7 +88,7 @@ def update_wrapper_globals(
         wrapper: types.FunctionType,
         wrapped: types.FunctionType,
         *,
-        error_on_conflict: bool = True,
+        ignored_conflict_names: t.Set[str] = frozenset(),
 ) -> types.FunctionType:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
@@ -100,25 +100,22 @@ def update_wrapper_globals(
     This function creates a new function functionally identical to `wrapper`, which has the globals replaced with
     a merge of `wrapped`s globals and the `wrapper`s globals.
 
-    If `error_on_conflict` is True, an exception will be raised in case `wrapper` and `wrapped` share a global name
-    that is used by `wrapped`'s typehints, as this can cause incorrect objects being used by discordpy's converters.
-    The error can be turned into a warning by setting the argument to False.
+    An exception will be raised in case `wrapper` and `wrapped` share a global name that is used by
+    `wrapped`'s typehints and is not in `ignored_conflict_names`,
+    as this can cause incorrect objects being used by discordpy's converters.
     """
-    forwardrefs = (ann for ann in wrapped.__annotations__.values() if isinstance(ann, str))
-    annotation_global_names = (ann.split(".", maxsplit=1)[0] for ann in forwardrefs)
+    annotation_global_names = (
+        ann.split(".", maxsplit=1)[0] for ann in wrapped.__annotations__.values() if isinstance(ann, str)
+    )
     # Conflicting globals from both functions' modules that are also used in the wrapper and in wrapped's annotations.
     shared_globals = set(wrapper.__code__.co_names) & set(annotation_global_names)
-    shared_globals &= set(wrapped.__globals__) & set(wrapper.__globals__)
+    shared_globals &= set(wrapped.__globals__) & set(wrapper.__globals__) - ignored_conflict_names
     if shared_globals:
-        message = (
+        raise GlobalNameConflictError(
             f"wrapper and the wrapped function share the following "
-            f"global names used by annotations: {', '.join(shared_globals)}. "
-            f"Resolve the conflicts or pass error_on_conflict=False to suppress this error if this is intentional."
+            f"global names used by annotations: {', '.join(shared_globals)}. Resolve the conflicts or add "
+            f"the name to the `ignored_conflict_names` set to suppress this error if this is intentional."
         )
-        if error_on_conflict:
-            raise GlobalNameConflictError(message)
-        else:
-            log.info(message)
 
     new_globals = wrapper.__globals__.copy()
     new_globals.update((k, v) for k, v in wrapped.__globals__.items() if k not in wrapper.__code__.co_names)
@@ -136,12 +133,15 @@ def command_wraps(
         assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
         updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
         *,
-        error_on_conflict: bool = True,
+        ignored_conflict_names: t.Set[str] = frozenset(),
 ) -> t.Callable[[types.FunctionType], types.FunctionType]:
     """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
     def decorator(wrapper: types.FunctionType) -> types.FunctionType:
         return functools.update_wrapper(
-            update_wrapper_globals(wrapper, wrapped, error_on_conflict=error_on_conflict), wrapped, assigned, updated
+            update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),
+            wrapped,
+            assigned,
+            updated,
         )
 
     return decorator
