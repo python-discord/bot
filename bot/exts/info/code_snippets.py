@@ -234,8 +234,7 @@ class CodeSnippets(Cog):
                 await message.edit(suppress=True)
                 await wait_for_deletion(
                     await message.channel.send(message_to_send),
-                    (message.author.id,),
-                    client=self.bot
+                    (message.author.id,)
                 )
 
 
