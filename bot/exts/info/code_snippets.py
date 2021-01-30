@@ -127,8 +127,11 @@ class CodeSnippets(Cog):
         enc_repo = quote_plus(repo)
 
         # Searches the GitLab API for the specified branch
-        branches = await self._fetch_response(f'https://api.github.com/repos/{repo}/branches', 'json')
-        tags = await self._fetch_response(f'https://api.github.com/repos/{repo}/tags', 'json')
+        branches = await self._fetch_response(
+            f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/branches',
+            'json'
+        )
+        tags = await self._fetch_response(f'https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags', 'json')
         refs = branches + tags
         ref, file_path = self._find_ref(path, refs)
         enc_ref = quote_plus(ref)
