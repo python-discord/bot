@@ -68,8 +68,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """
         Relay messages sent by the given `user` to the `#talent-pool` channel.
 
-        A `reason` for adding the user to the talent pool is required and will be displayed
-        in the header when relaying messages of this user to the channel.
+        A `reason` for adding the user to the talent pool is optional.
+        If given, it will be displayed in the header when relaying messages of this user to the channel.
         """
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")

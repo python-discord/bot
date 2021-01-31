@@ -1,5 +1,7 @@
 import contextlib
+import difflib
 import logging
+import random
 import typing as t
 
 from discord import Embed
@@ -8,9 +10,10 @@ from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours
+from bot.constants import Colours, ERROR_REPLIES, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import LockedResourceError
+from bot.exts.backend.branding._errors import BrandingError
 from bot.utils.checks import InWhitelistCheckFailure
 
 log = logging.getLogger(__name__)
@@ -76,6 +79,15 @@ class ErrorHandler(Cog):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
+            elif isinstance(e.original, BrandingError):
+                await ctx.send(embed=self._get_error_embed(random.choice(ERROR_REPLIES), str(e.original)))
+                return
+            else:
+                await self.handle_unexpected_error(ctx, e.original)
+            return  # Exit early to avoid logging.
+        elif isinstance(e, errors.ConversionError):
+            if isinstance(e.original, ResponseCodeError):
+                await self.handle_api_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
             return  # Exit early to avoid logging.
@@ -160,9 +172,45 @@ class ErrorHandler(Cog):
             )
         else:
             with contextlib.suppress(ResponseCodeError):
-                await ctx.invoke(tags_get_command, tag_name=tag_name)
+                if await ctx.invoke(tags_get_command, tag_name=tag_name):
+                    return
+
+        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            await self.send_command_suggestion(ctx, ctx.invoked_with)
+
         # Return to not raise the exception
         return
+
+    async def send_command_suggestion(self, ctx: Context, command_name: str) -> None:
+        """Sends user similar commands if any can be found."""
+        # No similar tag found, or tag on cooldown -
+        # searching for a similar command
+        raw_commands = []
+        for cmd in self.bot.walk_commands():
+            if not cmd.hidden:
+                raw_commands += (cmd.name, *cmd.aliases)
+        if similar_command_data := difflib.get_close_matches(command_name, raw_commands, 1):
+            similar_command_name = similar_command_data[0]
+            similar_command = self.bot.get_command(similar_command_name)
+
+            if not similar_command:
+                return
+
+            log_msg = "Cancelling attempt to suggest a command due to failed checks."
+            try:
+                if not await similar_command.can_run(ctx):
+                    log.debug(log_msg)
+                    return
+            except errors.CommandError as cmd_error:
+                log.debug(log_msg)
+                await self.on_command_error(ctx, cmd_error)
+                return
+
+            misspelled_content = ctx.message.content
+            e = Embed()
+            e.set_author(name="Did you mean:", icon_url=Icons.questionmark)
+            e.description = f"{misspelled_content.replace(command_name, similar_command_name, 1)}"
+            await ctx.send(embed=e, delete_after=10.0)
 
     async def handle_user_input_error(self, ctx: Context, e: errors.UserInputError) -> None:
         """

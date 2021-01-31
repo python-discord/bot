@@ -77,6 +77,9 @@ class Bot(commands.Bot):
                 attempt + 1
             )
 
+        # All tasks that need to block closing until finished
+        self.closing_tasks: List[asyncio.Task] = []
+
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
         full_cache = await self.api_client.get('bot/filter-lists')
