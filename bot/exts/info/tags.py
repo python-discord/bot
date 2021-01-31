@@ -189,7 +189,7 @@ class Tags(Cog):
         If a tag is not specified, display a paginated embed of all tags.
 
         Tags are on cooldowns on a per-tag, per-channel basis. If a tag is on cooldown, display
-        nothing and return False.
+        nothing and return True.
         """
         def _command_on_cooldown(tag_name: str) -> bool:
             """
@@ -217,11 +217,6 @@ class Tags(Cog):
                 f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                 f"Cooldown ends in {time_left:.1f} seconds."
             )
-            await ctx.send(embed=Embed(
-                title='Cooldown',
-                description=f"The `{tag_name}` tag is on cooldown. "
-                f"Cooldown ends in {time_left:.1f} seconds."
-            ))
             return True
 
         if tag_name is not None:
