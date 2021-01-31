@@ -285,7 +285,7 @@ class Tags(Cog):
         """
         Get a specified tag, or a list of all tags if no tag is specified.
 
-        Returns True if something can be send, or the tag is on cooldown
+        Returns True if something can be sent, or if the tag is on cooldown.
         Returns False if no matches are found.
         """
         return await self.display_tag(ctx, tag_name)
