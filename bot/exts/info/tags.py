@@ -217,7 +217,12 @@ class Tags(Cog):
                 f"{ctx.author} tried to get the '{tag_name}' tag, but the tag is on cooldown. "
                 f"Cooldown ends in {time_left:.1f} seconds."
             )
-            return False
+            await ctx.send(embed=Embed(
+                title='Cooldown',
+                description=f"The `{tag_name}` tag is on cooldown. "
+                f"Cooldown ends in {time_left:.1f} seconds."
+            ))
+            return True
 
         if tag_name is not None:
             temp_founds = self._get_tag(tag_name)
@@ -285,7 +290,7 @@ class Tags(Cog):
         """
         Get a specified tag, or a list of all tags if no tag is specified.
 
-        Returns False if a tag is on cooldown, or if no matches are found.
+        Returns True if a tag is on cooldown, False if no matches are found.
         """
         return await self.display_tag(ctx, tag_name)
 
