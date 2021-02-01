@@ -48,8 +48,10 @@ async def wait_for_deletion(
         return (
             reaction.message.id == message.id
             and str(reaction.emoji) in deletion_emojis
-            and user.id in user_ids
-            or allow_moderation_roles and any(role.id in MODERATION_ROLES for role in user.roles)
+            and (
+                user.id in user_ids
+                or allow_moderation_roles and any(role.id in MODERATION_ROLES for role in user.roles)
+            )
         )
 
     with contextlib.suppress(asyncio.TimeoutError):
