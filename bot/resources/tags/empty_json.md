@@ -16,7 +16,6 @@ When this is added to your JSON, it will look like this:
 ```json
 {
 
-
 }
 ```
 
