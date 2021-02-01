@@ -3,7 +3,7 @@ When creating a new JSON file you might run into the following error.
 `JSONDecodeError: Expecting value: line 1 column 1 (char 0)`
 
 In short, this means that your JSON is invalid in its current state. This could very well happen because the file is just new and completely empty.
-Whilst the JSON data may be empty, the .json file must not. It is recommended to have at least one of the following data types in your .json file:
+Whilst the JSON data, the data you wish to store,  may be empty, the .json file must not. It is recommended to have at least one of the following data types in your .json file:
 
 ```
 object
