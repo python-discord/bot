@@ -244,8 +244,18 @@ class DocCog(commands.Cog):
 
         symbol_info = self.doc_symbols.get(symbol)
         if symbol_info is None:
-            log.debug("Symbol does not exist.")
-            return None
+            if symbol.count(" "):
+                # If an invalid symbol contains a space, check if the command was invoked
+                # in the format !d <symbol> <message>
+                symbol = symbol.split(" ", maxsplit=1)[0]
+                symbol_info = self.doc_symbols.get(symbol)
+                if symbol_info is None:
+                    log.debug("Symbol does not exist.")
+                    return None
+            else:
+                log.debug("Symbol does not exist.")
+                return None
+
         self.bot.stats.incr(f"doc_fetches.{symbol_info.package}")
 
         with self.symbol_get_event:
