@@ -111,7 +111,10 @@ class BatchParser:
             self._item_futures[doc_item].user_requested = True
 
             async with bot.instance.http_session.get(doc_item.url) as response:
-                soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
+                soup = await bot.instance.loop.run_in_executor(
+                    None,
+                    partial(BeautifulSoup, await response.text(encoding="utf8"), "lxml")
+                )
 
             self._queue.extend(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
             log.debug(f"Added items from {doc_item.url} to parse queue.")
