@@ -74,7 +74,7 @@ class Stream(commands.Cog):
             if user.id in self.scheduler:
                 self.scheduler.cancel(user.id)
             await user.remove_roles(discord.Object(Roles.video))
-            await ctx.send(f"{Emojis.check_mark}Streaming permission taken from {user.display_name}")
+            await ctx.send(f"{Emojis.check_mark} Streaming permission taken from {user.display_name}.")
         else:
             await ctx.send(f"{Emojis.cross_mark} This user already can't stream.")
 
