@@ -350,7 +350,7 @@ class Duration(DurationDelta):
 
         try:
             return now + delta
-        except ValueError:
+        except (ValueError, OverflowError):
             raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
 
 
