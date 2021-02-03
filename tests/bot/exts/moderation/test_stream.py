@@ -2,15 +2,10 @@ import unittest
 
 
 from bot.constants import Roles
-from bot.exts.moderation.stream import Stream
-from tests.helpers import MockBot, MockMember, MockRole
+from tests.helpers import MockMember, MockRole
 
 
 class StreamCommandTest(unittest.IsolatedAsyncioTestCase):
-
-    def setUp(self) -> None:
-        self.bot = MockBot()
-        self.cog = Stream(self.bot)
 
     def test_checking_if_user_has_streaming_permission(self):
         """
