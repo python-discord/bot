@@ -33,27 +33,27 @@ class StaleInventoryNotifier:
         await bot.instance.wait_until_guild_available()
         self._dev_log = bot.instance.get_channel(Channels.dev_log)
 
-    async def send_warning(self, item: _cog.DocItem) -> None:
+    async def send_warning(self, doc_item: _cog.DocItem) -> None:
         """Send a warning to dev log is one wasn't already sent for `item`'s url."""
-        if item.url not in self._warned_urls:
-            self._warned_urls.add(item.url)
+        if doc_item.url not in self._warned_urls:
+            self._warned_urls.add(doc_item.url)
             await self._init_task
             embed = discord.Embed(
-                description=f"Doc item `{item.symbol_id=}` present in loaded documentation inventories "
-                            f"not found on [site]({item.url}), inventories may need to be refreshed."
+                description=f"Doc item `{doc_item.symbol_id=}` present in loaded documentation inventories "
+                            f"not found on [site]({doc_item.url}), inventories may need to be refreshed."
             )
             await self._dev_log.send(embed=embed)
 
 
 class QueueItem(NamedTuple):
-    """Contains a symbol and the BeautifulSoup object needed to parse it."""
+    """Contains a doc_item and the BeautifulSoup object needed to parse it."""
 
-    symbol: _cog.DocItem
+    doc_item: _cog.DocItem
     soup: BeautifulSoup
 
     def __eq__(self, other: Union[QueueItem, _cog.DocItem]):
         if isinstance(other, _cog.DocItem):
-            return self.symbol == other
+            return self.doc_item == other
         return NamedTuple.__eq__(self, other)
 
 
@@ -83,14 +83,14 @@ class BatchParser:
     """
     Get the Markdown of all symbols on a page and send them to redis when a symbol is requested.
 
-    DocItems are added through the `add_item` method which adds them to the `_page_symbols` dict.
+    DocItems are added through the `add_item` method which adds them to the `_page_doc_items` dict.
     `get_markdown` is used to fetch the Markdown; when this is used for the first time on a page,
     all of the symbols are queued to be parsed to avoid multiple web requests to the same page.
     """
 
     def __init__(self):
         self._queue: List[QueueItem] = []
-        self._page_symbols: Dict[str, List[_cog.DocItem]] = defaultdict(list)
+        self._page_doc_items: Dict[str, List[_cog.DocItem]] = defaultdict(list)
         self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = {}
         self._parse_task = None
 
@@ -109,14 +109,14 @@ class BatchParser:
         Not safe to run while `self.clear` is running.
         """
         if doc_item not in self._item_futures:
-            self._item_futures.update((symbol, ParseResultFuture()) for symbol in self._page_symbols[doc_item.url])
+            self._item_futures.update((item, ParseResultFuture()) for item in self._page_doc_items[doc_item.url])
             self._item_futures[doc_item].user_requested = True
 
             async with bot.instance.http_session.get(doc_item.url) as response:
                 soup = BeautifulSoup(await response.text(encoding="utf8"), "lxml")
 
-            self._queue.extend(QueueItem(symbol, soup) for symbol in self._page_symbols[doc_item.url])
-            log.debug(f"Added symbols from {doc_item.url} to parse queue.")
+            self._queue.extend(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
+            log.debug(f"Added items from {doc_item.url} to parse queue.")
 
             if self._parse_task is None:
                 self._parse_task = asyncio.create_task(self._parse_queue())
@@ -139,7 +139,7 @@ class BatchParser:
                 item, soup = self._queue.pop()
                 try:
                     if (future := self._item_futures[item]).done():
-                        # Some items are present in the inventories multiple times under different symbols,
+                        # Some items are present in the inventories multiple times under different symbol names,
                         # if we already parsed an equal item, we can just skip it.
                         continue
 
@@ -173,7 +173,7 @@ class BatchParser:
 
     def add_item(self, doc_item: _cog.DocItem) -> None:
         """Map a DocItem to its page so that the symbol will be parsed once the page is requested."""
-        self._page_symbols[doc_item.url].append(doc_item)
+        self._page_doc_items[doc_item.url].append(doc_item)
 
     async def clear(self) -> None:
         """
@@ -186,7 +186,7 @@ class BatchParser:
         if self._parse_task is not None:
             self._parse_task.cancel()
         self._queue.clear()
-        self._page_symbols.clear()
+        self._page_doc_items.clear()
         self._item_futures.clear()
 
     async def _cleanup_futures(self) -> None:

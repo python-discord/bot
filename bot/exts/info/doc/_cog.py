@@ -92,31 +92,31 @@ class DocCog(commands.Cog):
         self.base_urls[api_package_name] = base_url
 
         for group, items in package.items():
-            for symbol, relative_doc_url in items:
+            for symbol_name, relative_doc_url in items:
 
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
-                if (original_symbol := self.doc_symbols.get(symbol)) is not None:
+                if (original_item := self.doc_symbols.get(symbol_name)) is not None:
                     replaced_symbol_name = self.ensure_unique_symbol_name(
                         api_package_name,
                         group_name,
-                        original_symbol,
-                        symbol,
+                        original_item,
+                        symbol_name,
                     )
                     if replaced_symbol_name is not None:
-                        symbol = replaced_symbol_name
+                        symbol_name = replaced_symbol_name
 
                 relative_url_path, _, symbol_id = relative_doc_url.partition("#")
                 # Intern fields that have shared content so we're not storing unique strings for every object
-                symbol_item = DocItem(
+                doc_item = DocItem(
                     api_package_name,
                     sys.intern(group_name),
                     base_url,
                     sys.intern(relative_url_path),
-                    symbol_id
+                    symbol_id,
                 )
-                self.doc_symbols[symbol] = symbol_item
-                self.item_fetcher.add_item(symbol_item)
+                self.doc_symbols[symbol_name] = doc_item
+                self.item_fetcher.add_item(doc_item)
 
         log.trace(f"Fetched inventory for {api_package_name}.")
 
@@ -124,7 +124,7 @@ class DocCog(commands.Cog):
             self,
             api_package_name: str,
             base_url: str,
-            inventory_url: str
+            inventory_url: str,
     ) -> None:
         """
         Update the cog's inventory, or reschedule this method to execute again if the remote inventory unreachable.
@@ -144,7 +144,7 @@ class DocCog(commands.Cog):
             self.inventory_scheduler.schedule_later(
                 delay*60,
                 api_package_name,
-                self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url)
+                self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url),
             )
         else:
             self.update_single(api_package_name, base_url, package)
@@ -154,7 +154,7 @@ class DocCog(commands.Cog):
             package_name: str,
             group_name: str,
             original_item: DocItem,
-            symbol_name: str
+            symbol_name: str,
     ) -> Optional[str]:
         """
         Ensure `symbol_name` doesn't overwrite an another symbol in `doc_symbols`.
@@ -166,42 +166,42 @@ class DocCog(commands.Cog):
         """
         # Certain groups are added as prefixes to disambiguate the symbols.
         if group_name in FORCE_PREFIX_GROUPS:
-            new_symbol = f"{group_name}.{symbol_name}"
-            if new_symbol in self.doc_symbols:
+            new_symbol_name = f"{group_name}.{symbol_name}"
+            if new_symbol_name in self.doc_symbols:
                 # If there's still a conflict, prefix with package name.
-                new_symbol = f"{package_name}.{new_symbol}"
-            self.renamed_symbols[symbol_name].append(new_symbol)
-            return new_symbol
+                new_symbol_name = f"{package_name}.{new_symbol_name}"
+            self.renamed_symbols[symbol_name].append(new_symbol_name)
+            return new_symbol_name
 
         # The existing symbol with which the current symbol conflicts should have a group prefix.
         # It currently doesn't have the group prefix because it's only added once there's a conflict.
         elif (original_symbol_group := original_item.group) in FORCE_PREFIX_GROUPS:
-            overridden_symbol = f"{original_symbol_group}.{symbol_name}"
-            if overridden_symbol in self.doc_symbols:
+            overridden_symbol_name = f"{original_symbol_group}.{symbol_name}"
+            if overridden_symbol_name in self.doc_symbols:
                 # If there's still a conflict, prefix with package name.
-                overridden_symbol = f"{original_item.package}.{overridden_symbol}"
+                overridden_symbol_name = f"{original_item.package}.{overridden_symbol_name}"
 
-            self.doc_symbols[overridden_symbol] = original_item
-            self.renamed_symbols[symbol_name].append(overridden_symbol)
+            self.doc_symbols[overridden_symbol_name] = original_item
+            self.renamed_symbols[symbol_name].append(overridden_symbol_name)
 
         elif package_name in PRIORITY_PACKAGES:
-            overridden_symbol = f"{original_item.package}.{symbol_name}"
-            if overridden_symbol in self.doc_symbols:
+            overridden_symbol_name = f"{original_item.package}.{symbol_name}"
+            if overridden_symbol_name in self.doc_symbols:
                 # If there's still a conflict, add the symbol's group in the middle.
-                overridden_symbol = f"{original_item.package}.{original_item.group}.{symbol_name}"
+                overridden_symbol_name = f"{original_item.package}.{original_item.group}.{symbol_name}"
 
-            self.doc_symbols[overridden_symbol] = original_item
-            self.renamed_symbols[symbol_name].append(overridden_symbol)
+            self.doc_symbols[overridden_symbol_name] = original_item
+            self.renamed_symbols[symbol_name].append(overridden_symbol_name)
 
         # If we can't specially handle the symbol through its group or package,
         # fall back to prepending its package name to the front.
         else:
-            new_symbol = f"{package_name}.{symbol_name}"
-            if new_symbol in self.doc_symbols:
+            new_symbol_name = f"{package_name}.{symbol_name}"
+            if new_symbol_name in self.doc_symbols:
                 # If there's still a conflict, add the symbol's group in the middle.
-                new_symbol = f"{package_name}.{group_name}.{symbol_name}"
-            self.renamed_symbols[symbol_name].append(new_symbol)
-            return new_symbol
+                new_symbol_name = f"{package_name}.{group_name}.{symbol_name}"
+            self.renamed_symbols[symbol_name].append(new_symbol_name)
+            return new_symbol_name
 
     async def refresh_inventory(self) -> None:
         """Refresh internal documentation inventory."""
@@ -229,7 +229,7 @@ class DocCog(commands.Cog):
         log.debug("Finished inventory refresh.")
         self.refresh_event.set()
 
-    async def get_symbol_embed(self, symbol: str) -> Optional[discord.Embed]:
+    async def get_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol`, and build an embed from its contents.
 
@@ -237,47 +237,47 @@ class DocCog(commands.Cog):
 
         First check the DocRedisCache before querying the cog's `BatchParser`.
         """
-        log.trace(f"Building embed for symbol `{symbol}`")
+        log.trace(f"Building embed for symbol `{symbol_name}`")
         if not self.refresh_event.is_set():
             log.debug("Waiting for inventories to be refreshed before processing item.")
             await self.refresh_event.wait()
 
-        symbol_info = self.doc_symbols.get(symbol)
-        if symbol_info is None:
-            if symbol.count(" "):
+        doc_item = self.doc_symbols.get(symbol_name)
+        if doc_item is None:
+            if symbol_name.count(" "):
                 # If an invalid symbol contains a space, check if the command was invoked
                 # in the format !d <symbol> <message>
-                symbol = symbol.split(" ", maxsplit=1)[0]
-                symbol_info = self.doc_symbols.get(symbol)
-                if symbol_info is None:
+                symbol_name = symbol_name.split(" ", maxsplit=1)[0]
+                doc_item = self.doc_symbols.get(symbol_name)
+                if doc_item is None:
                     log.debug("Symbol does not exist.")
                     return None
             else:
                 log.debug("Symbol does not exist.")
                 return None
 
-        self.bot.stats.incr(f"doc_fetches.{symbol_info.package}")
+        self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
 
         with self.symbol_get_event:
-            markdown = await doc_cache.get(symbol_info)
+            markdown = await doc_cache.get(doc_item)
 
         if markdown is None:
-            log.debug(f"Redis cache miss for symbol `{symbol}`.")
-            markdown = await self.item_fetcher.get_markdown(symbol_info)
+            log.debug(f"Redis cache miss for symbol `{symbol_name}`.")
+            markdown = await self.item_fetcher.get_markdown(doc_item)
             if markdown is not None:
-                await doc_cache.set(symbol_info, markdown)
+                await doc_cache.set(doc_item, markdown)
             else:
                 markdown = "Unable to parse the requested symbol."
 
         embed = discord.Embed(
-            title=discord.utils.escape_markdown(symbol),
-            url=f"{symbol_info.url}#{symbol_info.symbol_id}",
+            title=discord.utils.escape_markdown(symbol_name),
+            url=f"{doc_item.url}#{doc_item.symbol_id}",
             description=markdown
         )
         # Show all symbols with the same name that were renamed in the footer,
         # with a max of 100 chars.
-        if symbol in self.renamed_symbols:
-            renamed_symbols = ', '.join(self.renamed_symbols[symbol])
+        if symbol_name in self.renamed_symbols:
+            renamed_symbols = ', '.join(self.renamed_symbols[symbol_name])
             footer_text = textwrap.shorten("Moved: " + renamed_symbols, 100, placeholder=' ...')
         else:
             footer_text = ""
@@ -285,12 +285,12 @@ class DocCog(commands.Cog):
         return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
+    async def docs_group(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
-        await self.get_command(ctx, symbol=symbol)
+        await self.get_command(ctx, symbol_name=symbol_name)
 
     @docs_group.command(name='getdoc', aliases=('g',))
-    async def get_command(self, ctx: commands.Context, *, symbol: Optional[str]) -> None:
+    async def get_command(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
         """
         Return a documentation embed for a given symbol.
 
@@ -302,7 +302,7 @@ class DocCog(commands.Cog):
             !docs aiohttp.ClientSession
             !docs getdoc aiohttp.ClientSession
         """
-        if not symbol:
+        if not symbol_name:
             inventory_embed = discord.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)",
                 colour=discord.Colour.blue()
@@ -317,7 +317,7 @@ class DocCog(commands.Cog):
                 await ctx.send(embed=inventory_embed)
 
         else:
-            symbol = symbol.strip("`")
+            symbol = symbol_name.strip("`")
             # Fetching documentation for a symbol (at least for the first time, since
             # caching is used) takes quite some time, so let's send typing to indicate
             # that we got the command, but are still working on it.
