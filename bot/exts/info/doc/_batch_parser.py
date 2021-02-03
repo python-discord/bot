@@ -7,7 +7,7 @@ from collections import defaultdict
 from contextlib import suppress
 from functools import partial
 from operator import attrgetter
-from typing import Dict, List, NamedTuple, TYPE_CHECKING, Union
+from typing import Dict, List, NamedTuple, Union
 
 import discord
 from bs4 import BeautifulSoup
@@ -15,10 +15,8 @@ from bs4 import BeautifulSoup
 import bot
 from bot.constants import Channels
 from bot.utils.lock import lock_arg
-from . import NAMESPACE, doc_cache
+from . import NAMESPACE, _cog, doc_cache
 from ._parsing import get_symbol_markdown
-if TYPE_CHECKING:
-    from ._cog import DocItem
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +33,7 @@ class StaleInventoryNotifier:
         await bot.instance.wait_until_guild_available()
         self._dev_log = bot.instance.get_channel(Channels.dev_log)
 
-    async def send_warning(self, item: DocItem) -> None:
+    async def send_warning(self, item: _cog.DocItem) -> None:
         """Send a warning to dev log is one wasn't already sent for `item`'s url."""
         if item.url not in self._warned_urls:
             self._warned_urls.add(item.url)
@@ -50,11 +48,11 @@ class StaleInventoryNotifier:
 class QueueItem(NamedTuple):
     """Contains a symbol and the BeautifulSoup object needed to parse it."""
 
-    symbol: DocItem
+    symbol: _cog.DocItem
     soup: BeautifulSoup
 
-    def __eq__(self, other: Union[QueueItem, DocItem]):
-        if isinstance(other, type(self.symbol)):
+    def __eq__(self, other: Union[QueueItem, _cog.DocItem]):
+        if isinstance(other, _cog.DocItem):
             return self.symbol == other
         return NamedTuple.__eq__(self, other)
 
@@ -92,8 +90,8 @@ class BatchParser:
 
     def __init__(self):
         self._queue: List[QueueItem] = []
-        self._page_symbols: Dict[str, List[DocItem]] = defaultdict(list)
-        self._item_futures: Dict[DocItem, ParseResultFuture] = {}
+        self._page_symbols: Dict[str, List[_cog.DocItem]] = defaultdict(list)
+        self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = {}
         self._parse_task = None
 
         self.cleanup_futures_task = bot.instance.loop.create_task(self._cleanup_futures())
@@ -101,7 +99,7 @@ class BatchParser:
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
     @lock_arg(NAMESPACE, "doc_item", attrgetter("url"), wait=True)
-    async def get_markdown(self, doc_item: DocItem) -> str:
+    async def get_markdown(self, doc_item: _cog.DocItem) -> str:
         """
         Get the result Markdown of `doc_item`.
 
@@ -163,7 +161,7 @@ class BatchParser:
             self._parse_task = None
             log.trace("Finished parsing queue.")
 
-    def _move_to_front(self, item: Union[QueueItem, DocItem]) -> None:
+    def _move_to_front(self, item: Union[QueueItem, _cog.DocItem]) -> None:
         """Move `item` to the front of the parse queue."""
         # The parse queue stores soups along with the doc symbols in QueueItem objects,
         # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.
@@ -173,7 +171,7 @@ class BatchParser:
         self._queue.append(queue_item)
         log.trace(f"Moved {item} to the front of the queue.")
 
-    def add_item(self, doc_item: DocItem) -> None:
+    def add_item(self, doc_item: _cog.DocItem) -> None:
         """Map a DocItem to its page so that the symbol will be parsed once the page is requested."""
         self._page_symbols[doc_item.url].append(doc_item)
 
