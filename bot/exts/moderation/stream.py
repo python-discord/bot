@@ -9,10 +9,6 @@ from bot.converters import Expiry
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
 
-# Constant error messages
-USER_ALREADY_ALLOWED_TO_STREAM = f"{Emojis.cross_mark}This user can already stream."
-USER_ALREADY_NOT_ALLOWED_TO_STREAM = f"{Emojis.cross_mark}This user already can't stream."
-
 
 class Stream(commands.Cog):
     """Grant and revoke streaming permissions from users."""
@@ -54,7 +50,7 @@ class Stream(commands.Cog):
         # Check if user already has streaming permission
         already_allowed = any(Roles.video == role.id for role in user.roles)
         if already_allowed:
-            await ctx.send(USER_ALREADY_ALLOWED_TO_STREAM)
+            await ctx.send(f"{Emojis.cross_mark} This user can already stream.")
             return
 
         # Schedule task to remove streaming permission from Member
@@ -80,7 +76,7 @@ class Stream(commands.Cog):
             await user.remove_roles(discord.Object(Roles.video))
             await ctx.send(f"{Emojis.check_mark}Streaming permission taken from {user.display_name}")
         else:
-            await ctx.send(USER_ALREADY_NOT_ALLOWED_TO_STREAM)
+            await ctx.send(f"{Emojis.cross_mark} This user already can't stream.")
 
 
 def setup(bot: Bot) -> None:
