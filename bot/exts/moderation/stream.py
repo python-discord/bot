@@ -10,8 +10,6 @@ from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
 
 # Constant error messages
-TIME_FORMAT_NOT_VALID = f"{Emojis.cross_mark}Please specify a valid time format ex. 10h or 1day."
-TIME_LESS_EQ_0 = f"{Emojis.cross_mark}Duration can not be a 0 or lower."
 USER_ALREADY_ALLOWED_TO_STREAM = f"{Emojis.cross_mark}This user can already stream."
 USER_ALREADY_NOT_ALLOWED_TO_STREAM = f"{Emojis.cross_mark}This user already can't stream."
 
