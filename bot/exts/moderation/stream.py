@@ -50,6 +50,7 @@ class Stream(commands.Cog):
         \u2003`h` - hours
         \u2003`M` - minutes∗
         \u2003`s` - seconds
+
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         # Check if user already has streaming permission
