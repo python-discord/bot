@@ -257,6 +257,10 @@ class Infractions(InfractionScheduler, commands.Cog):
         self.mod_log.ignore(Event.member_update, user.id)
 
         async def action() -> None:
+            # Skip members that left the server
+            if not isinstance(user, Member):
+                return
+
             await user.add_roles(self._muted_role, reason=reason)
 
             log.trace(f"Attempting to kick {user} from voice because they've been muted.")
@@ -351,10 +355,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+        async def action() -> None:
+            # Skip members that left the server
+            if not isinstance(user, Member):
+                return
 
-        action = user.remove_roles(self._voice_verified_role, reason=reason)
-        await self.apply_infraction(ctx, infraction, user, action)
+            await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+            await user.remove_roles(self._voice_verified_role, reason=reason)
+
+        await self.apply_infraction(ctx, infraction, user, action())
 
     # endregion
     # region: Base pardon functions
