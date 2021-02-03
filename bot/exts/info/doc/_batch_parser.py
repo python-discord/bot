@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 import bot
 from bot.constants import Channels
+from bot.utils import scheduling
 from . import _cog, doc_cache
 from ._parsing import get_symbol_markdown
 
@@ -149,9 +150,9 @@ class BatchParser:
                         partial(get_symbol_markdown, soup, item),
                     )
                     if markdown is not None:
-                        asyncio.create_task(doc_cache.set(item, markdown))
+                        scheduling.create_task(doc_cache.set(item, markdown))
                     else:
-                        asyncio.create_task(self.stale_inventory_notifier.send_warning(item))
+                        scheduling.create_task(self.stale_inventory_notifier.send_warning(item))
                 except Exception as e:
                     log.exception(f"Unexpected error when handling {item}")
                     future.set_exception(e)
