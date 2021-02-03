@@ -149,7 +149,7 @@ class BatchParser:
                         partial(get_symbol_markdown, soup, item),
                     )
                     if markdown is not None:
-                        await doc_cache.set(item, markdown)
+                        asyncio.create_task(doc_cache.set(item, markdown))
                     else:
                         asyncio.create_task(self.stale_inventory_notifier.send_warning(item))
                 except Exception as e:
