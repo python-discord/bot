@@ -19,8 +19,7 @@ from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
-from . import NAMESPACE, PRIORITY_PACKAGES, doc_cache
-from ._batch_parser import BatchParser
+from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 from ._inventory_parser import InventoryDict, fetch_inventory
 
 log = logging.getLogger(__name__)
@@ -62,7 +61,7 @@ class DocCog(commands.Cog):
         self.base_urls = {}
         self.bot = bot
         self.doc_symbols: Dict[str, DocItem] = {}
-        self.item_fetcher = BatchParser()
+        self.item_fetcher = _batch_parser.BatchParser()
         self.renamed_symbols = defaultdict(list)
 
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
