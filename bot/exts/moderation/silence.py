@@ -325,7 +325,7 @@ class Silence(commands.Cog):
         finally:
             # Delete VC channel if it was created.
             if delete_channel:
-                await afk_channel.delete(reason="Deleting temp mute channel.")
+                await afk_channel.delete(reason="Deleting temporary mute channel.")
 
     async def _schedule_unsilence(self, ctx: Context, channel: TextOrVoiceChannel, duration: Optional[int]) -> None:
         """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
