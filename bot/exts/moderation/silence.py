@@ -282,13 +282,16 @@ class Silence(commands.Cog):
         log.debug(f"Removing all non staff members from #{channel.name} ({channel.id}).")
 
         for member in channel.members:
-            if self._helper_role not in member.roles:
-                try:
-                    await member.move_to(None, reason="Kicking member from voice channel.")
-                    log.debug(f"Kicked {member.name} from voice channel.")
-                except Exception as e:
-                    log.debug(f"Failed to move {member.name}. Reason: {e}")
-                    continue
+            # Skip staff
+            if any(role.id in constants.MODERATION_ROLES for role in member.roles):
+                continue
+
+            try:
+                await member.move_to(None, reason="Kicking member from voice channel.")
+                log.debug(f"Kicked {member.name} from voice channel.")
+            except Exception as e:
+                log.debug(f"Failed to move {member.name}. Reason: {e}")
+                continue
 
         log.debug("Removed all members.")
 
@@ -306,7 +309,7 @@ class Silence(commands.Cog):
             # Move all members to temporary channel and back
             for member in channel.members:
                 # Skip staff
-                if self._helper_role in member.roles:
+                if any(role.id in constants.MODERATION_ROLES for role in member.roles):
                     continue
 
                 try:
