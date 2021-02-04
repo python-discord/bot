@@ -7,9 +7,18 @@ from unittest.mock import AsyncMock, Mock
 from async_rediscache import RedisSession
 from discord import PermissionOverwrite
 
-from bot.constants import Channels, Guild, Roles
+from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.moderation import silence
-from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockTextChannel, MockVoiceChannel, autospec
+from tests.helpers import (
+    MockBot,
+    MockContext,
+    MockGuild,
+    MockMember,
+    MockRole,
+    MockTextChannel,
+    MockVoiceChannel,
+    autospec
+)
 
 redis_session = None
 redis_loop = asyncio.get_event_loop()
@@ -164,13 +173,13 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._async_init()
 
         members = [MockMember() for _ in range(10)]
-        members.extend([MockMember(roles=[self.cog._helper_role]) for _ in range(3)])
+        members.extend([MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES])
 
         channel = MockVoiceChannel(members=members)
 
         await self.cog._force_voice_sync(channel)
         for member in members:
-            if self.cog._helper_role in member.roles:
+            if any(role.id in MODERATION_ROLES for role in member.roles):
                 member.move_to.assert_not_called()
             else:
                 self.assertEqual(member.move_to.call_count, 2)
@@ -204,13 +213,13 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._async_init()
 
         members = [MockMember() for _ in range(10)]
-        members.extend([MockMember(roles=[self.cog._helper_role]) for _ in range(3)])
+        members.extend([MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES])
 
         channel = MockVoiceChannel(members=members)
         await self.cog._kick_voice_members(channel)
 
         for member in members:
-            if self.cog._helper_role in member.roles:
+            if any(role.id in MODERATION_ROLES for role in member.roles):
                 member.move_to.assert_not_called()
             else:
                 self.assertEqual((None,), member.move_to.call_args_list[0].args)
@@ -296,8 +305,7 @@ def voice_sync_helper(function):
     @autospec(silence.Silence, "_force_voice_sync", "_kick_voice_members", "_set_silence_overwrites")
     async def inner(self, sync, kick, overwrites):
         overwrites.return_value = True
-        await function(self, MockContext(),
-                       sync, kick)
+        await function(self, MockContext(), sync, kick)
 
     return inner
 
@@ -389,7 +397,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel = MockVoiceChannel()
         await self.cog.silence.callback(self.cog, ctx, 10, channel, kick=True)
 
-        kick.assert_called_once_with(self.cog, channel)
+        kick.assert_called_once_with(channel)
         sync.assert_not_called()
 
     @voice_sync_helper

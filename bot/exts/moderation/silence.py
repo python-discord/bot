@@ -117,7 +117,6 @@ class Silence(commands.Cog):
 
         self._everyone_role = guild.default_role
         self._verified_voice_role = guild.get_role(constants.Roles.voice_verified)
-        self._helper_role = guild.get_role(constants.Roles.helpers)
 
         self._mod_alerts_channel = self.bot.get_channel(constants.Channels.mod_alerts)
 
@@ -277,7 +276,8 @@ class Silence(commands.Cog):
 
         return afk_channel
 
-    async def _kick_voice_members(self, channel: VoiceChannel) -> None:
+    @staticmethod
+    async def _kick_voice_members(channel: VoiceChannel) -> None:
         """Remove all non-staff members from a voice channel."""
         log.debug(f"Removing all non staff members from #{channel.name} ({channel.id}).")
 
