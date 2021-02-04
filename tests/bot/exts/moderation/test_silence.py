@@ -648,14 +648,15 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.overwrite.send_messages)
         self.assertIsNone(self.overwrite.add_reactions)
 
-    async def test_cache_miss_sent_mod_alert(self):
-        """A message was sent to the mod alerts channel."""
+    async def test_cache_miss_sent_mod_alert_text(self):
+        """A message was sent to the mod alerts channel upon muting a text channel."""
         self.cog.previous_overwrites.get.return_value = None
-
         await self.cog._unsilence(self.channel)
         self.cog._mod_alerts_channel.send.assert_awaited_once()
-        self.cog._mod_alerts_channel.send.reset_mock()
 
+    async def test_cache_miss_sent_mod_alert_voice(self):
+        """A message was sent to the mod alerts channel upon muting a voice channel."""
+        self.cog.previous_overwrites.get.return_value = None
         await self.cog._unsilence(MockVoiceChannel())
         self.cog._mod_alerts_channel.send.assert_awaited_once()
 
@@ -832,6 +833,7 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         message = "This should show up just here."
         await self.cog.send_message(message, self.text_channels[0], self.voice_channel, alert_target=False)
         self.text_channels[0].send.assert_called_once_with(message)
+        self.text_channels[1].send.assert_not_called()
 
     async def test_silence_voice_alert(self):
         """Tests that the correct message was sent when a voice channel is muted with alerts."""
