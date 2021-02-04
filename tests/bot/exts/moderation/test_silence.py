@@ -461,7 +461,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(await self.cog._set_silence_overwrites(channel))
                 channel.set_permissions.assert_not_called()
 
-    async def test_silenced_channel(self):
+    async def test_silenced_text_channel(self):
         """Channel had `send_message` and `add_reactions` permissions revoked for verified role."""
         self.assertTrue(await self.cog._set_silence_overwrites(self.text_channel))
         self.assertFalse(self.text_overwrite.send_messages)
@@ -469,6 +469,24 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.text_channel.set_permissions.assert_awaited_once_with(
             self.cog._everyone_role,
             overwrite=self.text_overwrite
+        )
+
+    async def test_silenced_voice_channel_speak(self):
+        """Channel had `speak` permissions revoked for verified role."""
+        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel))
+        self.assertFalse(self.voice_overwrite.speak)
+        self.voice_channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_voice_role,
+            overwrite=self.voice_overwrite
+        )
+
+    async def test_silenced_voice_channel_full(self):
+        """Channel had `speak` and `connect` permissions revoked for verified role."""
+        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel, kick=True))
+        self.assertFalse(self.voice_overwrite.speak or self.voice_overwrite.connect)
+        self.voice_channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_voice_role,
+            overwrite=self.voice_overwrite
         )
 
     async def test_preserved_other_overwrites(self):
@@ -544,14 +562,6 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         ctx = MockContext(channel=self.text_channel)
         await self.cog.silence.callback(self.cog, ctx, None)
         self.cog.scheduler.schedule_later.assert_not_called()
-
-    async def test_correct_permission_updates(self):
-        """Tests if _set_silence_overwrites can correctly get and update permissions."""
-        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel))
-        self.assertFalse(self.voice_overwrite.speak)
-
-        self.assertTrue(await self.cog._set_silence_overwrites(self.voice_channel, kick=True))
-        self.assertFalse(self.voice_overwrite.speak or self.voice_overwrite.connect)
 
 
 @autospec(silence.Silence, "unsilence_timestamps", pass_mocks=False)
