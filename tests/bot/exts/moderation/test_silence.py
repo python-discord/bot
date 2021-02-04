@@ -1,6 +1,7 @@
 import asyncio
 import unittest
 from datetime import datetime, timezone
+from typing import List, Tuple
 from unittest import mock
 from unittest.mock import AsyncMock, Mock
 
@@ -224,31 +225,43 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
             else:
                 self.assertEqual((None,), member.move_to.call_args_list[0].args)
 
-    async def test_voice_move_to_error(self):
-        """Test to ensure move_to get called on all members, even if some fail."""
-        await self.cog._async_init()
+    @staticmethod
+    def create_erroneous_members() -> Tuple[List[MockMember], List[MockMember]]:
+        """
+        Helper method to generate a list of members that error out on move_to call.
 
+        Returns the list of erroneous members,
+        as well as a list of regular and erroneous members combined, in that order.
+        """
         def failing_move_to(*_):
             raise Exception()
-        failing_members = [MockMember(move_to=Mock(failing_move_to)) for _ in range(5)]
+        erroneous_members = [MockMember(move_to=Mock(failing_move_to)) for _ in range(5)]
 
         members = []
         for i in range(5):
             members.append(MockMember())
-            members.append(failing_members[i])
+            members.append(erroneous_members[i])
 
-        channel = MockVoiceChannel(members=members)
+        return erroneous_members, members
 
-        with self.subTest("Kick"):
-            await self.cog._kick_voice_members(channel)
-            for member in members:
-                member.move_to.assert_called_once()
-                member.reset_mock()
+    async def test_kick_move_to_error(self):
+        """Test to ensure move_to gets called on all members during kick, even if some fail."""
+        await self.cog._async_init()
+        failing_members, members = self.create_erroneous_members()
 
-        with self.subTest("Sync"):
-            await self.cog._force_voice_sync(channel)
-            for member in members:
-                self.assertEqual(member.move_to.call_count, 1 if member in failing_members else 2)
+        await self.cog._kick_voice_members(MockVoiceChannel(members=members))
+        for member in members:
+            member.move_to.assert_called_once()
+            member.reset_mock()
+
+    async def test_sync_move_to_error(self):
+        """Test to ensure move_to gets called on all members during sync, even if some fail."""
+        await self.cog._async_init()
+        failing_members, members = self.create_erroneous_members()
+
+        await self.cog._force_voice_sync(MockVoiceChannel(members=members))
+        for member in members:
+            self.assertEqual(member.move_to.call_count, 1 if member in failing_members else 2)
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
