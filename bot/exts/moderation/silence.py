@@ -92,7 +92,7 @@ async def _select_lock_channel(args: OrderedDict[str, any]) -> TextOrVoiceChanne
 
 
 class Silence(commands.Cog):
-    """Commands for stopping channel messages for `verified` role in a channel."""
+    """Commands for stopping channel messages for `everyone` role in a channel."""
 
     # Maps muted channel IDs to their previous overwrites for send_message and add_reactions.
     # Overwrites are stored as JSON.

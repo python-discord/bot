@@ -5,7 +5,7 @@ from contextlib import suppress
 from typing import List, Union
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Command, Context, Group, HelpCommand
+from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
 from fuzzywuzzy import fuzz, process
 from fuzzywuzzy.utils import full_process
 
@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 
 COMMANDS_PER_PAGE = 8
 PREFIX = constants.Bot.prefix
+
+NOT_ALLOWED_TO_RUN_MESSAGE = "***You cannot run this command.***\n\n"
 
 Category = namedtuple("Category", ["name", "description", "cogs"])
 
@@ -173,9 +175,16 @@ class CustomHelpCommand(HelpCommand):
         if aliases:
             command_details += f"**Can also use:** {aliases}\n\n"
 
-        # check if the user is allowed to run this command
-        if not await command.can_run(self.context):
-            command_details += "***You cannot run this command.***\n\n"
+        # when command is disabled, show message about it,
+        # when other CommandError or user is not allowed to run command,
+        # add this to help message.
+        try:
+            if not await command.can_run(self.context):
+                command_details += NOT_ALLOWED_TO_RUN_MESSAGE
+        except DisabledCommand:
+            command_details += "***This command is disabled.***\n\n"
+        except CommandError:
+            command_details += NOT_ALLOWED_TO_RUN_MESSAGE
 
         command_details += f"*{command.help or 'No details provided.'}*\n"
         embed.description = command_details

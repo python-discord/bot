@@ -65,7 +65,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
             permissions=discord.Permissions(0),
         )
 
-        self.ctx.guild.roles.append([dummy_role, admin_role])
+        self.ctx.guild.roles.extend([dummy_role, admin_role])
 
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
@@ -355,7 +355,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             textwrap.dedent(f"""
                 Joined: {"1 year ago"}
-                Pending: {"False"}
+                Verified: {"True"}
                 Roles: &Moderators
             """).strip(),
             embed.fields[1].value
