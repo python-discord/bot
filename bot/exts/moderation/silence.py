@@ -34,9 +34,10 @@ MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced current chann
 TextOrVoiceChannel = Union[TextChannel, VoiceChannel]
 
 VOICE_CHANNELS = {
+    constants.Channels.code_help_voice_0: constants.Channels.code_help_chat_0,
     constants.Channels.code_help_voice_1: constants.Channels.code_help_chat_1,
-    constants.Channels.code_help_voice_2: constants.Channels.code_help_chat_2,
-    constants.Channels.general_voice: constants.Channels.voice_chat,
+    constants.Channels.general_voice_0: constants.Channels.voice_chat_0,
+    constants.Channels.general_voice_1: constants.Channels.voice_chat_1,
     constants.Channels.staff_voice: constants.Channels.staff_voice_chat,
 }
 

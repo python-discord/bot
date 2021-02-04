@@ -441,15 +441,17 @@ class Channels(metaclass=YAMLGetter):
     staff_announcements: int
 
     admins_voice: int
+    code_help_voice_0: int
     code_help_voice_1: int
-    code_help_voice_2: int
-    general_voice: int
+    general_voice_0: int
+    general_voice_1: int
     staff_voice: int
 
+    code_help_chat_0: int
     code_help_chat_1: int
-    code_help_chat_2: int
     staff_voice_chat: int
-    voice_chat: int
+    voice_chat_0: int
+    voice_chat_1: int
 
     big_brother_logs: int
     talent_pool: int
