@@ -158,8 +158,8 @@ guild:
         python_general:     &PY_GENERAL     267624335836053506
 
         # Python Help: Available
-        how_to_get_help:    704250143020417084
         cooldown:           720603994149486673
+        how_to_get_help:    704250143020417084
 
         # Topical
         discord_py:         343944376055103488
