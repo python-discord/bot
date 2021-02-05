@@ -1,6 +1,8 @@
 Often while using dictionaries in Python, you may run into `KeyErrors`. This error is raised when you try to access a key that isn't present in your dictionary.\
-While you can use a `try` and `except` block to catch the `KeyError`, Python also gives you some other neat ways to handle them.
+While you can use a `try` and `except` block to catch the `KeyError`, Python also gives you some other neat ways to handle them.\
+
 __**The `dict.get` method**__
+
 The [`dict.get`](https://docs.python.org/3/library/stdtypes.html#dict.get) method will return the value for the key if it exists, or None (or a default value that you specify) if the key doesn't exist. Hence it will _never raise_ a KeyError.
 ```py
 >>> my_dict = {"foo": 1, "bar": 2}
