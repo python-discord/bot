@@ -22,7 +22,7 @@ HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
 AVAILABLE_HELP_CHANNELS = """
-Currently available help channel(s): {available}
+**Currently available help channel(s):** {available}
 """
 
 
