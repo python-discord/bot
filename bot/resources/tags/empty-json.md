@@ -1,23 +1,15 @@
-When creating a new JSON file you might run into the following error.
 
-`JSONDecodeError: Expecting value: line 1 column 1 (char 0)`
+When using JSON you might run into the following error:
+```
+JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+```
+This error could have appeared because you just created the JSON file and there is nothing in it at the moment.
 
-In short, this means that your JSON is invalid in its current state. This could very well happen because the file is just new and completely empty.
-Whilst the JSON data, the data you wish to store,  may be empty, the .json file must not. You most likely want to use one of the following data types in your .json file:
-
+Whilst having the data empty is no problem, the file itself may never be completely empty. You most likely want one of the following in your json
 ```
 object
 array
 ```
+This issue can be resolved by creating one of these data types. An object is the most common of the 2, and is created by editing your file to read `{}`.
 
-To resolve this issue, create one of the above data types in your .json file. It is very common to use `{}` to make an object, which works similar to a dictionary in python.
-When this is added to your .json file, it will look like this:
-
-```json
-{
-
-}
-```
-
-The error is resolved now.
-Make sure to put all your data between the `{}`, just like you would when making a dictionary.
+Different data types are also supported. If you wish to read more on these, please reffer to the following article: https://www.tutorialspoint.com/json/json_data_types.htm
