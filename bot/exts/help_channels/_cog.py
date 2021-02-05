@@ -495,18 +495,16 @@ class HelpChannels(commands.Cog):
                 c.id for c in available_channels_category.channels if 'help-' in c.name
             )
 
-        if self.how_to_get_help is None:
-            self.how_to_get_help = await channel_utils.try_get_channel(Channels.how_to_get_help)
-
-        if self.dynamic_message is None:
-            last_message = await self.how_to_get_help.history(limit=1)
-            self.dynamic_message = next(last_message)
-
         available_channels = AVAILABLE_HELP_CHANNELS.format(
             available=', '.join(f"<#{c}>" for c in self.available_help_channels)
         )
 
-        try:
-            await self.dynamic_message.edit(content=available_channels)
-        except discord.Forbidden:
-            self.dynamic_message = await self.how_to_get_help.send(available_channels)
+        if self.how_to_get_help is None:
+            self.how_to_get_help = await channel_utils.try_get_channel(Channels.how_to_get_help)
+
+        if self.dynamic_message is None:
+            try:
+                self.dynamic_message = await self.how_to_get_help.fetch_message(self.how_to_get_help.last_message_id)
+                await self.dynamic_message.edit(content=available_channels)
+            except discord.NotFound:
+                self.dynamic_message = await self.how_to_get_help.send(available_channels)
