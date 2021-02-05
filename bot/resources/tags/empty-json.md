@@ -10,6 +10,6 @@ Whilst having the data empty is no problem, the file itself may never be complet
 object
 array
 ```
-This issue can be resolved by creating one of these data types. An object is the most common of the 2, and is created by editing your file to read `{}`.
+An object is the most common of the 2, and is created by editing your file to read `{}`.
 
 Different data types are also supported. If you wish to read more on these, please reffer to the following article: https://www.tutorialspoint.com/json/json_data_types.htm
