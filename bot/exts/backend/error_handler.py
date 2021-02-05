@@ -12,7 +12,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, ERROR_REPLIES, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
-from bot.errors import LockedResourceError
+from bot.errors import InvalidInfractedUser, LockedResourceError
 from bot.exts.backend.branding._errors import BrandingError
 from bot.utils.checks import InWhitelistCheckFailure
 
@@ -82,6 +82,8 @@ class ErrorHandler(Cog):
             elif isinstance(e.original, BrandingError):
                 await ctx.send(embed=self._get_error_embed(random.choice(ERROR_REPLIES), str(e.original)))
                 return
+            elif isinstance(e.original, InvalidInfractedUser):
+                await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
                 await self.handle_unexpected_error(ctx, e.original)
             return  # Exit early to avoid logging.
