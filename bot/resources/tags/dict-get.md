@@ -12,4 +12,4 @@ None
 3
 ```
 
-Some other methods that can be used for handling KeyErrors gracefully are the [`dict.setdefault`](https://docs.python.org/3/library/stdtypes.html#dict.setdefault) method, or by using [`collections.defaultdict`](https://docs.python.org/3/library/collections.html#collections.defaultdict).
+Some other methods that can be used for handling KeyErrors gracefully are the [`dict.setdefault`](https://docs.python.org/3/library/stdtypes.html#dict.setdefault) method, or by using [`collections.defaultdict`](https://docs.python.org/3/library/collections.html#collections.defaultdict) (check out the `!defaultdict` tag).
