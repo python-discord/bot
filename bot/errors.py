@@ -1,4 +1,5 @@
 from typing import Hashable, Union
+
 from discord import Member, User
 
 
@@ -23,7 +24,7 @@ class LockedResourceError(RuntimeError):
 
 class InvalidInfractedUser(Exception):
     """
-    Exception raised upon attempt of infracting an invalid user."
+    Exception raised upon attempt of infracting an invalid user.
 
     Attributes:
         `user` -- User or Member which is invalid
