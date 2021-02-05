@@ -5,7 +5,6 @@ import logging
 import time
 from collections import defaultdict
 from contextlib import suppress
-from functools import partial
 from operator import attrgetter
 from typing import Dict, List, NamedTuple, Union
 
@@ -114,7 +113,9 @@ class BatchParser:
             async with bot.instance.http_session.get(doc_item.url) as response:
                 soup = await bot.instance.loop.run_in_executor(
                     None,
-                    partial(BeautifulSoup, await response.text(encoding="utf8"), "lxml")
+                    BeautifulSoup,
+                    await response.text(encoding="utf8"),
+                    "lxml",
                 )
 
             self._queue.extend(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
@@ -145,10 +146,7 @@ class BatchParser:
                         # if we already parsed an equal item, we can just skip it.
                         continue
 
-                    markdown = await bot.instance.loop.run_in_executor(
-                        None,
-                        partial(get_symbol_markdown, soup, item),
-                    )
+                    markdown = await bot.instance.loop.run_in_executor(None, get_symbol_markdown, soup, item)
                     if markdown is not None:
                         scheduling.create_task(doc_cache.set(item, markdown))
                     else:
