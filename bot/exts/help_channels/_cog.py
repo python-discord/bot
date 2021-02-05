@@ -123,12 +123,11 @@ class HelpChannels(commands.Cog):
 
         await _caches.unanswered.set(message.channel.id, True)
 
-        # Not awaited because it may indefinitely hold the lock while waiting for a channel.
-        scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
-
         # Removing the help channel from the dynamic message, and editing/sending that message.
         self.available_help_channels.remove(message.channel.id)
-        await self.update_available_help_channels()
+
+        # Not awaited because it may indefinitely hold the lock while waiting for a channel.
+        scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
