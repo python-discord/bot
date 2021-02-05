@@ -11,7 +11,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Categories, Channels
+from bot.constants import Channels
 from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
@@ -490,9 +490,8 @@ class HelpChannels(commands.Cog):
     async def update_available_help_channels(self) -> None:
         """Updates the dynamic message within #how-to-get-help for available help channels."""
         if not self.available_help_channels:
-            available_channels_category = await channel_utils.try_get_channel(Categories.help_available)
             self.available_help_channels = set(
-                c.id for c in available_channels_category.channels if 'help-' in c.name
+                c.id for c in self.available_category.channels if 'help-' in c.name
             )
 
         available_channels = AVAILABLE_HELP_CHANNELS.format(
