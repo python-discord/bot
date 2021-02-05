@@ -123,11 +123,12 @@ class HelpChannels(commands.Cog):
 
         await _caches.unanswered.set(message.channel.id, True)
 
-        self.available_help_channels.remove(message.channel.id)
-        await self.update_available_help_channels()
-
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
         scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
+
+        # Removing the help channel from the dynamic message, and editing/sending that message.
+        self.available_help_channels.remove(message.channel.id)
+        await self.update_available_help_channels()
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
@@ -496,15 +497,15 @@ class HelpChannels(commands.Cog):
             )
 
         available_channels = AVAILABLE_HELP_CHANNELS.format(
-            available=', '.join(f"<#{c}>" for c in self.available_help_channels)
+            available=', '.join(f"<#{c}>" for c in self.available_help_channels) or None
         )
 
         if self.how_to_get_help is None:
             self.how_to_get_help = await channel_utils.try_get_channel(Channels.how_to_get_help)
 
-        if self.dynamic_message is None:
-            try:
+        try:
+            if self.dynamic_message is None:
                 self.dynamic_message = await self.how_to_get_help.fetch_message(self.how_to_get_help.last_message_id)
-                await self.dynamic_message.edit(content=available_channels)
-            except discord.NotFound:
-                self.dynamic_message = await self.how_to_get_help.send(available_channels)
+            await self.dynamic_message.edit(content=available_channels)
+        except discord.NotFound:
+            self.dynamic_message = await self.how_to_get_help.send(available_channels)
