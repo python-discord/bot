@@ -11,7 +11,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Categories
+from bot.constants import Categories, Channels
 from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
@@ -293,7 +293,7 @@ class HelpChannels(commands.Cog):
 
         await task
 
-        log.trace(f"Dynamic available help message updated.")
+        log.trace("Dynamic available help message updated.")
         self.queue_tasks.remove(task)
 
         await self.init_available()
@@ -499,7 +499,8 @@ class HelpChannels(commands.Cog):
             self.how_to_get_help = await channel_utils.try_get_channel(Channels.how_to_get_help)
 
         if self.dynamic_message is None:
-            self.dynamic_message = await self.how_to_get_help.history(limit=1).next()
+            last_message = await self.how_to_get_help.history(limit=1)
+            self.dynamic_message = next(last_message)
 
         available_channels = AVAILABLE_HELP_CHANNELS.format(
             available=', '.join(f"<#{c}>" for c in self.available_help_channels)
