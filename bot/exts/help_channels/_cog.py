@@ -76,7 +76,7 @@ class HelpChannels(commands.Cog):
 
         # Acquiring and modifying the channel to dynamically update the available help channels message.
         self.how_to_get_help: discord.TextChannel = None
-        self.available_help_channels: t.Set[int] = set()
+        self.available_help_channels: t.Set[discord.TextChannel] = set()
         self.dynamic_message: discord.Message = None
 
         # Asyncio stuff
@@ -122,7 +122,7 @@ class HelpChannels(commands.Cog):
         await _caches.unanswered.set(message.channel.id, True)
 
         # Removing the help channel from the dynamic message, and editing/sending that message.
-        self.available_help_channels.remove(message.channel.id)
+        self.available_help_channels.remove(message.channel)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
         scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
@@ -352,7 +352,7 @@ class HelpChannels(commands.Cog):
         )
 
         # Adding the help channel to the dynamic message, and editing/sending that message.
-        self.available_help_channels.add(channel.id)
+        self.available_help_channels.add(channel)
         await self.update_available_help_channels()
 
         _stats.report_counts()
@@ -489,11 +489,11 @@ class HelpChannels(commands.Cog):
         """Updates the dynamic message within #how-to-get-help for available help channels."""
         if not self.available_help_channels:
             self.available_help_channels = set(
-                c.id for c in self.available_category.channels if 'help-' in c.name
+                c for c in self.available_category.channels if not _channel.is_excluded_channel(c)
             )
 
         available_channels = AVAILABLE_HELP_CHANNELS.format(
-            available=', '.join(f"<#{c}>" for c in self.available_help_channels) or None
+            available=', '.join(c.mention for c in self.available_help_channels) or None
         )
 
         if self.how_to_get_help is None:
