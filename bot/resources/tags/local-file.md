@@ -16,7 +16,7 @@ embed = discord.Embed()
 # Set other fields
 embed.set_image(url="attachment://file.png")  # Filename here must be exactly same as attachment filename.
 ```
-After this, you send an embed with an attachment to Discord:
+After this, you can send an embed with an attachment to Discord:
 ```py
 await channel.send(file=file, embed=embed)
 ```
