@@ -32,5 +32,6 @@ class InvalidInfractedUser(Exception):
 
     def __init__(self, user: Union[Member, User], reason: str = "User infracted is a bot."):
         self.user = user
+        self.reason = reason
 
         super().__init__(reason)
