@@ -6,4 +6,4 @@ Creating a Python string with your variables using the `+` operator can be diffi
 >>> f"There are {number * 2} {snake} on the plane."
 "There are 42 pythons on the plane."
 ```
-Note that even when you include an expression that isn't a string, like `number * 2`, Python will handle converting it to a string.
+Note that even when you include an expression that isn't a string, like `number * 2`, Python will convert it to a string for you.
