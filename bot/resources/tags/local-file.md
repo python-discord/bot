@@ -20,4 +20,4 @@ After this, you can send embed and attachment to Discord:
 ```py
 await channel.send(file=file, embed=embed)
 ```
-This example uses `discord.TextChannel` for sending, but any `discord.abc.Messageable` can be used for sending.
+This example uses `discord.TextChannel` for sending, but any instance of `discord.abc.Messageable` can be used for sending.
