@@ -21,7 +21,7 @@ NAMESPACE = "help"
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
-AVAILABLE_HELP_CHANNELS = """**Currently available help channel(s):** {available}"""
+AVAILABLE_HELP_CHANNELS = "**Currently available help channel(s):** {available}"
 
 
 class HelpChannels(commands.Cog):
@@ -500,3 +500,4 @@ class HelpChannels(commands.Cog):
             await self.dynamic_message.edit(content=available_channels)
         except discord.NotFound:
             self.dynamic_message = await self.how_to_get_help.send(available_channels)
+            log.trace("A dynamic message was sent for later modification because one couldn't be found.")
