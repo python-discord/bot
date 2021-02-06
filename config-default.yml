@@ -367,7 +367,7 @@ anti_spam:
     rules:
         attachments:
             interval: 10
-            max: 9
+            max: 3
 
         burst:
             interval: 10
