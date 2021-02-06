@@ -286,13 +286,8 @@ class HelpChannels(commands.Cog):
         self.close_command.enabled = True
 
         # Getting channels that need to be included in the dynamic message.
-        task = asyncio.create_task(self.update_available_help_channels())
-        self.queue_tasks.append(task)
-
-        await task
-
+        await self.update_available_help_channels()
         log.trace("Dynamic available help message updated.")
-        self.queue_tasks.remove(task)
 
         await self.init_available()
         _stats.report_counts()
