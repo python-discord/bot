@@ -7,7 +7,7 @@ file = discord.File("/this/is/path/to/my/file.png", filename="file.png")
 with open("/this/is/path/to/my/file.png", "rb") as f:
     file = discord.File(f)
 ```
-When using the file-like object, you have to open it in `rb` mode. Also, in this case, passing filename to it is not necessary.
+When using the file-like object, you have to open it in `rb` mode. Also, in this case, passing `filename` to it is not necessary.
 Please note that `filename` can't contain underscores. This is a Discord limitation.
 
 [`discord.Embed`](https://discordpy.readthedocs.io/en/latest/api.html#discord.Embed) instances have a [`set_image`](https://discordpy.readthedocs.io/en/latest/api.html#discord.Embed.set_image) method which can be used to set an attachment as an image:
