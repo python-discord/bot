@@ -159,6 +159,7 @@ guild:
 
         # Python Help: Available
         cooldown:           720603994149486673
+        how_to_get_help:    704250143020417084
 
         # Topical
         discord_py:         343944376055103488

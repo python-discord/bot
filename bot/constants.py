@@ -406,6 +406,7 @@ class Channels(metaclass=YAMLGetter):
 
     meta: int
     python_general: int
+    how_to_get_help: int
 
     cooldown: int
 
