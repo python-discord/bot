@@ -56,8 +56,8 @@ class Stream(commands.Cog):
         # Schedule task to remove streaming permission from Member
         self.scheduler.schedule_at(duration, user.id, self._remove_streaming_permission(user))
         await user.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
-        await ctx.send(f"{Emojis.check_mark}{user.mention} can now stream until "
-                       f"{format_infraction_with_duration(str(duration))}.")
+        duration = format_infraction_with_duration(str(duration))
+        await ctx.send(f"{Emojis.check_mark} {user.mention} can now stream until {duration}.")
 
     @commands.command(aliases=("unstream", ))
     @commands.has_any_role(*STAFF_ROLES)
