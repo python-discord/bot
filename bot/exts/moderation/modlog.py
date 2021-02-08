@@ -546,6 +546,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
         else:
@@ -553,6 +554,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
 
