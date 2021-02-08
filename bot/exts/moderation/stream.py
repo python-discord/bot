@@ -28,8 +28,7 @@ class Stream(commands.Cog):
             self,
             ctx: commands.Context,
             user: discord.Member,
-            duration: Expiry =
-            datetime.datetime.utcnow() + datetime.timedelta(minutes=VideoPermission.default_permission_duration),
+            duration: Expiry = None,
             *_
     ) -> None:
         """
@@ -47,6 +46,11 @@ class Stream(commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
+        # if duration is none then calculate default duration
+        if duration is None:
+            now = datetime.datetime.utcnow()
+            duration = now + datetime.timedelta(minutes=VideoPermission.default_permission_duration)
+
         # Check if user already has streaming permission
         already_allowed = any(Roles.video == role.id for role in user.roles)
         if already_allowed:
