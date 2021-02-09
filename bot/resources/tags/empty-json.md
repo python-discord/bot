@@ -8,4 +8,4 @@ Whilst having the data empty is no problem, the file itself may never be complet
 
 You most likely wanted to structure your JSON as a dictionary. To do this, change your JSON to read `{}`.
 
-Different data types are also supported. If you wish to read more on these, please refer to the following article: https://www.tutorialspoint.com/json/json_data_types.htm
+Different data types are also supported. If you wish to read more on these, please refer to [this article](https://www.tutorialspoint.com/json/json_data_types.htm).
