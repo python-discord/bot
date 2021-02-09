@@ -24,7 +24,7 @@ async with aiohttp.ClientSession() as session:
             await channel.send(js['file'])
 ```
 **How can I find asynchronous modules?**
-Most python modules have an asynchronous implementation. For example, `sqlite3` has `aiosqlite`, and `praw` has `asycpraw`. You try searching on [Pypi](https://pypi.org). Or check out [this list](https://github.com/timofurrer/awesome-asyncio).
+Most python modules have an asynchronous implementation. For example, `sqlite3` has `aiosqlite`, and `praw` has `asycpraw`. You try searching on [PyPi](https://pypi.org). Or check out [this list](https://github.com/timofurrer/awesome-asyncio).
 You can also ask here in this server for options.
 **Resources for Further Reading**
 [Discord.py Frequently Asked Questions: What does 'blocking' mean?](https://discordpy.readthedocs.io/en/latest/faq.html#what-does-blocking-mean)
