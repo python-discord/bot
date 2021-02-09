@@ -1,6 +1,5 @@
 **What does blocking mean?**
-In asynchronous programming, blocking calls are all the parts of your function that are not using `await`. Not all forms of blocking are bad, and using blocking calls are inevitable, but make sure not to use too much, or else the program will freeze and you cannot do other tasks. 
-
+In asynchronous programming, blocking calls are all the parts of your function that are not using `await`. Not all forms of blocking are bad, and using blocking calls are inevitable, but make sure not to use too much, or else the program will freeze and you cannot do other tasks.
 **Examples of Blocking**
 A major example of blocking is using `time.sleep()`. Use `asyncio.sleep()` instead.
 Example:
@@ -26,6 +25,6 @@ async with aiohttp.ClientSession() as session:
 ```
 **How can I find asynchronous modules?**
 Most python modules have an asynchronous implementation. For example, `sqlite3` has `aiosqlite`, and `praw` has `asycpraw`. You try searching on [Pypi](https://pypi.org). Or check out [this list](https://github.com/timofurrer/awesome-asyncio).
-You can also ask here in this server for options. 
+You can also ask here in this server for options.
 **Resources for Further Reading**
 [Discord.py Frequently Asked Questions: What does 'blocking' mean?](https://discordpy.readthedocs.io/en/latest/faq.html#what-does-blocking-mean)
