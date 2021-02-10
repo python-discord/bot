@@ -530,6 +530,7 @@ class URLs(metaclass=YAMLGetter):
     site: str
     site_api: str
     site_schema: str
+    site_api_schema: str
 
     # Site endpoints
     site_logs_view: str
