@@ -129,8 +129,9 @@ class Stream(commands.Cog):
             await ctx.send(f"{Emojis.cross_mark} This user already can't stream.")
 
     def cog_unload(self) -> None:
-        """Cache and cancel all scheduled tasks."""
-        self.scheduler.cancel_all()
+        """Cancel all scheduled tasks."""
+        self.reload_task.cancel()
+        self.reload_task.add_done_callback(lambda _: self.scheduler.cancel_all())
 
 
 def setup(bot: Bot) -> None:
