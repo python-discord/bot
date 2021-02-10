@@ -26,7 +26,7 @@ class Stream(commands.Cog):
     async def _remove_streaming_permission(self, schedule_user: discord.Member) -> None:
         """Remove streaming permission from Member."""
         await self._delete_from_redis(schedule_user.id)
-        await schedule_user.remove_roles(discord.Object(Roles.video), reason="Temporary streaming access revoked")
+        await schedule_user.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
     async def _add_to_redis_cache(self, user_id: int, timestamp: float) -> None:
         """Adds 'task' to redis cache."""
@@ -85,6 +85,29 @@ class Stream(commands.Cog):
         await user.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
         duration = format_infraction_with_duration(str(duration))
         await ctx.send(f"{Emojis.check_mark} {user.mention} can now stream until {duration}.")
+
+    @commands.command(aliases=("pstream",))
+    @commands.has_any_role(*STAFF_ROLES)
+    async def permanentstream(
+            self,
+            ctx: commands.Context,
+            user: discord.Member,
+            *_
+    ) -> None:
+        """Permanently give user a streaming permission."""
+        # Check if user already has streaming permission
+        already_allowed = any(Roles.video == role.id for role in user.roles)
+        if already_allowed:
+            if user.id in self.scheduler:
+                self.scheduler.cancel(user.id)
+                await self._delete_from_redis(user.id)
+                await ctx.send(f"{Emojis.check_mark} Moved temporary permission to permanent")
+                return
+            await ctx.send(f"{Emojis.cross_mark} This user can already stream.")
+            return
+
+        await user.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
+        await ctx.send(f"{Emojis.check_mark} {user.mention} can now stream forever")
 
     @commands.command(aliases=("unstream", ))
     @commands.has_any_role(*STAFF_ROLES)
