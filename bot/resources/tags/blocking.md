@@ -27,7 +27,7 @@ async with aiohttp.ClientSession() as session:
 
 **How can I find asynchronous modules?**
 Most Python modules have an asynchronous implementation. For example, `sqlite3` has `aiosqlite`, and `praw` has `asycpraw`. You try searching on [PyPi](https://pypi.org), or check out [this curated list of Python asyncio frameworks](https://github.com/timofurrer/awesome-asyncio).
-You can also ask here in this server for options.
+You can also ask in <#630504881542791169> for options.
 
 **Resources for Further Reading**
 [Discord.py Frequently Asked Questions: What does 'blocking' mean?](https://discordpy.readthedocs.io/en/latest/faq.html#what-does-blocking-mean)
