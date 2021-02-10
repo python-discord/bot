@@ -1,10 +1,11 @@
 import datetime
 
 import discord
+from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Emojis, Roles, STAFF_ROLES, VideoPermission
+from bot.constants import Emojis, Guild, Roles, STAFF_ROLES, VideoPermission
 from bot.converters import Expiry
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
@@ -13,14 +14,35 @@ from bot.utils.time import format_infraction_with_duration
 class Stream(commands.Cog):
     """Grant and revoke streaming permissions from users."""
 
+    # Stores tasks to remove streaming permission
+    # User id : timestamp relation
+    task_cache = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
+        self.reload_task = self.bot.loop.create_task(self._reload_tasks_from_redis())
 
-    @staticmethod
-    async def _remove_streaming_permission(schedule_user: discord.Member) -> None:
+    async def _remove_streaming_permission(self, schedule_user: discord.Member) -> None:
         """Remove streaming permission from Member."""
+        await self._delete_from_redis(schedule_user.id)
         await schedule_user.remove_roles(discord.Object(Roles.video), reason="Temporary streaming access revoked")
+
+    async def _add_to_redis_cache(self, user_id: int, timestamp: float) -> None:
+        """Adds 'task' to redis cache."""
+        await self.task_cache.set(user_id, timestamp)
+
+    async def _reload_tasks_from_redis(self) -> None:
+        await self.bot.wait_until_guild_available()
+        items = await self.task_cache.items()
+        for key, value in items:
+            member = await self.bot.get_guild(Guild.id).fetch_member(key)
+            self.scheduler.schedule_at(datetime.datetime.utcfromtimestamp(value),
+                                       key,
+                                       self._remove_streaming_permission(member))
+
+    async def _delete_from_redis(self, key: str) -> None:
+        await self.task_cache.delete(key)
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*STAFF_ROLES)
@@ -57,8 +79,9 @@ class Stream(commands.Cog):
             await ctx.send(f"{Emojis.cross_mark} This user can already stream.")
             return
 
-        # Schedule task to remove streaming permission from Member
+        # Schedule task to remove streaming permission from Member and add it to task cache
         self.scheduler.schedule_at(duration, user.id, self._remove_streaming_permission(user))
+        await self._add_to_redis_cache(user.id, duration.timestamp())
         await user.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
         duration = format_infraction_with_duration(str(duration))
         await ctx.send(f"{Emojis.check_mark} {user.mention} can now stream until {duration}.")
@@ -77,10 +100,14 @@ class Stream(commands.Cog):
             # Cancel scheduled task to take away streaming permission to avoid errors
             if user.id in self.scheduler:
                 self.scheduler.cancel(user.id)
-            await user.remove_roles(discord.Object(Roles.video))
+            await self._remove_streaming_permission(user)
             await ctx.send(f"{Emojis.check_mark} Streaming permission taken from {user.display_name}.")
         else:
             await ctx.send(f"{Emojis.cross_mark} This user already can't stream.")
+
+    def cog_unload(self) -> None:
+        """Cache and cancel all scheduled tasks."""
+        self.scheduler.cancel_all()
 
 
 def setup(bot: Bot) -> None:
