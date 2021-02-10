@@ -335,7 +335,8 @@ keys:
 urls:
     # PyDis site vars
     site:        &DOMAIN       "pythondiscord.com"
-    site_api:    &API    !JOIN ["api.", *DOMAIN]
+    site_api:    &API          "pydis-api.default.svc.cluster.local"
+    site_api_schema:           "http://"
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
