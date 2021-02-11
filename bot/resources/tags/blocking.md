@@ -12,10 +12,10 @@ In asynchronous programming, blocking calls are all the parts of your function t
 
 **How can I find asynchronous modules?**
 
-Most Python modules have an asynchronous implementation. For example, `sqlite3` has `aiosqlite`, and `praw` has `asycpraw`. You try searching on [PyPi](https://pypi.org), or check out [this curated list of Python asyncio frameworks](https://github.com/timofurrer/awesome-asyncio).
+Most Python modules have an asynchronous implementation. For example, [`sqlite3`](https://docs.python.org/3/library/sqlite3.html) has [`aiosqlite`](https://pypi.org/project/aiosqlite/), and [`praw`](https://pypi.org/project/praw/) has [`asycpraw`](https://pypi.org/project/asyncpraw/). You try searching on [PyPi](https://pypi.org), or check out [this curated list of Python asyncio frameworks](https://github.com/timofurrer/awesome-asyncio).
 You can also ask in <#630504881542791169> for options.
 
 **Resources for Further Reading**
 
 [Getting Started With Async Features in Python – Real Python](https://realpython.com/python-async-features/)
-[Async IO in Python: A Complete Walkthrough - Real](https://realpython.com/async-io-python/)
+[Async IO in Python: A Complete Walkthrough - Real Python](https://realpython.com/async-io-python/)
