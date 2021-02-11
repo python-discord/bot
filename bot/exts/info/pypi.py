@@ -1,6 +1,7 @@
 import itertools
 import logging
 import random
+import re
 
 from discord import Embed
 from discord.ext.commands import Cog, Context, command
@@ -12,7 +13,10 @@ from bot.constants import Colours, NEGATIVE_REPLIES
 URL = "https://pypi.org/pypi/{package}/json"
 FIELDS = ("author", "requires_python", "summary", "license")
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
+
 PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
+
+ILLEGAL_CHARACTERS = re.compile(r"[^a-zA-Z0-9-.]+")
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +35,11 @@ class PyPi(Cog):
             colour=Colours.soft_red
         )
         embed.set_thumbnail(url=PYPI_ICON)
+
+        if (character := re.search(ILLEGAL_CHARACTERS, package)) is not None:
+            embed.description = f"Illegal character passed into command: '{escape_markdown(character.group(0))}'"
+            await ctx.send(embed=embed)
+            return
 
         async with self.bot.http_session.get(URL.format(package=package)) as response:
             if response.status == 404:
