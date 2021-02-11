@@ -5,7 +5,7 @@ from discord import Embed
 from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
-from bot.constants import NEGATIVE_REPLIES, Colours
+from bot.constants import Colours, NEGATIVE_REPLIES
 
 URL = "https://pypi.org/pypi/{package}/json"
 FIELDS = ["author", "requires_python", "description", "license"]
@@ -26,7 +26,7 @@ class PyPi(Cog):
 
         async with self.bot.http_session.get(URL.format(package=package)) as response:
             if response.status == 404:
-                embed.description = f"Package could not be found."
+                embed.description = "Package could not be found."
 
             elif response.status == 200 and response.content_type == "application/json":
                 response_json = await response.json()
