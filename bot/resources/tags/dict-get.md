@@ -1,5 +1,4 @@
-Often while using dictionaries in Python, you may run into `KeyErrors`. This error is raised when you try to access a key that isn't present in your dictionary.\
-While you can use a `try` and `except` block to catch the `KeyError`, Python also gives you some other neat ways to handle them.
+Often while using dictionaries in Python, you may run into `KeyErrors`. This error is raised when you try to access a key that isn't present in your dictionary. Python gives you some neat ways to handle them.
 
 **The `dict.get` method**
 
