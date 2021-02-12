@@ -246,13 +246,16 @@ class Colours(metaclass=YAMLGetter):
     section = "style"
     subsection = "colours"
 
+    blue: int
     bright_green: int
-    soft_green: int
-    soft_orange: int
-    soft_red: int
     orange: int
     pink: int
     purple: int
+    soft_green: int
+    soft_orange: int
+    soft_red: int
+    white: int
+    yellow: int
 
 
 class DuckPond(metaclass=YAMLGetter):
