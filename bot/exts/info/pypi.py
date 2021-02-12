@@ -32,9 +32,9 @@ class PyPi(Cog):
                 response_json = await response.json()
                 info = response_json["info"]
 
-                embed.title = "Python Package Index"
+                embed.title = f"{info['name']} v{info['version']}"
+                embed.url = info['package_url']
                 embed.colour = Colours.soft_green
-                embed.description = f"[{info['name']} v{info['version']}]({info['package_url']})\n"
 
                 for field in FIELDS:
                     # Field could be completely empty, in some cases can be a string with whitespaces, or None.
