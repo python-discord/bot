@@ -37,7 +37,8 @@ class PyPi(Cog):
                 embed.description = f"[{info['name']} v{info['version']}]({info['package_url']})\n"
 
                 for field in FIELDS:
-                    if field_value := info[field]:
+                    # Field could be completely empty, in some cases can be a string with whitespaces.
+                    if field_value := info[field].strip():
                         embed.add_field(
                             name=field.replace("_", " ").title(),
                             value=field_value,
