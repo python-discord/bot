@@ -8,7 +8,7 @@ from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES
 
 URL = "https://pypi.org/pypi/{package}/json"
-FIELDS = ["author", "requires_python", "description", "license"]
+FIELDS = ["author", "requires_python", "summary", "license"]
 
 log = logging.getLogger(__name__)
 
@@ -34,14 +34,15 @@ class PyPi(Cog):
 
                 embed.title = "Python Package Index"
                 embed.colour = Colours.soft_green
-                embed.description = f"[{info['name']} v{info['version']}]({info['download_url']})\n"
+                embed.description = f"[{info['name']} v{info['version']}]({info['package_url']})\n"
 
                 for field in FIELDS:
-                    embed.add_field(
-                        name=field.replace("_", " ").title(),
-                        value=info[field],
-                        inline=False,
-                    )
+                    if field_value := info[field]:
+                        embed.add_field(
+                            name=field.replace("_", " ").title(),
+                            value=field_value,
+                            inline=False,
+                        )
 
             else:
                 embed.description = "There was an error when fetching your PyPi package."
