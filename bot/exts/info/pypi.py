@@ -21,7 +21,7 @@ class PyPi(Cog):
 
     @command(name="pypi", aliases=("package", "pack"))
     async def get_package_info(self, ctx: Context, package: str) -> None:
-        """Getting information about a specific package."""
+        """Provide information about a specific package  from PyPI."""
         embed = Embed(title=choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
 
         async with self.bot.http_session.get(URL.format(package=package)) as response:
