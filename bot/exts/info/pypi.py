@@ -1,5 +1,6 @@
+import itertools
 import logging
-from random import choice
+import random
 
 from discord import Embed
 from discord.ext.commands import Cog, Context, command
@@ -8,7 +9,9 @@ from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES
 
 URL = "https://pypi.org/pypi/{package}/json"
-FIELDS = ["author", "requires_python", "summary", "license"]
+FIELDS = ("author", "requires_python", "summary", "license")
+PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
+PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 
 log = logging.getLogger(__name__)
 
@@ -21,8 +24,12 @@ class PyPi(Cog):
 
     @command(name="pypi", aliases=("package", "pack"))
     async def get_package_info(self, ctx: Context, package: str) -> None:
-        """Getting information about a specific package."""
-        embed = Embed(title=choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
+        """Provide information about a specific package from PyPI."""
+        embed = Embed(
+            title=random.choice(NEGATIVE_REPLIES),
+            colour=Colours.soft_red
+        )
+        embed.set_thumbnail(url=PYPI_ICON)
 
         async with self.bot.http_session.get(URL.format(package=package)) as response:
             if response.status == 404:
@@ -34,7 +41,7 @@ class PyPi(Cog):
 
                 embed.title = f"{info['name']} v{info['version']}"
                 embed.url = info['package_url']
-                embed.colour = Colours.soft_green
+                embed.colour = next(PYPI_COLOURS)
 
                 for field in FIELDS:
                     # Field could be completely empty, in some cases can be a string with whitespaces, or None.
