@@ -44,11 +44,16 @@ class PyPi(Cog):
                 embed.colour = next(PYPI_COLOURS)
 
                 for field in FIELDS:
+                    field_data = info[field]
+
                     # Field could be completely empty, in some cases can be a string with whitespaces, or None.
-                    if info[field] and not info[field].isspace():
+                    if field_data and not field_data.isspace():
+                        if '\n' in field_data and field == "license":
+                            field_data = field_data.split('\n')[0]
+
                         embed.add_field(
                             name=field.replace("_", " ").title(),
-                            value=info[field],
+                            value=field_data,
                             inline=False,
                         )
 
