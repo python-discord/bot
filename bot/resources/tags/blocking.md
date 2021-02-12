@@ -18,4 +18,5 @@ This is because the program will freeze and you cannot do other tasks until that
 **Resources for Further Reading**
 
 [Getting Started With Async Features in Python – Real Python](https://realpython.com/python-async-features/)
+
 [Async IO in Python: A Complete Walkthrough - Real Python](https://realpython.com/async-io-python/)
