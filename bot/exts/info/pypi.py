@@ -4,6 +4,7 @@ import random
 
 from discord import Embed
 from discord.ext.commands import Cog, Context, command
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES
@@ -53,7 +54,7 @@ class PyPi(Cog):
 
                         embed.add_field(
                             name=field.replace("_", " ").title(),
-                            value=field_data,
+                            value=escape_markdown(field_data),
                             inline=False,
                         )
 
