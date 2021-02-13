@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import namedtuple
 from datetime import datetime
@@ -182,7 +183,7 @@ class Defcon(Cog):
         new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {humanize_delta(self.threshold)})"
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
-        await self.channel.edit(topic=new_topic)
+        asyncio.create_task(self.channel.edit(topic=new_topic))
 
     @redis_cache.atomic_transaction
     async def _defcon_action(self, author: User, threshold: relativedelta, expiry: Optional[Expiry] = None) -> None:
