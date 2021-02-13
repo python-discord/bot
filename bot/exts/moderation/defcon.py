@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from gettext import ngettext
 
+from async_rediscache import RedisCache
 from discord import Colour, Embed, Member
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
@@ -36,67 +37,59 @@ class Action(Enum):
 
     ActionInfo = namedtuple('LogInfoDetails', ['icon', 'color', 'template'])
 
-    ENABLED = ActionInfo(Icons.defcon_enabled, Colours.soft_green, "**Days:** {days}\n\n")
-    DISABLED = ActionInfo(Icons.defcon_disabled, Colours.soft_red, "")
-    UPDATED = ActionInfo(Icons.defcon_updated, Colour.blurple(), "**Days:** {days}\n\n")
+    SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Colours.soft_green, "")
+    SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Colours.soft_red, "")
+    DURATION_UPDATE = ActionInfo(Icons.defcon_update, Colour.blurple(), "**Days:** {days}\n\n")
 
 
 class Defcon(Cog):
     """Time-sensitive server defense mechanisms."""
 
+    redis_cache = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.channel = None
         self.days = timedelta(days=0)
-        self.enabled = False
+        self.expiry = None
 
-        self.bot.loop.create_task(self.sync_settings())
+        self.bot.loop.create_task(self._sync_settings())
 
     @property
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def sync_settings(self) -> None:
+    @redis_cache.atomic_transaction
+    async def _sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
         log.trace("Waiting for the guild to become available before syncing.")
         await self.bot.wait_until_guild_available()
-
-        log.trace("Syncing settings.")
         self.channel = await self.bot.fetch_channel(Channels.defcon)
 
-        try:
-            response = await self.bot.api_client.get('bot/bot-settings/defcon')
-            data = response['data']
+        log.trace("Syncing settings.")
 
-        except Exception:  # Yikes!
+        try:
+            settings = await self.redis_cache.to_dict()
+            self.days = timedelta(days=settings["days"])
+        except Exception:
             log.exception("Unable to get DEFCON settings!")
-            await self.bot.get_channel(Channels.dev_log).send(
-                f"<@&{Roles.admins}> **WARNING**: Unable to get DEFCON settings!"
-            )
+            await self.channel.send(f"<@&{Roles.moderators}> **WARNING**: Unable to get DEFCON settings!")
 
         else:
-            if data["enabled"]:
-                self.enabled = True
-                self.days = timedelta(days=data["days"])
-                log.info(f"DEFCON enabled: {self.days.days} days")
+            self._update_notifier()
+            log.info(f"DEFCON synchronized: {self.days.days} days")
 
-            else:
-                self.enabled = False
-                self.days = timedelta(days=0)
-                log.info("DEFCON disabled")
-
-            self.update_notifier()
-            await self.update_channel_topic()
+        await self._update_channel_topic()
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
-        """If DEFCON is enabled, check newly joining users to see if they meet the account age threshold."""
-        if self.enabled and self.days.days > 0:
+        """Check newly joining users to see if they meet the account age threshold."""
+        if self.days.days > 0:
             now = datetime.utcnow()
 
             if now - member.created_at < self.days:
-                log.info(f"Rejecting user {member}: Account is too new and DEFCON is enabled")
+                log.info(f"Rejecting user {member}: Account is too new")
 
                 message_sent = False
 
@@ -104,7 +97,7 @@ class Defcon(Cog):
                     await member.send(REJECTION_MESSAGE.format(user=member.mention))
 
                     message_sent = True
-                except Exception:
+                except Exception:  # TODO
                     log.exception(f"Unable to send rejection message to user: {member}")
 
                 await member.kick(reason="DEFCON active, user is too new")
@@ -128,118 +121,64 @@ class Defcon(Cog):
         """Check the DEFCON status or run a subcommand."""
         await ctx.send_help(ctx.command)
 
+    @redis_cache.atomic_transaction
     async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
         """Providing a structured way to do an defcon action."""
-        try:
-            response = await self.bot.api_client.get('bot/bot-settings/defcon')
-            data = response['data']
-
-            if "enable_date" in data and action is Action.DISABLED:
-                enabled = datetime.fromisoformat(data["enable_date"])
-
-                delta = datetime.now() - enabled
-
-                self.bot.stats.timing("defcon.enabled", delta)
-        except Exception:
-            pass
-
         self.days = timedelta(days=days)
-        self.enabled = action != Action.DISABLED
 
-        error = None
-        try:
-            await self.bot.api_client.put(
-                'bot/bot-settings/defcon',
-                json={
-                    'name': 'defcon',
-                    'data': {
-                        # TODO: retrieve old days count
-                        'days': self.days.days,
-                        'enabled': self.enabled,
-                        'enable_date': datetime.now().isoformat()
-                    }
-                }
-            )
+        await self.redis_cache.update(
+            {
+                'days': self.days.days,
+            }
+        )
+        self._update_notifier()
 
-        except Exception as err:
-            log.exception("Unable to update DEFCON settings.")
-            error = err
-        finally:
-            self.update_notifier()
+        await ctx.send(self._build_defcon_msg(action))
+        await self._send_defcon_log(action, ctx.author)
+        await self._update_channel_topic()
 
-            await ctx.send(self.build_defcon_msg(action, error))
-            await self.send_defcon_log(action, ctx.author, error)
-            await self.update_channel_topic()
+        self.bot.stats.gauge("defcon.threshold", days)
 
-            self.bot.stats.gauge("defcon.threshold", days)
-
-    @defcon_group.command(name='enable', aliases=('on', 'e'), root_aliases=("defon",))
+    @defcon_group.command(aliases=('s',))
     @has_any_role(*MODERATION_ROLES)
-    async def enable_command(self, ctx: Context) -> None:
-        """
-        Enable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!
-
-        Currently, this just adds an account age requirement. Use !defcon days <int> to set how old an account must be,
-        in days.
-        """
-        await self._defcon_action(ctx, days=self.days, action=Action.ENABLED)
-
-    @defcon_group.command(name='disable', aliases=('off', 'd'), root_aliases=("defoff",))
-    @has_any_role(*MODERATION_ROLES)
-    async def disable_command(self, ctx: Context) -> None:
-        """Disable DEFCON mode. Useful in a pinch, but be sure you know what you're doing!"""
-        await self._defcon_action(ctx, days=0, action=Action.DISABLED)
-
-    @defcon_group.command(name='status', aliases=('s',))
-    @has_any_role(*MODERATION_ROLES)
-    async def status_command(self, ctx: Context) -> None:
+    async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
             colour=Colour.blurple(), title="DEFCON Status",
-            description=f"**Enabled:** {self.enabled}\n"
-                        f"**Days:** {self.days.days}"
+            description=f"**Days:** {self.days.days}"
         )
 
         await ctx.send(embed=embed)
 
-    @defcon_group.command(name='days')
+    @defcon_group.command(aliases=('d',))
     @has_any_role(*MODERATION_ROLES)
-    async def days_command(self, ctx: Context, days: int) -> None:
-        """Set how old an account must be to join the server, in days, with DEFCON mode enabled."""
-        await self._defcon_action(ctx, days=days, action=Action.UPDATED)
+    async def days(self, ctx: Context, days: int) -> None:
+        """Set how old an account must be to join the server, in days."""
+        await self._defcon_action(ctx, days=days, action=Action.DURATION_UPDATE)
 
-    async def update_channel_topic(self) -> None:
+    async def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
-        if self.enabled:
-            day_str = "days" if self.days.days > 1 else "day"
-            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Enabled, Threshold: {self.days.days} {day_str})"
-        else:
-            new_topic = f"{BASE_CHANNEL_TOPIC}\n(Status: Disabled)"
+        day_str = "days" if self.days.days > 1 else "day"
+        new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {self.days.days} {day_str})"
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         await self.channel.edit(topic=new_topic)
 
-    def build_defcon_msg(self, action: Action, e: Exception = None) -> str:
+    def _build_defcon_msg(self, action: Action) -> str:
         """Build in-channel response string for DEFCON action."""
-        if action is Action.ENABLED:
-            msg = f"{Emojis.defcon_enabled} DEFCON enabled.\n\n"
-        elif action is Action.DISABLED:
-            msg = f"{Emojis.defcon_disabled} DEFCON disabled.\n\n"
-        elif action is Action.UPDATED:
+        if action is Action.SERVER_OPEN:
+            msg = f"{Emojis.defcon_enabled} Server reopened.\n\n"
+        elif action is Action.SERVER_SHUTDOWN:
+            msg = f"{Emojis.defcon_disabled} Server shut down.\n\n"
+        elif action is Action.DURATION_UPDATE:
             msg = (
-                f"{Emojis.defcon_updated} DEFCON days updated; accounts must be {self.days.days} "
-                f"day{'s' if self.days.days > 1 else ''} old to join the server.\n\n"
-            )
-
-        if e:
-            msg += (
-                "**There was a problem updating the site** - This setting may be reverted when the bot restarts.\n\n"
-                f"```py\n{e}\n```"
+                f"{Emojis.defcon_update} DEFCON days updated; accounts must be {self.days.days} "
+                f"day{ngettext('', 's', self.days.days)} old to join the server.\n\n"
             )
 
         return msg
 
-    async def send_defcon_log(self, action: Action, actor: Member, e: Exception = None) -> None:
+    async def _send_defcon_log(self, action: Action, actor: Member) -> None:
         """Send log message for DEFCON action."""
         info = action.value
         log_msg: str = (
@@ -248,15 +187,9 @@ class Defcon(Cog):
         )
         status_msg = f"DEFCON {action.name.lower()}"
 
-        if e:
-            log_msg += (
-                "**There was a problem updating the site** - This setting may be reverted when the bot restarts.\n\n"
-                f"```py\n{e}\n```"
-            )
-
         await self.mod_log.send_log_message(info.icon, info.color, status_msg, log_msg)
 
-    def update_notifier(self) -> None:
+    def _update_notifier(self) -> None:
         """Start or stop the notifier according to the DEFCON status."""
         if self.days.days != 0 and not self.defcon_notifier.is_running():
             log.info("DEFCON notifier started.")
