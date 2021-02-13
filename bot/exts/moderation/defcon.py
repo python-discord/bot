@@ -138,6 +138,28 @@ class Defcon(Cog):
         """Set how old an account must be to join the server, in days."""
         await self._defcon_action(ctx, days=days, action=Action.DURATION_UPDATE)
 
+    @defcon_group.command()
+    @has_any_role(*MODERATION_ROLES)
+    async def shutdown(self, ctx: Context) -> None:
+        """Shut down the server by setting send permissions of everyone to False."""
+        role = ctx.guild.default_role
+        permissions = role.permissions
+
+        permissions.update(send_messages=False, add_reactions=False)
+        await role.edit(reason="DEFCON shutdown", permissions=permissions)
+        await ctx.send(self._build_defcon_msg(Action.SERVER_SHUTDOWN))
+
+    @defcon_group.command()
+    @has_any_role(*MODERATION_ROLES)
+    async def unshutdown(self, ctx: Context) -> None:
+        """Open up the server again by setting send permissions of everyone to None."""
+        role = ctx.guild.default_role
+        permissions = role.permissions
+
+        permissions.update(send_messages=True, add_reactions=True)
+        await role.edit(reason="DEFCON unshutdown", permissions=permissions)
+        await ctx.send(self._build_defcon_msg(Action.SERVER_OPEN))
+
     async def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
         day_str = "days" if self.days.days > 1 else "day"
@@ -167,9 +189,9 @@ class Defcon(Cog):
     def _build_defcon_msg(self, action: Action) -> str:
         """Build in-channel response string for DEFCON action."""
         if action is Action.SERVER_OPEN:
-            msg = f"{Emojis.defcon_enabled} Server reopened.\n\n"
+            msg = f"{Emojis.defcon_unshutdown} Server reopened.\n\n"
         elif action is Action.SERVER_SHUTDOWN:
-            msg = f"{Emojis.defcon_disabled} Server shut down.\n\n"
+            msg = f"{Emojis.defcon_shutdown} Server shut down.\n\n"
         elif action is Action.DURATION_UPDATE:
             msg = (
                 f"{Emojis.defcon_update} DEFCON days updated; accounts must be {self.days.days} "
