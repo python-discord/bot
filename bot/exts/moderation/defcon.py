@@ -2,19 +2,22 @@ from __future__ import annotations
 
 import logging
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from gettext import ngettext
+from typing import Union
 
 from async_rediscache import RedisCache
+from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Member
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
+from bot.converters import DurationDelta
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.messages import format_user
+from bot.utils.time import humanize_delta, parse_duration_string
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +34,8 @@ will be resolved soon. In the meantime, please feel free to peruse the resources
 
 BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 
+SECONDS_IN_DAY = 86400
+
 
 class Action(Enum):
     """Defcon Action."""
@@ -39,7 +44,9 @@ class Action(Enum):
 
     SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Emojis.defcon_unshutdown, Colours.soft_green, "")
     SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Emojis.defcon_shutdown, Colours.soft_red, "")
-    DURATION_UPDATE = ActionInfo(Icons.defcon_update, Emojis.defcon_update, Colour.blurple(), "**Days:** {days}\n\n")
+    DURATION_UPDATE = ActionInfo(
+        Icons.defcon_update, Emojis.defcon_update, Colour.blurple(), "**Threshold:** {threshold}\n\n"
+    )
 
 
 class Defcon(Cog):
@@ -50,7 +57,7 @@ class Defcon(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.channel = None
-        self.days = timedelta(days=0)
+        self.threshold = relativedelta(days=0)
         self.expiry = None
 
         self.bot.loop.create_task(self._sync_settings())
@@ -71,24 +78,24 @@ class Defcon(Cog):
 
         try:
             settings = await self.redis_cache.to_dict()
-            self.days = timedelta(days=settings["days"])
+            self.threshold = parse_duration_string(settings["threshold"])
         except Exception:
             log.exception("Unable to get DEFCON settings!")
             await self.channel.send(f"<@&{Roles.moderators}> **WARNING**: Unable to get DEFCON settings!")
 
         else:
             self._update_notifier()
-            log.info(f"DEFCON synchronized: {self.days.days} days")
+            log.info(f"DEFCON synchronized: {humanize_delta(self.threshold)}")
 
         await self._update_channel_topic()
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """Check newly joining users to see if they meet the account age threshold."""
-        if self.days.days > 0:
+        if self.threshold > relativedelta(days=0):
             now = datetime.utcnow()
 
-            if now - member.created_at < self.days:
+            if now - member.created_at < self.threshold:
                 log.info(f"Rejecting user {member}: Account is too new")
 
                 message_sent = False
@@ -125,15 +132,17 @@ class Defcon(Cog):
         """Check the current status of DEFCON mode."""
         embed = Embed(
             colour=Colour.blurple(), title="DEFCON Status",
-            description=f"**Days:** {self.days.days}"
+            description=f"**Threshold:** {humanize_delta(self.threshold)}"
         )
 
         await ctx.send(embed=embed)
 
-    @defcon_group.command(aliases=('d',))
-    async def days(self, ctx: Context, days: int) -> None:
-        """Set how old an account must be to join the server, in days."""
-        await self._defcon_action(ctx, days=days)
+    @defcon_group.command(aliases=('t',))
+    async def threshold(self, ctx: Context, threshold: Union[DurationDelta, int]) -> None:
+        """Set how old an account must be to join the server."""
+        if isinstance(threshold, int):
+            threshold = relativedelta(days=threshold)
+        await self._defcon_action(ctx, threshold=threshold)
 
     @defcon_group.command()
     async def shutdown(self, ctx: Context) -> None:
@@ -157,20 +166,19 @@ class Defcon(Cog):
 
     async def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
-        day_str = "days" if self.days.days > 1 else "day"
-        new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {self.days.days} {day_str})"
+        new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {humanize_delta(self.threshold)})"
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         await self.channel.edit(topic=new_topic)
 
     @redis_cache.atomic_transaction
-    async def _defcon_action(self, ctx: Context, days: int) -> None:
+    async def _defcon_action(self, ctx: Context, threshold: relativedelta) -> None:
         """Providing a structured way to do a defcon action."""
-        self.days = timedelta(days=days)
+        self.threshold = threshold
 
         await self.redis_cache.update(
             {
-                'days': self.days.days,
+                'threshold': Defcon._stringify_relativedelta(self.threshold),
             }
         )
         self._update_notifier()
@@ -178,20 +186,32 @@ class Defcon(Cog):
         action = Action.DURATION_UPDATE
 
         await ctx.send(
-            f"{action.value.emoji} DEFCON days updated; accounts must be {self.days.days} "
-            f"day{ngettext('', 's', self.days.days)} old to join the server."
+            f"{action.value.emoji} DEFCON threshold updated; accounts must be "
+            f"{humanize_delta(self.threshold)} old to join the server."
         )
         await self._send_defcon_log(action, ctx.author)
         await self._update_channel_topic()
 
-        self.bot.stats.gauge("defcon.threshold", days)
+        self._log_threshold_stat(threshold)
+
+    @staticmethod
+    def _stringify_relativedelta(delta: relativedelta) -> str:
+        """Convert a relativedelta object to a duration string."""
+        units = [("years", "y"), ("months", "m"), ("days", "d"), ("hours", "h"), ("minutes", "m"), ("seconds", "s")]
+        return "".join(f"{getattr(delta, unit)}{symbol}" for unit, symbol in units if getattr(delta, unit)) or "0s"
+
+    def _log_threshold_stat(self, threshold: relativedelta) -> None:
+        """Adds the threshold to the bot stats in days."""
+        utcnow = datetime.utcnow()
+        threshold_days = (utcnow + threshold - utcnow).total_seconds() / SECONDS_IN_DAY
+        self.bot.stats.gauge("defcon.threshold", threshold_days)
 
     async def _send_defcon_log(self, action: Action, actor: Member) -> None:
         """Send log message for DEFCON action."""
         info = action.value
         log_msg: str = (
             f"**Staffer:** {actor.mention} {actor} (`{actor.id}`)\n"
-            f"{info.template.format(days=self.days.days)}"
+            f"{info.template.format(threshold=humanize_delta(self.threshold))}"
         )
         status_msg = f"DEFCON {action.name.lower()}"
 
@@ -199,22 +219,22 @@ class Defcon(Cog):
 
     def _update_notifier(self) -> None:
         """Start or stop the notifier according to the DEFCON status."""
-        if self.days.days != 0 and not self.defcon_notifier.is_running():
+        if self.threshold != relativedelta(days=0) and not self.defcon_notifier.is_running():
             log.info("DEFCON notifier started.")
             self.defcon_notifier.start()
 
-        elif self.days.days == 0 and self.defcon_notifier.is_running():
+        elif self.threshold == relativedelta(days=0) and self.defcon_notifier.is_running():
             log.info("DEFCON notifier stopped.")
             self.defcon_notifier.cancel()
 
     @tasks.loop(hours=1)
     async def defcon_notifier(self) -> None:
         """Routinely notify moderators that DEFCON is active."""
-        await self.channel.send(f"Defcon is on and is set to {self.days.days} day{ngettext('', 's', self.days.days)}.")
+        await self.channel.send(f"Defcon is on and is set to {humanize_delta(self.threshold)}.")
 
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators in the defcon channel to run commands in this cog."""
-        return has_any_role(*MODERATION_ROLES).predicate(ctx) and ctx.channel == self.channel
+        return (await has_any_role(*MODERATION_ROLES).predicate(ctx)) and ctx.channel == self.channel
 
     def cog_unload(self) -> None:
         """Cancel the notifer task when the cog unloads."""
