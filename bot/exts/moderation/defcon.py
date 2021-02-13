@@ -35,11 +35,11 @@ BASE_CHANNEL_TOPIC = "Python Discord Defense Mechanism"
 class Action(Enum):
     """Defcon Action."""
 
-    ActionInfo = namedtuple('LogInfoDetails', ['icon', 'color', 'template'])
+    ActionInfo = namedtuple('LogInfoDetails', ['icon', 'emoji', 'color', 'template'])
 
-    SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Colours.soft_green, "")
-    SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Colours.soft_red, "")
-    DURATION_UPDATE = ActionInfo(Icons.defcon_update, Colour.blurple(), "**Days:** {days}\n\n")
+    SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Emojis.defcon_unshutdown, Colours.soft_green, "")
+    SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Emojis.defcon_shutdown, Colours.soft_red, "")
+    DURATION_UPDATE = ActionInfo(Icons.defcon_update, Emojis.defcon_update, Colour.blurple(), "**Days:** {days}\n\n")
 
 
 class Defcon(Cog):
@@ -136,7 +136,7 @@ class Defcon(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def days(self, ctx: Context, days: int) -> None:
         """Set how old an account must be to join the server, in days."""
-        await self._defcon_action(ctx, days=days, action=Action.DURATION_UPDATE)
+        await self._defcon_action(ctx, days=days)
 
     @defcon_group.command()
     @has_any_role(*MODERATION_ROLES)
@@ -147,7 +147,7 @@ class Defcon(Cog):
 
         permissions.update(send_messages=False, add_reactions=False)
         await role.edit(reason="DEFCON shutdown", permissions=permissions)
-        await ctx.send(self._build_defcon_msg(Action.SERVER_SHUTDOWN))
+        await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
 
     @defcon_group.command()
     @has_any_role(*MODERATION_ROLES)
@@ -158,7 +158,7 @@ class Defcon(Cog):
 
         permissions.update(send_messages=True, add_reactions=True)
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
-        await ctx.send(self._build_defcon_msg(Action.SERVER_OPEN))
+        await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
 
     async def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
@@ -169,8 +169,8 @@ class Defcon(Cog):
         await self.channel.edit(topic=new_topic)
 
     @redis_cache.atomic_transaction
-    async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
-        """Providing a structured way to do an defcon action."""
+    async def _defcon_action(self, ctx: Context, days: int) -> None:
+        """Providing a structured way to do a defcon action."""
         self.days = timedelta(days=days)
 
         await self.redis_cache.update(
@@ -180,25 +180,16 @@ class Defcon(Cog):
         )
         self._update_notifier()
 
-        await ctx.send(self._build_defcon_msg(action))
+        action = Action.DURATION_UPDATE
+
+        await ctx.send(
+            f"{action.value.emoji} DEFCON days updated; accounts must be {self.days.days} "
+            f"day{ngettext('', 's', self.days.days)} old to join the server."
+        )
         await self._send_defcon_log(action, ctx.author)
         await self._update_channel_topic()
 
         self.bot.stats.gauge("defcon.threshold", days)
-
-    def _build_defcon_msg(self, action: Action) -> str:
-        """Build in-channel response string for DEFCON action."""
-        if action is Action.SERVER_OPEN:
-            msg = f"{Emojis.defcon_unshutdown} Server reopened.\n\n"
-        elif action is Action.SERVER_SHUTDOWN:
-            msg = f"{Emojis.defcon_shutdown} Server shut down.\n\n"
-        elif action is Action.DURATION_UPDATE:
-            msg = (
-                f"{Emojis.defcon_update} DEFCON days updated; accounts must be {self.days.days} "
-                f"day{ngettext('', 's', self.days.days)} old to join the server.\n\n"
-            )
-
-        return msg
 
     async def _send_defcon_log(self, action: Action, actor: Member) -> None:
         """Send log message for DEFCON action."""
