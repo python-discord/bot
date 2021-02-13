@@ -7,6 +7,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES
+from discord.utils import escape_markdown
 
 URL = "https://pypi.org/pypi/{package}/json"
 FIELDS = ("author", "requires_python", "summary", "license")
@@ -53,7 +54,7 @@ class PyPi(Cog):
 
                         embed.add_field(
                             name=field.replace("_", " ").title(),
-                            value=field_data,
+                            value=escape_markdown(field_data),
                             inline=False,
                         )
 
