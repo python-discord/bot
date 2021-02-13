@@ -142,6 +142,7 @@ class Defcon(Cog):
             description=f"""
                 **Threshold:** {humanize_delta(self.threshold)}
                 **Expires in:** {humanize_delta(relativedelta(self.expiry, datetime.utcnow())) if self.expiry else "-"}
+                **Verification level:** {ctx.guild.verification_level.name}
                 """
         )
 
