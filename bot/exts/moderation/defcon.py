@@ -116,13 +116,11 @@ class Defcon(Cog):
                 )
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
-    @has_any_role(*MODERATION_ROLES)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
         await ctx.send_help(ctx.command)
 
     @defcon_group.command(aliases=('s',))
-    @has_any_role(*MODERATION_ROLES)
     async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
@@ -133,13 +131,11 @@ class Defcon(Cog):
         await ctx.send(embed=embed)
 
     @defcon_group.command(aliases=('d',))
-    @has_any_role(*MODERATION_ROLES)
     async def days(self, ctx: Context, days: int) -> None:
         """Set how old an account must be to join the server, in days."""
         await self._defcon_action(ctx, days=days)
 
     @defcon_group.command()
-    @has_any_role(*MODERATION_ROLES)
     async def shutdown(self, ctx: Context) -> None:
         """Shut down the server by setting send permissions of everyone to False."""
         role = ctx.guild.default_role
@@ -150,7 +146,6 @@ class Defcon(Cog):
         await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
 
     @defcon_group.command()
-    @has_any_role(*MODERATION_ROLES)
     async def unshutdown(self, ctx: Context) -> None:
         """Open up the server again by setting send permissions of everyone to None."""
         role = ctx.guild.default_role
@@ -216,6 +211,10 @@ class Defcon(Cog):
     async def defcon_notifier(self) -> None:
         """Routinely notify moderators that DEFCON is active."""
         await self.channel.send(f"Defcon is on and is set to {self.days.days} day{ngettext('', 's', self.days.days)}.")
+
+    async def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators in the defcon channel to run commands in this cog."""
+        return has_any_role(*MODERATION_ROLES).predicate(ctx) and ctx.channel == self.channel
 
     def cog_unload(self) -> None:
         """Cancel the notifer task when the cog unloads."""
