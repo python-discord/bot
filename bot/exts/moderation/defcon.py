@@ -18,7 +18,7 @@ from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.messages import format_user
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta, parse_duration_string
+from bot.utils.time import humanize_delta, parse_duration_string, relativedelta_to_timedelta
 
 log = logging.getLogger(__name__)
 
@@ -99,10 +99,10 @@ class Defcon(Cog):
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """Check newly joining users to see if they meet the account age threshold."""
-        if self.threshold > relativedelta(days=0):
+        if self.threshold != relativedelta(days=0):
             now = datetime.utcnow()
 
-            if now - member.created_at < self.threshold:  # TODO
+            if now - member.created_at < relativedelta_to_timedelta(self.threshold):
                 log.info(f"Rejecting user {member}: Account is too new")
 
                 message_sent = False
@@ -231,8 +231,7 @@ class Defcon(Cog):
 
     def _log_threshold_stat(self, threshold: relativedelta) -> None:
         """Adds the threshold to the bot stats in days."""
-        utcnow = datetime.utcnow()
-        threshold_days = (utcnow + threshold - utcnow).total_seconds() / SECONDS_IN_DAY
+        threshold_days = relativedelta_to_timedelta(threshold).total_seconds() / SECONDS_IN_DAY
         self.bot.stats.gauge("defcon.threshold", threshold_days)
 
     async def _send_defcon_log(self, action: Action, actor: User) -> None:

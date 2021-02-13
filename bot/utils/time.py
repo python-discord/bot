@@ -110,6 +110,12 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
     return delta
 
 
+def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
+    """Converts a relativedelta object to a timedelta object."""
+    utcnow = datetime.datetime.utcnow()
+    return utcnow + delta - utcnow
+
+
 def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max_units: int = 6) -> str:
     """
     Takes a datetime and returns a human-readable string that describes how long ago that datetime was.
