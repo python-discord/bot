@@ -4,10 +4,10 @@ import random
 
 from discord import Embed
 from discord.ext.commands import Cog, Context, command
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES
-from discord.utils import escape_markdown
 
 URL = "https://pypi.org/pypi/{package}/json"
 FIELDS = ("author", "requires_python", "summary", "license")
