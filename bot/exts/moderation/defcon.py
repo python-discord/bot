@@ -121,24 +121,6 @@ class Defcon(Cog):
         """Check the DEFCON status or run a subcommand."""
         await ctx.send_help(ctx.command)
 
-    @redis_cache.atomic_transaction
-    async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
-        """Providing a structured way to do an defcon action."""
-        self.days = timedelta(days=days)
-
-        await self.redis_cache.update(
-            {
-                'days': self.days.days,
-            }
-        )
-        self._update_notifier()
-
-        await ctx.send(self._build_defcon_msg(action))
-        await self._send_defcon_log(action, ctx.author)
-        await self._update_channel_topic()
-
-        self.bot.stats.gauge("defcon.threshold", days)
-
     @defcon_group.command(aliases=('s',))
     @has_any_role(*MODERATION_ROLES)
     async def status(self, ctx: Context) -> None:
@@ -163,6 +145,24 @@ class Defcon(Cog):
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         await self.channel.edit(topic=new_topic)
+
+    @redis_cache.atomic_transaction
+    async def _defcon_action(self, ctx: Context, days: int, action: Action) -> None:
+        """Providing a structured way to do an defcon action."""
+        self.days = timedelta(days=days)
+
+        await self.redis_cache.update(
+            {
+                'days': self.days.days,
+            }
+        )
+        self._update_notifier()
+
+        await ctx.send(self._build_defcon_msg(action))
+        await self._send_defcon_log(action, ctx.author)
+        await self._update_channel_topic()
+
+        self.bot.stats.gauge("defcon.threshold", days)
 
     def _build_defcon_msg(self, action: Action) -> str:
         """Build in-channel response string for DEFCON action."""
