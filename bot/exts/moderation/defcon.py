@@ -95,7 +95,7 @@ class Defcon(Cog):
             self._update_notifier()
             log.info(f"DEFCON synchronized: {humanize_delta(self.threshold)}")
 
-        await self._update_channel_topic()
+        self._update_channel_topic()
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
@@ -178,7 +178,7 @@ class Defcon(Cog):
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
 
-    async def _update_channel_topic(self) -> None:
+    def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
         new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {humanize_delta(self.threshold)})"
 
@@ -217,7 +217,7 @@ class Defcon(Cog):
             f"{humanize_delta(self.threshold)} old to join the server {expiry_message}."
         )
         await self._send_defcon_log(action, author)
-        await self._update_channel_topic()
+        self._update_channel_topic()
 
         self._log_threshold_stat(threshold)
 
