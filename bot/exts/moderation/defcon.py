@@ -131,11 +131,13 @@ class Defcon(Cog):
                 )
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
+    @has_any_role(*MODERATION_ROLES)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
         await ctx.send_help(ctx.command)
 
     @defcon_group.command(aliases=('s',))
+    @has_any_role(*MODERATION_ROLES)
     async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
@@ -150,6 +152,7 @@ class Defcon(Cog):
         await ctx.send(embed=embed)
 
     @defcon_group.command(aliases=('t',))
+    @has_any_role(*MODERATION_ROLES)
     async def threshold(
         self, ctx: Context, threshold: Union[DurationDelta, int], expiry: Optional[Expiry] = None
     ) -> None:
@@ -159,6 +162,7 @@ class Defcon(Cog):
         await self._defcon_action(ctx.author, threshold=threshold, expiry=expiry)
 
     @defcon_group.command()
+    @has_any_role(Roles.admins)
     async def shutdown(self, ctx: Context) -> None:
         """Shut down the server by setting send permissions of everyone to False."""
         role = ctx.guild.default_role
@@ -169,6 +173,7 @@ class Defcon(Cog):
         await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
 
     @defcon_group.command()
+    @has_any_role(Roles.admins)
     async def unshutdown(self, ctx: Context) -> None:
         """Open up the server again by setting send permissions of everyone to None."""
         role = ctx.guild.default_role
@@ -261,10 +266,6 @@ class Defcon(Cog):
     async def defcon_notifier(self) -> None:
         """Routinely notify moderators that DEFCON is active."""
         await self.channel.send(f"Defcon is on and is set to {humanize_delta(self.threshold)}.")
-
-    async def cog_check(self, ctx: Context) -> bool:
-        """Only allow moderators in the defcon channel to run commands in this cog."""
-        return (await has_any_role(*MODERATION_ROLES).predicate(ctx)) and ctx.channel == self.channel
 
     def cog_unload(self) -> None:
         """Cancel the notifer and threshold removal tasks when the cog unloads."""
