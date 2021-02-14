@@ -159,7 +159,7 @@ class Defcon(Cog):
         """Set how old an account must be to join the server."""
         if isinstance(threshold, int):
             threshold = relativedelta(days=threshold)
-        await self._defcon_action(ctx.author, threshold=threshold, expiry=expiry)
+        await self._update_threshold(ctx.author, threshold=threshold, expiry=expiry)
 
     @defcon_group.command()
     @has_any_role(Roles.admins)
@@ -191,8 +191,8 @@ class Defcon(Cog):
         asyncio.create_task(self.channel.edit(topic=new_topic))
 
     @redis_cache.atomic_transaction
-    async def _defcon_action(self, author: User, threshold: relativedelta, expiry: Optional[Expiry] = None) -> None:
-        """Providing a structured way to do a defcon action."""
+    async def _update_threshold(self, author: User, threshold: relativedelta, expiry: Optional[Expiry] = None) -> None:
+        """Update the new threshold in the cog, cache, defcon channel, and logs, and additionally schedule expiry."""
         self.threshold = threshold
         if threshold == relativedelta(days=0):  # If the threshold is 0, we don't need to schedule anything
             expiry = None
@@ -228,7 +228,7 @@ class Defcon(Cog):
 
     async def _remove_threshold(self) -> None:
         """Resets the threshold back to 0."""
-        await self._defcon_action(self.bot.user, relativedelta(days=0))
+        await self._update_threshold(self.bot.user, relativedelta(days=0))
 
     @staticmethod
     def _stringify_relativedelta(delta: relativedelta) -> str:
