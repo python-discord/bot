@@ -106,7 +106,7 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
 
 def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collection[str]]:
     """
-    Truncate passed signatures to not exceed `_MAX_SIGNAUTRES_LENGTH`.
+    Truncate passed signatures to not exceed `_MAX_SIGNATURES_LENGTH`.
 
     If the signatures need to be truncated, parameters are collapsed until they fit withing the limit.
     Individual signatures can consist of max 1, 2, ..., `_MAX_SIGNATURE_AMOUNT` lines of text,
@@ -149,10 +149,10 @@ def _get_truncated_description(
         max_lines: int,
 ) -> str:
     """
-    Truncate markdown from `elements` to be at most `max_length` characters when rendered or `max_lines` newlines.
+    Truncate the Markdown from `elements` to be at most `max_length` characters when rendered or `max_lines` newlines.
 
     `max_length` limits the length of the rendered characters in the string,
-    with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits
+    with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits.
     """
     result = ""
     markdown_element_ends = []
@@ -209,10 +209,10 @@ def _get_truncated_description(
 
 def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
     """
-    Create a markdown string with the signatures at the top, and the converted html description below them.
+    Create a Markdown string with the signatures at the top, and the converted html description below them.
 
     The signatures are wrapped in python codeblocks, separated from the description by a newline.
-    The result markdown string is max 750 rendered characters for the description with signatures at the start.
+    The result Markdown string is max 750 rendered characters for the description with signatures at the start.
     """
     description = _get_truncated_description(
         description,
@@ -232,7 +232,7 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
 
 def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:
     """
-    Return parsed markdown of the passed item using the passed in soup, truncated to fit within a discord message.
+    Return parsed Markdown of the passed item using the passed in soup, truncated to fit within a discord message.
 
     The method of parsing and what information gets included depends on the symbol's group.
     """

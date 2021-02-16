@@ -126,7 +126,7 @@ class DocCog(commands.Cog):
             inventory_url: str,
     ) -> None:
         """
-        Update the cog's inventory, or reschedule this method to execute again if the remote inventory unreachable.
+        Update the cog's inventory, or reschedule this method to execute again if the remote inventory is unreachable.
 
         The first attempt is rescheduled to execute in `FETCH_RESCHEDULE_DELAY.first` minutes, the subsequent attempts
         in `FETCH_RESCHEDULE_DELAY.repeated` minutes.

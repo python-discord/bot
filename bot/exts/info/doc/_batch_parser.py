@@ -33,7 +33,7 @@ class StaleInventoryNotifier:
         self._dev_log = bot.instance.get_channel(Channels.dev_log)
 
     async def send_warning(self, doc_item: _cog.DocItem) -> None:
-        """Send a warning to dev log is one wasn't already sent for `item`'s url."""
+        """Send a warning to dev log if one wasn't already sent for `item`'s url."""
         if doc_item.url not in self._warned_urls:
             self._warned_urls.add(doc_item.url)
             await self._init_task
@@ -132,7 +132,7 @@ class BatchParser:
 
     async def _parse_queue(self) -> None:
         """
-        Parse all item from the queue, setting their result markdown on the futures and sending them to redis.
+        Parse all items from the queue, setting their result Markdown on the futures and sending them to redis.
 
         The coroutine will run as long as the queue is not empty, resetting `self._parse_task` to None when finished.
         """

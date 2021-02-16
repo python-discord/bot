@@ -100,7 +100,7 @@ def get_general_description(start_element: Tag) -> List[Union[Tag, NavigableStri
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
-    A headerlink a tag is attempted to be found to skip repeating the symbol information in the description,
+    A headerlink tag is attempted to be found to skip repeating the symbol information in the description,
     if it's found it's used as the tag to start the search from instead of the `start_element`.
     """
     child_tags = _find_recursive_children_until_tag(start_element, _class_filter_factory(["section"]), limit=100)
