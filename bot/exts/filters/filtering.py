@@ -344,7 +344,7 @@ class Filtering(Cog):
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
         eval_msg = "using !eval " if is_eval else ""
-        footer = f"Entry comment: {reason}" if reason else None
+        footer = f"Reason: {reason}" if reason else None
         message = (
             f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)} "
             f"{channel_str} {eval_msg}with [the following message]({msg.jump_url}):\n\n"
@@ -388,7 +388,7 @@ class Filtering(Cog):
         if name == "filter_invites" and match is not True:
             additional_embeds = []
             for _, data in match.items():
-                reason = f"\n**Entry comment:**\n{data['reason']}" if data.get('reason') else ""
+                reason = f"\n**Reason:**\n{data['reason']}" if data.get('reason') else ""
                 embed = discord.Embed(description=(
                     f"**Members:**\n{data['members']}\n"
                     f"**Active:**\n{data['active']}"
