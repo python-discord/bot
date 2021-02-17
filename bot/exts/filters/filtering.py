@@ -432,7 +432,7 @@ class Filtering(Cog):
 
         # Make sure it's not a URL
         if URL_RE.search(text):
-            return False
+            return False, None
 
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
@@ -445,7 +445,7 @@ class Filtering(Cog):
     async def _has_urls(self, text: str) -> Tuple[bool, Optional[str]]:
         """Returns True if the text contains one of the blacklisted URLs from the config file."""
         if not URL_RE.search(text):
-            return False
+            return False, None
 
         text = text.lower()
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
@@ -494,7 +494,7 @@ class Filtering(Cog):
                 # Lack of a "guild" key in the JSON response indicates either an group DM invite, an
                 # expired invite, or an invalid invite. The API does not currently differentiate
                 # between invalid and expired invites
-                return True
+                return True, None
 
             guild_id = guild.get("id")
             guild_invite_whitelist = self._get_filterlist_items("guild_invite", allowed=True)
