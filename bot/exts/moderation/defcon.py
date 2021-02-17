@@ -89,7 +89,9 @@ class Defcon(Cog):
             self.expiry = datetime.fromisoformat(settings["expiry"]) if settings["expiry"] else None
         except Exception:
             log.exception("Unable to get DEFCON settings!")
-            await self.channel.send(f"<@&{Roles.moderators}> **WARNING**: Unable to get DEFCON settings!")
+            await self.channel.send(
+                f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
+            )
 
         else:
             if self.expiry:
