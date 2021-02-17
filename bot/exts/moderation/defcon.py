@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import logging
 from collections import namedtuple
@@ -56,7 +54,7 @@ class Defcon(Cog):
 
     # RedisCache[str, str]
     # The cache's keys are "threshold" and "expiry".
-    # The caches' values are strings formatted as valid input to the DurationDelta converter.
+    # The caches' values are strings formatted as valid input to the DurationDelta converter, or empty when off.
     defcon_settings = RedisCache()
 
     def __init__(self, bot: Bot):
@@ -85,7 +83,7 @@ class Defcon(Cog):
 
         try:
             settings = await self.defcon_settings.to_dict()
-            self.threshold = parse_duration_string(settings["threshold"])
+            self.threshold = parse_duration_string(settings["threshold"]) if settings["threshold"] else None
             self.expiry = datetime.fromisoformat(settings["expiry"]) if settings["expiry"] else None
         except Exception:
             log.exception("Unable to get DEFCON settings!")
@@ -98,14 +96,14 @@ class Defcon(Cog):
                 self.scheduler.schedule_at(self.expiry, 0, self._remove_threshold())
 
             self._update_notifier()
-            log.info(f"DEFCON synchronized: {humanize_delta(self.threshold)}")
+            log.info(f"DEFCON synchronized: {humanize_delta(self.threshold) if self.threshold else '-'}")
 
         self._update_channel_topic()
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """Check newly joining users to see if they meet the account age threshold."""
-        if self.threshold != relativedelta(days=0):
+        if self.threshold:
             now = datetime.utcnow()
 
             if now - member.created_at < relativedelta_to_timedelta(self.threshold):
@@ -148,7 +146,7 @@ class Defcon(Cog):
         embed = Embed(
             colour=Colour.blurple(), title="DEFCON Status",
             description=f"""
-                **Threshold:** {humanize_delta(self.threshold)}
+                **Threshold:** {humanize_delta(self.threshold) if self.threshold else "-"}
                 **Expires in:** {humanize_delta(relativedelta(self.expiry, datetime.utcnow())) if self.expiry else "-"}
                 **Verification level:** {ctx.guild.verification_level.name}
                 """
@@ -190,7 +188,7 @@ class Defcon(Cog):
 
     def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
-        new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {humanize_delta(self.threshold)})"
+        new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {humanize_delta(self.threshold) if self.threshold else '-'})"
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         asyncio.create_task(self.channel.edit(topic=new_topic))
@@ -210,7 +208,7 @@ class Defcon(Cog):
 
         await self.defcon_settings.update(
             {
-                'threshold': Defcon._stringify_relativedelta(self.threshold),
+                'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
                 'expiry': expiry.isoformat() if expiry else 0
             }
         )
@@ -220,11 +218,18 @@ class Defcon(Cog):
 
         expiry_message = ""
         if expiry:
-            expiry_message = f"for the next {humanize_delta(relativedelta(expiry, datetime.utcnow()))}"
+            expiry_message = f" for the next {humanize_delta(relativedelta(expiry, datetime.utcnow()), max_units=2)}"
+
+        if self.threshold:
+            channel_message = (
+                f"updated; accounts must be {humanize_delta(self.threshold)} "
+                f"old to join the server{expiry_message}"
+            )
+        else:
+            channel_message = "removed"
 
         await self.channel.send(
-            f"{action.value.emoji} DEFCON threshold updated; accounts must be "
-            f"{humanize_delta(self.threshold)} old to join the server {expiry_message}."
+            f"{action.value.emoji} DEFCON threshold {channel_message}."
         )
         await self._send_defcon_log(action, author)
         self._update_channel_topic()
@@ -251,7 +256,7 @@ class Defcon(Cog):
         info = action.value
         log_msg: str = (
             f"**Staffer:** {actor.mention} {actor} (`{actor.id}`)\n"
-            f"{info.template.format(threshold=humanize_delta(self.threshold))}"
+            f"{info.template.format(threshold=(humanize_delta(self.threshold) if self.threshold else '-'))}"
         )
         status_msg = f"DEFCON {action.name.lower()}"
 
@@ -259,11 +264,11 @@ class Defcon(Cog):
 
     def _update_notifier(self) -> None:
         """Start or stop the notifier according to the DEFCON status."""
-        if self.threshold != relativedelta(days=0) and self.expiry is None and not self.defcon_notifier.is_running():
+        if self.threshold and self.expiry is None and not self.defcon_notifier.is_running():
             log.info("DEFCON notifier started.")
             self.defcon_notifier.start()
 
-        elif (self.threshold == relativedelta(days=0) or self.expiry is not None) and self.defcon_notifier.is_running():
+        elif (not self.threshold or self.expiry is not None) and self.defcon_notifier.is_running():
             log.info("DEFCON notifier stopped.")
             self.defcon_notifier.cancel()
 
