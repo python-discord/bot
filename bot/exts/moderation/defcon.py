@@ -54,7 +54,10 @@ class Action(Enum):
 class Defcon(Cog):
     """Time-sensitive server defense mechanisms."""
 
-    redis_cache = RedisCache()
+    # RedisCache[str, str]
+    # The cache's keys are "threshold" and "expiry".
+    # The caches' values are strings formatted as valid input to the DurationDelta converter.
+    defcon_settings = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -71,7 +74,7 @@ class Defcon(Cog):
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    @redis_cache.atomic_transaction
+    @defcon_settings.atomic_transaction
     async def _sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
         log.trace("Waiting for the guild to become available before syncing.")
@@ -81,7 +84,7 @@ class Defcon(Cog):
         log.trace("Syncing settings.")
 
         try:
-            settings = await self.redis_cache.to_dict()
+            settings = await self.defcon_settings.to_dict()
             self.threshold = parse_duration_string(settings["threshold"])
             self.expiry = datetime.fromisoformat(settings["expiry"]) if settings["expiry"] else None
         except Exception:
@@ -190,7 +193,7 @@ class Defcon(Cog):
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
         asyncio.create_task(self.channel.edit(topic=new_topic))
 
-    @redis_cache.atomic_transaction
+    @defcon_settings.atomic_transaction
     async def _update_threshold(self, author: User, threshold: relativedelta, expiry: Optional[Expiry] = None) -> None:
         """Update the new threshold in the cog, cache, defcon channel, and logs, and additionally schedule expiry."""
         self.threshold = threshold
@@ -203,7 +206,7 @@ class Defcon(Cog):
         if self.expiry is not None:
             self.scheduler.schedule_at(expiry, 0, self._remove_threshold())
 
-        await self.redis_cache.update(
+        await self.defcon_settings.update(
             {
                 'threshold': Defcon._stringify_relativedelta(self.threshold),
                 'expiry': expiry.isoformat() if expiry else 0
