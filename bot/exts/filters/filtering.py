@@ -426,6 +426,7 @@ class Filtering(Cog):
 
         `word_watchlist`'s patterns are placed between word boundaries while `token_watchlist` is
         matched as-is. Spoilers are expanded, if any, and URLs are ignored.
+        Second return value is a reason written to database about blacklist entry (can be None).
         """
         if SPOILER_RE.search(text):
             text = self._expand_spoilers(text)
@@ -443,7 +444,11 @@ class Filtering(Cog):
         return False, None
 
     async def _has_urls(self, text: str) -> Tuple[bool, Optional[str]]:
-        """Returns True if the text contains one of the blacklisted URLs from the config file."""
+        """
+        Returns True if the text contains one of the blacklisted URLs from the config file.
+
+        Second return value is a reason of URL blacklisting (can be None).
+        """
         if not URL_RE.search(text):
             return False, None
 
@@ -474,6 +479,8 @@ class Filtering(Cog):
         If none are detected, False is returned.
 
         Attempts to catch some of common ways to try to cheat the system.
+
+        Return None as second value for compability with other filters.
         """
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
@@ -535,7 +542,11 @@ class Filtering(Cog):
 
     @staticmethod
     async def _has_rich_embed(msg: Message) -> Tuple[Union[bool, List[discord.Embed]], None]:
-        """Determines if `msg` contains any rich embeds not auto-generated from a URL."""
+        """
+        Determines if `msg` contains any rich embeds not auto-generated from a URL.
+
+        Return None as second value for compability with other filters.
+        """
         if msg.embeds:
             for embed in msg.embeds:
                 if embed.type == "rich":
@@ -554,7 +565,11 @@ class Filtering(Cog):
 
     @staticmethod
     async def _has_everyone_ping(text: str) -> Tuple[bool, None]:
-        """Determines if `msg` contains an @everyone or @here ping outside of a codeblock."""
+        """
+        Determines if `msg` contains an @everyone or @here ping outside of a codeblock.
+
+        Return None as second value for compability with other filters.
+        """
         # First pass to avoid running re.sub on every message
         if not EVERYONE_PING_RE.search(text):
             return False, None
