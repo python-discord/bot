@@ -63,43 +63,31 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     last_split = 0
     depth = 0
     current_search: Optional[BracketPair] = None
-    quote_character = None
 
     enumerated_string = enumerate(parameters_string)
     for index, character in enumerated_string:
-        if quote_character is None and character in _BRACKET_PAIRS:
-            if current_search is None:
-                current_search = _BRACKET_PAIRS[character]
+        if character in {"'", '"'}:
+            # Skip everything inside of strings, regardless of the depth.
+            quote_character = character
+            for index, character in enumerated_string:
+                if character == quote_character and _is_closing_quote(parameters_string, index):
+                    break
+
+        elif current_search is None:
+            if (current_search := _BRACKET_PAIRS.get(character)) is not None:
                 depth = 1
-            elif character == current_search.opening_bracket:
+            elif character == ",":
+                yield parameters_string[last_split:index]
+                last_split = index + 1
+
+        else:
+            if character == current_search.opening_bracket:
                 depth += 1
 
-        elif character in {"'", '"'}:
-            if current_search is not None:
-                # We're currently searching for a bracket, skip all characters that belong to the string
-                # to avoid false positives of closing brackets
-                quote_character = character
-                for index, character in enumerated_string:
-                    if character == quote_character and _is_closing_quote(parameters_string, index):
-                        break
-
-            elif depth == 0:
-                depth += 1
-                quote_character = character
-            elif character == quote_character:
-                if _is_closing_quote(parameters_string, index):
-                    depth -= 1
+            elif character == current_search.closing_bracket:
+                depth -= 1
                 if depth == 0:
-                    quote_character = None
-
-        elif current_search is not None and character == current_search.closing_bracket:
-            depth -= 1
-            if depth == 0:
-                current_search = None
-
-        elif depth == 0 and character == ",":
-            yield parameters_string[last_split:index]
-            last_split = index + 1
+                    current_search = None
 
     yield parameters_string[last_split:]
 
