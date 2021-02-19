@@ -156,7 +156,7 @@ class Defcon(Cog):
 
         await ctx.send(embed=embed)
 
-    @defcon_group.command(aliases=('t',))
+    @defcon_group.command(aliases=('t', 'd'))
     @has_any_role(*MODERATION_ROLES)
     async def threshold(
         self, ctx: Context, threshold: Union[DurationDelta, int], expiry: Optional[Expiry] = None
