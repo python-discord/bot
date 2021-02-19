@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 from collections import namedtuple
 from datetime import datetime
 from enum import Enum
@@ -89,6 +90,7 @@ class Defcon(Cog):
             log.exception("Unable to get DEFCON settings!")
             await self.channel.send(
                 f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
+                f"\n\n```{traceback.format_exc()}```"
             )
 
         else:
