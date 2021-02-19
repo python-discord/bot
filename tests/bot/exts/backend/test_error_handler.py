@@ -28,22 +28,19 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.ctx.send.assert_not_awaited()
 
     async def test_error_handler_command_not_found_error_not_invoked_by_handler(self):
-        """Should try first (un)silence channel, when fail and channel is not verification channel try to get tag."""
+        """Should try first (un)silence channel, when fail, try to get tag."""
         error = errors.CommandNotFound()
         test_cases = (
             {
                 "try_silence_return": True,
-                "patch_verification_id": False,
                 "called_try_get_tag": False
             },
             {
                 "try_silence_return": False,
-                "patch_verification_id": True,
                 "called_try_get_tag": False
             },
             {
                 "try_silence_return": False,
-                "patch_verification_id": False,
                 "called_try_get_tag": True
             }
         )
@@ -60,20 +57,15 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 cog.try_silence.return_value = case["try_silence_return"]
                 self.ctx.channel.id = 1234
 
-                if case["patch_verification_id"]:
-                    with patch("bot.exts.backend.error_handler.Channels.verification", new=1234):
-                        self.assertIsNone(await cog.on_command_error(self.ctx, error))
-                else:
-                    self.assertIsNone(await cog.on_command_error(self.ctx, error))
+                self.assertIsNone(await cog.on_command_error(self.ctx, error))
+
                 if case["try_silence_return"]:
                     cog.try_get_tag.assert_not_awaited()
                     cog.try_silence.assert_awaited_once()
                 else:
                     cog.try_silence.assert_awaited_once()
-                    if case["patch_verification_id"]:
-                        cog.try_get_tag.assert_not_awaited()
-                    else:
-                        cog.try_get_tag.assert_awaited_once()
+                    cog.try_get_tag.assert_awaited_once()
+
                 self.ctx.send.assert_not_awaited()
 
     async def test_error_handler_command_not_found_error_invoked_by_handler(self):
