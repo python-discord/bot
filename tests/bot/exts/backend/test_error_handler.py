@@ -4,11 +4,13 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from discord.ext.commands import errors
 
 from bot.api import ResponseCodeError
+from bot.errors import InvalidInfractedUser, LockedResourceError
+from bot.exts.backend.branding._errors import BrandingError
 from bot.exts.backend.error_handler import ErrorHandler, setup
 from bot.exts.info.tags import Tags
 from bot.exts.moderation.silence import Silence
 from bot.utils.checks import InWhitelistCheckFailure
-from tests.helpers import MockBot, MockContext, MockGuild
+from tests.helpers import MockBot, MockContext, MockGuild, MockRole
 
 
 class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
@@ -123,20 +125,58 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
             {
                 "args": (self.ctx, errors.CommandInvokeError(TypeError)),
                 "expect_mock_call": cog.handle_unexpected_error
+            },
+            {
+                "args": (self.ctx, errors.CommandInvokeError(LockedResourceError("abc", "test"))),
+                "expect_mock_call": "send"
+            },
+            {
+                "args": (self.ctx, errors.CommandInvokeError(BrandingError())),
+                "expect_mock_call": "send"
+            },
+            {
+                "args": (self.ctx, errors.CommandInvokeError(InvalidInfractedUser(self.ctx.author))),
+                "expect_mock_call": "send"
             }
         )
 
         for case in test_cases:
             with self.subTest(args=case["args"], expect_mock_call=case["expect_mock_call"]):
+                self.ctx.send.reset_mock()
                 self.assertIsNone(await cog.on_command_error(*case["args"]))
-                case["expect_mock_call"].assert_awaited_once_with(self.ctx, case["args"][1].original)
+                if case["expect_mock_call"] == "send":
+                    self.ctx.send.assert_awaited_once()
+                else:
+                    case["expect_mock_call"].assert_awaited_once_with(
+                        self.ctx, case["args"][1].original
+                    )
 
-    async def test_error_handler_three_other_errors(self):
-        """Should call `handle_unexpected_error` when `ConversionError`, `MaxConcurrencyReached` or `ExtensionError`."""
+    async def test_error_handler_conversion_error(self):
+        """Should call `handle_api_error` or `handle_unexpected_error` depending on original error."""
+        cog = ErrorHandler(self.bot)
+        cog.handle_api_error = AsyncMock()
+        cog.handle_unexpected_error = AsyncMock()
+        cases = (
+            {
+                "error": errors.ConversionError(AsyncMock(), ResponseCodeError(AsyncMock())),
+                "mock_function_to_call": cog.handle_api_error
+            },
+            {
+                "error": errors.ConversionError(AsyncMock(), TypeError),
+                "mock_function_to_call": cog.handle_unexpected_error
+            }
+        )
+
+        for case in cases:
+            with self.subTest(**case):
+                self.assertIsNone(await cog.on_command_error(self.ctx, case["error"]))
+                case["mock_function_to_call"].assert_awaited_once_with(self.ctx, case["error"].original)
+
+    async def test_error_handler_two_other_errors(self):
+        """Should call `handle_unexpected_error` if error is `MaxConcurrencyReached` or `ExtensionError`."""
         cog = ErrorHandler(self.bot)
         cog.handle_unexpected_error = AsyncMock()
         errs = (
-            errors.ConversionError(MagicMock(), MagicMock()),
             errors.MaxConcurrencyReached(1, MagicMock()),
             errors.ExtensionError(name="foo")
         )
@@ -289,11 +329,34 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
         self.ctx.invoke.assert_awaited_once_with(self.tag.get_command, tag_name="foo")
 
-    async def test_try_get_tag_response_code_error_suppress(self):
-        """Should suppress `ResponseCodeError` when calling `ctx.invoke`."""
+    async def test_dont_call_suggestion_tag_sent(self):
+        """Should never call command suggestion if tag is already sent."""
         self.ctx.invoked_with = "foo"
-        self.ctx.invoke.side_effect = ResponseCodeError(MagicMock())
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
+        self.ctx.invoke = AsyncMock(return_value=True)
+        self.cog.send_command_suggestion = AsyncMock()
+
+        await self.cog.try_get_tag(self.ctx)
+        self.cog.send_command_suggestion.assert_not_awaited()
+
+    @patch("bot.exts.backend.error_handler.MODERATION_ROLES", new=[1234])
+    async def test_dont_call_suggestion_if_user_mod(self):
+        """Should not call command suggestion if user is a mod."""
+        self.ctx.invoked_with = "foo"
+        self.ctx.invoke = AsyncMock(return_value=False)
+        self.ctx.author.roles = [MockRole(id=1234)]
+        self.cog.send_command_suggestion = AsyncMock()
+
+        await self.cog.try_get_tag(self.ctx)
+        self.cog.send_command_suggestion.assert_not_awaited()
+
+    async def test_call_suggestion(self):
+        """Should call command suggestion if user is not a mod."""
+        self.ctx.invoked_with = "foo"
+        self.ctx.invoke = AsyncMock(return_value=False)
+        self.cog.send_command_suggestion = AsyncMock()
+
+        await self.cog.try_get_tag(self.ctx)
+        self.cog.send_command_suggestion.assert_awaited_once_with(self.ctx, "foo")
 
 
 class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
