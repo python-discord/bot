@@ -1,4 +1,3 @@
-import contextlib
 import difflib
 import logging
 import random
@@ -167,9 +166,8 @@ class ErrorHandler(Cog):
                 f"and the fallback tag failed validation in TagNameConverter."
             )
         else:
-            with contextlib.suppress(ResponseCodeError):
-                if await ctx.invoke(tags_get_command, tag_name=tag_name):
-                    return
+            if await ctx.invoke(tags_get_command, tag_name=tag_name):
+                return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
