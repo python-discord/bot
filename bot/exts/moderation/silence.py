@@ -72,7 +72,7 @@ class SilenceNotifier(tasks.Loop):
 
 
 class Silence(commands.Cog):
-    """Commands for stopping channel messages for `verified` role in a channel."""
+    """Commands for stopping channel messages for `everyone` role in a channel."""
 
     # Maps muted channel IDs to their previous overwrites for send_message and add_reactions.
     # Overwrites are stored as JSON.
@@ -93,7 +93,7 @@ class Silence(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         guild = self.bot.get_guild(Guild.id)
-        self._verified_role = guild.get_role(Roles.verified)
+        self._everyone_role = guild.default_role
         self._mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
         self.notifier = SilenceNotifier(self.bot.get_channel(Channels.mod_log))
         await self._reschedule()
@@ -142,7 +142,7 @@ class Silence(commands.Cog):
     async def _unsilence_wrapper(self, channel: TextChannel) -> None:
         """Unsilence `channel` and send a success/failure message."""
         if not await self._unsilence(channel):
-            overwrite = channel.overwrites_for(self._verified_role)
+            overwrite = channel.overwrites_for(self._everyone_role)
             if overwrite.send_messages is False or overwrite.add_reactions is False:
                 await channel.send(MSG_UNSILENCE_MANUAL)
             else:
@@ -152,14 +152,14 @@ class Silence(commands.Cog):
 
     async def _set_silence_overwrites(self, channel: TextChannel) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
-        overwrite = channel.overwrites_for(self._verified_role)
+        overwrite = channel.overwrites_for(self._everyone_role)
         prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
 
         if channel.id in self.scheduler or all(val is False for val in prev_overwrites.values()):
             return False
 
         overwrite.update(send_messages=False, add_reactions=False)
-        await channel.set_permissions(self._verified_role, overwrite=overwrite)
+        await channel.set_permissions(self._everyone_role, overwrite=overwrite)
         await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
 
         return True
@@ -188,14 +188,14 @@ class Silence(commands.Cog):
             log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
             return False
 
-        overwrite = channel.overwrites_for(self._verified_role)
+        overwrite = channel.overwrites_for(self._everyone_role)
         if prev_overwrites is None:
             log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")
             overwrite.update(send_messages=None, add_reactions=None)
         else:
             overwrite.update(**json.loads(prev_overwrites))
 
-        await channel.set_permissions(self._verified_role, overwrite=overwrite)
+        await channel.set_permissions(self._everyone_role, overwrite=overwrite)
         log.info(f"Unsilenced channel #{channel} ({channel.id}).")
 
         self.scheduler.cancel(channel.id)
@@ -207,7 +207,7 @@ class Silence(commands.Cog):
             await self._mod_alerts_channel.send(
                 f"<@&{Roles.admins}> Restored overwrites with default values after unsilencing "
                 f"{channel.mention}. Please check that the `Send Messages` and `Add Reactions` "
-                f"overwrites for {self._verified_role.mention} are at their desired values."
+                f"overwrites for {self._everyone_role.mention} are at their desired values."
             )
 
         return True

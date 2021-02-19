@@ -188,30 +188,37 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the API requests that sync users."""
 
     def setUp(self):
-        patcher = mock.patch("bot.instance", new=helpers.MockBot())
-        self.bot = patcher.start()
-        self.addCleanup(patcher.stop)
+        bot_patcher = mock.patch("bot.instance", new=helpers.MockBot())
+        self.bot = bot_patcher.start()
+        self.addCleanup(bot_patcher.stop)
+
+        chunk_patcher = mock.patch("bot.exts.backend.sync._syncers.CHUNK_SIZE", 2)
+        self.chunk_size = chunk_patcher.start()
+        self.addCleanup(chunk_patcher.stop)
+
+        self.chunk_count = 2
+        self.users = [fake_user(id=i) for i in range(self.chunk_size * self.chunk_count)]
 
     async def test_sync_created_users(self):
         """Only POST requests should be made with the correct payload."""
-        users = [fake_user(id=111), fake_user(id=222)]
-
-        diff = _Diff(users, [], None)
+        diff = _Diff(self.users, [], None)
         await UserSyncer._sync(diff)
 
-        self.bot.api_client.post.assert_called_once_with("bot/users", json=diff.created)
+        self.bot.api_client.post.assert_any_call("bot/users", json=diff.created[:self.chunk_size])
+        self.bot.api_client.post.assert_any_call("bot/users", json=diff.created[self.chunk_size:])
+        self.assertEqual(self.bot.api_client.post.call_count, self.chunk_count)
 
         self.bot.api_client.put.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
 
     async def test_sync_updated_users(self):
         """Only PUT requests should be made with the correct payload."""
-        users = [fake_user(id=111), fake_user(id=222)]
-
-        diff = _Diff([], users, None)
+        diff = _Diff([], self.users, None)
         await UserSyncer._sync(diff)
 
-        self.bot.api_client.patch.assert_called_once_with("bot/users/bulk_patch", json=diff.updated)
+        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=diff.updated[:self.chunk_size])
+        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=diff.updated[self.chunk_size:])
+        self.assertEqual(self.bot.api_client.patch.call_count, self.chunk_count)
 
         self.bot.api_client.post.assert_not_called()
         self.bot.api_client.delete.assert_not_called()
