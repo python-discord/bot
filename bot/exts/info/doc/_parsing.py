@@ -101,7 +101,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
     inversely proportional to the amount of signatures.
     A maximum of `_MAX_SIGNATURE_AMOUNT` signatures is assumed to be passed.
     """
-    if not sum(len(signature) for signature in signatures) > _MAX_SIGNATURES_LENGTH:
+    if sum(len(signature) for signature in signatures) <= _MAX_SIGNATURES_LENGTH:
         return signatures
 
     max_signature_length = _EMBED_CODE_BLOCK_LINE_LENGTH * (MAX_SIGNATURE_AMOUNT + 1 - len(signatures))
