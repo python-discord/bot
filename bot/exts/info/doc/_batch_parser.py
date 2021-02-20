@@ -93,7 +93,7 @@ class BatchParser:
         self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = {}
         self._parse_task = None
 
-        self.cleanup_futures_task = bot.instance.loop.create_task(self._cleanup_futures())
+        self.cleanup_futures_task = bot.instance.loop.create_task(self._clean_up_futures())
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
@@ -189,7 +189,7 @@ class BatchParser:
         self._page_doc_items.clear()
         self._item_futures.clear()
 
-    async def _cleanup_futures(self) -> None:
+    async def _clean_up_futures(self) -> None:
         """
         Clear old futures from internal results.
 
