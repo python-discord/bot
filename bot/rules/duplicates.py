@@ -13,7 +13,7 @@ async def apply(
         if (
             msg.author == last_message.author
             and msg.content == last_message.content
-            and (msg.content and not msg.attachments)
+            and msg.content
         )
     )
 
