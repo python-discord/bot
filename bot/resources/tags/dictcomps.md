@@ -1,20 +1,14 @@
-**Dictionary Comprehensions**
-
-Like lists, there is a convenient way of creating dictionaries:
+Dictionary comprehensions (*dict comps*) provide a convenient way to make dictionaries, just like list comps:
 ```py
->>> ftoc = {f: round((5/9)*(f-32)) for f in range(-40,101,20)}
->>> print(ftoc)
-{-40: -40, -20: -29, 0: -18, 20: -7, 40: 4, 60: 16, 80: 27, 100: 38}
+>>> {word.lower(): len(word) for word in ('I', 'love', 'Python')}
+{'i': 1, 'love': 4, 'python': 6}
 ```
-In the example above, I created a dictionary of temperatures in Fahrenheit, that are mapped to (*roughly*) their Celsius counterpart within a small range. These comprehensions are useful for succinctly creating dictionaries from some other sequence.
+The syntax is very similar to list comps except that you surround it with curly braces and have two expressions: one for the key and one for the value.
 
-They are also very useful for inverting the key value pairs of a dictionary that already exists, such that the value in the old dictionary is now the key, and the corresponding key is now its value:
+One can use a dict comp to change an existing dictionary using its `items` method
 ```py
->>> ctof = {v:k for k, v in ftoc.items()}
->>> print(ctof)
-{-40: -40, -29: -20, -18: 0, -7: 20, 4: 40, 16: 60, 27: 80, 38: 100}
+>>> first_dict = {'i': 1, 'love': 4, 'python': 6}
+>>> {key.upper(): value * 2 for key, value in first_dict.items()}
+{'I': 2, 'LOVE': 8, 'PYTHON': 12}
 ```
-
-Also like list comprehensions, you can add a conditional to it in order to filter out items you don't want.
-
-For more information and examples, check [PEP 274](https://www.python.org/dev/peps/pep-0274/)
+For more information and examples, check out [PEP 274](https://www.python.org/dev/peps/pep-0274/)
