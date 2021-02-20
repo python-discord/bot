@@ -209,16 +209,11 @@ class DocCog(commands.Cog):
         log.debug("Refreshing documentation inventory...")
         self.inventory_scheduler.cancel_all()
 
-        # Clear the old base URLS and doc symbols to ensure
-        # that we start from a fresh local dataset.
-        # Also, reset the cache used for fetching documentation.
         self.base_urls.clear()
         self.doc_symbols.clear()
         self.renamed_symbols.clear()
         await self.item_fetcher.clear()
 
-        # Run all coroutines concurrently - since each of them performs an HTTP
-        # request, this speeds up fetching the inventory data heavily.
         coros = [
             self.update_or_reschedule_inventory(
                 package["package"], package["base_url"], package["inventory_url"]
@@ -317,9 +312,6 @@ class DocCog(commands.Cog):
 
         else:
             symbol = symbol_name.strip("`")
-            # Fetching documentation for a symbol (at least for the first time, since
-            # caching is used) takes quite some time, so let's send typing to indicate
-            # that we got the command, but are still working on it.
             async with ctx.typing():
                 doc_embed = await self.get_symbol_embed(symbol)
 
@@ -384,8 +376,6 @@ class DocCog(commands.Cog):
         await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
 
         async with ctx.typing():
-            # Rebuild the inventory to ensure that everything
-            # that was from this package is properly deleted.
             await self.refresh_inventories()
             await doc_cache.delete(package_name)
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.")
