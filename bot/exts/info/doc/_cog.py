@@ -402,7 +402,7 @@ class DocCog(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @docs_group.command(name="cleardoccache")
+    @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
     @commands.has_any_role(*MODERATION_ROLES)
     async def clear_cache_command(self, ctx: commands.Context, package_name: PackageName) -> None:
         """Clear the persistent redis cache for `package`."""
