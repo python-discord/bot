@@ -76,11 +76,11 @@ class DocCog(commands.Cog):
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""
         await self.bot.wait_until_guild_available()
-        await self.refresh_inventory()
+        await self.refresh_inventories()
 
     def update_single(self, api_package_name: str, base_url: str, package: InventoryDict) -> None:
         """
-        Rebuild the inventory for a single package.
+        Build the inventory for a single package.
 
         Where:
             * `package_name` is the package name to use, appears in the log
@@ -126,7 +126,7 @@ class DocCog(commands.Cog):
             inventory_url: str,
     ) -> None:
         """
-        Update the cog's inventory, or reschedule this method to execute again if the remote inventory is unreachable.
+        Update the cog's inventories, or reschedule this method to execute again if the remote inventory is unreachable.
 
         The first attempt is rescheduled to execute in `FETCH_RESCHEDULE_DELAY.first` minutes, the subsequent attempts
         in `FETCH_RESCHEDULE_DELAY.repeated` minutes.
@@ -202,8 +202,8 @@ class DocCog(commands.Cog):
             self.renamed_symbols[symbol_name].append(new_symbol_name)
             return new_symbol_name
 
-    async def refresh_inventory(self) -> None:
-        """Refresh internal documentation inventory."""
+    async def refresh_inventories(self) -> None:
+        """Refresh internal documentation inventories."""
         self.refresh_event.clear()
         await self.symbol_get_event.wait()
         log.debug("Refreshing documentation inventory...")
@@ -369,7 +369,7 @@ class DocCog(commands.Cog):
         )
 
         self.update_single(package_name, base_url, inventory_dict)
-        await ctx.send(f"Added the package `{package_name}` to the database and refreshed the inventory.")
+        await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
 
     @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -386,9 +386,9 @@ class DocCog(commands.Cog):
         async with ctx.typing():
             # Rebuild the inventory to ensure that everything
             # that was from this package is properly deleted.
-            await self.refresh_inventory()
+            await self.refresh_inventories()
             await doc_cache.delete(package_name)
-        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventory.")
+        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.")
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -397,7 +397,7 @@ class DocCog(commands.Cog):
         """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
         with ctx.typing():
-            await self.refresh_inventory()
+            await self.refresh_inventories()
         new_inventories = set(self.base_urls)
 
         if added := ", ".join(new_inventories - old_inventories):
