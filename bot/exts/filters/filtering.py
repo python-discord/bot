@@ -388,15 +388,14 @@ class Filtering(Cog):
         if name == "filter_invites" and match is not True:
             additional_embeds = []
             for _, data in match.items():
-                reason = f"\n**Reason:**\n{data['reason']}" if data.get('reason') else ""
+                reason = f"Reason: {data['reason']} | " if data.get('reason') else ""
                 embed = discord.Embed(description=(
                     f"**Members:**\n{data['members']}\n"
                     f"**Active:**\n{data['active']}"
-                    f"{reason}"
                 ))
                 embed.set_author(name=data["name"])
                 embed.set_thumbnail(url=data["icon"])
-                embed.set_footer(text=f"Guild ID: {data['id']}")
+                embed.set_footer(text=f"{reason}Guild ID: {data['id']}")
                 additional_embeds.append(embed)
 
         elif name == "watch_rich_embeds":
