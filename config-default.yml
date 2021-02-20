@@ -46,6 +46,8 @@ style:
         badge_partner: "<:partner:748666453242413136>"
         badge_staff: "<:discord_staff:743882896498098226>"
         badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
+        badge_verified_bot: "<:verified_bot:811645219220750347>"
+        bot: "<:bot:812712599464443914>"
 
         defcon_disabled: "<:defcondisabled:470326273952972810>"
         defcon_enabled:  "<:defconenabled:470326274213150730>"

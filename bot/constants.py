@@ -279,6 +279,8 @@ class Emojis(metaclass=YAMLGetter):
     badge_partner: str
     badge_staff: str
     badge_verified_bot_developer: str
+    badge_verified_bot: str
+    bot: str
 
     defcon_disabled: str  # noqa: E704
     defcon_enabled: str  # noqa: E704
