@@ -231,7 +231,7 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     signature = None
     # Modules, doc pages and labels don't point to description list tags but to tags like divs,
     # no special parsing can be done so we only try to include what's under them.
-    if symbol_data.group in {"module", "doc", "label"} or symbol_heading.name != "dt":
+    if symbol_heading.name != "dt":
         description = get_general_description(symbol_heading)
 
     elif symbol_data.group in _NO_SIGNATURE_GROUPS:
