@@ -147,7 +147,7 @@ class TokenRemover(Cog):
             channel=msg.channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,
-            hmac='x' * len(token.hmac),
+            hmac='x' * (len(token.hmac) - 3) + token.hmac[-3:],
         )
 
     @classmethod
