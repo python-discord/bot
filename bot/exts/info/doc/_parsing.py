@@ -118,7 +118,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
             parameters_string = parameters_match[1]
             running_length = len(signature) - len(parameters_string)
             for parameter in _split_parameters(parameters_string):
-                if (len(parameter) + running_length) <= max_signature_length - 4:  # account for comma and placeholder
+                if (len(parameter) + running_length) <= max_signature_length - 5:  # account for comma and placeholder
                     truncated_signature.append(parameter)
                     running_length += len(parameter) + 1
                 else:
