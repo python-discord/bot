@@ -42,6 +42,7 @@ _BRACKET_PAIRS = {
     "{": BracketPair("{", "}"),
     "(": BracketPair("(", ")"),
     "[": BracketPair("[", "]"),
+    "<": BracketPair("<", ">"),
 }
 
 
