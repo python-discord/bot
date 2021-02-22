@@ -373,7 +373,7 @@ anti_spam:
     rules:
         attachments:
             interval: 10
-            max: 9
+            max: 6
 
         burst:
             interval: 10
@@ -472,7 +472,7 @@ help_channels:
     deleted_idle_minutes: 5
 
     # Maximum number of channels to put in the available category
-    max_available: 2
+    max_available: 3
 
     # Maximum number of channels across all 3 categories
     # Note Discord has a hard limit of 50 channels per category, so this shouldn't be > 50

@@ -135,7 +135,7 @@ class TokenRemover(Cog):
                 user_id=user_id,
                 user_name=str(user),
                 kind="BOT" if user.bot else "USER",
-            ), not user.bot
+            ), True
         else:
             return UNKNOWN_USER_LOG_MESSAGE.format(user_id=user_id), False
 
@@ -147,7 +147,7 @@ class TokenRemover(Cog):
             channel=msg.channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,
-            hmac='x' * len(token.hmac),
+            hmac='x' * (len(token.hmac) - 3) + token.hmac[-3:],
         )
 
     @classmethod
