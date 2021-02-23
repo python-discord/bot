@@ -107,11 +107,9 @@ async def dm_on_open(message: discord.Message) -> None:
     )
 
     embed.set_thumbnail(url=constants.Icons.green_questionmark)
-    embed.add_field(
-        name="Your message",
-        value=textwrap.shorten(message.content, width=100, placeholder="..."),
-        inline=False,
-    )
+    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...")
+    if formatted_message:
+        embed.add_field(name="Your message", value=formatted_message, inline=False)
     embed.add_field(
         name="Conversation",
         value=f"[Jump to message!]({message.jump_url})",
