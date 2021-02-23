@@ -326,6 +326,7 @@ class Icons(metaclass=YAMLGetter):
     filtering: str
 
     green_checkmark: str
+    green_questionmark: str
     guild_update: str
 
     hash_blurple: str
