@@ -86,7 +86,7 @@ class DocCog(commands.Cog):
             * `package_name` is the package name to use, appears in the log
             * `base_url` is the root documentation URL for the specified package, used to build
                 absolute paths that link to specific symbols
-            * `inventory_url` is the absolute URL to the intersphinx inventory.
+            * `package` are the InventoryDict contents of a intersphinx inventory.
         """
         self.base_urls[api_package_name] = base_url
 
@@ -225,7 +225,7 @@ class DocCog(commands.Cog):
 
     async def get_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
         """
-        Attempt to scrape and fetch the data for the given `symbol`, and build an embed from its contents.
+        Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
         If the symbol is known, an Embed with documentation about it is returned.
 
