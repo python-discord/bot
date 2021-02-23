@@ -52,7 +52,7 @@ class Clean(Cog):
                 # Message doesn't exist or was already deleted
                 continue
 
-    def _get_messages_from_cache(self, amount: int, check: CheckHint) -> List[DefaultDict, List[int]]:
+    def _get_messages_from_cache(self, amount: int, predicate: CheckHint) -> List[DefaultDict, List[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(lambda: [])
         message_ids = []
@@ -61,7 +61,7 @@ class Clean(Cog):
                 # Cleaning was canceled
                 return (message_mappings, message_ids)
 
-            if check(message):
+            if predicate(message):
                 message_mappings[message.channel].append(message)
                 message_ids.append(message.id)
 
@@ -76,7 +76,7 @@ class Clean(Cog):
         self,
         amount: int,
         channels: Iterable[TextChannel],
-        check: CheckHint,
+        predicate: CheckHint,
         until_message: Optional[Message] = None
     ) -> DefaultDict:
         message_mappings = defaultdict(lambda: [])
@@ -90,7 +90,7 @@ class Clean(Cog):
                     # Cleaning was canceled
                     return (message_mappings, message_ids)
 
-                if check(message):
+                if predicate(message):
                     message_mappings[message.channel].append(message)
                     message_ids.append(message.id)
 
@@ -114,6 +114,7 @@ class Clean(Cog):
         user: User = None,
         regex: Optional[str] = None,
         until_message: Optional[Message] = None,
+        after_message: Optional[Message] = None,
     ) -> None:
         """A helper function that does the actual message cleaning."""
         def predicate_bots_only(message: Message) -> bool:
@@ -148,6 +149,10 @@ class Clean(Cog):
             else:
                 return bool(re.search(regex.lower(), content.lower()))
 
+        def predicate_range(message: Message) -> bool:
+            """Check if message is older than message provided in after_message but younger than until_message."""
+            return message.created_at > after_message.created_at and message.created_at < until_message.created_at
+
         # Is this an acceptable amount of messages to clean?
         if amount > CleanMessages.message_limit:
             embed = Embed(
@@ -157,6 +162,38 @@ class Clean(Cog):
             )
             await ctx.send(embed=embed)
             return
+
+        if after_message:
+
+            # Ensure that until_message is specified.
+            if not until_message:
+                embed = Embed(
+                    color=Colour(Colours.soft_red),
+                    title=random.choice(NEGATIVE_REPLIES),
+                    description="`until_message` must be specified if `after_message` is specified."
+                )
+                await ctx.send(embed=embed)
+                return
+
+            # Check if the messages are not in same channel
+            if after_message.channel != until_message.channel:
+                embed = Embed(
+                    color=Colour(Colours.soft_red),
+                    title=random.choice(NEGATIVE_REPLIES),
+                    description="You cannot do range clean across different channel."
+                )
+                await ctx.send(embed=embed)
+                return
+
+            # Ensure that after_message is younger than until_message
+            if after_message.created_at >= until_message.created_at:
+                embed = Embed(
+                    color=Colour(Colours.soft_red),
+                    title=random.choice(NEGATIVE_REPLIES),
+                    description="`after` message must be younger than `until` message"
+                )
+                await ctx.send(embed=embed)
+                return
 
         # Are we already performing a clean?
         if self.cleaning:
@@ -175,6 +212,8 @@ class Clean(Cog):
             predicate = predicate_specific_user  # Delete messages from specific user
         elif regex:
             predicate = predicate_regex          # Delete messages that match regex
+        elif after_message:
+            predicate = predicate_range          # Delete messages older than specific message
         else:
             predicate = lambda m: True           # Delete all messages  # noqa: E731
 
@@ -189,12 +228,12 @@ class Clean(Cog):
         self.cleaning = True
 
         if use_cache:
-            message_mappings, message_ids = self._get_messages_from_cache(amount, predicate)
+            message_mappings, message_ids = self._get_messages_from_cache(amount=amount, predicate=predicate)
         else:
             message_mappings, message_ids = await self._get_messages_from_channels(
                 amount=amount,
                 channels=channels,
-                check=predicate,
+                predicate=predicate,
                 until_message=until_message
             )
 
@@ -339,6 +378,18 @@ class Clean(Cog):
             ctx,
             channels=[message.channel],
             until_message=message
+        )
+
+    @clean_group.command(name="from-to", aliases=["after-until", "range"])
+    @has_any_role(*MODERATION_ROLES)
+    async def clean_from_to(self, ctx: Context, after_message: Message, until_message: Message) -> None:
+        """Delete all messages within range of messages."""
+        await self._clean_messages(
+            CleanMessages.message_limit,
+            ctx,
+            channels=[until_message.channel],
+            until_message=until_message,
+            after_message=after_message,
         )
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
