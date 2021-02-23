@@ -4,8 +4,20 @@
 
 version: "3.7"
 
+x-logging: &logging
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "10m"
+
+x-restart-policy: &restart_policy
+  restart: always
+
 services:
   postgres:
+    << : *logging
+    << : *restart_policy
     image: postgres:12-alpine
     environment:
       POSTGRES_DB: pysite
@@ -13,11 +25,15 @@ services:
       POSTGRES_USER: pysite
 
   redis:
+    << : *logging
+    << : *restart_policy
     image: redis:5.0.9
     ports:
       - "127.0.0.1:6379:6379"
 
   snekbox:
+    << : *logging
+    << : *restart_policy
     image: ghcr.io/python-discord/snekbox:latest
     init: true
     ipc: none
@@ -26,6 +42,8 @@ services:
     privileged: true
 
   web:
+    << : *logging
+    << : *restart_policy
     image: ghcr.io/python-discord/site:latest
     command: ["run", "--debug"]
     networks:
@@ -46,6 +64,8 @@ services:
       STATIC_ROOT: /var/www/static
 
   bot:
+    << : *logging
+    << : *restart_policy
     build:
       context: .
       dockerfile: Dockerfile
