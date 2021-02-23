@@ -111,7 +111,7 @@ async def dm_on_open(message: discord.Message) -> None:
         name="Your message", value=truncate_message(message, limit=100), inline=False
     )
     embed.add_field(
-        name="Want to go there?",
+        name="Conversation",
         value=f"[Jump to message!]({message.jump_url})",
         inline=False,
     )
