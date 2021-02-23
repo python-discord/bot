@@ -102,6 +102,7 @@ class HelpChannels(commands.Cog):
         await _cooldown.revoke_send_permissions(message.author, self.scheduler)
 
         await _message.pin(message)
+        await _message.dm_on_open(message)
 
         # Add user with channel for dormant check.
         await _caches.claimants.set(message.channel.id, message.author.id)
