@@ -2,18 +2,19 @@ import difflib
 import logging
 import re
 import unicodedata
-from email.parser import HeaderParser
-from io import StringIO
 from typing import Tuple, Union
 
 from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from discord.utils import snowflake_time
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
+from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
+from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
 
@@ -39,82 +40,12 @@ If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 """
 
-ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
-
 
 class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-
-        self.base_pep_url = "http://www.python.org/dev/peps/pep-"
-        self.base_github_pep_url = "https://raw.githubusercontent.com/python/peps/master/pep-"
-
-    @command(name='pep', aliases=('get_pep', 'p'))
-    async def pep_command(self, ctx: Context, pep_number: str) -> None:
-        """Fetches information about a PEP and sends it to the channel."""
-        if pep_number.isdigit():
-            pep_number = int(pep_number)
-        else:
-            await ctx.send_help(ctx.command)
-            return
-
-        # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
-        if pep_number == 0:
-            return await self.send_pep_zero(ctx)
-
-        possible_extensions = ['.txt', '.rst']
-        found_pep = False
-        for extension in possible_extensions:
-            # Attempt to fetch the PEP
-            pep_url = f"{self.base_github_pep_url}{pep_number:04}{extension}"
-            log.trace(f"Requesting PEP {pep_number} with {pep_url}")
-            response = await self.bot.http_session.get(pep_url)
-
-            if response.status == 200:
-                log.trace("PEP found")
-                found_pep = True
-
-                pep_content = await response.text()
-
-                # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
-                pep_header = HeaderParser().parse(StringIO(pep_content))
-
-                # Assemble the embed
-                pep_embed = Embed(
-                    title=f"**PEP {pep_number} - {pep_header['Title']}**",
-                    description=f"[Link]({self.base_pep_url}{pep_number:04})",
-                )
-
-                pep_embed.set_thumbnail(url=ICON_URL)
-
-                # Add the interesting information
-                fields_to_check = ("Status", "Python-Version", "Created", "Type")
-                for field in fields_to_check:
-                    # Check for a PEP metadata field that is present but has an empty value
-                    # embed field values can't contain an empty string
-                    if pep_header.get(field, ""):
-                        pep_embed.add_field(name=field, value=pep_header[field])
-
-            elif response.status != 404:
-                # any response except 200 and 404 is expected
-                found_pep = True  # actually not, but it's easier to display this way
-                log.trace(f"The user requested PEP {pep_number}, but the response had an unexpected status code: "
-                          f"{response.status}.\n{response.text}")
-
-                error_message = "Unexpected HTTP error during PEP search. Please let us know."
-                pep_embed = Embed(title="Unexpected error", description=error_message)
-                pep_embed.colour = Colour.red()
-                break
-
-        if not found_pep:
-            log.trace("PEP was not found")
-            not_found = f"PEP {pep_number} does not exist."
-            pep_embed = Embed(title="PEP not found", description=not_found)
-            pep_embed.colour = Colour.red()
-
-        await ctx.message.channel.send(embed=pep_embed)
 
     @command()
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
@@ -223,6 +154,21 @@ class Utils(Cog):
         embed.description = best_match
         await ctx.send(embed=embed)
 
+    @command(aliases=("snf", "snfl", "sf"))
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
+    async def snowflake(self, ctx: Context, snowflake: Snowflake) -> None:
+        """Get Discord snowflake creation time."""
+        created_at = snowflake_time(snowflake)
+        embed = Embed(
+            description=f"**Created at {created_at}** ({time_since(created_at, max_units=3)}).",
+            colour=Colour.blue()
+        )
+        embed.set_author(
+            name=f"Snowflake: {snowflake}",
+            icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
+        )
+        await ctx.send(embed=embed)
+
     @command(aliases=("poll",))
     @has_any_role(*MODERATION_ROLES)
     async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
@@ -245,19 +191,6 @@ class Utils(Cog):
         message = await ctx.send(embed=embed)
         for reaction in options:
             await message.add_reaction(reaction)
-
-    async def send_pep_zero(self, ctx: Context) -> None:
-        """Send information about PEP 0."""
-        pep_embed = Embed(
-            title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            description="[Link](https://www.python.org/dev/peps/)"
-        )
-        pep_embed.set_thumbnail(url=ICON_URL)
-        pep_embed.add_field(name="Status", value="Active")
-        pep_embed.add_field(name="Created", value="13-Jul-2000")
-        pep_embed.add_field(name="Type", value="Informational")
-
-        await ctx.send(embed=pep_embed)
 
 
 def setup(bot: Bot) -> None:

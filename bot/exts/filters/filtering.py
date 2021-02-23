@@ -48,7 +48,6 @@ class Stats(NamedTuple):
 
     message_content: str
     additional_embeds: Optional[List[discord.Embed]]
-    additional_embeds_msg: Optional[str]
 
 
 class Filtering(Cog):
@@ -246,7 +245,7 @@ class Filtering(Cog):
                             filter_triggered = True
 
                         stats = self._add_stats(filter_name, match, result)
-                        await self._send_log(filter_name, _filter["type"], msg, stats, is_eval=True)
+                        await self._send_log(filter_name, _filter, msg, stats, is_eval=True)
 
                         break  # We don't want multiple filters to trigger
 
@@ -358,7 +357,6 @@ class Filtering(Cog):
             channel_id=Channels.mod_alerts,
             ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,
-            additional_embeds_msg=stats.additional_embeds_msg
         )
 
     def _add_stats(self, name: str, match: FilterMatch, content: str) -> Stats:
@@ -375,7 +373,6 @@ class Filtering(Cog):
             message_content = content
 
         additional_embeds = None
-        additional_embeds_msg = None
 
         self.bot.stats.incr(f"filters.{name}")
 
@@ -392,13 +389,11 @@ class Filtering(Cog):
                 embed.set_thumbnail(url=data["icon"])
                 embed.set_footer(text=f"Guild ID: {data['id']}")
                 additional_embeds.append(embed)
-            additional_embeds_msg = "For the following guild(s):"
 
         elif name == "watch_rich_embeds":
             additional_embeds = match
-            additional_embeds_msg = "With the following embed(s):"
 
-        return Stats(message_content, additional_embeds, additional_embeds_msg)
+        return Stats(message_content, additional_embeds)
 
     @staticmethod
     def _check_filter(msg: Message) -> bool:

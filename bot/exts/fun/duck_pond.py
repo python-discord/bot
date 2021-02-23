@@ -3,7 +3,7 @@ import logging
 from typing import Union
 
 import discord
-from discord import Color, Embed, Member, Message, RawReactionActionEvent, User, errors
+from discord import Color, Embed, Member, Message, RawReactionActionEvent, TextChannel, User, errors
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
@@ -22,6 +22,7 @@ class DuckPond(Cog):
         self.bot = bot
         self.webhook_id = constants.Webhooks.duck_pond
         self.webhook = None
+        self.ducked_messages = []
         self.bot.loop.create_task(self.fetch_webhook())
         self.relay_lock = None
 
@@ -42,6 +43,17 @@ class DuckPond(Cog):
                 if role.id in constants.STAFF_ROLES:
                     return True
         return False
+
+    @staticmethod
+    def is_helper_viewable(channel: TextChannel) -> bool:
+        """Check if helpers can view a specific channel."""
+        guild = channel.guild
+        helper_role = guild.get_role(constants.Roles.helpers)
+        # check channel overwrites for both the Helper role and @everyone and
+        # return True for channels that they have permissions to view.
+        helper_overwrites = channel.overwrites_for(helper_role)
+        default_overwrites = channel.overwrites_for(guild.default_role)
+        return default_overwrites.view_channel is None or helper_overwrites.view_channel is True
 
     async def has_green_checkmark(self, message: Message) -> bool:
         """Check if the message has a green checkmark reaction."""
@@ -106,7 +118,7 @@ class DuckPond(Cog):
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
 
-    async def locked_relay(self, message: discord.Message) -> bool:
+    async def locked_relay(self, message: Message) -> bool:
         """Relay a message after obtaining the relay lock."""
         if self.relay_lock is None:
             # Lazily load the lock to ensure it's created within the
@@ -145,6 +157,10 @@ class DuckPond(Cog):
         amount of ducks specified in the config under duck_pond/threshold, it will
         send the message off to the duck pond.
         """
+        # Ignore other guilds and DMs.
+        if payload.guild_id != constants.Guild.id:
+            return
+
         # Was this reaction issued in a blacklisted channel?
         if payload.channel_id in constants.DuckPond.channel_blacklist:
             return
@@ -154,6 +170,13 @@ class DuckPond(Cog):
             return
 
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        if channel is None:
+            return
+
+        # Was the message sent in a channel Helpers can see?
+        if not self.is_helper_viewable(channel):
+            return
+
         message = await channel.fetch_message(payload.message_id)
         member = discord.utils.get(message.guild.members, id=payload.user_id)
 
@@ -169,13 +192,20 @@ class DuckPond(Cog):
         duck_count = await self.count_ducks(message)
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
-        if duck_count >= constants.DuckPond.threshold:
+        if duck_count >= constants.DuckPond.threshold and message.id not in self.ducked_messages:
+            self.ducked_messages.append(message.id)
             await self.locked_relay(message)
 
     @Cog.listener()
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent) -> None:
         """Ensure that people don't remove the green checkmark from duck ponded messages."""
+        # Ignore other guilds and DMs.
+        if payload.guild_id != constants.Guild.id:
+            return
+
         channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        if channel is None:
+            return
 
         # Prevent the green checkmark from being removed
         if payload.emoji.name == "✅":
@@ -186,7 +216,7 @@ class DuckPond(Cog):
 
     @command(name="duckify", aliases=("duckpond", "pondify"))
     @has_any_role(constants.Roles.admins)
-    async def duckify(self, ctx: Context, message: discord.Message) -> None:
+    async def duckify(self, ctx: Context, message: Message) -> None:
         """Relay a message to the duckpond, no ducks required!"""
         if await self.locked_relay(message):
             await ctx.message.add_reaction("🦆")

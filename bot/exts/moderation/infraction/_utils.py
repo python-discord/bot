@@ -7,6 +7,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
+from bot.errors import InvalidInfractedUser
 
 log = logging.getLogger(__name__)
 
@@ -18,9 +19,10 @@ INFRACTION_ICONS = {
     "note": (Icons.user_warn, None),
     "superstar": (Icons.superstarify, Icons.unsuperstarify),
     "warning": (Icons.user_warn, None),
+    "voice_ban": (Icons.voice_state_red, Icons.voice_state_green),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
-APPEALABLE_INFRACTIONS = ("ban", "mute")
+APPEALABLE_INFRACTIONS = ("ban", "mute", "voice_ban")
 
 # Type aliases
 UserObject = t.Union[discord.Member, discord.User]
@@ -78,6 +80,10 @@ async def post_infraction(
     active: bool = True
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
+    if isinstance(user, (discord.Member, discord.User)) and user.bot:
+        log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
+        raise InvalidInfractedUser(user)
+
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
     payload = {
@@ -154,7 +160,7 @@ async def notify_infraction(
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
-        type=infr_type.capitalize(),
+        type=infr_type.title(),
         expires=expires_at or "N/A",
         reason=reason or "No reason provided."
     )

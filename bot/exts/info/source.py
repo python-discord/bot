@@ -2,7 +2,7 @@ import inspect
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
-from discord import Embed
+from discord import Embed, utils
 from discord.ext import commands
 
 from bot.bot import Bot
@@ -35,8 +35,10 @@ class SourceConverter(commands.Converter):
         elif argument.lower() in tags_cog._cache:
             return argument.lower()
 
+        escaped_arg = utils.escape_markdown(argument)
+
         raise commands.BadArgument(
-            f"Unable to convert `{argument}` to valid command{', tag,' if show_tag else ''} or Cog."
+            f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or Cog."
         )
 
 
@@ -66,14 +68,8 @@ class BotSource(commands.Cog):
         Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
         """
         if isinstance(source_item, commands.Command):
-            if source_item.cog_name == "Alias":
-                cmd_name = source_item.callback.__name__.replace("_alias", "")
-                cmd = self.bot.get_command(cmd_name.replace("_", " "))
-                src = cmd.callback.__code__
-                filename = src.co_filename
-            else:
-                src = source_item.callback.__code__
-                filename = src.co_filename
+            src = source_item.callback.__code__
+            filename = src.co_filename
         elif isinstance(source_item, str):
             tags_cog = self.bot.get_cog("Tags")
             filename = tags_cog._cache[source_item]["location"]
@@ -113,13 +109,7 @@ class BotSource(commands.Cog):
             title = "Help Command"
             description = source_object.__doc__.splitlines()[1]
         elif isinstance(source_object, commands.Command):
-            if source_object.cog_name == "Alias":
-                cmd_name = source_object.callback.__name__.replace("_alias", "")
-                cmd = self.bot.get_command(cmd_name.replace("_", " "))
-                description = cmd.short_doc
-            else:
-                description = source_object.short_doc
-
+            description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
         elif isinstance(source_object, str):
             title = f"Tag: {source_object}"
