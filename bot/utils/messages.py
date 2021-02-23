@@ -154,12 +154,3 @@ async def send_denial(ctx: Context, reason: str) -> None:
 def format_user(user: discord.abc.User) -> str:
     """Return a string for `user` which has their mention and ID."""
     return f"{user.mention} (`{user.id}`)"
-
-
-def truncate_message(message: discord.Message, limit: int) -> str:
-    """Returns a truncated version of the message content, up to the specified limit."""
-    text = message.content
-    if len(text) > limit:
-        return text[:limit-3] + "..."
-    else:
-        return text

@@ -1,4 +1,5 @@
 import logging
+import textwrap
 import typing as t
 from datetime import datetime
 
@@ -8,7 +9,6 @@ import bot
 from bot import constants
 from bot.exts.help_channels import _caches
 from bot.utils.channel import is_in_category
-from bot.utils.messages import truncate_message
 
 log = logging.getLogger(__name__)
 
@@ -108,7 +108,9 @@ async def dm_on_open(message: discord.Message) -> None:
 
     embed.set_thumbnail(url=constants.Icons.green_questionmark)
     embed.add_field(
-        name="Your message", value=truncate_message(message, limit=100), inline=False
+        name="Your message",
+        value=textwrap.shorten(message.content, width=100, placeholder="..."),
+        inline=False,
     )
     embed.add_field(
         name="Conversation",
