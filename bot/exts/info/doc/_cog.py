@@ -7,14 +7,14 @@ import textwrap
 from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, NamedTuple, Optional, Union
 
 import discord
 from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
-from bot.converters import Inventory, PackageName, ValidURL
+from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
 from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
@@ -404,7 +404,11 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def clear_cache_command(self, ctx: commands.Context, package_name: PackageName) -> None:
+    async def clear_cache_command(
+        self,
+        ctx: commands.Context,
+        package_name: Union[PackageName, allowed_strings("*")]  # noqa: F722
+    ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
             await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
