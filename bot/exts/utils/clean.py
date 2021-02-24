@@ -276,6 +276,8 @@ class Clean(Cog):
                 # deleting any leftover messages if there are any
                 await channel.delete_messages(to_delete)
 
+        self.cleaning = False
+
         log_messages = []
 
         for messages in message_mappings.values():
