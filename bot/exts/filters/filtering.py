@@ -271,9 +271,17 @@ class Filtering(Cog):
 
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:
-                        match, reason = await _filter["function"](msg.content)
+                        payload = msg.content
                     else:
-                        match, reason = await _filter["function"](msg)
+                        payload = msg
+
+                    result = await _filter["function"](payload)
+                    reason = None
+
+                    if isinstance(result, tuple):
+                        match, reason = result
+                    else:
+                        match = result
 
                     if match:
                         is_private = msg.channel.type is discord.ChannelType.private
@@ -461,16 +469,15 @@ class Filtering(Cog):
         return False, None
 
     @staticmethod
-    async def _has_zalgo(text: str) -> Tuple[bool, None]:
+    async def _has_zalgo(text: str) -> bool:
         """
         Returns True if the text contains zalgo characters.
 
         Zalgo range is \u0300 – \u036F and \u0489.
-        Return None as second value for compability with other filters.
         """
-        return bool(ZALGO_RE.search(text)), None
+        return bool(ZALGO_RE.search(text))
 
-    async def _has_invites(self, text: str) -> Tuple[Union[dict, bool], None]:
+    async def _has_invites(self, text: str) -> Union[dict, bool]:
         """
         Checks if there's any invites in the text content that aren't in the guild whitelist.
 
@@ -478,8 +485,6 @@ class Filtering(Cog):
         If none are detected, False is returned.
 
         Attempts to catch some of common ways to try to cheat the system.
-
-        Return None as second value for compability with other filters.
         """
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
@@ -500,7 +505,7 @@ class Filtering(Cog):
                 # Lack of a "guild" key in the JSON response indicates either an group DM invite, an
                 # expired invite, or an invalid invite. The API does not currently differentiate
                 # between invalid and expired invites
-                return True, None
+                return True
 
             guild_id = guild.get("id")
             guild_invite_whitelist = self._get_filterlist_items("guild_invite", allowed=True)
@@ -537,15 +542,11 @@ class Filtering(Cog):
                     "reason": reason
                 }
 
-        return invite_data if invite_data else False, None
+        return invite_data if invite_data else False
 
     @staticmethod
-    async def _has_rich_embed(msg: Message) -> Tuple[Union[bool, List[discord.Embed]], None]:
-        """
-        Determines if `msg` contains any rich embeds not auto-generated from a URL.
-
-        Return None as second value for compability with other filters.
-        """
+    async def _has_rich_embed(msg: Message) -> Union[bool, List[discord.Embed]]:
+        """Determines if `msg` contains any rich embeds not auto-generated from a URL."""
         if msg.embeds:
             for embed in msg.embeds:
                 if embed.type == "rich":
@@ -553,28 +554,24 @@ class Filtering(Cog):
                     if not embed.url or embed.url not in urls:
                         # If `embed.url` does not exist or if `embed.url` is not part of the content
                         # of the message, it's unlikely to be an auto-generated embed by Discord.
-                        return msg.embeds, None
+                        return msg.embeds
                     else:
                         log.trace(
                             "Found a rich embed sent by a regular user account, "
                             "but it was likely just an automatic URL embed."
                         )
-                        return False, None
-        return False, None
+                        return False
+        return False
 
     @staticmethod
-    async def _has_everyone_ping(text: str) -> Tuple[bool, None]:
-        """
-        Determines if `msg` contains an @everyone or @here ping outside of a codeblock.
-
-        Return None as second value for compability with other filters.
-        """
+    async def _has_everyone_ping(text: str) -> bool:
+        """Determines if `msg` contains an @everyone or @here ping outside of a codeblock."""
         # First pass to avoid running re.sub on every message
         if not EVERYONE_PING_RE.search(text):
-            return False, None
+            return False
 
         content_without_codeblocks = CODE_BLOCK_RE.sub("", text)
-        return bool(EVERYONE_PING_RE.search(content_without_codeblocks)), None
+        return bool(EVERYONE_PING_RE.search(content_without_codeblocks))
 
     async def notify_member(self, filtered_member: Member, reason: str, channel: TextChannel) -> None:
         """
