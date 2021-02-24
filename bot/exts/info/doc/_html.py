@@ -46,12 +46,12 @@ class Strainer(SoupStrainer):
 
 
 def _find_elements_until_tag(
-        start_element: PageElement,
-        end_tag_filter: Union[Container[str], Callable[[Tag], bool]],
-        *,
-        func: Callable,
-        include_strings: bool = False,
-        limit: int = None,
+    start_element: PageElement,
+    end_tag_filter: Union[Container[str], Callable[[Tag], bool]],
+    *,
+    func: Callable,
+    include_strings: bool = False,
+    limit: int = None,
 ) -> List[Union[Tag, NavigableString]]:
     """
     Get all elements up to `limit` or until a tag matching `tag_filter` is found.

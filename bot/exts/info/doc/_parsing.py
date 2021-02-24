@@ -132,10 +132,10 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
 
 
 def _get_truncated_description(
-        elements: Iterable[Union[Tag, NavigableString]],
-        markdown_converter: DocMarkdownConverter,
-        max_length: int,
-        max_lines: int,
+    elements: Iterable[Union[Tag, NavigableString]],
+    markdown_converter: DocMarkdownConverter,
+    max_length: int,
+    max_lines: int,
 ) -> str:
     """
     Truncate the Markdown from `elements` to be at most `max_length` characters when rendered or `max_lines` newlines.

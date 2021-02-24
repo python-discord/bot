@@ -120,10 +120,10 @@ class DocCog(commands.Cog):
         log.trace(f"Fetched inventory for {api_package_name}.")
 
     async def update_or_reschedule_inventory(
-            self,
-            api_package_name: str,
-            base_url: str,
-            inventory_url: str,
+        self,
+        api_package_name: str,
+        base_url: str,
+        inventory_url: str,
     ) -> None:
         """
         Update the cog's inventories, or reschedule this method to execute again if the remote inventory is unreachable.
@@ -149,11 +149,11 @@ class DocCog(commands.Cog):
             self.update_single(api_package_name, base_url, package)
 
     def ensure_unique_symbol_name(
-            self,
-            package_name: str,
-            group_name: str,
-            original_item: DocItem,
-            symbol_name: str,
+        self,
+        package_name: str,
+        group_name: str,
+        original_item: DocItem,
+        symbol_name: str,
     ) -> Optional[str]:
         """
         Ensure `symbol_name` doesn't overwrite an another symbol in `doc_symbols`.
