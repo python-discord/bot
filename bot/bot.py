@@ -89,6 +89,22 @@ class Bot(commands.Bot):
         for item in full_cache:
             self.insert_item_into_filter_list_cache(item)
 
+    async def ping_services(self) -> None:
+        """A helper to make sure all the services the bot relies on are available on startup."""
+        # Connect Site/API
+        attempts = 0
+        while True:
+            try:
+                log.info(f"Attempting site connection: {attempts + 1}/{constants.URLs.connect_max_retries}")
+                await self.api_client.get("healthcheck")
+                break
+
+            except aiohttp.ClientConnectorError as e:
+                attempts += 1
+                if attempts == constants.URLs.connect_max_retries:
+                    raise e
+                await asyncio.sleep(constants.URLs.connect_cooldown)
+
     @classmethod
     def create(cls) -> "Bot":
         """Create and return an instance of a Bot."""
@@ -230,6 +246,11 @@ class Bot(commands.Bot):
             # If the RedisSession was somehow closed, we try to reconnect it
             # here. Normally, this shouldn't happen.
             await self.redis_session.connect()
+
+        try:
+            await self.ping_services()
+        except Exception as e:
+            raise StartupError(e)
 
         # Build the FilterList cache
         await self.cache_filter_list_data()
