@@ -19,6 +19,14 @@ log = logging.getLogger('bot')
 LOCALHOST = "127.0.0.1"
 
 
+class StartupError(Exception):
+    """Exception class for startup errors."""
+
+    def __init__(self, base: Exception):
+        super()
+        self.exception = base
+
+
 class Bot(commands.Bot):
     """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
 
@@ -318,5 +326,8 @@ def _create_redis_session(loop: asyncio.AbstractEventLoop) -> RedisSession:
         use_fakeredis=constants.Redis.use_fakeredis,
         global_namespace="bot",
     )
-    loop.run_until_complete(redis_session.connect())
+    try:
+        loop.run_until_complete(redis_session.connect())
+    except OSError as e:
+        raise StartupError(e)
     return redis_session
