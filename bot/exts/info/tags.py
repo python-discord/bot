@@ -159,7 +159,8 @@ class Tags(Cog):
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
-        await self.get_command(ctx, tag_name=tag_name)
+        # Use invoke here for testability purposes
+        await ctx.invoke(self.get_command, tag_name=tag_name)
 
     @tags_group.group(name='search', invoke_without_command=True)
     async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
