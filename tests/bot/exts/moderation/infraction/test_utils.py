@@ -146,7 +146,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.token_removed
-                ).set_footer(text=utils.INFRACTION_APPEAL_FOOTER),
+                ).set_footer(text=utils.INFRACTION_APPEAL_EMAIL_FOOTER),
                 "send_result": True
             },
             {
@@ -200,7 +200,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(text=utils.INFRACTION_APPEAL_FOOTER),
+                ).set_footer(text=utils.INFRACTION_APPEAL_EMAIL_FOOTER),
                 "send_result": False
             },
             {
@@ -218,7 +218,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(text=utils.INFRACTION_APPEAL_FOOTER),
+                ).set_footer(text=utils.INFRACTION_APPEAL_EMAIL_FOOTER),
                 "send_result": True
             }
         ]
