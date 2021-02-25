@@ -99,7 +99,7 @@ class Bot(commands.Bot):
                 await self.api_client.get("healthcheck")
                 break
 
-            except aiohttp.ClientConnectorError as e:
+            except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError) as e:
                 attempts += 1
                 if attempts == constants.URLs.connect_max_retries:
                     raise e
