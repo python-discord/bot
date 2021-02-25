@@ -153,7 +153,7 @@ class TagsBaseTests(unittest.TestCase):
             with self.subTest(keywords=case["keywords"], expected=case["expected"], check=case["check"]):
                 self.cog.check_accessibility.reset_mock()
                 actual = self.cog._get_tags_via_content(case["check"], case["keywords"], self.member)
-                self.assertEqual(actual, case["expected"])
+                self.assertCountEqual(actual, case["expected"])
                 self.cog.check_accessibility.assert_called()
 
     def test_check_accessibility(self):
@@ -188,6 +188,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
             self.cog = tags.Tags(self.bot)
 
+    @patch("bot.utils.messages.bot.instance", MockBot())
     async def test_head_command(self):
         """Should invoke `!tags get` command from `!tag` command."""
         self.assertIsNone(await self.cog.tags_group.callback(self.cog, self.ctx, tag_name="class"))
@@ -266,6 +267,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(embed.footer.text, case["expected"].footer.text)
 
 
+@patch("bot.utils.messages.bot.instance", MockBot())
 class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     """Tests for `!tags get` command."""
 
@@ -281,13 +283,13 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         """Should not respond to chat due tag is under cooldown."""
         self.cog.tag_cooldowns["ytdl"] = {"channel": 1234, "time": time.time()}
 
-        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="ytdl"))
+        self.assertFalse(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="ytdl"))
         self.ctx.send.assert_not_awaited()
 
     async def test_tags_list_empty(self):
         """Should send to chat (`ctx.send`) correct embed with information about no tags."""
         self.cog._cache = {}
-        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
+        self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
         self.ctx.send.assert_awaited_once_with(embed=embed)
 
@@ -296,7 +298,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tags_list(self):
         """Should send to chat (`LinePaginator.paginate`) embed that contains all tags."""
-        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
+        self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
 
         self.assertEqual(embed.title, "**Current tags**")
@@ -307,7 +309,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_tags_list_permissions(self):
         """Should not include tag to list when user don't have permissions to use that tag."""
         self.ctx.author = MockMember(roles=(MockRole(name="Developers"),))
-        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
+        self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
         tags_string = "\n".join(
             sorted(f"**»**   {tag}" for tag in self.cog._cache if self.cog._cache[tag]["restricted_to"] != "moderators")
@@ -317,7 +319,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_tag(self):
         """Should send correct embed to chat (`ctx.send`) with tag content."""
         test_cases = [
-            {"tag": tag["title"], "expected": tag["embed"]} for tag in self.cog._cache.values()
+            {"tag": tag["title"], "expected": tag["embed"], "return_value": True} for tag in self.cog._cache.values()
         ]
         test_cases.extend(
             [
@@ -327,21 +329,27 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                         "title": "Did you mean ...",
                         "description": "classmethod\nclass",
                         "type": "rich"
-                    }
+                    },
+                    "return_value": True
                 },
                 {
                     "tag": "clss",
-                    "expected": None
+                    "expected": None,
+                    "return_value": False
                 }
             ]
         )
         self.cog.bot.stats.incr = MagicMock()
 
         for case in test_cases:
-            with self.subTest(tag_name=case["tag"], expected=case["expected"]):
+            with self.subTest(tag_name=case["tag"], expected=case["expected"], return_value=case["return_value"]):
                 self.ctx.send.reset_mock()
                 self.cog.bot.stats.incr.reset_mock()
-                self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=case["tag"]))
+                self.assertTrue(
+                    await self.cog.get_command.callback(
+                        self.cog, self.ctx, tag_name=case["tag"]
+                    ) is case["return_value"]
+                )
                 if case["expected"] is None:
                     self.ctx.send.assert_not_awaited()
                 else:
@@ -353,20 +361,20 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.info.tags.time.time", MagicMock(return_value=1234))
     async def test_tag_cooldown(self):
         """Should set tag to cooldown when not in test channels."""
-        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
+        self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
         self.assertIn("class", self.cog.tag_cooldowns)
         self.assertEqual(self.cog.tag_cooldowns["class"], {"time": 1234, "channel": self.ctx.channel.id})
 
     async def test_tag_cooldown_test_channel(self):
         """Should not set tag to cooldown when in test channels."""
         with patch("bot.exts.info.tags.TEST_CHANNELS", (1234,)):
-            self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
+            self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
         self.assertNotIn("class", self.cog.tag_cooldowns)
 
     @patch("bot.exts.info.tags.Tags.check_accessibility")
     async def test_tag_permission_check(self, check_accessibility_mock):
         """Should call check_accessibility for every tag that _get_tag returns."""
-        self.assertIsNone(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="clas"))
+        self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="clas"))
         calls = []
         for tag in self.cog._get_tag("clas"):
             calls.append(call(self.ctx.author, tag))
