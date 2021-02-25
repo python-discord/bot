@@ -102,7 +102,7 @@ class Bot(commands.Bot):
             except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError) as e:
                 attempts += 1
                 if attempts == constants.URLs.connect_max_retries:
-                    raise e
+                    raise
                 await asyncio.sleep(constants.URLs.connect_cooldown)
 
     @classmethod
