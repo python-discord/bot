@@ -244,6 +244,7 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
             await ctx.send(embed=embed)
+            prepared_help_command.close()
             self.bot.stats.incr("errors.argument_parsing_error")
         else:
             embed = self._get_error_embed(
