@@ -23,7 +23,7 @@ class StartupError(Exception):
     """Exception class for startup errors."""
 
     def __init__(self, base: Exception):
-        super()
+        super().__init__()
         self.exception = base
 
 
