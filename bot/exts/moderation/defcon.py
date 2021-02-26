@@ -14,7 +14,7 @@ from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
+from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Redis, Roles
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.messages import format_user
@@ -89,10 +89,11 @@ class Defcon(Cog):
             self.expiry = datetime.fromisoformat(settings["expiry"]) if settings["expiry"] else None
         except Exception:
             log.exception("Unable to get DEFCON settings!")
-            await self.channel.send(
-                f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
-                f"\n\n```{traceback.format_exc()}```"
-            )
+            if not Redis.use_fakeredis:
+                await self.channel.send(
+                    f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
+                    f"\n\n```{traceback.format_exc()}```"
+                )
 
         else:
             if self.expiry:
