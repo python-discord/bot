@@ -338,6 +338,8 @@ keys:
 
 urls:
     # PyDis site vars
+    connect_max_retries:       3
+    connect_cooldown:          5
     site:        &DOMAIN       "pythondiscord.com"
     site_api:    &API          "pydis-api.default.svc.cluster.local"
     site_api_schema:           "http://"

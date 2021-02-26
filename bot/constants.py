@@ -531,6 +531,8 @@ class URLs(metaclass=YAMLGetter):
     github_bot_repo: str
 
     # Base site vars
+    connect_max_retries: int
+    connect_cooldown: int
     site: str
     site_api: str
     site_schema: str
