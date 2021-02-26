@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 INFRACTION_FORMAT = "%Y-%m-%d %H:%M"
 
-_duration_parser = re.compile(
+_DURATION_REGEX = re.compile(
     r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
     r"((?P<months>\d+?) ?(months|month|m) ?)?"
     r"((?P<weeks>\d+?) ?(weeks|week|W|w) ?)?"
@@ -100,7 +100,7 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
     The units need to be provided in descending order of magnitude.
     If the string does represent a durationdelta object, it will return None.
     """
-    match = _duration_parser.fullmatch(duration)
+    match = _DURATION_REGEX.fullmatch(duration)
     if not match:
         return None
 
