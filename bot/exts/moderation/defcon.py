@@ -2,6 +2,7 @@ import asyncio
 import logging
 import traceback
 from collections import namedtuple
+from contextlib import suppress
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Union
@@ -208,12 +209,13 @@ class Defcon(Cog):
         if self.expiry is not None:
             self.scheduler.schedule_at(expiry, 0, self._remove_threshold())
 
-        await self.defcon_settings.update(
-            {
-                'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
-                'expiry': expiry.isoformat() if expiry else 0
-            }
-        )
+        with suppress(Exception):
+            await self.defcon_settings.update(
+                {
+                    'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
+                    'expiry': expiry.isoformat() if expiry else 0
+                }
+            )
         self._update_notifier()
 
         action = Action.DURATION_UPDATE
