@@ -190,7 +190,7 @@ def _get_truncated_description(
         truncated_result = textwrap.shorten(result, truncate_index)
     else:
         # Truncate at the last Markdown element that comes before the truncation index.
-        markdown_truncate_index = max(possible_truncation_indices)
+        markdown_truncate_index = possible_truncation_indices[-1]
         truncated_result = result[:markdown_truncate_index]
 
     return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
