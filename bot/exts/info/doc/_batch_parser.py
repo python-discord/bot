@@ -118,7 +118,7 @@ class BatchParser:
                     "lxml",
                 )
 
-            self._queue.extend(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
+            self._queue[:0] = (QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
             log.debug(f"Added items from {doc_item.url} to parse queue.")
 
             if self._parse_task is None:
