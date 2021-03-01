@@ -363,7 +363,10 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                     embed = self.ctx.send.call_args[1]["embed"]
 
                     if case["suggestion"]:
-                        self.assertCountEqual(embed.description.split("\n"), case["expected"]["description"].split("\n"))
+                        self.assertCountEqual(
+                            embed.description.split("\n"),
+                            case["expected"]["description"].split("\n")
+                        )
                         self.assertEqual(embed.type, case["expected"]["type"])
                         self.assertEqual(embed.title, case["expected"]["title"])
                     else:
