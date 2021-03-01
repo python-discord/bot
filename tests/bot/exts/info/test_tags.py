@@ -17,7 +17,7 @@ class TagsBaseTests(unittest.TestCase):
         with patch("bot.exts.info.tags.Path") as path:
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
             self.cog = tags.Tags(self.bot)
-        self.member = MockMember(roles=(MockRole(name="Developers"),))
+        self.member = MockMember()
 
     def test_get_tags(self):
         """Should return `Dict` of tags, fetched from resources and have correct keys."""
@@ -160,12 +160,12 @@ class TagsBaseTests(unittest.TestCase):
         """Should return does user have access to tag."""
         test_cases = [
             {
-                "member": MockMember(roles=(MockRole(name="Developers"),)),
+                "member": MockMember(),
                 "restricted_to": "moderators",
                 "expected": False
             },
             {
-                "member": MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators"))),
+                "member": MockMember(roles=(MockRole(name="Moderators"),)),
                 "restricted_to": "moderators",
                 "expected": True
             }
@@ -182,7 +182,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.member = MockMember(roles=(MockRole(name="Developers"),))
+        self.member = MockMember()
         self.ctx = MockContext(bot=self.bot, author=self.member)
         with patch("bot.exts.info.tags.Path") as path:
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
@@ -273,7 +273,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         self.bot = MockBot()
-        self.member = MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators")))
+        self.member = MockMember(roles=(MockRole(name="Moderators"),))
         self.ctx = MockContext(bot=self.bot, channel=MockTextChannel(id=1234), author=self.member)
         with patch("bot.exts.info.tags.Path") as path:
             path.return_value = Path("tests", "bot", "resources", "testing-tags")
@@ -308,7 +308,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_tags_list_permissions(self):
         """Should not include tag to list when user don't have permissions to use that tag."""
-        self.ctx.author = MockMember(roles=(MockRole(name="Developers"),))
+        self.ctx.author = MockMember()
         self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
         tags_string = "\n".join(
@@ -319,7 +319,12 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_tag(self):
         """Should send correct embed to chat (`ctx.send`) with tag content."""
         test_cases = [
-            {"tag": tag["title"], "expected": tag["embed"], "return_value": True} for tag in self.cog._cache.values()
+            {
+                "tag": tag["title"],
+                "expected": tag["embed"],
+                "return_value": True,
+                "suggestion": False,
+            } for tag in self.cog._cache.values()
         ]
         test_cases.extend(
             [
@@ -330,12 +335,14 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                         "description": "classmethod\nclass",
                         "type": "rich"
                     },
-                    "return_value": True
+                    "return_value": True,
+                    "suggestion": True,
                 },
                 {
                     "tag": "clss",
                     "expected": None,
-                    "return_value": False
+                    "return_value": False,
+                    "suggestion": False
                 }
             ]
         )
@@ -355,8 +362,12 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     embed = self.ctx.send.call_args[1]["embed"]
 
-                    self.assertEqual(embed.to_dict(), case["expected"])
-                    self.ctx.send.assert_awaited_once_with(embed=embed)
+                    if case["suggestion"]:
+                        self.assertCountEqual(embed.description.split("\n"), case["expected"]["description"].split("\n"))
+                        self.assertEqual(embed.type, case["expected"]["type"])
+                        self.assertEqual(embed.title, case["expected"]["title"])
+                    else:
+                        self.assertEqual(embed.to_dict(), case["expected"])
 
     @patch("bot.exts.info.tags.time.time", MagicMock(return_value=1234))
     async def test_tag_cooldown(self):
@@ -385,12 +396,12 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         """Should silently return when user don't have required role to use tag."""
         test_cases = [
             {
-                "member": MockMember(roles=(MockRole(name="Developers"), MockRole(name="Moderators"))),
+                "member": MockMember(roles=(MockRole(name="Moderators"),)),
                 "tag": "test-mod-tag",
                 "should_access": True
             },
             {
-                "member": MockMember(roles=(MockRole(name="Developers"),)),
+                "member": MockMember(),
                 "tag": "test-mod-tag",
                 "should_access": False
             }
