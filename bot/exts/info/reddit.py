@@ -1,7 +1,7 @@
 import asyncio
 import logging
-import random
 import html
+import random
 import textwrap
 from collections import namedtuple
 from datetime import datetime, timedelta
