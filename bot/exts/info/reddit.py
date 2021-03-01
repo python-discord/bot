@@ -1,6 +1,6 @@
 import asyncio
-import logging
 import html
+import logging
 import random
 import textwrap
 from collections import namedtuple
