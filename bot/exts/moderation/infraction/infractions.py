@@ -198,7 +198,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Temporary shadow infractions
 
-    @command(hidden=True, aliases=["shadowtempban", "stempban"])
+    @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
     async def shadow_tempban(
         self,
         ctx: Context,
