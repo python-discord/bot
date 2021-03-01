@@ -126,7 +126,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             duration = await Duration().convert(ctx, "1h")
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
-    @command()
+    @command(aliases=("tban",))
     async def tempban(
         self,
         ctx: Context,
