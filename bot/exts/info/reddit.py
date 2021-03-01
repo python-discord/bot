@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 import textwrap
+import html
 from collections import namedtuple
 from datetime import datetime, timedelta
 from typing import List
@@ -179,7 +180,7 @@ class Reddit(Cog):
         for post in posts:
             data = post["data"]
 
-            text = data["selftext"]
+            text = html.unescape(data["selftext"])
             if text:
                 text = textwrap.shorten(text, width=128, placeholder="...")
                 text += "\n"  # Add newline to separate embed info
@@ -188,7 +189,8 @@ class Reddit(Cog):
             comments = data["num_comments"]
             author = data["author"]
 
-            title = textwrap.shorten(data["title"], width=64, placeholder="...")
+            title = html.unescape(data["title"])
+            title = textwrap.shorten(title, width=64, placeholder="...")
             # Normal brackets interfere with Markdown.
             title = escape_markdown(title).replace("[", "⦋").replace("]", "⦌")
             link = self.URL + data["permalink"]
