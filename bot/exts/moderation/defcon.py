@@ -85,8 +85,8 @@ class Defcon(Cog):
 
         try:
             settings = await self.defcon_settings.to_dict()
-            self.threshold = parse_duration_string(settings["threshold"]) if settings["threshold"] else None
-            self.expiry = datetime.fromisoformat(settings["expiry"]) if settings["expiry"] else None
+            self.threshold = parse_duration_string(settings["threshold"]) if settings.get("threshold") else None
+            self.expiry = datetime.fromisoformat(settings["expiry"]) if settings.get("expiry") else None
         except RedisError:
             log.exception("Unable to get DEFCON settings!")
             await self.channel.send(
