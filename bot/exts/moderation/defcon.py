@@ -2,11 +2,11 @@ import asyncio
 import logging
 import traceback
 from collections import namedtuple
-from contextlib import suppress
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Union
 
+from aioredis import RedisError
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Member, User
@@ -14,7 +14,7 @@ from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Redis, Roles
+from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.messages import format_user
@@ -87,13 +87,12 @@ class Defcon(Cog):
             settings = await self.defcon_settings.to_dict()
             self.threshold = parse_duration_string(settings["threshold"]) if settings["threshold"] else None
             self.expiry = datetime.fromisoformat(settings["expiry"]) if settings["expiry"] else None
-        except Exception:
+        except RedisError:
             log.exception("Unable to get DEFCON settings!")
-            if not Redis.use_fakeredis:
-                await self.channel.send(
-                    f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
-                    f"\n\n```{traceback.format_exc()}```"
-                )
+            await self.channel.send(
+                f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
+                f"\n\n```{traceback.format_exc()}```"
+            )
 
         else:
             if self.expiry:
@@ -210,14 +209,19 @@ class Defcon(Cog):
         if self.expiry is not None:
             self.scheduler.schedule_at(expiry, 0, self._remove_threshold())
 
-        with suppress(Exception):
+        self._update_notifier()
+
+        # Make sure to handle the critical part of the update before writing to Redis.
+        error = ""
+        try:
             await self.defcon_settings.update(
                 {
                     'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
                     'expiry': expiry.isoformat() if expiry else 0
                 }
             )
-        self._update_notifier()
+        except RedisError:
+            error = ", but failed to write to cache"
 
         action = Action.DURATION_UPDATE
 
@@ -234,7 +238,7 @@ class Defcon(Cog):
             channel_message = "removed"
 
         await self.channel.send(
-            f"{action.value.emoji} DEFCON threshold {channel_message}."
+            f"{action.value.emoji} DEFCON threshold {channel_message}{error}."
         )
         await self._send_defcon_log(action, author)
         self._update_channel_topic()
