@@ -23,6 +23,9 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          repository: python-discord/kubernetes
+          token: ${{ secrets.REPO_TOKEN }}
 
       - name: Authenticate with Kubernetes
         uses: azure/k8s-set-context@v1
@@ -34,6 +37,6 @@ jobs:
         uses: Azure/k8s-deploy@v1
         with:
           manifests: |
-              deployment.yaml
+              bot/deployment.yaml
           images: 'ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}'
           kubectl-version: 'latest'

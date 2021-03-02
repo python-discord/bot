@@ -6,7 +6,6 @@ from pathlib import Path
 
 import coloredlogs
 import sentry_sdk
-from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
@@ -55,6 +54,9 @@ def setup() -> None:
     logging.getLogger("chardet").setLevel(logging.WARNING)
     logging.getLogger("async_rediscache").setLevel(logging.WARNING)
 
+    # Set back to the default of INFO even if asyncio's debug mode is enabled.
+    logging.getLogger("asyncio").setLevel(logging.INFO)
+
 
 def setup_sentry() -> None:
     """Set up the Sentry logging integrations."""
@@ -67,9 +69,9 @@ def setup_sentry() -> None:
         dsn=constants.Bot.sentry_dsn,
         integrations=[
             sentry_logging,
-            AioHttpIntegration(),
             RedisIntegration(),
-        ]
+        ],
+        release=f"bot@{constants.GIT_SHA}"
     )
 
 
