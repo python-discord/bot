@@ -246,13 +246,16 @@ class Colours(metaclass=YAMLGetter):
     section = "style"
     subsection = "colours"
 
+    blue: int
     bright_green: int
-    soft_green: int
-    soft_orange: int
-    soft_red: int
     orange: int
     pink: int
     purple: int
+    soft_green: int
+    soft_orange: int
+    soft_red: int
+    white: int
+    yellow: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -323,6 +326,7 @@ class Icons(metaclass=YAMLGetter):
     filtering: str
 
     green_checkmark: str
+    green_questionmark: str
     guild_update: str
 
     hash_blurple: str
@@ -528,9 +532,12 @@ class URLs(metaclass=YAMLGetter):
     github_bot_repo: str
 
     # Base site vars
+    connect_max_retries: int
+    connect_cooldown: int
     site: str
     site_api: str
     site_schema: str
+    site_api_schema: str
 
     # Site endpoints
     site_logs_view: str

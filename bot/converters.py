@@ -337,34 +337,45 @@ class Duration(DurationDelta):
 
         try:
             return now + delta
-        except ValueError:
+        except (ValueError, OverflowError):
             raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
 
 
 class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
+    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
+
+    @classmethod
+    def translate_name(cls, name: str, *, from_unicode: bool = True) -> str:
+        """
+        Translates `name` into a format that is allowed in discord channel names.
+
+        If `from_unicode` is True, the name is translated from a discord-safe format, back to normalized text.
+        """
+        if from_unicode:
+            table = str.maketrans(cls.ALLOWED_CHARACTERS, '𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-')
+        else:
+            table = str.maketrans('𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-', cls.ALLOWED_CHARACTERS)
+
+        return name.translate(table)
+
     async def convert(self, ctx: Context, argument: str) -> str:
         """Attempt to replace any invalid characters with their approximate Unicode equivalent."""
-        allowed_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
-
         # Chain multiple words to a single one
         argument = "-".join(argument.split())
 
         if not (2 <= len(argument) <= 96):
             raise BadArgument("Channel name must be between 2 and 96 chars long")
 
-        elif not all(c.isalnum() or c in allowed_characters for c in argument):
+        elif not all(c.isalnum() or c in self.ALLOWED_CHARACTERS for c in argument):
             raise BadArgument(
                 "Channel name must only consist of "
                 "alphanumeric characters, minus signs or apostrophes."
             )
 
         # Replace invalid characters with unicode alternatives.
-        table = str.maketrans(
-            allowed_characters, '𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-'
-        )
-        return argument.translate(table)
+        return self.translate_name(argument)
 
 
 class ISODateTime(Converter):

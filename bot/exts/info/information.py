@@ -203,7 +203,7 @@ class Information(Cog):
 
         await ctx.send(embed=embed)
 
-    @command(name="user", aliases=["user_info", "member", "member_info"])
+    @command(name="user", aliases=["user_info", "member", "member_info", "u"])
     async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
         """Returns info about a user."""
         if user is None:
