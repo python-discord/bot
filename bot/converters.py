@@ -16,6 +16,7 @@ from discord.utils import DISCORD_EPOCH, snowflake_time
 from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.utils.regex import INVITE_RE
+from bot.utils.time import parse_duration_string
 
 log = logging.getLogger(__name__)
 
@@ -301,16 +302,6 @@ class TagContentConverter(Converter):
 class DurationDelta(Converter):
     """Convert duration strings into dateutil.relativedelta.relativedelta objects."""
 
-    duration_parser = re.compile(
-        r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
-        r"((?P<months>\d+?) ?(months|month|m) ?)?"
-        r"((?P<weeks>\d+?) ?(weeks|week|W|w) ?)?"
-        r"((?P<days>\d+?) ?(days|day|D|d) ?)?"
-        r"((?P<hours>\d+?) ?(hours|hour|H|h) ?)?"
-        r"((?P<minutes>\d+?) ?(minutes|minute|M) ?)?"
-        r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
-    )
-
     async def convert(self, ctx: Context, duration: str) -> relativedelta:
         """
         Converts a `duration` string to a relativedelta object.
@@ -326,12 +317,8 @@ class DurationDelta(Converter):
 
         The units need to be provided in descending order of magnitude.
         """
-        match = self.duration_parser.fullmatch(duration)
-        if not match:
+        if not (delta := parse_duration_string(duration)):
             raise BadArgument(f"`{duration}` is not a valid duration string.")
-
-        duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
-        delta = relativedelta(**duration_dict)
 
         return delta
 
