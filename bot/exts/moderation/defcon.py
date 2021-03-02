@@ -161,7 +161,14 @@ class Defcon(Cog):
     async def threshold(
         self, ctx: Context, threshold: Union[DurationDelta, int], expiry: Optional[Expiry] = None
     ) -> None:
-        """Set how old an account must be to join the server."""
+        """
+        Set how old an account must be to join the server.
+
+        The threshold is the minimum required account age. Can accept either a duration string or a number of days.
+        Set it to 0 to have no threshold.
+        The expiry allows to automatically remove the threshold after a designated time. If no expiry is specified,
+        the cog will remind to remove the threshold hourly.
+        """
         if isinstance(threshold, int):
             threshold = relativedelta(days=threshold)
         await self._update_threshold(ctx.author, threshold=threshold, expiry=expiry)
