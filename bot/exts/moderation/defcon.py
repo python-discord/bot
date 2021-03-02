@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Union
 
+from aioredis import RedisError
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Member, User
@@ -84,9 +85,9 @@ class Defcon(Cog):
 
         try:
             settings = await self.defcon_settings.to_dict()
-            self.threshold = parse_duration_string(settings["threshold"]) if settings["threshold"] else None
-            self.expiry = datetime.fromisoformat(settings["expiry"]) if settings["expiry"] else None
-        except Exception:
+            self.threshold = parse_duration_string(settings["threshold"]) if settings.get("threshold") else None
+            self.expiry = datetime.fromisoformat(settings["expiry"]) if settings.get("expiry") else None
+        except RedisError:
             log.exception("Unable to get DEFCON settings!")
             await self.channel.send(
                 f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
@@ -215,13 +216,19 @@ class Defcon(Cog):
         if self.expiry is not None:
             self.scheduler.schedule_at(expiry, 0, self._remove_threshold())
 
-        await self.defcon_settings.update(
-            {
-                'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
-                'expiry': expiry.isoformat() if expiry else 0
-            }
-        )
         self._update_notifier()
+
+        # Make sure to handle the critical part of the update before writing to Redis.
+        error = ""
+        try:
+            await self.defcon_settings.update(
+                {
+                    'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
+                    'expiry': expiry.isoformat() if expiry else 0
+                }
+            )
+        except RedisError:
+            error = ", but failed to write to cache"
 
         action = Action.DURATION_UPDATE
 
@@ -238,7 +245,7 @@ class Defcon(Cog):
             channel_message = "removed"
 
         await self.channel.send(
-            f"{action.value.emoji} DEFCON threshold {channel_message}."
+            f"{action.value.emoji} DEFCON threshold {channel_message}{error}."
         )
         await self._send_defcon_log(action, author)
         self._update_channel_topic()
