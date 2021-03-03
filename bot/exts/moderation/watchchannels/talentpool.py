@@ -28,6 +28,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             api_endpoint='bot/nominations',
             api_default_params={'active': 'true', 'ordering': '-inserted_at'},
             logger=log,
+            disable_header=True,
         )
 
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
@@ -83,10 +84,6 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             await ctx.send(f":x: Failed to update the user cache; can't add {user}")
             return
 
-        if user.id in self.watched_users:
-            await ctx.send(f":x: {user} is already being watched in the talent pool")
-            return
-
         # Manual request with `raise_for_status` as False because we want the actual response
         session = self.bot.api_client.session
         url = self.bot.api_client._url_for(self.api_endpoint)
@@ -101,8 +98,12 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         async with session.post(url, **kwargs) as resp:
             response_data = await resp.json()
 
-            if resp.status == 400 and response_data.get('user', False):
-                await ctx.send(":x: The specified user can't be found in the database tables")
+            if resp.status == 400:
+                if response_data.get('user', False):
+                    await ctx.send(":x: The specified user can't be found in the database tables")
+                elif response_data.get('actor', False):
+                    await ctx.send(":x: You already have nominated this user")
+
                 return
             else:
                 resp.raise_for_status()
@@ -120,9 +121,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         )
 
         if history:
-            total = f"({len(history)} previous nominations in total)"
-            start_reason = f"Watched: {textwrap.shorten(history[0]['reason'], width=500, placeholder='...')}"
-            msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}```"
+            msg += f"\n\n{len(history)} previous nominations in total"
 
         await ctx.send(msg)
 
@@ -176,13 +175,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_edit_group.command(name='reason')
     @has_any_role(*MODERATION_ROLES)
-    async def edit_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
-        """
-        Edits the reason/unnominate reason for the nomination with the given `id` depending on the status.
-
-        If the nomination is active, the reason for nominating the user will be edited;
-        If the nomination is no longer active, the reason for ending the nomination will be edited instead.
-        """
+    async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: FetchedMember, *, reason: str) -> None:
+        """Edits the reason of `actor` entry for the nomination with the given `id`."""
         try:
             nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
@@ -193,16 +187,49 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             else:
                 raise
 
-        field = "reason" if nomination["active"] else "end_reason"
+        if not nomination["active"]:
+            await ctx.send(":x: Can't edit reason of ended nomination.")
+            return
 
-        self.log.trace(f"Changing {field} for nomination with id {nomination_id} to {reason}")
+        if not any(entry["actor"] == actor.id for entry in nomination["entries"]):
+            await ctx.send(f":x: {actor} don't have entry for this nomination.")
+            return
+
+        self.log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {reason}")
 
         await self.bot.api_client.patch(
             f"{self.api_endpoint}/{nomination_id}",
-            json={field: reason}
+            json={"actor": actor.id, "reason": reason}
+        )
+        await self.fetch_user_cache()  # Update cache
+        await ctx.send(":white_check_mark: Successfully updates reason of nomination.")
+
+    @nomination_edit_group.command(name='end_reason')
+    @has_any_role(*MODERATION_ROLES)
+    async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
+        """Edits the unnominate reason for the nomination with the given `id`."""
+        try:
+            nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
+        except ResponseCodeError as e:
+            if e.response.status == 404:
+                self.log.trace(f"Nomination API 404: Can't nomination with id {nomination_id}")
+                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
+                return
+            else:
+                raise
+
+        if nomination["active"]:
+            await ctx.send(":x: Cannot edit end reason of active nomination.")
+            return
+
+        self.log.trace(f"Changing end reason for nomination with id {nomination_id} to {reason}")
+
+        await self.bot.api_client.patch(
+            f"{self.api_endpoint}/{nomination_id}",
+            json={"end_reason": reason}
         )
         await self.fetch_user_cache()  # Update cache.
-        await ctx.send(f":white_check_mark: Updated the {field} of the nomination!")
+        await ctx.send(":white_check_mark: Updated the end reason of the nomination!")
 
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: Union[User, Member]) -> None:
@@ -237,13 +264,18 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     def _nomination_to_string(self, nomination_object: dict) -> str:
         """Creates a string representation of a nomination."""
         guild = self.bot.get_guild(Guild.id)
+        entries = []
+        for site_entry in nomination_object["entries"]:
+            actor_id = site_entry["actor"]
+            actor = guild.get_member(actor_id)
 
-        actor_id = nomination_object["actor"]
-        actor = guild.get_member(actor_id)
+            reason = site_entry["reason"] or "*None*"
+            created = time.format_infraction(site_entry["inserted_at"])
+            entries.append(f"Actor: {actor or actor_id}\nReason: {reason}\nCreated: {created}")
+
+        entries_string = "\n\n".join(entries)
 
         active = nomination_object["active"]
-
-        reason = nomination_object["reason"] or "*None*"
 
         start_date = time.format_infraction(nomination_object["inserted_at"])
         if active:
@@ -252,9 +284,9 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 ===============
                 Status: **Active**
                 Date: {start_date}
-                Actor: {actor.mention if actor else actor_id}
-                Reason: {reason}
                 Nomination ID: `{nomination_object["id"]}`
+
+                {entries_string}
                 ===============
                 """
             )
@@ -265,8 +297,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 ===============
                 Status: Inactive
                 Date: {start_date}
-                Actor: {actor.mention if actor else actor_id}
-                Reason: {reason}
+
+                {entries_string}
 
                 End date: {end_date}
                 Unwatch reason: {nomination_object["end_reason"]}
