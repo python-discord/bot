@@ -47,9 +47,9 @@ style:
         badge_staff: "<:discord_staff:743882896498098226>"
         badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
 
-        defcon_disabled: "<:defcondisabled:470326273952972810>"
-        defcon_enabled:  "<:defconenabled:470326274213150730>"
-        defcon_updated:  "<:defconsettingsupdated:470326274082996224>"
+        defcon_shutdown:    "<:defcondisabled:470326273952972810>"
+        defcon_unshutdown:  "<:defconenabled:470326274213150730>"
+        defcon_update:      "<:defconsettingsupdated:470326274082996224>"
 
         failmail: "<:failmail:633660039931887616>"
 
@@ -83,9 +83,9 @@ style:
         crown_red:     "https://cdn.discordapp.com/emojis/469964154879344640.png"
 
         defcon_denied:   "https://cdn.discordapp.com/emojis/472475292078964738.png"
-        defcon_disabled: "https://cdn.discordapp.com/emojis/470326273952972810.png"
-        defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
-        defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
+        defcon_shutdown: "https://cdn.discordapp.com/emojis/470326273952972810.png"
+        defcon_unshutdown:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
+        defcon_update:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
 
         filtering: "https://cdn.discordapp.com/emojis/472472638594482195.png"
 
@@ -261,6 +261,7 @@ guild:
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
         core_developers:                    587606783669829632
+        devops:                             409416496733880320
         helpers:            &HELPERS_ROLE   267630620367257601
         moderators:         &MODS_ROLE      267629731250176001
         owners:             &OWNERS_ROLE    267627879762755584
