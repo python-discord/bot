@@ -7,6 +7,8 @@ from async_rediscache.types.base import RedisObject, namespace_lock
 if TYPE_CHECKING:
     from ._cog import DocItem
 
+WEEK_SECONDS = datetime.timedelta(weeks=1).total_seconds()
+
 
 class DocRedisCache(RedisObject):
     """Interface for redis functionality needed by the Doc cog."""
@@ -33,7 +35,7 @@ class DocRedisCache(RedisObject):
 
             await connection.hset(redis_key, item.symbol_id, value)
             if needs_expire:
-                await connection.expire(redis_key, datetime.timedelta(weeks=1).total_seconds())
+                await connection.expire(redis_key, WEEK_SECONDS)
 
     @namespace_lock
     async def get(self, item: DocItem) -> Optional[str]:
