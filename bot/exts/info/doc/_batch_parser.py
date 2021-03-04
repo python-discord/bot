@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import logging
 import time
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
-from typing import Dict, List, NamedTuple, Union
+from typing import Deque, Dict, List, NamedTuple, Union
 
 import discord
 from bs4 import BeautifulSoup
@@ -88,7 +89,7 @@ class BatchParser:
     """
 
     def __init__(self):
-        self._queue: List[QueueItem] = []
+        self._queue: Deque[QueueItem] = collections.deque()
         self._page_doc_items: Dict[str, List[_cog.DocItem]] = defaultdict(list)
         self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = {}
         self._parse_task = None
@@ -118,7 +119,7 @@ class BatchParser:
                     "lxml",
                 )
 
-            self._queue[:0] = (QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
+            self._queue.extendleft(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
             log.debug(f"Added items from {doc_item.url} to parse queue.")
 
             if self._parse_task is None:
@@ -126,7 +127,7 @@ class BatchParser:
         else:
             self._item_futures[doc_item].user_requested = True
         with suppress(ValueError):
-            # If the item is not in the list then the item is already parsed or is being parsed
+            # If the item is not in the queue then the item is already parsed or is being parsed
             self._move_to_front(doc_item)
         return await self._item_futures[doc_item]
 
@@ -166,7 +167,8 @@ class BatchParser:
         # The parse queue stores soups along with the doc symbols in QueueItem objects,
         # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.
         item_index = self._queue.index(item)
-        queue_item = self._queue.pop(item_index)
+        queue_item = self._queue[item_index]
+        del self._queue[item_index]
 
         self._queue.append(queue_item)
         log.trace(f"Moved {item} to the front of the queue.")
