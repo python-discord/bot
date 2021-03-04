@@ -477,7 +477,7 @@ class Incidents(Cog):
     async def on_message(self, message: discord.Message) -> None:
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
         if is_incident(message):
-            message_links = DISCORD_MESSAGE_LINK_RE.findall(message.content)
+            message_links = DISCORD_MESSAGE_LINK_RE.findall(str(message.content))
             print(message_links)
             if message_links:
 
