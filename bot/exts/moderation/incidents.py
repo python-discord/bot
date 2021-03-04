@@ -8,6 +8,7 @@ from enum import Enum
 import discord
 from async_rediscache import RedisCache
 from discord.ext.commands import Cog
+from more_itertools.recipes import grouper
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
@@ -377,9 +378,14 @@ class Incidents(Cog):
             log.trace("Deletion was confirmed")
 
         log.trace("Deleting discord links webhook message.")
-        webhook_msg_id = await self.message_link_embeds_cache.get(incident.id)
+        webhook_msg_ids = await self.message_link_embeds_cache.get(incident.id)
+        webhook_msg_ids = webhook_msg_ids.split(',')
         webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-        await webhook.delete_message(webhook_msg_id)
+
+        for x, msg in enumerate(webhook_msg_ids):
+            await webhook.delete_message(msg)
+            log.trace(f"Deleted discord links webhook message{x}/{len(webhook_msg_ids)}")
+
         log.trace("Successfully deleted discord links webhook message.")
 
     async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
@@ -474,17 +480,24 @@ class Incidents(Cog):
 
                 try:
                     webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-                    webhook_msg = await webhook.send(
-                        embeds=embeds,
-                        username=sub_clyde(message.author.name),
-                        avatar_url=message.author.avatar_url,
-                        wait=True
-                    )
+                    webhook_embed_list = list(grouper(embeds, 10))
+                    webhook_msg_ids = []
+
+                    for x, embed in enumerate(webhook_embed_list):
+                        webhook_msg = await webhook.send(
+                            embeds=[x for x in embed if x is not None],
+                            username=sub_clyde(message.author.name),
+                            avatar_url=message.author.avatar_url,
+                            wait=True
+                        )
+                        webhook_msg_ids.append(webhook_msg.id)
+                        log.trace(f"Message Link Embed {x+1}/{len(webhook_embed_list)} Sent Succesfully")
+
                 except Exception:
                     log.exception(f"Failed to send message link embeds {message.id} to #incidents")
                 else:
+                    await self.message_link_embeds_cache.set(message.id, ','.join(map(str, webhook_msg_ids)))
                     log.trace("Message Link Embeds Sent successfully!")
-                    await self.message_link_embeds_cache.set(message.id, webhook_msg.id)
 
             await add_signals(message)
 
