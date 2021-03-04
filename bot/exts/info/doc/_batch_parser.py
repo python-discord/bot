@@ -141,6 +141,7 @@ class BatchParser:
         try:
             while self._queue:
                 item, soup = self._queue.pop()
+                markdown = None
                 try:
                     if (future := self._item_futures[item]).done():
                         # Some items are present in the inventories multiple times under different symbol names,
@@ -154,7 +155,10 @@ class BatchParser:
                         scheduling.create_task(self.stale_inventory_notifier.send_warning(item))
                 except Exception as e:
                     log.exception(f"Unexpected error when handling {item}")
-                    future.set_exception(e)
+                    if markdown is not None:
+                        future.set_result(markdown)
+                    else:
+                        future.set_exception(e)
                 else:
                     future.set_result(markdown)
                 await asyncio.sleep(0.1)
