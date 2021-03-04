@@ -7,10 +7,10 @@ from enum import Enum
 
 import discord
 from async_rediscache import RedisCache
-from discord.ext.commands import Cog
+from discord.ext.commands import Cog, Context, MessageConverter
 from more_itertools.recipes import grouper
 
-from bot.bot import Bot
+from bot import bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
 from bot.utils import scheduling
 from bot.utils.messages import format_user, sub_clyde
@@ -26,7 +26,8 @@ CRAWL_LIMIT = 50
 CRAWL_SLEEP = 2
 
 DISCORD_MESSAGE_LINK_RE = re.compile(
-    r"discord(?:[\.,]|dot)com(?:\/|slash)channels(?:\/|slash)[0-9]{18}(?:\/|slash)[0-9]{18}(?:\/|slash)[0-9]{18}"
+    r"http(?:s):\/\/discord(?:[\.,]|dot)com(?:\/|slash)channels(?:\/|slash)[0-9]{18}(?:\/|slash)[0-9]{18}"
+    r"(?:\/|slash)[0-9]{18}"
 )
 
 
@@ -138,7 +139,7 @@ def has_signals(message: discord.Message) -> bool:
     return ALL_SIGNALS.issubset(own_reactions(message))
 
 
-async def make_message_link_embed(incident: discord.Message, message_link: str) -> discord.Embed:
+async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Embed:
     """
     Create an embed representation of discord message link contained in the incident report.
 
@@ -147,21 +148,28 @@ async def make_message_link_embed(incident: discord.Message, message_link: str) 
         Channel: Special/#bot-commands (814190307980607493)
         Content: This is a very important message!
     """
-    channel_id = int(message_link.split("/")[3])
-    msg_id = int(message_link.split("/")[4])
+    embed = discord.Embed()
 
-    channel = incident.guild.get_channel(channel_id)
-    message = await channel.fetch_message(msg_id)
+    try:
+        message_convert_object = MessageConverter()
+        message = await message_convert_object.convert(ctx, message_link)
 
-    text = message.content
-    channel = message.channel
-    description = (
-        f"**Author:** {format_user(message.author)}\n"
-        f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-        f"**Content:** {text[:2045] + '...' if len(text) > 2048 else text}\n"
-        "\n"
-    )
-    return discord.Embed(description=description)
+    except Exception as e:
+        embed.title = f"{e}"
+        embed.colour = Colours.soft_red
+
+    else:
+        text = message.content
+        channel = message.channel
+
+        embed.description = (
+            f"**Author:** {format_user(message.author)}\n"
+            f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
+            f"**Content:** {text[:2045] + '...' if len(text) > 2048 else text}\n"
+            "\n"
+        )
+
+    return embed
 
 
 async def add_signals(incident: discord.Message) -> None:
@@ -223,7 +231,7 @@ class Incidents(Cog):
     # RedisCache[discord.Message.id, List[discord.Message.id]]
     message_link_embeds_cache = RedisCache()
 
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: bot.Bot) -> None:
         """Prepare `event_lock` and schedule `crawl_task` on start-up."""
         self.bot = bot
 
@@ -470,13 +478,13 @@ class Incidents(Cog):
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
         if is_incident(message):
             message_links = DISCORD_MESSAGE_LINK_RE.findall(message.content)
+            print(message_links)
             if message_links:
 
                 embeds = []
                 for message_link in message_links:
-                    embeds.append(
-                        await make_message_link_embed(message, message_link)
-                    )
+                    ctx = await self.bot.get_context(message)
+                    embeds.append(await make_message_link_embed(ctx, message_link))
 
                 try:
                     webhook = await self.bot.fetch_webhook(Webhooks.incidents)
@@ -491,17 +499,19 @@ class Incidents(Cog):
                             wait=True
                         )
                         webhook_msg_ids.append(webhook_msg.id)
-                        log.trace(f"Message Link Embed {x+1}/{len(webhook_embed_list)} Sent Succesfully")
+                        log.trace(f"Message Link Embed {x + 1}/{len(webhook_embed_list)} Sent Succesfully")
 
                 except Exception:
                     log.exception(f"Failed to send message link embeds {message.id} to #incidents")
+
                 else:
                     await self.message_link_embeds_cache.set(message.id, ','.join(map(str, webhook_msg_ids)))
                     log.trace("Message Link Embeds Sent successfully!")
 
+            log.trace(f"Skipping discord message link detection on {message.id}: message doesn't qualify.")
             await add_signals(message)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: bot.Bot) -> None:
     """Load the Incidents cog."""
     bot.add_cog(Incidents(bot))
