@@ -3,7 +3,7 @@ import random
 import re
 import time
 from collections import defaultdict
-from typing import Callable, DefaultDict, Iterable, List, Optional
+from typing import Callable, DefaultDict, Iterable, List, Optional, Tuple
 
 from discord import Colour, Embed, Message, NotFound, TextChannel, User
 from discord.ext import commands
@@ -52,7 +52,7 @@ class Clean(Cog):
                 # Message doesn't exist or was already deleted
                 continue
 
-    def _get_messages_from_cache(self, amount: int, predicate: CheckHint) -> List[DefaultDict, List[int]]:
+    def _get_messages_from_cache(self, amount: int, predicate: CheckHint) -> Tuple[DefaultDict, List[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(lambda: [])
         message_ids = []
@@ -382,7 +382,7 @@ class Clean(Cog):
             until_message=message
         )
 
-    @clean_group.command(name="from-to", aliases=["after-until", "range"])
+    @clean_group.command(name="from-to", aliases=["after-until"])
     @has_any_role(*MODERATION_ROLES)
     async def clean_from_to(self, ctx: Context, after_message: Message, until_message: Message) -> None:
         """Delete all messages within range of messages."""
