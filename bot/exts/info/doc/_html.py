@@ -54,7 +54,7 @@ def _find_elements_until_tag(
     limit: int = None,
 ) -> List[Union[Tag, NavigableString]]:
     """
-    Get all elements up to `limit` or until a tag matching `tag_filter` is found.
+    Get all elements up to `limit` or until a tag matching `end_tag_filter` is found.
 
     `end_tag_filter` can be either a container of string names to check against,
     or a filtering callable that's applied to tags.
@@ -86,7 +86,7 @@ _find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=Beaut
 
 
 def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
-    """Create callable that returns True when the passed in tag's class is in `class_names` or when it's is a table."""
+    """Create callable that returns True when the passed in tag's class is in `class_names` or when it's a table."""
     def match_tag(tag: Tag) -> bool:
         for attr in class_names:
             if attr in tag.get("class", ()):
@@ -100,8 +100,8 @@ def get_general_description(start_element: Tag) -> List[Union[Tag, NavigableStri
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
-    A headerlink tag is attempted to be found to skip repeating the symbol information in the description,
-    if it's found it's used as the tag to start the search from instead of the `start_element`.
+    A headerlink tag is attempted to be found to skip repeating the symbol information in the description.
+    If it's found it's used as the tag to start the search from instead of the `start_element`.
     """
     child_tags = _find_recursive_children_until_tag(start_element, _class_filter_factory(["section"]), limit=100)
     header = next(filter(_class_filter_factory(["headerlink"]), child_tags), None)

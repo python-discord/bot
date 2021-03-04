@@ -46,7 +46,7 @@ class StaleInventoryNotifier:
 
 
 class QueueItem(NamedTuple):
-    """Contains a doc_item and the BeautifulSoup object needed to parse it."""
+    """Contains a `DocItem` and the `BeautifulSoup` object needed to parse it."""
 
     doc_item: _cog.DocItem
     soup: BeautifulSoup
@@ -120,7 +120,7 @@ class BatchParser:
                 )
 
             self._queue.extendleft(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
-            log.debug(f"Added items from {doc_item.url} to parse queue.")
+            log.debug(f"Added items from {doc_item.url} to the parse queue.")
 
             if self._parse_task is None:
                 self._parse_task = asyncio.create_task(self._parse_queue())
@@ -181,7 +181,7 @@ class BatchParser:
         """
         Clear all internal symbol data.
 
-        All currently requested items are waited to be parsed before clearing.
+        Wait for all user-requested symbols to be parsed before clearing the parser.
         """
         for future in filter(attrgetter("user_requested"), self._item_futures.values()):
             await future

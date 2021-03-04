@@ -83,10 +83,10 @@ class DocCog(commands.Cog):
         Build the inventory for a single package.
 
         Where:
-            * `package_name` is the package name to use, appears in the log
+            * `package_name` is the package name to use in logs and when qualifying symbols
             * `base_url` is the root documentation URL for the specified package, used to build
                 absolute paths that link to specific symbols
-            * `package` are the InventoryDict contents of a intersphinx inventory.
+            * `package` is the content of a intersphinx inventory.
         """
         self.base_urls[api_package_name] = base_url
 

@@ -140,7 +140,7 @@ class PackageName(Converter):
     async def convert(cls, ctx: Context, argument: str) -> str:
         """Checks whether the given string is a valid package name."""
         if cls.PACKAGE_NAME_RE.search(argument):
-            raise BadArgument("The provided package name is not valid; please only use the _, 0-9 and a-z characters.")
+            raise BadArgument("The provided package name is not valid; please only use the _, 0-9, and a-z characters.")
         return argument
 
 
