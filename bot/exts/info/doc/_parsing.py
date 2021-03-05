@@ -49,7 +49,7 @@ _BRACKET_PAIRS = {
 def _is_closing_quote(search_string: str, index: int) -> bool:
     """Check whether the quote at `index` inside `search_string` can be a closing quote."""
     if search_string[index - 1] != "\\":
-        return True
+        return True  # The quote is not escaped.
     elif search_string[index - 2] == "\\":
         return True
     return False
@@ -69,7 +69,7 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     for index, character in enumerated_string:
         if character in {"'", '"'}:
             # Skip everything inside of strings, regardless of the depth.
-            quote_character = character
+            quote_character = character  # The closing quote must equal the opening quote.
             for index, character in enumerated_string:
                 if character == quote_character and _is_closing_quote(parameters_string, index):
                     break
@@ -103,6 +103,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
     A maximum of `_MAX_SIGNATURE_AMOUNT` signatures is assumed to be passed.
     """
     if sum(len(signature) for signature in signatures) <= _MAX_SIGNATURES_LENGTH:
+        # Total length of signatures is under the length limit; no truncation needed.
         return signatures
 
     max_signature_length = _EMBED_CODE_BLOCK_LINE_LENGTH * (MAX_SIGNATURE_AMOUNT + 1 - len(signatures))
@@ -111,6 +112,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
         signature = signature.strip()
         if len(signature) > max_signature_length:
             if (parameters_match := _PARAMETERS_RE.search(signature)) is None:
+                # The signature has no parameters or the regex failed; perform a simple truncation of the text.
                 formatted_signatures.append(textwrap.shorten(signature, max_signature_length))
                 continue
 
@@ -118,14 +120,17 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
             parameters_string = parameters_match[1]
             running_length = len(signature) - len(parameters_string)
             for parameter in _split_parameters(parameters_string):
+                # Check if including this parameter would still be within the maximum length.
                 if (len(parameter) + running_length) <= max_signature_length - 5:  # account for comma and placeholder
                     truncated_signature.append(parameter)
                     running_length += len(parameter) + 1
                 else:
+                    # There's no more room for this parameter. Truncate the parameter list and put it in the signature.
                     truncated_signature.append(" ...")
                     formatted_signatures.append(signature.replace(parameters_string, ",".join(truncated_signature)))
                     break
         else:
+            # The current signature is under the length limit; no truncation needed.
             formatted_signatures.append(signature)
 
     return formatted_signatures
@@ -144,7 +149,7 @@ def _get_truncated_description(
     with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits.
     """
     result = ""
-    markdown_element_ends = []
+    markdown_element_ends = []  # Stores indices into `result` which point to the end boundary of each Markdown element.
     rendered_length = 0
 
     tag_end_index = 0
