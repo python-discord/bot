@@ -110,7 +110,7 @@ class BatchParser:
             log.debug(f"Added items from {doc_item.url} to the parse queue.")
 
             if self._parse_task is None:
-                self._parse_task = asyncio.create_task(self._parse_queue())
+                self._parse_task = scheduling.create_task(self._parse_queue())
         else:
             self._item_futures[doc_item].user_requested = True
         with suppress(ValueError):
