@@ -81,7 +81,7 @@ class DocCog(commands.Cog):
         await self.bot.wait_until_guild_available()
         await self.refresh_inventories()
 
-    def update_single(self, api_package_name: str, base_url: str, package: InventoryDict) -> None:
+    def update_single(self, package_name: str, base_url: str, inventory: InventoryDict) -> None:
         """
         Build the inventory for a single package.
 
@@ -91,16 +91,16 @@ class DocCog(commands.Cog):
                 absolute paths that link to specific symbols
             * `package` is the content of a intersphinx inventory.
         """
-        self.base_urls[api_package_name] = base_url
+        self.base_urls[package_name] = base_url
 
-        for group, items in package.items():
+        for group, items in inventory.items():
             for symbol_name, relative_doc_url in items:
 
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
                 if (original_item := self.doc_symbols.get(symbol_name)) is not None:
                     replaced_symbol_name = self.ensure_unique_symbol_name(
-                        api_package_name,
+                        package_name,
                         group_name,
                         original_item,
                         symbol_name,
@@ -111,7 +111,7 @@ class DocCog(commands.Cog):
                 relative_url_path, _, symbol_id = relative_doc_url.partition("#")
                 # Intern fields that have shared content so we're not storing unique strings for every object
                 doc_item = DocItem(
-                    api_package_name,
+                    package_name,
                     sys.intern(group_name),
                     base_url,
                     sys.intern(relative_url_path),
@@ -120,7 +120,7 @@ class DocCog(commands.Cog):
                 self.doc_symbols[symbol_name] = doc_item
                 self.item_fetcher.add_item(doc_item)
 
-        log.trace(f"Fetched inventory for {api_package_name}.")
+        log.trace(f"Fetched inventory for {package_name}.")
 
     async def update_or_reschedule_inventory(
         self,
