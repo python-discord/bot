@@ -129,12 +129,13 @@ class BatchParser:
             while self._queue:
                 item, soup = self._queue.pop()
                 markdown = None
-                try:
-                    if (future := self._item_futures[item]).done():
-                        # Some items are present in the inventories multiple times under different symbol names,
-                        # if we already parsed an equal item, we can just skip it.
-                        continue
 
+                if (future := self._item_futures[item]).done():
+                    # Some items are present in the inventories multiple times under different symbol names,
+                    # if we already parsed an equal item, we can just skip it.
+                    continue
+
+                try:
                     markdown = await bot.instance.loop.run_in_executor(None, get_symbol_markdown, soup, item)
                     if markdown is not None:
                         await doc_cache.set(item, markdown)
