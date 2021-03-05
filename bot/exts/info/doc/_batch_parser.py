@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
-from typing import Deque, Dict, List, NamedTuple, Union
+from typing import Deque, Dict, List, NamedTuple, Optional, Union
 
 import discord
 from bs4 import BeautifulSoup
@@ -86,7 +86,7 @@ class BatchParser:
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
-    async def get_markdown(self, doc_item: _cog.DocItem) -> str:
+    async def get_markdown(self, doc_item: _cog.DocItem) -> Optional[str]:
         """
         Get the result Markdown of `doc_item`.
 
