@@ -141,14 +141,9 @@ class BatchParser:
                         await doc_cache.set(item, markdown)
                     else:
                         scheduling.create_task(self.stale_inventory_notifier.send_warning(item))
-                except Exception as e:
+                except Exception:
                     log.exception(f"Unexpected error when handling {item}")
-                    if markdown is not None:
-                        future.set_result(markdown)
-                    else:
-                        future.set_exception(e)
-                else:
-                    future.set_result(markdown)
+                future.set_result(markdown)
                 del self._item_futures[item]
                 await asyncio.sleep(0.1)
         finally:
