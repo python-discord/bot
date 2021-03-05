@@ -122,9 +122,9 @@ def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (
         message.channel.id == Channels.incidents,  # Message sent in #incidents
-        not message.author.bot,                    # Not by a bot
-        not message.content.startswith("#"),       # Doesn't start with a hash
-        not message.pinned,                        # And isn't header
+        not message.author.bot,  # Not by a bot
+        not message.content.startswith("#"),  # Doesn't start with a hash
+        not message.pinned,  # And isn't header
     )
     return all(conditions)
 
@@ -165,7 +165,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Em
         embed.description = (
             f"**Author:** {format_user(message.author)}\n"
             f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-            f"**Content:** {text[:2045] + '...' if len(text) > 2048 else text}\n"
+            f"**Content:** {text[:300] + '...' if len(text) > 500 else text}\n"
             "\n"
         )
 
@@ -485,30 +485,40 @@ class Incidents(Cog):
                     ctx = await self.bot.get_context(message)
                     embeds.append(await make_message_link_embed(ctx, message_link))
 
-                try:
-                    webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-                    webhook_embed_list = list(grouper(embeds, 10))
-                    webhook_msg_ids = []
+                webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+                webhook_embed_list = list(grouper(embeds, 10))
 
-                    for x, embed in enumerate(webhook_embed_list):
-                        webhook_msg = await webhook.send(
-                            embeds=[x for x in embed if x is not None],
-                            username=sub_clyde(message.author.name),
-                            avatar_url=message.author.avatar_url,
-                            wait=True
-                        )
-                        webhook_msg_ids.append(webhook_msg.id)
-                        log.trace(f"Message Link Embed {x + 1}/{len(webhook_embed_list)} Sent Succesfully")
-
-                except Exception:
-                    log.exception(f"Failed to send message link embeds {message.id} to #incidents")
-
-                else:
-                    await self.message_link_embeds_cache.set(message.id, ','.join(map(str, webhook_msg_ids)))
-                    log.trace("Message Link Embeds Sent successfully!")
+                await self.send_webhooks(webhook_embed_list, message, webhook)
 
             log.trace(f"Skipping discord message link detection on {message.id}: message doesn't qualify.")
             await add_signals(message)
+
+    async def send_webhooks(
+            self,
+            webhook_embed_list: t.List,
+            message: discord.Message,
+            webhook: discord.Webhook
+    ) -> t.List[int]:
+        webhook_msg_ids = []
+        try:
+            for x, embed in enumerate(webhook_embed_list):
+                webhook_msg = await webhook.send(
+                    embeds=[x for x in embed if x is not None],
+                    username=sub_clyde(message.author.name),
+                    avatar_url=message.author.avatar_url,
+                    wait=True
+                )
+                webhook_msg_ids.append(webhook_msg.id)
+                log.trace(f"Message Link Embed {x + 1}/{len(webhook_embed_list)} Sent Succesfully")
+
+        except Exception:
+            log.exception(f"Failed to send message link embeds {message.id} to #incidents")
+
+        else:
+            await self.message_link_embeds_cache.set(message.id, ','.join(map(str, webhook_msg_ids)))
+            log.trace("Message Link Embeds Sent successfully!")
+
+        return webhook_msg_ids
 
 
 def setup(bot: Bot) -> None:
