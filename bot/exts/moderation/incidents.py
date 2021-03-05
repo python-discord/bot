@@ -499,6 +499,15 @@ class Incidents(Cog):
             message: discord.Message,
             webhook: discord.Webhook
     ) -> t.List[int]:
+        """
+        Send Message Link Embeds to #incidents channel.
+
+        Uses the `webhook` passed in as parameter to send the embeds
+        in `webhook_embed_list` parameter.
+
+        After sending each webhook it maps the `message.id` to the
+        `webhook_msg_ids` IDs in the async rediscache.
+        """
         webhook_msg_ids = []
         try:
             for x, embed in enumerate(webhook_embed_list):
