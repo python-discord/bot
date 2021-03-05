@@ -113,7 +113,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
         if len(signature) > max_signature_length:
             if (parameters_match := _PARAMETERS_RE.search(signature)) is None:
                 # The signature has no parameters or the regex failed; perform a simple truncation of the text.
-                formatted_signatures.append(textwrap.shorten(signature, max_signature_length))
+                formatted_signatures.append(textwrap.shorten(signature, max_signature_length, placeholder="..."))
                 continue
 
             truncated_signature = []
