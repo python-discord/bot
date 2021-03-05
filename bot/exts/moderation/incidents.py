@@ -10,7 +10,7 @@ from async_rediscache import RedisCache
 from discord.ext.commands import Cog, Context, MessageConverter
 from more_itertools.recipes import grouper
 
-from bot import bot
+from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
 from bot.utils import scheduling
 from bot.utils.messages import format_user, sub_clyde
@@ -122,9 +122,9 @@ def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (
         message.channel.id == Channels.incidents,  # Message sent in #incidents
-        not message.author.bot,  # Not by a bot
-        not message.content.startswith("#"),  # Doesn't start with a hash
-        not message.pinned,  # And isn't header
+        not message.author.bot,                    # Not by a bot
+        not message.content.startswith("#"),       # Doesn't start with a hash
+        not message.pinned,                        # And isn't header
     )
     return all(conditions)
 
@@ -231,7 +231,7 @@ class Incidents(Cog):
     # RedisCache[discord.Message.id, List[discord.Message.id]]
     message_link_embeds_cache = RedisCache()
 
-    def __init__(self, bot: bot.Bot) -> None:
+    def __init__(self, bot: Bot) -> None:
         """Prepare `event_lock` and schedule `crawl_task` on start-up."""
         self.bot = bot
 
@@ -511,6 +511,6 @@ class Incidents(Cog):
             await add_signals(message)
 
 
-def setup(bot: bot.Bot) -> None:
+def setup(bot: Bot) -> None:
     """Load the Incidents cog."""
     bot.add_cog(Incidents(bot))
