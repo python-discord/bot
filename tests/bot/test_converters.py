@@ -80,7 +80,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_package_name_for_valid(self):
         """PackageName returns valid package names unchanged."""
-        test_values = ('foo', 'le_mon')
+        test_values = ('foo', 'le_mon', 'num83r')
 
         for name in test_values:
             with self.subTest(identifier=name):
@@ -89,7 +89,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_package_name_for_invalid(self):
         """PackageName raises the proper exception for invalid package names."""
-        test_values = ('text_with_a_dot.', 'UpperCaseName', "num83r")
+        test_values = ('text_with_a_dot.', 'UpperCaseName', 'dashed-name')
 
         for name in test_values:
             with self.subTest(identifier=name):
