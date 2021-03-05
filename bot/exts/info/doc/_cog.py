@@ -58,10 +58,13 @@ class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Bot):
+        # Contains URLs to documentation home pages.
+        # Used to calculate inventory diffs on refreshes and to display all currently stored inventories.
         self.base_urls = {}
         self.bot = bot
-        self.doc_symbols: Dict[str, DocItem] = {}
+        self.doc_symbols: Dict[str, DocItem] = {}  # Maps symbol names to objects containing their metadata.
         self.item_fetcher = _batch_parser.BatchParser()
+        # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
 
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
