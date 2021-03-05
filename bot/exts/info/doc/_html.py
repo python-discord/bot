@@ -33,9 +33,9 @@ class Strainer(SoupStrainer):
             log.warning("`text` is not a supported kwarg in the custom strainer.")
         super().__init__(**kwargs)
 
-    markup_hint = Union[PageElement, List["markup_hint"]]
+    Markup = Union[PageElement, List["Markup"]]
 
-    def search(self, markup: markup_hint) -> Union[PageElement, str]:
+    def search(self, markup: Markup) -> Union[PageElement, str]:
         """Extend default SoupStrainer behaviour to allow matching both `Tag`s` and `NavigableString`s."""
         if isinstance(markup, str):
             # Let everything through the text filter if we're including strings and tags.
