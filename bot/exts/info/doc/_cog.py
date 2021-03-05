@@ -73,7 +73,10 @@ class DocCog(commands.Cog):
         self.refresh_event.set()
         self.symbol_get_event = SharedEvent()
 
-        self.init_refresh_task = self.bot.loop.create_task(self.init_refresh_inventory())
+        self.init_refresh_task = self.bot.loop.create_task(
+            self.init_refresh_inventory(),
+            name="Doc inventory init"
+        )
 
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def init_refresh_inventory(self) -> None:
@@ -417,4 +420,4 @@ class DocCog(commands.Cog):
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
         self.init_refresh_task.cancel()
-        asyncio.create_task(self.item_fetcher.clear())
+        asyncio.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")

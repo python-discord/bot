@@ -24,7 +24,10 @@ class StaleInventoryNotifier:
     """Handle sending notifications about stale inventories through `DocItem`s to dev log."""
 
     def __init__(self):
-        self._init_task = bot.instance.loop.create_task(self._init_channel())
+        self._init_task = bot.instance.loop.create_task(
+            self._init_channel(),
+            name="StaleInventoryNotifier channel init"
+        )
         self._warned_urls = set()
 
     async def _init_channel(self) -> None:
@@ -110,7 +113,7 @@ class BatchParser:
             log.debug(f"Added items from {doc_item.url} to the parse queue.")
 
             if self._parse_task is None:
-                self._parse_task = scheduling.create_task(self._parse_queue())
+                self._parse_task = scheduling.create_task(self._parse_queue(), name="Queue parse")
         else:
             self._item_futures[doc_item].user_requested = True
         with suppress(ValueError):
@@ -141,7 +144,9 @@ class BatchParser:
                         await doc_cache.set(item, markdown)
                     else:
                         # Don't wait for this coro as the parsing doesn't depend on anything it does.
-                        scheduling.create_task(self.stale_inventory_notifier.send_warning(item))
+                        scheduling.create_task(
+                            self.stale_inventory_notifier.send_warning(item), name="Stale inventory warning"
+                        )
                 except Exception:
                     log.exception(f"Unexpected error when handling {item}")
                 future.set_result(markdown)
