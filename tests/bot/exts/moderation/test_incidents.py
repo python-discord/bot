@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import aiohttp
 import discord
+from async_rediscache import RedisSession
 
 from bot.constants import Colours
 from bot.exts.moderation import incidents
@@ -21,6 +22,22 @@ from tests.helpers import (
     MockTextChannel,
     MockUser,
 )
+
+redis_session = None
+redis_loop = asyncio.get_event_loop()
+
+
+def setUpModule():  # noqa: N802
+    """Create and connect to the fakeredis session."""
+    global redis_session
+    redis_session = RedisSession(use_fakeredis=True)
+    redis_loop.run_until_complete(redis_session.connect())
+
+
+def tearDownModule():  # noqa: N802
+    """Close the fakeredis session."""
+    if redis_session:
+        redis_loop.run_until_complete(redis_session.close())
 
 
 class MockAsyncIterable:
@@ -513,7 +530,7 @@ class TestProcessEvent(TestIncidents):
         with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
             await self.cog_instance.process_event(
                 reaction=incidents.Signal.ACTIONED.value,
-                incident=MockMessage(),
+                incident=MockMessage(id=123),
                 member=MockMember(roles=[MockRole(id=1)])
             )
 
@@ -533,7 +550,7 @@ class TestProcessEvent(TestIncidents):
             with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
                 await self.cog_instance.process_event(
                     reaction=incidents.Signal.ACTIONED.value,
-                    incident=MockMessage(),
+                    incident=MockMessage(id=123),
                     member=MockMember(roles=[MockRole(id=1)])
                 )
         except asyncio.TimeoutError:

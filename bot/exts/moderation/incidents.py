@@ -478,7 +478,6 @@ class Incidents(Cog):
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
         if is_incident(message):
             message_links = DISCORD_MESSAGE_LINK_RE.findall(str(message.content))
-            print(message_links)
             if message_links:
 
                 embeds = []
