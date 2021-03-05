@@ -211,12 +211,10 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
     )
     description = _WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
     if signatures is not None:
-        formatted_markdown = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
+        signature = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
+        return f"{signature}\n{description}"
     else:
-        formatted_markdown = ""
-    formatted_markdown += f"\n{description}"
-
-    return formatted_markdown
+        return description
 
 
 def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:
