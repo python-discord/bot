@@ -42,11 +42,11 @@ COMMAND_LOCK_SINGLETON = "inventory refresh"
 class DocItem(NamedTuple):
     """Holds inventory symbol information."""
 
-    package: str
-    group: str
-    base_url: str
-    relative_url_path: str
-    symbol_id: str
+    package: str  # Name of the package name the symbol is from
+    group: str  # Interpshinx "role" of the symbol, for example `label` or `method`
+    base_url: str  # Absolute path to to which the relative path resolves, same for all items with the same package
+    relative_url_path: str  # Relative path to the page where the symbol is located
+    symbol_id: str  # Fragment id used to locate the symbol on the page
 
     @property
     def url(self) -> str:
