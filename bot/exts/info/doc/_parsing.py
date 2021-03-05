@@ -187,7 +187,7 @@ def _get_truncated_description(
     possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
     if not possible_truncation_indices:
         # In case there is no Markdown element ending before the truncation index, use shorten as a fallback.
-        truncated_result = textwrap.shorten(result, truncate_index)
+        truncated_result = textwrap.shorten(result, truncate_index, placeholder="")
     else:
         # Truncate at the last Markdown element that comes before the truncation index.
         markdown_truncate_index = possible_truncation_indices[-1]
