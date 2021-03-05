@@ -30,6 +30,9 @@ class DocRedisCache(RedisObject):
 
         with await self._get_pool_connection() as connection:
             if redis_key not in self._set_expires:
+                # An expire is only set if the key didn't exist before.
+                # If this is the first time setting values for this key check if it exists and add it to
+                # `_set_expires` to prevent redundant checks for subsequent uses with items from the same page.
                 self._set_expires.add(redis_key)
                 needs_expire = not await connection.exists(redis_key)
 
