@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import collections
 import logging
-import time
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
@@ -63,20 +62,11 @@ class ParseResultFuture(asyncio.Future):
 
     `user_requested` is set by the parser when a Future is requested by an user and moved to the front,
     allowing the futures to only be waited for when clearing if they were user requested.
-
-    `result_set_time` provides the time at which the future's result has been set,
-    or -inf if the result hasn't been set yet
     """
 
     def __init__(self):
         super().__init__()
         self.user_requested = False
-        self.result_set_time = float("inf")
-
-    def set_result(self, result: str, /) -> None:
-        """Set `self.result_set_time` to current time when the result is set."""
-        self.result_set_time = time.time()
-        super().set_result(result)
 
 
 class BatchParser:
@@ -91,10 +81,8 @@ class BatchParser:
     def __init__(self):
         self._queue: Deque[QueueItem] = collections.deque()
         self._page_doc_items: Dict[str, List[_cog.DocItem]] = defaultdict(list)
-        self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = {}
+        self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
         self._parse_task = None
-
-        self.cleanup_futures_task = bot.instance.loop.create_task(self._clean_up_futures())
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
@@ -107,8 +95,7 @@ class BatchParser:
 
         Not safe to run while `self.clear` is running.
         """
-        if doc_item not in self._item_futures:
-            self._item_futures.update((item, ParseResultFuture()) for item in self._page_doc_items[doc_item.url])
+        if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
             async with bot.instance.http_session.get(doc_item.url) as response:
@@ -150,7 +137,7 @@ class BatchParser:
 
                     markdown = await bot.instance.loop.run_in_executor(None, get_symbol_markdown, soup, item)
                     if markdown is not None:
-                        scheduling.create_task(doc_cache.set(item, markdown))
+                        await doc_cache.set(item, markdown)
                     else:
                         scheduling.create_task(self.stale_inventory_notifier.send_warning(item))
                 except Exception as e:
@@ -161,6 +148,7 @@ class BatchParser:
                         future.set_exception(e)
                 else:
                     future.set_result(markdown)
+                del self._item_futures[item]
                 await asyncio.sleep(0.1)
         finally:
             self._parse_task = None
@@ -194,19 +182,3 @@ class BatchParser:
         self._queue.clear()
         self._page_doc_items.clear()
         self._item_futures.clear()
-
-    async def _clean_up_futures(self) -> None:
-        """
-        Clear old futures from internal results.
-
-        After a future is set, we only need to wait for old requests to its associated `DocItem` to finish
-        as all new requests will get the value from the redis cache in the cog first.
-        Keeping them around for longer than a second is unnecessary and keeps the parsed Markdown strings alive.
-        """
-        while True:
-            if not self._queue:
-                current_time = time.time()
-                for key, future in self._item_futures.copy().items():
-                    if current_time - future.result_set_time > 5:
-                        del self._item_futures[key]
-            await asyncio.sleep(5)
