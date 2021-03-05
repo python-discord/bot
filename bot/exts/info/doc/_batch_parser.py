@@ -140,6 +140,7 @@ class BatchParser:
                     if markdown is not None:
                         await doc_cache.set(item, markdown)
                     else:
+                        # Don't wait for this coro as the parsing doesn't depend on anything it does.
                         scheduling.create_task(self.stale_inventory_notifier.send_warning(item))
                 except Exception:
                     log.exception(f"Unexpected error when handling {item}")
