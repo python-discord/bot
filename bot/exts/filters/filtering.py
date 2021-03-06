@@ -242,7 +242,7 @@ class Filtering(Cog):
                 if _filter["enabled"] and _filter["content_only"]:
                     filter_result = await _filter["function"](result)
                     reason = None
-                    
+
                     if isinstance(filter_result, tuple):
                         match, reason = filter_result
                     else:
