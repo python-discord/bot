@@ -239,8 +239,6 @@ class DocCog(commands.Cog):
         """
         doc_item = self.doc_symbols.get(symbol_name)
         if doc_item is None and " " in symbol_name:
-            # If an invalid symbol contains a space, check if the command was invoked
-            # in the format !d <symbol> <message>
             symbol_name = symbol_name.split(" ", maxsplit=1)[0]
             doc_item = self.doc_symbols.get(symbol_name)
 
