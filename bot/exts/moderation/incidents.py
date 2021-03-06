@@ -123,9 +123,9 @@ def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (
         message.channel.id == Channels.incidents,  # Message sent in #incidents
-        not message.author.bot,  # Not by a bot
-        not message.content.startswith("#"),  # Doesn't start with a hash
-        not message.pinned,  # And isn't header
+        not message.author.bot,                    # Not by a bot
+        not message.content.startswith("#"),       # Doesn't start with a hash
+        not message.pinned,                        # And isn't header
     )
     return all(conditions)
 
