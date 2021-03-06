@@ -280,9 +280,9 @@ class Emojis(metaclass=YAMLGetter):
     badge_staff: str
     badge_verified_bot_developer: str
 
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str  # noqa: E704
-    defcon_updated: str  # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str  # noqa: E704
+    defcon_update: str  # noqa: E704
 
     failmail: str
 
@@ -319,9 +319,9 @@ class Icons(metaclass=YAMLGetter):
     crown_red: str
 
     defcon_denied: str    # noqa: E704
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str   # noqa: E704
-    defcon_updated: str   # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str   # noqa: E704
+    defcon_update: str   # noqa: E704
 
     filtering: str
 
@@ -487,6 +487,7 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     core_developers: int
+    devops: int
     helpers: int
     moderators: int
     owners: int
@@ -531,6 +532,8 @@ class URLs(metaclass=YAMLGetter):
     github_bot_repo: str
 
     # Base site vars
+    connect_max_retries: int
+    connect_cooldown: int
     site: str
     site_api: str
     site_schema: str

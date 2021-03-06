@@ -1,17 +1,27 @@
 import logging
 import os
 import sys
-from logging import Logger, handlers
+from logging import Logger, StreamHandler, handlers
 from pathlib import Path
 
 import coloredlogs
 import sentry_sdk
+from pythonjsonlogger import jsonlogger
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
 from bot import constants
 
 TRACE_LEVEL = 5
+
+PROD_FIELDS = [
+    "asctime",
+    "name",
+    "levelname",
+    "message",
+    "funcName",
+    "filename"
+]
 
 
 def setup() -> None:
@@ -33,21 +43,28 @@ def setup() -> None:
     root_log.setLevel(log_level)
     root_log.addHandler(file_handler)
 
-    if "COLOREDLOGS_LEVEL_STYLES" not in os.environ:
-        coloredlogs.DEFAULT_LEVEL_STYLES = {
-            **coloredlogs.DEFAULT_LEVEL_STYLES,
-            "trace": {"color": 246},
-            "critical": {"background": "red"},
-            "debug": coloredlogs.DEFAULT_LEVEL_STYLES["info"]
-        }
+    if constants.DEBUG_MODE:
+        if "COLOREDLOGS_LEVEL_STYLES" not in os.environ:
+            coloredlogs.DEFAULT_LEVEL_STYLES = {
+                **coloredlogs.DEFAULT_LEVEL_STYLES,
+                "trace": {"color": 246},
+                "critical": {"background": "red"},
+                "debug": coloredlogs.DEFAULT_LEVEL_STYLES["info"]
+            }
 
-    if "COLOREDLOGS_LOG_FORMAT" not in os.environ:
-        coloredlogs.DEFAULT_LOG_FORMAT = format_string
+        if "COLOREDLOGS_LOG_FORMAT" not in os.environ:
+            coloredlogs.DEFAULT_LOG_FORMAT = format_string
 
-    if "COLOREDLOGS_LOG_LEVEL" not in os.environ:
-        coloredlogs.DEFAULT_LOG_LEVEL = log_level
+        if "COLOREDLOGS_LOG_LEVEL" not in os.environ:
+            coloredlogs.DEFAULT_LOG_LEVEL = log_level
 
-    coloredlogs.install(logger=root_log, stream=sys.stdout)
+        coloredlogs.install(logger=root_log, stream=sys.stdout)
+    else:
+        json_format = " ".join([f"%({field})s" for field in PROD_FIELDS])
+        stream_handler = StreamHandler()
+        formatter = jsonlogger.JsonFormatter(json_format)
+        stream_handler.setFormatter(formatter)
+        root_log.addHandler(stream_handler)
 
     logging.getLogger("discord").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
