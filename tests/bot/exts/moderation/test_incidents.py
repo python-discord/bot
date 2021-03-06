@@ -23,22 +23,6 @@ from tests.helpers import (
     MockUser,
 )
 
-redis_session = None
-redis_loop = asyncio.get_event_loop()
-
-
-def setUpModule():  # noqa: N802
-    """Create and connect to the fakeredis session."""
-    global redis_session
-    redis_session = RedisSession(use_fakeredis=True)
-    redis_loop.run_until_complete(redis_session.connect())
-
-
-def tearDownModule():  # noqa: N802
-    """Close the fakeredis session."""
-    if redis_session:
-        redis_loop.run_until_complete(redis_session.close())
-
 
 class MockAsyncIterable:
     """
@@ -299,6 +283,22 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
     for each test function, but not make any assertions on its own. Tests can mutate
     the instance as they wish.
     """
+
+    session = None
+
+    async def flush(self):
+        """Flush everything from the database to prevent carry-overs between tests."""
+        with await self.session.pool as connection:
+            await connection.flushall()
+
+    async def asyncSetUp(self):
+        self.session = RedisSession(use_fakeredis=True)
+        await self.session.connect()
+        await self.flush()
+
+    async def asyncTearDown(self):
+        if self.session:
+            await self.session.close()
 
     def setUp(self):
         """
