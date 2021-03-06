@@ -102,7 +102,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 if response_data.get('user', False):
                     await ctx.send(":x: The specified user can't be found in the database tables")
                 elif response_data.get('actor', False):
-                    await ctx.send(":x: You already have nominated this user")
+                    await ctx.send(":x: You have already nominated this user")
 
                 return
             else:
@@ -176,7 +176,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @nomination_edit_group.command(name='reason')
     @has_any_role(*MODERATION_ROLES)
     async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: FetchedMember, *, reason: str) -> None:
-        """Edits the reason of `actor` entry for the nomination with the given `id`."""
+        """Edits the reason of a specific nominator in a specific active nomination."""
         try:
             nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
@@ -188,21 +188,21 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 raise
 
         if not nomination["active"]:
-            await ctx.send(":x: Can't edit reason of ended nomination.")
+            await ctx.send(":x: Can't edit the reason of an inactive nomination.")
             return
 
         if not any(entry["actor"] == actor.id for entry in nomination["entries"]):
-            await ctx.send(f":x: {actor} don't have entry for this nomination.")
+            await ctx.send(f":x: {actor} doesn't have an entry in this nomination.")
             return
 
-        self.log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {reason}")
+        self.log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {repr(reason)}")
 
         await self.bot.api_client.patch(
             f"{self.api_endpoint}/{nomination_id}",
             json={"actor": actor.id, "reason": reason}
         )
         await self.fetch_user_cache()  # Update cache
-        await ctx.send(":white_check_mark: Successfully updates reason of nomination.")
+        await ctx.send(":white_check_mark: Successfully updated nomination reason.")
 
     @nomination_edit_group.command(name='end_reason')
     @has_any_role(*MODERATION_ROLES)
@@ -219,10 +219,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 raise
 
         if nomination["active"]:
-            await ctx.send(":x: Cannot edit end reason of active nomination.")
+            await ctx.send(":x: Can't edit the end reason of an active nomination.")
             return
 
-        self.log.trace(f"Changing end reason for nomination with id {nomination_id} to {reason}")
+        self.log.trace(f"Changing end reason for nomination with id {nomination_id} to {repr(reason)}")
 
         await self.bot.api_client.patch(
             f"{self.api_endpoint}/{nomination_id}",
