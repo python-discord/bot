@@ -32,8 +32,10 @@ APPEAL_EMAIL = "appeals@pythondiscord.com"
 
 INFRACTION_TITLE = "Please review our rules"
 INFRACTION_APPEAL_EMAIL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
-INFRACTION_APPEAL_MODMAIL_FOOTER = ('If you would like to discuss or appeal this infraction, '
-                                    'send a message to the ModMail bot')
+INFRACTION_APPEAL_MODMAIL_FOOTER = (
+    'If you would like to discuss or appeal this infraction, '
+    'send a message to the ModMail bot'
+)
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
