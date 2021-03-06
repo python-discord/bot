@@ -388,12 +388,14 @@ class Incidents(Cog):
 
         log.trace("Deleting discord links webhook message.")
         webhook_msg_ids = await self.message_link_embeds_cache.get(incident.id)
-        webhook_msg_ids = webhook_msg_ids.split(',')
-        webhook = await self.bot.fetch_webhook(Webhooks.incidents)
 
-        for x, msg in enumerate(webhook_msg_ids):
-            await webhook.delete_message(msg)
-            log.trace(f"Deleted discord links webhook message{x}/{len(webhook_msg_ids)}")
+        if webhook_msg_ids:
+            webhook_msg_ids = webhook_msg_ids.split(',')
+            webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+
+            for x, msg in enumerate(webhook_msg_ids):
+                await webhook.delete_message(msg)
+                log.trace(f"Deleted discord links webhook message{x}/{len(webhook_msg_ids)}")
 
         log.trace("Successfully deleted discord links webhook message.")
 
