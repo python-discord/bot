@@ -24,13 +24,16 @@ bot:
 
 style:
     colours:
+        blue: 0x3775a8
         bright_green: 0x01d277
-        soft_green: 0x68c290
-        soft_orange: 0xf9cb54
-        soft_red: 0xcd6d6d
         orange: 0xe67e22
         pink: 0xcf84e0
         purple: 0xb734eb
+        soft_green: 0x68c290
+        soft_orange: 0xf9cb54
+        soft_red: 0xcd6d6d
+        white: 0xfffffe
+        yellow: 0xffd241
 
     emojis:
         badge_bug_hunter: "<:bug_hunter_lvl1:743882896372269137>"
@@ -44,9 +47,9 @@ style:
         badge_staff: "<:discord_staff:743882896498098226>"
         badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
 
-        defcon_disabled: "<:defcondisabled:470326273952972810>"
-        defcon_enabled:  "<:defconenabled:470326274213150730>"
-        defcon_updated:  "<:defconsettingsupdated:470326274082996224>"
+        defcon_shutdown:    "<:defcondisabled:470326273952972810>"
+        defcon_unshutdown:  "<:defconenabled:470326274213150730>"
+        defcon_update:      "<:defconsettingsupdated:470326274082996224>"
 
         failmail: "<:failmail:633660039931887616>"
 
@@ -80,13 +83,14 @@ style:
         crown_red:     "https://cdn.discordapp.com/emojis/469964154879344640.png"
 
         defcon_denied:   "https://cdn.discordapp.com/emojis/472475292078964738.png"
-        defcon_disabled: "https://cdn.discordapp.com/emojis/470326273952972810.png"
-        defcon_enabled:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
-        defcon_updated:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
+        defcon_shutdown: "https://cdn.discordapp.com/emojis/470326273952972810.png"
+        defcon_unshutdown:  "https://cdn.discordapp.com/emojis/470326274213150730.png"
+        defcon_update:  "https://cdn.discordapp.com/emojis/472472638342561793.png"
 
         filtering: "https://cdn.discordapp.com/emojis/472472638594482195.png"
 
         green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-checkmark-dist.png"
+        green_questionmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-question-mark-dist.png"
         guild_update: "https://cdn.discordapp.com/emojis/469954765141442561.png"
 
         hash_blurple: "https://cdn.discordapp.com/emojis/469950142942806017.png"
@@ -257,6 +261,7 @@ guild:
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
         core_developers:                    587606783669829632
+        devops:                             409416496733880320
         helpers:            &HELPERS_ROLE   267630620367257601
         moderators:         &MODS_ROLE      267629731250176001
         owners:             &OWNERS_ROLE    267627879762755584
@@ -334,8 +339,11 @@ keys:
 
 urls:
     # PyDis site vars
+    connect_max_retries:       3
+    connect_cooldown:          5
     site:        &DOMAIN       "pythondiscord.com"
-    site_api:    &API    !JOIN ["api.", *DOMAIN]
+    site_api:    &API          "pydis-api.default.svc.cluster.local"
+    site_api_schema:           "http://"
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
     site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
@@ -367,7 +375,7 @@ anti_spam:
     rules:
         attachments:
             interval: 10
-            max: 9
+            max: 6
 
         burst:
             interval: 10
@@ -466,7 +474,7 @@ help_channels:
     deleted_idle_minutes: 5
 
     # Maximum number of channels to put in the available category
-    max_available: 2
+    max_available: 3
 
     # Maximum number of channels across all 3 categories
     # Note Discord has a hard limit of 50 channels per category, so this shouldn't be > 50

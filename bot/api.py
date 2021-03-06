@@ -53,7 +53,7 @@ class APIClient:
 
     @staticmethod
     def _url_for(endpoint: str) -> str:
-        return f"{URLs.site_schema}{URLs.site_api}/{quote_url(endpoint)}"
+        return f"{URLs.site_api_schema}{URLs.site_api}/{quote_url(endpoint)}"
 
     async def close(self) -> None:
         """Close the aiohttp session."""
