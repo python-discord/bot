@@ -291,12 +291,12 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
         with await self.session.pool as connection:
             await connection.flushall()
 
-    async def asyncSetUp(self):
+    async def asyncSetUp(self):  # noqa: N802
         self.session = RedisSession(use_fakeredis=True)
         await self.session.connect()
         await self.flush()
 
-    async def asyncTearDown(self):
+    async def asyncTearDown(self):  # noqa: N802
         if self.session:
             await self.session.close()
 
