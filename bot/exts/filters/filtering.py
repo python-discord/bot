@@ -240,7 +240,13 @@ class Filtering(Cog):
                 # We also do not need to worry about filters that take the full message,
                 # since all we have is an arbitrary string.
                 if _filter["enabled"] and _filter["content_only"]:
-                    match, reason = await _filter["function"](result)
+                    filter_result = await _filter["function"](result)
+                    reason = None
+                    
+                    if isinstance(filter_result, tuple):
+                        match, reason = filter_result
+                    else:
+                        match = filter_result
 
                     if match:
                         # If this is a filter (not a watchlist), we set the variable so we know
