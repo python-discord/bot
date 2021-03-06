@@ -1,17 +1,9 @@
-In Python, there are several ways to do string interpolation, including using `%s`\'s and by using the `+` operator to concatenate strings together. However, because some of these methods offer poor readability and require typecasting to prevent errors, you should for the most part be using a feature called format strings.
+Creating a Python string with your variables using the `+` operator can be difficult to write and read. F-strings (*format-strings*) make it easy to insert values into a string. If you put an `f` in front of the first quote, you can then put Python expressions between curly braces in the string.
 
-**In Python 3.6 or later, we can use f-strings like this:**
 ```py
-snake = "Pythons"
-print(f"{snake} are some of the largest snakes in the world")
+>>> snake = "pythons"
+>>> number = 21
+>>> f"There are {number * 2} {snake} on the plane."
+"There are 42 pythons on the plane."
 ```
-**In earlier versions of Python or in projects where backwards compatibility is very important, use  str.format() like this:**
-```py
-snake = "Pythons"
-
-# With str.format() you can either use indexes
-print("{0} are some of the largest snakes in the world".format(snake))
-
-# Or keyword arguments
-print("{family} are some of the largest snakes in the world".format(family=snake))
-```
+Note that even when you include an expression that isn't a string, like `number * 2`, Python will convert it to a string for you.

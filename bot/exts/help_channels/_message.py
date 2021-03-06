@@ -1,4 +1,5 @@
 import logging
+import textwrap
 import typing as t
 from datetime import datetime
 
@@ -90,6 +91,38 @@ async def is_empty(channel: discord.TextChannel) -> bool:
             return True
 
     return False
+
+
+async def dm_on_open(message: discord.Message) -> None:
+    """
+    DM claimant with a link to the claimed channel's first message, with a 100 letter preview of the message.
+
+    Does nothing if the user has DMs disabled.
+    """
+    embed = discord.Embed(
+        title="Help channel opened",
+        description=f"You claimed {message.channel.mention}.",
+        colour=bot.constants.Colours.bright_green,
+        timestamp=message.created_at,
+    )
+
+    embed.set_thumbnail(url=constants.Icons.green_questionmark)
+    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...")
+    if formatted_message:
+        embed.add_field(name="Your message", value=formatted_message, inline=False)
+    embed.add_field(
+        name="Conversation",
+        value=f"[Jump to message!]({message.jump_url})",
+        inline=False,
+    )
+
+    try:
+        await message.author.send(embed=embed)
+        log.trace(f"Sent DM to {message.author.id} after claiming help channel.")
+    except discord.errors.Forbidden:
+        log.trace(
+            f"Ignoring to send DM to {message.author.id} after claiming help channel: DMs disabled."
+        )
 
 
 async def notify(channel: discord.TextChannel, last_notification: t.Optional[datetime]) -> t.Optional[datetime]:
