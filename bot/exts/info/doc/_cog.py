@@ -9,6 +9,7 @@ from contextlib import suppress
 from types import SimpleNamespace
 from typing import Dict, NamedTuple, Optional, Union
 
+import aiohttp
 import discord
 from discord.ext import commands
 
@@ -257,7 +258,17 @@ class DocCog(commands.Cog):
 
         if markdown is None:
             log.debug(f"Redis cache miss with {doc_item}.")
-            markdown = await self.item_fetcher.get_markdown(doc_item)
+            try:
+                markdown = await self.item_fetcher.get_markdown(doc_item)
+
+            except aiohttp.ClientError as e:
+                log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
+                return "Unable to parse the requested symbol due to a network error."
+
+            except Exception:
+                log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
+                return "Unable to parse the requested symbol due to an error."
+
             if markdown is None:
                 return "Unable to parse the requested symbol."
         return markdown
