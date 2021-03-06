@@ -229,7 +229,40 @@ class DocCog(commands.Cog):
         log.debug("Finished inventory refresh.")
         self.refresh_event.set()
 
-    async def get_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
+    def get_symbol_item(self, symbol_name: str) -> Optional[DocItem]:
+        """
+        Get the `DocItem` associated with `symbol_name` from the `doc_symbols` dict.
+
+        If the doc item is not found directly from the name and the name contains a space,
+        the first word of the name will be attempted to be used to get the item.
+        """
+        doc_item = self.doc_symbols.get(symbol_name)
+        if doc_item is None and " " in symbol_name:
+            # If an invalid symbol contains a space, check if the command was invoked
+            # in the format !d <symbol> <message>
+            symbol_name = symbol_name.split(" ", maxsplit=1)[0]
+            doc_item = self.doc_symbols.get(symbol_name)
+
+        return doc_item
+
+    async def get_symbol_markdown(self, doc_item: DocItem) -> str:
+        """
+        Get the Markdown from the symbol `doc_item` refers to.
+
+        First a redis lookup is attempted, if that fails the `item_fetcher`
+        is used to fetch the page and parse the HTML from it into Markdown.
+        """
+        with self.symbol_get_event:
+            markdown = await doc_cache.get(doc_item)
+
+        if markdown is None:
+            log.debug(f"Redis cache miss with {doc_item}.")
+            markdown = await self.item_fetcher.get_markdown(doc_item)
+            if markdown is None:
+                return "Unable to parse the requested symbol."
+        return markdown
+
+    async def create_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -242,32 +275,17 @@ class DocCog(commands.Cog):
             log.debug("Waiting for inventories to be refreshed before processing item.")
             await self.refresh_event.wait()
 
-        doc_item = self.doc_symbols.get(symbol_name)
-        if doc_item is None and " " in symbol_name:
-            # If an invalid symbol contains a space, check if the command was invoked
-            # in the format !d <symbol> <message>
-            symbol_name = symbol_name.split(" ", maxsplit=1)[0]
-            doc_item = self.doc_symbols.get(symbol_name)
-
+        doc_item = self.get_symbol_item(symbol_name)
         if doc_item is None:
             log.debug("Symbol does not exist.")
             return None
 
         self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
 
-        with self.symbol_get_event:
-            markdown = await doc_cache.get(doc_item)
-
-        if markdown is None:
-            log.debug(f"Redis cache miss for symbol `{symbol_name}`.")
-            markdown = await self.item_fetcher.get_markdown(doc_item)
-            if markdown is None:
-                markdown = "Unable to parse the requested symbol."
-
         embed = discord.Embed(
             title=discord.utils.escape_markdown(symbol_name),
             url=f"{doc_item.url}#{doc_item.symbol_id}",
-            description=markdown
+            description=await self.get_symbol_markdown(doc_item)
         )
         # Show all symbols with the same name that were renamed in the footer,
         # with a max of 100 chars.
@@ -314,7 +332,7 @@ class DocCog(commands.Cog):
         else:
             symbol = symbol_name.strip("`")
             async with ctx.typing():
-                doc_embed = await self.get_symbol_embed(symbol)
+                doc_embed = await self.create_symbol_embed(symbol)
 
             if doc_embed is None:
                 error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
