@@ -282,11 +282,6 @@ class DocCog(commands.Cog):
 
         self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
 
-        embed = discord.Embed(
-            title=discord.utils.escape_markdown(symbol_name),
-            url=f"{doc_item.url}#{doc_item.symbol_id}",
-            description=await self.get_symbol_markdown(doc_item)
-        )
         # Show all symbols with the same name that were renamed in the footer,
         # with a max of 100 chars.
         if symbol_name in self.renamed_symbols:
@@ -294,6 +289,12 @@ class DocCog(commands.Cog):
             footer_text = textwrap.shorten("Moved: " + renamed_symbols, 100, placeholder=' ...')
         else:
             footer_text = ""
+
+        embed = discord.Embed(
+            title=discord.utils.escape_markdown(symbol_name),
+            url=f"{doc_item.url}#{doc_item.symbol_id}",
+            description=await self.get_symbol_markdown(doc_item)
+        )
         embed.set_footer(text=footer_text)
         return embed
 
