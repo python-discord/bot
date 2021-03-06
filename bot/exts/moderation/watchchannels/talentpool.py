@@ -181,7 +181,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
             if e.response.status == 404:
-                self.log.trace(f"Nomination API 404: Can't nomination with id {nomination_id}")
+                self.log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
                 await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
                 return
             else:
@@ -212,7 +212,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
             if e.response.status == 404:
-                self.log.trace(f"Nomination API 404: Can't nomination with id {nomination_id}")
+                self.log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
                 await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
                 return
             else:
