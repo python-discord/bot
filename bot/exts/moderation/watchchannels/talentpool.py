@@ -121,7 +121,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         )
 
         if history:
-            msg += f"\n\n{len(history)} previous nominations in total"
+            msg += f"\n\n({len(history)} previous nominations in total)"
 
         await ctx.send(msg)
 
