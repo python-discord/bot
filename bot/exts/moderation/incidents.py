@@ -26,8 +26,9 @@ CRAWL_LIMIT = 50
 CRAWL_SLEEP = 2
 
 DISCORD_MESSAGE_LINK_RE = re.compile(
-    r"http(?:s):\/\/discord(?:[\.,]|dot)com(?:\/|slash)channels(?:\/|slash)[0-9]{18}(?:\/|slash)[0-9]{18}"
-    r"(?:\/|slash)[0-9]{18}"
+    r'(https?:\/\/(?:(ptb|canary|www)\.)?discord(?:app)?\.com\/channels\/'
+    r'[0-9]{15,21}'
+    r'\/[0-9]{15,21}\/[0-9]{15,21})'
 )
 
 
@@ -483,7 +484,7 @@ class Incidents(Cog):
                 embeds = []
                 for message_link in message_links:
                     ctx = await self.bot.get_context(message)
-                    embeds.append(await make_message_link_embed(ctx, message_link))
+                    embeds.append(await make_message_link_embed(ctx, message_link[0]))
 
                 webhook = await self.bot.fetch_webhook(Webhooks.incidents)
                 webhook_embed_list = list(grouper(embeds, 10))
