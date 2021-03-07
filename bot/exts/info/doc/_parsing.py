@@ -46,15 +46,6 @@ _BRACKET_PAIRS = {
 }
 
 
-def _is_closing_quote(search_string: str, index: int) -> bool:
-    """Check whether the quote at `index` inside `search_string` can be a closing quote."""
-    if search_string[index - 1] != "\\":
-        return True  # The quote is not escaped.
-    elif search_string[index - 2] == "\\":
-        return True
-    return False
-
-
 def _split_parameters(parameters_string: str) -> Iterator[str]:
     """
     Split parameters of a signature into individual parameter strings on commas.
@@ -70,9 +61,15 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
         if character in {"'", '"'}:
             # Skip everything inside of strings, regardless of the depth.
             quote_character = character  # The closing quote must equal the opening quote.
-            for index, character in enumerated_string:
-                if character == quote_character and _is_closing_quote(parameters_string, index):
+            preceding_backslashes = 0
+            for _, character in enumerated_string:
+                # If an odd number of backslashes precedes the quote, it was escaped.
+                if character == quote_character and not preceding_backslashes % 2:
                     break
+                if character == "\\":
+                    preceding_backslashes += 1
+                else:
+                    preceding_backslashes = 0
 
         elif current_search is None:
             if (current_search := _BRACKET_PAIRS.get(character)) is not None:

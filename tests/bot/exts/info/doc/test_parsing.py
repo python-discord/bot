@@ -42,6 +42,13 @@ class SignatureSplitter(TestCase):
         )
         self._run_tests(test_cases)
 
+    def test_quote_escaped(self):
+        test_cases = (
+            (r"'\',','\\',0", [r"'\','", r"'\\'", "0"]),
+            (r"'0\',0\\\'\\',0", [r"'0\',0\\\'\\'", "0"]),
+        )
+        self._run_tests(test_cases)
+
     def test_real_signatures(self):
         test_cases = (
             ("start, stop[, step]", ["start", " stop[, step]"]),
