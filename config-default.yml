@@ -195,6 +195,7 @@ guild:
         incidents_archive:                  720668923636351037
         mods:               &MODS           305126844661760000
         mod_alerts:                         473092532147060736
+        mod_appeals:        &MOD_APPEALS    808790025688711198
         mod_meta:           &MOD_META       775412552795947058
         mod_spam:           &MOD_SPAM       620607373828030464
         mod_tools:          &MOD_TOOLS      775413915391098921
@@ -230,6 +231,7 @@ guild:
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
+        - *MOD_APPEALS
         - *MOD_META
         - *MOD_TOOLS
         - *MODS
