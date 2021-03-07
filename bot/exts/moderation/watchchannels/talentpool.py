@@ -272,7 +272,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             reason = site_entry["reason"] or "*None*"
             created = time.format_infraction(site_entry["inserted_at"])
             entries.append(
-                f"Actor: {actor.mention if actor else actor_id}\nReason: {reason}\nCreated: {created}"
+                f"Actor: {actor.mention if actor else actor_id}\nCreated: {created}\nReason: {reason}"
             )
 
         entries_string = "\n\n".join(entries)
@@ -299,12 +299,12 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 ===============
                 Status: Inactive
                 Date: {start_date}
+                Nomination ID: `{nomination_object["id"]}`
 
                 {entries_string}
 
                 End date: {end_date}
                 Unwatch reason: {nomination_object["end_reason"]}
-                Nomination ID: `{nomination_object["id"]}`
                 ===============
                 """
             )
