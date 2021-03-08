@@ -5,6 +5,7 @@ import typing as t
 from datetime import datetime, timezone
 from operator import attrgetter
 
+import async_rediscache
 import discord
 import discord.abc
 from discord.ext import commands
@@ -20,6 +21,7 @@ NAMESPACE = "help"
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
+AVAILABLE_HELP_CHANNELS = "**Currently available help channel(s):** {available}"
 
 
 class HelpChannels(commands.Cog):
@@ -72,6 +74,14 @@ class HelpChannels(commands.Cog):
 
         self.last_notification: t.Optional[datetime] = None
 
+        # Caching the message object for the dynamic message.
+        self.dynamic_message_cache = async_rediscache.RedisCache(namespace="Dynamic Message")
+
+        self.how_to_get_help: t.Optional[discord.TextChannel] = None
+        self.dynamic_message: t.Optional[discord.Message] = None
+
+        self.available_help_channels: t.Set[discord.TextChannel] = set()
+
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
         self.init_task = self.bot.loop.create_task(self.init_cog())
@@ -102,6 +112,10 @@ class HelpChannels(commands.Cog):
         await _cooldown.revoke_send_permissions(message.author, self.scheduler)
 
         await _message.pin(message)
+        try:
+            await _message.dm_on_open(message)
+        except Exception as e:
+            log.warning("Error occurred while sending DM:", exc_info=e)
 
         # Add user with channel for dormant check.
         await _caches.claimants.set(message.channel.id, message.author.id)
@@ -113,6 +127,9 @@ class HelpChannels(commands.Cog):
         await _caches.claim_times.set(message.channel.id, timestamp)
 
         await _caches.unanswered.set(message.channel.id, True)
+
+        # Removing the help channel from the dynamic message, and editing/sending that message.
+        self.available_help_channels.remove(message.channel)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
         scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
@@ -275,6 +292,15 @@ class HelpChannels(commands.Cog):
         # This may confuse users. So would potentially long delays for the cog to become ready.
         self.close_command.enabled = True
 
+        # Acquiring and modifying the channel to dynamically update the available help channels message.
+        log.trace("Attempting to fetch dynamic message ID along with How-to-get-help channel ID.")
+        self.how_to_get_help = await self.dynamic_message_cache.get("How-to-get-help Channel ID")
+        self.dynamic_message = await self.dynamic_message_cache.get("How-to-get-help Dynamic Message ID")
+
+        # Getting channels that need to be included in the dynamic message.
+        await self.update_available_help_channels()
+        log.trace("Dynamic available help message updated.")
+
         await self.init_available()
         _stats.report_counts()
 
@@ -331,6 +357,10 @@ class HelpChannels(commands.Cog):
             channel=channel,
             category_id=constants.Categories.help_available,
         )
+
+        # Adding the help channel to the dynamic message, and editing/sending that message.
+        self.available_help_channels.add(channel)
+        await self.update_available_help_channels()
 
         _stats.report_counts()
 
@@ -461,3 +491,38 @@ class HelpChannels(commands.Cog):
         self.queue_tasks.remove(task)
 
         return channel
+
+    async def update_available_help_channels(self) -> None:
+        """Updates the dynamic message within #how-to-get-help for available help channels."""
+        if not self.available_help_channels:
+            self.available_help_channels = set(
+                c for c in self.available_category.channels if not _channel.is_excluded_channel(c)
+            )
+
+        available_channels = AVAILABLE_HELP_CHANNELS.format(
+            available=', '.join(c.mention for c in self.available_help_channels) or None
+        )
+
+        if self.how_to_get_help is None:
+            self.how_to_get_help = await channel_utils.try_get_channel(constants.Channels.how_to_get_help)
+            await self.dynamic_message_cache.set("How-to-get-help Channel ID", self.how_to_get_help.id)
+
+        if self.dynamic_message is None:
+            last_message = await self.how_to_get_help.history(limit=1).find(lambda m: m.author == self.bot.user)
+
+            if not last_message:
+                self.dynamic_message = await self.how_to_get_help.send(available_channels)
+                log.trace("A dynamic message was sent for later modification because one couldn't be found.")
+            else:
+                await last_message.edit(content=available_channels)
+
+            await self.dynamic_message_cache.set("How-to-get-help Dynamic Message ID", self.dynamic_message.id)
+
+        else:
+            try:
+                await self.dynamic_message.edit(content=available_channels)
+            except discord.NotFound:
+                self.dynamic_message = await self.how_to_get_help.send(available_channels)
+                await self.dynamic_message_cache.set("How-to-get-help Dynamic Message ID", self.dynamic_message.id)
+                log.trace("Dynamic has been sent again since previous was removed during process of updating message.")
+
