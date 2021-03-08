@@ -5,7 +5,6 @@ import typing as t
 from datetime import datetime, timezone
 from operator import attrgetter
 
-import async_rediscache
 import discord
 import discord.abc
 from discord.ext import commands
