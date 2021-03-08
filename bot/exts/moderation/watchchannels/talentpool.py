@@ -14,6 +14,8 @@ from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 from bot.pagination import LinePaginator
 from bot.utils import time
 
+REASON_MAX_CHARS = 1000
+
 log = logging.getLogger(__name__)
 
 
@@ -82,6 +84,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         if not await self.fetch_user_cache():
             await ctx.send(f":x: Failed to update the user cache; can't add {user}")
+            return
+
+        if len(reason) > REASON_MAX_CHARS:
+            await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response
@@ -162,6 +168,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         Providing a `reason` is required.
         """
+        if len(reason) > REASON_MAX_CHARS:
+            await ctx.send(f":x: Maxiumum allowed characters for the end reason is {REASON_MAX_CHARS}.")
+            return
+
         if await self.unwatch(user.id, reason):
             await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed")
         else:
@@ -177,6 +187,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @has_any_role(*MODERATION_ROLES)
     async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: FetchedMember, *, reason: str) -> None:
         """Edits the reason of a specific nominator in a specific active nomination."""
+        if len(reason) > REASON_MAX_CHARS:
+            await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            return
+
         try:
             nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
@@ -208,6 +222,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @has_any_role(*MODERATION_ROLES)
     async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """Edits the unnominate reason for the nomination with the given `id`."""
+        if len(reason) > REASON_MAX_CHARS:
+            await ctx.send(f":x: Maxiumum allowed characters for the end reason is {REASON_MAX_CHARS}.")
+            return
+
         try:
             nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
@@ -269,7 +287,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             actor_id = site_entry["actor"]
             actor = guild.get_member(actor_id)
 
-            reason = textwrap.shorten(site_entry["reason"], 1000, placeholder="...") or "*None*"
+            reason = site_entry["reason"] or "*None*"
             created = time.format_infraction(site_entry["inserted_at"])
             entries.append(
                 f"Actor: {actor.mention if actor else actor_id}\nCreated: {created}\nReason: {reason}"
