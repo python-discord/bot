@@ -47,7 +47,9 @@ class WatchChannel(metaclass=CogABCMeta):
         webhook_id: int,
         api_endpoint: str,
         api_default_params: dict,
-        logger: logging.Logger
+        logger: logging.Logger,
+        *,
+        disable_header: bool = False
     ) -> None:
         self.bot = bot
 
@@ -66,6 +68,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.channel = None
         self.webhook = None
         self.message_history = MessageHistory()
+        self.disable_header = disable_header
 
         self._start = self.bot.loop.create_task(self.start_watchchannel())
 
@@ -267,6 +270,9 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def send_header(self, msg: Message) -> None:
         """Sends a header embed with information about the relayed messages to the watch channel."""
+        if self.disable_header:
+            return
+
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
