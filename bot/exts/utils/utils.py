@@ -2,7 +2,7 @@ import difflib
 import logging
 import re
 import unicodedata
-from typing import Tuple, Union
+from typing import Tuple, Union, List
 
 from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
@@ -156,18 +156,19 @@ class Utils(Cog):
 
     @command(aliases=("snf", "snfl", "sf"))
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
-    async def snowflake(self, ctx: Context, snowflake: Snowflake) -> None:
+    async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
         """Get Discord snowflake creation time."""
-        created_at = snowflake_time(snowflake)
-        embed = Embed(
-            description=f"**Created at {created_at}** ({time_since(created_at, max_units=3)}).",
-            colour=Colour.blue()
-        )
-        embed.set_author(
-            name=f"Snowflake: {snowflake}",
-            icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
-        )
-        await ctx.send(embed=embed)
+        for snowflake in snowflakes:
+            created_at = snowflake_time(snowflake)
+            embed = Embed(
+                description=f"**Created at {created_at}** ({time_since(created_at, max_units=3)}).",
+                colour=Colour.blue()
+            )
+            embed.set_author(
+                name=f"Snowflake: {snowflake}",
+                icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
+            )
+            await ctx.send(embed=embed)
 
     @command(aliases=("poll",))
     @has_any_role(*MODERATION_ROLES)
