@@ -525,4 +525,3 @@ class HelpChannels(commands.Cog):
                 self.dynamic_message = await self.how_to_get_help.send(available_channels)
                 await self.dynamic_message_cache.set("How-to-get-help Dynamic Message ID", self.dynamic_message.id)
                 log.trace("Dynamic has been sent again since previous was removed during process of updating message.")
-
