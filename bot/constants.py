@@ -246,13 +246,16 @@ class Colours(metaclass=YAMLGetter):
     section = "style"
     subsection = "colours"
 
+    blue: int
     bright_green: int
-    soft_green: int
-    soft_orange: int
-    soft_red: int
     orange: int
     pink: int
     purple: int
+    soft_green: int
+    soft_orange: int
+    soft_red: int
+    white: int
+    yellow: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -277,9 +280,9 @@ class Emojis(metaclass=YAMLGetter):
     badge_staff: str
     badge_verified_bot_developer: str
 
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str  # noqa: E704
-    defcon_updated: str  # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str  # noqa: E704
+    defcon_update: str  # noqa: E704
 
     failmail: str
 
@@ -316,13 +319,14 @@ class Icons(metaclass=YAMLGetter):
     crown_red: str
 
     defcon_denied: str    # noqa: E704
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str   # noqa: E704
-    defcon_updated: str   # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str   # noqa: E704
+    defcon_update: str   # noqa: E704
 
     filtering: str
 
     green_checkmark: str
+    green_questionmark: str
     guild_update: str
 
     hash_blurple: str
@@ -406,7 +410,6 @@ class Channels(metaclass=YAMLGetter):
 
     meta: int
     python_general: int
-    how_to_get_help: int
 
     cooldown: int
 
@@ -484,6 +487,7 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     core_developers: int
+    devops: int
     helpers: int
     moderators: int
     owners: int
@@ -528,9 +532,12 @@ class URLs(metaclass=YAMLGetter):
     github_bot_repo: str
 
     # Base site vars
+    connect_max_retries: int
+    connect_cooldown: int
     site: str
     site_api: str
     site_schema: str
+    site_api_schema: str
 
     # Site endpoints
     site_logs_view: str

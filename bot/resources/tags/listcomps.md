@@ -1,14 +1,19 @@
-Do you ever find yourself writing something like:
+Do you ever find yourself writing something like this?
 ```py
-even_numbers = []
-for n in range(20):
-    if n % 2 == 0:
-        even_numbers.append(n)
+>>> squares = []
+>>> for n in range(5):
+...    squares.append(n ** 2)
+[0, 1, 4, 9, 16]
 ```
-Using list comprehensions can simplify this significantly, and greatly improve code readability. If we rewrite the example above to use list comprehensions, it would look like this:
+Using list comprehensions can make this both shorter and more readable. As a list comprehension, the same code would look like this:
 ```py
-even_numbers = [n for n in range(20) if n % 2 == 0]
+>>> [n ** 2 for n in range(5)]
+[0, 1, 4, 9, 16]
 ```
-This also works for generators, dicts and sets by using `()` or `{}` instead of `[]`.
+List comprehensions also get an `if` statement:
+```python
+>>> [n ** 2 for n in range(5) if n % 2 == 0]
+[0, 4, 16]
+```
 
-For more info, see [this pythonforbeginners.com post](http://www.pythonforbeginners.com/basics/list-comprehensions-in-python) or [PEP 202](https://www.python.org/dev/peps/pep-0202/).
+For more info, see [this pythonforbeginners.com post](http://www.pythonforbeginners.com/basics/list-comprehensions-in-python).
