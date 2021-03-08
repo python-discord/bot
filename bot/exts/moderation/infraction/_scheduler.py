@@ -173,7 +173,7 @@ class InfractionScheduler:
             total = len(infractions)
             end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
 
-        purge = infraction['purge']
+        purge = infraction.get("purge", "")
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
