@@ -2,7 +2,7 @@ import difflib
 import logging
 import re
 import unicodedata
-from typing import Tuple, Union, List
+from typing import Tuple, Union
 
 from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
@@ -14,6 +14,7 @@ from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
+from bot.utils.checks import has_no_roles_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -158,6 +159,9 @@ class Utils(Cog):
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
     async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
         """Get Discord snowflake creation time."""
+        if len(snowflakes) > 1 and await has_no_roles_check(ctx, *STAFF_ROLES):
+            raise BadArgument("Cannot process more than one snowflake in one invocation.")
+
         for snowflake in snowflakes:
             created_at = snowflake_time(snowflake)
             embed = Embed(
