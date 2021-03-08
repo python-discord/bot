@@ -17,3 +17,7 @@ question_messages = RedisCache(namespace="HelpChannels.question_messages")
 # activity and False being other activity.
 # RedisCache[discord.TextChannel.id, bool]
 unanswered = RedisCache(namespace="HelpChannels.unanswered")
+
+# This cache keeps track of the dynamic message ID for
+# the continuously updated message in the #How-to-get-help channel.
+dynamic_message = RedisCache(namespace="HelpChannels.dynamic_message")
