@@ -77,9 +77,7 @@ class HelpChannels(commands.Cog):
         # Caching the message object for the dynamic message.
         self.dynamic_message_cache = async_rediscache.RedisCache(namespace="Dynamic Message")
 
-        self.how_to_get_help: t.Optional[discord.TextChannel] = None
-        self.dynamic_message: t.Optional[discord.Message] = None
-
+        self.dynamic_message: t.Optional[int] = None
         self.available_help_channels: t.Set[discord.TextChannel] = set()
 
         # Asyncio stuff
@@ -292,9 +290,8 @@ class HelpChannels(commands.Cog):
         # This may confuse users. So would potentially long delays for the cog to become ready.
         self.close_command.enabled = True
 
-        # Acquiring and modifying the channel to dynamically update the available help channels message.
-        log.trace("Attempting to fetch dynamic message ID along with How-to-get-help channel ID.")
-        self.how_to_get_help = await self.dynamic_message_cache.get("How-to-get-help Channel ID")
+        # Acquiring the dynamic message ID, if it exists within the cache.
+        log.trace("Attempting to fetch How-to-get-help dynamic message ID.")
         self.dynamic_message = await self.dynamic_message_cache.get("How-to-get-help Dynamic Message ID")
 
         # Getting channels that need to be included in the dynamic message.
@@ -503,25 +500,18 @@ class HelpChannels(commands.Cog):
             available=', '.join(c.mention for c in self.available_help_channels) or None
         )
 
-        if self.how_to_get_help is None:
-            self.how_to_get_help = await channel_utils.try_get_channel(constants.Channels.how_to_get_help)
-            await self.dynamic_message_cache.set("How-to-get-help Channel ID", self.how_to_get_help.id)
-
-        if self.dynamic_message is None:
-            last_message = await self.how_to_get_help.history(limit=1).find(lambda m: m.author == self.bot.user)
-
-            if not last_message:
-                self.dynamic_message = await self.how_to_get_help.send(available_channels)
-                log.trace("A dynamic message was sent for later modification because one couldn't be found.")
-            else:
-                await last_message.edit(content=available_channels)
-
-            await self.dynamic_message_cache.set("How-to-get-help Dynamic Message ID", self.dynamic_message.id)
-
-        else:
+        if self.dynamic_message is not None:
             try:
-                await self.dynamic_message.edit(content=available_channels)
+                await self.bot.http.edit_message(
+                    constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels
+                )
+                log.trace("Help channels have changed, dynamic message has been edited.")
             except discord.NotFound:
-                self.dynamic_message = await self.how_to_get_help.send(available_channels)
-                await self.dynamic_message_cache.set("How-to-get-help Dynamic Message ID", self.dynamic_message.id)
-                log.trace("Dynamic has been sent again since previous was removed during process of updating message.")
+                pass
+        else:
+            log.trace("No How-to-get-help dynamic message could be found in the Redis cache. Setting a new one.")
+            new_dynamic_message = await self.bot.http.send_message(
+                constants.Channels.how_to_get_help, available_channels
+            )
+            self.dynamic_message = new_dynamic_message["id"]
+            await self.dynamic_message_cache.set("How-to-get-help Dynamic Message ID", self.dynamic_message)
