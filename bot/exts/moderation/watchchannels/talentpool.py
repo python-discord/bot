@@ -269,7 +269,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             actor_id = site_entry["actor"]
             actor = guild.get_member(actor_id)
 
-            reason = site_entry["reason"] or "*None*"
+            reason = textwrap.shorten(site_entry["reason"], 1000, placeholder="...") or "*None*"
             created = time.format_infraction(site_entry["inserted_at"])
             entries.append(
                 f"Actor: {actor.mention if actor else actor_id}\nCreated: {created}\nReason: {reason}"
