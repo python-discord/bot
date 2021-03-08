@@ -109,7 +109,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
-        msg = f":white_check_mark: Messages sent by {user} will now be relayed to the talent pool channel"
+        msg = f":white_check_mark: The nomination for {user} has been added to the talent pool"
 
         history = await self.bot.api_client.get(
             self.api_endpoint,
