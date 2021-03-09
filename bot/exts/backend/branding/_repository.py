@@ -38,7 +38,7 @@ class RemoteObject:
     name: str  # Filename
     path: str  # Path from repo root
     type: str  # Either 'file' or 'dir'
-    download_url: str
+    download_url: t.Optional[str]  # If type is 'dir', this is None!
 
     def __init__(self, dictionary: t.Dict[str, t.Any]) -> None:
         """Initialize by grabbing annotated attributes from `dictionary`."""
