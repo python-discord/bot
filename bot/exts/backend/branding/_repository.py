@@ -159,3 +159,54 @@ class BrandingRepository:
         meta_file = await self.parse_meta_file(meta_bytes)
 
         return Event(contents["banner.png"], list(server_icons.values()), meta_file)
+
+    async def get_events(self) -> t.List[Event]:
+        """
+        Discover available events in the branding repository.
+
+        Misconfigured events are skipped, the return value may therefore not contain a representation of each
+        directory in the repository. May return an empty list in the catastrophic case.
+        """
+        log.debug("Discovering events in branding repository")
+
+        event_directories = await self.fetch_directory("events", types=("dir",))  # Skip files
+        instances: t.List[Event] = []
+
+        for event_directory in event_directories.values():
+            log.trace(f"Attempting to construct event from directory: {event_directory.path}")
+            try:
+                instance = await self.construct_event(event_directory)
+            except Exception as exc:
+                log.warning(f"Could not construct event: {exc}")
+            else:
+                instances.append(instance)
+
+        log.trace(f"Found {len(instances)} correctly configured events")
+        return instances
+
+    async def get_current_event(self) -> t.Optional[Event]:
+        """
+        Get the currently active event, or the fallback event.
+
+        Returns None in the case that no event is active, and no fallback event is found.
+        """
+        utc_now = datetime.utcnow()
+        log.debug(f"Finding active event for: {utc_now}")
+
+        # As all events exist in the arbitrary year, we construct a separate object for the purposes of comparison
+        lookup_now = date(year=ARBITRARY_YEAR, month=utc_now.month, day=utc_now.day)
+
+        events = await self.get_events()
+
+        for event in events:
+            meta = event.meta
+            if not meta.is_fallback and (meta.start_date <= lookup_now <= meta.end_date):
+                return event
+
+        log.debug("No active event found, looking for fallback")
+
+        for event in events:
+            if event.meta.is_fallback:
+                return event
+
+        log.warning("No event is currently active and no fallback event was found!")
