@@ -58,9 +58,13 @@ class MetaFile(t.NamedTuple):
 class Event(t.NamedTuple):
     """Represent an event defined in the branding repository."""
 
+    path: str  # Path from repo root where event lives
+    meta: MetaFile
     banner: RemoteObject
     icons: t.List[RemoteObject]
-    meta: MetaFile
+
+    def __str__(self) -> str:
+        return f"<Event at '{self.path}'>"
 
 
 class BrandingRepository:
@@ -158,7 +162,7 @@ class BrandingRepository:
 
         meta_file = await self.parse_meta_file(meta_bytes)
 
-        return Event(contents["banner.png"], list(server_icons.values()), meta_file)
+        return Event(directory.path, meta_file, contents["banner.png"], list(server_icons.values()))
 
     async def get_events(self) -> t.List[Event]:
         """
