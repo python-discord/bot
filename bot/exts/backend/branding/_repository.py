@@ -1,8 +1,12 @@
 import logging
 import typing as t
+from datetime import date, datetime
+
+import frontmatter
 
 from bot.bot import Bot
 from bot.constants import Keys
+from bot.errors import BrandingMisconfiguration
 
 # Base URL for requests into the branding repository
 BRANDING_URL = "https://api.github.com/repos/kwzrd/pydis-branding/contents"
@@ -13,6 +17,13 @@ HEADERS = {"Accept": "application/vnd.github.v3+json"}  # Ensure we use API v3
 # A GitHub token is not necessary for the cog to operate, unauthorized requests are however limited to 60 per hour
 if Keys.github:
     HEADERS["Authorization"] = f"token {Keys.github}"
+
+# Since event periods are year-agnostic, we parse them into `datetime` objects with a manually inserted year
+# Please note that this is intentionally a leap year in order to allow Feb 29 to be valid
+ARBITRARY_YEAR = 2020
+
+# Format used to parse date strings after we inject `ARBITRARY_YEAR` at the end
+DATE_FMT = "%B %d %Y"  # Ex: July 10 2020
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +44,23 @@ class RemoteObject:
         """Initialize by grabbing annotated attributes from `dictionary`."""
         for annotation in self.__annotations__:
             setattr(self, annotation, dictionary[annotation])
+
+
+class MetaFile(t.NamedTuple):
+    """Composition of attributes defined in a 'meta.md' file."""
+
+    is_fallback: bool
+    start_date: t.Optional[date]
+    end_date: t.Optional[date]
+    description: str  # Markdown event description
+
+
+class Event(t.NamedTuple):
+    """Represent an event defined in the branding repository."""
+
+    banner: RemoteObject
+    icons: t.List[RemoteObject]
+    meta: MetaFile
 
 
 class BrandingRepository:
@@ -75,3 +103,59 @@ class BrandingRepository:
                 return await response.read()
             else:
                 log.warning(f"Received non-200 response status: {response.status}")
+
+    async def parse_meta_file(self, raw_file: bytes) -> MetaFile:
+        """
+        Parse a 'meta.md' file from raw bytes.
+
+        The caller is responsible for handling errors caused by misconfiguration.
+        """
+        attrs, description = frontmatter.parse(raw_file)  # Library automatically decodes using UTF-8
+
+        if not description:
+            raise BrandingMisconfiguration("No description found in 'meta.md'!")
+
+        if attrs.get("fallback", False):
+            return MetaFile(is_fallback=True, start_date=None, end_date=None, description=description)
+
+        start_date_raw = attrs.get("start_date")
+        end_date_raw = attrs.get("end_date")
+
+        if None in (start_date_raw, end_date_raw):
+            raise BrandingMisconfiguration("Non-fallback event doesn't have start and end dates defined!")
+
+        # We extend the configured month & day with an arbitrary leap year to allow a `datetime` repr to exist
+        # This may raise errors if configured in a wrong format ~ we let the caller handle such cases
+        start_date = datetime.strptime(f"{start_date_raw} {ARBITRARY_YEAR}", DATE_FMT).date()
+        end_date = datetime.strptime(f"{end_date_raw} {ARBITRARY_YEAR}", DATE_FMT).date()
+
+        return MetaFile(is_fallback=False, start_date=start_date, end_date=end_date, description=description)
+
+    async def construct_event(self, directory: RemoteObject) -> Event:
+        """
+        Construct an `Event` instance from an event `directory`.
+
+        The caller is responsible for handling errors caused by misconfiguration.
+        """
+        contents = await self.fetch_directory(directory.path)
+
+        missing_assets = {"meta.md", "banner.png", "server_icons"} - contents.keys()
+
+        if missing_assets:
+            raise BrandingMisconfiguration(f"Directory is missing following assets: {missing_assets}")
+
+        server_icons = await self.fetch_directory(contents["server_icons"].path, types=("file",))
+
+        if server_icons is None:
+            raise BrandingMisconfiguration("Failed to fetch server icons!")
+        if len(server_icons) == 0:
+            raise BrandingMisconfiguration("Found no server icons!")
+
+        meta_bytes = await self.fetch_file(contents["meta.md"])
+
+        if meta_bytes is None:
+            raise BrandingMisconfiguration("Failed to fetch 'meta.md' file!")
+
+        meta_file = await self.parse_meta_file(meta_bytes)
+
+        return Event(contents["banner.png"], list(server_icons.values()), meta_file)
