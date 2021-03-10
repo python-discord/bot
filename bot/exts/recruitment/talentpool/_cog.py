@@ -328,8 +328,3 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             )
 
         return lines.strip()
-
-
-def setup(bot: Bot) -> None:
-    """Load the TalentPool cog."""
-    bot.add_cog(TalentPool(bot))
