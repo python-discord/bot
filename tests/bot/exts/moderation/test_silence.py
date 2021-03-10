@@ -233,9 +233,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         Returns the list of erroneous members,
         as well as a list of regular and erroneous members combined, in that order.
         """
-        def failing_move_to(*_):
-            raise Exception()
-        erroneous_members = [MockMember(move_to=Mock(failing_move_to)) for _ in range(5)]
+        erroneous_members = [MockMember(move_to=Mock(side_effect=Exception())) for _ in range(5)]
 
         members = []
         for i in range(5):
