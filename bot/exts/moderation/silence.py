@@ -173,7 +173,7 @@ class Silence(commands.Cog):
 
         if not await self._set_silence_overwrites(channel, kick=kick):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
-            await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel)
+            await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel, alert_target=False)
             return
 
         if isinstance(channel, VoiceChannel):

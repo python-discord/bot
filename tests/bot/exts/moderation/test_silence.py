@@ -375,51 +375,28 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         self.voice_channel.overwrites_for.return_value = self.voice_overwrite
 
     async def test_sent_correct_message(self):
-        """Appropriate failure/success message was sent by the command."""
+        """Appropriate failure/success message was sent by the command to the correct channel."""
+        # The following test tuples are made up of:
+        # duration, expected message, and the success of the _set_silence_overwrites function
         test_cases = (
             (0.0001, silence.MSG_SILENCE_SUCCESS.format(duration=0.0001), True,),
             (None, silence.MSG_SILENCE_PERMANENT, True,),
             (5, silence.MSG_SILENCE_FAIL, False,),
         )
+
         for duration, message, was_silenced in test_cases:
-            ctx = MockContext()
             with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=was_silenced):
-                with self.subTest(was_silenced=was_silenced, message=message, duration=duration):
-                    await self.cog.silence.callback(self.cog, ctx, duration)
-                    ctx.channel.send.assert_called_once_with(message)
-
-    @mock.patch.object(silence.Silence, "_set_silence_overwrites", return_value=True)
-    @mock.patch.object(silence.Silence, "_force_voice_sync")
-    async def test_sent_to_correct_channel(self, voice_sync, _):
-        """Test function sends messages to the correct channels."""
-        text_channel = MockTextChannel()
-        voice_channel = MockVoiceChannel()
-        ctx = MockContext()
-
-        test_cases = (
-            (None, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
-            (text_channel, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
-            (voice_channel, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
-            (ctx.channel, silence.MSG_SILENCE_SUCCESS.format(duration=10)),
-        )
-
-        for target, message in test_cases:
-            with self.subTest(target_channel=target, message=message):
-                await self.cog.silence.callback(self.cog, ctx, 10, target, kick=False)
-
-                if ctx.channel == target or target is None:
-                    ctx.channel.send.assert_called_once_with(message)
-
-                else:
-                    ctx.channel.send.assert_called_once_with(message.replace("current channel", target.mention))
-                    if isinstance(target, MockTextChannel):
-                        target.send.assert_called_once_with(message)
-                    else:
-                        voice_sync.assert_called_once_with(target)
-
-            ctx.channel.send.reset_mock()
-            if target is not None and isinstance(target, MockTextChannel):
-                target.send.reset_mock()
+                for target in [MockTextChannel(), MockVoiceChannel(), None]:
+                    with self.subTest(was_silenced=was_silenced, target=target, message=message):
+                        with mock.patch.object(self.cog, "send_message") as send_message:
+                            ctx = MockContext()
+                            await self.cog.silence.callback(self.cog, ctx, duration, target)
+                            send_message.assert_called_once_with(
+                                message,
+                                ctx.channel,
+                                target or ctx.channel,
+                                alert_target=was_silenced
+                            )
 
     @voice_sync_helper
     async def test_sync_called(self, ctx, sync, kick):
