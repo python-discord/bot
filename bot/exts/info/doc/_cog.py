@@ -102,15 +102,11 @@ class DocCog(commands.Cog):
 
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
-                if (original_item := self.doc_symbols.get(symbol_name)) is not None:
-                    replaced_symbol_name = self.ensure_unique_symbol_name(
-                        package_name,
-                        group_name,
-                        original_item,
-                        symbol_name,
-                    )
-                    if replaced_symbol_name is not None:
-                        symbol_name = replaced_symbol_name
+                symbol_name = self.ensure_unique_symbol_name(
+                    package_name,
+                    group_name,
+                    symbol_name,
+                )
 
                 relative_url_path, _, symbol_id = relative_doc_url.partition("#")
                 # Intern fields that have shared content so we're not storing unique strings for every object
@@ -155,59 +151,52 @@ class DocCog(commands.Cog):
         else:
             self.update_single(api_package_name, base_url, package)
 
-    def ensure_unique_symbol_name(
-        self,
-        package_name: str,
-        group_name: str,
-        original_item: DocItem,
-        symbol_name: str,
-    ) -> Optional[str]:
+    def ensure_unique_symbol_name(self, package_name: str, group_name: str, symbol_name: str) -> str:
         """
         Ensure `symbol_name` doesn't overwrite an another symbol in `doc_symbols`.
 
-        Should only be called with symbol names that already have a conflict in `doc_symbols`.
+        For conflicts, rename either the current symbol or the existing symbol with which it conflicts.
+        Store the new name in `renamed_symbols` and return the name to use for the symbol.
 
-        If None is returned, space was created for `symbol_name` in `doc_symbols` instead of
-        the symbol name being changed.
+        If the existing symbol was renamed or there was no conflict, the returned name is equivalent to `symbol_name`.
         """
+        if (item := self.doc_symbols.get(symbol_name)) is None:
+            return symbol_name  # There's no conflict so it's fine to simply use the given symbol name.
+
+        def rename(prefix: str, *, rename_extant: bool = False) -> str:
+            new_name = f"{prefix}.{symbol_name}"
+            if new_name in self.doc_symbols:
+                # If there's still a conflict, qualify the name further.
+                if rename_extant:
+                    new_name = f"{item.package}.{item.group}.{symbol_name}"
+                else:
+                    new_name = f"{package_name}.{group_name}.{symbol_name}"
+
+            self.renamed_symbols[symbol_name].append(new_name)
+
+            if rename_extant:
+                # Instead of renaming the current symbol, rename the symbol with which it conflicts.
+                self.doc_symbols[new_name] = self.doc_symbols[symbol_name]
+                return symbol_name
+            else:
+                return new_name
+
         # Certain groups are added as prefixes to disambiguate the symbols.
         if group_name in FORCE_PREFIX_GROUPS:
-            new_symbol_name = f"{group_name}.{symbol_name}"
-            if new_symbol_name in self.doc_symbols:
-                # If there's still a conflict, prefix with package name.
-                new_symbol_name = f"{package_name}.{new_symbol_name}"
-            self.renamed_symbols[symbol_name].append(new_symbol_name)
-            return new_symbol_name
+            return rename(group_name)
 
         # The existing symbol with which the current symbol conflicts should have a group prefix.
         # It currently doesn't have the group prefix because it's only added once there's a conflict.
-        elif (original_symbol_group := original_item.group) in FORCE_PREFIX_GROUPS:
-            overridden_symbol_name = f"{original_symbol_group}.{symbol_name}"
-            if overridden_symbol_name in self.doc_symbols:
-                # If there's still a conflict, prefix with package name.
-                overridden_symbol_name = f"{original_item.package}.{overridden_symbol_name}"
-
-            self.doc_symbols[overridden_symbol_name] = original_item
-            self.renamed_symbols[symbol_name].append(overridden_symbol_name)
+        elif item.group in FORCE_PREFIX_GROUPS:
+            return rename(item.group, rename_extant=True)
 
         elif package_name in PRIORITY_PACKAGES:
-            overridden_symbol_name = f"{original_item.package}.{symbol_name}"
-            if overridden_symbol_name in self.doc_symbols:
-                # If there's still a conflict, add the symbol's group in the middle.
-                overridden_symbol_name = f"{original_item.package}.{original_item.group}.{symbol_name}"
-
-            self.doc_symbols[overridden_symbol_name] = original_item
-            self.renamed_symbols[symbol_name].append(overridden_symbol_name)
+            return rename(item.package, rename_extant=True)
 
         # If we can't specially handle the symbol through its group or package,
         # fall back to prepending its package name to the front.
         else:
-            new_symbol_name = f"{package_name}.{symbol_name}"
-            if new_symbol_name in self.doc_symbols:
-                # If there's still a conflict, add the symbol's group in the middle.
-                new_symbol_name = f"{package_name}.{group_name}.{symbol_name}"
-            self.renamed_symbols[symbol_name].append(new_symbol_name)
-            return new_symbol_name
+            return rename(package_name)
 
     async def refresh_inventories(self) -> None:
         """Refresh internal documentation inventories."""
