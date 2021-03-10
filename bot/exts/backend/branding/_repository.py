@@ -94,15 +94,15 @@ class BrandingRepository:
 
         return {file["name"]: RemoteObject(file) for file in json_directory if file["type"] in types}
 
-    async def fetch_file(self, file: RemoteObject) -> t.Optional[bytes]:
+    async def fetch_file(self, download_url: str) -> t.Optional[bytes]:
         """
-        Fetch `file` using its download URL.
+        Fetch file from `download_url`.
 
         Returns the file as bytes unless the request fails, in which case None is given.
         """
-        log.debug(f"Fetching file from branding repository: {file.download_url}")
+        log.debug(f"Fetching file from branding repository: {download_url}")
 
-        async with self.bot.http_session.get(file.download_url, params=PARAMS, headers=HEADERS) as response:
+        async with self.bot.http_session.get(download_url, params=PARAMS, headers=HEADERS) as response:
             if response.status == 200:
                 return await response.read()
             else:
@@ -155,7 +155,7 @@ class BrandingRepository:
         if len(server_icons) == 0:
             raise BrandingMisconfiguration("Found no server icons!")
 
-        meta_bytes = await self.fetch_file(contents["meta.md"])
+        meta_bytes = await self.fetch_file(contents["meta.md"].download_url)
 
         if meta_bytes is None:
             raise BrandingMisconfiguration("Failed to fetch 'meta.md' file!")
