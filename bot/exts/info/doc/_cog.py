@@ -251,8 +251,7 @@ class DocCog(commands.Cog):
         First a redis lookup is attempted, if that fails the `item_fetcher`
         is used to fetch the page and parse the HTML from it into Markdown.
         """
-        with self.symbol_get_event:
-            markdown = await doc_cache.get(doc_item)
+        markdown = await doc_cache.get(doc_item)
 
         if markdown is None:
             log.debug(f"Redis cache miss with {doc_item}.")
@@ -283,29 +282,30 @@ class DocCog(commands.Cog):
         if not self.refresh_event.is_set():
             log.debug("Waiting for inventories to be refreshed before processing item.")
             await self.refresh_event.wait()
+        # Ensure a refresh can't run in case of a context switch until the with block is exited
+        with self.symbol_get_event:
+            doc_item = self.get_symbol_item(symbol_name)
+            if doc_item is None:
+                log.debug("Symbol does not exist.")
+                return None
 
-        doc_item = self.get_symbol_item(symbol_name)
-        if doc_item is None:
-            log.debug("Symbol does not exist.")
-            return None
+            self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
 
-        self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
+            # Show all symbols with the same name that were renamed in the footer,
+            # with a max of 100 chars.
+            if symbol_name in self.renamed_symbols:
+                renamed_symbols = ', '.join(self.renamed_symbols[symbol_name])
+                footer_text = textwrap.shorten("Moved: " + renamed_symbols, 100, placeholder=' ...')
+            else:
+                footer_text = ""
 
-        # Show all symbols with the same name that were renamed in the footer,
-        # with a max of 100 chars.
-        if symbol_name in self.renamed_symbols:
-            renamed_symbols = ', '.join(self.renamed_symbols[symbol_name])
-            footer_text = textwrap.shorten("Moved: " + renamed_symbols, 100, placeholder=' ...')
-        else:
-            footer_text = ""
-
-        embed = discord.Embed(
-            title=discord.utils.escape_markdown(symbol_name),
-            url=f"{doc_item.url}#{doc_item.symbol_id}",
-            description=await self.get_symbol_markdown(doc_item)
-        )
-        embed.set_footer(text=footer_text)
-        return embed
+            embed = discord.Embed(
+                title=discord.utils.escape_markdown(symbol_name),
+                url=f"{doc_item.url}#{doc_item.symbol_id}",
+                description=await self.get_symbol_markdown(doc_item)
+            )
+            embed.set_footer(text=footer_text)
+            return embed
 
     @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
