@@ -688,42 +688,17 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
-    @mock.patch.object(silence.Silence, "_unsilence", return_value=False)
-    @mock.patch.object(silence.Silence, "send_message")
-    async def test_unsilence_helper_fail(self, send_message, _):
-        """Tests unsilence_wrapper when `_unsilence` fails."""
-        ctx = MockContext()
-
-        text_channel = MockTextChannel()
-        text_role = self.cog.bot.get_guild(Guild.id).default_role
-
-        voice_channel = MockVoiceChannel()
-        voice_role = self.cog.bot.get_guild(Guild.id).get_role(Roles.voice_verified)
-
+    async def test_unsilence_role(self):
+        """Tests unsilence_wrapper applies permission to the correct role."""
         test_cases = (
-            (ctx, text_channel, text_role, True, silence.MSG_UNSILENCE_FAIL),
-            (ctx, text_channel, text_role, False, silence.MSG_UNSILENCE_MANUAL),
-            (ctx, voice_channel, voice_role, True, silence.MSG_UNSILENCE_FAIL),
-            (ctx, voice_channel, voice_role, False, silence.MSG_UNSILENCE_MANUAL),
+            (MockTextChannel(), self.cog.bot.get_guild(Guild.id).default_role),
+            (MockVoiceChannel(), self.cog.bot.get_guild(Guild.id).get_role(Roles.voice_verified))
         )
 
-        class PermClass:
-            """Class to Mock return permissions"""
-            def __init__(self, value: bool):
-                self.val = value
-
-            def __getattr__(self, item):
-                return self.val
-
-        for context, channel, role, permission, message in test_cases:
-            with mock.patch.object(channel, "overwrites_for", return_value=PermClass(permission)) as overwrites:
-                with self.subTest(channel=channel, message=message):
-                    await self.cog._unsilence_wrapper(channel, context)
-
-                    overwrites.assert_called_once_with(role)
-                    send_message.assert_called_once_with(message, ctx.channel, channel, alert_target=False)
-
-                    send_message.reset_mock()
+        for channel, role in test_cases:
+            with self.subTest(channel=channel, role=role):
+                await self.cog._unsilence_wrapper(channel, MockContext())
+                channel.overwrites_for.assert_called_with(role)
 
     @mock.patch.object(silence.Silence, "_force_voice_sync")
     @mock.patch.object(silence.Silence, "send_message")
