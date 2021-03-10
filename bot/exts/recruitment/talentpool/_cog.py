@@ -1,3 +1,4 @@
+
 import logging
 import textwrap
 from collections import ChainMap
@@ -11,6 +12,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
 from bot.converters import FetchedMember
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
+from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import time
 
@@ -33,6 +35,9 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             disable_header=True,
         )
 
+        self.reviewer = Reviewer(self.__class__.__name__, bot, self)
+        self.bot.loop.create_task(self.reviewer.reschedule_reviews())
+
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
@@ -53,6 +58,44 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         cache using the API before listing the users.
         """
         await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
+
+    async def list_watched_users(
+        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+    ) -> None:
+        """
+        Gives an overview of the nominated users list.
+
+        It specifies the users' mention, name, how long ago they were nominated, and whether their
+        review was scheduled or already posted.
+
+        The optional kwarg `oldest_first` orders the list by oldest entry.
+
+        The optional kwarg `update_cache` specifies whether the cache should
+        be refreshed by polling the API.
+        """
+        # TODO Once the watch channel is removed, this can be done in a smarter way, without splitting and overriding
+        # the list_watched_users function.
+        watched_data = await self.prepare_watched_users_data(ctx, oldest_first, update_cache)
+
+        if update_cache and not watched_data["updated"]:
+            await ctx.send(f":x: Failed to update {self.__class__.__name__} user cache, serving from cache")
+
+        lines = []
+        for user_id, line in watched_data["info"].items():
+            if self.watched_users[user_id]['reviewed']:
+                line += " *(reviewed)*"
+            elif user_id in self.reviewer:
+                line += " *(scheduled)*"
+            lines.append(line)
+
+        if not lines:
+            lines = ("There's nothing here yet.",)
+
+        embed = Embed(
+            title=watched_data["title"],
+            color=Color.blue()
+        )
+        await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
     @nomination_group.command(name='oldest')
     @has_any_role(*MODERATION_ROLES)
@@ -115,7 +158,9 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
-        msg = f":white_check_mark: The nomination for {user} has been added to the talent pool"
+
+        if user.id not in self.reviewer:
+            self.reviewer.schedule_review(user.id)
 
         history = await self.bot.api_client.get(
             self.api_endpoint,
@@ -126,6 +171,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             }
         )
 
+        msg = f"✅ The nomination for {user} has been added to the talent pool"
         if history:
             msg += f"\n\n({len(history)} previous nominations in total)"
 
@@ -249,6 +295,22 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         await self.fetch_user_cache()  # Update cache.
         await ctx.send(":white_check_mark: Updated the end reason of the nomination!")
 
+    @nomination_group.command(aliases=('mr',))
+    async def mark_reviewed(self, ctx: Context, nomination_id: int) -> None:
+        """Mark a nomination as reviewed and cancel the review task."""
+        if not await self.reviewer.mark_reviewed(ctx, nomination_id):
+            return
+        await ctx.channel.send(f"✅ The nomination with ID `{nomination_id}` was marked as reviewed.")
+
+    @nomination_group.command(aliases=('review',))
+    async def post_review(self, ctx: Context, nomination_id: int) -> None:
+        """Post the automatic review for the user ahead of time."""
+        if not (user_id := await self.reviewer.mark_reviewed(ctx, nomination_id)):
+            return
+
+        await self.reviewer.post_review(user_id, update_database=False)
+        await ctx.message.add_reaction("✅")
+
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: Union[User, Member]) -> None:
         """Remove `user` from the talent pool after they are banned."""
@@ -276,6 +338,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             json={'end_reason': reason, 'active': False}
         )
         self._remove_user(user_id)
+
+        self.reviewer.cancel(user_id)
 
         return True
 
@@ -328,3 +392,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             )
 
         return lines.strip()
+
+    def cog_unload(self) -> None:
+        """Cancels all review tasks on cog unload."""
+        super().cog_unload()
+        self.reviewer.cancel_all()
