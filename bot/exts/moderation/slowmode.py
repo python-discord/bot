@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
@@ -54,8 +53,7 @@ class Slowmode(Cog):
 
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
         # Must do this to get the delta in a particular unit of time
-        utcnow = datetime.utcnow()
-        slowmode_delay = (utcnow + delay - utcnow).total_seconds()
+        slowmode_delay = time.relativedelta_to_timedelta(delay).total_seconds()
 
         humanized_delay = time.humanize_delta(delay)
 

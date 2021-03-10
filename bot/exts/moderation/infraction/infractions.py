@@ -126,7 +126,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             duration = await Duration().convert(ctx, "1h")
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
-    @command()
+    @command(aliases=("tban",))
     async def tempban(
         self,
         ctx: Context,
@@ -198,7 +198,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Temporary shadow infractions
 
-    @command(hidden=True, aliases=["shadowtempban", "stempban"])
+    @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
     async def shadow_tempban(
         self,
         ctx: Context,
@@ -317,6 +317,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
             return
+
+        infraction["purge"] = "purge " if purge_days else ""
 
         self.mod_log.ignore(Event.member_remove, user.id)
 

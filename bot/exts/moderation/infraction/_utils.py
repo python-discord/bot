@@ -7,6 +7,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
+from bot.errors import InvalidInfractedUser
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +80,10 @@ async def post_infraction(
     active: bool = True
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
+    if isinstance(user, (discord.Member, discord.User)) and user.bot:
+        log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
+        raise InvalidInfractedUser(user)
+
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
     payload = {
