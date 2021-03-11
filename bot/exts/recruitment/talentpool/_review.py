@@ -1,14 +1,15 @@
 import asyncio
 import logging
+import random
 import textwrap
 import typing
 from collections import Counter
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
-from discord import Member, Message, TextChannel
+from discord import Emoji, Member, Message, TextChannel
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
@@ -82,13 +83,15 @@ class Reviewer(Scheduler):
 
         review_body = await self._construct_review_body(member)
 
+        seen_emoji = self._random_ducky(guild)
         vote_request = "*Refer to their nomination and infraction histories for further details*.\n"
-        vote_request += "*Please react 👀 if you've seen this post. Then react 👍 for approval, or 👎 for disapproval*."
+        vote_request += f"*Please react {seen_emoji} if you've seen this post."
+        vote_request += " Then react 👍 for approval, or 👎 for disapproval*."
 
         review = "\n\n".join(part for part in (opening, current_nominations, review_body, vote_request))
 
         message = (await self._bulk_send(channel, review))[-1]
-        for reaction in ("👀", "👍", "👎"):
+        for reaction in (seen_emoji, "👍", "👎"):
             await message.add_reaction(reaction)
 
     async def _construct_review_body(self, member: Member) -> str:
@@ -223,6 +226,14 @@ class Reviewer(Scheduler):
         review += f"\nThe last one ended {end_time} with the reason: {history[0]['end_reason']}"
 
         return review
+
+    @staticmethod
+    def _random_ducky(guild: Guild) -> Union[Emoji, str]:
+        """Picks a random ducky emoji to be used to mark the vote as seen. If no duckies found returns 👀."""
+        duckies = [emoji for emoji in guild.emojis if emoji.name.startswith("ducky")]
+        if not duckies:
+            return "👀"
+        return random.choice(duckies)
 
     @staticmethod
     async def _bulk_send(channel: TextChannel, text: str) -> List[Message]:
