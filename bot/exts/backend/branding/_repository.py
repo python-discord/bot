@@ -35,6 +35,7 @@ class RemoteObject:
     The annotations match keys in the response JSON that we're interested in.
     """
 
+    sha: str  # Hash helps us detect asset change
     name: str  # Filename
     path: str  # Path from repo root
     type: str  # Either 'file' or 'dir'
