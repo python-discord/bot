@@ -250,7 +250,6 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._kick_voice_members(MockVoiceChannel(members=members))
         for member in members:
             member.move_to.assert_called_once()
-            member.reset_mock()
 
     async def test_sync_move_to_error(self):
         """Test to ensure move_to gets called on all members during sync, even if some fail."""
