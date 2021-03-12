@@ -2,13 +2,13 @@ import asyncio
 import logging
 import random
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from enum import Enum
 
 import async_timeout
 import discord
 from async_rediscache import RedisCache
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from bot.bot import Bot
 from bot.constants import Branding as BrandingConfig, Channels, Guild
@@ -38,6 +38,7 @@ class Branding(commands.Cog):
     """Guild branding management."""
 
     # RedisCache[
+    #     "daemon_active": If True, daemon auto-starts; controlled via commands (bool)
     #     "event_path": Path from root in the branding repo (str)
     #     "event_description": Markdown description (str)
     #     "event_duration": Human-readable date range or 'Fallback' (str)
@@ -52,9 +53,11 @@ class Branding(commands.Cog):
     cache_icons = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
-        """Instantiate repository abstraction."""
+        """Instantiate repository abstraction & allow daemon to start."""
         self.bot = bot
         self.repository = BrandingRepository(bot)
+
+        self.bot.loop.create_task(self.maybe_start_daemon())  # Start depending on cache
 
     # region: Internal utility
 
@@ -236,5 +239,108 @@ class Branding(commands.Cog):
 
         # Notify guild of new event ~ this reads the information that we cached above!
         await self.send_info_embed(Channels.change_log)
+
+    # endregion
+    # region: Daemon
+
+    async def maybe_start_daemon(self) -> None:
+        """
+        Start the daemon depending on cache state.
+
+        The daemon will only start if it's been previously explicitly enabled via a command.
+        """
+        log.debug("Checking whether daemon is enabled")
+
+        should_begin: t.Optional[bool] = await self.cache_information.get("daemon_active")  # None if never set!
+
+        if should_begin:
+            self.daemon_main.start()
+
+    async def cog_unload(self) -> None:
+        """
+        Cancel the daemon in case of cog unload.
+
+        This is **not** done automatically! The daemon otherwise remains active in the background.
+        """
+        log.debug("Cog unload: cancelling daemon")
+
+        self.daemon_main.cancel()
+
+    @tasks.loop(hours=24)
+    async def daemon_main(self) -> None:
+        """
+        Periodically synchronise guild & caches with branding repository.
+
+        This function executes every 24 hours at midnight. We pull the currently active event from the branding
+        repository and check whether it matches the currently active event. If not, we apply the new event.
+
+        However, it is also possible that an event's assets change as it's active. To account for such cases,
+        we check the banner & icons hashes against the currently cached values. If there is a mismatch, the
+        specific asset is re-applied.
+
+        As such, the guild should always remain synchronised with the branding repository. However, the #changelog
+        notification is only sent in the case of entering a new event ~ no change in an on-going event will trigger
+        a new notification to be sent.
+        """
+        log.debug("Daemon awakens: checking current event")
+
+        new_event = await self.repository.get_current_event()
+
+        if new_event is None:
+            log.warning("Failed to get current event from the branding repository, daemon will do nothing!")
+            return
+
+        if new_event.path != await self.cache_information.get("event_path"):
+            log.debug("New event detected!")
+            await self.enter_event(new_event)
+            return
+
+        log.debug("Event has not changed, checking for change in assets")
+
+        if new_event.banner.sha != await self.cache_information.get("banner_hash"):
+            log.debug("Detected same-event banner change!")
+            await self.apply_banner(new_event.banner)
+
+        if compound_hash(new_event.icons) != await self.cache_information.get("icons_hash"):
+            log.debug("Detected same-event icon change!")
+            await self.initiate_icon_rotation(new_event.icons)
+        else:
+            await self.maybe_rotate_icons()
+
+    @daemon_main.before_loop
+    async def daemon_before(self) -> None:
+        """
+        Wait until the next-up UTC midnight before letting `daemon_main` begin.
+
+        This function allows the daemon to keep a consistent schedule across restarts.
+
+        We check for a special case in which the cog's cache is empty. This indicates that we have never entered
+        an event (on first start-up), or that there was a cache loss. In either case, the current event gets
+        applied immediately, to avoid leaving the cog in an empty state.
+        """
+        log.debug("Calculating time for daemon to sleep before first awakening")
+
+        current_event = await self.cache_information.get("event_path")
+
+        if current_event is None:  # Maiden case ~ first start or cache loss
+            log.debug("Applying event immediately as cache is empty (indicating maiden case)")
+
+            event = await self.repository.get_current_event()
+
+            if event is None:
+                log.warning("Failed to fetch event ~ cache will remain empty!")
+            else:
+                await self.enter_event(event)
+
+        now = datetime.utcnow()
+
+        # The actual midnight moment is offset into the future in order to prevent issues with imprecise sleep
+        tomorrow = now + timedelta(days=1)
+        midnight = datetime.combine(tomorrow, time(minute=1))
+
+        sleep_secs = (midnight - now).total_seconds()
+
+        log.debug(f"Sleeping {sleep_secs} seconds before next-up midnight at {midnight}")
+        await asyncio.sleep(sleep_secs)
 
     # endregion
