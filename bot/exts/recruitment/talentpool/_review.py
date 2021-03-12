@@ -30,13 +30,17 @@ MAX_DAYS_IN_POOL = 30
 MAX_MESSAGE_SIZE = 2000
 
 
-class Reviewer(Scheduler):
+class Reviewer:
     """Schedules, formats, and publishes reviews of helper nominees."""
 
     def __init__(self, name: str, bot: Bot, pool: 'TalentPool'):
-        super().__init__(name)
         self.bot = bot
         self._pool = pool
+        self._review_scheduler = Scheduler(name)
+
+    def __contains__(self, user_id: int) -> bool:
+        """Return True if the user with ID user_id is scheduled for review, False otherwise."""
+        return user_id in self._review_scheduler
 
     async def reschedule_reviews(self) -> None:
         """Reschedule all active nominations to be reviewed at the appropriate time."""
@@ -57,13 +61,17 @@ class Reviewer(Scheduler):
         inserted_at = isoparse(user_data['inserted_at']).replace(tzinfo=None)
         review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
 
-        self.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
+        self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format a generic review of a user and post it to the mod announcements channel."""
         log.trace(f"Posting the review of {user_id}")
 
         nomination = self._pool.watched_users[user_id]
+        if not nomination:
+            log.trace(f"There doesn't appear to be an active nomination for {user_id}")
+            return
+
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.mod_announcements)
         member = guild.get_member(user_id)
@@ -276,9 +284,27 @@ class Reviewer(Scheduler):
             return None
 
         await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
-        if nomination["user"] in self:
-            self.cancel(nomination["user"])
+        if nomination["user"] in self._review_scheduler:
+            self._review_scheduler.cancel(nomination["user"])
 
         await self._pool.fetch_user_cache()
 
         return nomination["user"]
+
+    def cancel(self, user_id: int) -> None:
+        """
+        Cancels the review of the nominee with ID user_id.
+
+        It's important to note that this applies only until reschedule_reviews is called again.
+        To permenantly cancel someone's review, either remove them from the pool, or use mark_reviewed.
+        """
+        self._review_scheduler.cancel(user_id)
+
+    def cancel_all(self) -> None:
+        """
+        Cancels all reviews.
+
+        It's important to note that this applies only until reschedule_reviews is called again.
+        To permenantly cancel someone's review, either remove them from the pool, or use mark_reviewed.
+        """
+        self._review_scheduler.cancel_all()
