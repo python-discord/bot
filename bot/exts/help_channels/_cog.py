@@ -498,16 +498,16 @@ class HelpChannels(commands.Cog):
 
         if self.dynamic_message is not None:
             try:
+                log.trace("Help channels have changed, dynamic message has been edited.")
                 await self.bot.http.edit_message(
                     constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels
                 )
-                log.trace("Help channels have changed, dynamic message has been edited.")
             except discord.NotFound:
                 pass
             else:
                 return
 
-        log.trace("No How-to-get-help dynamic message could be found in the Redis cache. Setting a new one.")
+        log.trace("Dynamic message could not be edited or found. Creating a new one.")
         new_dynamic_message = await self.bot.http.send_message(
             constants.Channels.how_to_get_help, available_channels
         )
