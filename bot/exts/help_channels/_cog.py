@@ -242,6 +242,10 @@ class HelpChannels(commands.Cog):
             for channel in channels[:abs(missing)]:
                 await self.unclaim_channel(channel)
 
+        # Getting channels that need to be included in the dynamic message.
+        await self.update_available_help_channels()
+        log.trace("Dynamic available help message updated.")
+
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
         log.trace("Getting the CategoryChannel objects for the help categories.")
@@ -289,10 +293,6 @@ class HelpChannels(commands.Cog):
         # Acquiring the dynamic message ID, if it exists within the cache.
         log.trace("Attempting to fetch How-to-get-help dynamic message ID.")
         self.dynamic_message = await _caches.dynamic_message.get("message_id")
-
-        # Getting channels that need to be included in the dynamic message.
-        await self.update_available_help_channels()
-        log.trace("Dynamic available help message updated.")
 
         await self.init_available()
         _stats.report_counts()
