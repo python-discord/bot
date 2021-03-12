@@ -92,9 +92,11 @@ class Reviewer:
         review_body = await self._construct_review_body(member)
 
         seen_emoji = self._random_ducky(guild)
-        vote_request = "*Refer to their nomination and infraction histories for further details*.\n"
-        vote_request += f"*Please react {seen_emoji} if you've seen this post."
-        vote_request += " Then react 👍 for approval, or 👎 for disapproval*."
+        vote_request = (
+            "*Refer to their nomination and infraction histories for further details*.\n"
+            f"*Please react {seen_emoji} if you've seen this post."
+            " Then react 👍 for approval, or 👎 for disapproval*."
+        )
 
         review = "\n\n".join(part for part in (opening, current_nominations, review_body, vote_request))
 
@@ -143,8 +145,10 @@ class Reviewer:
                 channels += f", and {last_channel[1]} in {last_channel[0]}"
 
         time_on_server = humanize_delta(relativedelta(datetime.utcnow(), member.joined_at), max_units=2)
-        review = f"{member.name} has been on the server for **{time_on_server}**"
-        review += f" and has **{messages} messages**{channels}."
+        review = (
+            f"{member.name} has been on the server for **{time_on_server}**"
+            f" and has **{messages} messages**{channels}."
+        )
 
         return review
 
@@ -227,11 +231,13 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        review = f"They were nominated **{nomination_times}** before"
-        review += f", but their nomination was called off **{rejection_times}**."
-
         end_time = time_since(isoparse(history[0]['ended_at']).replace(tzinfo=None), max_units=2)
-        review += f"\nThe last one ended {end_time} with the reason: {history[0]['end_reason']}"
+
+        review = (
+            f"They were nominated **{nomination_times}** before"
+            f", but their nomination was called off **{rejection_times}**."
+            f"\nThe last one ended {end_time} with the reason: {history[0]['end_reason']}"
+        )
 
         return review
 
