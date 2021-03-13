@@ -445,6 +445,69 @@ class Branding(commands.Cog):
         await ctx.send(embed=resp)
 
     # endregion
+    # region: Command interface (branding calendar)
+
+    @branding_group.group(name="calendar", aliases=("schedule",))
+    async def branding_calendar_group(self, ctx: commands.Context) -> None:
+        """
+        Show the current event calendar.
+
+        We draw event information from `cache_events` and use each key-value pair to create a field in the response
+        embed. As such, we do not need to query the API to get event information. The cache is automatically
+        re-populated by the daemon whenever it makes a request. A moderator+ can also explicitly request a cache
+        refresh using the 'refresh' subcommand.
+
+        Due to Discord limitations, we only show up to 25 events. This is entirely sufficient at the time of writing.
+        In the case that we find ourselves with more than 25 events, a warning log will alert core devs.
+
+        In the future, we may be interested in a field-paginating solution.
+        """
+        if ctx.invoked_subcommand:
+            # If you're wondering why this works: when the 'refresh' subcommand eventually re-invokes
+            # this group, the attribute will be automatically set to None by the framework
+            return
+
+        available_events = await self.cache_events.to_dict()
+        log.debug(f"Found {len(available_events)} cached events available for calendar view")
+
+        if not available_events:
+            resp = make_embed("No events found!", "Cache may be empty, try `branding calendar refresh`.", success=False)
+            await ctx.send(embed=resp)
+            return
+
+        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.blurple())
+
+        # Because a Discord embed can only contain up to 25 fields, we only show the first 25
+        first_25 = list(available_events.items())[:25]
+
+        if len(first_25) != len(available_events):  # Alert core devs that a paginating solution is now necessary
+            log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25!")
+
+        for name, duration in first_25:
+            embed.add_field(name=name, value=duration)
+
+        embed.set_footer(text="Otherwise, the fallback season is used.")
+
+        await ctx.send(embed=embed)
+
+    @commands.has_any_role(*MODERATION_ROLES)
+    @branding_calendar_group.command(name="refresh")
+    async def branding_calendar_refresh_cmd(self, ctx: commands.Context) -> None:
+        """
+        Refresh event cache and show current event calendar.
+
+        Supplementary subcommand allowing force-refreshing the event cache. Implemented as a subcommand because
+        unlike the supergroup, it requires moderator privileges.
+        """
+        log.debug("Performing command-requested event cache refresh")
+
+        async with ctx.typing():
+            available_events = await self.repository.get_events()
+            await self.populate_cache_events(available_events)
+
+        await ctx.invoke(self.branding_calendar_group)
+
+    # endregion
     # region: Command interface (branding daemon)
 
     @commands.has_any_role(*MODERATION_ROLES)
