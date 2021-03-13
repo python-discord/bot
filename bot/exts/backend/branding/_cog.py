@@ -240,6 +240,23 @@ class Branding(commands.Cog):
         # Notify guild of new event ~ this reads the information that we cached above!
         await self.send_info_embed(Channels.change_log)
 
+    async def synchronise(self) -> None:
+        """
+        Fetch the current event and delegate to `enter_event`.
+
+        This is a convenience wrapper to force synchronisation either via a command, or when the daemon starts
+        with an empty cache. It is generally only used in a recovery scenario. In the usual case, the daemon
+        already has an `Event` instance and can pass it to `enter_event` directly.
+        """
+        log.debug("Synchronise: fetching current event")
+
+        event = await self.repository.get_current_event()
+
+        if event is None:
+            log.error("Failed to fetch event ~ cannot synchronise!")
+        else:
+            await self.enter_event(event)
+
     # endregion
     # region: Daemon
 
@@ -323,14 +340,8 @@ class Branding(commands.Cog):
         current_event = await self.cache_information.get("event_path")
 
         if current_event is None:  # Maiden case ~ first start or cache loss
-            log.debug("Applying event immediately as cache is empty (indicating maiden case)")
-
-            event = await self.repository.get_current_event()
-
-            if event is None:
-                log.warning("Failed to fetch event ~ cache will remain empty!")
-            else:
-                await self.enter_event(event)
+            log.debug("Event cache is empty (indicating maiden case), invoking synchronisation")
+            await self.synchronise()
 
         now = datetime.utcnow()
 
