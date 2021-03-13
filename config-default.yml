@@ -262,6 +262,8 @@ guild:
 
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
+        domain_leads:                       807415650778742785
+        project_leads:                      807415650778742785
         core_developers:                    587606783669829632
         devops:                             409416496733880320
         helpers:            &HELPERS_ROLE   267630620367257601
