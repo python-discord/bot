@@ -276,7 +276,7 @@ class Reviewer:
             nomination = await self.bot.api_client.get(f"{self._pool.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
             if e.response.status == 404:
-                self.log.trace(f"Nomination API 404: Can't find nomination with id {nomination_id}")
+                log.trace(f"Nomination API 404: Can't find nomination with id {nomination_id}")
                 await ctx.send(f"❌ Can't find a nomination with id `{nomination_id}`")
                 return None
             else:
