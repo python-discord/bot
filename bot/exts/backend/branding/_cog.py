@@ -158,6 +158,7 @@ class Branding(commands.Cog):
 
         if last_rotation_timestamp is None:  # Maiden case ~ never rotated
             await self.rotate_icons()
+            return
 
         last_rotation = datetime.fromtimestamp(last_rotation_timestamp)
         difference = (datetime.utcnow() - last_rotation) + timedelta(minutes=5)
