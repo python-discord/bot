@@ -208,6 +208,8 @@ class Branding(commands.Cog):
         This function should be called whenever the set of `available_icons` changes. This is generally the case
         when we enter a new event, but potentially also when the assets of an on-going event change. In such cases,
         a reset of `cache_icons` is necessary, because it contains download URLs which may have gotten stale.
+
+        This function does not upload a new icon!
         """
         log.debug("Initiating new icon rotation")
 
@@ -218,7 +220,6 @@ class Branding(commands.Cog):
 
         log.trace(f"Icon rotation initiated for {len(new_state)} icons")
 
-        await self.rotate_icons()
         await self.cache_information.set("icons_hash", compound_hash(available_icons))
 
     async def send_info_embed(self, channel_id: int) -> None:
@@ -266,7 +267,9 @@ class Branding(commands.Cog):
         log.debug(f"Entering new event: {event.path}")
 
         await self.apply_banner(event.banner)  # Only one asset ~ apply directly
-        await self.initiate_icon_rotation(event.icons)  # Extra layer of abstraction to handle multiple assets
+
+        await self.initiate_icon_rotation(event.icons)  # Prepare a new rotation
+        await self.rotate_icons()  # Apply an icon from the new rotation
 
         # Cache event identity to avoid re-entry in case of restart
         await self.cache_information.set("event_path", event.path)
@@ -384,6 +387,7 @@ class Branding(commands.Cog):
         if compound_hash(new_event.icons) != await self.cache_information.get("icons_hash"):
             log.debug("Detected same-event icon change!")
             await self.initiate_icon_rotation(new_event.icons)
+            await self.rotate_icons()
         else:
             await self.maybe_rotate_icons()
 
