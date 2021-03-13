@@ -42,7 +42,7 @@ SERVER_ICONS = "server_icons"
 
 BRANDING_URL = "https://api.github.com/repos/python-discord/branding/contents"
 
-PARAMS = {"ref": "master"}  # Target branch
+PARAMS = {"ref": "main"}  # Target branch
 HEADERS = {"Accept": "application/vnd.github.v3+json"}  # Ensure we use API v3
 
 # A GitHub token is not necessary for the cog to operate,

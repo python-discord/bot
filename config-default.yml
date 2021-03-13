@@ -89,8 +89,8 @@ style:
 
         filtering: "https://cdn.discordapp.com/emojis/472472638594482195.png"
 
-        green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-checkmark-dist.png"
-        green_questionmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-question-mark-dist.png"
+        green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/main/icons/checkmark/green-checkmark-dist.png"
+        green_questionmark: "https://raw.githubusercontent.com/python-discord/branding/main/icons/checkmark/green-question-mark-dist.png"
         guild_update: "https://cdn.discordapp.com/emojis/469954765141442561.png"
 
         hash_blurple: "https://cdn.discordapp.com/emojis/469950142942806017.png"
@@ -360,8 +360,8 @@ urls:
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
     discord_invite_api: !JOIN [*DISCORD_API, "invites"]
 
-    # Misc URLs
-    bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
+    # Misc URLsw
+    bot_avatar:      "https://raw.githubusercontent.com/python-discord/branding/main/logos/logo_circle/logo_circle.png"
     github_bot_repo: "https://github.com/python-discord/bot"
 
 
