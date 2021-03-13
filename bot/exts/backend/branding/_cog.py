@@ -46,6 +46,22 @@ def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
     return discord.Embed(title=title, description=description, colour=colour)
 
 
+def extract_event_duration(event: Event) -> str:
+    """
+    Extract a human-readable, year-agnostic duration string from `event`.
+
+    In the case that `event` is a fallback event, resolves to 'Fallback'.
+    """
+    if event.meta.is_fallback:
+        return "Fallback"
+
+    fmt = "%B %d"  # Ex: August 23
+    start_date = event.meta.start_date.strftime(fmt)
+    end_date = event.meta.end_date.strftime(fmt)
+
+    return f"{start_date} - {end_date}"
+
+
 class Branding(commands.Cog):
     """Guild branding management."""
 
@@ -239,15 +255,7 @@ class Branding(commands.Cog):
         await self.cache_information.set("event_path", event.path)
 
         # The following values are only stored for the purpose of presenting them to the users
-        if event.meta.is_fallback:
-            event_duration = "Fallback"
-        else:
-            fmt = "%B %d"  # Ex: August 23
-            start_date = event.meta.start_date.strftime(fmt)
-            end_date = event.meta.end_date.strftime(fmt)
-            event_duration = f"{start_date} - {end_date}"
-
-        await self.cache_information.set("event_duration", event_duration)
+        await self.cache_information.set("event_duration", extract_event_duration(event))
         await self.cache_information.set("event_description", event.meta.description)
 
         # Notify guild of new event ~ this reads the information that we cached above!
