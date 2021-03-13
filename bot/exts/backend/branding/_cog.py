@@ -4,6 +4,7 @@ import random
 import typing as t
 from datetime import datetime, time, timedelta
 from enum import Enum
+from operator import attrgetter
 
 import async_timeout
 import discord
@@ -310,7 +311,7 @@ class Branding(commands.Cog):
         await self.cache_events.clear()
 
         no_fallback = [event for event in events if not event.meta.is_fallback]
-        chronological_events = sorted(no_fallback, key=lambda event_: event_.meta.start_date)
+        chronological_events = sorted(no_fallback, key=attrgetter("meta.start_date"))
 
         await self.cache_events.update({
             extract_event_name(event): extract_event_duration(event)
