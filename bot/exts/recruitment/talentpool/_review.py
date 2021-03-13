@@ -278,16 +278,16 @@ class Reviewer:
             if e.response.status == 404:
                 log.trace(f"Nomination API 404: Can't find nomination with id {nomination_id}")
                 await ctx.send(f"❌ Can't find a nomination with id `{nomination_id}`")
-                return None
+                return
             else:
                 raise
 
         if nomination["reviewed"]:
             await ctx.send("❌ This nomination was already reviewed, but here's a cookie 🍪")
-            return None
+            return
         elif not nomination["active"]:
             await ctx.send("❌ This nomination is inactive")
-            return None
+            return
 
         await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
         if nomination["user"] in self._review_scheduler:
@@ -302,7 +302,7 @@ class Reviewer:
         Cancels the review of the nominee with ID user_id.
 
         It's important to note that this applies only until reschedule_reviews is called again.
-        To permenantly cancel someone's review, either remove them from the pool, or use mark_reviewed.
+        To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
         """
         self._review_scheduler.cancel(user_id)
 
@@ -311,6 +311,6 @@ class Reviewer:
         Cancels all reviews.
 
         It's important to note that this applies only until reschedule_reviews is called again.
-        To permenantly cancel someone's review, either remove them from the pool, or use mark_reviewed.
+        To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
         """
         self._review_scheduler.cancel_all()

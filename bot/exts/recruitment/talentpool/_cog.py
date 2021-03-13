@@ -1,4 +1,3 @@
-
 import logging
 import textwrap
 from collections import ChainMap
@@ -47,7 +46,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @nomination_group.command(name='watched', aliases=('all', 'list'), root_aliases=("nominees",))
     @has_any_role(*MODERATION_ROLES)
     async def watched_command(
-        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+        self,
+        ctx: Context,
+        oldest_first: bool = False,
+        update_cache: bool = True
     ) -> None:
         """
         Shows the users that are currently being monitored in the talent pool.
@@ -60,7 +62,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
 
     async def list_watched_users(
-        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+        self,
+        ctx: Context,
+        oldest_first: bool = False,
+        update_cache: bool = True
     ) -> None:
         """
         Gives an overview of the nominated users list.
