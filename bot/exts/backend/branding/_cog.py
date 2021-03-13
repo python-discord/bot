@@ -11,7 +11,7 @@ from async_rediscache import RedisCache
 from discord.ext import commands, tasks
 
 from bot.bot import Bot
-from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild
+from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, MODERATION_ROLES
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
 
@@ -380,6 +380,7 @@ class Branding(commands.Cog):
         """Show the current event description."""
         await self.send_info_embed(ctx.channel.id)
 
+    @commands.has_any_role(*MODERATION_ROLES)
     @branding_group.command(name="sync")
     async def branding_sync_cmd(self, ctx: commands.Context) -> None:
         """Force branding synchronisation."""
@@ -396,6 +397,7 @@ class Branding(commands.Cog):
     # endregion
     # region: Command interface (branding daemon)
 
+    @commands.has_any_role(*MODERATION_ROLES)
     @branding_group.group(name="daemon", aliases=("d",))
     async def branding_daemon_group(self, ctx: commands.Context) -> None:
         """Control the branding cog's daemon."""
