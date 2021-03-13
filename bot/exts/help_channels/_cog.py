@@ -54,7 +54,7 @@ class HelpChannels(commands.Cog):
     * Contains channels which aren't in use
     * Channels are used to refill the Available category
 
-    Help channels are named after the chemical elements in `bot/resources/elements.json`.
+    Help channels are named after the foods in `bot/resources/foods.json`.
     """
 
     def __init__(self, bot: Bot):
