@@ -62,6 +62,18 @@ def extract_event_duration(event: Event) -> str:
     return f"{start_date} - {end_date}"
 
 
+def extract_event_name(event: Event) -> str:
+    """
+    Extract title-cased event name from the path of `event`.
+
+    An event with a path of 'events/black_history_month' will resolve to 'Black History Month'.
+    """
+    name = event.path.split("/")[-1]  # Inner-most directory name
+    words = name.split("_")  # Words from snake case
+
+    return " ".join(word.title() for word in words)
+
+
 class Branding(commands.Cog):
     """Guild branding management."""
 
@@ -79,6 +91,10 @@ class Branding(commands.Cog):
     # Cache holding icons in current rotation ~ the keys are download URLs (str) and the values are integers
     # corresponding to the amount of times each icon has been used in the current rotation
     cache_icons = RedisCache()
+
+    # Cache holding all available event names & their durations; this is cached by the daemon and read by
+    # the calendar command with the intention of preventing API spam; doesn't contain the fallback event
+    cache_events = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
         """Instantiate repository abstraction & allow daemon to start."""
@@ -271,12 +287,35 @@ class Branding(commands.Cog):
         """
         log.debug("Synchronise: fetching current event")
 
-        event = await self.repository.get_current_event()
+        current_event, available_events = await self.repository.get_current_event()
 
-        if event is None:
+        await self.populate_cache_events(available_events)
+
+        if current_event is None:
             log.error("Failed to fetch event ~ cannot synchronise!")
         else:
-            await self.enter_event(event)
+            await self.enter_event(current_event)
+
+    async def populate_cache_events(self, events: t.List[Event]) -> None:
+        """
+        Clear `cache_events` and re-populate with names and durations of `events`.
+
+        For each event, we store its name and duration string. This is the information presented to users in the
+        calendar command. If a format change is needed, it has to be done here.
+
+        The cache does not store the fallback event, as it is not shown in the calendar.
+        """
+        log.debug(f"Populating events cache with {len(events)} events")
+
+        await self.cache_events.clear()
+
+        no_fallback = [event for event in events if not event.meta.is_fallback]
+        chronological_events = sorted(no_fallback, key=lambda event_: event_.meta.start_date)
+
+        await self.cache_events.update({
+            extract_event_name(event): extract_event_duration(event)
+            for event in chronological_events
+        })
 
     # endregion
     # region: Daemon
@@ -322,7 +361,9 @@ class Branding(commands.Cog):
         """
         log.debug("Daemon awakens: checking current event")
 
-        new_event = await self.repository.get_current_event()
+        new_event, available_events = await self.repository.get_current_event()
+
+        await self.populate_cache_events(available_events)
 
         if new_event is None:
             log.warning("Failed to get current event from the branding repository, daemon will do nothing!")

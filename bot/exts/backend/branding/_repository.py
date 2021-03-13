@@ -189,11 +189,14 @@ class BrandingRepository:
         log.trace(f"Found {len(instances)} correctly configured events")
         return instances
 
-    async def get_current_event(self) -> t.Optional[Event]:
+    async def get_current_event(self) -> t.Tuple[t.Optional[Event], t.List[Event]]:
         """
         Get the currently active event, or the fallback event.
 
-        Returns None in the case that no event is active, and no fallback event is found.
+        The second return value is a list of all available events. The caller may discard it, if not needed.
+        Returning all events alongside the current one prevents having to query the API twice in some cases.
+
+        The current event may be None in the case that no event is active, and no fallback event is found.
         """
         utc_now = datetime.utcnow()
         log.debug(f"Finding active event for: {utc_now}")
@@ -201,17 +204,18 @@ class BrandingRepository:
         # As all events exist in the arbitrary year, we construct a separate object for the purposes of comparison
         lookup_now = date(year=ARBITRARY_YEAR, month=utc_now.month, day=utc_now.day)
 
-        events = await self.get_events()
+        available_events = await self.get_events()
 
-        for event in events:
+        for event in available_events:
             meta = event.meta
             if not meta.is_fallback and (meta.start_date <= lookup_now <= meta.end_date):
-                return event
+                return event, available_events
 
         log.debug("No active event found, looking for fallback")
 
-        for event in events:
+        for event in available_events:
             if event.meta.is_fallback:
-                return event
+                return event, available_events
 
         log.warning("No event is currently active and no fallback event was found!")
+        return None, available_events
