@@ -11,7 +11,7 @@ from async_rediscache import RedisCache
 from discord.ext import commands, tasks
 
 from bot.bot import Bot
-from bot.constants import Branding as BrandingConfig, Channels, Guild
+from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
 
@@ -32,6 +32,18 @@ class AssetType(Enum):
 def compound_hash(objects: t.Iterable[RemoteObject]) -> str:
     """Compound hashes are cached to check for change in any of the member `objects`."""
     return "-".join(item.sha for item in objects)
+
+
+def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
+    """
+    Construct simple response embed.
+
+    If `success` is True, use green colour, otherwise red.
+
+    For both `title` and `description`, empty string are valid values ~ fields will be empty.
+    """
+    colour = Colours.soft_green if success else Colours.soft_red
+    return discord.Embed(title=title, description=description, colour=colour)
 
 
 class Branding(commands.Cog):
@@ -353,5 +365,77 @@ class Branding(commands.Cog):
 
         log.debug(f"Sleeping {sleep_secs} seconds before next-up midnight at {midnight}")
         await asyncio.sleep(sleep_secs)
+
+    # endregion
+    # region: Command interface (branding)
+
+    @commands.group(name="branding")
+    async def branding_group(self, ctx: commands.Context) -> None:
+        """Control the branding cog."""
+        if not ctx.invoked_subcommand:
+            await ctx.send_help(ctx.command)
+
+    @branding_group.command(name="about")
+    async def branding_about_cmd(self, ctx: commands.Context) -> None:
+        """Show the current event description."""
+        await self.send_info_embed(ctx.channel.id)
+
+    @branding_group.command(name="sync")
+    async def branding_sync_cmd(self, ctx: commands.Context) -> None:
+        """Force branding synchronisation."""
+        async with ctx.typing():
+            await self.synchronise()
+
+        resp = make_embed(
+            "Synchronisation complete",
+            "If something doesn't look right, check log for errors.",
+            success=True,
+        )
+        await ctx.send(embed=resp)
+
+    # endregion
+    # region: Command interface (branding daemon)
+
+    @branding_group.group(name="daemon", aliases=("d",))
+    async def branding_daemon_group(self, ctx: commands.Context) -> None:
+        """Control the branding cog's daemon."""
+        if not ctx.invoked_subcommand:
+            await ctx.send_help(ctx.command)
+
+    @branding_daemon_group.command(name="enable", aliases=("start", "on"))
+    async def branding_daemon_enable_cmd(self, ctx: commands.Context) -> None:
+        """Enable the branding daemon."""
+        await self.cache_information.set("daemon_active", True)
+
+        if self.daemon_main.is_running():
+            resp = make_embed("Daemon is already enabled!", "", success=False)
+        else:
+            self.daemon_main.start()
+            resp = make_embed("Daemon enabled!", "It will now automatically awaken on start-up.", success=True)
+
+        await ctx.send(embed=resp)
+
+    @branding_daemon_group.command(name="disable", aliases=("stop", "off"))
+    async def branding_daemon_disable_cmd(self, ctx: commands.Context) -> None:
+        """Disable the branding daemon."""
+        await self.cache_information.set("daemon_active", False)
+
+        if self.daemon_main.is_running():
+            self.daemon_main.cancel()
+            resp = make_embed("Daemon disabled!", "It will not awaken on start-up.", success=True)
+        else:
+            resp = make_embed("Daemon is already disabled!", "", success=False)
+
+        await ctx.send(embed=resp)
+
+    @branding_daemon_group.command(name="status")
+    async def branding_daemon_status_cmd(self, ctx: commands.Context) -> None:
+        """Check whether the daemon is currently enabled."""
+        if self.daemon_main.is_running():
+            resp = make_embed("Daemon is enabled", "Use `branding daemon disable` to stop.", success=True)
+        else:
+            resp = make_embed("Daemon is disabled", "Use `branding daemon enable` to start.", success=False)
+
+        await ctx.send(embed=resp)
 
     # endregion
