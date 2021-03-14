@@ -196,6 +196,10 @@ class Branding(commands.Cog):
         state = await self.cache_icons.to_dict()
         log.trace(f"Total icons in rotation: {len(state)}")
 
+        if not state:  # This would only happen if rotation not initiated, but we can handle gracefully
+            log.warning("Attempted icon rotation with an empty icon cache!")
+            return False
+
         if len(state) == 1 and 1 in state.values():
             log.debug("Aborting icon rotation: only 1 icon is available and has already been applied")
             return False
