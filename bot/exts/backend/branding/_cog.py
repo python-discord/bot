@@ -44,7 +44,7 @@ def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
     For both `title` and `description`, empty string are valid values ~ fields will be empty.
     """
     colour = Colours.soft_green if success else Colours.soft_red
-    return discord.Embed(title=title, description=description, colour=colour)
+    return discord.Embed(title=title[:256], description=description[:2048], colour=colour)
 
 
 def extract_event_duration(event: Event) -> str:
@@ -282,11 +282,14 @@ class Branding(commands.Cog):
 
         log.debug(f"Destination channel: #{channel.name}")
 
-        embed = discord.Embed(
-            description=await self.cache_information.get("event_description"),
-            colour=discord.Colour.blurple(),
-        )
-        embed.set_footer(text=await self.cache_information.get("event_duration"))
+        description = await self.cache_information.get("event_description")
+        duration = await self.cache_information.get("event_duration")
+
+        if None in (description, duration):
+            embed = make_embed("No event in cache", "Is the daemon enabled?", success=False)
+        else:
+            embed = discord.Embed(description=description[:2048], colour=discord.Colour.blurple())
+            embed.set_footer(text=duration[:2048])
 
         await channel.send(embed=embed)
 
@@ -553,7 +556,7 @@ class Branding(commands.Cog):
             log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25!")
 
         for name, duration in first_25:
-            embed.add_field(name=name, value=duration)
+            embed.add_field(name=name[:256], value=duration[:1024])
 
         embed.set_footer(text="Otherwise, the fallback season is used.")
 
