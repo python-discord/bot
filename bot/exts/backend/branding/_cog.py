@@ -270,25 +270,27 @@ class Branding(commands.Cog):
 
     async def enter_event(self, event: Event) -> t.Tuple[bool, bool]:
         """
-        Enter `event` and update information cache.
+        Apply `event` assets and update information cache.
 
-        From the outside, entering a new event is as simple as applying its branding to the guild and dispatching
-        a notification to #changelog.
-
-        However, internally we cache information to ensure that we:
+        We cache `event` information to ensure that we:
         * Remember which event we're currently in across restarts
         * Provide an on-demand information embed without re-querying the branding repository
 
         An event change should always be handled via this function, as it ensures that the cache is populated.
 
+        The #changelog notification is sent only if `event` differs from the currently cached event.
+
         Returns a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
-        log.debug(f"Entering new event: {event.path}")
+        log.debug(f"Entering event: {event.path}")
 
         banner_success = await self.apply_banner(event.banner)  # Only one asset ~ apply directly
 
         await self.initiate_icon_rotation(event.icons)  # Prepare a new rotation
         icon_success = await self.rotate_icons()  # Apply an icon from the new rotation
+
+        # This will only be False in the case of a manual same-event re-synchronisation
+        event_changed = event.path != await self.cache_information.get("event_path")
 
         # Cache event identity to avoid re-entry in case of restart
         await self.cache_information.set("event_path", event.path)
@@ -298,7 +300,10 @@ class Branding(commands.Cog):
         await self.cache_information.set("event_description", event.meta.description)
 
         # Notify guild of new event ~ this reads the information that we cached above!
-        await self.send_info_embed(Channels.change_log)
+        if event_changed:
+            await self.send_info_embed(Channels.change_log)
+        else:
+            log.trace("Omitted #changelog notification as event has not changed (indicating manual re-sync)")
 
         return banner_success, icon_success
 
