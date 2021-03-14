@@ -2,7 +2,7 @@
 
 Intents are a feature of Discord that tells the gateway exactly which events to send your bot. By default discord.py has all intents enabled, except for the `Members` and `Presences` intents, which are needed for events such as `on_member` and to get members' statuses.
 
-To enable one of these intents you need to first to to the [Discord developer portal](https://discord.com/developers/applications), then to the bot page of your bot's application. Scroll down to the `Privileged Gateway Intents` section, and enable the intents that you need.
+To enable one of these intents you need to first go to the [Discord developer portal](https://discord.com/developers/applications), then to the bot page of your bot's application. Scroll down to the `Privileged Gateway Intents` section, and enable the intents that you need.
 
 Next, in your bot you need to set the intents you want to connect with in the bot's constructor using the `intents` keyword argument, like this:
 
