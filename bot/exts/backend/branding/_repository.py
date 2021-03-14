@@ -182,7 +182,7 @@ class BrandingRepository:
             try:
                 instance = await self.construct_event(event_directory)
             except Exception as exc:
-                log.warning(f"Could not construct event: {exc}")
+                log.warning(f"Could not construct event '{event_directory.path}': {exc}")
             else:
                 instances.append(instance)
 
