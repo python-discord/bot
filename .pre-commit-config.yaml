@@ -7,8 +7,6 @@ repos:
       - id: check-yaml
         args: [--unsafe] # Required due to custom constructors (e.g. !ENV)
       - id: end-of-file-fixer
-      - id: mixed-line-ending
-        args: [--fix=lf]
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
   - repo: https://github.com/pre-commit/pygrep-hooks
