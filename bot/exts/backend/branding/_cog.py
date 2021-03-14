@@ -338,12 +338,14 @@ class Branding(commands.Cog):
 
         The cache does not store the fallback event, as it is not shown in the calendar.
         """
-        log.debug(f"Populating events cache with {len(events)} events")
+        log.debug("Populating events cache")
 
         await self.cache_events.clear()
 
         no_fallback = [event for event in events if not event.meta.is_fallback]
         chronological_events = sorted(no_fallback, key=attrgetter("meta.start_date"))
+
+        log.trace(f"Writing {len(chronological_events)} events (fallback omitted)")
 
         await self.cache_events.update({
             extract_event_name(event): extract_event_duration(event)
