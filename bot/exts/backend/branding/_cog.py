@@ -361,7 +361,7 @@ class Branding(commands.Cog):
         if should_begin:
             self.daemon_main.start()
 
-    async def cog_unload(self) -> None:
+    def cog_unload(self) -> None:
         """
         Cancel the daemon in case of cog unload.
 
