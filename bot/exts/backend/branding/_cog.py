@@ -462,15 +462,26 @@ class Branding(commands.Cog):
     @commands.has_any_role(*MODERATION_ROLES)
     @branding_group.command(name="sync")
     async def branding_sync_cmd(self, ctx: commands.Context) -> None:
-        """Force branding synchronisation."""
-        async with ctx.typing():
-            await self.synchronise()
+        """
+        Force branding synchronisation.
 
-        resp = make_embed(
-            "Synchronisation complete",
-            "If something doesn't look right, check log for errors.",
-            success=True,
+        Shows which assets have failed to synchronise, if any.
+        """
+        async with ctx.typing():
+            banner_success, icon_success = await self.synchronise()
+
+        failed_assets = ", ".join(
+            name
+            for name, status in [("banner", banner_success), ("icon", icon_success)]
+            if status is False
         )
+
+        if failed_assets:
+            resp = make_embed("Synchronisation unsuccessful", f"Failed to apply: {failed_assets}.", success=False)
+            resp.set_footer(text="Check log for details.")
+        else:
+            resp = make_embed("Synchronisation successful", "Assets have been applied.", success=True)
+
         await ctx.send(embed=resp)
 
     # endregion
