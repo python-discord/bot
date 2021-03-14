@@ -69,7 +69,26 @@ class Event(t.NamedTuple):
 
 
 class BrandingRepository:
-    """Abstraction exposing the branding repository via convenient methods."""
+    """
+    Branding repository abstraction.
+
+    This class represents the branding repository's main branch and exposes available events and assets as objects.
+
+    The API is primarily formed by the `get_current_event` function. It performs the necessary amount of validation
+    to ensure that a misconfigured event isn't returned. Such events are simply ignored, and will be substituted
+    with the fallback event, if available.
+
+    Warning logs will inform core developers if a misconfigured event is encountered.
+
+    Colliding events cause no special behaviour - in such cases, the first found active event is returned.
+    We work with the assumption that the branding repository checks for such conflicts and prevents them
+    from reaching the main branch.
+
+    This class keeps no internal state. All `get_current_event` calls will result in GitHub API requests.
+    The caller is therefore responsible for being responsible and caching information to prevent API abuse.
+
+    Requests are made using the HTTP session looked up on the bot instance.
+    """
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot

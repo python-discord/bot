@@ -76,7 +76,29 @@ def extract_event_name(event: Event) -> str:
 
 
 class Branding(commands.Cog):
-    """Guild branding management."""
+    """
+    Guild branding management.
+
+    This cog is responsible for automatic management of the guild's branding while sourcing assets directly from
+    the branding repository.
+
+    We utilize multiple Redis caches to persist state. As a result, the cog should seamlessly transition across
+    restarts without having to query either the Discord or GitHub APIs, as it will always remember which
+    assets are currently applied.
+
+    Additionally, the state of the icon rotation is persisted. As a result, the rotation doesn't reset unless
+    the current event or its icons change.
+
+    The cog is designed to be autonomous. The daemon, unless disabled, will poll the branding repository at
+    midnight every day and respond to detected changes. Since we persist SHA hashes of tracked assets,
+    changes in an on-going event will trigger automatic resynchronisation.
+
+    A #changelog notification is automatically sent when entering a new event. Changes in the branding of
+    an on-going event do not trigger a repeated notification.
+
+    The command interface allows moderators+ to control the daemon or request an asset synchronisation,
+    while regular users can see information about the current event and the overall event schedule.
+    """
 
     # RedisCache[
     #     "daemon_active": If True, daemon auto-starts; controlled via commands (bool)
