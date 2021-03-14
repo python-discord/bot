@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import random
 import typing as t
@@ -376,10 +377,11 @@ class Branding(commands.Cog):
 
         log.trace(f"Writing {len(chronological_events)} events (fallback omitted)")
 
-        await self.cache_events.update({
-            extract_event_name(event): extract_event_duration(event)
-            for event in chronological_events
-        })
+        with contextlib.suppress(ValueError):  # Cache raises when updated with an empty dict
+            await self.cache_events.update({
+                extract_event_name(event): extract_event_duration(event)
+                for event in chronological_events
+            })
 
     # endregion
     # region: Daemon
