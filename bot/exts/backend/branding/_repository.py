@@ -134,7 +134,7 @@ class BrandingRepository:
 
         The caller is responsible for handling errors caused by misconfiguration.
         """
-        attrs, description = frontmatter.parse(raw_file)  # Library automatically decodes using UTF-8
+        attrs, description = frontmatter.parse(raw_file, encoding="UTF-8")
 
         if not description:
             raise BrandingMisconfiguration("No description found in 'meta.md'!")
