@@ -59,7 +59,7 @@ async def get_closing_time(channel: discord.TextChannel) -> t.Optional[int]:
 
     # The further away closing time is what we should use.
     closing_time = max(claimant, last_message)
-    log.trace(f"claimant: {claimant}, last_message: {last_message}")
+    log.trace(f"claimant closing time: {claimant}, last_message closing time: {last_message}")
     log.trace(f"#{channel} ({channel.id}) should be closed at {closing_time}.")
     return closing_time
 
