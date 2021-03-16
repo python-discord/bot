@@ -188,8 +188,21 @@ def _get_truncated_description(
     # Determine the actual truncation index.
     possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
     if not possible_truncation_indices:
-        # In case there is no Markdown element ending before the truncation index, use shorten as a fallback.
-        truncated_result = textwrap.shorten(result, truncate_index, placeholder="")
+        # In case there is no Markdown element ending before the truncation index, try to find a good cutoff point.
+        force_truncated = result[:truncate_index]
+        # If there is an incomplete codeblock, cut it out.
+        if force_truncated.count("```") % 2:
+            force_truncated = force_truncated[:force_truncated.rfind("```")]
+        # Search for substrings to truncate at, with decreasing desirability.
+        for string_ in ("\n\n", "\n", ". ", ", ", ",", " "):
+            cutoff = force_truncated.rfind(string_)
+
+            if cutoff != -1:
+                truncated_result = force_truncated[:cutoff]
+                break
+        else:
+            truncated_result = force_truncated
+
     else:
         # Truncate at the last Markdown element that comes before the truncation index.
         markdown_truncate_index = possible_truncation_indices[-1]
