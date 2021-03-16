@@ -222,7 +222,6 @@ class LinePaginator(Paginator):
         """
         def event_check(reaction_: discord.Reaction, user_: discord.Member) -> bool:
             """Make sure that this reaction is what we want to operate on."""
-
             return (
                 # Conditions for a successful pagination:
                 all((
