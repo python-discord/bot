@@ -63,7 +63,7 @@ async def wait_for_deletion(
                 break
 
             await message.remove_reaction(reaction.emoji, user)
-        
+
         await message.delete()
 
 
