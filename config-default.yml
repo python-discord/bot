@@ -473,7 +473,7 @@ help_channels:
 
     # Allowed duration of inactivity by others before making a channel dormant
     # `idle_minutes_claimant` must also be met, before a channel is closed
-    idle_minutes_others: 30
+    idle_minutes_others: 10
 
     # Allowed duration of inactivity when channel is empty (due to deleted messages)
     # before message making a channel dormant
