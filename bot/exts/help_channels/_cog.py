@@ -43,7 +43,9 @@ class HelpChannels(commands.Cog):
     In Use Category
 
     * Contains all channels which are occupied by someone needing help
-    * Channel moves to dormant category after `constants.HelpChannels.idle_minutes` of being idle
+    * Channel moves to dormant category after `constants.HelpChannels.idle_minutes_other` minutes
+        since the last user message, or `constants.HelpChannels.idle_minutes_claimant` minutes
+        since the last claimant message.
     * Command can prematurely mark a channel as dormant
         * Channel claimant is allowed to use the command
         * Allowed roles for the command are configurable with `constants.HelpChannels.cmd_whitelist`
@@ -293,16 +295,12 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        if not await _message.is_empty(channel):
-            idle_seconds = constants.HelpChannels.idle_minutes * 60
-        else:
-            idle_seconds = constants.HelpChannels.deleted_idle_minutes * 60
+        closing_time = await _channel.get_closing_time(channel)
+        # The time at which the channel should be closed, based on messages sent.
+        if closing_time < datetime.utcnow():
 
-        time_elapsed = await _channel.get_idle_time(channel)
-
-        if time_elapsed is None or time_elapsed >= idle_seconds:
             log.info(
-                f"#{channel} ({channel.id}) is idle longer than {idle_seconds} seconds "
+                f"#{channel} ({channel.id}) is idle past {closing_time} "
                 f"and will be made dormant."
             )
 
@@ -312,7 +310,7 @@ class HelpChannels(commands.Cog):
             if has_task:
                 self.scheduler.cancel(channel.id)
 
-            delay = idle_seconds - time_elapsed
+            delay = (closing_time - datetime.utcnow()).seconds
             log.info(
                 f"#{channel} ({channel.id}) is still active; "
                 f"scheduling it to be moved after {delay} seconds."
@@ -410,7 +408,7 @@ class HelpChannels(commands.Cog):
             category_id=constants.Categories.help_in_use,
         )
 
-        timeout = constants.HelpChannels.idle_minutes * 60
+        timeout = constants.HelpChannels.idle_minutes_others * 60
 
         log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
         self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
@@ -418,7 +416,12 @@ class HelpChannels(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
-        """Move an available channel to the In Use category and replace it with a dormant one."""
+        """
+        Move an available channel to the In Use category and replace it with a dormant one.
+
+        Also updates the `message_times` cache based on the current timestamp. If the message
+        author is the claimant of this channel, also update the claimant_last_message.
+        """
         if message.author.bot:
             return  # Ignore messages sent by bots.
 
@@ -427,6 +430,21 @@ class HelpChannels(commands.Cog):
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
+                # Initialise the cache for this channel
+                await _caches.claimant_last_message.set(
+                    message.channel.id,
+                    message.created_at.timestamp()
+                )
+                await _caches.last_message.set(
+                    message.channel.id,
+                    message.created_at.timestamp()
+                )
+        elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
+            # Overwrite the claimant message time, if its from the claimant.
+            if message.author == await _caches.claimants.get(message.channel.id):
+                await _caches.claimant_last_message(message.channel.id, message.created_at.timestamp())
+
+            await _caches.last_message.set(message.channel.id, message.created_at.timestamp())
         else:
             await _message.check_for_answer(message)
 

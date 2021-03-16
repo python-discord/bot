@@ -25,23 +25,43 @@ def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[disco
             yield channel
 
 
-async def get_idle_time(channel: discord.TextChannel) -> t.Optional[int]:
-    """
-    Return the time elapsed, in seconds, since the last message sent in the `channel`.
+async def get_closing_time(channel: discord.TextChannel) -> t.Optional[int]:
+    """Return the timestamp at which the given help `channel` should be closed."""
+    log.trace(f"Getting the closing time for #{channel} ({channel.id}).")
 
-    Return None if the channel has no messages.
-    """
-    log.trace(f"Getting the idle time for #{channel} ({channel.id}).")
+    if await _message.is_empty(channel):
+        idle_minutes = constants.HelpChannels.deleted_idle_minutes
+    else:
+        idle_minutes = constants.HelpChannels.idle_minutes_others
 
-    msg = await _message.get_last_message(channel)
-    if not msg:
-        log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages.")
-        return None
+    last_message = await _caches.last_message.get(channel.id)
+    claimant_last_message = await _caches.claimant_last_message.get(channel.id)
 
-    idle_time = (datetime.utcnow() - msg.created_at).seconds
+    if not (last_message or claimant_last_message):
+        # Using the old method if we can't get cached info.
+        msg = await _message.get_last_message(channel)
+        if not msg:
+            log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages.")
+            return datetime.min
 
-    log.trace(f"#{channel} ({channel.id}) has been idle for {idle_time} seconds.")
-    return idle_time
+        # We want to get the time at which a channel should be closed.
+        closing_time = msg.created_at
+        closing_time += timedelta(minutes=idle_minutes)
+
+        return closing_time
+
+    # We want to get the time at which a channel should be closed.
+    last_message = datetime.fromtimestamp(last_message)
+    claimant = datetime.fromtimestamp(claimant_last_message)
+
+    last_message += timedelta(minutes=idle_minutes)
+    claimant += timedelta(minutes=constants.HelpChannels.idle_minutes_claimant)
+
+    # The further away closing time is what we should use.
+    closing_time = max(claimant, last_message)
+    log.trace(f"claimant: {claimant}, last_message: {last_message}")
+    log.trace(f"#{channel} ({channel.id}) should be closed at {closing_time}.")
+    return closing_time
 
 
 async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
