@@ -7,7 +7,7 @@ import textwrap
 from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Dict, NamedTuple, Optional, Union
+from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
 import discord
@@ -219,11 +219,11 @@ class DocCog(commands.Cog):
         log.debug("Finished inventory refresh.")
         self.refresh_event.set()
 
-    def get_symbol_item(self, symbol_name: str) -> Optional[DocItem]:
+    def get_symbol_item(self, symbol_name: str) -> Tuple[str, Optional[DocItem]]:
         """
-        Get the `DocItem` associated with `symbol_name` from the `doc_symbols` dict.
+        Get the `DocItem` and the symbol name used to fetch it from the `doc_symbols` dict.
 
-        If the doc item is not found directly from the name and the name contains a space,
+        If the doc item is not found directly from the passed in name and the name contains a space,
         the first word of the name will be attempted to be used to get the item.
         """
         doc_item = self.doc_symbols.get(symbol_name)
@@ -231,7 +231,7 @@ class DocCog(commands.Cog):
             symbol_name = symbol_name.split(" ", maxsplit=1)[0]
             doc_item = self.doc_symbols.get(symbol_name)
 
-        return doc_item
+        return symbol_name, doc_item
 
     async def get_symbol_markdown(self, doc_item: DocItem) -> str:
         """
@@ -273,7 +273,7 @@ class DocCog(commands.Cog):
             await self.refresh_event.wait()
         # Ensure a refresh can't run in case of a context switch until the with block is exited
         with self.symbol_get_event:
-            doc_item = self.get_symbol_item(symbol_name)
+            symbol_name, doc_item = self.get_symbol_item(symbol_name)
             if doc_item is None:
                 log.debug("Symbol does not exist.")
                 return None
