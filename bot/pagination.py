@@ -222,12 +222,6 @@ class LinePaginator(Paginator):
         """
         def event_check(reaction_: discord.Reaction, user_: discord.Member) -> bool:
             """Make sure that this reaction is what we want to operate on."""
-            no_restrictions = (
-                # The reaction was by a whitelisted user
-                user_.id == restrict_to_user.id
-                # The reaction was by a moderator
-                or isinstance(user_, Member) and any(role.id in MODERATION_ROLES for role in user_.roles)
-            )
 
             return (
                 # Conditions for a successful pagination:
@@ -238,8 +232,6 @@ class LinePaginator(Paginator):
                     str(reaction_.emoji) in PAGINATION_EMOJI,
                     # Reaction was not made by the Bot
                     user_.id != ctx.bot.user.id,
-                    # There were no restrictions
-                    no_restrictions
                 ))
             )
 
@@ -306,10 +298,23 @@ class LinePaginator(Paginator):
         while True:
             try:
                 reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=event_check)
-                log.trace(f"Got reaction: {reaction}")
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
+
+            no_restrictions = (
+                # The reaction was by a whitelisted user
+                user.id == restrict_to_user.id
+                # The reaction was by a moderator
+                or isinstance(user, Member) and any(role.id in MODERATION_ROLES for role in user.roles)
+            )
+
+            whitelisted = 'whitelisted' if no_restrictions else 'non-whitelisted'
+            log.trace(f"Got reaction: {reaction}  from a {whitelisted} user")
+
+            if not no_restrictions:
+                await message.remove_reaction(reaction.emoji, user)
+                continue
 
             if str(reaction.emoji) == DELETE_EMOJI:
                 log.debug("Got delete reaction")

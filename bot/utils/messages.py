@@ -48,14 +48,22 @@ async def wait_for_deletion(
         return (
             reaction.message.id == message.id
             and str(reaction.emoji) in deletion_emojis
-            and (
-                user.id in user_ids
-                or allow_moderation_roles and any(role.id in MODERATION_ROLES for role in user.roles)
-            )
         )
 
     with contextlib.suppress(asyncio.TimeoutError):
-        await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
+        while True:
+            reaction, user = await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
+
+            whitelisted = (
+                user.id in user_ids
+                or allow_moderation_roles and any(role.id in MODERATION_ROLES for role in user.roles)
+            )
+
+            if whitelisted:
+                break
+
+            await message.remove_reaction(reaction.emoji, user)
+        
         await message.delete()
 
 
