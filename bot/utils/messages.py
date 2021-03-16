@@ -26,6 +26,7 @@ async def wait_for_deletion(
 ) -> None:
     """
     Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
+
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`.
     An `allow_moderation_roles` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
@@ -80,6 +81,7 @@ async def send_attachments(
 ) -> List[str]:
     """
     Re-upload the message's attachments to the destination and return a list of their new URLs.
+
     Each attachment is sent as a separate message to more easily comply with the request/file size
     limit. If link_large is True, attachments which are too large are instead grouped into a single
     embed which links to them. Extra kwargs will be passed to send() when sending the attachment.
@@ -138,6 +140,7 @@ async def send_attachments(
 def sub_clyde(username: Optional[str]) -> Optional[str]:
     """
     Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
+
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
     """

@@ -31,6 +31,7 @@ class EmptyPaginatorEmbed(Exception):
 class LinePaginator(Paginator):
     """
     A class that aids in paginating code blocks for Discord messages.
+
     Available attributes include:
     * prefix: `str`
         The prefix inserted to every page. e.g. three backticks.
@@ -54,6 +55,7 @@ class LinePaginator(Paginator):
     ) -> None:
         """
         This function overrides the Paginator.__init__ from inside discord.ext.commands.
+
         It overrides in order to allow us to configure the maximum number of lines per page.
         """
         self.prefix = prefix
@@ -82,16 +84,20 @@ class LinePaginator(Paginator):
     def add_line(self, line: str = '', *, empty: bool = False) -> None:
         """
         Adds a line to the current page.
+
         If a line on a page exceeds `max_size` characters, then `max_size` will go up to
         `scale_to_size` for a single line before creating a new page for the overflow words. If it
         is still exceeded, the excess characters are stored and placed on the next pages unti
         there are none remaining (by word boundary). The line is truncated if `scale_to_size` is
         still exceeded after attempting to continue onto the next page.
+
         In the case that the page already contains one or more lines and the new lines would cause
         `max_size` to be exceeded, a new page is created. This is done in order to make a best
         effort to avoid breaking up single lines across pages, while keeping the total length of the
         page at a reasonable size.
+
         This function overrides the `Paginator.add_line` from inside `discord.ext.commands`.
+
         It overrides in order to allow us to configure the maximum number of lines per page.
         """
         remaining_words = None
@@ -127,6 +133,7 @@ class LinePaginator(Paginator):
     def _new_page(self) -> None:
         """
         Internal: start a new page for the paginator.
+
         This closes the current page and resets the counters for the new page's line count and
         character count.
         """
@@ -137,13 +144,17 @@ class LinePaginator(Paginator):
     def _split_remaining_words(self, line: str, max_chars: int) -> t.Tuple[str, t.Optional[str]]:
         """
         Internal: split a line into two strings -- reduced_words and remaining_words.
+
         reduced_words: the remaining words in `line`, after attempting to remove all words that
             exceed `max_chars` (rounding down to the nearest word boundary).
+
         remaining_words: the words in `line` which exceed `max_chars`. This value is None if
             no words could be split from `line`.
+
         If there are any remaining_words, an ellipses is appended to reduced_words and a
         continuation header is inserted before remaining_words to visually communicate the line
         continuation.
+
         Return a tuple in the format (reduced_words, remaining_words).
         """
         reduced_words = []
@@ -193,12 +204,17 @@ class LinePaginator(Paginator):
     ) -> t.Optional[discord.Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.
+
         The reactions are used to switch page, or to finish with pagination.
+
         When used, this will send a message using `ctx.send()` and apply a set of reactions to it. These reactions may
         be used to change page, or to remove pagination from the message.
+
         Pagination will also be removed automatically if no reaction is added for five minutes (300 seconds).
+
         The interaction will be limited to `restrict_to_user` (ctx.author by default) or
         to any user with a moderation role.
+
         Example:
         >>> embed = discord.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
