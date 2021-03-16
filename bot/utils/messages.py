@@ -26,7 +26,6 @@ async def wait_for_deletion(
 ) -> None:
     """
     Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
-
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`.
     An `allow_moderation_roles` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
@@ -45,25 +44,30 @@ async def wait_for_deletion(
 
     def check(reaction: discord.Reaction, user: discord.Member) -> bool:
         """Check that the deletion emoji is reacted by the appropriate user."""
-        return (
+        right_reaction = (
             reaction.message.id == message.id
             and str(reaction.emoji) in deletion_emojis
         )
 
-    with contextlib.suppress(asyncio.TimeoutError):
-        while True:
-            reaction, user = await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
-
-            whitelisted = (
+        whitelisted = (
+            right_reaction and (
                 user.id in user_ids
                 or allow_moderation_roles and any(role.id in MODERATION_ROLES for role in user.roles)
             )
+        )
 
-            if whitelisted:
-                break
+        if whitelisted:
+            return True
 
-            await message.remove_reaction(reaction.emoji, user)
+        elif right_reaction:
+            bot.instance.loop.create_task(
+                reaction.message.remove_reaction(
+                    reaction.emoji, user
+                )
+            )
 
+    with contextlib.suppress(asyncio.TimeoutError):
+        await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
         await message.delete()
 
 
@@ -76,7 +80,6 @@ async def send_attachments(
 ) -> List[str]:
     """
     Re-upload the message's attachments to the destination and return a list of their new URLs.
-
     Each attachment is sent as a separate message to more easily comply with the request/file size
     limit. If link_large is True, attachments which are too large are instead grouped into a single
     embed which links to them. Extra kwargs will be passed to send() when sending the attachment.
@@ -135,7 +138,6 @@ async def send_attachments(
 def sub_clyde(username: Optional[str]) -> Optional[str]:
     """
     Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
-
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
     """
