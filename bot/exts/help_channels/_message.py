@@ -28,7 +28,7 @@ For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_UR
 
 AVAILABLE_TITLE = "Available help channel"
 
-AVAILABLE_FOOTER = f"Closes after {constants.HelpChannels.idle_minutes} minutes of inactivity or when you send !close."
+AVAILABLE_FOOTER = "Closes after being idle for some time, or when you send !close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **Help: Dormant** \
