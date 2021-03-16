@@ -468,8 +468,12 @@ help_channels:
     cmd_whitelist:
         - *HELPERS_ROLE
 
-    # Allowed duration of inactivity before making a channel dormant
-    idle_minutes: 30
+    # Allowed duration of inactivity by claimant before making a channel dormant
+    idle_minutes_claimant: 30
+
+    # Allowed duration of inactivity by others before making a channel dormant
+    # `idle_minutes_claimant` must also be met, before a channel is closed
+    idle_minutes_others: 30
 
     # Allowed duration of inactivity when channel is empty (due to deleted messages)
     # before message making a channel dormant
