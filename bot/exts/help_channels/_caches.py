@@ -10,11 +10,11 @@ claimants = RedisCache(namespace="HelpChannels.help_channel_claimants")
 
 # Stores the timestamp of the last message in a help channel
 # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
-last_message = RedisCache(namespace="HelpChannels.last_message")
+last_message_times = RedisCache(namespace="HelpChannels.last_message_times")
 
 # Stores the timestamp of the last message from the claimant of a help channel
 # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
-claimant_last_message = RedisCache(namespace="HelpChannels.claimant_last_message")
+claimant_last_message_times = RedisCache(namespace="HelpChannels.claimant_last_message_times")
 
 # This cache maps a help channel to original question message in same channel.
 # RedisCache[discord.TextChannel.id, discord.Message.id]

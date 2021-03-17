@@ -43,9 +43,9 @@ class HelpChannels(commands.Cog):
     In Use Category
 
     * Contains all channels which are occupied by someone needing help
-    * Channel moves to dormant category after `constants.HelpChannels.idle_minutes_other` minutes
-        since the last user message, or `constants.HelpChannels.idle_minutes_claimant` minutes
-        since the last claimant message.
+    * Channel moves to dormant category after
+        - `constants.HelpChannels.idle_minutes_other` minutes since the last user message, or
+        - `constants.HelpChannels.idle_minutes_claimant` minutes since the last claimant message.
     * Command can prematurely mark a channel as dormant
         * Channel claimant is allowed to use the command
         * Allowed roles for the command are configurable with `constants.HelpChannels.cmd_whitelist`
@@ -419,8 +419,8 @@ class HelpChannels(commands.Cog):
         """
         Move an available channel to the In Use category and replace it with a dormant one.
 
-        Also updates the `message_times` cache based on the current timestamp. If the message
-        author is the claimant of this channel, also update the claimant_last_message.
+        Also updates the `last_message_times` cache based on the current timestamp. If the message
+        author is the claimant of this channel, also update the `claimant_last_message_times` cache.
         """
         if message.author.bot:
             return  # Ignore messages sent by bots.
@@ -431,20 +431,20 @@ class HelpChannels(commands.Cog):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
                 # Initialise the cache for this channel
-                await _caches.claimant_last_message.set(
+                await _caches.claimant_last_message_times.set(
                     message.channel.id,
                     message.created_at.timestamp()
                 )
-                await _caches.last_message.set(
+                await _caches.last_message_times.set(
                     message.channel.id,
                     message.created_at.timestamp()
                 )
         elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
             # Overwrite the claimant message time, if its from the claimant.
             if message.author == await _caches.claimants.get(message.channel.id):
-                await _caches.claimant_last_message(message.channel.id, message.created_at.timestamp())
+                await _caches.claimant_last_message_times(message.channel.id, message.created_at.timestamp())
 
-            await _caches.last_message.set(message.channel.id, message.created_at.timestamp())
+            await _caches.last_message_times.set(message.channel.id, message.created_at.timestamp())
         else:
             await _message.check_for_answer(message)
 
