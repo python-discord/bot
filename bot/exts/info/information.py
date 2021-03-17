@@ -64,7 +64,8 @@ class Information(Cog):
 
         defcon_info = ""
         if cog := self.bot.get_cog("Defcon"):
-            defcon_info = f"Defcon threshold: {humanize_delta(cog.threshold)}\n"
+            threshold = humanize_delta(cog.threshold) if cog.threshold else "-"
+            defcon_info = f"Defcon threshold: {threshold}\n"
 
         verification = f"Verification level: {ctx.guild.verification_level.name}\n"
 
