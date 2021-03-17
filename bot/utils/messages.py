@@ -62,7 +62,7 @@ async def wait_for_deletion(
 
         elif right_reaction:
             bot.instance.loop.create_task(reaction.message.remove_reaction(reaction.emoji, user))
-            return False
+        return False
 
     with contextlib.suppress(asyncio.TimeoutError):
         await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
