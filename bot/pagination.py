@@ -252,12 +252,9 @@ class LinePaginator(Paginator):
                 return True
 
             elif right_reaction and user_.id != ctx.bot.user.id:
-                ctx.bot.loop.create_task(
-                    reaction_.message.remove_reaction(
-                        reaction_.emoji, user_
-                    )
-                )
-                log.debug(f"Got reaction: {reaction_.emoji} from non-whitelisted user")
+                ctx.bot.loop.create_task(reaction_.message.remove_reaction(reaction_.emoji, user_))
+                log.debug(f"Got reaction: {reaction_.emoji} from non-whitelisted user, reaction deleted")
+                return False
 
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines,
                         scale_to_size=scale_to_size)
