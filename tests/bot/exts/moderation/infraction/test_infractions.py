@@ -39,7 +39,7 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
             delete_message_days=0
         )
         self.cog.apply_infraction.assert_awaited_once_with(
-            self.ctx, {"foo": "bar"}, self.target, self.ctx.guild.ban.return_value
+            self.ctx, {"foo": "bar", "purge": ""}, self.target, self.ctx.guild.ban.return_value
         )
 
     @patch("bot.exts.moderation.infraction._utils.post_infraction")

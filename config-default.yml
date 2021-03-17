@@ -89,8 +89,8 @@ style:
 
         filtering: "https://cdn.discordapp.com/emojis/472472638594482195.png"
 
-        green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-checkmark-dist.png"
-        green_questionmark: "https://raw.githubusercontent.com/python-discord/branding/master/icons/checkmark/green-question-mark-dist.png"
+        green_checkmark: "https://raw.githubusercontent.com/python-discord/branding/main/icons/checkmark/green-checkmark-dist.png"
+        green_questionmark: "https://raw.githubusercontent.com/python-discord/branding/main/icons/checkmark/green-question-mark-dist.png"
         guild_update: "https://cdn.discordapp.com/emojis/469954765141442561.png"
 
         hash_blurple: "https://cdn.discordapp.com/emojis/469950142942806017.png"
@@ -195,6 +195,7 @@ guild:
         incidents_archive:                  720668923636351037
         mods:               &MODS           305126844661760000
         mod_alerts:                         473092532147060736
+        mod_appeals:        &MOD_APPEALS    808790025688711198
         mod_meta:           &MOD_META       775412552795947058
         mod_spam:           &MOD_SPAM       620607373828030464
         mod_tools:          &MOD_TOOLS      775413915391098921
@@ -230,6 +231,7 @@ guild:
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
+        - *MOD_APPEALS
         - *MOD_META
         - *MOD_TOOLS
         - *MODS
@@ -358,8 +360,8 @@ urls:
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
     discord_invite_api: !JOIN [*DISCORD_API, "invites"]
 
-    # Misc URLs
-    bot_avatar:      "https://raw.githubusercontent.com/discord-python/branding/master/logos/logo_circle/logo_circle.png"
+    # Misc URLsw
+    bot_avatar:      "https://raw.githubusercontent.com/python-discord/branding/main/logos/logo_circle/logo_circle.png"
     github_bot_repo: "https://github.com/python-discord/bot"
 
 

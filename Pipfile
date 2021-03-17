@@ -28,7 +28,6 @@ sphinx = "~=2.2"
 statsd = "~=3.3"
 arrow = "~=0.17"
 emoji = "~=0.6"
-python-json-logger = "~=2.0"
 
 [dev-packages]
 coverage = "~=5.0"
