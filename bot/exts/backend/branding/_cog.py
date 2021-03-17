@@ -493,7 +493,7 @@ class Branding(commands.Cog):
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @branding_group.command(name="about")
+    @branding_group.command(name="about", aliases=("current", "event"))
     async def branding_about_cmd(self, ctx: commands.Context) -> None:
         """Show the current event description."""
         await self.send_info_embed(ctx.channel.id)
@@ -526,7 +526,7 @@ class Branding(commands.Cog):
     # endregion
     # region: Command interface (branding calendar)
 
-    @branding_group.group(name="calendar", aliases=("schedule",))
+    @branding_group.group(name="calendar", aliases=("schedule", "events"))
     async def branding_calendar_group(self, ctx: commands.Context) -> None:
         """
         Show the current event calendar.
