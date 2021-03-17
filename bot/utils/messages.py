@@ -12,6 +12,7 @@ from discord.ext.commands import Context
 
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.utils import scheduling
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +62,8 @@ async def wait_for_deletion(
             return True
 
         elif right_reaction:
-            bot.instance.loop.create_task(reaction.message.remove_reaction(reaction.emoji, user))
+            with contextlib.suppress(HTTPException):
+                scheduling.create_task(reaction.message.remove_reaction(reaction.emoji, user))
         return False
 
     with contextlib.suppress(asyncio.TimeoutError):
