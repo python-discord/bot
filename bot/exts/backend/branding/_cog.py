@@ -397,7 +397,7 @@ class Branding(commands.Cog):
         should_begin: t.Optional[bool] = await self.cache_information.get("daemon_active")  # None if never set!
 
         if should_begin:
-            self.daemon_main.start()
+            self.daemon_loop.start()
 
     def cog_unload(self) -> None:
         """
@@ -407,71 +407,72 @@ class Branding(commands.Cog):
         """
         log.debug("Cog unload: cancelling daemon")
 
-        self.daemon_main.cancel()
+        self.daemon_loop.cancel()
 
-    @tasks.loop(hours=24)
     async def daemon_main(self) -> None:
         """
-        Periodically synchronise guild & caches with branding repository.
+        Synchronise guild & caches with branding repository.
 
-        This function executes every 24 hours at midnight. We pull the currently active event from the branding
-        repository and check whether it matches the currently active event. If not, we apply the new event.
+        Pull the currently active event from the branding repository and check whether it matches the currently
+        active event in the cache. If not, apply the new event.
 
         However, it is also possible that an event's assets change as it's active. To account for such cases,
-        we check the banner & icons hashes against the currently cached values. If there is a mismatch, the
+        we check the banner & icons hashes against the currently cached values. If there is a mismatch, each
         specific asset is re-applied.
-
-        As such, the guild should always remain synchronised with the branding repository. However, the #changelog
-        notification is only sent in the case of entering a new event ~ no change in an on-going event will trigger
-        a new notification to be sent.
         """
-        log.debug("Daemon awakens: checking current event")
+        log.trace("Daemon main: checking current event")
 
         new_event, available_events = await self.repository.get_current_event()
 
         await self.populate_cache_events(available_events)
 
         if new_event is None:
-            log.warning("Failed to get current event from the branding repository, daemon will do nothing!")
+            log.warning("Daemon main: failed to get current event from branding repository, will do nothing")
             return
 
         if new_event.path != await self.cache_information.get("event_path"):
-            log.debug("New event detected!")
+            log.debug("Daemon main: new event detected!")
             await self.enter_event(new_event)
             return
 
-        log.debug("Event has not changed, checking for change in assets")
+        log.trace("Daemon main: event has not changed, checking for change in assets")
 
         if new_event.banner.sha != await self.cache_information.get("banner_hash"):
-            log.debug("Detected same-event banner change!")
+            log.debug("Daemon main: detected banner change!")
             await self.apply_banner(new_event.banner)
 
         if compound_hash(new_event.icons) != await self.cache_information.get("icons_hash"):
-            log.debug("Detected same-event icon change!")
+            log.debug("Daemon main: detected icon change!")
             await self.initiate_icon_rotation(new_event.icons)
             await self.rotate_icons()
         else:
             await self.maybe_rotate_icons()
 
-    @daemon_main.before_loop
+    @tasks.loop(hours=24)
+    async def daemon_loop(self) -> None:
+        """
+        Call `daemon_main` every 24 hours.
+
+        The scheduler maintains an exact 24-hour frequency even if this coroutine takes time to complete. If the
+        coroutine is started at 00:01 and completes at 00:05, it will still be started at 00:01 the next day.
+        """
+        log.trace("Daemon loop: calling daemon main")
+
+        await self.daemon_main()
+
+    @daemon_loop.before_loop
     async def daemon_before(self) -> None:
         """
-        Wait until the next-up UTC midnight before letting `daemon_main` begin.
+        Call `daemon_main` immediately, then block `daemon_loop` until the next-up UTC midnight.
 
-        This function allows the daemon to keep a consistent schedule across restarts.
-
-        We check for a special case in which the cog's cache is empty. This indicates that we have never entered
-        an event (on first start-up), or that there was a cache loss. In either case, the current event gets
-        applied immediately, to avoid leaving the cog in an empty state.
+        The first iteration will be invoked manually such that synchronisation happens immediately after daemon start.
+        We then calculate the time until the next-up midnight and sleep before letting `daemon_loop` begin.
         """
-        log.debug("Calculating time for daemon to sleep before first awakening")
+        log.info("Daemon before: synchronising guild")
 
-        current_event = await self.cache_information.get("event_path")
+        await self.daemon_main()
 
-        if current_event is None:  # Maiden case ~ first start or cache loss
-            log.debug("Event cache is empty (indicating maiden case), invoking synchronisation")
-            await self.synchronise()
-
+        log.trace("Daemon before: calculating time to sleep before loop begins")
         now = datetime.utcnow()
 
         # The actual midnight moment is offset into the future in order to prevent issues with imprecise sleep
@@ -479,8 +480,8 @@ class Branding(commands.Cog):
         midnight = datetime.combine(tomorrow, time(minute=1))
 
         sleep_secs = (midnight - now).total_seconds()
+        log.trace(f"Daemon before: sleeping {sleep_secs} seconds before next-up midnight: {midnight}")
 
-        log.debug(f"Sleeping {sleep_secs} seconds before next-up midnight at {midnight}")
         await asyncio.sleep(sleep_secs)
 
     # endregion
@@ -600,10 +601,10 @@ class Branding(commands.Cog):
         """Enable the branding daemon."""
         await self.cache_information.set("daemon_active", True)
 
-        if self.daemon_main.is_running():
+        if self.daemon_loop.is_running():
             resp = make_embed("Daemon is already enabled!", "", success=False)
         else:
-            self.daemon_main.start()
+            self.daemon_loop.start()
             resp = make_embed("Daemon enabled!", "It will now automatically awaken on start-up.", success=True)
 
         await ctx.send(embed=resp)
@@ -613,8 +614,8 @@ class Branding(commands.Cog):
         """Disable the branding daemon."""
         await self.cache_information.set("daemon_active", False)
 
-        if self.daemon_main.is_running():
-            self.daemon_main.cancel()
+        if self.daemon_loop.is_running():
+            self.daemon_loop.cancel()
             resp = make_embed("Daemon disabled!", "It will not awaken on start-up.", success=True)
         else:
             resp = make_embed("Daemon is already disabled!", "", success=False)
@@ -624,7 +625,7 @@ class Branding(commands.Cog):
     @branding_daemon_group.command(name="status")
     async def branding_daemon_status_cmd(self, ctx: commands.Context) -> None:
         """Check whether the daemon is currently enabled."""
-        if self.daemon_main.is_running():
+        if self.daemon_loop.is_running():
             resp = make_embed("Daemon is enabled", "Use `branding daemon disable` to stop.", success=True)
         else:
             resp = make_embed("Daemon is disabled", "Use `branding daemon enable` to start.", success=False)
