@@ -257,7 +257,7 @@ class LinePaginator(Paginator):
                         reaction_.emoji, user_
                     )
                 )
-                log.debug(f"Got reaction: {reaction_.emoji} from non-whitelisted user")
+                log.debug(f"Got reaction: {reaction_.emoji} from non-whitelisted user, reaction deleted")
 
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines,
                         scale_to_size=scale_to_size)
