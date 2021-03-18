@@ -254,11 +254,12 @@ class LinePaginator(Paginator):
 
             elif right_reaction and user_.id != ctx.bot.user.id:
 
-                with suppress(discord.HTTPException):
-                    scheduling.create_task(reaction_.message.remove_reaction(reaction_.emoji, user_))
-                    log.debug(f"Got reaction: {reaction_.emoji} from non-whitelisted user, reaction deleted")
+                scheduling.create_task(
+                    (discord.HTTPException,),  # Suppress the HTTPException if adding the reaction fails
+                    reaction.message.remove_reaction(reaction.emoji, user)
+                )
 
-            return False
+                return False
 
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines,
                         scale_to_size=scale_to_size)

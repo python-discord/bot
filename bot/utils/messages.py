@@ -62,8 +62,11 @@ async def wait_for_deletion(
             return True
 
         elif right_reaction:
-            with contextlib.suppress(HTTPException):
-                scheduling.create_task(reaction.message.remove_reaction(reaction.emoji, user))
+            scheduling.create_task(
+                (HTTPException,),  # Suppress the HTTPException if adding the reaction fails
+                reaction.message.remove_reaction(reaction.emoji, user)
+            )
+
         return False
 
     with contextlib.suppress(asyncio.TimeoutError):
