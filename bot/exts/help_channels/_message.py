@@ -42,8 +42,8 @@ through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
 """
 
 
-async def check_for_answer(message: discord.Message) -> None:
-    """Checks for whether new content in a help channel comes from non-claimants."""
+async def update_message_caches(message: discord.Message) -> None:
+    """Checks the source of new content in a help channel and updates the appropriate cache."""
     channel = message.channel
 
     # Confirm the channel is an in use help channel

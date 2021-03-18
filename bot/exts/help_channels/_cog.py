@@ -431,7 +431,7 @@ class HelpChannels(commands.Cog):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
         else:
-            await _message.check_for_answer(message)
+            await _message.update_message_caches(message)
 
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message) -> None:
