@@ -377,6 +377,7 @@ class HelpChannels(commands.Cog):
     async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, is_auto: bool) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
+        await _caches.claimant_last_message_times.delete(channel.id)
         await _caches.non_claimant_last_message_times.delete(channel.id)
 
         # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
