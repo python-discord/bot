@@ -35,8 +35,8 @@ async def report_complete_session(channel_id: int, is_auto: bool) -> None:
     if in_use_time:
         bot.instance.stats.timing("help.in_use_time", in_use_time)
 
-    unanswered = await _caches.unanswered.get(channel_id)
-    if unanswered:
+    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel_id)
+    if non_claimant_last_message_time is None:
         bot.instance.stats.incr("help.sessions.unanswered")
-    elif unanswered is not None:
+    else:
         bot.instance.stats.incr("help.sessions.answered")

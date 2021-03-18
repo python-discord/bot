@@ -117,8 +117,7 @@ class HelpChannels(commands.Cog):
         # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
         timestamp = datetime.now(timezone.utc).timestamp()
         await _caches.claim_times.set(message.channel.id, timestamp)
-
-        await _caches.unanswered.set(message.channel.id, True)
+        await _caches.claimant_last_message_times.set(message.channel.id, timestamp)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
         scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
@@ -378,6 +377,7 @@ class HelpChannels(commands.Cog):
     async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, is_auto: bool) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
+        await _caches.non_claimant_last_message_times.delete(channel.id)
 
         # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
         if claimant_id in self.scheduler:
@@ -419,7 +419,7 @@ class HelpChannels(commands.Cog):
         """
         Move an available channel to the In Use category and replace it with a dormant one.
 
-        Also updates the `last_message_times` cache based on the current timestamp. If the message
+        Update the `last_message_times` cache based on the current timestamp. If the message
         author is the claimant of this channel, also update the `claimant_last_message_times` cache.
         """
         if message.author.bot:
@@ -430,21 +430,6 @@ class HelpChannels(commands.Cog):
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
-                # Initialise the cache for this channel
-                await _caches.claimant_last_message_times.set(
-                    message.channel.id,
-                    message.created_at.timestamp()
-                )
-                await _caches.last_message_times.set(
-                    message.channel.id,
-                    message.created_at.timestamp()
-                )
-        elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
-            # Overwrite the claimant message time, if its from the claimant.
-            if message.author == await _caches.claimants.get(message.channel.id):
-                await _caches.claimant_last_message_times(message.channel.id, message.created_at.timestamp())
-
-            await _caches.last_message_times.set(message.channel.id, message.created_at.timestamp())
         else:
             await _message.check_for_answer(message)
 
