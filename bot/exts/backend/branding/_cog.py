@@ -341,9 +341,9 @@ class Branding(commands.Cog):
         """
         Fetch the current event and delegate to `enter_event`.
 
-        This is a convenience wrapper to force synchronisation either via a command, or when the daemon starts
-        with an empty cache. It is generally only used in a recovery scenario. In the usual case, the daemon
-        already has an `Event` instance and can pass it to `enter_event` directly.
+        This is a convenience function to force synchronisation via a command. It should generally only be used
+        in a recovery scenario. In the usual case, the daemon already has an `Event` instance and can pass it
+        to `enter_event` directly.
 
         Returns a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
