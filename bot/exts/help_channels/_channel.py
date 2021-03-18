@@ -26,10 +26,10 @@ def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[disco
 
 
 async def get_closing_time(channel: discord.TextChannel) -> datetime:
-    """Return the timestamp at which the given help `channel` should be closed."""
+    """Return the timestamp at which the given help channel, `channel`, should be closed."""
     log.trace(f"Getting the closing time for #{channel} ({channel.id}).")
 
-    if await _message.is_empty(channel):
+    if is_empty := await _message.is_empty(channel):
         idle_minutes = constants.HelpChannels.deleted_idle_minutes
     else:
         idle_minutes = constants.HelpChannels.idle_minutes_others
@@ -37,8 +37,9 @@ async def get_closing_time(channel: discord.TextChannel) -> datetime:
     non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
     claimant_last_message_time = await _caches.claimant_last_message_times.get(channel.id)
 
-    if not (non_claimant_last_message_time or claimant_last_message_time):
-        # One of the caches is empty, use the last message in the channel to determine closing time instead.
+    if is_empty or not (non_claimant_last_message_time or claimant_last_message_time):
+        # Current help session has no messages, or one of the caches is empty.
+        # Use the last message in the channel to determine closing time instead.
         msg = await _message.get_last_message(channel)
         if not msg:
             # last message can't be retreived, return datetime.min so channel closes right now.
