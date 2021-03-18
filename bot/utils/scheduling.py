@@ -169,8 +169,6 @@ def _log_task_exception(task: asyncio.Task, suppress_exceptions: t.Tuple[Excepti
     with contextlib.suppress(asyncio.CancelledError):
         exception = task.exception()
         # Log the exception if one exists.
-        if exception:
-            if isinstance(exception, suppress_exceptions):
-                return
+        if exception and not isinstance(exception, suppress_exceptions):
             log = logging.getLogger(__name__)
             log.error(f"Error in task {task.get_name()} {id(task)}!", exc_info=exception)
