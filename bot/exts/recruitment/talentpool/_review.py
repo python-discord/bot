@@ -276,37 +276,29 @@ class Reviewer:
 
         return results
 
-    async def mark_reviewed(self, ctx: Context, nomination_id: int) -> Optional[int]:
+    async def mark_reviewed(self, ctx: Context, user_id: int) -> bool:
         """
         Mark an active nomination as reviewed, updating the database and canceling the review task.
 
-        On success, returns the user ID.
+        Returns True if the user was successfully marked as reviewed, False otherwise.
         """
-        log.trace(f"Updating nomination #{nomination_id} as reviewed")
-        try:
-            nomination = await self.bot.api_client.get(f"{self._pool.api_endpoint}/{nomination_id}")
-        except ResponseCodeError as e:
-            if e.response.status == 404:
-                log.trace(f"Nomination API 404: Can't find nomination with id {nomination_id}")
-                await ctx.send(f"❌ Can't find a nomination with id `{nomination_id}`")
-                return
-            else:
-                raise
+        log.trace(f"Updating user {user_id} as reviewed")
+        await self._pool.fetch_user_cache()
+        if user_id not in self._pool.watched_users:
+            log.trace(f"Can't find a nominated user with id {user_id}")
+            await ctx.send(f"❌ Can't find a currently nominated user with id `{user_id}`")
+            return False
 
+        nomination = self._pool.watched_users[user_id]
         if nomination["reviewed"]:
             await ctx.send("❌ This nomination was already reviewed, but here's a cookie 🍪")
-            return
-        elif not nomination["active"]:
-            await ctx.send("❌ This nomination is inactive")
-            return
+            return False
 
         await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
-        if nomination["user"] in self._review_scheduler:
-            self._review_scheduler.cancel(nomination["user"])
+        if user_id in self._review_scheduler:
+            self._review_scheduler.cancel(user_id)
 
-        await self._pool.fetch_user_cache()
-
-        return nomination["user"]
+        return True
 
     def cancel(self, user_id: int) -> None:
         """

@@ -302,17 +302,17 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(aliases=('mr',))
     @has_any_role(*MODERATION_ROLES)
-    async def mark_reviewed(self, ctx: Context, nomination_id: int) -> None:
-        """Mark a nomination as reviewed and cancel the review task."""
-        if not await self.reviewer.mark_reviewed(ctx, nomination_id):
+    async def mark_reviewed(self, ctx: Context, user_id: int) -> None:
+        """Mark a user's nomination as reviewed and cancel the review task."""
+        if not await self.reviewer.mark_reviewed(ctx, user_id):
             return
-        await ctx.send(f"✅ The nomination with ID `{nomination_id}` was marked as reviewed.")
+        await ctx.send(f"✅ The user with ID `{user_id}` was marked as reviewed.")
 
     @nomination_group.command(aliases=('review',))
     @has_any_role(*MODERATION_ROLES)
-    async def post_review(self, ctx: Context, nomination_id: int) -> None:
+    async def post_review(self, ctx: Context, user_id: int) -> None:
         """Post the automatic review for the user ahead of time."""
-        if not (user_id := await self.reviewer.mark_reviewed(ctx, nomination_id)):
+        if not await self.reviewer.mark_reviewed(ctx, user_id):
             return
 
         await self.reviewer.post_review(user_id, update_database=False)
