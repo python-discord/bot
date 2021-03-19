@@ -76,7 +76,9 @@ class Reviewer:
         channel = guild.get_channel(Channels.mod_announcements)
         member = guild.get_member(user_id)
         if not member:
-            channel.send(f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server 😔")
+            await channel.send(
+                f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server 😔"
+            )
             return
 
         if update_database:
