@@ -180,11 +180,14 @@ class Reviewer:
         infr_stats = list(Counter(infr["type"] for infr in infraction_list).items())
 
         # Format into a sentence.
-        infractions = ", ".join(
-            f"{count} {self._format_infr_name(infr_type, count)}"
-            for infr_type, count in infr_stats[:-1]
-        )
-        if len(infr_stats) > 1:
+        if len(infr_stats) == 1:
+            infr_type, count = infr_stats[0]
+            infractions = f"{count} {self._format_infr_name(infr_type, count)}"
+        else:  # We already made sure they have infractions.
+            infractions = ", ".join(
+                f"{count} {self._format_infr_name(infr_type, count)}"
+                for infr_type, count in infr_stats[:-1]
+            )
             last_infr, last_count = infr_stats[-1]
             infractions += f", and {last_count} {self._format_infr_name(last_infr, last_count)}"
 
