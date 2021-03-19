@@ -306,7 +306,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """Mark a nomination as reviewed and cancel the review task."""
         if not await self.reviewer.mark_reviewed(ctx, nomination_id):
             return
-        await ctx.channel.send(f"✅ The nomination with ID `{nomination_id}` was marked as reviewed.")
+        await ctx.send(f"✅ The nomination with ID `{nomination_id}` was marked as reviewed.")
 
     @nomination_group.command(aliases=('review',))
     @has_any_role(*MODERATION_ROLES)
