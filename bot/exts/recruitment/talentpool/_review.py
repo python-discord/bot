@@ -127,11 +127,14 @@ class Reviewer:
             user_activity = await self.bot.api_client.get(f"bot/users/{member.id}/metricity_review_data")
         except ResponseCodeError as e:
             if e.status == 404:
+                log.trace(f"The user {member.id} seems to have no activity logged in Metricity.")
                 messages = "no"
                 channels = ""
             else:
+                log.trace(f"An unexpected error occured while fetching information of user {member.id}.")
                 raise
         else:
+            log.trace(f"Activity found for {member.id}, formatting review.")
             messages = user_activity["total_messages"]
             # Making this part flexible to the amount of expected and returned channels.
             first_channel = user_activity["top_channel_activity"][0]
@@ -164,6 +167,7 @@ class Reviewer:
             params={'user__id': str(member.id), 'ordering': '-inserted_at'}
         )
 
+        log.trace(f"{len(infraction_list)} infractions found for {member.id}, formatting review.")
         if not infraction_list:
             return "They have no infractions."
 
@@ -224,6 +228,7 @@ class Reviewer:
             }
         )
 
+        log.trace(f"{len(history)} previous nominations found for {member.id}, formatting review.")
         if not history:
             return
 
@@ -257,6 +262,7 @@ class Reviewer:
         Returns the resulting message objects.
         """
         messages = textwrap.wrap(text, width=MAX_MESSAGE_SIZE, replace_whitespace=False)
+        log.trace(f"The provided string will be sent to the channel {channel.id} as {len(messages)} messages.")
 
         results = []
         for message in messages:
@@ -304,6 +310,7 @@ class Reviewer:
         It's important to note that this applies only until reschedule_reviews is called again.
         To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
         """
+        log.trace(f"Canceling the review of user {user_id}.")
         self._review_scheduler.cancel(user_id)
 
     def cancel_all(self) -> None:
@@ -313,4 +320,5 @@ class Reviewer:
         It's important to note that this applies only until reschedule_reviews is called again.
         To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
         """
+        log.trace("Canceling all reviews.")
         self._review_scheduler.cancel_all()
