@@ -97,7 +97,7 @@ class BotSource(commands.Cog):
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
-        url = f"{URLs.github_bot_repo}/blob/master/{file_location}{lines_extension}"
+        url = f"{URLs.github_bot_repo}/blob/main/{file_location}{lines_extension}"
 
         return url, file_location, first_line_no or None
 
