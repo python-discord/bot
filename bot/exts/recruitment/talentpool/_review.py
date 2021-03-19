@@ -75,14 +75,15 @@ class Reviewer:
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.mod_announcements)
         member = guild.get_member(user_id)
+
+        if update_database:
+            await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
+
         if not member:
             await channel.send(
                 f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server 😔"
             )
             return
-
-        if update_database:
-            await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
 
         opening = f"<@&{Roles.moderators}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
 
