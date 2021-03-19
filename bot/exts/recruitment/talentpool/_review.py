@@ -271,7 +271,7 @@ class Reviewer:
 
         On success, returns the user ID.
         """
-        log.trace(f"Updating nomination #{nomination_id} as review")
+        log.trace(f"Updating nomination #{nomination_id} as reviewed")
         try:
             nomination = await self.bot.api_client.get(f"{self._pool.api_endpoint}/{nomination_id}")
         except ResponseCodeError as e:
@@ -299,7 +299,7 @@ class Reviewer:
 
     def cancel(self, user_id: int) -> None:
         """
-        Cancels the review of the nominee with ID user_id.
+        Cancels the review of the nominee with ID `user_id`.
 
         It's important to note that this applies only until reschedule_reviews is called again.
         To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
