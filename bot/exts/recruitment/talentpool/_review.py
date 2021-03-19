@@ -61,7 +61,9 @@ class Reviewer:
         inserted_at = isoparse(user_data['inserted_at']).replace(tzinfo=None)
         review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
 
-        self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
+        # If it's over a day overdue, it's probably an old nomination and shouldn't be automatically reviewed.
+        if datetime.utcnow() - review_at < timedelta(days=1):
+            self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format a generic review of a user and post it to the mod announcements channel."""
