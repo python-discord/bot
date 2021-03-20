@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import textwrap
 import typing as t
 from datetime import datetime
 from enum import Enum
@@ -150,7 +151,7 @@ def has_signals(message: discord.Message) -> bool:
 
 async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Embed:
     """
-    Create an embed representation of discord message link contained in the incident report.
+    Create an embedded representation of the discord message link contained in the incident report.
 
     The Embed would contain the following information -->
         Author: @Jason Terror ♦ (736234578745884682)
@@ -174,7 +175,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Em
         embed.description = (
             f"**Author:** {format_user(message.author)}\n"
             f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-            f"**Content:** {text[:300] + '...' if len(text) > 500 else text}\n"
+            f"**Content:** {textwrap.shorten(text, 300, placeholder='...')}\n"
             "\n"
         )
 
@@ -320,7 +321,9 @@ class Incidents(Cog):
                 file=attachment_file,
             )
         except Exception:
-            log.exception(f"Failed to archive incident {incident.id} to #incidents-archive")
+            log.exception(
+                f"Failed to archive incident {incident.id} to #incidents-archive"
+            )
             return False
         else:
             log.trace("Message archived successfully!")
@@ -498,19 +501,19 @@ class Incidents(Cog):
                 return
 
             if not is_incident(message):
-                log.debug("Ignoring event for a non-incident message")
+                log.debug("Ignoring event for a non-incident message.")
                 return
 
             await self.process_event(str(payload.emoji), message, payload.member)
-            log.trace("Releasing event lock")
+            log.trace("Releasing event lock.")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
         if is_incident(message):
             message_links = DISCORD_MESSAGE_LINK_RE.findall(str(message.content))
-            if message_links:
 
+            if message_links:
                 embeds = []
                 for message_link in message_links:
                     ctx = await self.bot.get_context(message)
@@ -530,16 +533,16 @@ class Incidents(Cog):
         self,
         webhook_embed_list: t.List,
         message: discord.Message,
-        webhook: discord.Webhook
+        webhook: discord.Webhook,
     ) -> t.List[int]:
         """
         Send Message Link Embeds to #incidents channel.
 
-        Uses the `webhook` passed in as parameter to send the embeds
-        in `webhook_embed_list` parameter.
+        Uses the `webhook` passed in as a parameter to send
+        the embeds in the `webhook_embed_list` parameter.
 
-        After sending each webhook it maps the `message.id` to the
-        `webhook_msg_ids` IDs in the async rediscache.
+        After sending each webhook it maps the `message.id`
+        to the `webhook_msg_ids` IDs in the async redis-cache.
         """
         webhook_msg_ids = []
         try:
@@ -551,10 +554,14 @@ class Incidents(Cog):
                     wait=True,
                 )
                 webhook_msg_ids.append(webhook_msg.id)
-                log.trace(f"Message Link Embed {x + 1}/{len(webhook_embed_list)} Sent Succesfully")
+                log.trace(
+                    f"Message Link Embed {x + 1}/{len(webhook_embed_list)} sent successfully."
+                )
 
         except Exception:
-            log.exception(f"Failed to send message link embeds {message.id} to #incidents")
+            log.exception(
+                f"Failed to send message link embeds {message.id} to #incidents."
+            )
 
         else:
             await self.message_link_embeds_cache.set(
