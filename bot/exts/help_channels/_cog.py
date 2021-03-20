@@ -380,7 +380,7 @@ class HelpChannels(commands.Cog):
         return await _unclaim_channel(channel, claimant_id, closed_on)
 
     async def _delete_message_time_caches(self, channel: discord.TextChannel) -> None:
-        """Delete message time caches """
+        """Delete message time caches."""
         await _caches.claimant_last_message_times.delete(channel.id)
         await _caches.non_claimant_last_message_times.delete(channel.id)
 
