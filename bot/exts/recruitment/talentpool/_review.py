@@ -66,7 +66,7 @@ class Reviewer:
             self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
-        """Format a generic review of a user and post it to the mod announcements channel."""
+        """Format a generic review of a user and post it to the nomination voting channel."""
         log.trace(f"Posting the review of {user_id}")
 
         nomination = self._pool.watched_users[user_id]
@@ -75,7 +75,7 @@ class Reviewer:
             return
 
         guild = self.bot.get_guild(Guild.id)
-        channel = guild.get_channel(Channels.mod_announcements)
+        channel = guild.get_channel(Channels.nomination_voting)
         member = guild.get_member(user_id)
 
         if update_database:
