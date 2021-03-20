@@ -119,7 +119,7 @@ class HelpChannels(commands.Cog):
         await _caches.claim_times.set(message.channel.id, timestamp)
         await _caches.claimant_last_message_times.set(message.channel.id, timestamp)
         # non_claimant needs to be set too, to satisfy the condition in `_channel.get_closing_time` the first time.
-        # Otherwise it will fall back to the old method if no other messages are sent. 
+        # Otherwise it will fall back to the old method if no other messages are sent.
         await _caches.non_claimant_last_message_times.set(message.channel.id, timestamp)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
@@ -378,7 +378,7 @@ class HelpChannels(commands.Cog):
             _unclaim_channel = decorator(_unclaim_channel)
 
         return await _unclaim_channel(channel, claimant_id, closed_on)
-    
+
     async def _delete_message_time_caches(self, channel: discord.TextChannel) -> None:
         """Delete message time caches """
         await _caches.claimant_last_message_times.delete(channel.id)

@@ -62,11 +62,18 @@ async def get_closing_time(channel: discord.TextChannel) -> t.Tuple[datetime, st
 
     # The further away closing time is what we should use.
     if claimant_last_message_time >= non_claimant_last_message_time:
-        log.trace(f"#{channel} ({channel.id}) should be closed at {claimant_last_message_time} due to claimant timeout.")
+        log.trace(
+            f"#{channel} ({channel.id}) should be closed at "
+            f"{claimant_last_message_time} due to claimant timeout."
+        )
         return claimant_last_message_time, "claimant_timeout"
     else:
-        log.trace(f"#{channel} ({channel.id}) should be closed at {non_claimant_last_message_time} due to others timeout.")
+        log.trace(
+            f"#{channel} ({channel.id}) should be closed at "
+            f"{non_claimant_last_message_time} due to others timeout."
+        )
         return non_claimant_last_message_time, "others_timeout"
+
 
 async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
     """Return the duration `channel_id` has been in use. Return None if it's not in use."""
