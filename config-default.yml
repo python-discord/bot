@@ -199,6 +199,7 @@ guild:
         mod_meta:           &MOD_META       775412552795947058
         mod_spam:           &MOD_SPAM       620607373828030464
         mod_tools:          &MOD_TOOLS      775413915391098921
+        nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
 
