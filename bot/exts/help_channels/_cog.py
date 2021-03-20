@@ -118,6 +118,9 @@ class HelpChannels(commands.Cog):
         timestamp = datetime.now(timezone.utc).timestamp()
         await _caches.claim_times.set(message.channel.id, timestamp)
         await _caches.claimant_last_message_times.set(message.channel.id, timestamp)
+        # non_claimant needs to be set too, to satisfy the condition in `_channel.get_closing_time` the first time.
+        # Otherwise it will fall back to the old method if no other messages are sent.
+        await _caches.non_claimant_last_message_times.set(message.channel.id, timestamp)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
         scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
@@ -188,7 +191,7 @@ class HelpChannels(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await self.unclaim_channel(ctx.channel, is_auto=False)
+            await self.unclaim_channel(ctx.channel, closed_on="command")
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
@@ -234,7 +237,7 @@ class HelpChannels(commands.Cog):
         elif missing < 0:
             log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
             for channel in channels[:abs(missing)]:
-                await self.unclaim_channel(channel)
+                await self.unclaim_channel(channel, closed_on="cleanup")
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
@@ -272,6 +275,8 @@ class HelpChannels(commands.Cog):
 
         log.trace("Moving or rescheduling in-use channels.")
         for channel in _channel.get_category_channels(self.in_use_category):
+            # clear the cache here so moving doesn't rely on old cached messages.
+            await self._delete_message_time_caches(channel)
             await self.move_idle_channel(channel, has_task=False)
 
         # Prevent the command from being used until ready.
@@ -294,16 +299,16 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        closing_time = await _channel.get_closing_time(channel)
+        closing_time, closed_on = await _channel.get_closing_time(channel)
         # The time at which the channel should be closed, based on messages sent.
         if closing_time < datetime.utcnow():
 
             log.info(
                 f"#{channel} ({channel.id}) is idle past {closing_time} "
-                f"and will be made dormant."
+                f"and will be made dormant. Reason: {closed_on}"
             )
 
-            await self.unclaim_channel(channel)
+            await self.unclaim_channel(channel, closed_on=closed_on)
         else:
             # Cancel the existing task, if any.
             if has_task:
@@ -353,7 +358,7 @@ class HelpChannels(commands.Cog):
         _stats.report_counts()
 
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "channel")
-    async def unclaim_channel(self, channel: discord.TextChannel, *, is_auto: bool = True) -> None:
+    async def unclaim_channel(self, channel: discord.TextChannel, *, closed_on: str) -> None:
         """
         Unclaim an in-use help `channel` to make it dormant.
 
@@ -361,7 +366,7 @@ class HelpChannels(commands.Cog):
         Remove the cooldown role from the channel claimant if they have no other channels claimed.
         Cancel the scheduled cooldown role removal task.
 
-        Set `is_auto` to True if the channel was automatically closed or False if manually closed.
+        `closed_on` is the reason that the channel was closed for. Examples: "cleanup", "command", "claimant_timeout"
         """
         claimant_id = await _caches.claimants.get(channel.id)
         _unclaim_channel = self._unclaim_channel
@@ -372,13 +377,17 @@ class HelpChannels(commands.Cog):
             decorator = lock.lock_arg(f"{NAMESPACE}.unclaim", "claimant_id", wait=True)
             _unclaim_channel = decorator(_unclaim_channel)
 
-        return await _unclaim_channel(channel, claimant_id, is_auto)
+        return await _unclaim_channel(channel, claimant_id, closed_on)
 
-    async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, is_auto: bool) -> None:
-        """Actual implementation of `unclaim_channel`. See that for full documentation."""
-        await _caches.claimants.delete(channel.id)
+    async def _delete_message_time_caches(self, channel: discord.TextChannel) -> None:
+        """Delete message time caches."""
         await _caches.claimant_last_message_times.delete(channel.id)
         await _caches.non_claimant_last_message_times.delete(channel.id)
+
+    async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, closed_on: str) -> None:
+        """Actual implementation of `unclaim_channel`. See that for full documentation."""
+        await _caches.claimants.delete(channel.id)
+        await self._delete_message_time_caches(channel)
 
         # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
         if claimant_id in self.scheduler:
@@ -392,12 +401,12 @@ class HelpChannels(commands.Cog):
             await _cooldown.remove_cooldown_role(claimant)
 
         await _message.unpin(channel)
-        await _stats.report_complete_session(channel.id, is_auto)
+        await _stats.report_complete_session(channel.id, closed_on)
         await self.move_to_dormant(channel)
 
         # Cancel the task that makes the channel dormant only if called by the close command.
         # In other cases, the task is either already done or not-existent.
-        if not is_auto:
+        if not closed_on:
             self.scheduler.cancel(channel.id)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
