@@ -197,6 +197,7 @@ guild:
         mods:                               305126844661760000
         mod_alerts:                         473092532147060736
         mod_spam:                           620607373828030464
+        nominations:                        822920136150745168
         nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
