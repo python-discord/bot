@@ -388,6 +388,7 @@ class Categories(metaclass=YAMLGetter):
     help_available: int
     help_dormant: int
     help_in_use: int
+    moderators: int
     modmail: int
     voice: int
 
@@ -435,9 +436,7 @@ class Channels(metaclass=YAMLGetter):
     helpers: int
     incidents: int
     incidents_archive: int
-    mods: int
     mod_alerts: int
-    mod_spam: int
     nominations: int
     nomination_voting: int
     organisation: int
