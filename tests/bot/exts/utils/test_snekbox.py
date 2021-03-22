@@ -66,7 +66,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Return error and message according to the eval result."""
         cases = (
             ('ERROR', None, ('Your eval job has failed', 'ERROR')),
-            ('', 128 + snekbox.SIGKILL, ('Your eval job timed out or ran out of memory', '')),
+            ('', 128 + snekbox.SIGTERM, ('Your eval job timed out or ran out of memory', '')),
             ('', 255, ('Your eval job has failed', 'A fatal NsJail error occurred'))
         )
         for stdout, returncode, expected in cases:
