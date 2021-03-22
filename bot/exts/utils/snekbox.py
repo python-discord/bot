@@ -43,7 +43,7 @@ EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
 EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use, Categories.voice)
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
-SIGKILL = 9
+SIGTERM = 15
 
 REEVAL_EMOJI = '\U0001f501'  # :repeat:
 REEVAL_TIMEOUT = 30
@@ -112,7 +112,7 @@ class Snekbox(Cog):
         if returncode is None:
             msg = "Your eval job has failed"
             error = stdout.strip()
-        elif returncode == 128 + SIGKILL:
+        elif returncode == 128 + SIGTERM:
             msg = "Your eval job timed out or ran out of memory"
         elif returncode == 255:
             msg = "Your eval job has failed"
