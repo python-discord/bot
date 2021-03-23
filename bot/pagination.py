@@ -255,8 +255,8 @@ class LinePaginator(Paginator):
             elif right_reaction and user_.id != ctx.bot.user.id:
 
                 scheduling.create_task(
-                    (discord.HTTPException,),  # Suppress the HTTPException if adding the reaction fails
-                    reaction.message.remove_reaction(reaction.emoji, user)
+                    reaction.message.remove_reaction(reaction.emoji, user),
+                    discord.HTTPException  # Suppress the HTTPException if adding the reaction fails
                 )
 
                 return False
