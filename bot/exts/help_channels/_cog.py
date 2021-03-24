@@ -298,6 +298,7 @@ class HelpChannels(commands.Cog):
         dormant will first be cancelled.
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
+
         closing_time, closed_on = await _channel.get_closing_time(channel, self.init_task.done())
         # The time at which the channel should be closed, based on messages sent.
         if closing_time < datetime.utcnow():
