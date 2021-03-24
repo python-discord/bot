@@ -34,7 +34,7 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
     if is_empty:
         idle_minutes = constants.HelpChannels.deleted_idle_minutes
     else:
-        idle_minutes = constants.HelpChannels.idle_minutes_others
+        idle_minutes = constants.HelpChannels.idle_minutes_claimant
 
     non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
     claimant_last_message_time = await _caches.claimant_last_message_times.get(channel.id)
