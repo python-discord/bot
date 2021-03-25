@@ -28,8 +28,9 @@ async def report_complete_session(channel_id: int, closed_on: str) -> None:
 
     Set `is_auto` to True if the channel was automatically closed or False if manually closed.
     """
-    caller = f"auto.{closed_on}" if closed_on else "command"
-    bot.instance.stats.incr(f"help.dormant_calls.{caller}")
+    if closed_on != "command":
+        closed_on = f"auto.{closed_on}"
+    bot.instance.stats.incr(f"help.dormant_calls.{closed_on}")
 
     in_use_time = await _channel.get_in_use_time(channel_id)
     if in_use_time:
