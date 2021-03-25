@@ -49,22 +49,21 @@ async def update_message_caches(message: discord.Message) -> None:
     # Confirm the channel is an in use help channel
     if is_in_category(channel, constants.Categories.help_in_use):
         log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
-        # Use datetime naive time stamp to be consistant with timestamps from discord.
-        timestamp = datetime.now().timestamp()
 
         claimant_id = await _caches.claimants.get(channel.id)
-
-        # Overwrite the claimant message time, if its from the claimant.
-        if message.author.id == claimant_id:
-            await _caches.claimant_last_message_times.set(channel.id, timestamp)
-            return
 
         if not claimant_id:
             # The mapping for this channel doesn't exist, we can't do anything.
             return
 
-        # Cache the timestamp of the non-claimants message
-        await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
+        # Use datetime naive time stamp to be consistant with timestamps from discord.
+        timestamp = message.created_at.timestamp()
+
+        # Overwrite the appropriate last message cache depending on the author of the message
+        if message.author.id == claimant_id:
+            await _caches.claimant_last_message_times.set(channel.id, timestamp)
+        else:
+            await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
 
 
 async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
