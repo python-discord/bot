@@ -85,8 +85,8 @@ async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
 
     claimed_timestamp = await _caches.claim_times.get(channel_id)
     if claimed_timestamp:
-        claimed = datetime.utcfromtimestamp(claimed_timestamp)
-        return datetime.utcnow() - claimed
+        claimed = datetime.fromtimestamp(claimed_timestamp)
+        return datetime.now() - claimed
 
 
 def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:

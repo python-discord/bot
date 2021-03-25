@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import typing as t
-from datetime import datetime, timezone
+from datetime import datetime
 from operator import attrgetter
 
 import discord
@@ -114,13 +114,11 @@ class HelpChannels(commands.Cog):
 
         self.bot.stats.incr("help.claimed")
 
-        # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
-        timestamp = datetime.now(timezone.utc).timestamp()
-        await _caches.claim_times.set(message.channel.id, timestamp)
-        await _caches.claimant_last_message_times.set(message.channel.id, timestamp)
+        await _caches.claim_times.set(message.channel.id, message.created_at)
+        await _caches.claimant_last_message_times.set(message.channel.id, message.created_at)
         # non_claimant needs to be set too, to satisfy the condition in `_channel.get_closing_time` the first time.
         # Otherwise it will fall back to the old method if no other messages are sent.
-        await _caches.non_claimant_last_message_times.set(message.channel.id, timestamp)
+        await _caches.non_claimant_last_message_times.set(message.channel.id, message.created_at)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
         scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
