@@ -39,13 +39,14 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
     non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
     claimant_last_message_time = await _caches.claimant_last_message_times.get(channel.id)
 
-    if is_empty or not all(
-        init_done,
-        non_claimant_last_message_time,
-        claimant_last_message_time,
+    if (
+        is_empty
+        or not init_done
+        or non_claimant_last_message_time is None
+        or claimant_last_message_time is None
     ):
-        # Current help channel has no messages, at least one of the caches is empty or the help system cog is starting.
-        # Use the last message in the channel to determine closing time instead.
+        # if the current help channel has no messages, the help system cog is starting or
+        # at least one of the caches is empty use the last message in the channel to determine closing time instead.
 
         msg = await _message.get_last_message(channel)
 
