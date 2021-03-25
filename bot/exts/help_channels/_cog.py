@@ -114,8 +114,8 @@ class HelpChannels(commands.Cog):
 
         self.bot.stats.incr("help.claimed")
 
-        await _caches.claim_times.set(message.channel.id, message.created_at)
-        await _caches.claimant_last_message_times.set(message.channel.id, message.created_at)
+        await _caches.claim_times.set(message.channel.id, message.created_at.timestamp())
+        await _caches.claimant_last_message_times.set(message.channel.id, message.created_at.timestamp())
         # Reset thie non_claimant cache for this channel to indicate that this session has yet to be answered.
         await _caches.non_claimant_last_message_times.delete(message.channel.id)
 
