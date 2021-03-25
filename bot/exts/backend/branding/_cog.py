@@ -32,7 +32,11 @@ class AssetType(Enum):
 
 
 def compound_hash(objects: t.Iterable[RemoteObject]) -> str:
-    """Compound hashes are cached to check for change in any of the member `objects`."""
+    """
+    Join SHA attributes of `objects` into a single string.
+
+    Compound hashes are cached to check for change in any of the member `objects`.
+    """
     return "-".join(item.sha for item in objects)
 
 
