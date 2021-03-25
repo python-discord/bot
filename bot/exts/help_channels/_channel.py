@@ -58,8 +58,8 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         return msg.created_at + timedelta(minutes=idle_minutes), "latest_message"
 
     # Get the later time at which a channel should be closed
-    non_claimant_last_message_time = datetime.fromtimestamp(non_claimant_last_message_time)
-    claimant_last_message_time = datetime.fromtimestamp(claimant_last_message_time)
+    non_claimant_last_message_time = datetime.utcfromtimestamp(non_claimant_last_message_time)
+    claimant_last_message_time = datetime.utcfromtimestamp(claimant_last_message_time)
 
     non_claimant_last_message_time += timedelta(minutes=idle_minutes)
     claimant_last_message_time += timedelta(minutes=constants.HelpChannels.idle_minutes_claimant)
@@ -85,8 +85,8 @@ async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
 
     claimed_timestamp = await _caches.claim_times.get(channel_id)
     if claimed_timestamp:
-        claimed = datetime.fromtimestamp(claimed_timestamp)
-        return datetime.now() - claimed
+        claimed = datetime.utcfromtimestamp(claimed_timestamp)
+        return datetime.utcnow() - claimed
 
 
 def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
