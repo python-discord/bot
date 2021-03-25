@@ -329,9 +329,8 @@ class Branding(commands.Cog):
         # Cache event identity to avoid re-entry in case of restart
         await self.cache_information.set("event_path", event.path)
 
-        # The following values are only stored for the purpose of presenting them to the users
-        await self.cache_information.set("event_duration", extract_event_duration(event))
-        await self.cache_information.set("event_description", event.meta.description)
+        # Cache information shown in the 'about' embed
+        await self.populate_cache_event_description(event)
 
         # Notify guild of new event ~ this reads the information that we cached above!
         if event_changed:
@@ -387,6 +386,20 @@ class Branding(commands.Cog):
                 for event in chronological_events
             })
 
+    async def populate_cache_event_description(self, event: Event) -> None:
+        """
+        Cache `event` description & duration.
+
+        This should be called when entering a new event, and can be called periodically to ensure that the cache
+        holds fresh information in the case that the event remains the same, but its description changes.
+
+        The duration is stored formatted for the frontend. It is not intended to be used programmatically.
+        """
+        log.trace("Caching event description & duration")
+
+        await self.cache_information.set("event_description", event.meta.description)
+        await self.cache_information.set("event_duration", extract_event_duration(event))
+
     # endregion
     # region: Daemon
 
@@ -438,6 +451,8 @@ class Branding(commands.Cog):
             log.debug("Daemon main: new event detected!")
             await self.enter_event(new_event)
             return
+
+        await self.populate_cache_event_description(new_event)  # Cache fresh frontend info in case of change
 
         log.trace("Daemon main: event has not changed, checking for change in assets")
 
