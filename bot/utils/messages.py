@@ -61,7 +61,7 @@ async def wait_for_deletion(
         if whitelisted:
             return True
 
-        elif right_reaction:
+        elif right_reaction and user != bot.instance.user:
             scheduling.create_task(
                 reaction.message.remove_reaction(reaction.emoji, user),
                 HTTPException  # Suppress the HTTPException if adding the reaction fails
