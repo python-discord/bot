@@ -408,7 +408,7 @@ class HelpChannels(commands.Cog):
             category_id=constants.Categories.help_in_use,
         )
 
-        timeout = constants.HelpChannels.idle_minutes_others * 60
+        timeout = constants.HelpChannels.idle_minutes_claimant * 60
 
         log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
         self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
