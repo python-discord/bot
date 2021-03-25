@@ -52,12 +52,13 @@ async def update_message_caches(message: discord.Message) -> None:
         # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
         timestamp = datetime.now(timezone.utc).timestamp()
 
+        claimant_id = await _caches.claimants.get(channel.id)
+
         # Overwrite the claimant message time, if its from the claimant.
-        if message.author == await _caches.claimants.get(channel.id):
+        if message.author.id == claimant_id:
             await _caches.claimant_last_message_times.set(channel.id, timestamp)
             return
 
-        claimant_id = await _caches.claimants.get(channel.id)
         if not claimant_id:
             # The mapping for this channel doesn't exist, we can't do anything.
             return
