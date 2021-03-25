@@ -273,8 +273,6 @@ class HelpChannels(commands.Cog):
 
         log.trace("Moving or rescheduling in-use channels.")
         for channel in _channel.get_category_channels(self.in_use_category):
-            # clear the cache here so moving doesn't rely on old cached messages.
-            await self._delete_message_time_caches(channel)
             await self.move_idle_channel(channel, has_task=False)
 
         # Prevent the command from being used until ready.
@@ -377,15 +375,9 @@ class HelpChannels(commands.Cog):
 
         return await _unclaim_channel(channel, claimant_id, closed_on)
 
-    async def _delete_message_time_caches(self, channel: discord.TextChannel) -> None:
-        """Delete message time caches."""
-        await _caches.claimant_last_message_times.delete(channel.id)
-        await _caches.non_claimant_last_message_times.delete(channel.id)
-
     async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, closed_on: str) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
-        await self._delete_message_time_caches(channel)
 
         # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
         if claimant_id in self.scheduler:
