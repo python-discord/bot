@@ -36,17 +36,20 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
     else:
         idle_minutes = constants.HelpChannels.idle_minutes_claimant
 
-    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
     claimant_last_message_time = await _caches.claimant_last_message_times.get(channel.id)
+    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
+    if non_claimant_last_message_time is None:
+        # A non-claimant hasn't messaged since session start, set to min timestamp so only claimant
+        # idle period is considered when getting the closing time.
+        non_claimant_last_message_time = datetime.min.timestamp()
 
     if (
         is_empty
         or not init_done
-        or non_claimant_last_message_time is None
         or claimant_last_message_time is None
     ):
-        # if the current help channel has no messages, the help system cog is starting or
-        # at least one of the caches is empty use the last message in the channel to determine closing time instead.
+        # If the current help channel has no messages, the help system cog is starting or
+        # the claimant cache is empty, use the last message in the channel to determine closing time instead.
 
         msg = await _message.get_last_message(channel)
 
