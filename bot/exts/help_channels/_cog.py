@@ -396,7 +396,7 @@ class HelpChannels(commands.Cog):
 
         # Cancel the task that makes the channel dormant only if called by the close command.
         # In other cases, the task is either already done or not-existent.
-        if not closed_on:
+        if closed_on == "command":
             self.scheduler.cancel(channel.id)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
