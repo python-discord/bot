@@ -63,8 +63,8 @@ async def wait_for_deletion(
 
         elif right_reaction:
             scheduling.create_task(
-                (HTTPException,),  # Suppress the HTTPException if adding the reaction fails
-                reaction.message.remove_reaction(reaction.emoji, user)
+                reaction.message.remove_reaction(reaction.emoji, user),
+                HTTPException  # Suppress the HTTPException if adding the reaction fails
             )
 
         return False
