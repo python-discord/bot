@@ -213,7 +213,7 @@ class DocCog(commands.Cog):
         coros = [
             self.update_or_reschedule_inventory(
                 package["package"], package["base_url"], package["inventory_url"]
-            ) for package in await self.bot.api_client.get('bot/documentation-links')
+            ) for package in await self.bot.api_client.get("bot/documentation-links")
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
@@ -283,8 +283,8 @@ class DocCog(commands.Cog):
             # Show all symbols with the same name that were renamed in the footer,
             # with a max of 100 chars.
             if symbol_name in self.renamed_symbols:
-                renamed_symbols = ', '.join(self.renamed_symbols[symbol_name])
-                footer_text = textwrap.shorten("Moved: " + renamed_symbols, 200, placeholder=' ...')
+                renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
+                footer_text = textwrap.shorten("Moved: " + renamed_symbols, 200, placeholder=" ...")
             else:
                 footer_text = ""
 
@@ -296,12 +296,12 @@ class DocCog(commands.Cog):
             embed.set_footer(text=footer_text)
             return embed
 
-    @commands.group(name='docs', aliases=('doc', 'd'), invoke_without_command=True)
+    @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
         await self.get_command(ctx, symbol_name=symbol_name)
 
-    @docs_group.command(name='getdoc', aliases=('g',))
+    @docs_group.command(name="getdoc", aliases=("g",))
     async def get_command(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
         """
         Return a documentation embed for a given symbol.
@@ -344,7 +344,7 @@ class DocCog(commands.Cog):
                 msg = await ctx.send(embed=doc_embed)
                 await wait_for_deletion(msg, (ctx.author.id,))
 
-    @docs_group.command(name='setdoc', aliases=('s',))
+    @docs_group.command(name="setdoc", aliases=("s",))
     @commands.has_any_role(*MODERATION_ROLES)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def set_command(
@@ -367,11 +367,11 @@ class DocCog(commands.Cog):
         """
         inventory_url, inventory_dict = inventory
         body = {
-            'package': package_name,
-            'base_url': base_url,
-            'inventory_url': inventory_url
+            "package": package_name,
+            "base_url": base_url,
+            "inventory_url": inventory_url
         }
-        await self.bot.api_client.post('bot/documentation-links', json=body)
+        await self.bot.api_client.post("bot/documentation-links", json=body)
 
         log.info(
             f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
@@ -381,7 +381,7 @@ class DocCog(commands.Cog):
         self.update_single(package_name, base_url, inventory_dict)
         await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
 
-    @docs_group.command(name='deletedoc', aliases=('removedoc', 'rm', 'd'))
+    @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
     @commands.has_any_role(*MODERATION_ROLES)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
@@ -391,7 +391,7 @@ class DocCog(commands.Cog):
         Example:
             !docs deletedoc aiohttp
         """
-        await self.bot.api_client.delete(f'bot/documentation-links/{package_name}')
+        await self.bot.api_client.delete(f"bot/documentation-links/{package_name}")
 
         async with ctx.typing():
             await self.refresh_inventories()

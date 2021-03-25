@@ -50,12 +50,12 @@ async def _load_v1(stream: aiohttp.StreamReader) -> InventoryDict:
     async for line in stream:
         name, type_, location = line.decode().rstrip().split(maxsplit=2)
         # version 1 did not add anchors to the location
-        if type_ == 'mod':
-            type_ = 'py:module'
-            location += '#module-' + name
+        if type_ == "mod":
+            type_ = "py:module"
+            location += "#module-" + name
         else:
-            type_ = 'py:' + type_
-            location += '#' + name
+            type_ = "py:" + type_
+            location += "#" + name
         invdata[type_].append((name, location))
     return invdata
 
@@ -66,7 +66,7 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
     async for line in ZlibStreamReader(stream):
         m = _V2_LINE_RE.match(line.rstrip())
         name, type_, _prio, location, _dispname = m.groups()  # ignore the parsed items we don't need
-        if location.endswith('$'):
+        if location.endswith("$"):
             location = location[:-1] + name
 
         invdata[type_].append((name, location))

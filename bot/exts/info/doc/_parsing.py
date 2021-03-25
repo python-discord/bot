@@ -224,7 +224,7 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
         max_length=750,
         max_lines=13
     )
-    description = _WHITESPACE_AFTER_NEWLINES_RE.sub('', description)
+    description = _WHITESPACE_AFTER_NEWLINES_RE.sub("", description)
     if signatures is not None:
         signature = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
         return f"{signature}\n{description}"
@@ -253,4 +253,4 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     else:
         signature = get_signatures(symbol_heading)
         description = get_dd_description(symbol_heading)
-    return _create_markdown(signature, description, symbol_data.url).replace('¶', '').strip()
+    return _create_markdown(signature, description, symbol_data.url).replace("¶", "").strip()
