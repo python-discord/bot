@@ -1,7 +1,7 @@
 import logging
 import textwrap
 import typing as t
-from datetime import datetime, timezone
+from datetime import datetime
 
 import discord
 
@@ -49,8 +49,8 @@ async def update_message_caches(message: discord.Message) -> None:
     # Confirm the channel is an in use help channel
     if is_in_category(channel, constants.Categories.help_in_use):
         log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
-        # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
-        timestamp = datetime.now(timezone.utc).timestamp()
+        # Use datetime naive time stamp to be consistant with timestamps from discord.
+        timestamp = datetime.now().timestamp()
 
         claimant_id = await _caches.claimants.get(channel.id)
 
