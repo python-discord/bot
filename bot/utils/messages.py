@@ -53,7 +53,8 @@ def reaction_check(
         log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
         scheduling.create_task(
             reaction.message.remove_reaction(reaction.emoji, user),
-            HTTPException  # Suppress the HTTPException if adding the reaction fails
+            HTTPException,  # Suppress the HTTPException if adding the reaction fails
+            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
         )
         return False
 
