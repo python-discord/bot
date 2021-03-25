@@ -416,12 +416,7 @@ class HelpChannels(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
-        """
-        Move an available channel to the In Use category and replace it with a dormant one.
-
-        Update the `last_message_times` cache based on the current timestamp. If the message
-        author is the claimant of this channel, also update the `claimant_last_message_times` cache.
-        """
+        """Move an available channel to the In Use category and replace it with a dormant one."""
         if message.author.bot:
             return  # Ignore messages sent by bots.
 
