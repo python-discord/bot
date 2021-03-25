@@ -5,9 +5,8 @@ import textwrap
 from abc import abstractmethod
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 
-import dateutil.parser
 import discord
 from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
@@ -20,7 +19,7 @@ from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages
-from bot.utils.time import time_since
+from bot.utils.time import get_time_delta
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +46,9 @@ class WatchChannel(metaclass=CogABCMeta):
         webhook_id: int,
         api_endpoint: str,
         api_default_params: dict,
-        logger: logging.Logger
+        logger: logging.Logger,
+        *,
+        disable_header: bool = False
     ) -> None:
         self.bot = bot
 
@@ -66,6 +67,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.channel = None
         self.webhook = None
         self.message_history = MessageHistory()
+        self.disable_header = disable_header
 
         self._start = self.bot.loop.create_task(self.start_watchchannel())
 
@@ -133,7 +135,10 @@ class WatchChannel(metaclass=CogABCMeta):
         if not await self.fetch_user_cache():
             await self.modlog.send_log_message(
                 title=f"Warning: Failed to retrieve user cache for the {self.__class__.__name__} watch channel",
-                text="Could not retrieve the list of watched users from the API and messages will not be relayed.",
+                text=(
+                    "Could not retrieve the list of watched users from the API. "
+                    "Messages will not be relayed, and reviews not rescheduled."
+                ),
                 ping_everyone=True,
                 icon_url=Icons.token_removed,
                 colour=Color.red()
@@ -267,6 +272,9 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def send_header(self, msg: Message) -> None:
         """Sends a header embed with information about the relayed messages to the watch channel."""
+        if self.disable_header:
+            return
+
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
@@ -274,7 +282,7 @@ class WatchChannel(metaclass=CogABCMeta):
         actor = actor.display_name if actor else self.watched_users[user_id]['actor']
 
         inserted_at = self.watched_users[user_id]['inserted_at']
-        time_delta = self._get_time_delta(inserted_at)
+        time_delta = get_time_delta(inserted_at)
 
         reason = self.watched_users[user_id]['reason']
 
@@ -302,35 +310,61 @@ class WatchChannel(metaclass=CogABCMeta):
         The optional kwarg `update_cache` specifies whether the cache should
         be refreshed by polling the API.
         """
-        if update_cache:
-            if not await self.fetch_user_cache():
-                await ctx.send(f":x: Failed to update {self.__class__.__name__} user cache, serving from cache")
-                update_cache = False
+        watched_data = await self.prepare_watched_users_data(ctx, oldest_first, update_cache)
 
-        lines = []
-        for user_id, user_data in self.watched_users.items():
-            inserted_at = user_data['inserted_at']
-            time_delta = self._get_time_delta(inserted_at)
-            lines.append(f"• <@{user_id}> (added {time_delta})")
+        if update_cache and not watched_data["updated"]:
+            await ctx.send(f":x: Failed to update {self.__class__.__name__} user cache, serving from cache")
 
-        if oldest_first:
-            lines.reverse()
-
-        lines = lines or ("There's nothing here yet.",)
+        lines = watched_data["info"].values() or ("There's nothing here yet.",)
 
         embed = Embed(
-            title=f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})",
+            title=watched_data["title"],
             color=Color.blue()
         )
         await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
-    @staticmethod
-    def _get_time_delta(time_string: str) -> str:
-        """Returns the time in human-readable time delta format."""
-        date_time = dateutil.parser.isoparse(time_string).replace(tzinfo=None)
-        time_delta = time_since(date_time, precision="minutes", max_units=1)
+    async def prepare_watched_users_data(
+        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Prepare overview information of watched users to list.
 
-        return time_delta
+        The optional kwarg `oldest_first` orders the list by oldest entry.
+
+        The optional kwarg `update_cache` specifies whether the cache should
+        be refreshed by polling the API.
+
+        Returns a dictionary with a "title" key for the list's title, and a "info" key with
+        information about each user.
+
+        The dictionary additionally has an "updated" field which is true if a cache update was
+        requested and it succeeded.
+        """
+        list_data = {}
+        if update_cache:
+            if not await self.fetch_user_cache():
+                update_cache = False
+        list_data["updated"] = update_cache
+
+        watched_iter = self.watched_users.items()
+        if oldest_first:
+            watched_iter = reversed(watched_iter)
+
+        list_data["info"] = {}
+        for user_id, user_data in watched_iter:
+            member = ctx.guild.get_member(user_id)
+            line = f"• `{user_id}`"
+            if member:
+                line += f" ({member.name}#{member.discriminator})"
+            inserted_at = user_data['inserted_at']
+            line += f", added {get_time_delta(inserted_at)}"
+            if not member:  # Cross off users who left the server.
+                line = f"~~{line}~~"
+            list_data["info"][user_id] = line
+
+        list_data["title"] = f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})"
+
+        return list_data
 
     def _remove_user(self, user_id: int) -> None:
         """Removes a user from a watch channel."""

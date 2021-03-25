@@ -102,6 +102,7 @@ class InfractionScheduler:
         """
         Apply an infraction to the user, log the infraction, and optionally notify the user.
 
+        `action_coro`, if not provided, will result in the infraction not getting scheduled for deletion.
         `user_reason`, if provided, will be sent to the user in place of the infraction reason.
         `additional_info` will be attached to the text field in the mod-log embed.
 
@@ -172,6 +173,8 @@ class InfractionScheduler:
             total = len(infractions)
             end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
 
+        purge = infraction.get("purge", "")
+
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
             log.trace(f"Awaiting the infraction #{id_} application action coroutine.")
@@ -209,7 +212,7 @@ class InfractionScheduler:
                 log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
             infr_message = ""
         else:
-            infr_message = f" **{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
+            infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -233,7 +236,7 @@ class InfractionScheduler:
             footer=f"ID {infraction['id']}"
         )
 
-        log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
+        log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
         return not failed
 
     async def pardon_infraction(

@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ["Lint & Test"]
     branches:
-      - master
+      - main
     types:
       - completed
 

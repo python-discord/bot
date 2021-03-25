@@ -54,7 +54,7 @@ class HelpChannels(commands.Cog):
     * Contains channels which aren't in use
     * Channels are used to refill the Available category
 
-    Help channels are named after the chemical elements in `bot/resources/elements.json`.
+    Help channels are named after the foods in `bot/resources/foods.json`.
     """
 
     def __init__(self, bot: Bot):
@@ -102,6 +102,10 @@ class HelpChannels(commands.Cog):
         await _cooldown.revoke_send_permissions(message.author, self.scheduler)
 
         await _message.pin(message)
+        try:
+            await _message.dm_on_open(message)
+        except Exception as e:
+            log.warning("Error occurred while sending DM:", exc_info=e)
 
         # Add user with channel for dormant check.
         await _caches.claimants.set(message.channel.id, message.author.id)

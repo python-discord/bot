@@ -291,7 +291,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             channel=self.msg.channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,
-            hmac="x" * len(token.hmac),
+            hmac="xxxxxxxxxxxxxxxxxxxxxxxxjf4",
         )
 
     @autospec("bot.exts.filters.token_remover", "UNKNOWN_USER_LOG_MESSAGE")
@@ -318,7 +318,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         return_value = TokenRemover.format_userid_log_message(msg, token)
 
-        self.assertEqual(return_value, (known_user_log_message.format.return_value, False))
+        self.assertEqual(return_value, (known_user_log_message.format.return_value, True))
 
         known_user_log_message.format.assert_called_once_with(
             user_id=472265943062413332,

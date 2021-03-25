@@ -4,10 +4,12 @@ import typing as t
 from contextlib import suppress
 
 import discord
+from discord import Member
 from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
 from bot import constants
+from bot.constants import MODERATION_ROLES
 
 FIRST_EMOJI = "\u23EE"   # [:track_previous:]
 LEFT_EMOJI = "\u2B05"    # [:arrow_left:]
@@ -210,6 +212,9 @@ class LinePaginator(Paginator):
 
         Pagination will also be removed automatically if no reaction is added for five minutes (300 seconds).
 
+        The interaction will be limited to `restrict_to_user` (ctx.author by default) or
+        to any user with a moderation role.
+
         Example:
         >>> embed = discord.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
@@ -218,10 +223,10 @@ class LinePaginator(Paginator):
         def event_check(reaction_: discord.Reaction, user_: discord.Member) -> bool:
             """Make sure that this reaction is what we want to operate on."""
             no_restrictions = (
-                # Pagination is not restricted
-                not restrict_to_user
                 # The reaction was by a whitelisted user
-                or user_.id == restrict_to_user.id
+                user_.id == restrict_to_user.id
+                # The reaction was by a moderator
+                or isinstance(user_, Member) and any(role.id in MODERATION_ROLES for role in user_.roles)
             )
 
             return (
@@ -241,6 +246,9 @@ class LinePaginator(Paginator):
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines,
                         scale_to_size=scale_to_size)
         current_page = 0
+
+        if not restrict_to_user:
+            restrict_to_user = ctx.author
 
         if not lines:
             if exception_on_empty_embed:
