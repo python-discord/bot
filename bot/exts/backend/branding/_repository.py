@@ -43,6 +43,9 @@ class RemoteObject:
 
     def __init__(self, dictionary: t.Dict[str, t.Any]) -> None:
         """Initialize by grabbing annotated attributes from `dictionary`."""
+        missing_keys = self.__annotations__.keys() - dictionary.keys()
+        if missing_keys:
+            raise KeyError(f"Fetched object lacks expected keys: {missing_keys}")
         for annotation in self.__annotations__:
             setattr(self, annotation, dictionary[annotation])
 
