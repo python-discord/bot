@@ -365,6 +365,8 @@ class DocCog(commands.Cog):
                     https://docs.python.org/3/ \
                     https://docs.python.org/3/objects.inv
         """
+        if not base_url.endswith("/"):
+            raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
         body = {
             "package": package_name,
