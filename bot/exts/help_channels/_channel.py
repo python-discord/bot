@@ -32,9 +32,9 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
     is_empty = await _message.is_empty(channel)
 
     if is_empty:
-        idle_minutes = constants.HelpChannels.deleted_idle_minutes
+        idle_minutes_claimant = constants.HelpChannels.deleted_idle_minutes
     else:
-        idle_minutes = constants.HelpChannels.idle_minutes_claimant
+        idle_minutes_claimant = constants.HelpChannels.idle_minutes_claimant
 
     claimant_last_message_time = await _caches.claimant_last_message_times.get(channel.id)
 
@@ -54,7 +54,7 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
             return datetime.min, "deleted"
 
         # The time at which a channel should be closed.
-        return msg.created_at + timedelta(minutes=idle_minutes), "latest_message"
+        return msg.created_at + timedelta(minutes=idle_minutes_claimant), "latest_message"
 
     # Switch to datetime objects so we can use time deltas
     claimant_last_message_time = datetime.utcfromtimestamp(claimant_last_message_time)
@@ -68,8 +68,8 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         non_claimant_last_message_time = datetime.min
 
     # Get the later time at which a channel should be closed
-    non_claimant_last_message_time += timedelta(minutes=idle_minutes)
-    claimant_last_message_time += timedelta(minutes=constants.HelpChannels.idle_minutes_claimant)
+    non_claimant_last_message_time += timedelta(minutes=constants.HelpChannels.idle_minutes_others)
+    claimant_last_message_time += timedelta(minutes=idle_minutes_claimant)
 
     # The further away closing time is what we should use.
     if claimant_last_message_time >= non_claimant_last_message_time:
