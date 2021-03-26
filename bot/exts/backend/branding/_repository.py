@@ -128,7 +128,7 @@ class BrandingRepository:
                 raise RuntimeError(f"Failed to fetch file due to status: {response.status}")
             return await response.read()
 
-    async def parse_meta_file(self, raw_file: bytes) -> MetaFile:
+    def parse_meta_file(self, raw_file: bytes) -> MetaFile:
         """
         Parse a 'meta.md' file from raw bytes.
 
@@ -175,7 +175,7 @@ class BrandingRepository:
 
         meta_bytes = await self.fetch_file(contents["meta.md"].download_url)
 
-        meta_file = await self.parse_meta_file(meta_bytes)
+        meta_file = self.parse_meta_file(meta_bytes)
 
         return Event(directory.path, meta_file, contents["banner.png"], list(server_icons.values()))
 
