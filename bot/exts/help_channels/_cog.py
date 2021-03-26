@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import typing as t
-from datetime import datetime
+from datetime import datetime, timedelta
 from operator import attrgetter
 
 import discord
@@ -295,8 +295,10 @@ class HelpChannels(commands.Cog):
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
         closing_time, closed_on = await _channel.get_closing_time(channel, self.init_task.done())
-        # The time at which the channel should be closed, based on messages sent.
-        if closing_time < datetime.utcnow():
+
+        # Closing time is in the past.
+        # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
+        if closing_time < (datetime.utcnow() + timedelta(seconds=1)):
 
             log.info(
                 f"#{channel} ({channel.id}) is idle past {closing_time} "
