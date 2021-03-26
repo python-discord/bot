@@ -100,33 +100,30 @@ class BrandingRepository:
         The directory will be represented by a mapping from file or sub-directory names to their corresponding
         instances of `RemoteObject`. Passing a custom `types` value allows only getting files or directories.
 
-        If the request fails, returns an empty dictionary.
+        An exception will be raised if the request fails, or if the response lacks the expected keys.
         """
         full_url = f"{BRANDING_URL}/{path}"
         log.debug(f"Fetching directory from branding repository: {full_url}")
 
         async with self.bot.http_session.get(full_url, params=PARAMS, headers=HEADERS) as response:
-            if response.status == 200:
-                json_directory = await response.json()
-            else:
-                log.warning(f"Received non-200 response status: {response.status}")
-                return {}
+            if response.status != 200:
+                raise RuntimeError(f"Failed to fetch directory due to status: {response.status}")
+            json_directory = await response.json()
 
         return {file["name"]: RemoteObject(file) for file in json_directory if file["type"] in types}
 
-    async def fetch_file(self, download_url: str) -> t.Optional[bytes]:
+    async def fetch_file(self, download_url: str) -> bytes:
         """
-        Fetch file from `download_url`.
+        Fetch file as bytes from `download_url`.
 
-        Returns the file as bytes unless the request fails, in which case None is given.
+        Raise an exception if the request does not succeed.
         """
         log.debug(f"Fetching file from branding repository: {download_url}")
 
         async with self.bot.http_session.get(download_url, params=PARAMS, headers=HEADERS) as response:
-            if response.status == 200:
-                return await response.read()
-            else:
-                log.warning(f"Received non-200 response status: {response.status}")
+            if response.status != 200:
+                raise RuntimeError(f"Failed to fetch file due to status: {response.status}")
+            return await response.read()
 
     async def parse_meta_file(self, raw_file: bytes) -> MetaFile:
         """
@@ -170,15 +167,10 @@ class BrandingRepository:
 
         server_icons = await self.fetch_directory(contents["server_icons"].path, types=("file",))
 
-        if server_icons is None:
-            raise BrandingMisconfiguration("Failed to fetch server icons!")
         if len(server_icons) == 0:
             raise BrandingMisconfiguration("Found no server icons!")
 
         meta_bytes = await self.fetch_file(contents["meta.md"].download_url)
-
-        if meta_bytes is None:
-            raise BrandingMisconfiguration("Failed to fetch 'meta.md' file!")
 
         meta_file = await self.parse_meta_file(meta_bytes)
 
@@ -193,7 +185,12 @@ class BrandingRepository:
         """
         log.debug("Discovering events in branding repository")
 
-        event_directories = await self.fetch_directory("events", types=("dir",))  # Skip files
+        try:
+            event_directories = await self.fetch_directory("events", types=("dir",))  # Skip files
+        except Exception as fetch_exc:
+            log.error(f"Failed to fetch 'events' directory: {fetch_exc}")
+            return []
+
         instances: t.List[Event] = []
 
         for event_directory in event_directories.values():

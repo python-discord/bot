@@ -145,10 +145,10 @@ class Branding(commands.Cog):
         """
         log.info(f"Applying {asset_type.value} asset to the guild")
 
-        file = await self.repository.fetch_file(download_url)
-
-        if file is None:
-            log.error(f"Failed to download {asset_type.value} from branding repository!")
+        try:
+            file = await self.repository.fetch_file(download_url)
+        except Exception as fetch_exc:
+            log.error(f"Failed to fetch '{asset_type.value}' asset: {fetch_exc}")
             return False
 
         await self.bot.wait_until_guild_available()
