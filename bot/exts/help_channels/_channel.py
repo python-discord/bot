@@ -57,11 +57,11 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         return msg.created_at + timedelta(minutes=idle_minutes_claimant), "latest_message"
 
     # Switch to datetime objects so we can use time deltas
-    claimant_last_message_time = datetime.utcfromtimestamp(claimant_last_message_time)
+    claimant_last_message_time = datetime.fromtimestamp(claimant_last_message_time)
     non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
 
     if non_claimant_last_message_time:
-        non_claimant_last_message_time = datetime.utcfromtimestamp(non_claimant_last_message_time)
+        non_claimant_last_message_time = datetime.fromtimestamp(non_claimant_last_message_time)
     else:
         # If it's falsey, then it indicates a non-claimant has yet to reply to this session.
         # Set to min date time so it isn't considered when calculating the closing time.
@@ -92,7 +92,7 @@ async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
 
     claimed_timestamp = await _caches.claim_times.get(channel_id)
     if claimed_timestamp:
-        claimed = datetime.utcfromtimestamp(claimed_timestamp)
+        claimed = datetime.fromtimestamp(claimed_timestamp)
         return datetime.utcnow() - claimed
 
 
