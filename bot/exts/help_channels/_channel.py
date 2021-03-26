@@ -37,11 +37,6 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         idle_minutes = constants.HelpChannels.idle_minutes_claimant
 
     claimant_last_message_time = await _caches.claimant_last_message_times.get(channel.id)
-    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
-    if non_claimant_last_message_time is None:
-        # A non-claimant hasn't messaged since session start, set to min timestamp so only claimant
-        # idle period is considered when getting the closing time.
-        non_claimant_last_message_time = datetime.min.timestamp()
 
     if (
         is_empty
@@ -61,10 +56,18 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         # The time at which a channel should be closed.
         return msg.created_at + timedelta(minutes=idle_minutes), "latest_message"
 
-    # Get the later time at which a channel should be closed
-    non_claimant_last_message_time = datetime.utcfromtimestamp(non_claimant_last_message_time)
+    # Switch to datetime objects so we can use time deltas
     claimant_last_message_time = datetime.utcfromtimestamp(claimant_last_message_time)
+    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
 
+    if non_claimant_last_message_time:
+        non_claimant_last_message_time = datetime.utcfromtimestamp(non_claimant_last_message_time)
+    else:
+        # If it's falsey, then it indicates a non-claimant has yet to reply to this session.
+        # Set to min date time so it isn't considered when calculating the closing time.
+        non_claimant_last_message_time = datetime.min
+
+    # Get the later time at which a channel should be closed
     non_claimant_last_message_time += timedelta(minutes=idle_minutes)
     claimant_last_message_time += timedelta(minutes=constants.HelpChannels.idle_minutes_claimant)
 
