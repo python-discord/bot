@@ -22,7 +22,6 @@ INFRACTION_ICONS = {
     "voice_ban": (Icons.voice_state_red, Icons.voice_state_green),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
-APPEALABLE_INFRACTIONS = ("ban", "mute", "voice_ban")
 
 # Type aliases
 UserObject = t.Union[discord.Member, discord.User]
@@ -31,8 +30,12 @@ Infraction = t.Dict[str, t.Union[str, int, bool]]
 
 APPEAL_EMAIL = "appeals@pythondiscord.com"
 
-INFRACTION_TITLE = f"Please review our rules over at {RULES_URL}"
-INFRACTION_APPEAL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
+INFRACTION_TITLE = "Please review our rules"
+INFRACTION_APPEAL_EMAIL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
+INFRACTION_APPEAL_MODMAIL_FOOTER = (
+    'If you would like to discuss or appeal this infraction, '
+    'send a message to the ModMail bot'
+)
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
@@ -71,13 +74,13 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
 
 
 async def post_infraction(
-    ctx: Context,
-    user: UserSnowflake,
-    infr_type: str,
-    reason: str,
-    expires_at: datetime = None,
-    hidden: bool = False,
-    active: bool = True
+        ctx: Context,
+        user: UserSnowflake,
+        infr_type: str,
+        reason: str,
+        expires_at: datetime = None,
+        hidden: bool = False,
+        active: bool = True
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
@@ -150,11 +153,11 @@ async def get_active_infraction(
 
 
 async def notify_infraction(
-    user: UserObject,
-    infr_type: str,
-    expires_at: t.Optional[str] = None,
-    reason: t.Optional[str] = None,
-    icon_url: str = Icons.token_removed
+        user: UserObject,
+        infr_type: str,
+        expires_at: t.Optional[str] = None,
+        reason: t.Optional[str] = None,
+        icon_url: str = Icons.token_removed
 ) -> bool:
     """DM a user about their new infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
@@ -178,17 +181,18 @@ async def notify_infraction(
     embed.title = INFRACTION_TITLE
     embed.url = RULES_URL
 
-    if infr_type in APPEALABLE_INFRACTIONS:
-        embed.set_footer(text=INFRACTION_APPEAL_FOOTER)
+    embed.set_footer(
+        text=INFRACTION_APPEAL_EMAIL_FOOTER if infr_type == 'Ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
+    )
 
     return await send_private_embed(user, embed)
 
 
 async def notify_pardon(
-    user: UserObject,
-    title: str,
-    content: str,
-    icon_url: str = Icons.user_verified
+        user: UserObject,
+        title: str,
+        content: str,
+        icon_url: str = Icons.user_verified
 ) -> bool:
     """DM a user about their pardoned infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their pardoned infraction.")

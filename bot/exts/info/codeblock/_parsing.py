@@ -103,6 +103,9 @@ def _is_python_code(content: str) -> bool:
     """Return True if `content` is valid Python consisting of more than just expressions."""
     log.trace("Checking if content is Python code.")
     try:
+        # Remove null bytes because they cause ast.parse to raise a ValueError.
+        content = content.replace("\x00", "")
+
         # Attempt to parse the message into an AST node.
         # Invalid Python code will raise a SyntaxError.
         tree = ast.parse(content)
