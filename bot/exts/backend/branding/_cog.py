@@ -300,7 +300,7 @@ class Branding(commands.Cog):
 
         An event change should always be handled via this function, as it ensures that the cache is populated.
 
-        The #changelog notification is sent only if `event` differs from the currently cached event.
+        The #changelog notification is omitted when `event` is fallback, or already applied.
 
         Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
@@ -321,10 +321,10 @@ class Branding(commands.Cog):
         await self.populate_cache_event_description(event)
 
         # Notify guild of new event ~ this reads the information that we cached above.
-        if event_changed:
+        if event_changed and not event.meta.is_fallback:
             await self.send_info_embed(Channels.change_log)
         else:
-            log.trace("Omitted #changelog notification as event has not changed. Assuming manual re-sync.")
+            log.trace("Omitting #changelog notification. Event has not changed, or new event is fallback.")
 
         return banner_success, icon_success
 
