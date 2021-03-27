@@ -2,10 +2,10 @@ import logging
 import textwrap
 
 import discord
-from discord.ext.commands import Cog, Context, command
+from discord.ext.commands import Cog, Context, command, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Emojis
+from bot.constants import Emojis, MODERATION_ROLES
 from bot.utils.services import send_to_paste_service
 
 log = logging.getLogger(__name__)
@@ -52,6 +52,10 @@ class DMRelay(Cog):
 
         paste_link = await send_to_paste_service(output, extension="txt")
         await ctx.send(paste_link)
+
+    async def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
 
 def setup(bot: Bot) -> None:
