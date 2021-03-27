@@ -74,8 +74,8 @@ def extract_event_name(event: Event) -> str:
 
     An event with a path of 'events/black_history_month' will resolve to 'Black History Month'.
     """
-    name = event.path.split("/")[-1]  # Inner-most directory name
-    words = name.split("_")  # Words from snake case
+    name = event.path.split("/")[-1]  # Inner-most directory name.
+    words = name.split("_")  # Words from snake case.
 
     return " ".join(word.title() for word in words)
 
@@ -84,44 +84,35 @@ class Branding(commands.Cog):
     """
     Guild branding management.
 
-    This cog is responsible for automatic management of the guild's branding while sourcing assets directly from
-    the branding repository.
+    Extension responsible for automatic synchronisation of the guild's branding with the branding repository.
+    Event definitions and assets are automatically discovered and applied as appropriate.
 
-    We utilize multiple Redis caches to persist state. As a result, the cog should seamlessly transition across
-    restarts without having to query either the Discord or GitHub APIs, as it will always remember which
-    assets are currently applied.
+    All state is stored in Redis. The cog should therefore seamlessly transition across restarts and maintain
+    a consistent icon rotation schedule for events with multiple icon assets.
 
-    Additionally, the state of the icon rotation is persisted. As a result, the rotation doesn't reset unless
-    the current event or its icons change.
+    By caching hashes of banner & icon assets, we discover changes in currently applied assets and always keep
+    the latest version applied.
 
-    The cog is designed to be autonomous. The daemon, unless disabled, will poll the branding repository at
-    midnight every day and respond to detected changes. Since we persist SHA hashes of tracked assets,
-    changes in an on-going event will trigger automatic resynchronisation.
-
-    A #changelog notification is automatically sent when entering a new event. Changes in the branding of
-    an on-going event do not trigger a repeated notification.
-
-    The command interface allows moderators+ to control the daemon or request an asset synchronisation,
-    while regular users can see information about the current event and the overall event schedule.
+    The command interface allows moderators+ to control the daemon or request asset synchronisation, while
+    regular users can see information about the current event and the overall event schedule.
     """
 
     # RedisCache[
-    #     "daemon_active": If True, daemon auto-starts; controlled via commands (bool)
-    #     "event_path": Path from root in the branding repo (str)
-    #     "event_description": Markdown description (str)
-    #     "event_duration": Human-readable date range or 'Fallback' (str)
-    #     "banner_hash": Hash of the last applied banner (str)
-    #     "icons_hash": Compound hash of icons in rotation (str)
-    #     "last_rotation_timestamp": POSIX timestamp (float)
+    #     "daemon_active": bool            | If True, daemon starts on start-up. Controlled via commands.
+    #     "event_path": str                | Current event's path in the branding repo.
+    #     "event_description": str         | Current event's Markdown description.
+    #     "event_duration": str            | Current event's human-readable date range.
+    #     "banner_hash": str               | SHA of the currently applied banner.
+    #     "icons_hash": str                | Compound SHA of all icons in current rotation.
+    #     "last_rotation_timestamp": float | POSIX UTC timestamp.
     # ]
     cache_information = RedisCache()
 
-    # Cache holding icons in current rotation ~ the keys are download URLs (str) and the values are integers
-    # corresponding to the amount of times each icon has been used in the current rotation
+    # Icons in current rotation. Keys (str) are download URLs, values (int) track the amount of times each
+    # icon has been used in the current rotation.
     cache_icons = RedisCache()
 
-    # Cache holding all available event names & their durations; this is cached by the daemon and read by
-    # the calendar command with the intention of preventing API spam; doesn't contain the fallback event
+    # All available event names & durations. Cached by the daemon nightly; read by the calendar command.
     cache_events = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
@@ -129,19 +120,16 @@ class Branding(commands.Cog):
         self.bot = bot
         self.repository = BrandingRepository(bot)
 
-        self.bot.loop.create_task(self.maybe_start_daemon())  # Start depending on cache
+        self.bot.loop.create_task(self.maybe_start_daemon())  # Start depending on cache.
 
-    # region: Internal utility
+    # region: Internal logic & state management
 
-    @mock_in_debug(return_value=True)
+    @mock_in_debug(return_value=True)  # Mocked in development environment to prevent API spam.
     async def apply_asset(self, asset_type: AssetType, download_url: str) -> bool:
         """
         Download asset from `download_url` and apply it to PyDis as `asset_type`.
 
-        This function is mocked in the development environment in order to prevent API spam during testing.
-        Decorator should be temporarily removed in order to test internal methodology.
-
-        Returns a boolean indicating whether the application was successful.
+        Return a boolean indicating whether the application was successful.
         """
         log.info(f"Applying {asset_type.value} asset to the guild")
 
@@ -154,7 +142,7 @@ class Branding(commands.Cog):
         await self.bot.wait_until_guild_available()
         pydis: discord.Guild = self.bot.get_guild(Guild.id)
 
-        timeout = 10  # Seconds
+        timeout = 10  # Seconds.
         try:
             with async_timeout.timeout(timeout):
                 await pydis.edit(**{asset_type.value: file})
@@ -174,7 +162,7 @@ class Branding(commands.Cog):
 
         Banners should always be applied via this method in order to ensure that the last hash is cached.
 
-        Returns a boolean indicating whether the application was successful.
+        Return a boolean indicating whether the application was successful.
         """
         success = await self.apply_asset(AssetType.BANNER, banner.download_url)
 
@@ -194,14 +182,14 @@ class Branding(commands.Cog):
 
         In the case that there is only 1 icon in the rotation and has already been applied, do nothing.
 
-        Returns a boolean indicating whether a new icon was applied successfully.
+        Return a boolean indicating whether a new icon was applied successfully.
         """
         log.debug("Rotating icons")
 
         state = await self.cache_icons.to_dict()
         log.trace(f"Total icons in rotation: {len(state)}")
 
-        if not state:  # This would only happen if rotation not initiated, but we can handle gracefully
+        if not state:  # This would only happen if rotation not initiated, but we can handle gracefully.
             log.warning("Attempted icon rotation with an empty icon cache!")
             return False
 
@@ -209,7 +197,7 @@ class Branding(commands.Cog):
             log.debug("Aborting icon rotation: only 1 icon is available and has already been applied")
             return False
 
-        current_iteration = min(state.values())  # Choose iteration to draw from
+        current_iteration = min(state.values())  # Choose iteration to draw from.
         options = [download_url for download_url, times_used in state.items() if times_used == current_iteration]
 
         log.trace(f"Choosing from {len(options)} icons in iteration {current_iteration}")
@@ -218,7 +206,7 @@ class Branding(commands.Cog):
         success = await self.apply_asset(AssetType.ICON, next_icon)
 
         if success:
-            await self.cache_icons.increment(next_icon)  # Push the icon into the next iteration
+            await self.cache_icons.increment(next_icon)  # Push the icon into the next iteration.
 
             timestamp = datetime.utcnow().timestamp()
             await self.cache_information.set("last_rotation_timestamp", timestamp)
@@ -237,7 +225,7 @@ class Branding(commands.Cog):
 
         last_rotation_timestamp = await self.cache_information.get("last_rotation_timestamp")
 
-        if last_rotation_timestamp is None:  # Maiden case ~ never rotated
+        if last_rotation_timestamp is None:  # Maiden case ~ never rotated.
             await self.rotate_icons()
             return
 
@@ -253,9 +241,9 @@ class Branding(commands.Cog):
         """
         Set up a new icon rotation.
 
-        This function should be called whenever the set of `available_icons` changes. This is generally the case
-        when we enter a new event, but potentially also when the assets of an on-going event change. In such cases,
-        a reset of `cache_icons` is necessary, because it contains download URLs which may have gotten stale.
+        This function should be called whenever available icons change. This is generally the case when we enter
+        a new event, but potentially also when the assets of an on-going event change. In such cases, a reset
+        of `cache_icons` is necessary, because it contains download URLs which may have gotten stale.
 
         This function does not upload a new icon!
         """
@@ -314,25 +302,25 @@ class Branding(commands.Cog):
 
         The #changelog notification is sent only if `event` differs from the currently cached event.
 
-        Returns a 2-tuple indicating whether the banner, and the icon, were applied successfully.
+        Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
         log.debug(f"Entering event: {event.path}")
 
-        banner_success = await self.apply_banner(event.banner)  # Only one asset ~ apply directly
+        banner_success = await self.apply_banner(event.banner)  # Only one asset ~ apply directly.
 
-        await self.initiate_icon_rotation(event.icons)  # Prepare a new rotation
-        icon_success = await self.rotate_icons()  # Apply an icon from the new rotation
+        await self.initiate_icon_rotation(event.icons)  # Prepare a new rotation.
+        icon_success = await self.rotate_icons()  # Apply an icon from the new rotation.
 
-        # This will only be False in the case of a manual same-event re-synchronisation
+        # This will only be False in the case of a manual same-event re-synchronisation.
         event_changed = event.path != await self.cache_information.get("event_path")
 
-        # Cache event identity to avoid re-entry in case of restart
+        # Cache event identity to avoid re-entry in case of restart.
         await self.cache_information.set("event_path", event.path)
 
-        # Cache information shown in the 'about' embed
+        # Cache information shown in the 'about' embed.
         await self.populate_cache_event_description(event)
 
-        # Notify guild of new event ~ this reads the information that we cached above!
+        # Notify guild of new event ~ this reads the information that we cached above.
         if event_changed:
             await self.send_info_embed(Channels.change_log)
         else:
@@ -348,7 +336,7 @@ class Branding(commands.Cog):
         in a recovery scenario. In the usual case, the daemon already has an `Event` instance and can pass it
         to `enter_event` directly.
 
-        Returns a 2-tuple indicating whether the banner, and the icon, were applied successfully.
+        Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
         log.debug("Synchronise: fetching current event")
 
@@ -380,7 +368,7 @@ class Branding(commands.Cog):
 
         log.trace(f"Writing {len(chronological_events)} events (fallback omitted)")
 
-        with contextlib.suppress(ValueError):  # Cache raises when updated with an empty dict
+        with contextlib.suppress(ValueError):  # Cache raises when updated with an empty dict.
             await self.cache_events.update({
                 extract_event_name(event): extract_event_duration(event)
                 for event in chronological_events
@@ -407,7 +395,7 @@ class Branding(commands.Cog):
         """
         Start the daemon depending on cache state.
 
-        The daemon will only start if it's been previously explicitly enabled via a command.
+        The daemon will only start if it has been explicitly enabled via a command.
         """
         log.debug("Checking whether daemon is enabled")
 
@@ -452,7 +440,7 @@ class Branding(commands.Cog):
             await self.enter_event(new_event)
             return
 
-        await self.populate_cache_event_description(new_event)  # Cache fresh frontend info in case of change
+        await self.populate_cache_event_description(new_event)  # Cache fresh frontend info in case of change.
 
         log.trace("Daemon main: event has not changed, checking for change in assets")
 
@@ -497,7 +485,7 @@ class Branding(commands.Cog):
         log.trace("Daemon before: calculating time to sleep before loop begins")
         now = datetime.utcnow()
 
-        # The actual midnight moment is offset into the future in order to prevent issues with imprecise sleep
+        # The actual midnight moment is offset into the future in order to prevent issues with imprecise sleep.
         tomorrow = now + timedelta(days=1)
         midnight = datetime.combine(tomorrow, time(minute=1))
 
@@ -517,7 +505,7 @@ class Branding(commands.Cog):
 
     @branding_group.command(name="about", aliases=("current", "event"))
     async def branding_about_cmd(self, ctx: commands.Context) -> None:
-        """Show the current event description."""
+        """Show the current event's description and duration."""
         await self.send_info_embed(ctx.channel.id)
 
     @commands.has_any_role(*MODERATION_ROLES)
@@ -526,7 +514,7 @@ class Branding(commands.Cog):
         """
         Force branding synchronisation.
 
-        Shows which assets have failed to synchronise, if any.
+        Show which assets have failed to synchronise, if any.
         """
         async with ctx.typing():
             banner_success, icon_success = await self.synchronise()
@@ -565,7 +553,7 @@ class Branding(commands.Cog):
         """
         if ctx.invoked_subcommand:
             # If you're wondering why this works: when the 'refresh' subcommand eventually re-invokes
-            # this group, the attribute will be automatically set to None by the framework
+            # this group, the attribute will be automatically set to None by the framework.
             return
 
         available_events = await self.cache_events.to_dict()
@@ -578,10 +566,10 @@ class Branding(commands.Cog):
 
         embed = discord.Embed(title="Current event calendar", colour=discord.Colour.blurple())
 
-        # Because a Discord embed can only contain up to 25 fields, we only show the first 25
+        # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
         first_25 = list(available_events.items())[:25]
 
-        if len(first_25) != len(available_events):  # Alert core devs that a paginating solution is now necessary
+        if len(first_25) != len(available_events):  # Alert core devs that a paginating solution is now necessary.
             log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25!")
 
         for name, duration in first_25:
