@@ -131,12 +131,12 @@ class Branding(commands.Cog):
 
         Return a boolean indicating whether the application was successful.
         """
-        log.info(f"Applying {asset_type.value} asset to the guild")
+        log.info(f"Applying '{asset_type.value}' asset to the guild.")
 
         try:
             file = await self.repository.fetch_file(download_url)
-        except Exception as fetch_exc:
-            log.error(f"Failed to fetch '{asset_type.value}' asset: {fetch_exc}")
+        except Exception:
+            log.exception(f"Failed to fetch '{asset_type.value}' asset.")
             return False
 
         await self.bot.wait_until_guild_available()
@@ -146,14 +146,14 @@ class Branding(commands.Cog):
         try:
             with async_timeout.timeout(timeout):
                 await pydis.edit(**{asset_type.value: file})
-        except discord.HTTPException as http_exc:
-            log.error(f"Asset upload to Discord failed: {http_exc}")
+        except discord.HTTPException:
+            log.exception("Asset upload to Discord failed.")
             return False
         except asyncio.TimeoutError:
-            log.error(f"Asset upload to Discord timed out after {timeout} seconds!")
+            log.error(f"Asset upload to Discord timed out after {timeout} seconds.")
             return False
         else:
-            log.debug("Asset uploaded successfully!")
+            log.trace("Asset uploaded successfully.")
             return True
 
     async def apply_banner(self, banner: RemoteObject) -> bool:
@@ -184,23 +184,23 @@ class Branding(commands.Cog):
 
         Return a boolean indicating whether a new icon was applied successfully.
         """
-        log.debug("Rotating icons")
+        log.debug("Rotating icons.")
 
         state = await self.cache_icons.to_dict()
-        log.trace(f"Total icons in rotation: {len(state)}")
+        log.trace(f"Total icons in rotation: {len(state)}.")
 
         if not state:  # This would only happen if rotation not initiated, but we can handle gracefully.
-            log.warning("Attempted icon rotation with an empty icon cache!")
+            log.warning("Attempted icon rotation with an empty icon cache. This indicates wrong logic.")
             return False
 
         if len(state) == 1 and 1 in state.values():
-            log.debug("Aborting icon rotation: only 1 icon is available and has already been applied")
+            log.debug("Aborting icon rotation: only 1 icon is available and has already been applied.")
             return False
 
         current_iteration = min(state.values())  # Choose iteration to draw from.
         options = [download_url for download_url, times_used in state.items() if times_used == current_iteration]
 
-        log.trace(f"Choosing from {len(options)} icons in iteration {current_iteration}")
+        log.trace(f"Choosing from {len(options)} icons in iteration {current_iteration}.")
         next_icon = random.choice(options)
 
         success = await self.apply_asset(AssetType.ICON, next_icon)
@@ -221,7 +221,7 @@ class Branding(commands.Cog):
         Because there is work to be done before the timestamp is read and written, the next read will likely
         commence slightly under 24 hours after the last write.
         """
-        log.debug("Checking if icons should rotate")
+        log.debug("Checking whether it's time for icons to rotate.")
 
         last_rotation_timestamp = await self.cache_information.get("last_rotation_timestamp")
 
@@ -232,7 +232,7 @@ class Branding(commands.Cog):
         last_rotation = datetime.fromtimestamp(last_rotation_timestamp)
         difference = (datetime.utcnow() - last_rotation) + timedelta(minutes=5)
 
-        log.trace(f"Icons last rotated at {last_rotation} (difference: {difference})")
+        log.trace(f"Icons last rotated at {last_rotation} (difference: {difference}).")
 
         if difference.days >= BrandingConfig.cycle_frequency:
             await self.rotate_icons()
@@ -247,14 +247,14 @@ class Branding(commands.Cog):
 
         This function does not upload a new icon!
         """
-        log.debug("Initiating new icon rotation")
+        log.debug("Initiating new icon rotation.")
 
         await self.cache_icons.clear()
 
         new_state = {icon.download_url: 0 for icon in available_icons}
         await self.cache_icons.update(new_state)
 
-        log.trace(f"Icon rotation initiated for {len(new_state)} icons")
+        log.trace(f"Icon rotation initiated for {len(new_state)} icons.")
 
         await self.cache_information.set("icons_hash", compound_hash(available_icons))
 
@@ -268,7 +268,7 @@ class Branding(commands.Cog):
         To support either case, we read information about the current event from `cache_information`. The caller
         is therefore responsible for making sure that the cache is up-to-date before calling this function.
         """
-        log.debug(f"Sending event information event to channel id: {channel_id}")
+        log.debug(f"Sending event information event to channel id: {channel_id}.")
 
         await self.bot.wait_until_guild_available()
         channel: t.Optional[discord.TextChannel] = self.bot.get_channel(channel_id)
@@ -277,7 +277,7 @@ class Branding(commands.Cog):
             log.warning(f"Cannot send event information: channel {channel_id} not found!")
             return
 
-        log.debug(f"Destination channel: #{channel.name}")
+        log.trace(f"Destination channel: #{channel.name}.")
 
         description = await self.cache_information.get("event_description")
         duration = await self.cache_information.get("event_duration")
@@ -304,7 +304,7 @@ class Branding(commands.Cog):
 
         Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
-        log.debug(f"Entering event: {event.path}")
+        log.info(f"Entering event: '{event.path}'.")
 
         banner_success = await self.apply_banner(event.banner)  # Only one asset ~ apply directly.
 
@@ -324,7 +324,7 @@ class Branding(commands.Cog):
         if event_changed:
             await self.send_info_embed(Channels.change_log)
         else:
-            log.trace("Omitted #changelog notification as event has not changed (indicating manual re-sync)")
+            log.trace("Omitted #changelog notification as event has not changed. Assuming manual re-sync.")
 
         return banner_success, icon_success
 
@@ -338,14 +338,14 @@ class Branding(commands.Cog):
 
         Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
-        log.debug("Synchronise: fetching current event")
+        log.debug("Synchronise: fetching current event.")
 
         current_event, available_events = await self.repository.get_current_event()
 
         await self.populate_cache_events(available_events)
 
         if current_event is None:
-            log.error("Failed to fetch event ~ cannot synchronise!")
+            log.error("Failed to fetch event. Cannot synchronise!")
             return False, False
 
         return await self.enter_event(current_event)
@@ -359,14 +359,14 @@ class Branding(commands.Cog):
 
         The cache does not store the fallback event, as it is not shown in the calendar.
         """
-        log.debug("Populating events cache")
+        log.debug("Populating events cache.")
 
         await self.cache_events.clear()
 
         no_fallback = [event for event in events if not event.meta.is_fallback]
         chronological_events = sorted(no_fallback, key=attrgetter("meta.start_date"))
 
-        log.trace(f"Writing {len(chronological_events)} events (fallback omitted)")
+        log.trace(f"Writing {len(chronological_events)} events (fallback omitted).")
 
         with contextlib.suppress(ValueError):  # Cache raises when updated with an empty dict.
             await self.cache_events.update({
@@ -383,7 +383,7 @@ class Branding(commands.Cog):
 
         The duration is stored formatted for the frontend. It is not intended to be used programmatically.
         """
-        log.trace("Caching event description & duration")
+        log.debug("Caching event description & duration.")
 
         await self.cache_information.set("event_description", event.meta.description)
         await self.cache_information.set("event_duration", extract_event_duration(event))
@@ -397,7 +397,7 @@ class Branding(commands.Cog):
 
         The daemon will only start if it has been explicitly enabled via a command.
         """
-        log.debug("Checking whether daemon is enabled")
+        log.debug("Checking whether daemon should start.")
 
         should_begin: t.Optional[bool] = await self.cache_information.get("daemon_active")  # None if never set!
 
@@ -410,7 +410,7 @@ class Branding(commands.Cog):
 
         This is **not** done automatically! The daemon otherwise remains active in the background.
         """
-        log.debug("Cog unload: cancelling daemon")
+        log.debug("Cog unload: cancelling daemon.")
 
         self.daemon_loop.cancel()
 
@@ -425,14 +425,14 @@ class Branding(commands.Cog):
         we check the banner & icons hashes against the currently cached values. If there is a mismatch, each
         specific asset is re-applied.
         """
-        log.trace("Daemon main: checking current event")
+        log.info("Daemon main: checking current event.")
 
         new_event, available_events = await self.repository.get_current_event()
 
         await self.populate_cache_events(available_events)
 
         if new_event is None:
-            log.warning("Daemon main: failed to get current event from branding repository, will do nothing")
+            log.warning("Daemon main: failed to get current event from branding repository, will do nothing.")
             return
 
         if new_event.path != await self.cache_information.get("event_path"):
@@ -442,14 +442,14 @@ class Branding(commands.Cog):
 
         await self.populate_cache_event_description(new_event)  # Cache fresh frontend info in case of change.
 
-        log.trace("Daemon main: event has not changed, checking for change in assets")
+        log.trace("Daemon main: event has not changed, checking for change in assets.")
 
         if new_event.banner.sha != await self.cache_information.get("banner_hash"):
-            log.debug("Daemon main: detected banner change!")
+            log.debug("Daemon main: detected banner change.")
             await self.apply_banner(new_event.banner)
 
         if compound_hash(new_event.icons) != await self.cache_information.get("icons_hash"):
-            log.debug("Daemon main: detected icon change!")
+            log.debug("Daemon main: detected icon change.")
             await self.initiate_icon_rotation(new_event.icons)
             await self.rotate_icons()
         else:
@@ -463,7 +463,7 @@ class Branding(commands.Cog):
         The scheduler maintains an exact 24-hour frequency even if this coroutine takes time to complete. If the
         coroutine is started at 00:01 and completes at 00:05, it will still be started at 00:01 the next day.
         """
-        log.trace("Daemon loop: calling daemon main")
+        log.trace("Daemon loop: calling daemon main.")
 
         try:
             await self.daemon_main()
@@ -478,11 +478,11 @@ class Branding(commands.Cog):
         The first iteration is invoked directly such that synchronisation happens immediately after daemon start.
         We then calculate the time until the next-up midnight and sleep before letting `daemon_loop` begin.
         """
-        log.trace("Daemon before: performing start-up iteration")
+        log.trace("Daemon before: performing start-up iteration.")
 
         await self.daemon_loop()
 
-        log.trace("Daemon before: calculating time to sleep before loop begins")
+        log.trace("Daemon before: calculating time to sleep before loop begins.")
         now = datetime.utcnow()
 
         # The actual midnight moment is offset into the future in order to prevent issues with imprecise sleep.
@@ -490,7 +490,7 @@ class Branding(commands.Cog):
         midnight = datetime.combine(tomorrow, time(minute=1))
 
         sleep_secs = (midnight - now).total_seconds()
-        log.trace(f"Daemon before: sleeping {sleep_secs} seconds before next-up midnight: {midnight}")
+        log.trace(f"Daemon before: sleeping {sleep_secs} seconds before next-up midnight: {midnight}.")
 
         await asyncio.sleep(sleep_secs)
 
@@ -557,7 +557,7 @@ class Branding(commands.Cog):
             return
 
         available_events = await self.cache_events.to_dict()
-        log.debug(f"Found {len(available_events)} cached events available for calendar view")
+        log.trace(f"Found {len(available_events)} cached events available for calendar view.")
 
         if not available_events:
             resp = make_embed("No events found!", "Cache may be empty, try `branding calendar refresh`.", success=False)
@@ -570,7 +570,7 @@ class Branding(commands.Cog):
         first_25 = list(available_events.items())[:25]
 
         if len(first_25) != len(available_events):  # Alert core devs that a paginating solution is now necessary.
-            log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25!")
+            log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25.")
 
         for name, duration in first_25:
             embed.add_field(name=name[:256], value=duration[:1024])
@@ -588,7 +588,7 @@ class Branding(commands.Cog):
         Supplementary subcommand allowing force-refreshing the event cache. Implemented as a subcommand because
         unlike the supergroup, it requires moderator privileges.
         """
-        log.debug("Performing command-requested event cache refresh")
+        log.info("Performing command-requested event cache refresh.")
 
         async with ctx.typing():
             available_events = await self.repository.get_events()

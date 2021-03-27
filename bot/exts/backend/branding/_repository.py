@@ -102,7 +102,7 @@ class BrandingRepository:
         Passing custom `types` allows getting only files or directories. By default, both are included.
         """
         full_url = f"{BRANDING_URL}/{path}"
-        log.debug(f"Fetching directory from branding repository: {full_url}")
+        log.debug(f"Fetching directory from branding repository: '{full_url}'.")
 
         async with self.bot.http_session.get(full_url, params=PARAMS, headers=HEADERS) as response:
             if response.status != 200:
@@ -117,7 +117,7 @@ class BrandingRepository:
 
         Raise an exception if the request does not succeed.
         """
-        log.debug(f"Fetching file from branding repository: {download_url}")
+        log.debug(f"Fetching file from branding repository: '{download_url}'.")
 
         async with self.bot.http_session.get(download_url, params=PARAMS, headers=HEADERS) as response:
             if response.status != 200:
@@ -181,26 +181,25 @@ class BrandingRepository:
 
         Misconfigured events are skipped. May return an empty list in the catastrophic case.
         """
-        log.debug("Discovering events in branding repository")
+        log.debug("Discovering events in branding repository.")
 
         try:
             event_directories = await self.fetch_directory("events", types=("dir",))  # Skip files.
-        except Exception as fetch_exc:
-            log.error(f"Failed to fetch 'events' directory: {fetch_exc}")
+        except Exception:
+            log.exception("Failed to fetch 'events' directory.")
             return []
 
         instances: t.List[Event] = []
 
         for event_directory in event_directories.values():
-            log.trace(f"Attempting to construct event from directory: {event_directory.path}")
+            log.trace(f"Attempting to construct event from directory: '{event_directory.path}'.")
             try:
                 instance = await self.construct_event(event_directory)
             except Exception as exc:
-                log.warning(f"Could not construct event '{event_directory.path}': {exc}")
+                log.warning(f"Could not construct event '{event_directory.path}'.", exc_info=exc)
             else:
                 instances.append(instance)
 
-        log.trace(f"Found {len(instances)} correctly configured events")
         return instances
 
     async def get_current_event(self) -> t.Tuple[t.Optional[Event], t.List[Event]]:
@@ -213,19 +212,21 @@ class BrandingRepository:
         The current event may be None in the case that no event is active, and no fallback event is found.
         """
         utc_now = datetime.utcnow()
-        log.debug(f"Finding active event for: {utc_now}")
+        log.debug(f"Finding active event for: {utc_now}.")
 
         # Construct an object in the arbitrary year for the purpose of comparison.
         lookup_now = date(year=ARBITRARY_YEAR, month=utc_now.month, day=utc_now.day)
+        log.trace(f"Lookup object in arbitrary year: {lookup_now}.")
 
         available_events = await self.get_events()
+        log.trace(f"Found {len(available_events)} available events.")
 
         for event in available_events:
             meta = event.meta
             if not meta.is_fallback and (meta.start_date <= lookup_now <= meta.end_date):
                 return event, available_events
 
-        log.debug("No active event found, looking for fallback")
+        log.trace("No active event found. Looking for fallback event.")
 
         for event in available_events:
             if event.meta.is_fallback:
