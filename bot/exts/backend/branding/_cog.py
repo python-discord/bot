@@ -477,19 +477,22 @@ class Branding(commands.Cog):
         """
         log.trace("Daemon loop: calling daemon main")
 
-        await self.daemon_main()
+        try:
+            await self.daemon_main()
+        except Exception:
+            log.exception("Daemon loop: failed with an unhandled exception!")
 
     @daemon_loop.before_loop
     async def daemon_before(self) -> None:
         """
-        Call `daemon_main` immediately, then block `daemon_loop` until the next-up UTC midnight.
+        Call `daemon_loop` immediately, then block the loop until the next-up UTC midnight.
 
-        The first iteration will be invoked manually such that synchronisation happens immediately after daemon start.
+        The first iteration is invoked directly such that synchronisation happens immediately after daemon start.
         We then calculate the time until the next-up midnight and sleep before letting `daemon_loop` begin.
         """
-        log.info("Daemon before: synchronising guild")
+        log.trace("Daemon before: performing start-up iteration")
 
-        await self.daemon_main()
+        await self.daemon_loop()
 
         log.trace("Daemon before: calculating time to sleep before loop begins")
         now = datetime.utcnow()
