@@ -258,17 +258,16 @@ class Branding(commands.Cog):
 
         await self.cache_information.set("icons_hash", compound_hash(available_icons))
 
-    async def send_info_embed(self, channel_id: int) -> None:
+    async def send_info_embed(self, channel_id: int, *, is_notification: bool) -> None:
         """
         Send the currently cached event description to `channel_id`.
 
-        This function is called when entering a new event with the destination being #changelog. However, it can
-        also be invoked on-demand by users.
+        When `is_notification` holds, a short contextual message for the #changelog channel is added.
 
-        To support either case, we read information about the current event from `cache_information`. The caller
-        is therefore responsible for making sure that the cache is up-to-date before calling this function.
+        We read event information from `cache_information`. The caller is therefore responsible for making
+        sure that the cache is up-to-date before calling this function.
         """
-        log.debug(f"Sending event information event to channel id: {channel_id}.")
+        log.debug(f"Sending event information event to channel: {channel_id} ({is_notification=}).")
 
         await self.bot.wait_until_guild_available()
         channel: t.Optional[discord.TextChannel] = self.bot.get_channel(channel_id)
@@ -283,12 +282,15 @@ class Branding(commands.Cog):
         duration = await self.cache_information.get("event_duration")
 
         if None in (description, duration):
+            content = None
             embed = make_embed("No event in cache", "Is the daemon enabled?", success=False)
+
         else:
+            content = "Python Discord is entering a new event!" if is_notification else None
             embed = discord.Embed(description=description[:2048], colour=discord.Colour.blurple())
             embed.set_footer(text=duration[:2048])
 
-        await channel.send(embed=embed)
+        await channel.send(content=content, embed=embed)
 
     async def enter_event(self, event: Event) -> t.Tuple[bool, bool]:
         """
@@ -322,7 +324,7 @@ class Branding(commands.Cog):
 
         # Notify guild of new event ~ this reads the information that we cached above.
         if event_changed and not event.meta.is_fallback:
-            await self.send_info_embed(Channels.change_log)
+            await self.send_info_embed(Channels.change_log, is_notification=True)
         else:
             log.trace("Omitting #changelog notification. Event has not changed, or new event is fallback.")
 
@@ -506,7 +508,7 @@ class Branding(commands.Cog):
     @branding_group.command(name="about", aliases=("current", "event"))
     async def branding_about_cmd(self, ctx: commands.Context) -> None:
         """Show the current event's description and duration."""
-        await self.send_info_embed(ctx.channel.id)
+        await self.send_info_embed(ctx.channel.id, is_notification=False)
 
     @commands.has_any_role(*MODERATION_ROLES)
     @branding_group.command(name="sync")
