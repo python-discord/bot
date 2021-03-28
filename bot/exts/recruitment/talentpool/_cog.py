@@ -210,7 +210,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def history_command(self, ctx: Context, user: FetchedMember) -> None:
         """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
-            self.api_endpoint,
+            'bot/nominations',
             params={
                 'user__id': str(user.id),
                 'ordering': "-active,-inserted_at"
