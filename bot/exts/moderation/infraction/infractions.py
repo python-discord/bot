@@ -318,6 +318,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         if infraction is None:
             return
 
+        infraction["purge"] = "purge " if purge_days else ""
+
         self.mod_log.ignore(Event.member_remove, user.id)
 
         if reason:

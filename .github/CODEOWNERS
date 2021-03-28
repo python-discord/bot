@@ -12,6 +12,7 @@ bot/exts/info/information.py            @mbaruh
 bot/exts/filters/**                     @mbaruh
 bot/exts/fun/**                         @ks129
 bot/exts/utils/**                       @ks129
+bot/exts/recruitment/**                 @wookie184
 
 # Rules
 bot/rules/**                            @mbaruh
