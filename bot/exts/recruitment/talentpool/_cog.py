@@ -1,6 +1,6 @@
 import logging
 import textwrap
-from collections import ChainMap
+from collections import ChainMap, defaultdict
 from typing import Union
 
 from discord import Color, Embed, Member, User
@@ -8,34 +8,47 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
+from bot.constants import Guild, MODERATION_ROLES, STAFF_ROLES
 from bot.converters import FetchedMember
-from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import time
+from bot.utils.time import get_time_delta
 
 REASON_MAX_CHARS = 1000
 
 log = logging.getLogger(__name__)
 
 
-class TalentPool(WatchChannel, Cog, name="Talentpool"):
+class TalentPool(Cog, name="Talentpool"):
     """Relays messages of helper candidates to a watch channel to observe them."""
 
     def __init__(self, bot: Bot) -> None:
-        super().__init__(
-            bot,
-            destination=Channels.talent_pool,
-            webhook_id=Webhooks.talent_pool,
-            api_endpoint='bot/nominations',
-            api_default_params={'active': 'true', 'ordering': '-inserted_at'},
-            logger=log,
-            disable_header=True,
-        )
-
+        self.bot = bot
         self.reviewer = Reviewer(self.__class__.__name__, bot, self)
         self.bot.loop.create_task(self.reviewer.reschedule_reviews())
+
+        # Stores talentpool users in cache
+        self.cache = defaultdict(dict)
+
+    async def refresh_cache(self) -> bool:
+        """Updates TalentPool users cache."""
+        try:
+            data = await self.bot.api_client.get(
+                'bot/nominations',
+                params={'active': 'true', 'ordering': '-inserted_at'}
+            )
+        except ResponseCodeError as err:
+            log.exception("Failed to fetch the watched users from the API", exc_info=err)
+            return False
+
+        self.cache = defaultdict(dict)
+
+        for entry in data:
+            user_id = entry.pop('user')
+            self.cache[user_id] = entry
+
+        return True
 
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
@@ -78,26 +91,37 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         The optional kwarg `update_cache` specifies whether the cache should
         be refreshed by polling the API.
         """
-        # TODO Once the watch channel is removed, this can be done in a smarter way, without splitting and overriding
-        # the list_watched_users function.
-        watched_data = await self.prepare_watched_users_data(ctx, oldest_first, update_cache)
+        successful_update = False
+        if update_cache:
+            if not (successful_update := await self.refresh_cache()):
+                await ctx.send(":warning: Unable to update cache. Data may be inaccurate.")
 
-        if update_cache and not watched_data["updated"]:
-            await ctx.send(f":x: Failed to update {self.__class__.__name__} user cache, serving from cache")
+        nominations = self.cache.items()
+        if oldest_first:
+            nominations = reversed(nominations)
 
         lines = []
-        for user_id, line in watched_data["info"].items():
-            if self.watched_users[user_id]['reviewed']:
+
+        for user_id, user_data in nominations:
+            member = ctx.guild.get_member(user_id)
+            line = f"• `{user_id}`"
+            if member:
+                line += f" ({member.name}#{member.discriminator})"
+            inserted_at = user_data['inserted_at']
+            line += f", added {get_time_delta(inserted_at)}"
+            if not member:  # Cross off users who left the server.
+                line = f"~~{line}~~"
+            if user_data['reviewed']:
                 line += " *(reviewed)*"
             elif user_id in self.reviewer:
-                line += " *(scheduled)*"
+                line += " *(scheduled)"
             lines.append(line)
 
         if not lines:
             lines = ("There's nothing here yet.",)
 
         embed = Embed(
-            title=watched_data["title"],
+            title=f"Talent Pool active nominations ({'updated' if update_cache and successful_update else 'cached'})",
             color=Color.blue()
         )
         await LinePaginator.paginate(lines, ctx, embed, empty=False)
@@ -130,8 +154,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             await ctx.send(":x: Nominating staff members, eh? Here's a cookie :cookie:")
             return
 
-        if not await self.fetch_user_cache():
-            await ctx.send(f":x: Failed to update the user cache; can't add {user}")
+        if not await self.refresh_cache():
+            await ctx.send(f":x: Failed to update the cache; can't add {user}")
             return
 
         if len(reason) > REASON_MAX_CHARS:
@@ -140,7 +164,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         # Manual request with `raise_for_status` as False because we want the actual response
         session = self.bot.api_client.session
-        url = self.bot.api_client._url_for(self.api_endpoint)
+        url = self.bot.api_client._url_for('bot/nominations')
         kwargs = {
             'json': {
                 'actor': ctx.author.id,
@@ -162,13 +186,13 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             else:
                 resp.raise_for_status()
 
-        self.watched_users[user.id] = response_data
+        self.cache[user.id] = response_data
 
         if user.id not in self.reviewer:
             self.reviewer.schedule_review(user.id)
 
         history = await self.bot.api_client.get(
-            self.api_endpoint,
+            'bot/nominations',
             params={
                 "user__id": str(user.id),
                 "active": "false",
