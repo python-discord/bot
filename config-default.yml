@@ -223,7 +223,6 @@ guild:
 
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
-        talent_pool:        &TALENT_POOL    534321732593647616
 
     moderation_categories:
         - *MODMAIL
@@ -292,7 +291,6 @@ guild:
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
         reddit:                             635408384794951680
-        talent_pool:                        569145364800602132
 
 
 filter:
@@ -323,7 +321,6 @@ filter:
         - *MESSAGE_LOG
         - *MOD_LOG
         - *STAFF_LOUNGE
-        - *TALENT_POOL
         - *USER_EVENT_A
 
     role_whitelist:

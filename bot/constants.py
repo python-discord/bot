@@ -457,7 +457,6 @@ class Channels(metaclass=YAMLGetter):
     voice_chat: int
 
     big_brother_logs: int
-    talent_pool: int
 
 
 class Webhooks(metaclass=YAMLGetter):
@@ -470,7 +469,6 @@ class Webhooks(metaclass=YAMLGetter):
     duck_pond: int
     incidents_archive: int
     reddit: int
-    talent_pool: int
 
 
 class Roles(metaclass=YAMLGetter):
