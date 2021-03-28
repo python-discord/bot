@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 class DMRelay(Cog):
-    """Relay direct messages from the bot."""
+    """Inspect messages sent to the bot."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
