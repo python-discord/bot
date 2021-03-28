@@ -22,7 +22,7 @@ class DMRelay(Cog):
         """Relays the direct message history between the bot and given user."""
         log.trace(f"Relaying DMs with {user.name} ({user.id})")
 
-        if not user.dm_channel:
+        if self.bot.user == user or not user.dm_channel:
             await ctx.send(f"{Emojis.cross_mark} No direct message history with {user.mention}.")
             return
 
