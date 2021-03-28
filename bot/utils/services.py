@@ -52,6 +52,7 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
 
             if extension == '.py':
                 return paste_link
+
             return paste_link + "?noredirect"
 
         log.warning(
