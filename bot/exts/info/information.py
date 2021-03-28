@@ -448,7 +448,7 @@ class Information(Cog):
         def add_content(title: str, content: str) -> None:
             paginator.add_line(f'== {title} ==\n')
             # Replace backticks as it breaks out of code blocks.
-            # An invisble character seemed to be the most reasonable solution. We hope it's not close to 2000.
+            # An invisible character seemed to be the most reasonable solution. We hope it's not close to 2000.
             paginator.add_line(content.replace('`', '`\u200b'))
             paginator.close_page()
 
