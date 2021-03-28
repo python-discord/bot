@@ -22,22 +22,11 @@ class DMRelay(Cog):
         """Relays the direct message history between the bot and given user."""
         log.trace(f"Relaying DMs with {user.name} ({user.id})")
 
-        if self.bot.user == user:
-            await ctx.send(f"{Emojis.cross_mark} No direct message history with myself.")
+        if user.bot:
+            await ctx.send(f"{Emojis.cross_mark} No direct message history with bots.")
             return
 
-        # Force cache to update
-        await user.history(limit=1).flatten()
-
-        if not user.dm_channel:
-            await ctx.send(f"{Emojis.cross_mark} No direct message history with {user.mention}.")
-            return
-
-        output = textwrap.dedent(f"""\
-            User: {user} ({user.id})
-            Channel ID: {user.dm_channel.id}\n
-        """)
-
+        output = ""
         async for msg in user.history(limit=limit, oldest_first=True):
             created_at = msg.created_at.strftime(r"%Y-%m-%d %H:%M")
 
@@ -57,7 +46,16 @@ class DMRelay(Cog):
             if attachments:
                 output += attachments + "\n"
 
-        paste_link = await send_to_paste_service(output, extension="txt")
+        if not output:
+            await ctx.send(f"{Emojis.cross_mark} No direct message history with {user.mention}.")
+            return
+
+        metadata = textwrap.dedent(f"""\
+            User: {user} ({user.id})
+            Channel ID: {user.dm_channel.id}\n
+        """)
+
+        paste_link = await send_to_paste_service(metadata + output, extension="txt")
         await ctx.send(paste_link)
 
     async def cog_check(self, ctx: Context) -> bool:
