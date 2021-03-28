@@ -267,10 +267,10 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         try:
-            nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
+            nomination = await self.bot.api_client.get(f"bot/nominations/{nomination_id}")
         except ResponseCodeError as e:
             if e.response.status == 404:
-                self.log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
+                log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
                 await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
                 return
             else:
@@ -284,13 +284,13 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(f":x: {actor} doesn't have an entry in this nomination.")
             return
 
-        self.log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {repr(reason)}")
+        log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {repr(reason)}")
 
         await self.bot.api_client.patch(
-            f"{self.api_endpoint}/{nomination_id}",
+            f"bot/nominations/{nomination_id}",
             json={"actor": actor.id, "reason": reason}
         )
-        await self.fetch_user_cache()  # Update cache
+        await self.refresh_cache()  # Update cache
         await ctx.send(":white_check_mark: Successfully updated nomination reason.")
 
     @nomination_edit_group.command(name='end_reason')
@@ -302,10 +302,10 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         try:
-            nomination = await self.bot.api_client.get(f"{self.api_endpoint}/{nomination_id}")
+            nomination = await self.bot.api_client.get(f"bot/nominations/{nomination_id}")
         except ResponseCodeError as e:
             if e.response.status == 404:
-                self.log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
+                log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
                 await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
                 return
             else:
@@ -315,13 +315,13 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(":x: Can't edit the end reason of an active nomination.")
             return
 
-        self.log.trace(f"Changing end reason for nomination with id {nomination_id} to {repr(reason)}")
+        log.trace(f"Changing end reason for nomination with id {nomination_id} to {repr(reason)}")
 
         await self.bot.api_client.patch(
-            f"{self.api_endpoint}/{nomination_id}",
+            f"bot/nominations/{nomination_id}",
             json={"end_reason": reason}
         )
-        await self.fetch_user_cache()  # Update cache.
+        await self.refresh_cache()  # Update cache.
         await ctx.send(":white_check_mark: Updated the end reason of the nomination!")
 
     @nomination_group.command(aliases=('mr',))
