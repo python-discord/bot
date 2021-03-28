@@ -115,7 +115,7 @@ class TalentPool(Cog, name="Talentpool"):
             if user_data['reviewed']:
                 line += " *(reviewed)*"
             elif user_id in self.reviewer:
-                line += " *(scheduled)"
+                line += " *(scheduled)*"
             lines.append(line)
 
         if not lines:
