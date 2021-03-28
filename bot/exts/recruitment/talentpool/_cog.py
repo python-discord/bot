@@ -30,13 +30,14 @@ class TalentPool(Cog, name="Talentpool"):
 
         # Stores talentpool users in cache
         self.cache = defaultdict(dict)
+        self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
 
     async def refresh_cache(self) -> bool:
         """Updates TalentPool users cache."""
         try:
             data = await self.bot.api_client.get(
                 'bot/nominations',
-                params={'active': 'true', 'ordering': '-inserted_at'}
+                params=self.api_default_params
             )
         except ResponseCodeError as err:
             log.exception("Failed to fetch the watched users from the API", exc_info=err)
@@ -243,11 +244,11 @@ class TalentPool(Cog, name="Talentpool"):
         Providing a `reason` is required.
         """
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the end reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the end reason is {REASON_MAX_CHARS}.")
             return
 
         if await self.unwatch(user.id, reason):
-            await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed")
+            await ctx.send(f":white_check_mark: Successfully un-nominated {user}")
         else:
             await ctx.send(":x: The specified user does not have an active nomination")
 
@@ -349,7 +350,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def unwatch(self, user_id: int, reason: str) -> bool:
         """End the active nomination of a user with the given reason and return True on success."""
         active_nomination = await self.bot.api_client.get(
-            self.api_endpoint,
+            'bot/nominations',
             params=ChainMap(
                 {"user__id": str(user_id)},
                 self.api_default_params,
@@ -364,10 +365,9 @@ class TalentPool(Cog, name="Talentpool"):
 
         nomination = active_nomination[0]
         await self.bot.api_client.patch(
-            f"{self.api_endpoint}/{nomination['id']}",
+            f"bot/nominations/{nomination['id']}",
             json={'end_reason': reason, 'active': False}
         )
-        self._remove_user(user_id)
 
         self.reviewer.cancel(user_id)
 
