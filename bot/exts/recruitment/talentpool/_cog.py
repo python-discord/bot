@@ -56,25 +56,25 @@ class TalentPool(Cog, name="Talentpool"):
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
 
-    @nomination_group.command(name='watched', aliases=('all', 'list'), root_aliases=("nominees",))
+    @nomination_group.command(name='list', aliases=('all', 'watched'), root_aliases=("nominees",))
     @has_any_role(*MODERATION_ROLES)
-    async def watched_command(
+    async def list_command(
         self,
         ctx: Context,
         oldest_first: bool = False,
         update_cache: bool = True
     ) -> None:
         """
-        Shows the users that are currently being monitored in the talent pool.
+        Shows the users that are currently in the talent pool.
 
         The optional kwarg `oldest_first` can be used to order the list by oldest nomination.
 
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
         """
-        await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
+        await self.list_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
 
-    async def list_watched_users(
+    async def list_users(
         self,
         ctx: Context,
         oldest_first: bool = False,
@@ -130,21 +130,20 @@ class TalentPool(Cog, name="Talentpool"):
     @has_any_role(*MODERATION_ROLES)
     async def oldest_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
-        Shows talent pool monitored users ordered by oldest nomination.
+        Shows talent pool users ordered by oldest nomination.
 
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
         """
-        await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
+        await ctx.invoke(self.list_command, oldest_first=True, update_cache=update_cache)
 
-    @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
+    @nomination_group.command(name='add', aliases=('w', 'a', 'watch'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+    async def add_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
         """
-        Relay messages sent by the given `user` to the `#talent-pool` channel.
+        Adds user nomination (or nomination entry) to Talent Pool.
 
-        A `reason` for adding the user to the talent pool is optional.
-        If given, it will be displayed in the header when relaying messages of this user to the channel.
+        If user already have nomination, then entry associated with existing nomination will be created.
         """
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
@@ -235,9 +234,9 @@ class TalentPool(Cog, name="Talentpool"):
             max_size=1000
         )
 
-    @nomination_group.command(name='unwatch', aliases=('end', ), root_aliases=("unnominate",))
+    @nomination_group.command(name='end', aliases=('unwatch',), root_aliases=("unnominate",))
     @has_any_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def end_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 
