@@ -150,7 +150,6 @@ guild:
         python_events:              &PYEVENTS_CHANNEL   729674110270963822
         python_news:                &PYNEWS_CHANNEL     704372456592506880
         reddit:                     &REDDIT_CHANNEL     458224812528238616
-        user_event_announcements:   &USER_EVENT_A       592000283102674944
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
@@ -322,7 +321,6 @@ filter:
         - *MOD_LOG
         - *STAFF_LOUNGE
         - *TALENT_POOL
-        - *USER_EVENT_A
 
     role_whitelist:
         - *ADMINS_ROLE
@@ -511,7 +509,6 @@ duck_pond:
         - *PYEVENTS_CHANNEL
         - *MAILING_LISTS
         - *REDDIT_CHANNEL
-        - *USER_EVENT_A
         - *DUCK_POND
         - *CHANGE_LOG
         - *STAFF_ANNOUNCEMENTS

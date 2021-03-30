@@ -402,7 +402,6 @@ class Channels(metaclass=YAMLGetter):
     python_events: int
     python_news: int
     reddit: int
-    user_event_announcements: int
 
     dev_contrib: int
     dev_core: int
