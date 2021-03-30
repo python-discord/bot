@@ -414,7 +414,6 @@ class Channels(metaclass=YAMLGetter):
     cooldown: int
 
     attachment_log: int
-    dm_log: int
     message_log: int
     mod_log: int
     user_log: int
@@ -466,7 +465,6 @@ class Webhooks(metaclass=YAMLGetter):
 
     big_brother: int
     dev_log: int
-    dm_log: int
     duck_pond: int
     incidents_archive: int
     reddit: int
