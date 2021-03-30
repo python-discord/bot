@@ -55,6 +55,11 @@ class DMRelay(Cog):
         )
 
         paste_link = await send_to_paste_service(metadata + output, extension="txt")
+
+        if paste_link is None:
+            await ctx.send(f"{Emojis.cross_mark} Failed to upload output to hastebin.")
+            return
+
         await ctx.send(paste_link)
 
     async def cog_check(self, ctx: Context) -> bool:
