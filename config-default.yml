@@ -481,7 +481,7 @@ help_channels:
 
     # Maximum number of channels across all 3 categories
     # Note Discord has a hard limit of 50 channels per category, so this shouldn't be > 50
-    max_total_channels: 32
+    max_total_channels: 42
 
     # Prefix for help channel names
     name_prefix: 'help-'
