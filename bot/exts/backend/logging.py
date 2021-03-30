@@ -29,7 +29,7 @@ class Logging(Cog):
             url="https://github.com/python-discord/bot",
             icon_url=(
                 "https://raw.githubusercontent.com/"
-                "python-discord/branding/master/logos/logo_circle/logo_circle_large.png"
+                "python-discord/branding/main/logos/logo_circle/logo_circle_large.png"
             )
         )
 

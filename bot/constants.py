@@ -438,6 +438,7 @@ class Channels(metaclass=YAMLGetter):
     mods: int
     mod_alerts: int
     mod_spam: int
+    nomination_voting: int
     organisation: int
 
     admin_announcements: int

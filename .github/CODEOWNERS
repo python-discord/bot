@@ -4,14 +4,15 @@
 **/bot/exts/moderation/*silence.py      @MarkKoz
 bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
-bot/exts/utils/snekbox.py               @MarkKoz @Akarys42
+bot/exts/utils/snekbox.py               @MarkKoz @Akarys42 @jb3
 bot/exts/help_channels/**               @MarkKoz @Akarys42
-bot/exts/moderation/**                  @Akarys42 @mbaruh @Den4200 @ks129
-bot/exts/info/**                        @Akarys42 @Den4200
-bot/exts/info/information.py            @mbaruh
-bot/exts/filters/**                     @mbaruh
+bot/exts/moderation/**                  @Akarys42 @mbaruh @Den4200 @ks129 @jb3
+bot/exts/info/**                        @Akarys42 @Den4200 @jb3
+bot/exts/info/information.py            @mbaruh @jb3
+bot/exts/filters/**                     @mbaruh @jb3
 bot/exts/fun/**                         @ks129
-bot/exts/utils/**                       @ks129
+bot/exts/utils/**                       @ks129 @jb3
+bot/exts/recruitment/**                 @wookie184
 
 # Rules
 bot/rules/**                            @mbaruh
@@ -29,9 +30,9 @@ tests/bot/exts/test_cogs.py             @MarkKoz
 tests/**                                @Akarys42
 
 # CI & Docker
-.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ @Den4200
-Dockerfile                              @MarkKoz @Akarys42 @Den4200
-docker-compose.yml                      @MarkKoz @Akarys42 @Den4200
+.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ @Den4200 @jb3
+Dockerfile                              @MarkKoz @Akarys42 @Den4200 @jb3
+docker-compose.yml                      @MarkKoz @Akarys42 @Den4200 @jb3
 
 # Tools
 Pipfile*                                @Akarys42
