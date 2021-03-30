@@ -28,65 +28,67 @@ def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[disco
 
 
 async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[Arrow, str]:
-    """Return the time at which the given help `channel` should be closed along with the reason."""
+    """
+    Return the time at which the given help `channel` should be closed along with the reason.
+
+    `init_done` is True if the cog has finished loading and False otherwise.
+
+    The time is calculated as follows:
+
+    * If `init_done` is True or the cached time for the claimant's last message is unavailable,
+      add the configured `idle_minutes_claimant` to the time the most recent message was sent.
+    * If the help session is empty (see `is_empty`), do the above but with `deleted_idle_minutes`.
+    * If either of the above is attempted but the channel is completely empty, close the channel
+      immediately.
+    * Otherwise, retrieve the times of the claimant's and non-claimant's last messages from the
+      cache. Add the configured `idle_minutes_claimant` and idle_minutes_others`, respectively, and
+      choose the time which is furthest in the future.
+    """
     log.trace(f"Getting the closing time for #{channel} ({channel.id}).")
 
     is_empty = await _message.is_empty(channel)
-
     if is_empty:
         idle_minutes_claimant = constants.HelpChannels.deleted_idle_minutes
     else:
         idle_minutes_claimant = constants.HelpChannels.idle_minutes_claimant
 
-    claimant_last_message_time = await _caches.claimant_last_message_times.get(channel.id)
+    claimant_time = await _caches.claimant_last_message_times.get(channel.id)
 
-    if (
-        is_empty
-        or not init_done
-        or claimant_last_message_time is None
-    ):
-        # If the current help channel has no messages, the help system cog is starting or
-        # the claimant cache is empty, use the last message in the channel to determine closing time instead.
-
+    # The current session lacks messages, the cog is still starting, or the cache is empty.
+    if is_empty or not init_done or claimant_time is None:
         msg = await _message.get_last_message(channel)
-
         if not msg:
-            # Last message can't be retrieved, return datetime.min so channel closes right now.
             log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages, closing now.")
             return Arrow.min, "deleted"
 
-        # The time at which a channel should be closed.
+        # Use the greatest offset to avoid the possibility of prematurely closing the channel.
         time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
         return time, "latest_message"
 
-    # Switch to datetime objects so we can use time deltas
-    claimant_last_message_time = Arrow.utcfromtimestamp(claimant_last_message_time)
-    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
+    claimant_time = Arrow.utcfromtimestamp(claimant_time)
+    others_time = await _caches.non_claimant_last_message_times.get(channel.id)
 
-    if non_claimant_last_message_time:
-        non_claimant_last_message_time = Arrow.utcfromtimestamp(non_claimant_last_message_time)
+    if others_time:
+        others_time = Arrow.utcfromtimestamp(others_time)
     else:
-        # If it's falsey, then it indicates a non-claimant has yet to reply to this session.
-        # Set to min date time so it isn't considered when calculating the closing time.
-        non_claimant_last_message_time = Arrow.min
+        # The help session hasn't received any answers (messages from non-claimants) yet.
+        # Set to min value so it isn't considered when calculating the closing time.
+        others_time = Arrow.min
 
-    # Get the later time at which a channel should be closed
-    non_claimant_last_message_time += timedelta(minutes=constants.HelpChannels.idle_minutes_others)
-    claimant_last_message_time += timedelta(minutes=idle_minutes_claimant)
+    # Offset the cached times by the configured values.
+    others_time += timedelta(minutes=constants.HelpChannels.idle_minutes_others)
+    claimant_time += timedelta(minutes=idle_minutes_claimant)
 
-    # The further away closing time is what we should use.
-    if claimant_last_message_time >= non_claimant_last_message_time:
-        log.trace(
-            f"#{channel} ({channel.id}) should be closed at "
-            f"{claimant_last_message_time} due to claimant timeout."
-        )
-        return claimant_last_message_time, "claimant_timeout"
+    # Use the time which is the furthest into the future.
+    if claimant_time >= others_time:
+        closing_time = claimant_time
+        reason = "claimant_timeout"
     else:
-        log.trace(
-            f"#{channel} ({channel.id}) should be closed at "
-            f"{non_claimant_last_message_time} due to others timeout."
-        )
-        return non_claimant_last_message_time, "others_timeout"
+        closing_time = others_time
+        reason = "others_timeout"
+
+    log.trace(f"#{channel} ({channel.id}) should be closed at {closing_time} due to {reason}.")
+    return closing_time, reason
 
 
 async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:

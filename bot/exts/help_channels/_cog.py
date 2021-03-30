@@ -303,7 +303,6 @@ class HelpChannels(commands.Cog):
         # Closing time is in the past.
         # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
         if closing_time < (arrow.utcnow() + timedelta(seconds=1)):
-
             log.info(
                 f"#{channel} ({channel.id}) is idle past {closing_time} "
                 f"and will be made dormant. Reason: {closed_on}"
