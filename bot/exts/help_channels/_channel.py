@@ -1,6 +1,7 @@
 import logging
 import typing as t
 from datetime import timedelta
+from enum import Enum
 
 import arrow
 import discord
@@ -17,6 +18,17 @@ MAX_CHANNELS_PER_CATEGORY = 50
 EXCLUDED_CHANNELS = (constants.Channels.cooldown,)
 
 
+class ClosingReason(Enum):
+    """All possible closing reasons for help channels."""
+
+    COMMAND = "command"
+    LATEST_MESSSAGE = "auto.latest_message"
+    CLAIMANT_TIMEOUT = "auto.claimant_timeout"
+    OTHER_TIMEOUT = "auto.other_timeout"
+    DELETED = "auto.deleted"
+    CLEANUP = "auto.deleted"
+
+
 def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
     """Yield the text channels of the `category` in an unsorted manner."""
     log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
@@ -27,7 +39,7 @@ def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[disco
             yield channel
 
 
-async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[Arrow, str]:
+async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[Arrow, ClosingReason]:
     """
     Return the time at which the given help `channel` should be closed along with the reason.
 
@@ -59,11 +71,11 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         msg = await _message.get_last_message(channel)
         if not msg:
             log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages, closing now.")
-            return Arrow.min, "deleted"
+            return Arrow.min, ClosingReason.DELETED
 
         # Use the greatest offset to avoid the possibility of prematurely closing the channel.
         time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
-        return time, "latest_message"
+        return time, ClosingReason.LATEST_MESSSAGE
 
     claimant_time = Arrow.utcfromtimestamp(claimant_time)
     others_time = await _caches.non_claimant_last_message_times.get(channel.id)
@@ -82,10 +94,10 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
     # Use the time which is the furthest into the future.
     if claimant_time >= others_time:
         closing_time = claimant_time
-        reason = "claimant_timeout"
+        reason = ClosingReason.CLAIMANT_TIMEOUT
     else:
         closing_time = others_time
-        reason = "others_timeout"
+        reason = ClosingReason.OTHER_TIMEOUT
 
     log.trace(f"#{channel} ({channel.id}) should be closed at {closing_time} due to {reason}.")
     return closing_time, reason

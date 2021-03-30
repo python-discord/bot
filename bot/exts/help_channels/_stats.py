@@ -22,15 +22,13 @@ def report_counts() -> None:
             log.warning(f"Couldn't find category {name!r} to track channel count stats.")
 
 
-async def report_complete_session(channel_id: int, closed_on: str) -> None:
+async def report_complete_session(channel_id: int, closed_on: _channel.ClosingReason) -> None:
     """
     Report stats for a completed help session channel `channel_id`.
 
-    Set `is_auto` to True if the channel was automatically closed or False if manually closed.
+    `closed_on` is the reason why the channel was closed. See `_channel.ClosingReason` for possible reasons.
     """
-    if closed_on != "command":
-        closed_on = f"auto.{closed_on}"
-    bot.instance.stats.incr(f"help.dormant_calls.{closed_on}")
+    bot.instance.stats.incr(f"help.dormant_calls.{closed_on.value}")
 
     in_use_time = await _channel.get_in_use_time(channel_id)
     if in_use_time:
