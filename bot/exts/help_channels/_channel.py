@@ -26,7 +26,7 @@ class ClosingReason(Enum):
     CLAIMANT_TIMEOUT = "auto.claimant_timeout"
     OTHER_TIMEOUT = "auto.other_timeout"
     DELETED = "auto.deleted"
-    CLEANUP = "auto.deleted"
+    CLEANUP = "auto.cleanup"
 
 
 def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
