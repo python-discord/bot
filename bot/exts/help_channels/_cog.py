@@ -366,7 +366,10 @@ class HelpChannels(commands.Cog):
         Remove the cooldown role from the channel claimant if they have no other channels claimed.
         Cancel the scheduled cooldown role removal task.
 
-        `closed_on` is the reason that the channel was closed for. Examples: "cleanup", "command", "claimant_timeout"
+        `closed_on` is the reason that the channel was closed for. Possible values for this are:
+        "cleanup", "command", "claimant_timeout", "others_timeout", "deleted".
+        All values, except for "command", get prefixed with "auto." within `_stats.report_complete_session()`
+        before being added to the bot's stats.
         """
         claimant_id = await _caches.claimants.get(channel.id)
         _unclaim_channel = self._unclaim_channel
