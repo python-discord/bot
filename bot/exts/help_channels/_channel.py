@@ -1,8 +1,10 @@
 import logging
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+import arrow
 import discord
+from arrow import Arrow
 
 import bot
 from bot import constants
@@ -25,8 +27,8 @@ def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[disco
             yield channel
 
 
-async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[datetime, str]:
-    """Return the timestamp at which the given help `channel` should be closed along with the reason."""
+async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[Arrow, str]:
+    """Return the time at which the given help `channel` should be closed along with the reason."""
     log.trace(f"Getting the closing time for #{channel} ({channel.id}).")
 
     is_empty = await _message.is_empty(channel)
@@ -49,23 +51,24 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         msg = await _message.get_last_message(channel)
 
         if not msg:
-            # last message can't be retreived, return datetime.min so channel closes right now.
+            # Last message can't be retrieved, return datetime.min so channel closes right now.
             log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages, closing now.")
-            return datetime.min, "deleted"
+            return Arrow.min, "deleted"
 
         # The time at which a channel should be closed.
-        return msg.created_at + timedelta(minutes=idle_minutes_claimant), "latest_message"
+        time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
+        return time, "latest_message"
 
     # Switch to datetime objects so we can use time deltas
-    claimant_last_message_time = datetime.fromtimestamp(claimant_last_message_time)
+    claimant_last_message_time = Arrow.utcfromtimestamp(claimant_last_message_time)
     non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel.id)
 
     if non_claimant_last_message_time:
-        non_claimant_last_message_time = datetime.fromtimestamp(non_claimant_last_message_time)
+        non_claimant_last_message_time = Arrow.utcfromtimestamp(non_claimant_last_message_time)
     else:
         # If it's falsey, then it indicates a non-claimant has yet to reply to this session.
         # Set to min date time so it isn't considered when calculating the closing time.
-        non_claimant_last_message_time = datetime.min
+        non_claimant_last_message_time = Arrow.min
 
     # Get the later time at which a channel should be closed
     non_claimant_last_message_time += timedelta(minutes=constants.HelpChannels.idle_minutes_others)
@@ -92,8 +95,8 @@ async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
 
     claimed_timestamp = await _caches.claim_times.get(channel_id)
     if claimed_timestamp:
-        claimed = datetime.fromtimestamp(claimed_timestamp)
-        return datetime.utcnow() - claimed
+        claimed = Arrow.utcfromtimestamp(claimed_timestamp)
+        return arrow.utcnow() - claimed
 
 
 def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:

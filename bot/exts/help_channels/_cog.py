@@ -2,9 +2,10 @@ import asyncio
 import logging
 import random
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 from operator import attrgetter
 
+import arrow
 import discord
 import discord.abc
 from discord.ext import commands
@@ -72,7 +73,7 @@ class HelpChannels(commands.Cog):
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
-        self.last_notification: t.Optional[datetime] = None
+        self.last_notification: t.Optional[arrow.Arrow] = None
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
@@ -114,9 +115,12 @@ class HelpChannels(commands.Cog):
 
         self.bot.stats.incr("help.claimed")
 
-        await _caches.claim_times.set(message.channel.id, message.created_at.timestamp())
-        await _caches.claimant_last_message_times.set(message.channel.id, message.created_at.timestamp())
-        # Reset thie non_claimant cache for this channel to indicate that this session has yet to be answered.
+        # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
+        timestamp = arrow.Arrow.fromdatetime(message.created_at).timestamp()
+
+        await _caches.claim_times.set(message.channel.id, timestamp)
+        await _caches.claimant_last_message_times.set(message.channel.id, timestamp)
+        # Delete to indicate that the help session has yet to receive an answer.
         await _caches.non_claimant_last_message_times.delete(message.channel.id)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
@@ -298,7 +302,7 @@ class HelpChannels(commands.Cog):
 
         # Closing time is in the past.
         # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
-        if closing_time < (datetime.utcnow() + timedelta(seconds=1)):
+        if closing_time < (arrow.utcnow() + timedelta(seconds=1)):
 
             log.info(
                 f"#{channel} ({channel.id}) is idle past {closing_time} "
@@ -311,7 +315,7 @@ class HelpChannels(commands.Cog):
             if has_task:
                 self.scheduler.cancel(channel.id)
 
-            delay = (closing_time - datetime.utcnow()).seconds
+            delay = (closing_time - arrow.utcnow()).seconds
             log.info(
                 f"#{channel} ({channel.id}) is still active; "
                 f"scheduling it to be moved after {delay} seconds."

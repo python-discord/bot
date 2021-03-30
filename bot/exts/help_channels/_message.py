@@ -1,9 +1,10 @@
 import logging
 import textwrap
 import typing as t
-from datetime import datetime
 
+import arrow
 import discord
+from arrow import Arrow
 
 import bot
 from bot import constants
@@ -51,13 +52,12 @@ async def update_message_caches(message: discord.Message) -> None:
         log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
 
         claimant_id = await _caches.claimants.get(channel.id)
-
         if not claimant_id:
             # The mapping for this channel doesn't exist, we can't do anything.
             return
 
-        # Use datetime naive time stamp to be consistant with timestamps from discord.
-        timestamp = message.created_at.timestamp()
+        # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
+        timestamp = Arrow.fromdatetime(message.created_at).timestamp()
 
         # Overwrite the appropriate last message cache depending on the author of the message
         if message.author.id == claimant_id:
@@ -128,12 +128,12 @@ async def dm_on_open(message: discord.Message) -> None:
         )
 
 
-async def notify(channel: discord.TextChannel, last_notification: t.Optional[datetime]) -> t.Optional[datetime]:
+async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arrow]) -> t.Optional[Arrow]:
     """
     Send a message in `channel` notifying about a lack of available help channels.
 
-    If a notification was sent, return the `datetime` at which the message was sent. Otherwise,
-    return None.
+    If a notification was sent, return the time at which the message was sent.
+    Otherwise, return None.
 
     Configuration:
 
@@ -147,7 +147,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[dat
     log.trace("Notifying about lack of channels.")
 
     if last_notification:
-        elapsed = (datetime.utcnow() - last_notification).seconds
+        elapsed = (arrow.utcnow() - last_notification).seconds
         minimum_interval = constants.HelpChannels.notify_minutes * 60
         should_send = elapsed >= minimum_interval
     else:
@@ -170,7 +170,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[dat
             allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
         )
 
-        return message.created_at
+        return Arrow.fromdatetime(message.created_at)
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about lack of dormant channels!")
