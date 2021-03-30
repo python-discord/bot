@@ -487,13 +487,13 @@ class Roles(metaclass=YAMLGetter):
     voice_verified: int
 
     admins: int
-    domain_leads: int
-    project_leads: int
     core_developers: int
     devops: int
+    domain_leads: int
     helpers: int
     moderators: int
     owners: int
+    project_leads: int
 
     jammers: int
     team_leaders: int
