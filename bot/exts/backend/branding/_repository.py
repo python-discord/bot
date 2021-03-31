@@ -9,9 +9,9 @@ from bot.constants import Keys
 from bot.errors import BrandingMisconfiguration
 
 # Base URL for requests into the branding repository.
-BRANDING_URL = "https://api.github.com/repos/kwzrd/pydis-branding/contents"
+BRANDING_URL = "https://api.github.com/repos/python-discord/branding/contents"
 
-PARAMS = {"ref": "kwzrd/events-rework"}  # Target branch.
+PARAMS = {"ref": "main"}  # Target branch.
 HEADERS = {"Accept": "application/vnd.github.v3+json"}  # Ensure we use API v3.
 
 # A GitHub token is not necessary. However, unauthorized requests are limited to 60 per hour.
