@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 import discord
 from async_rediscache import RedisCache
@@ -9,6 +10,8 @@ from bot.constants import Emojis, Guild, Roles, STAFF_ROLES, VideoPermission
 from bot.converters import Expiry
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
+
+log = logging.getLogger(__name__)
 
 
 class Stream(commands.Cog):
@@ -32,7 +35,22 @@ class Stream(commands.Cog):
         await self.bot.wait_until_guild_available()
         items = await self.task_cache.items()
         for key, value in items:
-            member = await self.bot.get_guild(Guild.id).fetch_member(key)
+            member = self.bot.get_guild(Guild.id).get_member(key)
+
+            if not member:
+                try:
+                    member = await self.bot.get_guild(Guild.id).fetch_member(key)
+                except discord.errors.NotFound:
+                    log.debug(
+                        f"Member {key} left the guild before we could scheudle "
+                        "the revoking of their streaming permissions."
+                    )
+                    await self.task_cache.delete(key)
+                    continue
+                except discord.HTTPException as e:
+                    log.exception(f"Exception while trying to retrieve member {key} from discord\n{e}")
+                    continue
+
             self.scheduler.schedule_at(
                 datetime.datetime.utcfromtimestamp(value),
                 key,
