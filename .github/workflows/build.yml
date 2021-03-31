@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: ["Lint & Test"]
     branches:
-      - master
+      - main
     types:
       - completed
 
@@ -55,3 +55,5 @@ jobs:
           tags: |
             ghcr.io/python-discord/bot:latest
             ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}
+          build-args: |
+            git_sha=${{ github.sha }}

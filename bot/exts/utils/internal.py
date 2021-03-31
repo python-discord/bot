@@ -15,7 +15,6 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Roles
-from bot.interpreter import Interpreter
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
 log = logging.getLogger(__name__)
@@ -29,8 +28,6 @@ class Internal(Cog):
         self.env = {}
         self.ln = 0
         self.stdout = StringIO()
-
-        self.interpreter = Interpreter()
 
         self.socket_since = datetime.utcnow()
         self.socket_event_total = 0
@@ -243,12 +240,12 @@ async def func():  # (None,) -> Any
 
         stats_embed = discord.Embed(
             title="WebSocket statistics",
-            description=f"Receiving {per_s:0.2f} event per second.",
+            description=f"Receiving {per_s:0.2f} events per second.",
             color=discord.Color.blurple()
         )
 
         for event_type, count in self.socket_events.most_common(25):
-            stats_embed.add_field(name=event_type, value=count, inline=False)
+            stats_embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 
         await ctx.send(embed=stats_embed)
 

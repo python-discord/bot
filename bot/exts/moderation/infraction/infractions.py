@@ -10,7 +10,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Expiry, FetchedMember
+from bot.converters import Duration, Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -27,7 +27,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     category_description = "Server moderation tools."
 
     def __init__(self, bot: Bot):
-        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning"})
+        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_ban"})
 
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
@@ -98,7 +98,13 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
-    async def tempmute(self, ctx: Context, user: Member, duration: Expiry, *, reason: t.Optional[str] = None) -> None:
+    async def tempmute(
+        self, ctx: Context,
+        user: Member,
+        duration: t.Optional[Expiry] = None,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
         """
         Temporarily mute a user for the given reason and duration.
 
@@ -113,10 +119,14 @@ class Infractions(InfractionScheduler, commands.Cog):
         \u2003`s` - seconds
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
+
+        If no duration is given, a one hour duration is used by default.
         """
+        if duration is None:
+            duration = await Duration().convert(ctx, "1h")
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
-    @command()
+    @command(aliases=("tban",))
     async def tempban(
         self,
         ctx: Context,
@@ -180,11 +190,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         await self.apply_infraction(ctx, infraction, user)
 
-    @command(hidden=True, aliases=['shadowkick', 'skick'])
-    async def shadow_kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
-        """Kick a user for the given reason without notifying the user."""
-        await self.apply_kick(ctx, user, reason, hidden=True)
-
     @command(hidden=True, aliases=['shadowban', 'sban'])
     async def shadow_ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Permanently ban a user for the given reason without notifying the user."""
@@ -193,32 +198,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Temporary shadow infractions
 
-    @command(hidden=True, aliases=["shadowtempmute, stempmute", "shadowmute", "smute"])
-    async def shadow_tempmute(
-        self, ctx: Context,
-        user: Member,
-        duration: Expiry,
-        *,
-        reason: t.Optional[str] = None
-    ) -> None:
-        """
-        Temporarily mute a user for the given reason and duration without notifying the user.
-
-        A unit of time should be appended to the duration.
-        Units (∗case-sensitive):
-        \u2003`y` - years
-        \u2003`m` - months∗
-        \u2003`w` - weeks
-        \u2003`d` - days
-        \u2003`h` - hours
-        \u2003`M` - minutes∗
-        \u2003`s` - seconds
-
-        Alternatively, an ISO 8601 timestamp can be provided for the duration.
-        """
-        await self.apply_mute(ctx, user, reason, expires_at=duration, hidden=True)
-
-    @command(hidden=True, aliases=["shadowtempban, stempban"])
+    @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
     async def shadow_tempban(
         self,
         ctx: Context,
@@ -277,6 +257,10 @@ class Infractions(InfractionScheduler, commands.Cog):
         self.mod_log.ignore(Event.member_update, user.id)
 
         async def action() -> None:
+            # Skip members that left the server
+            if not isinstance(user, Member):
+                return
+
             await user.add_roles(self._muted_role, reason=reason)
 
             log.trace(f"Attempting to kick {user} from voice because they've been muted.")
@@ -334,6 +318,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         if infraction is None:
             return
 
+        infraction["purge"] = "purge " if purge_days else ""
+
         self.mod_log.ignore(Event.member_remove, user.id)
 
         if reason:
@@ -371,10 +357,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+        async def action() -> None:
+            # Skip members that left the server
+            if not isinstance(user, Member):
+                return
 
-        action = user.remove_roles(self._voice_verified_role, reason=reason)
-        await self.apply_infraction(ctx, infraction, user, action)
+            await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+            await user.remove_roles(self._voice_verified_role, reason=reason)
+
+        await self.apply_infraction(ctx, infraction, user, action())
 
     # endregion
     # region: Base pardon functions

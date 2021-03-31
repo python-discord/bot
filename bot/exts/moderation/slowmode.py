@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
@@ -7,13 +6,19 @@ from discord import TextChannel
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES
+from bot.constants import Channels, Emojis, MODERATION_ROLES
 from bot.converters import DurationDelta
 from bot.utils import time
 
 log = logging.getLogger(__name__)
 
 SLOWMODE_MAX_DELAY = 21600  # seconds
+
+COMMONLY_SLOWMODED_CHANNELS = {
+    Channels.python_general: "python_general",
+    Channels.discord_py: "discordpy",
+    Channels.off_topic_0: "ot0",
+}
 
 
 class Slowmode(Cog):
@@ -48,8 +53,7 @@ class Slowmode(Cog):
 
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
         # Must do this to get the delta in a particular unit of time
-        utcnow = datetime.utcnow()
-        slowmode_delay = (utcnow + delay - utcnow).total_seconds()
+        slowmode_delay = time.relativedelta_to_timedelta(delay).total_seconds()
 
         humanized_delay = time.humanize_delta(delay)
 
@@ -58,6 +62,10 @@ class Slowmode(Cog):
             log.info(f'{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.')
 
             await channel.edit(slowmode_delay=slowmode_delay)
+            if channel.id in COMMONLY_SLOWMODED_CHANNELS:
+                log.info(f'Recording slowmode change in stats for {channel.name}.')
+                self.bot.stats.gauge(f"slowmode.{COMMONLY_SLOWMODED_CHANNELS[channel.id]}", slowmode_delay)
+
             await ctx.send(
                 f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {humanized_delay}.'
             )
@@ -75,16 +83,7 @@ class Slowmode(Cog):
     @slowmode_group.command(name='reset', aliases=['r'])
     async def reset_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
         """Reset the slowmode delay for a text channel to 0 seconds."""
-        # Use the channel this command was invoked in if one was not given
-        if channel is None:
-            channel = ctx.channel
-
-        log.info(f'{ctx.author} reset the slowmode delay for #{channel} to 0 seconds.')
-
-        await channel.edit(slowmode_delay=0)
-        await ctx.send(
-            f'{Emojis.check_mark} The slowmode delay for {channel.mention} has been reset to 0 seconds.'
-        )
+        await self.set_slowmode(ctx, channel, relativedelta(seconds=0))
 
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""

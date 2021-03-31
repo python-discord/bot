@@ -2,31 +2,24 @@ import colorsys
 import logging
 import pprint
 import textwrap
-from collections import Counter, defaultdict
-from string import Template
-from typing import Any, Mapping, Optional, Tuple, Union
+from collections import defaultdict
+from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
-from discord import ChannelType, Colour, Embed, Guild, Message, Role, Status, utils
-from discord.abc import GuildChannel
+import fuzzywuzzy
+from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
-from bot.utils.channel import is_mod_channel
+from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
-from bot.utils.time import time_since
+from bot.utils.time import humanize_delta, time_since
 
 log = logging.getLogger(__name__)
-
-
-STATUS_EMOTES = {
-    Status.offline: constants.Emojis.status_offline,
-    Status.dnd: constants.Emojis.status_dnd,
-    Status.idle: constants.Emojis.status_idle
-}
 
 
 class Information(Cog):
@@ -36,47 +29,55 @@ class Information(Cog):
         self.bot = bot
 
     @staticmethod
-    def role_can_read(channel: GuildChannel, role: Role) -> bool:
-        """Return True if `role` can read messages in `channel`."""
-        overwrites = channel.overwrites_for(role)
-        return overwrites.read_messages is True
+    def get_channel_type_counts(guild: Guild) -> DefaultDict[str, int]:
+        """Return the total amounts of the various types of channels in `guild`."""
+        channel_counter = defaultdict(int)
 
-    def get_staff_channel_count(self, guild: Guild) -> int:
-        """
-        Get the number of channels that are staff-only.
-
-        We need to know two things about a channel:
-        - Does the @everyone role have explicit read deny permissions?
-        - Do staff roles have explicit read allow permissions?
-
-        If the answer to both of these questions is yes, it's a staff channel.
-        """
-        channel_ids = set()
         for channel in guild.channels:
-            if channel.type is ChannelType.category:
-                continue
+            if is_staff_channel(channel):
+                channel_counter["staff"] += 1
+            else:
+                channel_counter[str(channel.type)] += 1
 
-            everyone_can_read = self.role_can_read(channel, guild.default_role)
-
-            for role in constants.STAFF_ROLES:
-                role_can_read = self.role_can_read(channel, guild.get_role(role))
-                if role_can_read and not everyone_can_read:
-                    channel_ids.add(channel.id)
-                    break
-
-        return len(channel_ids)
+        return channel_counter
 
     @staticmethod
-    def get_channel_type_counts(guild: Guild) -> str:
-        """Return the total amounts of the various types of channels in `guild`."""
-        channel_counter = Counter(c.type for c in guild.channels)
-        channel_type_list = []
-        for channel, count in channel_counter.items():
-            channel_type = str(channel).title()
-            channel_type_list.append(f"{channel_type} channels: {count}")
+    def get_member_counts(guild: Guild) -> Dict[str, int]:
+        """Return the total number of members for certain roles in `guild`."""
+        roles = (
+            guild.get_role(role_id) for role_id in (
+                constants.Roles.helpers, constants.Roles.moderators, constants.Roles.admins,
+                constants.Roles.owners, constants.Roles.contributors,
+            )
+        )
+        return {role.name.title(): len(role.members) for role in roles}
 
-        channel_type_list = sorted(channel_type_list)
-        return "\n".join(channel_type_list)
+    def get_extended_server_info(self, ctx: Context) -> str:
+        """Return additional server info only visible in moderation channels."""
+        talentpool_info = ""
+        if cog := self.bot.get_cog("Talentpool"):
+            talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
+
+        bb_info = ""
+        if cog := self.bot.get_cog("Big Brother"):
+            bb_info = f"BB-watched: {len(cog.watched_users)}\n"
+
+        defcon_info = ""
+        if cog := self.bot.get_cog("Defcon"):
+            threshold = humanize_delta(cog.threshold) if cog.threshold else "-"
+            defcon_info = f"Defcon threshold: {threshold}\n"
+
+        verification = f"Verification level: {ctx.guild.verification_level.name}\n"
+
+        python_general = self.bot.get_channel(constants.Channels.python_general)
+
+        return textwrap.dedent(f"""
+            {talentpool_info}\
+            {bb_info}\
+            {defcon_info}\
+            {verification}\
+            {python_general.mention} cooldown: {python_general.slowmode_delay}s
+        """)
 
     @has_any_role(*constants.STAFF_ROLES)
     @command(name="roles")
@@ -106,22 +107,28 @@ class Information(Cog):
 
         To specify multiple roles just add to the arguments, delimit roles with spaces in them using quotation marks.
         """
-        parsed_roles = []
-        failed_roles = []
+        parsed_roles = set()
+        failed_roles = set()
 
+        all_roles = {role.id: role.name for role in ctx.guild.roles}
         for role_name in roles:
             if isinstance(role_name, Role):
                 # Role conversion has already succeeded
-                parsed_roles.append(role_name)
+                parsed_roles.add(role_name)
                 continue
 
-            role = utils.find(lambda r: r.name.lower() == role_name.lower(), ctx.guild.roles)
+            match = fuzzywuzzy.process.extractOne(
+                role_name, all_roles, score_cutoff=80,
+                scorer=fuzzywuzzy.fuzz.ratio
+            )
 
-            if not role:
-                failed_roles.append(role_name)
+            if not match:
+                failed_roles.add(role_name)
                 continue
 
-            parsed_roles.append(role)
+            # `match` is a (role name, score, role id) tuple
+            role = ctx.guild.get_role(match[2])
+            parsed_roles.add(role)
 
         if failed_roles:
             await ctx.send(f":x: Could not retrieve the following roles: {', '.join(failed_roles)}")
@@ -145,54 +152,59 @@ class Information(Cog):
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context) -> None:
         """Returns an embed full of server information."""
+        embed = Embed(colour=Colour.blurple(), title="Server Information")
+
         created = time_since(ctx.guild.created_at, precision="days")
-        features = ", ".join(ctx.guild.features)
         region = ctx.guild.region
+        num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
-        roles = len(ctx.guild.roles)
-        member_count = ctx.guild.member_count
-        channel_counts = self.get_channel_type_counts(ctx.guild)
+        # Server Features are only useful in certain channels
+        if ctx.channel.id in (
+            *constants.MODERATION_CHANNELS, constants.Channels.dev_core, constants.Channels.dev_contrib
+        ):
+            features = f"\nFeatures: {', '.join(ctx.guild.features)}"
+        else:
+            features = ""
 
-        # How many of each user status?
+        # Member status
         py_invite = await self.bot.fetch_invite(constants.Guild.invite)
         online_presences = py_invite.approximate_presence_count
         offline_presences = py_invite.approximate_member_count - online_presences
-        embed = Embed(colour=Colour.blurple())
+        member_status = (
+            f"{constants.Emojis.status_online} {online_presences} "
+            f"{constants.Emojis.status_offline} {offline_presences}"
+        )
 
-        # How many staff members and staff channels do we have?
-        staff_member_count = len(ctx.guild.get_role(constants.Roles.helpers).members)
-        staff_channel_count = self.get_staff_channel_count(ctx.guild)
-
-        # Because channel_counts lacks leading whitespace, it breaks the dedent if it's inserted directly by the
-        # f-string. While this is correctly formatted by Discord, it makes unit testing difficult. To keep the
-        # formatting without joining a tuple of strings we can use a Template string to insert the already-formatted
-        # channel_counts after the dedent is made.
-        embed.description = Template(
-            textwrap.dedent(f"""
-                **Server information**
-                Created: {created}
-                Voice region: {region}
-                Features: {features}
-
-                **Channel counts**
-                $channel_counts
-                Staff channels: {staff_channel_count}
-
-                **Member counts**
-                Members: {member_count:,}
-                Staff members: {staff_member_count}
-                Roles: {roles}
-
-                **Member statuses**
-                {constants.Emojis.status_online} {online_presences:,}
-                {constants.Emojis.status_offline} {offline_presences:,}
-            """)
-        ).substitute({"channel_counts": channel_counts})
+        embed.description = textwrap.dedent(f"""
+            Created: {created}
+            Voice region: {region}\
+            {features}
+            Roles: {num_roles}
+            Member status: {member_status}
+        """)
         embed.set_thumbnail(url=ctx.guild.icon_url)
+
+        # Members
+        total_members = ctx.guild.member_count
+        member_counts = self.get_member_counts(ctx.guild)
+        member_info = "\n".join(f"{role}: {count}" for role, count in member_counts.items())
+        embed.add_field(name=f"Members: {total_members}", value=member_info)
+
+        # Channels
+        total_channels = len(ctx.guild.channels)
+        channel_counts = self.get_channel_type_counts(ctx.guild)
+        channel_info = "\n".join(
+            f"{channel.title()}: {count}" for channel, count in sorted(channel_counts.items())
+        )
+        embed.add_field(name=f"Channels: {total_channels}", value=channel_info)
+
+        # Additional info if ran in moderation channels
+        if is_mod_channel(ctx.channel):
+            embed.add_field(name="Moderation:", value=self.get_extended_server_info(ctx))
 
         await ctx.send(embed=embed)
 
-    @command(name="user", aliases=["user_info", "member", "member_info"])
+    @command(name="user", aliases=["user_info", "member", "member_info", "u"])
     async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
         """Returns info about a user."""
         if user is None:
@@ -224,13 +236,16 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
+        activity = await self.user_messages(user)
+
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
-            membership = textwrap.dedent(f"""
-                             Joined: {joined}
-                             Roles: {roles or None}
-                         """).strip()
+            membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
+            if not is_mod_channel(ctx.channel):
+                membership.pop("Verified")
+
+            membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
             roles = None
             membership = "The user is not a member of the server"
@@ -252,6 +267,8 @@ class Information(Cog):
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
+            fields.append(activity)
+
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
@@ -354,6 +371,30 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
+    async def user_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
+        """
+        Gets the amount of messages for `member`.
+
+        Fetches information from the metricity database that's hosted by the site.
+        If the database returns a code besides a 404, then many parts of the bot are broken including this one.
+        """
+        activity_output = []
+
+        try:
+            user_activity = await self.bot.api_client.get(f"bot/users/{user.id}/metricity_data")
+        except ResponseCodeError as e:
+            if e.status == 404:
+                activity_output = "No activity"
+        else:
+            activity_output.append(user_activity["total_messages"] or "No messages")
+            activity_output.append(user_activity["activity_blocks"] or "No activity")
+
+            activity_output = "\n".join(
+                f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
+            )
+
+        return ("Activity", activity_output)
+
     def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
         """Format a mapping to be readable to a human."""
         # sorting is technically superfluous but nice if you want to look for a specific field
@@ -390,10 +431,14 @@ class Information(Cog):
         return out.rstrip()
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
-    @group(invoke_without_command=True, enabled=False)
+    @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
+        if ctx.author not in message.channel.members:
+            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
+            return
+
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
@@ -402,9 +447,9 @@ class Information(Cog):
 
         def add_content(title: str, content: str) -> None:
             paginator.add_line(f'== {title} ==\n')
-            # replace backticks as it breaks out of code blocks. Spaces seemed to be the most reasonable solution.
-            # we hope it's not close to 2000
-            paginator.add_line(content.replace('```', '`` `'))
+            # Replace backticks as it breaks out of code blocks.
+            # An invisible character seemed to be the most reasonable solution. We hope it's not close to 2000.
+            paginator.add_line(content.replace('`', '`\u200b'))
             paginator.close_page()
 
         if message.content:
@@ -423,9 +468,9 @@ class Information(Cog):
                 add_content(title, transformer(item))
 
         for page in paginator.pages:
-            await ctx.send(page)
+            await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
-    @raw.command(enabled=False)
+    @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await ctx.invoke(self.raw, message=message, json=True)
