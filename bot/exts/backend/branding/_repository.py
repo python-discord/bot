@@ -107,6 +107,8 @@ class BrandingRepository:
         async with self.bot.http_session.get(full_url, params=PARAMS, headers=HEADERS) as response:
             if response.status != 200:
                 raise RuntimeError(f"Failed to fetch directory due to status: {response.status}")
+
+            log.debug("Fetch successful, reading JSON response.")
             json_directory = await response.json()
 
         return {file["name"]: RemoteObject(file) for file in json_directory if file["type"] in types}
@@ -122,6 +124,8 @@ class BrandingRepository:
         async with self.bot.http_session.get(download_url, params=PARAMS, headers=HEADERS) as response:
             if response.status != 200:
                 raise RuntimeError(f"Failed to fetch file due to status: {response.status}")
+
+            log.debug("Fetch successful, reading payload.")
             return await response.read()
 
     def parse_meta_file(self, raw_file: bytes) -> MetaFile:
