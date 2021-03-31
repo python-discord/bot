@@ -28,10 +28,6 @@ class Stream(commands.Cog):
         await self._delete_from_redis(member.id)
         await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
-    async def _add_to_redis_cache(self, user_id: int, timestamp: float) -> None:
-        """Adds 'task' to redis cache."""
-        await self.task_cache.set(user_id, timestamp)
-
     async def _reload_tasks_from_redis(self) -> None:
         await self.bot.wait_until_guild_available()
         items = await self.task_cache.items()
@@ -81,7 +77,7 @@ class Stream(commands.Cog):
 
         # Schedule task to remove streaming permission from Member and add it to task cache
         self.scheduler.schedule_at(duration, user.id, self._remove_streaming_permission(user))
-        await self._add_to_redis_cache(user.id, duration.timestamp())
+        await self.task_cache.set(user.id, duration.timestamp())
         await user.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
         duration = format_infraction_with_duration(str(duration))
         await ctx.send(f"{Emojis.check_mark} {user.mention} can now stream until {duration}.")
@@ -100,7 +96,7 @@ class Stream(commands.Cog):
         if already_allowed:
             if user.id in self.scheduler:
                 self.scheduler.cancel(user.id)
-                await self._delete_from_redis(user.id)
+                await self.task_cache.delete(user.id)
                 await ctx.send(f"{Emojis.check_mark} Moved temporary permission to permanent")
                 return
             await ctx.send(f"{Emojis.cross_mark} This user can already stream.")
