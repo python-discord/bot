@@ -144,7 +144,7 @@ class Branding(commands.Cog):
 
         timeout = 10  # Seconds.
         try:
-            with async_timeout.timeout(timeout):
+            with async_timeout.timeout(timeout):  # Raise after `timeout` seconds.
                 await pydis.edit(**{asset_type.value: file})
         except discord.HTTPException:
             log.exception("Asset upload to Discord failed.")
@@ -160,7 +160,7 @@ class Branding(commands.Cog):
         """
         Apply `banner` to the guild and cache its hash if successful.
 
-        Banners should always be applied via this method in order to ensure that the last hash is cached.
+        Banners should always be applied via this method to ensure that the last hash is cached.
 
         Return a boolean indicating whether the application was successful.
         """
@@ -217,9 +217,9 @@ class Branding(commands.Cog):
         """
         Call `rotate_icons` if the configured amount of time has passed since last rotation.
 
-        We offset the calculated time difference into the future in order to avoid off-by-a-little-bit errors.
-        Because there is work to be done before the timestamp is read and written, the next read will likely
-        commence slightly under 24 hours after the last write.
+        We offset the calculated time difference into the future to avoid off-by-a-little-bit errors. Because there
+        is work to be done before the timestamp is read and written, the next read will likely commence slightly
+        under 24 hours after the last write.
         """
         log.debug("Checking whether it's time for icons to rotate.")
 
@@ -298,7 +298,7 @@ class Branding(commands.Cog):
 
         We cache `event` information to ensure that we:
         * Remember which event we're currently in across restarts
-        * Provide an on-demand information embed without re-querying the branding repository
+        * Provide an on-demand informational embed without re-querying the branding repository
 
         An event change should always be handled via this function, as it ensures that the cache is populated.
 
@@ -487,7 +487,7 @@ class Branding(commands.Cog):
         log.trace("Daemon before: calculating time to sleep before loop begins.")
         now = datetime.utcnow()
 
-        # The actual midnight moment is offset into the future in order to prevent issues with imprecise sleep.
+        # The actual midnight moment is offset into the future to prevent issues with imprecise sleep.
         tomorrow = now + timedelta(days=1)
         midnight = datetime.combine(tomorrow, time(minute=1))
 

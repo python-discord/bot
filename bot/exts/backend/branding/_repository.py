@@ -19,7 +19,7 @@ if Keys.github:
     HEADERS["Authorization"] = f"token {Keys.github}"
 
 # Since event periods are year-agnostic, we parse them into `datetime` objects with a manually inserted year.
-# Please note that this is intentionally a leap year in order to allow Feb 29 to be valid.
+# Please note that this is intentionally a leap year to allow Feb 29 to be valid.
 ARBITRARY_YEAR = 2020
 
 # Format used to parse date strings after we inject `ARBITRARY_YEAR` at the end.
