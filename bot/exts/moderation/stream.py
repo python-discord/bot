@@ -23,10 +23,10 @@ class Stream(commands.Cog):
         self.scheduler = Scheduler(self.__class__.__name__)
         self.reload_task = self.bot.loop.create_task(self._reload_tasks_from_redis())
 
-    async def _remove_streaming_permission(self, schedule_user: discord.Member) -> None:
+    async def _remove_streaming_permission(self, member: discord.Member) -> None:
         """Remove streaming permission from Member."""
-        await self._delete_from_redis(schedule_user.id)
-        await schedule_user.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
+        await self._delete_from_redis(member.id)
+        await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
     async def _add_to_redis_cache(self, user_id: int, timestamp: float) -> None:
         """Adds 'task' to redis cache."""
