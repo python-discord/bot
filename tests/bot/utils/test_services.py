@@ -30,9 +30,9 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
         """Url with specified extension is returned on successful requests."""
         key = "paste_key"
         test_cases = (
-            (f"https://paste_service.com/{key}.txt", "txt"),
+            (f"https://paste_service.com/{key}.txt?noredirect", "txt"),
             (f"https://paste_service.com/{key}.py", "py"),
-            (f"https://paste_service.com/{key}", ""),
+            (f"https://paste_service.com/{key}?noredirect", ""),
         )
         response = MagicMock(
             json=AsyncMock(return_value={"key": key})
