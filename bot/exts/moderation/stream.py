@@ -33,9 +33,11 @@ class Stream(commands.Cog):
         items = await self.task_cache.items()
         for key, value in items:
             member = await self.bot.get_guild(Guild.id).fetch_member(key)
-            self.scheduler.schedule_at(datetime.datetime.utcfromtimestamp(value),
-                                       key,
-                                       self._remove_streaming_permission(member))
+            self.scheduler.schedule_at(
+                datetime.datetime.utcfromtimestamp(value),
+                key,
+                self._remove_streaming_permission(member)
+            )
 
     async def _delete_from_redis(self, key: str) -> None:
         await self.task_cache.delete(key)
@@ -90,20 +92,20 @@ class Stream(commands.Cog):
             user: discord.Member,
             *_
     ) -> None:
-        """Permanently give user a streaming permission."""
+        """Permanently grant a user the permission to stream."""
         # Check if user already has streaming permission
         already_allowed = any(Roles.video == role.id for role in user.roles)
         if already_allowed:
             if user.id in self.scheduler:
                 self.scheduler.cancel(user.id)
                 await self.task_cache.delete(user.id)
-                await ctx.send(f"{Emojis.check_mark} Moved temporary permission to permanent")
+                await ctx.send(f"{Emojis.check_mark} Changed temporary permission to permanent.")
                 return
             await ctx.send(f"{Emojis.cross_mark} This user can already stream.")
             return
 
         await user.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
-        await ctx.send(f"{Emojis.check_mark} {user.mention} can now stream forever")
+        await ctx.send(f"{Emojis.check_mark} Permanently granted {user.mention} the permission to stream.")
 
     @commands.command(aliases=("unstream", ))
     @commands.has_any_role(*STAFF_ROLES)
@@ -112,7 +114,7 @@ class Stream(commands.Cog):
             ctx: commands.Context,
             user: discord.Member
     ) -> None:
-        """Take away streaming permission from a user."""
+        """Revoke the permissiont to stream from a user."""
         # Check if user has the streaming permission to begin with
         allowed = any(Roles.video == role.id for role in user.roles)
         if allowed:
@@ -120,7 +122,7 @@ class Stream(commands.Cog):
             if user.id in self.scheduler:
                 self.scheduler.cancel(user.id)
             await self._remove_streaming_permission(user)
-            await ctx.send(f"{Emojis.check_mark} Streaming permission taken from {user.display_name}.")
+            await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {user.mention}.")
         else:
             await ctx.send(f"{Emojis.cross_mark} This user already can't stream.")
 
