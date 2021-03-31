@@ -35,3 +35,9 @@ class InvalidInfractedUser(Exception):
         self.reason = reason
 
         super().__init__(reason)
+
+
+class BrandingMisconfiguration(RuntimeError):
+    """Raised by the Branding cog when a misconfigured event is encountered."""
+
+    pass
