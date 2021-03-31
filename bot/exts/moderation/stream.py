@@ -26,9 +26,14 @@ class Stream(commands.Cog):
         self.scheduler = Scheduler(self.__class__.__name__)
         self.reload_task = self.bot.loop.create_task(self._reload_tasks_from_redis())
 
+    def cog_unload(self) -> None:
+        """Cancel all scheduled tasks."""
+        self.reload_task.cancel()
+        self.reload_task.add_done_callback(lambda _: self.scheduler.cancel_all())
+
     async def _remove_streaming_permission(self, member: discord.Member) -> None:
         """Remove streaming permission from Member."""
-        await self._delete_from_redis(member.id)
+        await self.task_cache.delete(member.id)
         await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
     async def _reload_tasks_from_redis(self) -> None:
@@ -57,18 +62,9 @@ class Stream(commands.Cog):
                 self._remove_streaming_permission(member)
             )
 
-    async def _delete_from_redis(self, key: str) -> None:
-        await self.task_cache.delete(key)
-
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*STAFF_ROLES)
-    async def stream(
-            self,
-            ctx: commands.Context,
-            user: discord.Member,
-            duration: Expiry = None,
-            *_
-    ) -> None:
+    async def stream(self, ctx: commands.Context, user: discord.Member, duration: Expiry = None) -> None:
         """
         Temporarily grant streaming permissions to a user for a given duration.
 
@@ -104,12 +100,7 @@ class Stream(commands.Cog):
 
     @commands.command(aliases=("pstream",))
     @commands.has_any_role(*STAFF_ROLES)
-    async def permanentstream(
-            self,
-            ctx: commands.Context,
-            user: discord.Member,
-            *_
-    ) -> None:
+    async def permanentstream(self, ctx: commands.Context, user: discord.Member) -> None:
         """Permanently grant a user the permission to stream."""
         # Check if user already has streaming permission
         already_allowed = any(Roles.video == role.id for role in user.roles)
@@ -125,13 +116,9 @@ class Stream(commands.Cog):
         await user.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
         await ctx.send(f"{Emojis.check_mark} Permanently granted {user.mention} the permission to stream.")
 
-    @commands.command(aliases=("unstream", ))
+    @commands.command(aliases=("unstream", "rstream"))
     @commands.has_any_role(*STAFF_ROLES)
-    async def revokestream(
-            self,
-            ctx: commands.Context,
-            user: discord.Member
-    ) -> None:
+    async def revokestream(self, ctx: commands.Context, user: discord.Member) -> None:
         """Revoke the permissiont to stream from a user."""
         # Check if user has the streaming permission to begin with
         allowed = any(Roles.video == role.id for role in user.roles)
@@ -143,11 +130,6 @@ class Stream(commands.Cog):
             await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {user.mention}.")
         else:
             await ctx.send(f"{Emojis.cross_mark} This user already can't stream.")
-
-    def cog_unload(self) -> None:
-        """Cancel all scheduled tasks."""
-        self.reload_task.cancel()
-        self.reload_task.add_done_callback(lambda _: self.scheduler.cancel_all())
 
 
 def setup(bot: Bot) -> None:
