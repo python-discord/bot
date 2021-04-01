@@ -48,7 +48,7 @@ class Stream(commands.Cog):
                     member = await self.bot.get_guild(Guild.id).fetch_member(key)
                 except discord.errors.NotFound:
                     log.debug(
-                        f"Member {key} left the guild before we could scheudle "
+                        f"Member {key} left the guild before we could schedule "
                         "the revoking of their streaming permissions."
                     )
                     await self.task_cache.delete(key)
@@ -107,7 +107,7 @@ class Stream(commands.Cog):
     @commands.has_any_role(*STAFF_ROLES)
     async def permanentstream(self, ctx: commands.Context, user: discord.Member) -> None:
         """Permanently grants the given user the permission to stream."""
-        log.trace(f"Attempting to give permenant streaming permission to {user} ({user.id}).")
+        log.trace(f"Attempting to give permanent streaming permission to {user} ({user.id}).")
         # Check if user already has streaming permission
         already_allowed = any(Roles.video == role.id for role in user.roles)
         if already_allowed:
