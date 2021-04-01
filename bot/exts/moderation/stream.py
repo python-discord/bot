@@ -18,7 +18,7 @@ class Stream(commands.Cog):
     """Grant and revoke streaming permissions from users."""
 
     # Stores tasks to remove streaming permission
-    # User id : timestamp relation
+    # RedisCache[discord.Member.id, UtcPosixTimestamp]
     task_cache = RedisCache()
 
     def __init__(self, bot: Bot):
