@@ -59,14 +59,18 @@ class Scheduler:
 
     def schedule_at(self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
-        Schedule `coroutine` to be executed at the given naïve UTC `time`.
+        Schedule `coroutine` to be executed at the given `time`.
+
+        If `time` is timezone aware, then use that timezone to calculate now() when subtracting.
+        If `time` is naïve, then we use UTC.
 
         If `time` is in the past, schedule `coroutine` immediately.
 
         If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
         prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
-        delay = (time - datetime.utcnow()).total_seconds()
+        now_datetime = datetime.now(time.tzinfo) if time.tzinfo else datetime.utcnow()
+        delay = (time - now_datetime).total_seconds()
         if delay > 0:
             coroutine = self._await_later(delay, task_id, coroutine)
 
