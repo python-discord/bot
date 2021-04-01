@@ -87,9 +87,7 @@ class Stream(commands.Cog):
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
         # If duration is none then calculate default duration
         if duration is None:
-            duration = arrow.utcnow() + timedelta(
-                minutes=VideoPermission.default_permission_duration
-            )
+            duration = arrow.utcnow() + timedelta(minutes=VideoPermission.default_permission_duration)
 
         # Check if the member already has streaming permission
         already_allowed = any(Roles.video == role.id for role in member.roles)
@@ -99,7 +97,7 @@ class Stream(commands.Cog):
             return
 
         # Schedule task to remove streaming permission from Member and add it to task cache
-        self.scheduler.schedule_at(duration.naive, member.id, self._revoke_streaming_permission(member))
+        self.scheduler.schedule_at(duration, member.id, self._revoke_streaming_permission(member))
         await self.task_cache.set(member.id, Arrow.fromdatetime(duration).timestamp())
 
         await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
@@ -134,7 +132,7 @@ class Stream(commands.Cog):
 
         await member.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
         await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
-        log.debug(f"Successfully given {member} ({member.id}) permanent streaming permission.")
+        log.debug(f"Successfully gave {member} ({member.id}) permanent streaming permission.")
 
     @commands.command(aliases=("unstream", "rstream"))
     @commands.has_any_role(*STAFF_ROLES)
