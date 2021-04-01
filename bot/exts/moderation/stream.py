@@ -85,8 +85,9 @@ class Stream(commands.Cog):
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
         # If duration is none then calculate default duration
         if duration is None:
-            now = datetime.datetime.utcnow()
-            duration = now + datetime.timedelta(minutes=VideoPermission.default_permission_duration)
+            duration = datetime.datetime.utcnow() + datetime.timedelta(
+                minutes=VideoPermission.default_permission_duration
+            )
 
         # Check if the member already has streaming permission
         already_allowed = any(Roles.video == role.id for role in member.roles)
