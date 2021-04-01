@@ -62,7 +62,7 @@ class Scheduler:
         Schedule `coroutine` to be executed at the given `time`.
 
         If `time` is timezone aware, then use that timezone to calculate now() when subtracting.
-        If `time` is naïve, then we use UTC.
+        If `time` is naïve, then use UTC.
 
         If `time` is in the past, schedule `coroutine` immediately.
 
