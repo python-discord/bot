@@ -110,7 +110,7 @@ class Stream(commands.Cog):
         # Convert here for nicer logging and output
         revoke_time = format_infraction_with_duration(str(duration))
         await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {revoke_time}.")
-        log.debug(f"Successfully given {member} ({member.id}) permission to stream until {revoke_time}.")
+        log.debug(f"Successfully gave {member} ({member.id}) permission to stream until {revoke_time}.")
 
     @commands.command(aliases=("pstream",))
     @commands.has_any_role(*STAFF_ROLES)
