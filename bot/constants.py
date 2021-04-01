@@ -486,9 +486,11 @@ class Roles(metaclass=YAMLGetter):
     admins: int
     core_developers: int
     devops: int
+    domain_leads: int
     helpers: int
     moderators: int
     owners: int
+    project_leads: int
 
     jammers: int
     team_leaders: int
