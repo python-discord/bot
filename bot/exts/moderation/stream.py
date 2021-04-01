@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 class Stream(commands.Cog):
-    """Grant and revoke streaming permissions from users."""
+    """Grant and revoke streaming permissions from members."""
 
     # Stores tasks to remove streaming permission
     # RedisCache[discord.Member.id, UtcPosixTimestamp]
@@ -66,9 +66,9 @@ class Stream(commands.Cog):
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*STAFF_ROLES)
-    async def stream(self, ctx: commands.Context, user: discord.Member, duration: Expiry = None) -> None:
+    async def stream(self, ctx: commands.Context, member: discord.Member, duration: Expiry = None) -> None:
         """
-        Temporarily grant streaming permissions to a user for a given duration.
+        Temporarily grant streaming permissions to a member for a given duration.
 
         A unit of time should be appended to the duration.
         Units (∗case-sensitive):
@@ -82,66 +82,68 @@ class Stream(commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        log.trace(f"Attempting to give temporary streaming permission to {user} ({user.id}).")
-        # if duration is none then calculate default duration
+        log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
+        # If duration is none then calculate default duration
         if duration is None:
             now = datetime.datetime.utcnow()
             duration = now + datetime.timedelta(minutes=VideoPermission.default_permission_duration)
 
-        # Check if user already has streaming permission
-        already_allowed = any(Roles.video == role.id for role in user.roles)
+        # Check if the member already has streaming permission
+        already_allowed = any(Roles.video == role.id for role in member.roles)
         if already_allowed:
-            await ctx.send(f"{Emojis.cross_mark} This user can already stream.")
-            log.debug(f"{user} ({user.id}) already has permission to stream.")
+            await ctx.send(f"{Emojis.cross_mark} This member can already stream.")
+            log.debug(f"{member} ({member.id}) already has permission to stream.")
             return
 
         # Schedule task to remove streaming permission from Member and add it to task cache
-        self.scheduler.schedule_at(duration, user.id, self._revoke_streaming_permission(user))
-        await self.task_cache.set(user.id, duration.timestamp())
-        await user.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
+        self.scheduler.schedule_at(duration, member.id, self._revoke_streaming_permission(member))
+        await self.task_cache.set(member.id, duration.timestamp())
+        await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
         revoke_time = format_infraction_with_duration(str(duration))
-        await ctx.send(f"{Emojis.check_mark} {user.mention} can now stream until {revoke_time}.")
-        log.debug(f"Successfully given {user} ({user.id}) permission to stream until {revoke_time}.")
+        await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {revoke_time}.")
+        log.debug(f"Successfully given {member} ({member.id}) permission to stream until {revoke_time}.")
 
     @commands.command(aliases=("pstream",))
     @commands.has_any_role(*STAFF_ROLES)
-    async def permanentstream(self, ctx: commands.Context, user: discord.Member) -> None:
-        """Permanently grants the given user the permission to stream."""
-        log.trace(f"Attempting to give permanent streaming permission to {user} ({user.id}).")
-        # Check if user already has streaming permission
-        already_allowed = any(Roles.video == role.id for role in user.roles)
+    async def permanentstream(self, ctx: commands.Context, member: discord.Member) -> None:
+        """Permanently grants the given member the permission to stream."""
+        log.trace(f"Attempting to give permanent streaming permission to {member} ({member.id}).")
+        # Check if the member already has streaming permission
+        already_allowed = any(Roles.video == role.id for role in member.roles)
         if already_allowed:
-            if user.id in self.scheduler:
-                self.scheduler.cancel(user.id)
-                await self.task_cache.delete(user.id)
+            if member.id in self.scheduler:
+                self.scheduler.cancel(member.id)
+                await self.task_cache.delete(member.id)
                 await ctx.send(f"{Emojis.check_mark} Changed temporary permission to permanent.")
-                log.debug(f"Successfully upgraded temporary streaming permission for {user} ({user.id}) to permanent.")
+                log.debug(
+                    f"Successfully upgraded temporary streaming permission for {member} ({member.id}) to permanent."
+                )
                 return
-            await ctx.send(f"{Emojis.cross_mark} This user can already stream.")
-            log.debug(f"{user} ({user.id}) already had permanent streaming permission.")
+            await ctx.send(f"{Emojis.cross_mark} This member can already stream.")
+            log.debug(f"{member} ({member.id}) already had permanent streaming permission.")
             return
 
-        await user.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
-        await ctx.send(f"{Emojis.check_mark} Permanently granted {user.mention} the permission to stream.")
-        log.debug(f"Successfully given {user} ({user.id}) permanent streaming permission.")
+        await member.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
+        await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
+        log.debug(f"Successfully given {member} ({member.id}) permanent streaming permission.")
 
     @commands.command(aliases=("unstream", "rstream"))
     @commands.has_any_role(*STAFF_ROLES)
-    async def revokestream(self, ctx: commands.Context, user: discord.Member) -> None:
-        """Revoke the permission to stream from the given user."""
-        log.trace(f"Attempting to remove streaming permission from {user} ({user.id}).")
-        # Check if user has the streaming permission to begin with
-        allowed = any(Roles.video == role.id for role in user.roles)
+    async def revokestream(self, ctx: commands.Context, member: discord.Member) -> None:
+        """Revoke the permission to stream from the given member."""
+        log.trace(f"Attempting to remove streaming permission from {member} ({member.id}).")
+        # Check if the memeber has the streaming permission to begin with
+        allowed = any(Roles.video == role.id for role in member.roles)
         if allowed:
             # Cancel scheduled task to take away streaming permission to avoid errors
-            if user.id in self.scheduler:
-                self.scheduler.cancel(user.id)
-            await self._revoke_streaming_permission(user)
-            await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {user.mention}.")
-            log.debug(f"Successfully revoked streaming permission from {user} ({user.id}).")
+            if member.id in self.scheduler:
+                self.scheduler.cancel(member.id)
+            await self._revoke_streaming_permission(member)
+            await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {member.mention}.")
+            log.debug(f"Successfully revoked streaming permission from {member} ({member.id}).")
         else:
-            await ctx.send(f"{Emojis.cross_mark} This user already can't stream.")
-            log.debug(f"{user} ({user.id}) didn't have the streaming permission to remove!")
+            await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
+            log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
 
 
 def setup(bot: Bot) -> None:
