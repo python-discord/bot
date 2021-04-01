@@ -31,7 +31,7 @@ class Stream(commands.Cog):
         self.reload_task.cancel()
         self.reload_task.add_done_callback(lambda _: self.scheduler.cancel_all())
 
-    async def _remove_streaming_permission(self, member: discord.Member) -> None:
+    async def _revoke_streaming_permission(self, member: discord.Member) -> None:
         """Remove the streaming permission from the given Member."""
         await self.task_cache.delete(member.id)
         await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
@@ -61,7 +61,7 @@ class Stream(commands.Cog):
             self.scheduler.schedule_at(
                 revoke_time,
                 key,
-                self._remove_streaming_permission(member)
+                self._revoke_streaming_permission(member)
             )
 
     @commands.command(aliases=("streaming",))
@@ -96,7 +96,7 @@ class Stream(commands.Cog):
             return
 
         # Schedule task to remove streaming permission from Member and add it to task cache
-        self.scheduler.schedule_at(duration, user.id, self._remove_streaming_permission(user))
+        self.scheduler.schedule_at(duration, user.id, self._revoke_streaming_permission(user))
         await self.task_cache.set(user.id, duration.timestamp())
         await user.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
         revoke_time = format_infraction_with_duration(str(duration))
@@ -136,7 +136,7 @@ class Stream(commands.Cog):
             # Cancel scheduled task to take away streaming permission to avoid errors
             if user.id in self.scheduler:
                 self.scheduler.cancel(user.id)
-            await self._remove_streaming_permission(user)
+            await self._revoke_streaming_permission(user)
             await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {user.mention}.")
             log.debug(f"Successfully revoked streaming permission from {user} ({user.id}).")
         else:
