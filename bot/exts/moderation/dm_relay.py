@@ -1,5 +1,4 @@
 import logging
-import textwrap
 
 import discord
 from discord.ext.commands import Cog, Context, command, has_any_role
@@ -50,12 +49,17 @@ class DMRelay(Cog):
             await ctx.send(f"{Emojis.cross_mark} No direct message history with {user.mention}.")
             return
 
-        metadata = textwrap.dedent(f"""\
-            User: {user} ({user.id})
-            Channel ID: {user.dm_channel.id}\n
-        """)
+        metadata = (
+            f"User: {user} ({user.id})\n"
+            f"Channel ID: {user.dm_channel.id}\n\n"
+        )
 
         paste_link = await send_to_paste_service(metadata + output, extension="txt")
+
+        if paste_link is None:
+            await ctx.send(f"{Emojis.cross_mark} Failed to upload output to hastebin.")
+            return
+
         await ctx.send(paste_link)
 
     async def cog_check(self, ctx: Context) -> bool:

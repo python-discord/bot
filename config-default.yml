@@ -150,7 +150,6 @@ guild:
         python_events:              &PYEVENTS_CHANNEL   729674110270963822
         python_news:                &PYNEWS_CHANNEL     704372456592506880
         reddit:                     &REDDIT_CHANNEL     458224812528238616
-        user_event_announcements:   &USER_EVENT_A       592000283102674944
 
         # Development
         dev_contrib:        &DEV_CONTRIB    635950537262759947
@@ -169,7 +168,6 @@ guild:
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
-        dm_log:                             653713721625018428
         message_log:        &MESSAGE_LOG    467752170159079424
         mod_log:            &MOD_LOG        282638479504965634
         user_log:                           528976905546760203
@@ -289,7 +287,6 @@ guild:
     webhooks:
         big_brother:                        569133704568373283
         dev_log:                            680501655111729222
-        dm_log:                             654567640664244225
         duck_pond:                          637821475327311927
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
@@ -326,7 +323,6 @@ filter:
         - *MOD_LOG
         - *STAFF_LOUNGE
         - *TALENT_POOL
-        - *USER_EVENT_A
 
     role_whitelist:
         - *ADMINS_ROLE
@@ -471,8 +467,12 @@ help_channels:
     cmd_whitelist:
         - *HELPERS_ROLE
 
-    # Allowed duration of inactivity before making a channel dormant
-    idle_minutes: 30
+    # Allowed duration of inactivity by claimant before making a channel dormant
+    idle_minutes_claimant: 30
+
+    # Allowed duration of inactivity by others before making a channel dormant
+    # `idle_minutes_claimant` must also be met, before a channel is closed
+    idle_minutes_others: 10
 
     # Allowed duration of inactivity when channel is empty (due to deleted messages)
     # before message making a channel dormant
@@ -483,7 +483,7 @@ help_channels:
 
     # Maximum number of channels across all 3 categories
     # Note Discord has a hard limit of 50 channels per category, so this shouldn't be > 50
-    max_total_channels: 32
+    max_total_channels: 42
 
     # Prefix for help channel names
     name_prefix: 'help-'
@@ -515,7 +515,6 @@ duck_pond:
         - *PYEVENTS_CHANNEL
         - *MAILING_LISTS
         - *REDDIT_CHANNEL
-        - *USER_EVENT_A
         - *DUCK_POND
         - *CHANGE_LOG
         - *STAFF_ANNOUNCEMENTS
