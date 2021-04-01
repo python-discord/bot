@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 import arrow
 import discord
@@ -85,9 +85,14 @@ class Stream(commands.Cog):
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
-        # If duration is none then calculate default duration
+
         if duration is None:
+            # If duration is None then calculate default duration
             duration = arrow.utcnow() + timedelta(minutes=VideoPermission.default_permission_duration)
+        elif duration.tzinfo is None:
+            # Make duration tz-aware.
+            # ISODateTime could already include tzinfo, this check is so it isn't overwritten.
+            duration.replace(tzinfo=timezone.utc)
 
         # Check if the member already has streaming permission
         already_allowed = any(Roles.video == role.id for role in member.roles)
