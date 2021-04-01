@@ -87,7 +87,7 @@ class Stream(commands.Cog):
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
         # If duration is none then calculate default duration
         if duration is None:
-            duration = arrow.utcnow().naive + timedelta(
+            duration = arrow.utcnow() + timedelta(
                 minutes=VideoPermission.default_permission_duration
             )
 
@@ -99,9 +99,12 @@ class Stream(commands.Cog):
             return
 
         # Schedule task to remove streaming permission from Member and add it to task cache
-        self.scheduler.schedule_at(duration, member.id, self._revoke_streaming_permission(member))
+        self.scheduler.schedule_at(duration.naive, member.id, self._revoke_streaming_permission(member))
         await self.task_cache.set(member.id, Arrow.fromdatetime(duration).timestamp())
+
         await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
+
+        # Convert here for nicer logging and output
         revoke_time = format_infraction_with_duration(str(duration))
         await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {revoke_time}.")
         log.debug(f"Successfully given {member} ({member.id}) permission to stream until {revoke_time}.")
@@ -111,17 +114,20 @@ class Stream(commands.Cog):
     async def permanentstream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Permanently grants the given member the permission to stream."""
         log.trace(f"Attempting to give permanent streaming permission to {member} ({member.id}).")
+
         # Check if the member already has streaming permission
-        already_allowed = any(Roles.video == role.id for role in member.roles)
-        if already_allowed:
+        if any(Roles.video == role.id for role in member.roles):
             if member.id in self.scheduler:
+                # Member has temp permission, so cancel the task to revoke later and delete from cache
                 self.scheduler.cancel(member.id)
                 await self.task_cache.delete(member.id)
+
                 await ctx.send(f"{Emojis.check_mark} Changed temporary permission to permanent.")
                 log.debug(
                     f"Successfully upgraded temporary streaming permission for {member} ({member.id}) to permanent."
                 )
                 return
+
             await ctx.send(f"{Emojis.cross_mark} This member can already stream.")
             log.debug(f"{member} ({member.id}) already had permanent streaming permission.")
             return
@@ -135,18 +141,21 @@ class Stream(commands.Cog):
     async def revokestream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Revoke the permission to stream from the given member."""
         log.trace(f"Attempting to remove streaming permission from {member} ({member.id}).")
-        # Check if the memeber has the streaming permission to begin with
-        allowed = any(Roles.video == role.id for role in member.roles)
-        if allowed:
-            # Cancel scheduled task to take away streaming permission to avoid errors
+
+        # Check if the member already has streaming permission
+        if any(Roles.video == role.id for role in member.roles):
             if member.id in self.scheduler:
+                # Member has temp permission, so cancel the task to revoke later and delete from cache
                 self.scheduler.cancel(member.id)
+                await self.task_cache.delete(member.id)
             await self._revoke_streaming_permission(member)
+
             await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {member.mention}.")
             log.debug(f"Successfully revoked streaming permission from {member} ({member.id}).")
-        else:
-            await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
-            log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
+            return
+
+        await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
+        log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
 
 
 def setup(bot: Bot) -> None:
