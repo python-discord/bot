@@ -1,7 +1,9 @@
-import datetime
 import logging
+from datetime import timedelta
 
+import arrow
 import discord
+from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext import commands
 
@@ -56,7 +58,7 @@ class Stream(commands.Cog):
                 except discord.HTTPException as e:
                     log.exception(f"Exception while trying to retrieve member {key} from discord\n{e}")
                     continue
-            revoke_time = datetime.datetime.utcfromtimestamp(value)
+            revoke_time = Arrow.utcfromtimestamp(value)
             log.debug(f"Scheduling {member} ({member.id}) to have streaming permission revoked at {revoke_time}")
             self.scheduler.schedule_at(
                 revoke_time,
@@ -85,7 +87,7 @@ class Stream(commands.Cog):
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
         # If duration is none then calculate default duration
         if duration is None:
-            duration = datetime.datetime.utcnow() + datetime.timedelta(
+            duration = arrow.utcnow().naive + timedelta(
                 minutes=VideoPermission.default_permission_duration
             )
 
@@ -98,7 +100,7 @@ class Stream(commands.Cog):
 
         # Schedule task to remove streaming permission from Member and add it to task cache
         self.scheduler.schedule_at(duration, member.id, self._revoke_streaming_permission(member))
-        await self.task_cache.set(member.id, duration.timestamp())
+        await self.task_cache.set(member.id, Arrow.fromdatetime(duration).timestamp())
         await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
         revoke_time = format_infraction_with_duration(str(duration))
         await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {revoke_time}.")
