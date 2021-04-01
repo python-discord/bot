@@ -125,7 +125,7 @@ class Stream(commands.Cog):
                 self.scheduler.cancel(member.id)
                 await self.task_cache.delete(member.id)
 
-                await ctx.send(f"{Emojis.check_mark} Changed temporary permission to permanent.")
+                await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
                 log.debug(
                     f"Successfully upgraded temporary streaming permission for {member} ({member.id}) to permanent."
                 )
