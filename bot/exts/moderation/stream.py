@@ -55,8 +55,8 @@ class Stream(commands.Cog):
                     )
                     await self.task_cache.delete(key)
                     continue
-                except discord.HTTPException as e:
-                    log.exception(f"Exception while trying to retrieve member {key} from discord\n{e}")
+                except discord.HTTPException:
+                    log.exception(f"Exception while trying to retrieve member {key} from Discord.")
                     continue
             revoke_time = Arrow.utcfromtimestamp(value)
             log.debug(f"Scheduling {member} ({member.id}) to have streaming permission revoked at {revoke_time}")
