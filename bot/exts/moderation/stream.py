@@ -103,7 +103,7 @@ class Stream(commands.Cog):
 
         # Schedule task to remove streaming permission from Member and add it to task cache
         self.scheduler.schedule_at(duration, member.id, self._revoke_streaming_permission(member))
-        await self.task_cache.set(member.id, Arrow.fromdatetime(duration).timestamp())
+        await self.task_cache.set(member.id, duration.timestamp())
 
         await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
 
