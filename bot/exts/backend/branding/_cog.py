@@ -1,566 +1,647 @@
 import asyncio
-import itertools
+import contextlib
 import logging
 import random
 import typing as t
 from datetime import datetime, time, timedelta
+from enum import Enum
+from operator import attrgetter
 
-import arrow
 import async_timeout
 import discord
 from async_rediscache import RedisCache
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from bot.bot import Bot
-from bot.constants import Branding, Colours, Emojis, Guild, MODERATION_ROLES
-from bot.exts.backend.branding import _constants, _decorators, _errors, _seasons
+from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, MODERATION_ROLES
+from bot.decorators import mock_in_debug
+from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
 
 log = logging.getLogger(__name__)
 
 
-class GitHubFile(t.NamedTuple):
+class AssetType(Enum):
     """
-    Represents a remote file on GitHub.
+    Recognised Discord guild asset types.
 
-    The `sha` hash is kept so that we can determine that a file has changed,
-    despite its filename remaining unchanged.
-    """
-
-    download_url: str
-    path: str
-    sha: str
-
-
-def pretty_files(files: t.Iterable[GitHubFile]) -> str:
-    """Provide a human-friendly representation of `files`."""
-    return "\n".join(file.path for file in files)
-
-
-def time_until_midnight() -> timedelta:
-    """
-    Determine amount of time until the next-up UTC midnight.
-
-    The exact `midnight` moment is actually delayed to 5 seconds after, in order
-    to avoid potential problems due to imprecise sleep.
-    """
-    now = datetime.utcnow()
-    tomorrow = now + timedelta(days=1)
-    midnight = datetime.combine(tomorrow, time(second=5))
-
-    return midnight - now
-
-
-class BrandingManager(commands.Cog):
-    """
-    Manages the guild's branding.
-
-    The purpose of this cog is to help automate the synchronization of the branding
-    repository with the guild. It is capable of discovering assets in the repository
-    via GitHub's API, resolving download urls for them, and delegating
-    to the `bot` instance to upload them to the guild.
-
-    BrandingManager is designed to be entirely autonomous. Its `daemon` background task awakens
-    once a day (see `time_until_midnight`) to detect new seasons, or to cycle icons within a single
-    season. The daemon can be turned on and off via the `daemon` cmd group. The value set via
-    its `start` and `stop` commands is persisted across sessions. If turned on, the daemon will
-    automatically start on the next bot start-up. Otherwise, it will wait to be started manually.
-
-    All supported operations, e.g. setting seasons, applying the branding, or cycling icons, can
-    also be invoked manually, via the following API:
-
-        branding list
-            - Show all available seasons
-
-        branding set <season_name>
-            - Set the cog's internal state to represent `season_name`, if it exists
-            - If no `season_name` is given, set chronologically current season
-            - This will not automatically apply the season's branding to the guild,
-              the cog's state can be detached from the guild
-            - Seasons can therefore be 'previewed' using this command
-
-        branding info
-            - View detailed information about resolved assets for current season
-
-        branding refresh
-            - Refresh internal state, i.e. synchronize with branding repository
-
-        branding apply
-            - Apply the current internal state to the guild, i.e. upload the assets
-
-        branding cycle
-            - If there are multiple available icons for current season, randomly pick
-              and apply the next one
-
-    The daemon calls these methods autonomously as appropriate. The use of this cog
-    is locked to moderation roles. As it performs media asset uploads, it is prone to
-    rate-limits - the `apply` command should be used with caution. The `set` command can,
-    however, be used freely to 'preview' seasonal branding and check whether paths have been
-    resolved as appropriate.
-
-    While the bot is in debug mode, it will 'mock' asset uploads by logging the passed
-    download urls and pretending that the upload was successful. Make use of this
-    to test this cog's behaviour.
+    The value of each member corresponds exactly to a kwarg that can be passed to `Guild.edit`.
     """
 
-    current_season: t.Type[_seasons.SeasonBase]
+    BANNER = "banner"
+    ICON = "icon"
 
-    banner: t.Optional[GitHubFile]
 
-    available_icons: t.List[GitHubFile]
-    remaining_icons: t.List[GitHubFile]
+def compound_hash(objects: t.Iterable[RemoteObject]) -> str:
+    """
+    Join SHA attributes of `objects` into a single string.
 
-    days_since_cycle: t.Iterator
+    Compound hashes are cached to check for change in any of the member `objects`.
+    """
+    return "-".join(item.sha for item in objects)
 
-    daemon: t.Optional[asyncio.Task]
 
-    # Branding configuration
-    branding_configuration = RedisCache()
+def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
+    """
+    Construct simple response embed.
+
+    If `success` is True, use green colour, otherwise red.
+
+    For both `title` and `description`, empty string are valid values ~ fields will be empty.
+    """
+    colour = Colours.soft_green if success else Colours.soft_red
+    return discord.Embed(title=title[:256], description=description[:2048], colour=colour)
+
+
+def extract_event_duration(event: Event) -> str:
+    """
+    Extract a human-readable, year-agnostic duration string from `event`.
+
+    In the case that `event` is a fallback event, resolves to 'Fallback'.
+    """
+    if event.meta.is_fallback:
+        return "Fallback"
+
+    fmt = "%B %d"  # Ex: August 23
+    start_date = event.meta.start_date.strftime(fmt)
+    end_date = event.meta.end_date.strftime(fmt)
+
+    return f"{start_date} - {end_date}"
+
+
+def extract_event_name(event: Event) -> str:
+    """
+    Extract title-cased event name from the path of `event`.
+
+    An event with a path of 'events/black_history_month' will resolve to 'Black History Month'.
+    """
+    name = event.path.split("/")[-1]  # Inner-most directory name.
+    words = name.split("_")  # Words from snake case.
+
+    return " ".join(word.title() for word in words)
+
+
+class Branding(commands.Cog):
+    """
+    Guild branding management.
+
+    Extension responsible for automatic synchronisation of the guild's branding with the branding repository.
+    Event definitions and assets are automatically discovered and applied as appropriate.
+
+    All state is stored in Redis. The cog should therefore seamlessly transition across restarts and maintain
+    a consistent icon rotation schedule for events with multiple icon assets.
+
+    By caching hashes of banner & icon assets, we discover changes in currently applied assets and always keep
+    the latest version applied.
+
+    The command interface allows moderators+ to control the daemon or request asset synchronisation, while
+    regular users can see information about the current event and the overall event schedule.
+    """
+
+    # RedisCache[
+    #     "daemon_active": bool            | If True, daemon starts on start-up. Controlled via commands.
+    #     "event_path": str                | Current event's path in the branding repo.
+    #     "event_description": str         | Current event's Markdown description.
+    #     "event_duration": str            | Current event's human-readable date range.
+    #     "banner_hash": str               | SHA of the currently applied banner.
+    #     "icons_hash": str                | Compound SHA of all icons in current rotation.
+    #     "last_rotation_timestamp": float | POSIX UTC timestamp.
+    # ]
+    cache_information = RedisCache()
+
+    # Icons in current rotation. Keys (str) are download URLs, values (int) track the amount of times each
+    # icon has been used in the current rotation.
+    cache_icons = RedisCache()
+
+    # All available event names & durations. Cached by the daemon nightly; read by the calendar command.
+    cache_events = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
-        """
-        Assign safe default values on init.
-
-        At this point, we don't have information about currently available branding.
-        Most of these attributes will be overwritten once the daemon connects, or once
-        the `refresh` command is used.
-        """
+        """Instantiate repository abstraction & allow daemon to start."""
         self.bot = bot
-        self.current_season = _seasons.get_current_season()
+        self.repository = BrandingRepository(bot)
 
-        self.banner = None
+        self.bot.loop.create_task(self.maybe_start_daemon())  # Start depending on cache.
 
-        self.available_icons = []
-        self.remaining_icons = []
+    # region: Internal logic & state management
 
-        self.days_since_cycle = itertools.cycle([None])
-
-        self.daemon = None
-        self._startup_task = self.bot.loop.create_task(self._initial_start_daemon())
-
-    async def _initial_start_daemon(self) -> None:
-        """Checks is daemon active and when is, start it at cog load."""
-        if await self.branding_configuration.get("daemon_active"):
-            self.daemon = self.bot.loop.create_task(self._daemon_func())
-
-    @property
-    def _daemon_running(self) -> bool:
-        """True if the daemon is currently active, False otherwise."""
-        return self.daemon is not None and not self.daemon.done()
-
-    async def _daemon_func(self) -> None:
+    @mock_in_debug(return_value=True)  # Mocked in development environment to prevent API spam.
+    async def apply_asset(self, asset_type: AssetType, download_url: str) -> bool:
         """
-        Manage all automated behaviour of the BrandingManager cog.
+        Download asset from `download_url` and apply it to PyDis as `asset_type`.
 
-        Once a day, the daemon will perform the following tasks:
-            - Update `current_season`
-            - Poll GitHub API to see if the available branding for `current_season` has changed
-            - Update assets if changes are detected (banner, guild icon, bot avatar, bot nickname)
-            - Check whether it's time to cycle guild icons
-
-        The internal loop runs once when activated, then periodically at the time
-        given by `time_until_midnight`.
-
-        All method calls in the internal loop are considered safe, i.e. no errors propagate
-        to the daemon's loop. The daemon itself does not perform any error handling on its own.
+        Return a boolean indicating whether the application was successful.
         """
-        await self.bot.wait_until_guild_available()
+        log.info(f"Applying '{asset_type.value}' asset to the guild.")
 
-        while True:
-            self.current_season = _seasons.get_current_season()
-            branding_changed = await self.refresh()
-
-            if branding_changed:
-                await self.apply()
-
-            elif next(self.days_since_cycle) == Branding.cycle_frequency:
-                await self.cycle()
-
-            until_midnight = time_until_midnight()
-            await asyncio.sleep(until_midnight.total_seconds())
-
-    async def _info_embed(self) -> discord.Embed:
-        """Make an informative embed representing current season."""
-        info_embed = discord.Embed(description=self.current_season.description, colour=self.current_season.colour)
-
-        # If we're in a non-evergreen season, also show active months
-        if self.current_season is not _seasons.SeasonBase:
-            title = f"{self.current_season.season_name} ({', '.join(str(m) for m in self.current_season.months)})"
-        else:
-            title = self.current_season.season_name
-
-        # Use the author field to show the season's name and avatar if available
-        info_embed.set_author(name=title)
-
-        banner = self.banner.path if self.banner is not None else "Unavailable"
-        info_embed.add_field(name="Banner", value=banner, inline=False)
-
-        icons = pretty_files(self.available_icons) or "Unavailable"
-        info_embed.add_field(name="Available icons", value=icons, inline=False)
-
-        # Only display cycle frequency if we're actually cycling
-        if len(self.available_icons) > 1 and Branding.cycle_frequency:
-            info_embed.set_footer(text=f"Icon cycle frequency: {Branding.cycle_frequency}")
-
-        return info_embed
-
-    async def _reset_remaining_icons(self) -> None:
-        """Set `remaining_icons` to a shuffled copy of `available_icons`."""
-        self.remaining_icons = random.sample(self.available_icons, k=len(self.available_icons))
-
-    async def _reset_days_since_cycle(self) -> None:
-        """
-        Reset the `days_since_cycle` iterator based on configured frequency.
-
-        If the current season only has 1 icon, or if `Branding.cycle_frequency` is falsey,
-        the iterator will always yield None. This signals that the icon shouldn't be cycled.
-
-        Otherwise, it will yield ints in range [1, `Branding.cycle_frequency`] indefinitely.
-        When the iterator yields a value equal to `Branding.cycle_frequency`, it is time to cycle.
-        """
-        if len(self.available_icons) > 1 and Branding.cycle_frequency:
-            sequence = range(1, Branding.cycle_frequency + 1)
-        else:
-            sequence = [None]
-
-        self.days_since_cycle = itertools.cycle(sequence)
-
-    async def _get_files(self, path: str, include_dirs: bool = False) -> t.Dict[str, GitHubFile]:
-        """
-        Get files at `path` in the branding repository.
-
-        If `include_dirs` is False (default), only returns files at `path`.
-        Otherwise, will return both files and directories. Never returns symlinks.
-
-        Return dict mapping from filename to corresponding `GitHubFile` instance.
-        This may return an empty dict if the response status is non-200,
-        or if the target directory is empty.
-        """
-        url = f"{_constants.BRANDING_URL}/{path}"
-        async with self.bot.http_session.get(
-            url, headers=_constants.HEADERS, params=_constants.PARAMS
-        ) as resp:
-            # Short-circuit if we get non-200 response
-            if resp.status != _constants.STATUS_OK:
-                log.error(f"GitHub API returned non-200 response: {resp}")
-                return {}
-            directory = await resp.json()  # Directory at `path`
-
-        allowed_types = {"file", "dir"} if include_dirs else {"file"}
-        return {
-            file["name"]: GitHubFile(file["download_url"], file["path"], file["sha"])
-            for file in directory
-            if file["type"] in allowed_types
-        }
-
-    async def refresh(self) -> bool:
-        """
-        Synchronize available assets with branding repository.
-
-        If the current season is not the evergreen, and lacks at least one asset,
-        we use the evergreen seasonal dir as fallback for missing assets.
-
-        Finally, if neither the seasonal nor fallback branding directories contain
-        an asset, it will simply be ignored.
-
-        Return True if the branding has changed. This will be the case when we enter
-        a new season, or when something changes in the current seasons's directory
-        in the branding repository.
-        """
-        old_branding = (self.banner, self.available_icons)
-        seasonal_dir = await self._get_files(self.current_season.branding_path, include_dirs=True)
-
-        # Only make a call to the fallback directory if there is something to be gained
-        branding_incomplete = any(
-            asset not in seasonal_dir
-            for asset in (_constants.FILE_BANNER, _constants.FILE_AVATAR, _constants.SERVER_ICONS)
-        )
-        if branding_incomplete and self.current_season is not _seasons.SeasonBase:
-            fallback_dir = await self._get_files(
-                _seasons.SeasonBase.branding_path, include_dirs=True
-            )
-        else:
-            fallback_dir = {}
-
-        # Resolve assets in this directory, None is a safe value
-        self.banner = (
-            seasonal_dir.get(_constants.FILE_BANNER)
-            or fallback_dir.get(_constants.FILE_BANNER)
-        )
-
-        # Now resolve server icons by making a call to the proper sub-directory
-        if _constants.SERVER_ICONS in seasonal_dir:
-            icons_dir = await self._get_files(
-                f"{self.current_season.branding_path}/{_constants.SERVER_ICONS}"
-            )
-            self.available_icons = list(icons_dir.values())
-
-        elif _constants.SERVER_ICONS in fallback_dir:
-            icons_dir = await self._get_files(
-                f"{_seasons.SeasonBase.branding_path}/{_constants.SERVER_ICONS}"
-            )
-            self.available_icons = list(icons_dir.values())
-
-        else:
-            self.available_icons = []  # This should never be the case, but an empty list is a safe value
-
-        # GitHubFile instances carry a `sha` attr so this will pick up if a file changes
-        branding_changed = old_branding != (self.banner, self.available_icons)
-
-        if branding_changed:
-            log.info(f"New branding detected (season: {self.current_season.season_name})")
-            await self._reset_remaining_icons()
-            await self._reset_days_since_cycle()
-
-        return branding_changed
-
-    async def cycle(self) -> bool:
-        """
-        Apply the next-up server icon.
-
-        Returns True if an icon is available and successfully gets applied, False otherwise.
-        """
-        if not self.available_icons:
-            log.info("Cannot cycle: no icons for this season")
+        try:
+            file = await self.repository.fetch_file(download_url)
+        except Exception:
+            log.exception(f"Failed to fetch '{asset_type.value}' asset.")
             return False
 
-        if not self.remaining_icons:
-            log.info("Reset & shuffle remaining icons")
-            await self._reset_remaining_icons()
+        await self.bot.wait_until_guild_available()
+        pydis: discord.Guild = self.bot.get_guild(Guild.id)
 
-        next_up = self.remaining_icons.pop(0)
-        success = await self.set_icon(next_up.download_url)
+        timeout = 10  # Seconds.
+        try:
+            with async_timeout.timeout(timeout):  # Raise after `timeout` seconds.
+                await pydis.edit(**{asset_type.value: file})
+        except discord.HTTPException:
+            log.exception("Asset upload to Discord failed.")
+            return False
+        except asyncio.TimeoutError:
+            log.error(f"Asset upload to Discord timed out after {timeout} seconds.")
+            return False
+        else:
+            log.trace("Asset uploaded successfully.")
+            return True
+
+    async def apply_banner(self, banner: RemoteObject) -> bool:
+        """
+        Apply `banner` to the guild and cache its hash if successful.
+
+        Banners should always be applied via this method to ensure that the last hash is cached.
+
+        Return a boolean indicating whether the application was successful.
+        """
+        success = await self.apply_asset(AssetType.BANNER, banner.download_url)
+
+        if success:
+            await self.cache_information.set("banner_hash", banner.sha)
 
         return success
 
-    async def apply(self) -> t.List[str]:
+    async def rotate_icons(self) -> bool:
         """
-        Apply current branding to the guild and bot.
+        Choose and apply the next-up icon in rotation.
 
-        This delegates to the bot instance to do all the work. We only provide download urls
-        for available assets. Assets unavailable in the branding repo will be ignored.
+        We keep track of the amount of times each icon has been used. The values in `cache_icons` can be understood
+        to be iteration IDs. When an icon is chosen & applied, we bump its count, pushing it into the next iteration.
 
-        Returns a list of names of all failed assets. An asset is considered failed
-        if it isn't found in the branding repo, or if something goes wrong while the
-        bot is trying to apply it.
+        Once the current iteration (lowest count in the cache) depletes, we move onto the next iteration.
 
-        An empty list denotes that all assets have been applied successfully.
+        In the case that there is only 1 icon in the rotation and has already been applied, do nothing.
+
+        Return a boolean indicating whether a new icon was applied successfully.
         """
-        report = {asset: False for asset in ("banner", "icon")}
+        log.debug("Rotating icons.")
 
-        if self.banner is not None:
-            report["banner"] = await self.set_banner(self.banner.download_url)
+        state = await self.cache_icons.to_dict()
+        log.trace(f"Total icons in rotation: {len(state)}.")
 
-        report["icon"] = await self.cycle()
+        if not state:  # This would only happen if rotation not initiated, but we can handle gracefully.
+            log.warning("Attempted icon rotation with an empty icon cache. This indicates wrong logic.")
+            return False
 
-        failed_assets = [asset for asset, succeeded in report.items() if not succeeded]
-        return failed_assets
+        if len(state) == 1 and 1 in state.values():
+            log.debug("Aborting icon rotation: only 1 icon is available and has already been applied.")
+            return False
 
-    @commands.has_any_role(*MODERATION_ROLES)
+        current_iteration = min(state.values())  # Choose iteration to draw from.
+        options = [download_url for download_url, times_used in state.items() if times_used == current_iteration]
+
+        log.trace(f"Choosing from {len(options)} icons in iteration {current_iteration}.")
+        next_icon = random.choice(options)
+
+        success = await self.apply_asset(AssetType.ICON, next_icon)
+
+        if success:
+            await self.cache_icons.increment(next_icon)  # Push the icon into the next iteration.
+
+            timestamp = datetime.utcnow().timestamp()
+            await self.cache_information.set("last_rotation_timestamp", timestamp)
+
+        return success
+
+    async def maybe_rotate_icons(self) -> None:
+        """
+        Call `rotate_icons` if the configured amount of time has passed since last rotation.
+
+        We offset the calculated time difference into the future to avoid off-by-a-little-bit errors. Because there
+        is work to be done before the timestamp is read and written, the next read will likely commence slightly
+        under 24 hours after the last write.
+        """
+        log.debug("Checking whether it's time for icons to rotate.")
+
+        last_rotation_timestamp = await self.cache_information.get("last_rotation_timestamp")
+
+        if last_rotation_timestamp is None:  # Maiden case ~ never rotated.
+            await self.rotate_icons()
+            return
+
+        last_rotation = datetime.fromtimestamp(last_rotation_timestamp)
+        difference = (datetime.utcnow() - last_rotation) + timedelta(minutes=5)
+
+        log.trace(f"Icons last rotated at {last_rotation} (difference: {difference}).")
+
+        if difference.days >= BrandingConfig.cycle_frequency:
+            await self.rotate_icons()
+
+    async def initiate_icon_rotation(self, available_icons: t.List[RemoteObject]) -> None:
+        """
+        Set up a new icon rotation.
+
+        This function should be called whenever available icons change. This is generally the case when we enter
+        a new event, but potentially also when the assets of an on-going event change. In such cases, a reset
+        of `cache_icons` is necessary, because it contains download URLs which may have gotten stale.
+
+        This function does not upload a new icon!
+        """
+        log.debug("Initiating new icon rotation.")
+
+        await self.cache_icons.clear()
+
+        new_state = {icon.download_url: 0 for icon in available_icons}
+        await self.cache_icons.update(new_state)
+
+        log.trace(f"Icon rotation initiated for {len(new_state)} icons.")
+
+        await self.cache_information.set("icons_hash", compound_hash(available_icons))
+
+    async def send_info_embed(self, channel_id: int, *, is_notification: bool) -> None:
+        """
+        Send the currently cached event description to `channel_id`.
+
+        When `is_notification` holds, a short contextual message for the #changelog channel is added.
+
+        We read event information from `cache_information`. The caller is therefore responsible for making
+        sure that the cache is up-to-date before calling this function.
+        """
+        log.debug(f"Sending event information event to channel: {channel_id} ({is_notification=}).")
+
+        await self.bot.wait_until_guild_available()
+        channel: t.Optional[discord.TextChannel] = self.bot.get_channel(channel_id)
+
+        if channel is None:
+            log.warning(f"Cannot send event information: channel {channel_id} not found!")
+            return
+
+        log.trace(f"Destination channel: #{channel.name}.")
+
+        description = await self.cache_information.get("event_description")
+        duration = await self.cache_information.get("event_duration")
+
+        if None in (description, duration):
+            content = None
+            embed = make_embed("No event in cache", "Is the daemon enabled?", success=False)
+
+        else:
+            content = "Python Discord is entering a new event!" if is_notification else None
+            embed = discord.Embed(description=description[:2048], colour=discord.Colour.blurple())
+            embed.set_footer(text=duration[:2048])
+
+        await channel.send(content=content, embed=embed)
+
+    async def enter_event(self, event: Event) -> t.Tuple[bool, bool]:
+        """
+        Apply `event` assets and update information cache.
+
+        We cache `event` information to ensure that we:
+        * Remember which event we're currently in across restarts
+        * Provide an on-demand informational embed without re-querying the branding repository
+
+        An event change should always be handled via this function, as it ensures that the cache is populated.
+
+        The #changelog notification is omitted when `event` is fallback, or already applied.
+
+        Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
+        """
+        log.info(f"Entering event: '{event.path}'.")
+
+        banner_success = await self.apply_banner(event.banner)  # Only one asset ~ apply directly.
+
+        await self.initiate_icon_rotation(event.icons)  # Prepare a new rotation.
+        icon_success = await self.rotate_icons()  # Apply an icon from the new rotation.
+
+        # This will only be False in the case of a manual same-event re-synchronisation.
+        event_changed = event.path != await self.cache_information.get("event_path")
+
+        # Cache event identity to avoid re-entry in case of restart.
+        await self.cache_information.set("event_path", event.path)
+
+        # Cache information shown in the 'about' embed.
+        await self.populate_cache_event_description(event)
+
+        # Notify guild of new event ~ this reads the information that we cached above.
+        if event_changed and not event.meta.is_fallback:
+            await self.send_info_embed(Channels.change_log, is_notification=True)
+        else:
+            log.trace("Omitting #changelog notification. Event has not changed, or new event is fallback.")
+
+        return banner_success, icon_success
+
+    async def synchronise(self) -> t.Tuple[bool, bool]:
+        """
+        Fetch the current event and delegate to `enter_event`.
+
+        This is a convenience function to force synchronisation via a command. It should generally only be used
+        in a recovery scenario. In the usual case, the daemon already has an `Event` instance and can pass it
+        to `enter_event` directly.
+
+        Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
+        """
+        log.debug("Synchronise: fetching current event.")
+
+        current_event, available_events = await self.repository.get_current_event()
+
+        await self.populate_cache_events(available_events)
+
+        if current_event is None:
+            log.error("Failed to fetch event. Cannot synchronise!")
+            return False, False
+
+        return await self.enter_event(current_event)
+
+    async def populate_cache_events(self, events: t.List[Event]) -> None:
+        """
+        Clear `cache_events` and re-populate with names and durations of `events`.
+
+        For each event, we store its name and duration string. This is the information presented to users in the
+        calendar command. If a format change is needed, it has to be done here.
+
+        The cache does not store the fallback event, as it is not shown in the calendar.
+        """
+        log.debug("Populating events cache.")
+
+        await self.cache_events.clear()
+
+        no_fallback = [event for event in events if not event.meta.is_fallback]
+        chronological_events = sorted(no_fallback, key=attrgetter("meta.start_date"))
+
+        log.trace(f"Writing {len(chronological_events)} events (fallback omitted).")
+
+        with contextlib.suppress(ValueError):  # Cache raises when updated with an empty dict.
+            await self.cache_events.update({
+                extract_event_name(event): extract_event_duration(event)
+                for event in chronological_events
+            })
+
+    async def populate_cache_event_description(self, event: Event) -> None:
+        """
+        Cache `event` description & duration.
+
+        This should be called when entering a new event, and can be called periodically to ensure that the cache
+        holds fresh information in the case that the event remains the same, but its description changes.
+
+        The duration is stored formatted for the frontend. It is not intended to be used programmatically.
+        """
+        log.debug("Caching event description & duration.")
+
+        await self.cache_information.set("event_description", event.meta.description)
+        await self.cache_information.set("event_duration", extract_event_duration(event))
+
+    # endregion
+    # region: Daemon
+
+    async def maybe_start_daemon(self) -> None:
+        """
+        Start the daemon depending on cache state.
+
+        The daemon will only start if it has been explicitly enabled via a command.
+        """
+        log.debug("Checking whether daemon should start.")
+
+        should_begin: t.Optional[bool] = await self.cache_information.get("daemon_active")  # None if never set!
+
+        if should_begin:
+            self.daemon_loop.start()
+
+    def cog_unload(self) -> None:
+        """
+        Cancel the daemon in case of cog unload.
+
+        This is **not** done automatically! The daemon otherwise remains active in the background.
+        """
+        log.debug("Cog unload: cancelling daemon.")
+
+        self.daemon_loop.cancel()
+
+    async def daemon_main(self) -> None:
+        """
+        Synchronise guild & caches with branding repository.
+
+        Pull the currently active event from the branding repository and check whether it matches the currently
+        active event in the cache. If not, apply the new event.
+
+        However, it is also possible that an event's assets change as it's active. To account for such cases,
+        we check the banner & icons hashes against the currently cached values. If there is a mismatch, each
+        specific asset is re-applied.
+        """
+        log.info("Daemon main: checking current event.")
+
+        new_event, available_events = await self.repository.get_current_event()
+
+        await self.populate_cache_events(available_events)
+
+        if new_event is None:
+            log.warning("Daemon main: failed to get current event from branding repository, will do nothing.")
+            return
+
+        if new_event.path != await self.cache_information.get("event_path"):
+            log.debug("Daemon main: new event detected!")
+            await self.enter_event(new_event)
+            return
+
+        await self.populate_cache_event_description(new_event)  # Cache fresh frontend info in case of change.
+
+        log.trace("Daemon main: event has not changed, checking for change in assets.")
+
+        if new_event.banner.sha != await self.cache_information.get("banner_hash"):
+            log.debug("Daemon main: detected banner change.")
+            await self.apply_banner(new_event.banner)
+
+        if compound_hash(new_event.icons) != await self.cache_information.get("icons_hash"):
+            log.debug("Daemon main: detected icon change.")
+            await self.initiate_icon_rotation(new_event.icons)
+            await self.rotate_icons()
+        else:
+            await self.maybe_rotate_icons()
+
+    @tasks.loop(hours=24)
+    async def daemon_loop(self) -> None:
+        """
+        Call `daemon_main` every 24 hours.
+
+        The scheduler maintains an exact 24-hour frequency even if this coroutine takes time to complete. If the
+        coroutine is started at 00:01 and completes at 00:05, it will still be started at 00:01 the next day.
+        """
+        log.trace("Daemon loop: calling daemon main.")
+
+        try:
+            await self.daemon_main()
+        except Exception:
+            log.exception("Daemon loop: failed with an unhandled exception!")
+
+    @daemon_loop.before_loop
+    async def daemon_before(self) -> None:
+        """
+        Call `daemon_loop` immediately, then block the loop until the next-up UTC midnight.
+
+        The first iteration is invoked directly such that synchronisation happens immediately after daemon start.
+        We then calculate the time until the next-up midnight and sleep before letting `daemon_loop` begin.
+        """
+        log.trace("Daemon before: performing start-up iteration.")
+
+        await self.daemon_loop()
+
+        log.trace("Daemon before: calculating time to sleep before loop begins.")
+        now = datetime.utcnow()
+
+        # The actual midnight moment is offset into the future to prevent issues with imprecise sleep.
+        tomorrow = now + timedelta(days=1)
+        midnight = datetime.combine(tomorrow, time(minute=1))
+
+        sleep_secs = (midnight - now).total_seconds()
+        log.trace(f"Daemon before: sleeping {sleep_secs} seconds before next-up midnight: {midnight}.")
+
+        await asyncio.sleep(sleep_secs)
+
+    # endregion
+    # region: Command interface (branding)
+
     @commands.group(name="branding")
-    async def branding_cmds(self, ctx: commands.Context) -> None:
-        """Manual branding control."""
+    async def branding_group(self, ctx: commands.Context) -> None:
+        """Control the branding cog."""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @branding_cmds.command(name="list", aliases=["ls"])
-    async def branding_list(self, ctx: commands.Context) -> None:
-        """List all available seasons and branding sources."""
-        embed = discord.Embed(title="Available seasons", colour=Colours.soft_green)
+    @branding_group.command(name="about", aliases=("current", "event"))
+    async def branding_about_cmd(self, ctx: commands.Context) -> None:
+        """Show the current event's description and duration."""
+        await self.send_info_embed(ctx.channel.id, is_notification=False)
 
-        for season in _seasons.get_all_seasons():
-            if season is _seasons.SeasonBase:
-                active_when = "always"
-            else:
-                active_when = f"in {', '.join(str(m) for m in season.months)}"
+    @commands.has_any_role(*MODERATION_ROLES)
+    @branding_group.command(name="sync")
+    async def branding_sync_cmd(self, ctx: commands.Context) -> None:
+        """
+        Force branding synchronisation.
 
-            description = (
-                f"Active {active_when}\n"
-                f"Branding: {season.branding_path}"
-            )
-            embed.add_field(name=season.season_name, value=description, inline=False)
+        Show which assets have failed to synchronise, if any.
+        """
+        async with ctx.typing():
+            banner_success, icon_success = await self.synchronise()
+
+        failed_assets = ", ".join(
+            name
+            for name, status in [("banner", banner_success), ("icon", icon_success)]
+            if status is False
+        )
+
+        if failed_assets:
+            resp = make_embed("Synchronisation unsuccessful", f"Failed to apply: {failed_assets}.", success=False)
+            resp.set_footer(text="Check log for details.")
+        else:
+            resp = make_embed("Synchronisation successful", "Assets have been applied.", success=True)
+
+        await ctx.send(embed=resp)
+
+    # endregion
+    # region: Command interface (branding calendar)
+
+    @branding_group.group(name="calendar", aliases=("schedule", "events"))
+    async def branding_calendar_group(self, ctx: commands.Context) -> None:
+        """
+        Show the current event calendar.
+
+        We draw event information from `cache_events` and use each key-value pair to create a field in the response
+        embed. As such, we do not need to query the API to get event information. The cache is automatically
+        re-populated by the daemon whenever it makes a request. A moderator+ can also explicitly request a cache
+        refresh using the 'refresh' subcommand.
+
+        Due to Discord limitations, we only show up to 25 events. This is entirely sufficient at the time of writing.
+        In the case that we find ourselves with more than 25 events, a warning log will alert core devs.
+
+        In the future, we may be interested in a field-paginating solution.
+        """
+        if ctx.invoked_subcommand:
+            # If you're wondering why this works: when the 'refresh' subcommand eventually re-invokes
+            # this group, the attribute will be automatically set to None by the framework.
+            return
+
+        available_events = await self.cache_events.to_dict()
+        log.trace(f"Found {len(available_events)} cached events available for calendar view.")
+
+        if not available_events:
+            resp = make_embed("No events found!", "Cache may be empty, try `branding calendar refresh`.", success=False)
+            await ctx.send(embed=resp)
+            return
+
+        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.blurple())
+
+        # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
+        first_25 = list(available_events.items())[:25]
+
+        if len(first_25) != len(available_events):  # Alert core devs that a paginating solution is now necessary.
+            log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25.")
+
+        for name, duration in first_25:
+            embed.add_field(name=name[:256], value=duration[:1024])
+
+        embed.set_footer(text="Otherwise, the fallback season is used.")
 
         await ctx.send(embed=embed)
 
-    @branding_cmds.command(name="set")
-    async def branding_set(self, ctx: commands.Context, *, season_name: t.Optional[str] = None) -> None:
+    @commands.has_any_role(*MODERATION_ROLES)
+    @branding_calendar_group.command(name="refresh")
+    async def branding_calendar_refresh_cmd(self, ctx: commands.Context) -> None:
         """
-        Manually set season, or reset to current if none given.
+        Refresh event cache and show current event calendar.
 
-        Season search is a case-less comparison against both seasonal class name,
-        and its `season_name` attr.
-
-        This only pre-loads the cog's internal state to the chosen season, but does not
-        automatically apply the branding. As that is an expensive operation, the `apply`
-        command must be called explicitly after this command finishes.
-
-        This means that this command can be used to 'preview' a season gathering info
-        about its available assets, without applying them to the guild.
-
-        If the daemon is running, it will automatically reset the season to current when
-        it wakes up. The season set via this command can therefore remain 'detached' from
-        what it should be - the daemon will make sure that it's set back properly.
+        Supplementary subcommand allowing force-refreshing the event cache. Implemented as a subcommand because
+        unlike the supergroup, it requires moderator privileges.
         """
-        if season_name is None:
-            new_season = _seasons.get_current_season()
-        else:
-            new_season = _seasons.get_season(season_name)
-            if new_season is None:
-                raise _errors.BrandingError("No such season exists")
+        log.info("Performing command-requested event cache refresh.")
 
-        if self.current_season is new_season:
-            raise _errors.BrandingError(f"Season {self.current_season.season_name} already active")
-
-        self.current_season = new_season
-        await self.branding_refresh(ctx)
-
-    @branding_cmds.command(name="info", aliases=["status"])
-    async def branding_info(self, ctx: commands.Context) -> None:
-        """
-        Show available assets for current season.
-
-        This can be used to confirm that assets have been resolved properly.
-        When `apply` is used, it attempts to upload exactly the assets listed here.
-        """
-        await ctx.send(embed=await self._info_embed())
-
-    @branding_cmds.command(name="refresh")
-    async def branding_refresh(self, ctx: commands.Context) -> None:
-        """Sync currently available assets with branding repository."""
         async with ctx.typing():
-            await self.refresh()
-            await self.branding_info(ctx)
+            available_events = await self.repository.get_events()
+            await self.populate_cache_events(available_events)
 
-    @branding_cmds.command(name="apply")
-    async def branding_apply(self, ctx: commands.Context) -> None:
-        """
-        Apply current season's branding to the guild.
+        await ctx.invoke(self.branding_calendar_group)
 
-        Use `info` to check which assets will be applied. Shows which assets have
-        failed to be applied, if any.
-        """
-        async with ctx.typing():
-            failed_assets = await self.apply()
-            if failed_assets:
-                raise _errors.BrandingError(
-                    f"Failed to apply following assets: {', '.join(failed_assets)}"
-                )
+    # endregion
+    # region: Command interface (branding daemon)
 
-            response = discord.Embed(description=f"All assets applied {Emojis.ok_hand}", colour=Colours.soft_green)
-            await ctx.send(embed=response)
-
-    @branding_cmds.command(name="cycle")
-    async def branding_cycle(self, ctx: commands.Context) -> None:
-        """
-        Apply the next-up guild icon, if multiple are available.
-
-        The order is random.
-        """
-        async with ctx.typing():
-            success = await self.cycle()
-            if not success:
-                raise _errors.BrandingError("Failed to cycle icon")
-
-            response = discord.Embed(description=f"Success {Emojis.ok_hand}", colour=Colours.soft_green)
-            await ctx.send(embed=response)
-
-    @branding_cmds.group(name="daemon", aliases=["d", "task"])
-    async def daemon_group(self, ctx: commands.Context) -> None:
-        """Control the background daemon."""
+    @commands.has_any_role(*MODERATION_ROLES)
+    @branding_group.group(name="daemon", aliases=("d",))
+    async def branding_daemon_group(self, ctx: commands.Context) -> None:
+        """Control the branding cog's daemon."""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @daemon_group.command(name="status")
-    async def daemon_status(self, ctx: commands.Context) -> None:
-        """Check whether daemon is currently active."""
-        if self._daemon_running:
-            remaining_time = (arrow.utcnow() + time_until_midnight()).humanize()
-            response = discord.Embed(description=f"Daemon running {Emojis.ok_hand}", colour=Colours.soft_green)
-            response.set_footer(text=f"Next refresh {remaining_time}")
+    @branding_daemon_group.command(name="enable", aliases=("start", "on"))
+    async def branding_daemon_enable_cmd(self, ctx: commands.Context) -> None:
+        """Enable the branding daemon."""
+        await self.cache_information.set("daemon_active", True)
+
+        if self.daemon_loop.is_running():
+            resp = make_embed("Daemon is already enabled!", "", success=False)
         else:
-            response = discord.Embed(description="Daemon not running", colour=Colours.soft_red)
+            self.daemon_loop.start()
+            resp = make_embed("Daemon enabled!", "It will now automatically awaken on start-up.", success=True)
 
-        await ctx.send(embed=response)
+        await ctx.send(embed=resp)
 
-    @daemon_group.command(name="start")
-    async def daemon_start(self, ctx: commands.Context) -> None:
-        """If the daemon isn't running, start it."""
-        if self._daemon_running:
-            raise _errors.BrandingError("Daemon already running!")
+    @branding_daemon_group.command(name="disable", aliases=("stop", "off"))
+    async def branding_daemon_disable_cmd(self, ctx: commands.Context) -> None:
+        """Disable the branding daemon."""
+        await self.cache_information.set("daemon_active", False)
 
-        self.daemon = self.bot.loop.create_task(self._daemon_func())
-        await self.branding_configuration.set("daemon_active", True)
-
-        response = discord.Embed(description=f"Daemon started {Emojis.ok_hand}", colour=Colours.soft_green)
-        await ctx.send(embed=response)
-
-    @daemon_group.command(name="stop")
-    async def daemon_stop(self, ctx: commands.Context) -> None:
-        """If the daemon is running, stop it."""
-        if not self._daemon_running:
-            raise _errors.BrandingError("Daemon not running!")
-
-        self.daemon.cancel()
-        await self.branding_configuration.set("daemon_active", False)
-
-        response = discord.Embed(description=f"Daemon stopped {Emojis.ok_hand}", colour=Colours.soft_green)
-        await ctx.send(embed=response)
-
-    async def _fetch_image(self, url: str) -> bytes:
-        """Retrieve and read image from `url`."""
-        log.debug(f"Getting image from: {url}")
-        async with self.bot.http_session.get(url) as resp:
-            return await resp.read()
-
-    async def _apply_asset(self, target: discord.Guild, asset: _constants.AssetType, url: str) -> bool:
-        """
-        Internal method for applying media assets to the guild.
-
-        This shouldn't be called directly. The purpose of this method is mainly generic
-        error handling to reduce needless code repetition.
-
-        Return True if upload was successful, False otherwise.
-        """
-        log.info(f"Attempting to set {asset.name}: {url}")
-
-        kwargs = {asset.value: await self._fetch_image(url)}
-        try:
-            async with async_timeout.timeout(5):
-                await target.edit(**kwargs)
-
-        except asyncio.TimeoutError:
-            log.info("Asset upload timed out")
-            return False
-
-        except discord.HTTPException as discord_error:
-            log.exception("Asset upload failed", exc_info=discord_error)
-            return False
-
+        if self.daemon_loop.is_running():
+            self.daemon_loop.cancel()
+            resp = make_embed("Daemon disabled!", "It will not awaken on start-up.", success=True)
         else:
-            log.info("Asset successfully applied")
-            return True
+            resp = make_embed("Daemon is already disabled!", "", success=False)
 
-    @_decorators.mock_in_debug(return_value=True)
-    async def set_banner(self, url: str) -> bool:
-        """Set the guild's banner to image at `url`."""
-        guild = self.bot.get_guild(Guild.id)
-        if guild is None:
-            log.info("Failed to get guild instance, aborting asset upload")
-            return False
+        await ctx.send(embed=resp)
 
-        return await self._apply_asset(guild, _constants.AssetType.BANNER, url)
+    @branding_daemon_group.command(name="status")
+    async def branding_daemon_status_cmd(self, ctx: commands.Context) -> None:
+        """Check whether the daemon is currently enabled."""
+        if self.daemon_loop.is_running():
+            resp = make_embed("Daemon is enabled", "Use `branding daemon disable` to stop.", success=True)
+        else:
+            resp = make_embed("Daemon is disabled", "Use `branding daemon enable` to start.", success=False)
 
-    @_decorators.mock_in_debug(return_value=True)
-    async def set_icon(self, url: str) -> bool:
-        """Sets the guild's icon to image at `url`."""
-        guild = self.bot.get_guild(Guild.id)
-        if guild is None:
-            log.info("Failed to get guild instance, aborting asset upload")
-            return False
+        await ctx.send(embed=resp)
 
-        return await self._apply_asset(guild, _constants.AssetType.SERVER_ICON, url)
-
-    def cog_unload(self) -> None:
-        """Cancels startup and daemon task."""
-        self._startup_task.cancel()
-        if self.daemon is not None:
-            self.daemon.cancel()
+    # endregion

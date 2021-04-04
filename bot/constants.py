@@ -403,7 +403,6 @@ class Channels(metaclass=YAMLGetter):
     python_events: int
     python_news: int
     reddit: int
-    user_event_announcements: int
 
     dev_contrib: int
     dev_core: int
@@ -415,7 +414,6 @@ class Channels(metaclass=YAMLGetter):
     cooldown: int
 
     attachment_log: int
-    dm_log: int
     message_log: int
     mod_log: int
     user_log: int
@@ -466,7 +464,6 @@ class Webhooks(metaclass=YAMLGetter):
 
     big_brother: int
     dev_log: int
-    dm_log: int
     duck_pond: int
     incidents_archive: int
     reddit: int
@@ -489,9 +486,11 @@ class Roles(metaclass=YAMLGetter):
     admins: int
     core_developers: int
     devops: int
+    domain_leads: int
     helpers: int
     moderators: int
     owners: int
+    project_leads: int
 
     jammers: int
     team_leaders: int
@@ -593,7 +592,8 @@ class HelpChannels(metaclass=YAMLGetter):
     enable: bool
     claim_minutes: int
     cmd_whitelist: List[int]
-    idle_minutes: int
+    idle_minutes_claimant: int
+    idle_minutes_others: int
     deleted_idle_minutes: int
     max_available: int
     max_total_channels: int
