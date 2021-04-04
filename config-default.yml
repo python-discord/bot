@@ -200,6 +200,7 @@ guild:
         nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
+        staff_info:         &STAFF_INFO     396684402404622347
 
         # Staff announcement channels
         admin_announcements:    &ADMIN_ANNOUNCEMENTS    749736155569848370
@@ -520,6 +521,7 @@ duck_pond:
         - *STAFF_ANNOUNCEMENTS
         - *MOD_ANNOUNCEMENTS
         - *ADMIN_ANNOUNCEMENTS
+        - *STAFF_INFO
 
 
 python_news:
