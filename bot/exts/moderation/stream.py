@@ -87,8 +87,9 @@ class Stream(commands.Cog):
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
 
         if duration is None:
-            # If duration is None then calculate default duration
+            # Use default duration and convert back to datetime as Embed.timestamp doesn't support Arrow
             duration = arrow.utcnow() + timedelta(minutes=VideoPermission.default_permission_duration)
+            duration = duration.datetime
         elif duration.tzinfo is None:
             # Make duration tz-aware.
             # ISODateTime could already include tzinfo, this check is so it isn't overwritten.
