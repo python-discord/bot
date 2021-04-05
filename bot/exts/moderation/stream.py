@@ -8,7 +8,7 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Emojis, Guild, Roles, STAFF_ROLES, VideoPermission
+from bot.constants import Colours, Emojis, Guild, Roles, STAFF_ROLES, VideoPermission
 from bot.converters import Expiry
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
@@ -97,7 +97,7 @@ class Stream(commands.Cog):
         # Check if the member already has streaming permission
         already_allowed = any(Roles.video == role.id for role in member.roles)
         if already_allowed:
-            await ctx.send(f"{Emojis.cross_mark} This member can already stream.")
+            await ctx.send(f"{Emojis.cross_mark} {member.mention} can already stream.")
             log.debug(f"{member} ({member.id}) already has permission to stream.")
             return
 
@@ -107,9 +107,19 @@ class Stream(commands.Cog):
 
         await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
 
-        # Convert here for nicer logging and output
+        # Use embed as embed timestamps do timezone conversions.
+        embed = discord.Embed(
+            description=f"{Emojis.check_mark} {member.mention} can now stream.",
+            colour=Colours.soft_green
+        )
+        embed.set_footer(text=f"Streaming permission has been given to {member} until")
+        embed.timestamp = duration
+
+        # Mention in content as mentions in embeds don't ping
+        await ctx.send(content=member.mention, embed=embed)
+
+        # Convert here for nicer logging
         revoke_time = format_infraction_with_duration(str(duration))
-        await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {revoke_time}.")
         log.debug(f"Successfully gave {member} ({member.id}) permission to stream until {revoke_time}.")
 
     @commands.command(aliases=("pstream",))
