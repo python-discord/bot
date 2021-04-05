@@ -313,10 +313,9 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
         admins_role = helpers.MockRole(name='Admins')
-        admins_role.colour = 100
 
         # A `MockMember` has the @Everyone role by default; we add the Admins to that.
-        user = helpers.MockMember(roles=[admins_role], top_role=admins_role, colour=100)
+        user = helpers.MockMember(roles=[admins_role], colour=100)
 
         embed = await self.cog.create_user_embed(ctx, user)
 
@@ -334,12 +333,11 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=50))
 
         moderators_role = helpers.MockRole(name='Moderators')
-        moderators_role.colour = 100
 
         infraction_counts.return_value = ("Infractions", "expanded infractions info")
         nomination_counts.return_value = ("Nominations", "nomination info")
 
-        user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role, colour=100)
+        user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
         embed = await self.cog.create_user_embed(ctx, user)
 
         infraction_counts.assert_called_once_with(user)
@@ -369,11 +367,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
 
         moderators_role = helpers.MockRole(name='Moderators')
-        moderators_role.colour = 100
 
         infraction_counts.return_value = ("Infractions", "basic infractions info")
 
-        user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role, colour=100)
+        user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
         embed = await self.cog.create_user_embed(ctx, user)
 
         infraction_counts.assert_called_once_with(user)
@@ -409,12 +406,11 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext()
 
         moderators_role = helpers.MockRole(name='Moderators')
-        moderators_role.colour = 100
 
-        user = helpers.MockMember(id=314, roles=[moderators_role], top_role=moderators_role, colour=100)
+        user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
         embed = await self.cog.create_user_embed(ctx, user)
 
-        self.assertEqual(embed.colour, discord.Colour(moderators_role.colour))
+        self.assertEqual(embed.colour, discord.Colour(100))
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
@@ -424,7 +420,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """The embed should be created with a blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
 
-        user = helpers.MockMember(id=217, colour=discord.Colour.blurple())
+        user = helpers.MockMember(id=217, colour=discord.Colour.default())
         embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.colour, discord.Colour.blurple())
