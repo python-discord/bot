@@ -284,7 +284,7 @@ class Information(Cog):
             embed.add_field(name=field_name, value=field_content, inline=False)
 
         embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
-        embed.colour = user.top_role.colour if roles else Colour.blurple()
+        embed.colour = user.colour if user.colour != Colour.default() else Colour.blurple()
 
         return embed
 
