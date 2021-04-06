@@ -548,4 +548,4 @@ config:
 
 
 video_permission:
-    default_permission_duration: 30  # Default duration for stream command in minutes
+    default_permission_duration: 5  # Default duration for stream command in minutes
