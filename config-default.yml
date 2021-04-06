@@ -267,6 +267,9 @@ guild:
         jammers:        737249140966162473
         team_leaders:   737250302834638889
 
+        # Streaming
+        video:          764245844798079016
+
     moderation_roles:
         - *ADMINS_ROLE
         - *MODS_ROLE
@@ -542,3 +545,7 @@ branding:
 
 config:
     required_keys: ['bot.token']
+
+
+video_permission:
+    default_permission_duration: 30  # Default duration for stream command in minutes
