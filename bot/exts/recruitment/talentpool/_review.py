@@ -77,7 +77,7 @@ class Reviewer:
         log.trace(f"Posting the review of {user_id}")
         message = (await self._bulk_send(channel, review))[-1]
         if seen_emoji:
-            for reaction in (seen_emoji, "👍", "👎"):
+            for reaction in (seen_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
                 await message.add_reaction(reaction)
 
         if update_database:
@@ -98,7 +98,7 @@ class Reviewer:
 
         if not member:
             return (
-                f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server 😔"
+                f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
             ), None
 
         opening = f"<@&{Roles.moderators}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
@@ -267,10 +267,10 @@ class Reviewer:
 
     @staticmethod
     def _random_ducky(guild: Guild) -> Union[Emoji, str]:
-        """Picks a random ducky emoji to be used to mark the vote as seen. If no duckies found returns 👀."""
+        """Picks a random ducky emoji to be used to mark the vote as seen. If no duckies found returns :eyes:."""
         duckies = [emoji for emoji in guild.emojis if emoji.name.startswith("ducky")]
         if not duckies:
-            return "👀"
+            return ":eyes:"
         return random.choice(duckies)
 
     @staticmethod
@@ -300,12 +300,12 @@ class Reviewer:
         await self._pool.fetch_user_cache()
         if user_id not in self._pool.watched_users:
             log.trace(f"Can't find a nominated user with id {user_id}")
-            await ctx.send(f"❌ Can't find a currently nominated user with id `{user_id}`")
+            await ctx.send(f":x: Can't find a currently nominated user with id `{user_id}`")
             return False
 
         nomination = self._pool.watched_users[user_id]
         if nomination["reviewed"]:
-            await ctx.send("❌ This nomination was already reviewed, but here's a cookie 🍪")
+            await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
             return False
 
         await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
