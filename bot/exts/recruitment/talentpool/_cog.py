@@ -11,6 +11,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
 from bot.converters import FetchedMember
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
+from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import time
 
@@ -33,6 +34,9 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             disable_header=True,
         )
 
+        self.reviewer = Reviewer(self.__class__.__name__, bot, self)
+        self.bot.loop.create_task(self.reviewer.reschedule_reviews())
+
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
@@ -42,7 +46,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @nomination_group.command(name='watched', aliases=('all', 'list'), root_aliases=("nominees",))
     @has_any_role(*MODERATION_ROLES)
     async def watched_command(
-        self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
+        self,
+        ctx: Context,
+        oldest_first: bool = False,
+        update_cache: bool = True
     ) -> None:
         """
         Shows the users that are currently being monitored in the talent pool.
@@ -53,6 +60,47 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         cache using the API before listing the users.
         """
         await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
+
+    async def list_watched_users(
+        self,
+        ctx: Context,
+        oldest_first: bool = False,
+        update_cache: bool = True
+    ) -> None:
+        """
+        Gives an overview of the nominated users list.
+
+        It specifies the users' mention, name, how long ago they were nominated, and whether their
+        review was scheduled or already posted.
+
+        The optional kwarg `oldest_first` orders the list by oldest entry.
+
+        The optional kwarg `update_cache` specifies whether the cache should
+        be refreshed by polling the API.
+        """
+        # TODO Once the watch channel is removed, this can be done in a smarter way, without splitting and overriding
+        # the list_watched_users function.
+        watched_data = await self.prepare_watched_users_data(ctx, oldest_first, update_cache)
+
+        if update_cache and not watched_data["updated"]:
+            await ctx.send(f":x: Failed to update {self.__class__.__name__} user cache, serving from cache")
+
+        lines = []
+        for user_id, line in watched_data["info"].items():
+            if self.watched_users[user_id]['reviewed']:
+                line += " *(reviewed)*"
+            elif user_id in self.reviewer:
+                line += " *(scheduled)*"
+            lines.append(line)
+
+        if not lines:
+            lines = ("There's nothing here yet.",)
+
+        embed = Embed(
+            title=watched_data["title"],
+            color=Color.blue()
+        )
+        await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
     @nomination_group.command(name='oldest')
     @has_any_role(*MODERATION_ROLES)
@@ -65,15 +113,39 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """
         await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
 
+    @nomination_group.command(name='forcewatch', aliases=('fw', 'forceadd', 'fa'), root_aliases=("forcenominate",))
+    @has_any_role(*MODERATION_ROLES)
+    async def force_watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+        """
+        Adds the given `user` to the talent pool, from any channel.
+
+        A `reason` for adding the user to the talent pool is optional.
+        """
+        await self._watch_user(ctx, user, reason)
+
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
     async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
         """
-        Relay messages sent by the given `user` to the `#talent-pool` channel.
+        Adds the given `user` to the talent pool.
 
         A `reason` for adding the user to the talent pool is optional.
-        If given, it will be displayed in the header when relaying messages of this user to the channel.
+        This command can only be used in the `#nominations` channel.
         """
+        if ctx.channel.id != Channels.nominations:
+            if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+                await ctx.send(
+                    f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
+                    "Use `!tp forcewatch` to override this check."
+                )
+            else:
+                await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")
+            return
+
+        await self._watch_user(ctx, user, reason)
+
+    async def _watch_user(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+        """Adds the given user to the talent pool."""
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
@@ -115,7 +187,9 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
                 resp.raise_for_status()
 
         self.watched_users[user.id] = response_data
-        msg = f":white_check_mark: The nomination for {user} has been added to the talent pool"
+
+        if user.id not in self.reviewer:
+            self.reviewer.schedule_review(user.id)
 
         history = await self.bot.api_client.get(
             self.api_endpoint,
@@ -126,6 +200,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             }
         )
 
+        msg = f"✅ The nomination for {user} has been added to the talent pool"
         if history:
             msg += f"\n\n({len(history)} previous nominations in total)"
 
@@ -249,6 +324,24 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         await self.fetch_user_cache()  # Update cache.
         await ctx.send(":white_check_mark: Updated the end reason of the nomination!")
 
+    @nomination_group.command(aliases=('mr',))
+    @has_any_role(*MODERATION_ROLES)
+    async def mark_reviewed(self, ctx: Context, user_id: int) -> None:
+        """Mark a user's nomination as reviewed and cancel the review task."""
+        if not await self.reviewer.mark_reviewed(ctx, user_id):
+            return
+        await ctx.send(f"✅ The user with ID `{user_id}` was marked as reviewed.")
+
+    @nomination_group.command(aliases=('review',))
+    @has_any_role(*MODERATION_ROLES)
+    async def post_review(self, ctx: Context, user_id: int) -> None:
+        """Post the automatic review for the user ahead of time."""
+        if not await self.reviewer.mark_reviewed(ctx, user_id):
+            return
+
+        await self.reviewer.post_review(user_id, update_database=False)
+        await ctx.message.add_reaction("✅")
+
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: Union[User, Member]) -> None:
         """Remove `user` from the talent pool after they are banned."""
@@ -276,6 +369,8 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             json={'end_reason': reason, 'active': False}
         )
         self._remove_user(user_id)
+
+        self.reviewer.cancel(user_id)
 
         return True
 
@@ -329,7 +424,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         return lines.strip()
 
-
-def setup(bot: Bot) -> None:
-    """Load the TalentPool cog."""
-    bot.add_cog(TalentPool(bot))
+    def cog_unload(self) -> None:
+        """Cancels all review tasks on cog unload."""
+        super().cog_unload()
+        self.reviewer.cancel_all()
