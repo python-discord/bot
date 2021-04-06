@@ -113,15 +113,39 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """
         await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
 
+    @nomination_group.command(name='forcewatch', aliases=('fw', 'forceadd', 'fa'), root_aliases=("forcenominate",))
+    @has_any_role(*MODERATION_ROLES)
+    async def force_watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+        """
+        Adds the given `user` to the talent pool, from any channel.
+
+        A `reason` for adding the user to the talent pool is optional.
+        """
+        await self._watch_user(ctx, user, reason)
+
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
     async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
         """
-        Relay messages sent by the given `user` to the `#talent-pool` channel.
+        Adds the given `user` to the talent pool.
 
         A `reason` for adding the user to the talent pool is optional.
-        If given, it will be displayed in the header when relaying messages of this user to the channel.
+        This command can only be used in the `#nominations` channel.
         """
+        if ctx.channel.id != Channels.nominations:
+            if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+                await ctx.send(
+                    f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
+                    "Use `!tp forcewatch` to override this check."
+                )
+            else:
+                await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")
+            return
+
+        await self._watch_user(ctx, user, reason)
+
+    async def _watch_user(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+        """Adds the given user to the talent pool."""
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
