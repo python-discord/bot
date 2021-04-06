@@ -114,7 +114,7 @@ class Reviewer:
         vote_request = (
             "*Refer to their nomination and infraction histories for further details*.\n"
             f"*Please react {seen_emoji} if you've seen this post."
-            " Then react 👍 for approval, or 👎 for disapproval*."
+            " Then react :+1: for approval, or :-1: for disapproval*."
         )
 
         review = "\n\n".join(part for part in (opening, current_nominations, review_body, vote_request))
