@@ -117,7 +117,7 @@ class Reviewer:
             " Then react :+1: for approval, or :-1: for disapproval*."
         )
 
-        review = "\n\n".join(part for part in (opening, current_nominations, review_body, vote_request))
+        review = "\n\n".join((opening, current_nominations, review_body, vote_request))
         return review, seen_emoji
 
     async def _construct_review_body(self, member: Member) -> str:
