@@ -46,6 +46,7 @@ class Stream(commands.Cog):
             member = self.bot.get_guild(Guild.id).get_member(key)
 
             if not member:
+                # Member isn't found in the cache
                 try:
                     member = await self.bot.get_guild(Guild.id).fetch_member(key)
                 except discord.errors.NotFound:
@@ -58,6 +59,7 @@ class Stream(commands.Cog):
                 except discord.HTTPException:
                     log.exception(f"Exception while trying to retrieve member {key} from Discord.")
                     continue
+
             revoke_time = Arrow.utcfromtimestamp(value)
             log.debug(f"Scheduling {member} ({member.id}) to have streaming permission revoked at {revoke_time}")
             self.scheduler.schedule_at(
