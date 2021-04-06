@@ -1,8 +1,10 @@
 import logging
 import textwrap
 from collections import ChainMap
+from io import StringIO
 from typing import Union
 
+import discord
 from discord import Color, Embed, Member, User
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -331,6 +333,17 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         if not await self.reviewer.mark_reviewed(ctx, user_id):
             return
         await ctx.send(f"✅ The user with ID `{user_id}` was marked as reviewed.")
+
+    @nomination_group.command(aliases=('gr',))
+    @has_any_role(*MODERATION_ROLES)
+    async def get_review(self, ctx: Context, user_id: int) -> None:
+        """Get the user's review as a markdown file."""
+        review = StringIO((await self.reviewer.make_review(user_id))[0])
+        if review:
+            file = discord.File(review, f"{user_id}_review.md")
+            await ctx.send(file=file)
+        else:
+            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
 
     @nomination_group.command(aliases=('review',))
     @has_any_role(*MODERATION_ROLES)

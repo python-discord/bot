@@ -66,26 +66,40 @@ class Reviewer:
             self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
-        """Format a generic review of a user and post it to the nomination voting channel."""
-        log.trace(f"Posting the review of {user_id}")
-
-        nomination = self._pool.watched_users[user_id]
-        if not nomination:
-            log.trace(f"There doesn't appear to be an active nomination for {user_id}")
+        """Format the review of a user and post it to the nomination voting channel."""
+        review, seen_emoji = await self.make_review(user_id)
+        if not review:
             return
 
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.nomination_voting)
-        member = guild.get_member(user_id)
+
+        log.trace(f"Posting the review of {user_id}")
+        message = (await self._bulk_send(channel, review))[-1]
+        if seen_emoji:
+            for reaction in (seen_emoji, "👍", "👎"):
+                await message.add_reaction(reaction)
 
         if update_database:
+            nomination = self._pool.watched_users[user_id]
             await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
 
+    async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji]]:
+        """Format a generic review of a user and return it with the seen emoji."""
+        log.trace(f"Formatting the review of {user_id}")
+
+        nomination = self._pool.watched_users[user_id]
+        if not nomination:
+            log.trace(f"There doesn't appear to be an active nomination for {user_id}")
+            return "", None
+
+        guild = self.bot.get_guild(Guild.id)
+        member = guild.get_member(user_id)
+
         if not member:
-            await channel.send(
+            return (
                 f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server 😔"
-            )
-            return
+            ), None
 
         opening = f"<@&{Roles.moderators}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
 
@@ -104,10 +118,7 @@ class Reviewer:
         )
 
         review = "\n\n".join(part for part in (opening, current_nominations, review_body, vote_request))
-
-        message = (await self._bulk_send(channel, review))[-1]
-        for reaction in (seen_emoji, "👍", "👎"):
-            await message.add_reaction(reaction)
+        return review, seen_emoji
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""
