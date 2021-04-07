@@ -84,6 +84,7 @@ class Reminders(Cog):
 
     @staticmethod
     async def _send_confirmation(
+        author = ctx.message.author
         ctx: Context,
         on_success: str,
         reminder_id: t.Union[str, int],
@@ -102,7 +103,7 @@ class Reminders(Cog):
 
         embed.set_footer(text=footer_str)
 
-        await ctx.send(embed=embed)
+        await author.send(embed=embed)
 
     @staticmethod
     async def _check_mentions(ctx: Context, mentions: t.Iterable[Mentionable]) -> t.Tuple[bool, str]:
