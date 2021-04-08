@@ -281,7 +281,7 @@ class DocCog(commands.Cog):
             self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
 
             # Show all symbols with the same name that were renamed in the footer,
-            # with a max of 100 chars.
+            # with a max of 200 chars.
             if symbol_name in self.renamed_symbols:
                 renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
                 footer_text = textwrap.shorten("Similar names: " + renamed_symbols, 200, placeholder=" ...")
