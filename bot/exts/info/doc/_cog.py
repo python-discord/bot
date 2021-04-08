@@ -284,7 +284,7 @@ class DocCog(commands.Cog):
             # with a max of 100 chars.
             if symbol_name in self.renamed_symbols:
                 renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
-                footer_text = textwrap.shorten("Moved: " + renamed_symbols, 200, placeholder=" ...")
+                footer_text = textwrap.shorten("Similar names: " + renamed_symbols, 200, placeholder=" ...")
             else:
                 footer_text = ""
 
