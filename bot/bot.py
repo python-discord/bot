@@ -111,7 +111,7 @@ class Bot(commands.Bot):
         loop = asyncio.get_event_loop()
         allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
 
-        intents = discord.Intents().all()
+        intents = discord.Intents.all()
         intents.presences = False
         intents.dm_typing = False
         intents.dm_reactions = False
