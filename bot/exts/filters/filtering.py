@@ -178,6 +178,7 @@ class Filtering(Cog):
 
     def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
+        name = self.remove_invisible_chars(name)
         matches = []
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
@@ -444,6 +445,8 @@ class Filtering(Cog):
         if SPOILER_RE.search(text):
             text = self._expand_spoilers(text)
 
+        text = self.remove_invisible_chars(text)
+
         # Make sure it's not a URL
         if URL_RE.search(text):
             return False, None
@@ -462,6 +465,7 @@ class Filtering(Cog):
 
         Second return value is a reason of URL blacklisting (can be None).
         """
+        text = self.remove_invisible_chars(text)
         if not URL_RE.search(text):
             return False, None
 
@@ -492,6 +496,8 @@ class Filtering(Cog):
 
         Attempts to catch some of common ways to try to cheat the system.
         """
+        text = self.remove_invisible_chars(text)
+
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
@@ -627,6 +633,22 @@ class Filtering(Cog):
 
         await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
         log.info(f"Deleted the offensive message with id {msg['id']}.")
+
+    @staticmethod
+    def remove_invisible_chars(string: str) -> str:
+        """
+        Remove invisible characters from `string`.
+
+        Removed characters:
+
+        - mongolian vowel separator
+        - zero width space
+        - zero width non-joiner
+        - zero width joiner
+        - word joiner
+        - zero width non-breaking space
+        """
+        return re.sub("[\u180e\u200b\u200c\u200d\u2060\ufeff]", "", string)
 
 
 def setup(bot: Bot) -> None:
