@@ -308,7 +308,7 @@ class Bot(commands.Bot):
             scope.set_extra("args", args)
             scope.set_extra("kwargs", kwargs)
 
-            log.exception(f"Unhandled exception in {event}.")
+            log.exception(f"Unhandled exception in {event}.", exc_info=True)
 
     def _add_root_aliases(self, command: commands.Command) -> None:
         """Recursively add root aliases for `command` and any of its subcommands."""
