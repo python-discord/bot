@@ -3,7 +3,7 @@ import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from operator import itemgetter
+from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
 from discord import Colour, Member, Message, NotFound, Object, TextChannel
@@ -18,6 +18,7 @@ from bot.constants import (
 )
 from bot.converters import Duration
 from bot.exts.moderation.modlog import ModLog
+from bot.utils import lock
 from bot.utils.messages import format_user, send_attachments
 
 
@@ -211,6 +212,7 @@ class AntiSpam(Cog):
                 await self.maybe_delete_messages(channel, relevant_messages)
                 break
 
+    @lock.lock_arg("antispam.punish", "member", attrgetter("id"))
     async def punish(self, msg: Message, member: Member, reason: str) -> None:
         """Punishes the given member for triggering an antispam rule."""
         if not any(role.id == self.muted_role.id for role in member.roles):
