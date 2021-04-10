@@ -18,7 +18,7 @@ from bot.constants import (
 )
 from bot.converters import Duration
 from bot.exts.moderation.modlog import ModLog
-from bot.utils import lock
+from bot.utils import lock, scheduling
 from bot.utils.messages import format_user, send_attachments
 
 
@@ -115,7 +115,7 @@ class AntiSpam(Cog):
 
         self.message_deletion_queue = dict()
 
-        self.bot.loop.create_task(self.alert_on_validation_error())
+        self.bot.loop.create_task(self.alert_on_validation_error(), name="AntiSpam.alert_on_validation_error")
 
     @property
     def mod_log(self) -> ModLog:
@@ -192,7 +192,10 @@ class AntiSpam(Cog):
                 if channel.id not in self.message_deletion_queue:
                     log.trace(f"Creating queue for channel `{channel.id}`")
                     self.message_deletion_queue[message.channel.id] = DeletionContext(channel)
-                    self.bot.loop.create_task(self._process_deletion_context(message.channel.id))
+                    scheduling.create_task(
+                        self._process_deletion_context(message.channel.id),
+                        name=f"AntiSpam._process_deletion_context({message.channel.id})"
+                    )
 
                 # Add the relevant of this trigger to the Deletion Context
                 await self.message_deletion_queue[message.channel.id].add(
@@ -202,11 +205,9 @@ class AntiSpam(Cog):
                 )
 
                 for member in members:
-
-                    # Fire it off as a background task to ensure
-                    # that the sleep doesn't block further tasks
-                    self.bot.loop.create_task(
-                        self.punish(message, member, full_reason)
+                    scheduling.create_task(
+                        self.punish(message, member, full_reason),
+                        name=f"AntiSpam.punish(message={message.id}, member={member.id}, rule={rule_name})"
                     )
 
                 await self.maybe_delete_messages(channel, relevant_messages)
