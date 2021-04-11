@@ -500,7 +500,9 @@ class HelpChannels(commands.Cog):
             )
 
         available_channels = AVAILABLE_HELP_CHANNELS.format(
-            available=', '.join(c.mention for c in self.available_help_channels) or None
+            available=", ".join(
+                c.mention for c in sorted(self.available_help_channels, key=attrgetter("position"))
+            ) or None
         )
 
         if self.dynamic_message is not None:
