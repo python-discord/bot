@@ -482,6 +482,7 @@ class Roles(metaclass=YAMLGetter):
     python_community: int
     sprinters: int
     voice_verified: int
+    video: int
 
     admins: int
     core_developers: int
@@ -659,6 +660,12 @@ class Event(Enum):
     message_edit = "message_edit"
 
     voice_state_update = "voice_state_update"
+
+
+class VideoPermission(metaclass=YAMLGetter):
+    section = "video_permission"
+
+    default_permission_duration: int
 
 
 # Debug mode
