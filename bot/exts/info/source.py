@@ -14,9 +14,10 @@ SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, str, co
 class SourceConverter(commands.Converter):
     """Convert an argument into a help command, tag, command, or cog."""
 
-    async def convert(self, ctx: commands.Context, argument: str) -> SourceType:
+    @staticmethod
+    async def convert(ctx: commands.Context, argument: str) -> SourceType:
         """Convert argument into source object."""
-        if argument.lower().startswith("help"):
+        if argument.lower() == "help":
             return ctx.bot.help_command
 
         cog = ctx.bot.get_cog(argument)
