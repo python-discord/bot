@@ -1,132 +1,72 @@
 import logging
-from typing import Optional
 
 import discord
-from async_rediscache import RedisCache
-from discord import Color
-from discord.ext import commands
-from discord.ext.commands import Cog
+from discord.ext.commands import Cog, Context, command, has_any_role
 
-from bot import constants
 from bot.bot import Bot
-from bot.converters import UserMentionOrID
-from bot.utils.checks import in_whitelist_check
-from bot.utils.messages import send_attachments
-from bot.utils.webhooks import send_webhook
+from bot.constants import Emojis, MODERATION_ROLES
+from bot.utils.services import send_to_paste_service
 
 log = logging.getLogger(__name__)
 
 
 class DMRelay(Cog):
-    """Relay direct messages to and from the bot."""
-
-    # RedisCache[str, t.Union[discord.User.id, discord.Member.id]]
-    dm_cache = RedisCache()
+    """Inspect messages sent to the bot."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.webhook_id = constants.Webhooks.dm_log
-        self.webhook = None
-        self.bot.loop.create_task(self.fetch_webhook())
 
-    @commands.command(aliases=("reply",))
-    async def send_dm(self, ctx: commands.Context, member: Optional[UserMentionOrID], *, message: str) -> None:
-        """
-        Allows you to send a DM to a user from the bot.
+    @command(aliases=("relay", "dr"))
+    async def dmrelay(self, ctx: Context, user: discord.User, limit: int = 100) -> None:
+        """Relays the direct message history between the bot and given user."""
+        log.trace(f"Relaying DMs with {user.name} ({user.id})")
 
-        If `member` is not provided, it will send to the last user who DM'd the bot.
-
-        This feature should be used extremely sparingly. Use ModMail if you need to have a serious
-        conversation with a user. This is just for responding to extraordinary DMs, having a little
-        fun with users, and telling people they are DMing the wrong bot.
-
-        NOTE: This feature will be removed if it is overused.
-        """
-        if not member:
-            user_id = await self.dm_cache.get("last_user")
-            member = ctx.guild.get_member(user_id) if user_id else None
-
-        # If we still don't have a Member at this point, give up
-        if not member:
-            log.debug("This bot has never gotten a DM, or the RedisCache has been cleared.")
-            await ctx.message.add_reaction("❌")
+        if user.bot:
+            await ctx.send(f"{Emojis.cross_mark} No direct message history with bots.")
             return
 
-        if member.id == self.bot.user.id:
-            log.debug("Not sending message to bot user")
-            return await ctx.send("🚫 I can't send messages to myself!")
+        output = ""
+        async for msg in user.history(limit=limit, oldest_first=True):
+            created_at = msg.created_at.strftime(r"%Y-%m-%d %H:%M")
 
-        try:
-            await member.send(message)
-        except discord.errors.Forbidden:
-            log.debug("User has disabled DMs.")
-            await ctx.message.add_reaction("❌")
-        else:
-            await ctx.message.add_reaction("✅")
-            self.bot.stats.incr("dm_relay.dm_sent")
+            # Metadata (author, created_at, id)
+            output += f"{msg.author} [{created_at}] ({msg.id}): "
 
-    async def fetch_webhook(self) -> None:
-        """Fetches the webhook object, so we can post to it."""
-        await self.bot.wait_until_guild_available()
+            # Content
+            if msg.content:
+                output += msg.content + "\n"
 
-        try:
-            self.webhook = await self.bot.fetch_webhook(self.webhook_id)
-        except discord.HTTPException:
-            log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
+            # Embeds
+            if (embeds := len(msg.embeds)) > 0:
+                output += f"<{embeds} embed{'s' if embeds > 1 else ''}>\n"
 
-    @Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
-        """Relays the message's content and attachments to the dm_log channel."""
-        # Only relay DMs from humans
-        if message.author.bot or message.guild or self.webhook is None:
+            # Attachments
+            attachments = "\n".join(a.url for a in msg.attachments)
+            if attachments:
+                output += attachments + "\n"
+
+        if not output:
+            await ctx.send(f"{Emojis.cross_mark} No direct message history with {user.mention}.")
             return
 
-        if message.clean_content:
-            await send_webhook(
-                webhook=self.webhook,
-                content=message.clean_content,
-                username=f"{message.author.display_name} ({message.author.id})",
-                avatar_url=message.author.avatar_url
-            )
-            await self.dm_cache.set("last_user", message.author.id)
-            self.bot.stats.incr("dm_relay.dm_received")
+        metadata = (
+            f"User: {user} ({user.id})\n"
+            f"Channel ID: {user.dm_channel.id}\n\n"
+        )
 
-        # Handle any attachments
-        if message.attachments:
-            try:
-                await send_attachments(
-                    message,
-                    self.webhook,
-                    username=f"{message.author.display_name} ({message.author.id})"
-                )
-            except (discord.errors.Forbidden, discord.errors.NotFound):
-                e = discord.Embed(
-                    description=":x: **This message contained an attachment, but it could not be retrieved**",
-                    color=Color.red()
-                )
-                await send_webhook(
-                    webhook=self.webhook,
-                    embed=e,
-                    username=f"{message.author.display_name} ({message.author.id})",
-                    avatar_url=message.author.avatar_url
-                )
-            except discord.HTTPException:
-                log.exception("Failed to send an attachment to the webhook")
+        paste_link = await send_to_paste_service(metadata + output, extension="txt")
 
-    async def cog_check(self, ctx: commands.Context) -> bool:
+        if paste_link is None:
+            await ctx.send(f"{Emojis.cross_mark} Failed to upload output to hastebin.")
+            return
+
+        await ctx.send(paste_link)
+
+    async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        checks = [
-            await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx),
-            in_whitelist_check(
-                ctx,
-                channels=[constants.Channels.dm_log],
-                redirect=None,
-                fail_silently=True,
-            )
-        ]
-        return all(checks)
+        return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
 
 def setup(bot: Bot) -> None:
-    """Load the DMRelay  cog."""
+    """Load the DMRelay cog."""
     bot.add_cog(DMRelay(bot))

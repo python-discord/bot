@@ -9,7 +9,7 @@ from discord.ext.commands import BadArgument, Cog, Context, clean_content, comma
 from discord.utils import snowflake_time
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
+from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
@@ -175,7 +175,7 @@ class Utils(Cog):
             await ctx.send(embed=embed)
 
     @command(aliases=("poll",))
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.project_leads, Roles.domain_leads)
     async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.
