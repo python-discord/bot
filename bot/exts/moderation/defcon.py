@@ -181,7 +181,7 @@ class Defcon(Cog):
         role = ctx.guild.default_role
         permissions = role.permissions
 
-        permissions.update(send_messages=False, add_reactions=False)
+        permissions.update(send_messages=False, add_reactions=False, connect=False)
         await role.edit(reason="DEFCON shutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
 
@@ -192,7 +192,7 @@ class Defcon(Cog):
         role = ctx.guild.default_role
         permissions = role.permissions
 
-        permissions.update(send_messages=True, add_reactions=True)
+        permissions.update(send_messages=True, add_reactions=True, connect=True)
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
 

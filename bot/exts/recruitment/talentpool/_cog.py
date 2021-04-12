@@ -1,14 +1,16 @@
 import logging
 import textwrap
 from collections import ChainMap
+from io import StringIO
 from typing import Union
 
+import discord
 from discord import Color, Embed, Member, User
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
+from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, STAFF_ROLES, Webhooks
 from bot.converters import FetchedMember
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 from bot.exts.recruitment.talentpool._review import Reviewer
@@ -113,15 +115,39 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """
         await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
 
+    @nomination_group.command(name='forcewatch', aliases=('fw', 'forceadd', 'fa'), root_aliases=("forcenominate",))
+    @has_any_role(*MODERATION_ROLES)
+    async def force_watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+        """
+        Adds the given `user` to the talent pool, from any channel.
+
+        A `reason` for adding the user to the talent pool is optional.
+        """
+        await self._watch_user(ctx, user, reason)
+
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
     async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
         """
-        Relay messages sent by the given `user` to the `#talent-pool` channel.
+        Adds the given `user` to the talent pool.
 
         A `reason` for adding the user to the talent pool is optional.
-        If given, it will be displayed in the header when relaying messages of this user to the channel.
+        This command can only be used in the `#nominations` channel.
         """
+        if ctx.channel.id != Channels.nominations:
+            if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+                await ctx.send(
+                    f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
+                    "Use `!tp forcewatch` to override this check."
+                )
+            else:
+                await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")
+            return
+
+        await self._watch_user(ctx, user, reason)
+
+    async def _watch_user(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+        """Adds the given user to the talent pool."""
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
             return
@@ -306,7 +332,18 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """Mark a user's nomination as reviewed and cancel the review task."""
         if not await self.reviewer.mark_reviewed(ctx, user_id):
             return
-        await ctx.send(f"✅ The user with ID `{user_id}` was marked as reviewed.")
+        await ctx.send(f"{Emojis.check_mark} The user with ID `{user_id}` was marked as reviewed.")
+
+    @nomination_group.command(aliases=('gr',))
+    @has_any_role(*MODERATION_ROLES)
+    async def get_review(self, ctx: Context, user_id: int) -> None:
+        """Get the user's review as a markdown file."""
+        review = (await self.reviewer.make_review(user_id))[0]
+        if review:
+            file = discord.File(StringIO(review), f"{user_id}_review.md")
+            await ctx.send(file=file)
+        else:
+            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
 
     @nomination_group.command(aliases=('review',))
     @has_any_role(*MODERATION_ROLES)
@@ -316,7 +353,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             return
 
         await self.reviewer.post_review(user_id, update_database=False)
-        await ctx.message.add_reaction("✅")
+        await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: Union[User, Member]) -> None:

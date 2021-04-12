@@ -2,9 +2,10 @@ import asyncio
 import logging
 import random
 import typing as t
-from datetime import datetime, timezone
+from datetime import timedelta
 from operator import attrgetter
 
+import arrow
 import discord
 import discord.abc
 from discord.ext import commands
@@ -20,6 +21,7 @@ NAMESPACE = "help"
 HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
+AVAILABLE_HELP_CHANNELS = "**Currently available help channel(s):** {available}"
 
 
 class HelpChannels(commands.Cog):
@@ -43,7 +45,9 @@ class HelpChannels(commands.Cog):
     In Use Category
 
     * Contains all channels which are occupied by someone needing help
-    * Channel moves to dormant category after `constants.HelpChannels.idle_minutes` of being idle
+    * Channel moves to dormant category after
+        - `constants.HelpChannels.idle_minutes_other` minutes since the last user message, or
+        - `constants.HelpChannels.idle_minutes_claimant` minutes since the last claimant message.
     * Command can prematurely mark a channel as dormant
         * Channel claimant is allowed to use the command
         * Allowed roles for the command are configurable with `constants.HelpChannels.cmd_whitelist`
@@ -70,7 +74,10 @@ class HelpChannels(commands.Cog):
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
-        self.last_notification: t.Optional[datetime] = None
+        self.last_notification: t.Optional[arrow.Arrow] = None
+
+        self.dynamic_message: t.Optional[int] = None
+        self.available_help_channels: t.Set[discord.TextChannel] = set()
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
@@ -112,11 +119,16 @@ class HelpChannels(commands.Cog):
 
         self.bot.stats.incr("help.claimed")
 
-        # Must use a timezone-aware datetime to ensure a correct POSIX timestamp.
-        timestamp = datetime.now(timezone.utc).timestamp()
-        await _caches.claim_times.set(message.channel.id, timestamp)
+        # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
+        timestamp = arrow.Arrow.fromdatetime(message.created_at).timestamp()
 
-        await _caches.unanswered.set(message.channel.id, True)
+        await _caches.claim_times.set(message.channel.id, timestamp)
+        await _caches.claimant_last_message_times.set(message.channel.id, timestamp)
+        # Delete to indicate that the help session has yet to receive an answer.
+        await _caches.non_claimant_last_message_times.delete(message.channel.id)
+
+        # Removing the help channel from the dynamic message, and editing/sending that message.
+        self.available_help_channels.remove(message.channel)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
         scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
@@ -187,7 +199,7 @@ class HelpChannels(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await self.unclaim_channel(ctx.channel, is_auto=False)
+            await self.unclaim_channel(ctx.channel, closed_on=_channel.ClosingReason.COMMAND)
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
@@ -233,7 +245,11 @@ class HelpChannels(commands.Cog):
         elif missing < 0:
             log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
             for channel in channels[:abs(missing)]:
-                await self.unclaim_channel(channel)
+                await self.unclaim_channel(channel, closed_on=_channel.ClosingReason.CLEANUP)
+
+        # Getting channels that need to be included in the dynamic message.
+        await self.update_available_help_channels()
+        log.trace("Dynamic available help message updated.")
 
     async def init_categories(self) -> None:
         """Get the help category objects. Remove the cog if retrieval fails."""
@@ -279,6 +295,10 @@ class HelpChannels(commands.Cog):
         # This may confuse users. So would potentially long delays for the cog to become ready.
         self.close_command.enabled = True
 
+        # Acquiring the dynamic message ID, if it exists within the cache.
+        log.trace("Attempting to fetch How-to-get-help dynamic message ID.")
+        self.dynamic_message = await _caches.dynamic_message.get("message_id")
+
         await self.init_available()
         _stats.report_counts()
 
@@ -293,26 +313,23 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        if not await _message.is_empty(channel):
-            idle_seconds = constants.HelpChannels.idle_minutes * 60
-        else:
-            idle_seconds = constants.HelpChannels.deleted_idle_minutes * 60
+        closing_time, closed_on = await _channel.get_closing_time(channel, self.init_task.done())
 
-        time_elapsed = await _channel.get_idle_time(channel)
-
-        if time_elapsed is None or time_elapsed >= idle_seconds:
+        # Closing time is in the past.
+        # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
+        if closing_time < (arrow.utcnow() + timedelta(seconds=1)):
             log.info(
-                f"#{channel} ({channel.id}) is idle longer than {idle_seconds} seconds "
-                f"and will be made dormant."
+                f"#{channel} ({channel.id}) is idle past {closing_time} "
+                f"and will be made dormant. Reason: {closed_on.value}"
             )
 
-            await self.unclaim_channel(channel)
+            await self.unclaim_channel(channel, closed_on=closed_on)
         else:
             # Cancel the existing task, if any.
             if has_task:
                 self.scheduler.cancel(channel.id)
 
-            delay = idle_seconds - time_elapsed
+            delay = (closing_time - arrow.utcnow()).seconds
             log.info(
                 f"#{channel} ({channel.id}) is still active; "
                 f"scheduling it to be moved after {delay} seconds."
@@ -336,6 +353,10 @@ class HelpChannels(commands.Cog):
             category_id=constants.Categories.help_available,
         )
 
+        # Adding the help channel to the dynamic message, and editing/sending that message.
+        self.available_help_channels.add(channel)
+        await self.update_available_help_channels()
+
         _stats.report_counts()
 
     async def move_to_dormant(self, channel: discord.TextChannel) -> None:
@@ -356,7 +377,7 @@ class HelpChannels(commands.Cog):
         _stats.report_counts()
 
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "channel")
-    async def unclaim_channel(self, channel: discord.TextChannel, *, is_auto: bool = True) -> None:
+    async def unclaim_channel(self, channel: discord.TextChannel, *, closed_on: _channel.ClosingReason) -> None:
         """
         Unclaim an in-use help `channel` to make it dormant.
 
@@ -364,7 +385,7 @@ class HelpChannels(commands.Cog):
         Remove the cooldown role from the channel claimant if they have no other channels claimed.
         Cancel the scheduled cooldown role removal task.
 
-        Set `is_auto` to True if the channel was automatically closed or False if manually closed.
+        `closed_on` is the reason that the channel was closed. See _channel.ClosingReason for possible values.
         """
         claimant_id = await _caches.claimants.get(channel.id)
         _unclaim_channel = self._unclaim_channel
@@ -375,9 +396,14 @@ class HelpChannels(commands.Cog):
             decorator = lock.lock_arg(f"{NAMESPACE}.unclaim", "claimant_id", wait=True)
             _unclaim_channel = decorator(_unclaim_channel)
 
-        return await _unclaim_channel(channel, claimant_id, is_auto)
+        return await _unclaim_channel(channel, claimant_id, closed_on)
 
-    async def _unclaim_channel(self, channel: discord.TextChannel, claimant_id: int, is_auto: bool) -> None:
+    async def _unclaim_channel(
+        self,
+        channel: discord.TextChannel,
+        claimant_id: int,
+        closed_on: _channel.ClosingReason
+    ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
 
@@ -393,12 +419,12 @@ class HelpChannels(commands.Cog):
             await _cooldown.remove_cooldown_role(claimant)
 
         await _message.unpin(channel)
-        await _stats.report_complete_session(channel.id, is_auto)
+        await _stats.report_complete_session(channel.id, closed_on)
         await self.move_to_dormant(channel)
 
         # Cancel the task that makes the channel dormant only if called by the close command.
         # In other cases, the task is either already done or not-existent.
-        if not is_auto:
+        if closed_on == _channel.ClosingReason.COMMAND:
             self.scheduler.cancel(channel.id)
 
     async def move_to_in_use(self, channel: discord.TextChannel) -> None:
@@ -410,7 +436,7 @@ class HelpChannels(commands.Cog):
             category_id=constants.Categories.help_in_use,
         )
 
-        timeout = constants.HelpChannels.idle_minutes * 60
+        timeout = constants.HelpChannels.idle_minutes_claimant * 60
 
         log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
         self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
@@ -428,7 +454,7 @@ class HelpChannels(commands.Cog):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
         else:
-            await _message.check_for_answer(message)
+            await _message.update_message_caches(message)
 
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message) -> None:
@@ -465,3 +491,34 @@ class HelpChannels(commands.Cog):
         self.queue_tasks.remove(task)
 
         return channel
+
+    async def update_available_help_channels(self) -> None:
+        """Updates the dynamic message within #how-to-get-help for available help channels."""
+        if not self.available_help_channels:
+            self.available_help_channels = set(
+                c for c in self.available_category.channels if not _channel.is_excluded_channel(c)
+            )
+
+        available_channels = AVAILABLE_HELP_CHANNELS.format(
+            available=", ".join(
+                c.mention for c in sorted(self.available_help_channels, key=attrgetter("position"))
+            ) or None
+        )
+
+        if self.dynamic_message is not None:
+            try:
+                log.trace("Help channels have changed, dynamic message has been edited.")
+                await self.bot.http.edit_message(
+                    constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels
+                )
+            except discord.NotFound:
+                pass
+            else:
+                return
+
+        log.trace("Dynamic message could not be edited or found. Creating a new one.")
+        new_dynamic_message = await self.bot.http.send_message(
+            constants.Channels.how_to_get_help, available_channels
+        )
+        self.dynamic_message = new_dynamic_message["id"]
+        await _caches.dynamic_message.set("message_id", self.dynamic_message)
