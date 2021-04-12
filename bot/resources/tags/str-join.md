@@ -9,15 +9,15 @@ for color in colors:
     output += color + separator
 print(output) # Prints 'red, green, blue, yellow, '
 ```
-However, this solution is flawed. The separator is still added to the last color, and it is slow.
+However, this solution is flawed. The separator is still added to the last element, and it is slow.
 
-The better way is to use `str.join`.
+The better solution is to use `str.join`.
 ```py
 colors = ['red', 'green', 'blue', 'yellow']
 separator = ", "
 print(separator.join(colors)) # Prints 'red, green, blue, yellow'
 ```
-This method is much simpler, faster, and solves the problem of the extra separator. An important thing to note is that you can only `str.join` strings. For a list of ints, 
+This solution is much simpler, faster, and solves the problem of the extra separator. An important thing to note is that you can only `str.join` strings. For a list of ints,
 you must convert each element to a string before joining.
 ```py
 integers = [1, 3, 6, 10, 15]
