@@ -162,17 +162,26 @@ class Utils(Cog):
         if len(snowflakes) > 1 and await has_no_roles_check(ctx, *STAFF_ROLES):
             raise BadArgument("Cannot process more than one snowflake in one invocation.")
 
+        embed = Embed(
+            colour=Colour.blue()
+        )
+        embed.set_author(
+            name=f"Snowflake{'s'[:len(snowflakes)^1]}",  # Deals with pluralisation
+            icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
+        )
+
+        lines = []
         for snowflake in snowflakes:
             created_at = snowflake_time(snowflake)
-            embed = Embed(
-                description=f"**Created at {created_at}** ({time_since(created_at, max_units=3)}).",
-                colour=Colour.blue()
-            )
-            embed.set_author(
-                name=f"Snowflake: {snowflake}",
-                icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
-            )
-            await ctx.send(embed=embed)
+            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at, max_units=3)}).")
+
+        await LinePaginator.paginate(
+            lines,
+            ctx=ctx,
+            embed=embed,
+            max_lines=5,
+            max_size=1000
+        )
 
     @command(aliases=("poll",))
     @has_any_role(*MODERATION_ROLES, Roles.project_leads, Roles.domain_leads)
