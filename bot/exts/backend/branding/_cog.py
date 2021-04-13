@@ -58,6 +58,8 @@ def extract_event_duration(event: Event) -> str:
     Extract a human-readable, year-agnostic duration string from `event`.
 
     In the case that `event` is a fallback event, resolves to 'Fallback'.
+
+    For 1-day events, only the single date is shown, instead of a period.
     """
     if event.meta.is_fallback:
         return "Fallback"
@@ -65,6 +67,9 @@ def extract_event_duration(event: Event) -> str:
     fmt = "%B %d"  # Ex: August 23
     start_date = event.meta.start_date.strftime(fmt)
     end_date = event.meta.end_date.strftime(fmt)
+
+    if start_date == end_date:
+        return start_date
 
     return f"{start_date} - {end_date}"
 
