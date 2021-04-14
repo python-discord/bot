@@ -97,7 +97,7 @@ class Duty(Cog):
         until_date = duration.replace(microsecond=0).isoformat()
         await mod.remove_roles(self.moderators_role, reason=f"Entered off-duty period until {until_date}.")
 
-        await self.off_duty_mods.update({mod.id: duration.isoformat()})
+        await self.off_duty_mods.set(mod.id, duration.isoformat())
 
         if mod.id in self._role_scheduler:
             self._role_scheduler.cancel(mod.id)
