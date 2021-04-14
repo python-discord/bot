@@ -130,5 +130,5 @@ class Duty(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Load the Slowmode cog."""
+    """Load the Duty cog."""
     bot.add_cog(Duty(bot))
