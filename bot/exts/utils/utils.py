@@ -162,6 +162,9 @@ class Utils(Cog):
         if len(snowflakes) > 1 and await has_no_roles_check(ctx, *STAFF_ROLES):
             raise BadArgument("Cannot process more than one snowflake in one invocation.")
 
+        if not snowflakes:
+            raise BadArgument("At least one snowflake must be provided.")
+
         embed = Embed(
             colour=Colour.blue()
         )
