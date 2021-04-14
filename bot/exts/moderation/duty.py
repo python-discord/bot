@@ -94,7 +94,8 @@ class Duty(Cog):
 
         mod = ctx.author
 
-        await mod.remove_roles(self.moderators_role, reason="Entered off-duty period.")
+        until_date = duration.replace(microsecond=0).isoformat()
+        await mod.remove_roles(self.moderators_role, reason=f"Entered off-duty period until {until_date}.")
 
         await self.off_duty_mods.update({mod.id: duration.isoformat()})
 
@@ -102,7 +103,6 @@ class Duty(Cog):
             self._role_scheduler.cancel(mod.id)
         self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
 
-        until_date = duration.replace(microsecond=0).isoformat()
         await ctx.send(f"{Emojis.check_mark} Moderators role has been removed until {until_date}.")
 
     @duty_group.command(name='on')
