@@ -165,9 +165,7 @@ class Utils(Cog):
         if not snowflakes:
             raise BadArgument("At least one snowflake must be provided.")
 
-        embed = Embed(
-            colour=Colour.blue()
-        )
+        embed = Embed(colour=Colour.blue())
         embed.set_author(
             name=f"Snowflake{'s'[:len(snowflakes)^1]}",  # Deals with pluralisation
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
