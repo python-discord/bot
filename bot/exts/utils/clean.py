@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from typing import Callable, DefaultDict, Iterable, List, Optional, Tuple
 
-from discord import Colour, Embed, Message, NotFound, TextChannel, User
+from discord import Colour, Embed, Message, NotFound, TextChannel, User, errors
 from discord.ext import commands
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -223,7 +223,11 @@ class Clean(Cog):
 
         # Delete the invocation first
         self.mod_log.ignore(Event.message_delete, ctx.message.id)
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except errors.NotFound:
+            # Invocation message has already been deleted
+            log.info("Tried to delete invocation message, but it was already deleted.")
 
         self.cleaning = True
 

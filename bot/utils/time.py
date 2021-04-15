@@ -85,6 +85,14 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
     return humanized
 
 
+def get_time_delta(time_string: str) -> str:
+    """Returns the time in human-readable time delta format."""
+    date_time = dateutil.parser.isoparse(time_string).replace(tzinfo=None)
+    time_delta = time_since(date_time, precision="minutes", max_units=1)
+
+    return time_delta
+
+
 def parse_duration_string(duration: str) -> Optional[relativedelta]:
     """
     Converts a `duration` string to a relativedelta object.

@@ -1,16 +1,18 @@
 import asyncio
+import functools
 import logging
+import types
 import typing as t
 from contextlib import suppress
-from functools import wraps
 
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
-from bot.constants import Channels, RedirectOutput
+from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.utils import function
 from bot.utils.checks import in_whitelist_check
+from bot.utils.function import command_wraps
 
 log = logging.getLogger(__name__)
 
@@ -70,8 +72,8 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
 
     This decorator must go before (below) the `command` decorator.
     """
-    def wrap(func: t.Callable) -> t.Callable:
-        @wraps(func)
+    def wrap(func: types.FunctionType) -> types.FunctionType:
+        @command_wraps(func)
         async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             if ctx.channel.id == destination_channel:
                 log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
@@ -105,7 +107,6 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
                 with suppress(NotFound):
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
-
         return inner
     return wrap
 
@@ -122,8 +123,8 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
     This decorator must go before (below) the `command` decorator.
     """
-    def decorator(func: t.Callable) -> t.Callable:
-        @wraps(func)
+    def decorator(func: types.FunctionType) -> types.FunctionType:
+        @command_wraps(func)
         async def wrapper(*args, **kwargs) -> None:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
@@ -152,4 +153,24 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
                 await func(*args, **kwargs)
         return wrapper
+    return decorator
+
+
+def mock_in_debug(return_value: t.Any) -> t.Callable:
+    """
+    Short-circuit function execution if in debug mode and return `return_value`.
+
+    The original function name, and the incoming args and kwargs are DEBUG level logged
+    upon each call. This is useful for expensive operations, i.e. media asset uploads
+    that are prone to rate-limits but need to be tested extensively.
+    """
+    def decorator(func: t.Callable) -> t.Callable:
+        @functools.wraps(func)
+        async def wrapped(*args, **kwargs) -> t.Any:
+            """Short-circuit and log if in debug mode."""
+            if DEBUG_MODE:
+                log.debug(f"Function {func.__name__} called with args: {args}, kwargs: {kwargs}")
+                return return_value
+            return await func(*args, **kwargs)
+        return wrapped
     return decorator

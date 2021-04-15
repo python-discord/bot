@@ -146,7 +146,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.token_removed
-                ).set_footer(text=utils.INFRACTION_APPEAL_FOOTER),
+                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
                 "send_result": True
             },
             {
@@ -164,9 +164,11 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.token_removed
-                ),
+                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
                 "send_result": False
             },
+            # Note that this test case asserts that the DM that *would* get sent to the user is formatted
+            # correctly, even though that message is deliberately never sent.
             {
                 "args": (self.user, "note", None, None, Icons.defcon_denied),
                 "expected_output": Embed(
@@ -182,7 +184,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ),
+                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
                 "send_result": False
             },
             {
@@ -200,7 +202,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(text=utils.INFRACTION_APPEAL_FOOTER),
+                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
                 "send_result": False
             },
             {
@@ -218,7 +220,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(text=utils.INFRACTION_APPEAL_FOOTER),
+                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
                 "send_result": True
             }
         ]

@@ -14,11 +14,11 @@ log = logging.getLogger(__name__)
 
 def create_name_queue(*categories: discord.CategoryChannel) -> deque:
     """
-    Return a queue of element names to use for creating new channels.
+    Return a queue of food names to use for creating new channels.
 
     Skip names that are already in use by channels in `categories`.
     """
-    log.trace("Creating the chemical element name queue.")
+    log.trace("Creating the food name queue.")
 
     used_names = _get_used_names(*categories)
 
@@ -31,7 +31,7 @@ def create_name_queue(*categories: discord.CategoryChannel) -> deque:
 
 def _get_names() -> t.List[str]:
     """
-    Return a truncated list of prefixed element names.
+    Return a truncated list of prefixed food names.
 
     The amount of names is configured with `HelpChannels.max_total_channels`.
     The prefix is configured with `HelpChannels.name_prefix`.
@@ -39,10 +39,10 @@ def _get_names() -> t.List[str]:
     count = constants.HelpChannels.max_total_channels
     prefix = constants.HelpChannels.name_prefix
 
-    log.trace(f"Getting the first {count} element names from JSON.")
+    log.trace(f"Getting the first {count} food names from JSON.")
 
-    with Path("bot/resources/elements.json").open(encoding="utf-8") as elements_file:
-        all_names = json.load(elements_file)
+    with Path("bot/resources/foods.json").open(encoding="utf-8") as foods_file:
+        all_names = json.load(foods_file)
 
     if prefix:
         return [prefix + name for name in all_names[:count]]
