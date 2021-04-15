@@ -90,10 +90,6 @@ class Clean(Cog):
                     # Cleaning was canceled
                     return (message_mappings, message_ids)
 
-                if predicate(message):
-                    message_mappings[message.channel].append(message)
-                    message_ids.append(message.id)
-
                 if until_message:
 
                     # We could use ID's here however in case if the message we are looking for gets deleted,
@@ -101,6 +97,10 @@ class Clean(Cog):
                     if message.created_at < until_message.created_at:
                         # Means we have found the message until which we were supposed to be deleting.
                         break
+
+                if predicate(message):
+                    message_mappings[message.channel].append(message)
+                    message_ids.append(message.id)
 
         return message_mappings, message_ids
 
