@@ -20,7 +20,6 @@ def setup() -> None:
     logging.addLevelName(TRACE_LEVEL, "TRACE")
     Logger.trace = _monkeypatch_trace
 
-    log_level = TRACE_LEVEL if constants.DEBUG_MODE else logging.INFO
     format_string = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
     log_format = logging.Formatter(format_string)
 
@@ -30,7 +29,6 @@ def setup() -> None:
     file_handler.setFormatter(log_format)
 
     root_log = logging.getLogger()
-    root_log.setLevel(log_level)
     root_log.addHandler(file_handler)
 
     if "COLOREDLOGS_LEVEL_STYLES" not in os.environ:
@@ -44,11 +42,9 @@ def setup() -> None:
     if "COLOREDLOGS_LOG_FORMAT" not in os.environ:
         coloredlogs.DEFAULT_LOG_FORMAT = format_string
 
-    if "COLOREDLOGS_LOG_LEVEL" not in os.environ:
-        coloredlogs.DEFAULT_LOG_LEVEL = log_level
+    coloredlogs.install(level=logging.TRACE, logger=root_log, stream=sys.stdout)
 
-    coloredlogs.install(logger=root_log, stream=sys.stdout)
-
+    root_log.setLevel(logging.DEBUG if constants.DEBUG_MODE else logging.INFO)
     logging.getLogger("discord").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("chardet").setLevel(logging.WARNING)
@@ -56,6 +52,8 @@ def setup() -> None:
 
     # Set back to the default of INFO even if asyncio's debug mode is enabled.
     logging.getLogger("asyncio").setLevel(logging.INFO)
+
+    _set_trace_loggers()
 
 
 def setup_sentry() -> None:
@@ -86,3 +84,13 @@ def _monkeypatch_trace(self: logging.Logger, msg: str, *args, **kwargs) -> None:
     """
     if self.isEnabledFor(TRACE_LEVEL):
         self._log(TRACE_LEVEL, msg, args, **kwargs)
+
+
+def _set_trace_loggers() -> None:
+    """Set loggers to the trace level according to the value from the BOT_TRACE_LOGGERS env var."""
+    if constants.Bot.trace_loggers:
+        if constants.Bot.trace_loggers in {"*", "ROOT"}:
+            logging.getLogger().setLevel(logging.TRACE)
+        else:
+            for logger_name in constants.Bot.trace_loggers.split(","):
+                logging.getLogger(logger_name).setLevel(logging.TRACE)
