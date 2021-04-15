@@ -12,7 +12,7 @@ from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import InvalidInfractedUser, LockedResourceError
-from bot.utils.checks import InWhitelistCheckFailure
+from bot.utils.checks import ContextCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -274,7 +274,7 @@ class ErrorHandler(Cog):
             await ctx.send(
                 "Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, (InWhitelistCheckFailure, errors.NoPrivateMessage)):
+        elif isinstance(e, (ContextCheckFailure, errors.NoPrivateMessage)):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 

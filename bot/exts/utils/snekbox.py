@@ -38,7 +38,7 @@ RAW_CODE_REGEX = re.compile(
 
 MAX_PASTE_LEN = 10000
 
-# `!eval` command whitelists
+# `!eval` command whitelists and blacklists.
 NO_EVAL_CHANNELS = (Channels.python_general,)
 NO_EVAL_CATEGORIES = ()
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)

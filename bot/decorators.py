@@ -11,7 +11,7 @@ from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.utils import function
-from bot.utils.checks import InWhitelistCheckFailure, in_whitelist_check
+from bot.utils.checks import ContextCheckFailure, in_whitelist_check
 from bot.utils.function import command_wraps
 
 log = logging.getLogger(__name__)
@@ -43,6 +43,10 @@ def in_whitelist(
         return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
 
     return commands.check(predicate)
+
+
+class NotInBlacklistCheckFailure(ContextCheckFailure):
+    """Raised when the 'not_in_blacklist' check fails."""
 
 
 def not_in_blacklist(
@@ -77,7 +81,7 @@ def not_in_blacklist(
         success = not_blacklisted or overridden
 
         if not success and not fail_silently:
-            raise InWhitelistCheckFailure(redirect)
+            raise NotInBlacklistCheckFailure(redirect)
 
         return success
 
