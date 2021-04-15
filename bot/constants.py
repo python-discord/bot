@@ -412,6 +412,7 @@ class Channels(metaclass=YAMLGetter):
     python_general: int
 
     cooldown: int
+    how_to_get_help: int
 
     attachment_log: int
     message_log: int
