@@ -180,8 +180,7 @@ class Reddit(Cog):
         for post in posts:
             data = post["data"]
 
-            text = unescape(data["selftext"])
-            if text:
+            if text := unescape(data["selftext"]):
                 text = textwrap.shorten(text, width=128, placeholder="...")
                 text += "\n"  # Add newline to separate embed info
 
@@ -189,8 +188,7 @@ class Reddit(Cog):
             comments = data["num_comments"]
             author = data["author"]
 
-            title = unescape(data["title"])
-            title = textwrap.shorten(title, width=64, placeholder="...")
+            title = textwrap.shorten(unescape(data["title"]), width=64, placeholder="...")
             # Normal brackets interfere with Markdown.
             title = escape_markdown(title).replace("[", "⦋").replace("]", "⦌")
             link = self.URL + data["permalink"]
