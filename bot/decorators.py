@@ -11,7 +11,7 @@ from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.utils import function
-from bot.utils.checks import in_whitelist_check
+from bot.utils.checks import InWhitelistCheckFailure, in_whitelist_check
 from bot.utils.function import command_wraps
 
 log = logging.getLogger(__name__)
@@ -41,6 +41,45 @@ def in_whitelist(
     def predicate(ctx: Context) -> bool:
         """Check if command was issued in a whitelisted context."""
         return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
+
+    return commands.check(predicate)
+
+
+def not_in_blacklist(
+    *,
+    channels: t.Container[int] = (),
+    categories: t.Container[int] = (),
+    roles: t.Container[int] = (),
+    override_roles: t.Container[int] = (),
+    redirect: t.Optional[int] = Channels.bot_commands,
+    fail_silently: bool = False,
+) -> t.Callable:
+    """
+    Check if a command was not issued in a blacklisted context.
+
+    The blacklists that can be provided are:
+
+    - `channels`: a container with channel ids for blacklisted channels
+    - `categories`: a container with category ids for blacklisted categories
+    - `roles`: a container with role ids for blacklisted roles
+
+    If the command was invoked in a context that was blacklisted, the member is either
+    redirected to the `redirect` channel that was passed (default: #bot-commands) or simply
+    told that they're not allowed to use this particular command (if `None` was passed).
+
+    The blacklist can be overridden through the roles specified in `override_roles`.
+    """
+    def predicate(ctx: Context) -> bool:
+        """Check if command was issued in a blacklisted context."""
+        not_blacklisted = not in_whitelist_check(ctx, channels, categories, roles, fail_silently=True)
+        overridden = in_whitelist_check(ctx, roles=override_roles, fail_silently=True)
+
+        success = not_blacklisted or overridden
+
+        if not success and not fail_silently:
+            raise InWhitelistCheckFailure(redirect)
+
+        return success
 
     return commands.check(predicate)
 
