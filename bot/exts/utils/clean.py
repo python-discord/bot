@@ -54,7 +54,7 @@ class Clean(Cog):
 
     def _get_messages_from_cache(self, amount: int, predicate: CheckHint) -> Tuple[DefaultDict, List[int]]:
         """Helper function for getting messages from the cache."""
-        message_mappings = defaultdict(lambda: [])
+        message_mappings = defaultdict(list)
         message_ids = []
         for message in self.bot.cached_messages:
             if not self.cleaning:
@@ -79,7 +79,7 @@ class Clean(Cog):
         predicate: CheckHint,
         until_message: Optional[Message] = None
     ) -> DefaultDict:
-        message_mappings = defaultdict(lambda: [])
+        message_mappings = defaultdict(list)
         message_ids = []
 
         for channel in channels:
