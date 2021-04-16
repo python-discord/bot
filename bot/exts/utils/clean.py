@@ -180,7 +180,7 @@ class Clean(Cog):
                 embed = Embed(
                     color=Colour(Colours.soft_red),
                     title=random.choice(NEGATIVE_REPLIES),
-                    description="You cannot do range clean across different channel."
+                    description="You cannot do range clean across several channel."
                 )
                 await ctx.send(embed=embed)
                 return
@@ -382,7 +382,7 @@ class Clean(Cog):
             until_message=message
         )
 
-    @clean_group.command(name="from-to", aliases=["after-until"])
+    @clean_group.command(name="from-to", aliases=["after-until", "between"])
     @has_any_role(*MODERATION_ROLES)
     async def clean_from_to(self, ctx: Context, after_message: Message, until_message: Message) -> None:
         """Delete all messages within range of messages."""
