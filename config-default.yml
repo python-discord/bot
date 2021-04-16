@@ -274,14 +274,12 @@ guild:
 
     moderation_roles:
         - *ADMINS_ROLE
-        - *MODS_ROLE
         - *MOD_TEAM_ROLE
         - *OWNERS_ROLE
 
     staff_roles:
         - *ADMINS_ROLE
         - *HELPERS_ROLE
-        - *MODS_ROLE
         - *MOD_TEAM_ROLE
         - *OWNERS_ROLE
 
