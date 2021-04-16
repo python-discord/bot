@@ -94,11 +94,12 @@ class Duty(Cog):
 
         mod = ctx.author
 
-        until_date = duration.replace(microsecond=0).isoformat()
+        until_date = duration.replace(microsecond=0).isoformat()  # Looks noisy with microseconds.
         await mod.remove_roles(self.moderators_role, reason=f"Entered off-duty period until {until_date}.")
 
         await self.off_duty_mods.set(mod.id, duration.isoformat())
 
+        # Allow rescheduling the task without cancelling it separately via the `on` command.
         if mod.id in self._role_scheduler:
             self._role_scheduler.cancel(mod.id)
         self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
@@ -118,6 +119,7 @@ class Duty(Cog):
 
         await self.off_duty_mods.delete(mod.id)
 
+        # We assume the task exists. Lack of it may indicate a bug.
         self._role_scheduler.cancel(mod.id)
 
         await ctx.send(f"{Emojis.check_mark} Moderators role has been re-applied.")
