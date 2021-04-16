@@ -18,7 +18,7 @@ from bot.exts.moderation.modlog import ModLog
 log = logging.getLogger(__name__)
 
 # Type alias for checks
-CheckHint = Callable[[Message], bool]
+Predicate = Callable[[Message], bool]
 
 
 class Clean(Cog):
@@ -52,7 +52,7 @@ class Clean(Cog):
                 # Message doesn't exist or was already deleted
                 continue
 
-    def _get_messages_from_cache(self, amount: int, predicate: CheckHint) -> Tuple[DefaultDict, List[int]]:
+    def _get_messages_from_cache(self, amount: int, to_delete: Predicate) -> Tuple[DefaultDict, List[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(list)
         message_ids = []
@@ -61,7 +61,7 @@ class Clean(Cog):
                 # Cleaning was canceled
                 return (message_mappings, message_ids)
 
-            if predicate(message):
+            if to_delete(message):
                 message_mappings[message.channel].append(message)
                 message_ids.append(message.id)
 
@@ -76,7 +76,7 @@ class Clean(Cog):
         self,
         amount: int,
         channels: Iterable[TextChannel],
-        predicate: CheckHint,
+        to_delete: Predicate,
         until_message: Optional[Message] = None
     ) -> DefaultDict:
         message_mappings = defaultdict(list)
@@ -98,7 +98,7 @@ class Clean(Cog):
                         # Means we have found the message until which we were supposed to be deleting.
                         break
 
-                if predicate(message):
+                if to_delete(message):
                     message_mappings[message.channel].append(message)
                     message_ids.append(message.id)
 
