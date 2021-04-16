@@ -84,7 +84,7 @@ class Clean(Cog):
 
         for channel in channels:
 
-            async for message in channel.history(amount=amount):
+            async for message in channel.history(limit=amount):
 
                 if not self.cleaning:
                     # Cleaning was canceled
