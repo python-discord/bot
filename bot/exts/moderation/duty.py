@@ -29,7 +29,7 @@ class Duty(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.bot.loop.create_task(self.reschedule_roles())
+        self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="duty-reschedule")
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -127,6 +127,7 @@ class Duty(Cog):
     def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
         log.trace("Cog unload: canceling role tasks.")
+        self.reschedule_task.cancel()
         self._role_scheduler.cancel_all()
 
 
