@@ -105,6 +105,17 @@ class Clean(Cog):
 
         return message_mappings, message_ids
 
+    def is_older_than_14d(self, message: Message) -> bool:
+        """
+        Precisely checks if message is older than 14 days, bulk deletion limit.
+
+        Inspired by how purge works internally.
+        Comparison on message age could possibly be less accurate which in turn would resort in problems
+        with message deletion if said messages are very close to the 14d mark.
+        """
+        two_weeks_old_snowflake = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
+        return message.id < two_weeks_old_snowflake
+
     async def _clean_messages(
         self,
         amount: int,
@@ -251,9 +262,6 @@ class Clean(Cog):
         # Now let's delete the actual messages with purge.
         self.mod_log.ignore(Event.message_delete, *message_ids)
 
-        # Creates ID like int object that would represent an object that is exactly 14 days old
-        minimum_time = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
-
         for channel, messages in message_mappings.items():
 
             to_delete = []
@@ -264,7 +272,7 @@ class Clean(Cog):
                     # Means that the cleaning was canceled
                     return
 
-                if message.id < minimum_time:
+                if self.is_older_than_14d(message):
                     # further messages are too old to be deleted in bulk
                     await self._delete_messages_individually(messages[current_index:])
                     if not self.cleaning:
