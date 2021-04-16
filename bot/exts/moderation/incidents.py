@@ -164,7 +164,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Em
         message_convert_object = MessageConverter()
         message = await message_convert_object.convert(ctx, message_link)
 
-    except Exception as e:
+    except discord.DiscordException as e:
         embed.title = f"{e}"
         embed.colour = Colours.soft_red
 
@@ -558,7 +558,7 @@ class Incidents(Cog):
                     f"Message Link Embed {x + 1}/{len(webhook_embed_list)} sent successfully."
                 )
 
-        except Exception:
+        except discord.DiscordException:
             log.exception(
                 f"Failed to send message link embeds {message.id} to #incidents."
             )
