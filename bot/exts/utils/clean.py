@@ -333,9 +333,7 @@ class Clean(Cog):
         channels: commands.Greedy[TextChannel] = None
     ) -> None:
         """Delete messages posted by the provided user, stop cleaning after traversing `amount` messages."""
-        use_cache = True
-        if channels:
-            use_cache = False
+        use_cache = not channels
         await self._clean_messages(amount, ctx, user=user, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="all", aliases=["everything"])
@@ -370,9 +368,7 @@ class Clean(Cog):
         channels: commands.Greedy[TextChannel] = None
     ) -> None:
         """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
-        use_cache = True
-        if channels:
-            use_cache = False
+        use_cache = not channels
         await self._clean_messages(amount, ctx, regex=regex, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="until")
