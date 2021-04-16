@@ -118,8 +118,7 @@ class Duty(Cog):
 
         await self.off_duty_mods.delete(mod.id)
 
-        if mod.id in self._role_scheduler:
-            self._role_scheduler.cancel(mod.id)
+        self._role_scheduler.cancel(mod.id)
 
         await ctx.send(f"{Emojis.check_mark} Moderators role has been re-applied.")
 
