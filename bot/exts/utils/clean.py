@@ -14,6 +14,7 @@ from bot.constants import (
     Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )
 from bot.exts.moderation.modlog import ModLog
+from bot.utils.channel import is_mod_channel
 
 log = logging.getLogger(__name__)
 
@@ -221,13 +222,15 @@ class Clean(Cog):
         if not channels:
             channels = [ctx.channel]
 
-        # Delete the invocation first
-        self.mod_log.ignore(Event.message_delete, ctx.message.id)
-        try:
-            await ctx.message.delete()
-        except errors.NotFound:
-            # Invocation message has already been deleted
-            log.info("Tried to delete invocation message, but it was already deleted.")
+        if not is_mod_channel(ctx.channel):
+
+            # Delete the invocation first
+            self.mod_log.ignore(Event.message_delete, ctx.message.id)
+            try:
+                await ctx.message.delete()
+            except errors.NotFound:
+                # Invocation message has already been deleted
+                log.info("Tried to delete invocation message, but it was already deleted.")
 
         self.cleaning = True
 
