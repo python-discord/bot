@@ -73,11 +73,7 @@ async def download_file(attachment: discord.Attachment) -> t.Optional[discord.Fi
         log.exception("Failed to download attachment")
 
 
-async def make_embed(
-    incident: discord.Message,
-    outcome: Signal,
-    actioned_by: discord.Member
-) -> FileEmbed:
+async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> FileEmbed:
     """
     Create an embed representation of `incident` for the #incidents-archive channel.
 
@@ -115,13 +111,9 @@ async def make_embed(
         file = await download_file(attachment)
 
         if file is not None:
-            embed.set_image(
-                url=f"attachment://{attachment.filename}"
-            )  # Embed displays the attached file
+            embed.set_image(url=f"attachment://{attachment.filename}")  # Embed displays the attached file
         else:
-            embed.set_author(
-                name="[Failed to relay attachment]", url=attachment.proxy_url
-            )  # Embed links the file
+            embed.set_author(name="[Failed to relay attachment]", url=attachment.proxy_url)  # Embed links the file
     else:
         file = None
 
@@ -191,9 +183,7 @@ async def add_signals(incident: discord.Message) -> None:
     existing_reacts = own_reactions(incident)
 
     for signal_emoji in Signal:
-        if (
-            signal_emoji.value in existing_reacts
-        ):  # This would not raise, but it is a superfluous API call
+        if signal_emoji.value in existing_reacts:  # This would not raise, but it is a superfluous API call
             log.trace(f"Skipping emoji as it's already been placed: {signal_emoji}")
         else:
             log.trace(f"Adding reaction: {signal_emoji}")
@@ -316,12 +306,7 @@ class Incidents(Cog):
 
         log.debug("Crawl task finished!")
 
-    async def archive(
-        self,
-        incident: discord.Message,
-        outcome: Signal,
-        actioned_by: discord.Member
-    ) -> bool:
+    async def archive(self, incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> bool:
         """
         Relay an embed representation of `incident` to the #incidents-archive channel.
 
@@ -342,9 +327,7 @@ class Incidents(Cog):
         not all information was relayed, return False. This signals that the original
         message is not safe to be deleted, as we will lose some information.
         """
-        log.info(
-            f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})"
-        )
+        log.info(f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})")
         embed, attachment_file = await make_embed(incident, outcome, actioned_by)
 
         try:
@@ -356,9 +339,7 @@ class Incidents(Cog):
                 file=attachment_file,
             )
         except Exception:
-            log.exception(
-                f"Failed to archive incident {incident.id} to #incidents-archive"
-            )
+            log.exception(f"Failed to archive incident {incident.id} to #incidents-archive")
             return False
         else:
             log.trace("Message archived successfully!")
@@ -371,9 +352,7 @@ class Incidents(Cog):
         If `timeout` passes, this will raise `asyncio.TimeoutError`, signaling that we haven't
         been able to confirm that the message was deleted.
         """
-        log.trace(
-            f"Confirmation task will wait {timeout=} seconds for {incident.id=} to be deleted"
-        )
+        log.trace(f"Confirmation task will wait {timeout=} seconds for {incident.id=} to be deleted")
 
         def check(payload: discord.RawReactionActionEvent) -> bool:
             return payload.message_id == incident.id
@@ -381,12 +360,7 @@ class Incidents(Cog):
         coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
         return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
-    async def process_event(
-        self,
-        reaction: str,
-        incident: discord.Message,
-        member: discord.Member
-    ) -> None:
+    async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """
         Process a `reaction_add` event in #incidents.
 
@@ -431,9 +405,7 @@ class Incidents(Cog):
 
         relay_successful = await self.archive(incident, signal, actioned_by=member)
         if not relay_successful:
-            log.trace(
-                "Original message will not be deleted as we failed to relay it to the archive"
-            )
+            log.trace("Original message will not be deleted as we failed to relay it to the archive")
             return
 
         timeout = 5  # Seconds
@@ -515,9 +487,7 @@ class Incidents(Cog):
         if payload.channel_id != Channels.incidents or payload.member.bot:
             return
 
-        log.trace(
-            f"Received reaction add event in #incidents, waiting for crawler: {self.crawl_task.done()=}"
-        )
+        log.trace(f"Received reaction add event in #incidents, waiting for crawler: {self.crawl_task.done()=}")
         await self.crawl_task
 
         log.trace(f"Acquiring event lock: {self.event_lock.locked()=}")
@@ -529,11 +499,11 @@ class Incidents(Cog):
                 return
 
             if not is_incident(message):
-                log.debug("Ignoring event for a non-incident message.")
+                log.debug("Ignoring event for a non-incident message")
                 return
 
             await self.process_event(str(payload.emoji), message, payload.member)
-            log.trace("Releasing event lock.")
+            log.trace("Releasing event lock")
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
