@@ -205,9 +205,9 @@ class CodeSnippets(Cog):
             ret = f'`{file_path}` lines {start_line} to {end_line}\n'
 
         if len(required) != 0:
-            return f'{ret}```{language}\n{required}```\n'
+            return f'{ret}```{language}\n{required}```'
         # Returns an empty codeblock if the snippet is empty
-        return f'{ret}``` ```\n'
+        return f'{ret}``` ```'
 
     def __init__(self, bot: Bot):
         """Initializes the cog's bot."""
@@ -224,13 +224,18 @@ class CodeSnippets(Cog):
     async def on_message(self, message: Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if not message.author.bot:
-            message_to_send = ''
+            all_snippets = []
 
             for pattern, handler in self.pattern_handlers:
                 for match in pattern.finditer(message.content):
-                    message_to_send += await handler(**match.groupdict())
+                    snippet = await handler(**match.groupdict())
+                    all_snippets.append((match.start(), snippet))
 
-            if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
+            # Sorts the list of snippets by their match index and joins them into
+            # a single message
+            message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
+
+            if 0 < len(message_to_send) <= 2000 and len(all_snippets) <= 15:
                 await message.edit(suppress=True)
                 await wait_for_deletion(
                     await message.channel.send(message_to_send),
