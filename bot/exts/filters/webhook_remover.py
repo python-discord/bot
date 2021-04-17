@@ -14,7 +14,7 @@ WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discord(?:app)?\.com/api/webhooks/\
 ALERT_MESSAGE_TEMPLATE = (
     "{user}, looks like you posted a Discord webhook URL. Therefore, your "
     "message has been removed. Your webhook may have been **compromised** so "
-    "please re-create the webhook **immediately**. If you believe this was "
+    "please re-create the webhook **immediately**. If you believe this was a "
     "mistake, please let us know."
 )
 

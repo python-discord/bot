@@ -19,6 +19,14 @@ log = logging.getLogger('bot')
 LOCALHOST = "127.0.0.1"
 
 
+class StartupError(Exception):
+    """Exception class for startup errors."""
+
+    def __init__(self, base: Exception):
+        super().__init__()
+        self.exception = base
+
+
 class Bot(commands.Bot):
     """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
 
@@ -81,13 +89,29 @@ class Bot(commands.Bot):
         for item in full_cache:
             self.insert_item_into_filter_list_cache(item)
 
+    async def ping_services(self) -> None:
+        """A helper to make sure all the services the bot relies on are available on startup."""
+        # Connect Site/API
+        attempts = 0
+        while True:
+            try:
+                log.info(f"Attempting site connection: {attempts + 1}/{constants.URLs.connect_max_retries}")
+                await self.api_client.get("healthcheck")
+                break
+
+            except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError):
+                attempts += 1
+                if attempts == constants.URLs.connect_max_retries:
+                    raise
+                await asyncio.sleep(constants.URLs.connect_cooldown)
+
     @classmethod
     def create(cls) -> "Bot":
         """Create and return an instance of a Bot."""
         loop = asyncio.get_event_loop()
         allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
 
-        intents = discord.Intents().all()
+        intents = discord.Intents.all()
         intents.presences = False
         intents.dm_typing = False
         intents.dm_reactions = False
@@ -223,6 +247,11 @@ class Bot(commands.Bot):
             # here. Normally, this shouldn't happen.
             await self.redis_session.connect()
 
+        try:
+            await self.ping_services()
+        except Exception as e:
+            raise StartupError(e)
+
         # Build the FilterList cache
         await self.cache_filter_list_data()
 
@@ -318,5 +347,8 @@ def _create_redis_session(loop: asyncio.AbstractEventLoop) -> RedisSession:
         use_fakeredis=constants.Redis.use_fakeredis,
         global_namespace="bot",
     )
-    loop.run_until_complete(redis_session.connect())
+    try:
+        loop.run_until_complete(redis_session.connect())
+    except OSError as e:
+        raise StartupError(e)
     return redis_session

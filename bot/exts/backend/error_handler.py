@@ -1,7 +1,6 @@
 import contextlib
 import difflib
 import logging
-import random
 import typing as t
 
 from discord import Embed
@@ -10,11 +9,10 @@ from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours, ERROR_REPLIES, Icons, MODERATION_ROLES
+from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import InvalidInfractedUser, LockedResourceError
-from bot.exts.backend.branding._errors import BrandingError
-from bot.utils.checks import InWhitelistCheckFailure
+from bot.utils.checks import ContextCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -79,9 +77,6 @@ class ErrorHandler(Cog):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
-            elif isinstance(e.original, BrandingError):
-                await ctx.send(embed=self._get_error_embed(random.choice(ERROR_REPLIES), str(e.original)))
-                return
             elif isinstance(e.original, InvalidInfractedUser):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
@@ -239,10 +234,12 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.BadUnionArgument):
             embed = self._get_error_embed("Bad argument", f"{e}\n{e.errors[-1]}")
             await ctx.send(embed=embed)
+            await prepared_help_command
             self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
             await ctx.send(embed=embed)
+            prepared_help_command.close()
             self.bot.stats.incr("errors.argument_parsing_error")
         else:
             embed = self._get_error_embed(
@@ -277,7 +274,7 @@ class ErrorHandler(Cog):
             await ctx.send(
                 "Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, (InWhitelistCheckFailure, errors.NoPrivateMessage)):
+        elif isinstance(e, (ContextCheckFailure, errors.NoPrivateMessage)):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 
