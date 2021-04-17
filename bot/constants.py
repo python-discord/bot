@@ -280,7 +280,7 @@ class Emojis(metaclass=YAMLGetter):
     badge_partner: str
     badge_staff: str
     badge_verified_bot_developer: str
-    badge_verified_bot: str
+    verified_bot: str
     bot: str
 
     defcon_shutdown: str  # noqa: E704
