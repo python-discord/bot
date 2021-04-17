@@ -13,7 +13,7 @@ from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Roles, URLs
-from bot.decorators import not_in_blacklist
+from bot.decorators import redirect_output
 from bot.utils import send_to_paste_service
 from bot.utils.messages import wait_for_deletion
 
@@ -280,7 +280,12 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @not_in_blacklist(channels=NO_EVAL_CHANNELS, categories=NO_EVAL_CATEGORIES, override_roles=EVAL_ROLES)
+    @redirect_output(
+        destination_channel=Channels.bot_commands,
+        bypass_roles=EVAL_ROLES,
+        categories=NO_EVAL_CATEGORIES,
+        channels=NO_EVAL_CHANNELS
+    )
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
