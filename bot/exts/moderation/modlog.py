@@ -115,9 +115,9 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"<@&{Roles.moderators}> @here\n{content}"
+                content = f"<@&{Roles.moderators}>\n{content}"
             else:
-                content = f"<@&{Roles.moderators}> @here"
+                content = f"<@&{Roles.moderators}>"
 
         # Truncate content to 2000 characters and append an ellipsis.
         if content and len(content) > 2000:
