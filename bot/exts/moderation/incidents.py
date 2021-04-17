@@ -269,7 +269,13 @@ class Incidents(Cog):
     """
 
     # This dictionary maps a incident message to the message link embeds(s) sent by it
-    # RedisCache[discord.Message.id, List[discord.Message.id]]
+    #
+    # Discord doesn't allow more than 10 embeds to be sent in a single webhook message
+    # hence the embeds need to be broken into groups of 10. Since we have multiple embeds
+    # and RedisCache doesn't allow storing lists, we need to join the list with commas to
+    # make it a string and then store it.
+    #
+    # RedisCache[discord.Message.id, str]
     message_link_embeds_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
