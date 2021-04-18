@@ -508,6 +508,8 @@ class Incidents(Cog):
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """
+        Pass `message` to `add_signals` and `extract_message_links` if it satisfies `is_incident`.
+
         If the message (`message`) is a incident then run it through `extract_message_links`
         to get all the message link embeds (embeds which contain information about that particular
         link), this message link embeds are then sent into the channel.
@@ -523,6 +525,8 @@ class Incidents(Cog):
     @Cog.listener()
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
         """
+        Pass `msg_after` to `extract_message_links` and edit `msg_before` webhook msg.
+
         Deletes cache value (`message_link_embeds_cache`) of `msg_before` if it exists and removes the
         webhook message for that particular link from the channel.
 
@@ -532,7 +536,6 @@ class Incidents(Cog):
 
         The edited message is also passed into `add_signals` if it is a incident message.
         """
-
         webhook_embed_list = await extract_message_links(msg_after, self.bot)
         webhook_msg_id = self.message_link_embeds_cache.get(msg_before.id)
 
@@ -551,8 +554,9 @@ class Incidents(Cog):
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         """
-        Deletes the message link embed found in cache from the channel and cache if the message
-        is a incident and is found in msg link embeds cache.
+        Delete message link embeds for `message`.
+
+        Search through the cache for message, if found delete it from cache and channel.
         """
         if is_incident(message):
             if message.id in self.message_link_embeds_cache.items:
@@ -580,7 +584,7 @@ class Incidents(Cog):
                 avatar_url=message.author.avatar_url,
                 wait=True,
             )
-            log.trace(f"Message Link Embed sent successfully.")
+            log.trace("Message Link Embed sent successfully.")
 
         except discord.DiscordException:
             log.exception(
