@@ -109,7 +109,7 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: Expiry,
+        duration: Expiry = "1h",
         *,
         reason: str = '',
     ) -> None:
