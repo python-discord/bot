@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import random
@@ -109,7 +110,7 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: Expiry = "1h",
+        duration: t.Optional[Expiry],
         *,
         reason: str = '',
     ) -> None:
@@ -133,6 +134,9 @@ class Superstarify(InfractionScheduler, Cog):
         """
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
+
+        # Set the duration to 1 hour if none was provided
+        duration = datetime.datetime.now() + datetime.timedelta(hours=1)
 
         # Post the infraction to the API
         old_nick = member.display_name
