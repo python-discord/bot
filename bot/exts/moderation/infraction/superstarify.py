@@ -136,8 +136,9 @@ class Superstarify(InfractionScheduler, Cog):
             return
 
         # Set the duration to 1 hour if none was provided
-        duration = datetime.datetime.now() + datetime.timedelta(hours=1)
-
+        if not duration:
+            duration = datetime.datetime.now() + datetime.timedelta(hours=1)
+            
         # Post the infraction to the API
         old_nick = member.display_name
         infraction_reason = f'Old nickname: {old_nick}. {reason}'
