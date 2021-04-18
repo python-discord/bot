@@ -9,7 +9,6 @@ from enum import Enum
 import discord
 from async_rediscache import RedisCache
 from discord.ext.commands import Cog, Context, MessageConverter
-from more_itertools.recipes import grouper
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
@@ -197,15 +196,15 @@ async def add_signals(incident: discord.Message) -> None:
                 return
 
 
-async def extract_message_links(message: discord.Message) -> t.Optional[list]:
+async def extract_message_links(message: discord.Message, bot: Bot) -> t.Optional[list]:
     """
     Checks if there's any message links in the text content.
 
     Then passes the the message_link into `make_message_link_embed` to format a
     embed for it containing information about the link.
 
-    As discord only allows a max of 10 embeds in a single webhook we need to
-    group the embeds into group of 10 and then return the list.
+    As discord only allows a max of 10 embeds in a single webhook, just send the
+    first 10 embeds and don't care about the rest.
 
     If no links are found for the message, it logs a trace statement.
     """
@@ -214,12 +213,10 @@ async def extract_message_links(message: discord.Message) -> t.Optional[list]:
     if message_links:
         embeds = []
         for message_link in message_links:
-            ctx = await message.bot.get_context(message)
+            ctx = await bot.get_context(message)
             embeds.append(await make_message_link_embed(ctx, message_link[0]))
 
-        webhook_embed_list = list(grouper(embeds, 10))
-
-        return webhook_embed_list
+        return embeds[:10]
 
     log.trace(
         f"Skipping discord message link detection on {message.id}: message doesn't qualify."
@@ -240,6 +237,7 @@ class Incidents(Cog):
         * See: `crawl_incidents`
 
     On message:
+        * Run message through `extract_message_links` and send them into the channel
         * Add `Signal` member emoji if message qualifies as an incident
         * Ignore messages starting with #
             * Use this if verbal communication is necessary
@@ -253,18 +251,13 @@ class Incidents(Cog):
         * If `Signal.ACTIONED` or `Signal.NOT_ACTIONED` were chosen, attempt to
           relay the incident message to #incidents-archive
         * If relay successful, delete original message
+        * Search the cache for the webhook message for this message, if found delete it.
         * See: `on_raw_reaction_add`
 
     Please refer to function docstrings for implementation details.
     """
 
-    # This dictionary maps a incident message to the message link embeds(s) sent by it
-    #
-    # Discord doesn't allow more than 10 embeds to be sent in a single webhook message
-    # hence the embeds need to be broken into groups of 10. Since we have multiple embeds
-    # and RedisCache doesn't allow storing lists, we need to join the list with commas to
-    # make it a string and then store it.
-    #
+    # This dictionary maps a incident message to the message link embeds sent by it
     # RedisCache[discord.Message.id, str]
     message_link_embeds_cache = RedisCache()
 
@@ -426,7 +419,7 @@ class Incidents(Cog):
             log.trace("Deletion was confirmed")
 
         # Deletes the message link embeds found in cache from the channel and cache.
-        await self.delete_msg_link_embeds(incident)
+        await self.delete_msg_link_embed(incident)
 
     async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
         """
@@ -515,7 +508,7 @@ class Incidents(Cog):
         Also passes the message into `add_signals` if the message is a incident.
         """
         if is_incident(message):
-            webhook_embed_list = await extract_message_links(message)
+            webhook_embed_list = await extract_message_links(message, self.bot)
             webhook = await self.bot.fetch_webhook(Webhooks.incidents)
             await self.send_webhooks(webhook_embed_list, message, webhook)
 
@@ -535,11 +528,11 @@ class Incidents(Cog):
         """
         if is_incident(msg_before):
             if msg_before.id in self.message_link_embeds_cache.items:
-                # Deletes the message link embeds found in cache from the channel and cache.
-                await self.delete_msg_link_embeds(msg_before)
+                # Deletes the message link embed found in cache from the channel and cache.
+                await self.delete_msg_link_embed(msg_before)
 
         if is_incident(msg_after):
-            webhook_embed_list = await extract_message_links(msg_after)
+            webhook_embed_list = await extract_message_links(msg_after, self.bot)
             webhook = await self.bot.fetch_webhook(Webhooks.incidents)
             await self.send_webhooks(webhook_embed_list, msg_after, webhook)
 
@@ -548,19 +541,19 @@ class Incidents(Cog):
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         """
-        Deletes the message link embeds found in cache from the channel and cache if the message
+        Deletes the message link embed found in cache from the channel and cache if the message
         is a incident and is found in msg link embeds cache.
         """
         if is_incident(message):
             if message.id in self.message_link_embeds_cache.items:
-                await self.delete_msg_link_embeds(message)
+                await self.delete_msg_link_embed(message)
 
     async def send_webhooks(
         self,
         webhook_embed_list: t.List,
         message: discord.Message,
         webhook: discord.Webhook,
-    ) -> t.List[int]:
+    ) -> t.Optional[int]:
         """
         Send Message Link Embeds to #incidents channel.
 
@@ -570,49 +563,35 @@ class Incidents(Cog):
         After sending each webhook it maps the `message.id`
         to the `webhook_msg_ids` IDs in the async redis-cache.
         """
-        webhook_msg_ids = []
         try:
-            for x, embed in enumerate(webhook_embed_list):
-                webhook_msg = await webhook.send(
-                    embeds=[x for x in embed if x is not None],
-                    username=sub_clyde(message.author.name),
-                    avatar_url=message.author.avatar_url,
-                    wait=True,
-                )
-                webhook_msg_ids.append(webhook_msg.id)
-                log.trace(
-                    f"Message Link Embed {x + 1}/{len(webhook_embed_list)} sent successfully."
-                )
+            webhook_msg = await webhook.send(
+                embeds=[x for x in webhook_embed_list if x is not None],
+                username=sub_clyde(message.author.name),
+                avatar_url=message.author.avatar_url,
+                wait=True,
+            )
+            log.trace(f"Message Link Embed sent successfully.")
 
         except discord.DiscordException:
             log.exception(
-                f"Failed to send message link embeds {message.id} to #incidents."
+                f"Failed to send message link embed {message.id} to #incidents."
             )
 
         else:
-            await self.message_link_embeds_cache.set(
-                message.id, ",".join(map(str, webhook_msg_ids))
-            )
-            log.trace("Message Link Embeds Sent successfully!")
+            await self.message_link_embeds_cache.set(message.id, webhook_msg.id)
+            log.trace("Message Link Embed Sent successfully!")
+            return webhook_msg.id
 
-        return webhook_msg_ids
-
-    async def delete_msg_link_embeds(self, message: discord.Message) -> None:
-        """Delete discord message links message found in cache for `message`."""
+    async def delete_msg_link_embed(self, message: discord.Message) -> None:
+        """Delete discord message link message found in cache for `message`."""
         log.trace("Deleting discord links webhook message.")
+        webhook_msg_id = await self.message_link_embeds_cache.get(message.id)
 
-        webhook_msg_ids = await self.message_link_embeds_cache.get(message.id)
-
-        if webhook_msg_ids:
-            webhook_msg_ids = webhook_msg_ids.split(",")
+        if webhook_msg_id:
             webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-
-            for x, msg in enumerate(webhook_msg_ids):
-                await webhook.delete_message(msg)
-                log.trace(f"Deleted discord links webhook message{x}/{len(webhook_msg_ids)}")
+            await webhook.delete_message(webhook_msg_id)
 
         await self.message_link_embeds_cache.delete(message.id)
-
         log.trace("Successfully deleted discord links webhook message.")
 
 
