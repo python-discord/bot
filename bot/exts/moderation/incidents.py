@@ -123,9 +123,9 @@ def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (
         message.channel.id == Channels.incidents,  # Message sent in #incidents
-        not message.author.bot,                    # Not by a bot
-        not message.content.startswith("#"),       # Doesn't start with a hash
-        not message.pinned,                        # And isn't header
+        not message.author.bot,  # Not by a bot
+        not message.content.startswith("#"),  # Doesn't start with a hash
+        not message.pinned,  # And isn't header
     )
     return all(conditions)
 
@@ -265,11 +265,15 @@ class Incidents(Cog):
         """Prepare `event_lock` and schedule `crawl_task` on start-up."""
         self.bot = bot
 
-        # Webhook to send message link embeds in #incidents
-        self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+        self.bot.loop.create_task(self.get_webhook())
 
         self.event_lock = asyncio.Lock()
         self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
+
+    async def get_webhook(self) -> None:
+        """Fetch and store message link embeds webhook, present in #incidents channel."""
+        await self.bot.wait_until_guild_available()
+        self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
 
     async def crawl_incidents(self) -> None:
         """
@@ -555,10 +559,10 @@ class Incidents(Cog):
                 await self.delete_msg_link_embed(message)
 
     async def send_webhooks(
-        self,
-        webhook_embed_list: t.List,
-        message: discord.Message,
-        webhook: discord.Webhook,
+            self,
+            webhook_embed_list: t.List,
+            message: discord.Message,
+            webhook: discord.Webhook,
     ) -> t.Optional[int]:
         """
         Send Message Link Embeds to #incidents channel.
