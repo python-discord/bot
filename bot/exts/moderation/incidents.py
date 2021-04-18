@@ -265,6 +265,9 @@ class Incidents(Cog):
         """Prepare `event_lock` and schedule `crawl_task` on start-up."""
         self.bot = bot
 
+        # Webhook to send message link embeds in #incidents
+        self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+
         self.event_lock = asyncio.Lock()
         self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
 
@@ -509,8 +512,7 @@ class Incidents(Cog):
         """
         if is_incident(message):
             webhook_embed_list = await extract_message_links(message, self.bot)
-            webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-            await self.send_webhooks(webhook_embed_list, message, webhook)
+            await self.send_webhooks(webhook_embed_list, message, self.incidents_webhook)
 
             await add_signals(message)
 
@@ -533,8 +535,7 @@ class Incidents(Cog):
 
         if is_incident(msg_after):
             webhook_embed_list = await extract_message_links(msg_after, self.bot)
-            webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-            await self.send_webhooks(webhook_embed_list, msg_after, webhook)
+            await self.send_webhooks(webhook_embed_list, msg_after, self.incidents_webhook)
 
             await add_signals(msg_after)
 
@@ -588,8 +589,7 @@ class Incidents(Cog):
         webhook_msg_id = await self.message_link_embeds_cache.get(message.id)
 
         if webhook_msg_id:
-            webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-            await webhook.delete_message(webhook_msg_id)
+            await self.incidents_webhook.delete_message(webhook_msg_id)
 
         await self.message_link_embeds_cache.delete(message.id)
         log.trace("Successfully deleted discord links webhook message.")
