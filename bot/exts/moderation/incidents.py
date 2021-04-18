@@ -528,10 +528,15 @@ class Incidents(Cog):
 
         The edited message is also passed into `add_signals` if it is a incident message.
         """
-        if is_incident(msg_before):
-            if msg_before.id in self.message_link_embeds_cache.items:
-                # Deletes the message link embed found in cache from the channel and cache.
-                await self.delete_msg_link_embed(msg_before)
+
+        webhook_embed_list = await extract_message_links(msg_after, self.bot)
+        webhook_msg_id = self.message_link_embeds_cache.get(msg_before.id)
+
+        if webhook_msg_id:
+            await self.incidents_webhook.edit_message(
+                message_id=webhook_msg_id,
+                embeds=[x for x in webhook_embed_list if x is not None],
+            )
 
         if is_incident(msg_after):
             webhook_embed_list = await extract_message_links(msg_after, self.bot)
