@@ -186,7 +186,7 @@ class Stream(commands.Cog):
         ]
 
         # List of tuples (UtcPosixTimestamp, str)
-        # This is so that output can be sorted on [0] before passed it's to the paginator
+        # So that the list can be sorted on the UtcPosixTimestamp before the message is passed to the paginator.
         streamer_info = []
         for member in non_staff_members_with_stream:
             if revoke_time := await self.task_cache.get(member.id):
