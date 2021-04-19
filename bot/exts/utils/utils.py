@@ -109,7 +109,7 @@ class Utils(Cog):
         # handle if it's an index int
         if isinstance(search_value, int):
             upper_bound = len(zen_lines) - 1
-            lower_bound = -1 * upper_bound
+            lower_bound = -1 * len(zen_lines)
             if not (lower_bound <= search_value <= upper_bound):
                 raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
 
