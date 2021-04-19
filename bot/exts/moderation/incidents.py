@@ -123,9 +123,9 @@ def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (
         message.channel.id == Channels.incidents,  # Message sent in #incidents
-        not message.author.bot,  # Not by a bot
-        not message.content.startswith("#"),  # Doesn't start with a hash
-        not message.pinned,  # And isn't header
+        not message.author.bot,                    # Not by a bot
+        not message.content.startswith("#"),       # Doesn't start with a hash
+        not message.pinned,                        # And isn't header
     )
     return all(conditions)
 
@@ -140,7 +140,7 @@ def has_signals(message: discord.Message) -> bool:
     return ALL_SIGNALS.issubset(own_reactions(message))
 
 
-async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Embed:
+async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional[discord.Embed]:
     """
     Create an embedded representation of the discord message link contained in the incident report.
 
@@ -156,8 +156,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Em
         message = await message_convert_object.convert(ctx, message_link)
 
     except discord.DiscordException as e:
-        embed.title = str(e)
-        embed.colour = Colours.soft_red
+        log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
 
     else:
         text = message.content
@@ -169,8 +168,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Em
             f"**Content:** {textwrap.shorten(text, 300, placeholder='...')}\n"
             "\n"
         )
-
-    return embed
+        return embed
 
 
 async def add_signals(incident: discord.Message) -> None:
@@ -214,7 +212,9 @@ async def extract_message_links(message: discord.Message, bot: Bot) -> t.Optiona
         embeds = []
         for message_link in message_links:
             ctx = await bot.get_context(message)
-            embeds.append(await make_message_link_embed(ctx, message_link[0]))
+            embed = await make_message_link_embed(ctx, message_link[0])
+            if embed:
+                embeds.append(embed)
 
         return embeds[:10]
 
