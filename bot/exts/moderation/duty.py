@@ -14,13 +14,13 @@ from bot.utils.scheduling import Scheduler
 log = logging.getLogger(__name__)
 
 
-class Duty(Cog):
-    """Commands for a moderator to go on and off duty."""
+class Modpings(Cog):
+    """Commands for a moderator to turn moderator pings on and off."""
 
     # RedisCache[str, str]
-    # The cache's keys are mods who are off-duty.
+    # The cache's keys are mods who have pings off.
     # The cache's values are the times when the role should be re-applied to them, stored in ISO format.
-    off_duty_mods = RedisCache()
+    pings_off_mods = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -29,7 +29,7 @@ class Duty(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="duty-reschedule")
+        self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="mod-pings-reschedule")
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -38,35 +38,35 @@ class Duty(Cog):
         self.moderators_role = self.guild.get_role(Roles.moderators)
 
         mod_team = self.guild.get_role(Roles.mod_team)
-        on_duty = self.moderators_role.members
-        off_duty = await self.off_duty_mods.to_dict()
+        pings_on = self.moderators_role.members
+        pings_off = await self.pings_off_mods.to_dict()
 
         log.trace("Applying the moderators role to the mod team where necessary.")
         for mod in mod_team.members:
-            if mod in on_duty:  # Make sure that on-duty mods aren't in the cache.
-                if mod in off_duty:
-                    await self.off_duty_mods.delete(mod.id)
+            if mod in pings_on:  # Make sure that on-duty mods aren't in the cache.
+                if mod in pings_off:
+                    await self.pings_off_mods.delete(mod.id)
                 continue
 
             # Keep the role off only for those in the cache.
-            if mod.id not in off_duty:
+            if mod.id not in pings_off:
                 await self.reapply_role(mod)
             else:
-                expiry = isoparse(off_duty[mod.id]).replace(tzinfo=None)
+                expiry = isoparse(pings_off[mod.id]).replace(tzinfo=None)
                 self._role_scheduler.schedule_at(expiry, mod.id, self.reapply_role(mod))
 
     async def reapply_role(self, mod: Member) -> None:
         """Reapply the moderator's role to the given moderator."""
         log.trace(f"Re-applying role to mod with ID {mod.id}.")
-        await mod.add_roles(self.moderators_role, reason="Off-duty period expired.")
+        await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
 
-    @group(name='duty', invoke_without_command=True)
+    @group(name='modpings', aliases=('modping',), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
-    async def duty_group(self, ctx: Context) -> None:
+    async def modpings_group(self, ctx: Context) -> None:
         """Allow the removal and re-addition of the pingable moderators role."""
         await ctx.send_help(ctx.command)
 
-    @duty_group.command(name='off')
+    @modpings_group.command(name='off')
     @has_any_role(*MODERATION_ROLES)
     async def off_command(self, ctx: Context, duration: Expiry) -> None:
         """
@@ -95,9 +95,9 @@ class Duty(Cog):
         mod = ctx.author
 
         until_date = duration.replace(microsecond=0).isoformat()  # Looks noisy with microseconds.
-        await mod.remove_roles(self.moderators_role, reason=f"Entered off-duty period until {until_date}.")
+        await mod.remove_roles(self.moderators_role, reason=f"Turned pings off until {until_date}.")
 
-        await self.off_duty_mods.set(mod.id, duration.isoformat())
+        await self.pings_off_mods.set(mod.id, duration.isoformat())
 
         # Allow rescheduling the task without cancelling it separately via the `on` command.
         if mod.id in self._role_scheduler:
@@ -106,7 +106,7 @@ class Duty(Cog):
 
         await ctx.send(f"{Emojis.check_mark} Moderators role has been removed until {until_date}.")
 
-    @duty_group.command(name='on')
+    @modpings_group.command(name='on')
     @has_any_role(*MODERATION_ROLES)
     async def on_command(self, ctx: Context) -> None:
         """Re-apply the pingable moderators role."""
@@ -115,9 +115,9 @@ class Duty(Cog):
             await ctx.send(":question: You already have the role.")
             return
 
-        await mod.add_roles(self.moderators_role, reason="Off-duty period canceled.")
+        await mod.add_roles(self.moderators_role, reason="Pings off period canceled.")
 
-        await self.off_duty_mods.delete(mod.id)
+        await self.pings_off_mods.delete(mod.id)
 
         # We assume the task exists. Lack of it may indicate a bug.
         self._role_scheduler.cancel(mod.id)
@@ -132,5 +132,5 @@ class Duty(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Load the Duty cog."""
-    bot.add_cog(Duty(bot))
+    """Load the Modpings cog."""
+    bot.add_cog(Modpings(bot))
