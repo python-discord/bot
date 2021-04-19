@@ -14,7 +14,7 @@ from bot.utils.scheduling import Scheduler
 log = logging.getLogger(__name__)
 
 
-class Modpings(Cog):
+class ModPings(Cog):
     """Commands for a moderator to turn moderator pings on and off."""
 
     # RedisCache[str, str]
@@ -132,5 +132,5 @@ class Modpings(Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Load the Modpings cog."""
-    bot.add_cog(Modpings(bot))
+    """Load the ModPings cog."""
+    bot.add_cog(ModPings(bot))
