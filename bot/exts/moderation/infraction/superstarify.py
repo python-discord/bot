@@ -11,7 +11,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Duration
+from bot.converters import Duration, Expiry
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.utils.messages import format_user
@@ -110,7 +110,7 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: t.Optional[Duration],
+        duration: t.Optional[Expiry],
         *,
         reason: str = '',
     ) -> None:
