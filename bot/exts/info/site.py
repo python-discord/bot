@@ -1,12 +1,11 @@
 from textwrap import shorten
 
 from discord import Colour, Embed
-from discord.ext.commands import Cog, Context, Greedy, group
+from discord.ext.commands import Cog, Context, group
 
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 
 log = get_logger(__name__)
 
@@ -104,40 +103,6 @@ class Site(Cog):
         )
 
         await ctx.send(embed=embed)
-
-    @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
-    async def site_rules(self, ctx: Context, rules: Greedy[int]) -> None:
-        """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title='Rules', color=Colour.og_blurple(), url=f'{BASE_URL}/pages/rules')
-
-        if not rules:
-            # Rules were not submitted. Return the default description.
-            rules_embed.description = (
-                "The rules and guidelines that apply to this community can be found on"
-                f" our [rules page]({BASE_URL}/pages/rules). We expect"
-                " all members of the community to have read and understood these."
-            )
-
-            await ctx.send(embed=rules_embed)
-            return
-
-        full_rules = await self.bot.api_client.get('rules', params={'link_format': 'md'})
-
-        # Remove duplicates and sort the rule indices
-        rules = sorted(set(rules))
-
-        invalid = ', '.join(str(index) for index in rules if index < 1 or index > len(full_rules))
-
-        if invalid:
-            await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=' ...'))
-            return
-
-        for rule in rules:
-            self.bot.stats.incr(f"rule_uses.{rule}")
-
-        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
-
-        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
 def setup(bot: Bot) -> None:
