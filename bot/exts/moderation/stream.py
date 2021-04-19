@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta, timezone
+from operator import itemgetter
 
 import arrow
 import discord
@@ -8,8 +9,9 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, VideoPermission
+from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES, VideoPermission
 from bot.converters import Expiry
+from bot.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
 
@@ -172,6 +174,46 @@ class Stream(commands.Cog):
 
         await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
         log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
+
+    @commands.command(aliases=('lstream',))
+    @commands.has_any_role(*MODERATION_ROLES)
+    async def liststream(self, ctx: commands.Context) -> None:
+        """Lists all non-staff users who have permission to stream."""
+        non_staff_members_with_stream = [
+            _member
+            for _member in ctx.guild.get_role(Roles.video).members
+            if not any(role.id in STAFF_ROLES for role in _member.roles)
+        ]
+
+        # List of tuples (UtcPosixTimestamp, str)
+        # This is so that we can sort before outputting to the paginator
+        streamer_info = []
+        for member in non_staff_members_with_stream:
+            if revoke_time := await self.task_cache.get(member.id):
+                # Member only has temporary streaming perms
+                revoke_delta = Arrow.utcfromtimestamp(revoke_time).humanize()
+                message = f"{member.mention} will have stream permissions revoked {revoke_delta}."
+            else:
+                message = f"{member.mention} has permanent streaming permissions."
+
+            # If revoke_time is None use max timestamp to force sort to put them at the end
+            streamer_info.append(
+                (revoke_time or Arrow.max.timestamp(), message)
+            )
+
+        if streamer_info:
+            # Sort based on duration left of streaming perms
+            streamer_info.sort(key=itemgetter(0))
+
+            # Only output the message in the pagination
+            lines = [line[1] for line in streamer_info]
+            embed = discord.Embed(
+                title=f"Members who can stream (`{len(lines)}` total)",
+                colour=Colours.soft_green
+            )
+            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+        else:
+            await ctx.send("No members with stream permissions found.")
 
 
 def setup(bot: Bot) -> None:
