@@ -135,7 +135,7 @@ class Superstarify(InfractionScheduler, Cog):
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
 
-        # Set the duration to 1 hour if none was provided
+        # Set to default duration if none was provided.
         duration = duration or await Duration().convert(ctx, SUPERSTARIFY_DEFAULT_DURATION)
 
         # Post the infraction to the API
