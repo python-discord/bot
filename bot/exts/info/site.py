@@ -71,22 +71,6 @@ class Site(Cog):
 
         await ctx.send(embed=embed)
 
-    @site_group.command(name="help")
-    async def site_help(self, ctx: Context) -> None:
-        """Info about the site's Getting Help page."""
-        url = f"{BASE_URL}/pages/guides/pydis-guides/asking-good-questions/"
-
-        embed = Embed(title="Asking Good Questions")
-        embed.set_footer(text=url)
-        embed.colour = Colour.og_blurple()
-        embed.description = (
-            "Asking the right question about something that's new to you can sometimes be tricky. "
-            f"To help with this, we've created a [guide to asking good questions]({url}) on our website. "
-            "It contains everything you need to get the very best help from our community."
-        )
-
-        await ctx.send(embed=embed)
-
     @site_group.command(name="faq", root_aliases=("faq",))
     async def site_faq(self, ctx: Context) -> None:
         """Info about the site's FAQ page."""
