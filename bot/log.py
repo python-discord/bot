@@ -87,10 +87,27 @@ def _monkeypatch_trace(self: logging.Logger, msg: str, *args, **kwargs) -> None:
 
 
 def _set_trace_loggers() -> None:
-    """Set loggers to the trace level according to the value from the BOT_TRACE_LOGGERS env var."""
-    if constants.Bot.trace_loggers:
-        if constants.Bot.trace_loggers in {"*", "ROOT"}:
+    """
+    Set loggers to the trace level according to the value from the BOT_TRACE_LOGGERS env var.
+
+    When the env var is a list of logger names delimited by a comma,
+    each of the listed loggers will be set to the trace level.
+
+    If this list is prefixed with a "!", all of the loggers except the listed ones will be set to the trace level.
+
+    Otherwise if the env var begins with a "*",
+    the root logger is set to the trace level and other contents are ignored.
+    """
+    level_filter = constants.Bot.trace_loggers
+    if level_filter:
+        if level_filter.startswith("*"):
             logging.getLogger().setLevel(logging.TRACE)
+
+        elif level_filter.startswith("!"):
+            logging.getLogger().setLevel(logging.TRACE)
+            for logger_name in level_filter.strip("!,").split(","):
+                logging.getLogger(logger_name).setLevel(logging.DEBUG)
+
         else:
-            for logger_name in constants.Bot.trace_loggers.split(","):
+            for logger_name in level_filter.strip(",").split(","):
                 logging.getLogger(logger_name).setLevel(logging.TRACE)
