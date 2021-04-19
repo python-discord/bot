@@ -9,7 +9,7 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES, VideoPermission
+from bot.constants import Channels, Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES, VideoPermission
 from bot.converters import Expiry
 from bot.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
@@ -69,6 +69,27 @@ class Stream(commands.Cog):
                 key,
                 self._revoke_streaming_permission(member)
             )
+
+    async def _suspend_stream(self, ctx: commands.Context, member: discord.Member) -> None:
+        """Suspend a member's stream."""
+        voice_state = member.voice
+
+        if not voice_state:
+            return
+
+        # If the user is streaming.
+        if voice_state.self_stream:
+            # End user's stream by moving them to AFK voice channel and back.
+            original_vc = voice_state.channel
+            await member.move_to(self.bot.get_channel(Channels.afk_voice))
+            await member.move_to(original_vc)
+
+            # Notify.
+            await ctx.send(f"{member.mention}'s stream has been suspended!")
+            log.debug(f"Successfully suspended stream from {member} ({member.id}).")
+            return
+
+        log.debug(f"No stream found to suspend from {member} ({member.id}).")
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -170,10 +191,12 @@ class Stream(commands.Cog):
 
             await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {member.mention}.")
             log.debug(f"Successfully revoked streaming permission from {member} ({member.id}).")
-            return
 
-        await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
-        log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
+        else:
+            await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
+            log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
+
+        await self._suspend_stream(ctx, member)
 
     @commands.command(aliases=('lstream',))
     @commands.has_any_role(*MODERATION_ROLES)
