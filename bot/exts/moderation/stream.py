@@ -180,9 +180,9 @@ class Stream(commands.Cog):
     async def liststream(self, ctx: commands.Context) -> None:
         """Lists all non-staff users who have permission to stream."""
         non_staff_members_with_stream = [
-            _member
-            for _member in ctx.guild.get_role(Roles.video).members
-            if not any(role.id in STAFF_ROLES for role in _member.roles)
+            member
+            for member in ctx.guild.get_role(Roles.video).members
+            if not any(role.id in STAFF_ROLES for role in member.roles)
         ]
 
         # List of tuples (UtcPosixTimestamp, str)
