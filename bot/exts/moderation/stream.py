@@ -208,7 +208,7 @@ class Stream(commands.Cog):
             # Only output the message in the pagination
             lines = [line[1] for line in streamer_info]
             embed = discord.Embed(
-                title=f"Members who can stream (`{len(lines)}` total)",
+                title=f"Members with streaming permission (`{len(lines)}` total)",
                 colour=Colours.soft_green
             )
             await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
