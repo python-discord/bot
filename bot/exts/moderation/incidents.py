@@ -517,10 +517,11 @@ class Incidents(Cog):
         Also passes the message into `add_signals` if the message is a incident.
         """
         if is_incident(message):
-            webhook_embed_list = await extract_message_links(message, self.bot)
-            await self.send_webhooks(webhook_embed_list, message, self.incidents_webhook)
-
             await add_signals(message)
+
+            webhook_embed_list = await extract_message_links(message, self.bot)
+            if webhook_embed_list:
+                await self.send_webhooks(webhook_embed_list, message, self.incidents_webhook)
 
     @Cog.listener()
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
@@ -536,20 +537,18 @@ class Incidents(Cog):
 
         The edited message is also passed into `add_signals` if it is a incident message.
         """
-        webhook_embed_list = await extract_message_links(msg_after, self.bot)
-        webhook_msg_id = self.message_link_embeds_cache.get(msg_before.id)
-
-        if webhook_msg_id:
-            await self.incidents_webhook.edit_message(
-                message_id=webhook_msg_id,
-                embeds=[x for x in webhook_embed_list if x is not None],
-            )
-
         if is_incident(msg_after):
             webhook_embed_list = await extract_message_links(msg_after, self.bot)
-            await self.send_webhooks(webhook_embed_list, msg_after, self.incidents_webhook)
+            webhook_msg_id = await self.message_link_embeds_cache.get(msg_before.id)
 
-            await add_signals(msg_after)
+            if webhook_msg_id:
+                await self.incidents_webhook.edit_message(
+                    message_id=webhook_msg_id,
+                    embeds=[x for x in webhook_embed_list if x is not None],
+                )
+                return
+
+            await self.send_webhooks(webhook_embed_list, msg_after, self.incidents_webhook)
 
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
@@ -559,8 +558,7 @@ class Incidents(Cog):
         Search through the cache for message, if found delete it from cache and channel.
         """
         if is_incident(message):
-            if message.id in self.message_link_embeds_cache.items:
-                await self.delete_msg_link_embed(message)
+            await self.delete_msg_link_embed(message)
 
     async def send_webhooks(
             self,
