@@ -8,7 +8,7 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, Roles, STAFF_ROLES, VideoPermission
+from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, VideoPermission
 from bot.converters import Expiry
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import format_infraction_with_duration
@@ -69,7 +69,7 @@ class Stream(commands.Cog):
             )
 
     @commands.command(aliases=("streaming",))
-    @commands.has_any_role(*STAFF_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     async def stream(self, ctx: commands.Context, member: discord.Member, duration: Expiry = None) -> None:
         """
         Temporarily grant streaming permissions to a member for a given duration.
@@ -126,7 +126,7 @@ class Stream(commands.Cog):
         log.debug(f"Successfully gave {member} ({member.id}) permission to stream until {revoke_time}.")
 
     @commands.command(aliases=("pstream",))
-    @commands.has_any_role(*STAFF_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     async def permanentstream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Permanently grants the given member the permission to stream."""
         log.trace(f"Attempting to give permanent streaming permission to {member} ({member.id}).")
@@ -153,7 +153,7 @@ class Stream(commands.Cog):
         log.debug(f"Successfully gave {member} ({member.id}) permanent streaming permission.")
 
     @commands.command(aliases=("unstream", "rstream"))
-    @commands.has_any_role(*STAFF_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     async def revokestream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Revoke the permission to stream from the given member."""
         log.trace(f"Attempting to remove streaming permission from {member} ({member.id}).")
