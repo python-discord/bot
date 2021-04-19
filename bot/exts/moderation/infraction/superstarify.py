@@ -1,4 +1,3 @@
-import datetime
 import json
 import logging
 import random
@@ -12,7 +11,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry
+from bot.converters import Duration
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.utils.messages import format_user
@@ -20,6 +19,7 @@ from bot.utils.time import format_infraction
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
+SUPERSTARIFY_DEFAULT_DURATION = "1h"
 
 with Path("bot/resources/stars.json").open(encoding="utf-8") as stars_file:
     STAR_NAMES = json.load(stars_file)
@@ -110,7 +110,7 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: t.Optional[Expiry],
+        duration: t.Optional[Duration],
         *,
         reason: str = '',
     ) -> None:
@@ -136,7 +136,7 @@ class Superstarify(InfractionScheduler, Cog):
             return
 
         # Set the duration to 1 hour if none was provided
-        duration = duration or datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        duration = duration or await Duration().convert(ctx, SUPERSTARIFY_DEFAULT_DURATION)
 
         # Post the infraction to the API
         old_nick = member.display_name
