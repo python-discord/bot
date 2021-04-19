@@ -206,6 +206,7 @@ guild:
         staff_announcements:    &STAFF_ANNOUNCEMENTS    464033278631084042
 
         # Voice Channels
+        afk_voice:                          756327105389920306
         admins_voice:       &ADMINS_VOICE   500734494840717332
         code_help_voice_1:                  751592231726481530
         code_help_voice_2:                  764232549840846858
