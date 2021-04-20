@@ -144,7 +144,7 @@ def parse_rfc1123(stamp: str) -> datetime.datetime:
     return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
 
 
-# Hey, this could actually be used in the off_topic_names and reddit cogs :)
+# Hey, this could actually be used in the off_topic_names cog :)
 async def wait_until(time: datetime.datetime, start: Optional[datetime.datetime] = None) -> None:
     """
     Wait until a given time.

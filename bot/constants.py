@@ -467,7 +467,6 @@ class Webhooks(metaclass=YAMLGetter):
     dev_log: int
     duck_pond: int
     incidents_archive: int
-    reddit: int
     talent_pool: int
 
 
@@ -544,14 +543,6 @@ class URLs(metaclass=YAMLGetter):
     # Site endpoints
     site_logs_view: str
     paste_service: str
-
-
-class Reddit(metaclass=YAMLGetter):
-    section = "reddit"
-
-    client_id: Optional[str]
-    secret: Optional[str]
-    subreddits: list
 
 
 class AntiSpam(metaclass=YAMLGetter):

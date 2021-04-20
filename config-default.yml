@@ -288,7 +288,6 @@ guild:
         duck_pond:                          637821475327311927
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
-        reddit:                             635408384794951680
         talent_pool:                        569145364800602132
 
 
@@ -416,13 +415,6 @@ anti_spam:
         role_mentions:
             interval: 10
             max: 3
-
-
-reddit:
-    client_id: !ENV "REDDIT_CLIENT_ID"
-    secret: !ENV "REDDIT_SECRET"
-    subreddits:
-        - 'r/Python'
 
 
 big_brother:
