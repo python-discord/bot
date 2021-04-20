@@ -173,14 +173,15 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         """Tests the _force_voice_sync helper function."""
         await self.cog._async_init()
 
-        members = [MockMember() for _ in range(10)]
-        members.extend([MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES])
+        # Create a regular member, and one member for each of the moderation roles
+        moderation_members = [MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES]
+        members = [MockMember(), *moderation_members]
 
         channel = MockVoiceChannel(members=members)
 
         await self.cog._force_voice_sync(channel)
         for member in members:
-            if any(role.id in MODERATION_ROLES for role in member.roles):
+            if member in moderation_members:
                 member.move_to.assert_not_called()
             else:
                 self.assertEqual(member.move_to.call_count, 2)
@@ -213,14 +214,15 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         """Test to ensure kick function can remove all members from a voice channel."""
         await self.cog._async_init()
 
-        members = [MockMember() for _ in range(10)]
-        members.extend([MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES])
+        # Create a regular member, and one member for each of the moderation roles
+        moderation_members = [MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES]
+        members = [MockMember(), *moderation_members]
 
         channel = MockVoiceChannel(members=members)
         await self.cog._kick_voice_members(channel)
 
         for member in members:
-            if any(role.id in MODERATION_ROLES for role in member.roles):
+            if member in moderation_members:
                 member.move_to.assert_not_called()
             else:
                 self.assertEqual((None,), member.move_to.call_args_list[0].args)
@@ -233,19 +235,15 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         Returns the list of erroneous members,
         as well as a list of regular and erroneous members combined, in that order.
         """
-        erroneous_members = [MockMember(move_to=Mock(side_effect=Exception())) for _ in range(5)]
+        erroneous_member = MockMember(move_to=Mock(side_effect=Exception()))
+        members = [MockMember(), erroneous_member]
 
-        members = []
-        for i in range(5):
-            members.append(MockMember())
-            members.append(erroneous_members[i])
-
-        return erroneous_members, members
+        return erroneous_member, members
 
     async def test_kick_move_to_error(self):
         """Test to ensure move_to gets called on all members during kick, even if some fail."""
         await self.cog._async_init()
-        failing_members, members = self.create_erroneous_members()
+        _, members = self.create_erroneous_members()
 
         await self.cog._kick_voice_members(MockVoiceChannel(members=members))
         for member in members:
@@ -254,11 +252,11 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
     async def test_sync_move_to_error(self):
         """Test to ensure move_to gets called on all members during sync, even if some fail."""
         await self.cog._async_init()
-        failing_members, members = self.create_erroneous_members()
+        failing_member, members = self.create_erroneous_members()
 
         await self.cog._force_voice_sync(MockVoiceChannel(members=members))
         for member in members:
-            self.assertEqual(member.move_to.call_count, 1 if member in failing_members else 2)
+            self.assertEqual(member.move_to.call_count, 1 if member == failing_member else 2)
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
