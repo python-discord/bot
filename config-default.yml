@@ -260,7 +260,8 @@ guild:
         devops:                             409416496733880320
         domain_leads:                       807415650778742785
         helpers:            &HELPERS_ROLE   267630620367257601
-        moderators:         &MODS_ROLE      267629731250176001
+        moderators:         &MODS_ROLE      831776746206265384
+        mod_team:           &MOD_TEAM_ROLE  267629731250176001
         owners:             &OWNERS_ROLE    267627879762755584
         project_leads:                      815701647526330398
 
@@ -273,13 +274,14 @@ guild:
 
     moderation_roles:
         - *ADMINS_ROLE
+        - *MOD_TEAM_ROLE
         - *MODS_ROLE
         - *OWNERS_ROLE
 
     staff_roles:
         - *ADMINS_ROLE
         - *HELPERS_ROLE
-        - *MODS_ROLE
+        - *MOD_TEAM_ROLE
         - *OWNERS_ROLE
 
     webhooks:
