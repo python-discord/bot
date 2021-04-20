@@ -14,7 +14,7 @@ from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
+from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
 from bot.utils.messages import format_user
 from bot.utils.time import humanize_delta
 
@@ -115,9 +115,9 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"@everyone\n{content}"
+                content = f"<@&{Roles.moderators}>\n{content}"
             else:
-                content = "@everyone"
+                content = f"<@&{Roles.moderators}>"
 
         # Truncate content to 2000 characters and append an ellipsis.
         if content and len(content) > 2000:
@@ -127,8 +127,7 @@ class ModLog(Cog, name="ModLog"):
         log_message = await channel.send(
             content=content,
             embed=embed,
-            files=files,
-            allowed_mentions=discord.AllowedMentions(everyone=True)
+            files=files
         )
 
         if additional_embeds:
