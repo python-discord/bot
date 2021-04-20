@@ -412,6 +412,7 @@ class Channels(metaclass=YAMLGetter):
     python_general: int
 
     cooldown: int
+    how_to_get_help: int
 
     attachment_log: int
     message_log: int
@@ -492,6 +493,7 @@ class Roles(metaclass=YAMLGetter):
     domain_leads: int
     helpers: int
     moderators: int
+    mod_team: int
     owners: int
     project_leads: int
 
