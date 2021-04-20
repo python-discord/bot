@@ -275,6 +275,7 @@ guild:
     moderation_roles:
         - *ADMINS_ROLE
         - *MOD_TEAM_ROLE
+        - *MODS_ROLE
         - *OWNERS_ROLE
 
     staff_roles:
