@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 class ModPings(Cog):
     """Commands for a moderator to turn moderator pings on and off."""
 
-    # RedisCache[str, str]
+    # RedisCache[discord.Member.id, 'Naïve ISO 8601 string']
     # The cache's keys are mods who have pings off.
     # The cache's values are the times when the role should be re-applied to them, stored in ISO format.
     pings_off_mods = RedisCache()
