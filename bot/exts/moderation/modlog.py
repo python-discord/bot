@@ -127,8 +127,7 @@ class ModLog(Cog, name="ModLog"):
         log_message = await channel.send(
             content=content,
             embed=embed,
-            files=files,
-            allowed_mentions=discord.AllowedMentions(everyone=True)
+            files=files
         )
 
         if additional_embeds:
