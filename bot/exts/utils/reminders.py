@@ -100,7 +100,7 @@ class Reminders(Cog):
 
         if delivery_dt:
             # Reminder deletion will have a `None` `delivery_dt`
-            footer_str += ', Done at'
+            footer_str += ', Due'
             embed.timestamp = delivery_dt
 
         embed.set_footer(text=footer_str)
