@@ -149,8 +149,6 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         Channel: Special/#bot-commands (814190307980607493)
         Content: This is a very important message!
     """
-    embed = discord.Embed()
-
     try:
         message_convert_object = MessageConverter()
         message = await message_convert_object.convert(ctx, message_link)
@@ -162,12 +160,16 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         text = message.content
         channel = message.channel
 
-        embed.description = (
-            f"**Author:** {format_user(message.author)}\n"
-            f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
-            f"**Content:** {textwrap.shorten(text, 300, placeholder='...')}\n"
-            "\n"
+        embed = discord.Embed(
+            colour=discord.Colour.gold(),
+            description=(
+                f"**Author:** {format_user(message.author)}\n"
+                f"**Channel:** <#{channel.id}> ({channel.category}/#{channel.name})\n"
+                f"**Content:** {textwrap.shorten(text, 300, placeholder='...')}\n"
+            )
         )
+        embed.set_footer(text=f"Message ID: {message.id}")
+
         return embed
 
 
