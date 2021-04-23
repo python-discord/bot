@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import re
 import textwrap
 import typing
 from collections import Counter
@@ -9,12 +10,13 @@ from typing import List, Optional, Union
 
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
-from discord import Emoji, Member, Message, TextChannel
+from discord import Embed, Emoji, Member, Message, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Guild, Roles
+from bot.constants import Channels, Colours, Emojis, Guild, Roles
+from bot.utils.messages import count_unique_users_reaction
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import get_time_delta, humanize_delta, time_since
 
@@ -119,6 +121,46 @@ class Reviewer:
 
         review = "\n\n".join((opening, current_nominations, review_body, vote_request))
         return review, seen_emoji
+
+    async def archive_vote(self, message: PartialMessage, passed: bool) -> None:
+        """Archive this vote to #nomination-archive."""
+        message = await message.fetch()
+
+        # We assume that the first user mentioned is the user that we are voting on
+        user_id = int(re.search(r"<@!?(\d+?)>", message.content).group(1))
+
+        # Get reaction counts
+        seen = await count_unique_users_reaction(
+            message,
+            lambda r: "ducky" in str(r) or str(r) == "\N{EYES}"
+        )
+        upvotes = await count_unique_users_reaction(message, lambda r: str(r) == "\N{THUMBS UP SIGN}", False)
+        downvotes = await count_unique_users_reaction(message, lambda r: str(r) == "\N{THUMBS DOWN SIGN}", False)
+
+        # Remove the first and last paragraphs
+        content = message.content.split("\n\n", maxsplit=1)[1].rsplit("\n\n", maxsplit=1)[0]
+
+        result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
+        colour = Colours.soft_green if passed else Colours.soft_red
+        timestamp = datetime.utcnow().strftime("%d/%m/%Y")
+
+        embed_content = (
+            f"{result} on {timestamp}\n"
+            f"With {seen} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
+            f"{content}"
+        )
+
+        if user := await self.bot.fetch_user(user_id):
+            embed_title = f"Vote for {user} (`{user.id}`)"
+        else:
+            embed_title = f"Vote for `{user_id}`"
+
+        await self.bot.get_channel(Channels.nomination_archive).send(embed=Embed(
+            title=embed_title,
+            description=embed_content,
+            colour=colour
+        ))
+        await message.delete()
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""

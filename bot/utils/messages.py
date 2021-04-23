@@ -5,9 +5,10 @@ import random
 import re
 from functools import partial
 from io import BytesIO
-from typing import List, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union
 
 import discord
+from discord import Reaction
 from discord.errors import HTTPException
 from discord.ext.commands import Context
 
@@ -162,6 +163,27 @@ async def send_attachments(
             await destination.send(embed=embed, **webhook_send_kwargs)
 
     return urls
+
+
+async def count_unique_users_reaction(
+        message: discord.Message,
+        predicate: Callable[[Reaction], bool] = lambda _: True,
+        count_bots: bool = True
+) -> int:
+    """
+    Count the amount of unique users who reacted to the message.
+
+    A predicate function can be passed to check if this reaction should be counted, along with a count_bot flag.
+    """
+    unique_users = set()
+
+    for reaction in message.reactions:
+        if predicate(reaction):
+            async for user in reaction.users():
+                if count_bots or not user.bot:
+                    unique_users.add(user.id)
+
+    return len(unique_users)
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:
