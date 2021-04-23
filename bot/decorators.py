@@ -141,6 +141,7 @@ def redirect_output(
             elif categories and ctx.channel.category.id not in categories:
                 log.trace(f"{ctx.author} used {ctx.command} in a category that can bypass output redirection")
                 await func(self, ctx, *args, **kwargs)
+                return
 
             redirect_channel = ctx.guild.get_channel(destination_channel)
             old_channel = ctx.channel
