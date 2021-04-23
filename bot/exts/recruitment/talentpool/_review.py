@@ -103,7 +103,7 @@ class Reviewer:
                 f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
             ), None
 
-        opening = f"<@&{Roles.moderators}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
+        opening = f"<@&{Roles.mod_team}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
 
         current_nominations = "\n\n".join(
             f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}" for entry in nomination['entries']
