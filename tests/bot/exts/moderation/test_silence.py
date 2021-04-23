@@ -205,10 +205,10 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         overwrites = {
             channel.guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
         }
-        channel.guild.create_voice_channel.assert_called_once_with("mute-temp", overwrites=overwrites)
+        channel.guild.create_voice_channel.assert_awaited_once_with("mute-temp", overwrites=overwrites)
 
         # Check bot deleted channel
-        new_channel.delete.assert_called_once()
+        new_channel.delete.assert_awaited_once()
 
     async def test_voice_kick(self):
         """Test to ensure kick function can remove all members from a voice channel."""
@@ -235,7 +235,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         Returns the list of erroneous members,
         as well as a list of regular and erroneous members combined, in that order.
         """
-        erroneous_member = MockMember(move_to=Mock(side_effect=Exception()))
+        erroneous_member = MockMember(move_to=AsyncMock(side_effect=Exception()))
         members = [MockMember(), erroneous_member]
 
         return erroneous_member, members
@@ -247,7 +247,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog._kick_voice_members(MockVoiceChannel(members=members))
         for member in members:
-            member.move_to.assert_called_once()
+            member.move_to.assert_awaited_once()
 
     async def test_sync_move_to_error(self):
         """Test to ensure move_to gets called on all members during sync, even if some fail."""
@@ -399,7 +399,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel = MockVoiceChannel()
         await self.cog.silence.callback(self.cog, ctx, 10, channel, kick=False)
 
-        sync.assert_called_once_with(self.cog, channel)
+        sync.assert_awaited_once_with(self.cog, channel)
         kick.assert_not_called()
 
     @voice_sync_helper
@@ -408,7 +408,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         channel = MockVoiceChannel()
         await self.cog.silence.callback(self.cog, ctx, 10, channel, kick=True)
 
-        kick.assert_called_once_with(channel)
+        kick.assert_awaited_once_with(channel)
         sync.assert_not_called()
 
     @voice_sync_helper
@@ -510,7 +510,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         """Channel's previous overwrites were cached."""
         overwrite_json = '{"send_messages": true, "add_reactions": false}'
         await self.cog._set_silence_overwrites(self.text_channel)
-        self.cog.previous_overwrites.set.assert_called_once_with(self.text_channel.id, overwrite_json)
+        self.cog.previous_overwrites.set.assert_awaited_once_with(self.text_channel.id, overwrite_json)
 
     @autospec(silence, "datetime")
     async def test_cached_unsilence_time(self, datetime_mock):
@@ -597,7 +597,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
                             await self.cog.unsilence.callback(self.cog, ctx, channel=target)
 
                             call_args = (message, ctx.channel, target or ctx.channel)
-                            send_message.assert_called_once_with(*call_args, alert_target=was_unsilenced)
+                            send_message.assert_awaited_once_with(*call_args, alert_target=was_unsilenced)
 
     async def test_skipped_already_unsilenced(self):
         """Permissions were not set and `False` was returned for an already unsilenced channel."""
@@ -731,11 +731,11 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
                 await self.cog._unsilence_wrapper(channel, context)
 
                 if context is None:
-                    send_message.assert_called_once_with(message, channel, channel, alert_target=True)
+                    send_message.assert_awaited_once_with(message, channel, channel, alert_target=True)
                 else:
-                    send_message.assert_called_once_with(message, context.channel, channel, alert_target=True)
+                    send_message.assert_awaited_once_with(message, context.channel, channel, alert_target=True)
 
-                channel.set_permissions.assert_called_once_with(role, overwrite=overwrites)
+                channel.set_permissions.assert_awaited_once_with(role, overwrite=overwrites)
                 if channel != ctx.channel:
                     ctx.channel.send.assert_not_called()
 
@@ -759,7 +759,7 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         message = "Test basic message."
         await self.cog.send_message(message, *self.text_channels, alert_target=False)
 
-        self.text_channels[0].send.assert_called_once_with(message)
+        self.text_channels[0].send.assert_awaited_once_with(message)
         self.text_channels[1].send.assert_not_called()
 
     async def test_send_to_multiple_channels(self):
@@ -767,8 +767,8 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         message = "Test basic message."
         await self.cog.send_message(message, *self.text_channels, alert_target=True)
 
-        self.text_channels[0].send.assert_called_once_with(message)
-        self.text_channels[1].send.assert_called_once_with(message)
+        self.text_channels[0].send.assert_awaited_once_with(message)
+        self.text_channels[1].send.assert_awaited_once_with(message)
 
     async def test_duration_replacement(self):
         """Tests that the channel name was set correctly for one target channel."""
@@ -776,7 +776,7 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.send_message(message, *self.text_channels, alert_target=False)
 
         updated_message = message.replace("current channel", self.text_channels[0].mention)
-        self.text_channels[0].send.assert_called_once_with(updated_message)
+        self.text_channels[0].send.assert_awaited_once_with(updated_message)
         self.text_channels[1].send.assert_not_called()
 
     async def test_name_replacement_multiple_channels(self):
@@ -785,14 +785,14 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.send_message(message, *self.text_channels, alert_target=True)
 
         updated_message = message.replace("current channel", self.text_channels[0].mention)
-        self.text_channels[0].send.assert_called_once_with(updated_message)
-        self.text_channels[1].send.assert_called_once_with(message)
+        self.text_channels[0].send.assert_awaited_once_with(updated_message)
+        self.text_channels[1].send.assert_awaited_once_with(message)
 
     async def test_silence_voice(self):
         """Tests that the correct message was sent when a voice channel is muted without alerting."""
         message = "This should show up just here."
         await self.cog.send_message(message, self.text_channels[0], self.voice_channel, alert_target=False)
-        self.text_channels[0].send.assert_called_once_with(message)
+        self.text_channels[0].send.assert_awaited_once_with(message)
         self.text_channels[1].send.assert_not_called()
 
     async def test_silence_voice_alert(self):
@@ -804,8 +804,8 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
             await self.cog.send_message(message, self.text_channels[0], self.voice_channel, alert_target=True)
 
         updated_message = message.replace("current channel", self.voice_channel.mention)
-        self.text_channels[0].send.assert_called_once_with(updated_message)
-        self.text_channels[1].send.assert_called_once_with(updated_message)
+        self.text_channels[0].send.assert_awaited_once_with(updated_message)
+        self.text_channels[1].send.assert_awaited_once_with(updated_message)
 
         mock_voice_channels.get.assert_called_once_with(self.voice_channel.id)
 
@@ -818,7 +818,7 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
             await self.cog.send_message(message, self.text_channels[1], self.voice_channel, alert_target=True)
 
             updated_message = message.replace("current channel", self.voice_channel.mention)
-            self.text_channels[1].send.assert_called_once_with(updated_message)
+            self.text_channels[1].send.assert_awaited_once_with(updated_message)
 
             mock_voice_channels.get.assert_called_once_with(self.voice_channel.id)
             self.bot.get_channel.assert_called_once_with(self.text_channels[1].id)
