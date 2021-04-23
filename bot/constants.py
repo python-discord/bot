@@ -492,6 +492,7 @@ class Roles(metaclass=YAMLGetter):
     domain_leads: int
     helpers: int
     moderators: int
+    mod_team: int
     owners: int
     project_leads: int
 

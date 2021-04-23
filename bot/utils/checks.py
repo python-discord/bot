@@ -20,8 +20,8 @@ from bot import constants
 log = logging.getLogger(__name__)
 
 
-class InWhitelistCheckFailure(CheckFailure):
-    """Raised when the `in_whitelist` check fails."""
+class ContextCheckFailure(CheckFailure):
+    """Raised when a context-specific check fails."""
 
     def __init__(self, redirect_channel: Optional[int]) -> None:
         self.redirect_channel = redirect_channel
@@ -34,6 +34,10 @@ class InWhitelistCheckFailure(CheckFailure):
         error_message = f"You are not allowed to use that command{redirect_message}."
 
         super().__init__(error_message)
+
+
+class InWhitelistCheckFailure(ContextCheckFailure):
+    """Raised when the `in_whitelist` check fails."""
 
 
 def in_whitelist_check(
