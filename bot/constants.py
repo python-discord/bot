@@ -199,6 +199,7 @@ class Bot(metaclass=YAMLGetter):
     prefix: str
     sentry_dsn: Optional[str]
     token: str
+    trace_loggers: Optional[str]
 
 
 class Redis(metaclass=YAMLGetter):

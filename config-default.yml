@@ -1,7 +1,8 @@
 bot:
-    prefix:      "!"
-    sentry_dsn:  !ENV "BOT_SENTRY_DSN"
-    token:       !ENV "BOT_TOKEN"
+    prefix:         "!"
+    sentry_dsn:     !ENV "BOT_SENTRY_DSN"
+    token:          !ENV "BOT_TOKEN"
+    trace_loggers:  !ENV "BOT_TRACE_LOGGERS"
 
     clean:
         # Maximum number of messages to traverse for clean commands
