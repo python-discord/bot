@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import random
 import re
@@ -10,7 +11,7 @@ from typing import List, Optional, Union
 
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
-from discord import Embed, Emoji, Member, Message, PartialMessage, TextChannel
+from discord import Embed, Emoji, Member, Message, NoMoreItems, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
@@ -130,19 +131,34 @@ class Reviewer:
         """Archive this vote to #nomination-archive."""
         message = await message.fetch()
 
+        # We consider that if a message has been sent less than 2 second before the one being archived
+        # it is part of the same nomination.
+        # For that we try to get messages sent in this timeframe until none is returned and NoMoreItems is raised.
+        messages = [message]
+        with contextlib.suppress(NoMoreItems):
+            while True:
+                new_message = await message.channel.history(  # noqa: B305 - yes flake8, .next() is a thing here.
+                    before=messages[-1].created_at,
+                    after=messages[-1].created_at - timedelta(seconds=2)
+                ).next()
+                messages.append(new_message)
+
+        content = "".join(message_.content for message_ in messages[::-1])
+
         # We assume that the first user mentioned is the user that we are voting on
-        user_id = int(re.search(r"<@!?(\d+?)>", message.content).group(1))
+        user_id = int(re.search(r"<@!?(\d+?)>", content).group(1))
 
         # Get reaction counts
         seen = await count_unique_users_reaction(
-            message,
-            lambda r: "ducky" in str(r) or str(r) == "\N{EYES}"
+            messages[0],
+            lambda r: "ducky" in str(r) or str(r) == "\N{EYES}",
+            False
         )
-        upvotes = await count_unique_users_reaction(message, lambda r: str(r) == "\N{THUMBS UP SIGN}", False)
-        downvotes = await count_unique_users_reaction(message, lambda r: str(r) == "\N{THUMBS DOWN SIGN}", False)
+        upvotes = await count_unique_users_reaction(messages[0], lambda r: str(r) == "\N{THUMBS UP SIGN}", False)
+        downvotes = await count_unique_users_reaction(messages[0], lambda r: str(r) == "\N{THUMBS DOWN SIGN}", False)
 
         # Remove the first and last paragraphs
-        content = message.content.split("\n\n", maxsplit=1)[1].rsplit("\n\n", maxsplit=1)[0]
+        stripped_content = content.split("\n\n", maxsplit=1)[1].rsplit("\n\n", maxsplit=1)[0]
 
         result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
         colour = Colours.soft_green if passed else Colours.soft_red
@@ -151,7 +167,7 @@ class Reviewer:
         embed_content = (
             f"{result} on {timestamp}\n"
             f"With {seen} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
-            f"{content}"
+            f"{textwrap.shorten(stripped_content, 2048, replace_whitespace=False)}"
         )
 
         if user := await self.bot.fetch_user(user_id):
@@ -164,7 +180,9 @@ class Reviewer:
             description=embed_content,
             colour=colour
         ))
-        await message.delete()
+
+        for message_ in messages:
+            await message_.delete()
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""
