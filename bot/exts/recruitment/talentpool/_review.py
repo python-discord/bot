@@ -16,7 +16,7 @@ from discord.ext.commands import Context
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
-from bot.utils.messages import count_unique_users_reaction
+from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import get_time_delta, humanize_delta, time_since
 
@@ -77,10 +77,14 @@ class Reviewer:
         channel = guild.get_channel(Channels.nomination_voting)
 
         log.trace(f"Posting the review of {user_id}")
-        message = (await self._bulk_send(channel, review))[-1]
+        messages = await self._bulk_send(channel, review)
+
+        await pin_no_system_message(messages[0])
+
+        last_message = messages[-1]
         if seen_emoji:
             for reaction in (seen_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
-                await message.add_reaction(reaction)
+                await last_message.add_reaction(reaction)
 
         if update_database:
             nomination = self._pool.watched_users[user_id]

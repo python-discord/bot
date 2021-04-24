@@ -8,7 +8,7 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
-from discord import Reaction
+from discord import Message, MessageType, Reaction
 from discord.errors import HTTPException
 from discord.ext.commands import Context
 
@@ -184,6 +184,21 @@ async def count_unique_users_reaction(
                     unique_users.add(user.id)
 
     return len(unique_users)
+
+
+async def pin_no_system_message(message: Message) -> bool:
+    """Pin the given message, wait a couple of seconds and try to delete the system message."""
+    await message.pin()
+
+    # Make sure that we give it enough time to deliver the message
+    await asyncio.sleep(2)
+    # Search for the system message in the last 10 messages
+    async for historical_message in message.channel.history(limit=10):
+        if historical_message.type == MessageType.pins_add:
+            await historical_message.delete()
+            return True
+
+    return False
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:
