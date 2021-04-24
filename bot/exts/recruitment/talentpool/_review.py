@@ -167,7 +167,7 @@ class Reviewer:
         embed_content = (
             f"{result} on {timestamp}\n"
             f"With {seen} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
-            f"{textwrap.shorten(stripped_content, 2048, replace_whitespace=False)}"
+            f"{stripped_content}"
         )
 
         if user := await self.bot.fetch_user(user_id):
@@ -175,11 +175,13 @@ class Reviewer:
         else:
             embed_title = f"Vote for `{user_id}`"
 
-        await self.bot.get_channel(Channels.nomination_archive).send(embed=Embed(
-            title=embed_title,
-            description=embed_content,
-            colour=colour
-        ))
+        channel = self.bot.get_channel(Channels.nomination_archive)
+        for number, part in enumerate(textwrap.wrap(embed_content, width=MAX_MESSAGE_SIZE, replace_whitespace=False)):
+            await channel.send(embed=Embed(
+                title=embed_title if number == 0 else None,
+                description="[...] " + part if number != 0 else part,
+                colour=colour
+            ))
 
         for message_ in messages:
             await message_.delete()
