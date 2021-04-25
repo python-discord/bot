@@ -72,6 +72,7 @@ class Stream(commands.Cog):
 
     async def _suspend_stream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Suspend a member's stream."""
+        await self.bot.wait_until_guild_available()
         voice_state = member.voice
 
         if not voice_state:
