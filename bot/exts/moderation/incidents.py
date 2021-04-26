@@ -164,7 +164,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
             description=(
                 f"**Author:** {format_user(message.author)}\n"
                 f"**Channel:** {channel.mention} ({channel.category}/#{channel.name})\n"
-                f"**Content:** {textwrap.shorten(text, 300, placeholder='...')}\n"
+                f"**Content:** {textwrap.shorten(text.lstrip(), 300, placeholder='...')}\n"
             )
         )
         embed.set_footer(text=f"Message ID: {message.id}")
