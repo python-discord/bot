@@ -522,7 +522,7 @@ class Incidents(Cog):
 
             webhook_embed_list = await extract_message_links(message, self.bot)
             if webhook_embed_list:
-                await self.send_webhooks(webhook_embed_list, message, self.incidents_webhook)
+                await self.send_message_link_embeds(webhook_embed_list, message, self.incidents_webhook)
 
     @Cog.listener()
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
@@ -549,7 +549,7 @@ class Incidents(Cog):
                 )
                 return
 
-            await self.send_webhooks(webhook_embed_list, msg_after, self.incidents_webhook)
+            await self.send_message_link_embeds(webhook_embed_list, msg_after, self.incidents_webhook)
 
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
@@ -561,7 +561,7 @@ class Incidents(Cog):
         if is_incident(message):
             await self.delete_msg_link_embed(message)
 
-    async def send_webhooks(
+    async def send_message_link_embeds(
             self,
             webhook_embed_list: t.List,
             message: discord.Message,
