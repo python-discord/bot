@@ -150,8 +150,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         Content: This is a very important message!
     """
     try:
-        message_convert_object = MessageConverter()
-        message = await message_convert_object.convert(ctx, message_link)
+        message = await MessageConverter().convert(ctx, message_link)
 
     except discord.DiscordException as e:
         log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
@@ -164,7 +163,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
             colour=discord.Colour.gold(),
             description=(
                 f"**Author:** {format_user(message.author)}\n"
-                f"**Channel:** <#{channel.id}> ({channel.category}/#{channel.name})\n"
+                f"**Channel:** {channel.mention} ({channel.category}/#{channel.name})\n"
                 f"**Content:** {textwrap.shorten(text, 300, placeholder='...')}\n"
             )
         )
@@ -584,7 +583,6 @@ class Incidents(Cog):
                 avatar_url=message.author.avatar_url,
                 wait=True,
             )
-            log.trace("Message Link Embed sent successfully.")
 
         except discord.DiscordException:
             log.exception(
