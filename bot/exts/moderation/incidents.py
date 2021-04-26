@@ -258,8 +258,8 @@ class Incidents(Cog):
     Please refer to function docstrings for implementation details.
     """
 
-    # This dictionary maps a incident message to the message link embeds sent by it
-    # RedisCache[discord.Message.id, str]
+    # This dictionary maps an incident report message to the message link embed's ID
+    # RedisCache[discord.Message.id, discord.Message.id]
     message_link_embeds_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
@@ -511,11 +511,11 @@ class Incidents(Cog):
         """
         Pass `message` to `add_signals` and `extract_message_links` if it satisfies `is_incident`.
 
-        If the message (`message`) is a incident then run it through `extract_message_links`
+        If the message (`message`) is an incident report, then run it through `extract_message_links`
         to get all the message link embeds (embeds which contain information about that particular
-        link), this message link embeds are then sent into the channel.
+        link).These message link embeds are then sent into the channel.
 
-        Also passes the message into `add_signals` if the message is a incident.
+        Also passes the message into `add_signals` if the message is an incident.
         """
         if is_incident(message):
             await add_signals(message)
