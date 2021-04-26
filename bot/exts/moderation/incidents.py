@@ -600,7 +600,10 @@ class Incidents(Cog):
         webhook_msg_id = await self.message_link_embeds_cache.get(message.id)
 
         if webhook_msg_id:
-            await self.incidents_webhook.delete_message(webhook_msg_id)
+            try:
+                await self.incidents_webhook.delete_message(webhook_msg_id)
+            except discord.errors.NotFound:
+                log.trace(f"Incidents message link embed (`{webhook_msg_id}`) has already been deleted, skipping.")
 
         await self.message_link_embeds_cache.delete(message.id)
         log.trace("Successfully deleted discord links webhook message.")
