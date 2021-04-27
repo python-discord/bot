@@ -231,8 +231,7 @@ class CodeSnippets(Cog):
                     snippet = await handler(**match.groupdict())
                     all_snippets.append((match.start(), snippet))
 
-            # Sorts the list of snippets by their match index and joins them into
-            # a single message
+            # Sorts the list of snippets by their match index and joins them into a single message
             message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
 
             if 0 < len(message_to_send) <= 2000 and len(all_snippets) <= 15:
