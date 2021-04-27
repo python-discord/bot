@@ -234,7 +234,7 @@ class CodeSnippets(Cog):
             # Sorts the list of snippets by their match index and joins them into a single message
             message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
 
-            if 0 < len(message_to_send) <= 2000 and len(all_snippets) <= 15:
+            if 0 < len(message_to_send) <= 1000 and message_to_send.count('\n') <= 15:
                 await message.edit(suppress=True)
                 await wait_for_deletion(
                     await message.channel.send(message_to_send),
