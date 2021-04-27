@@ -8,6 +8,7 @@ from discord import Message
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
+from bot.constants import Channels
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
@@ -234,12 +235,22 @@ class CodeSnippets(Cog):
             # Sorts the list of snippets by their match index and joins them into a single message
             message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
 
-            if 0 < len(message_to_send) <= 1000 and message_to_send.count('\n') <= 15:
+            if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
                 await message.edit(suppress=True)
-                await wait_for_deletion(
-                    await message.channel.send(message_to_send),
-                    (message.author.id,)
-                )
+                if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
+                    # Redirects to #bot-commands if the snippet contents are too long
+                    await message.channel.send(('The snippet you tried to send was too long. Please '
+                                                f'see <#{Channels.bot_commands}> for the full snippet.'))
+                    bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
+                    await wait_for_deletion(
+                        await bot_commands_channel.send(message_to_send),
+                        (message.author.id,)
+                    )
+                else:
+                    await wait_for_deletion(
+                        await message.channel.send(message_to_send),
+                        (message.author.id,)
+                    )
 
 
 def setup(bot: Bot) -> None:
