@@ -156,15 +156,16 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
 
     else:
-        text = message.content
+        text = message.content.lstrip()
         channel = message.channel
-
+        shortened_text = text[:300] + (text[300:] and '...')
+    
         embed = discord.Embed(
             colour=discord.Colour.gold(),
             description=(
                 f"**Author:** {format_user(message.author)}\n"
                 f"**Channel:** {channel.mention} ({channel.category}/#{channel.name})\n"
-                f"**Content:** {textwrap.shorten(text.lstrip(), 300, placeholder='...')}\n"
+                f"**Content:** {shortened_text}\n"
             )
         )
         embed.set_footer(text=f"Message ID: {message.id}")
