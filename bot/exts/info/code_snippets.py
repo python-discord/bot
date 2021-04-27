@@ -239,6 +239,7 @@ class CodeSnippets(Cog):
                 await message.edit(suppress=True)
                 if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
                     # Redirects to #bot-commands if the snippet contents are too long
+                    await self.bot.wait_until_guild_available()
                     await message.channel.send(('The snippet you tried to send was too long. Please '
                                                 f'see <#{Channels.bot_commands}> for the full snippet.'))
                     bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
