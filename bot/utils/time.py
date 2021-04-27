@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import re
 from typing import Optional
 
 import dateutil.parser
@@ -7,6 +8,16 @@ from dateutil.relativedelta import relativedelta
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 INFRACTION_FORMAT = "%Y-%m-%d %H:%M"
+
+_DURATION_REGEX = re.compile(
+    r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
+    r"((?P<months>\d+?) ?(months|month|m) ?)?"
+    r"((?P<weeks>\d+?) ?(weeks|week|W|w) ?)?"
+    r"((?P<days>\d+?) ?(days|day|D|d) ?)?"
+    r"((?P<hours>\d+?) ?(hours|hour|H|h) ?)?"
+    r"((?P<minutes>\d+?) ?(minutes|minute|M) ?)?"
+    r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
+)
 
 
 def _stringify_time_unit(value: int, unit: str) -> str:
@@ -72,6 +83,45 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
         humanized = ", ".join(time_strings)
 
     return humanized
+
+
+def get_time_delta(time_string: str) -> str:
+    """Returns the time in human-readable time delta format."""
+    date_time = dateutil.parser.isoparse(time_string).replace(tzinfo=None)
+    time_delta = time_since(date_time, precision="minutes", max_units=1)
+
+    return time_delta
+
+
+def parse_duration_string(duration: str) -> Optional[relativedelta]:
+    """
+    Converts a `duration` string to a relativedelta object.
+
+    The function supports the following symbols for each unit of time:
+    - years: `Y`, `y`, `year`, `years`
+    - months: `m`, `month`, `months`
+    - weeks: `w`, `W`, `week`, `weeks`
+    - days: `d`, `D`, `day`, `days`
+    - hours: `H`, `h`, `hour`, `hours`
+    - minutes: `M`, `minute`, `minutes`
+    - seconds: `S`, `s`, `second`, `seconds`
+    The units need to be provided in descending order of magnitude.
+    If the string does represent a durationdelta object, it will return None.
+    """
+    match = _DURATION_REGEX.fullmatch(duration)
+    if not match:
+        return None
+
+    duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
+    delta = relativedelta(**duration_dict)
+
+    return delta
+
+
+def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
+    """Converts a relativedelta object to a timedelta object."""
+    utcnow = datetime.datetime.utcnow()
+    return utcnow + delta - utcnow
 
 
 def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max_units: int = 6) -> str:

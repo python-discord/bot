@@ -74,8 +74,21 @@ class InfractionScheduler:
             return
 
         # Allowing mod log since this is a passive action that should be logged.
-        await apply_coro
-        log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
+        try:
+            await apply_coro
+        except discord.HTTPException as e:
+            # When user joined and then right after this left again before action completed, this can't apply roles
+            if e.code == 10007 or e.status == 404:
+                log.info(
+                    f"Can't reapply {infraction['type']} to user {infraction['user']} because user left the guild."
+                )
+            else:
+                log.exception(
+                    f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
+                    f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
+                )
+        else:
+            log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
 
     async def apply_infraction(
         self,
@@ -89,6 +102,7 @@ class InfractionScheduler:
         """
         Apply an infraction to the user, log the infraction, and optionally notify the user.
 
+        `action_coro`, if not provided, will result in the infraction not getting scheduled for deletion.
         `user_reason`, if provided, will be sent to the user in place of the infraction reason.
         `additional_info` will be attached to the text field in the mod-log embed.
 
@@ -159,6 +173,8 @@ class InfractionScheduler:
             total = len(infractions)
             end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
 
+        purge = infraction.get("purge", "")
+
         # Execute the necessary actions to apply the infraction on Discord.
         if action_coro:
             log.trace(f"Awaiting the infraction #{id_} application action coroutine.")
@@ -178,6 +194,10 @@ class InfractionScheduler:
                 log_msg = f"Failed to apply {' '.join(infr_type.split('_'))} infraction #{id_} to {user}"
                 if isinstance(e, discord.Forbidden):
                     log.warning(f"{log_msg}: bot lacks permissions.")
+                elif e.code == 10007 or e.status == 404:
+                    log.info(
+                        f"Can't apply {infraction['type']} to user {infraction['user']} because user left from guild."
+                    )
                 else:
                     log.exception(log_msg)
                 failed = True
@@ -192,7 +212,7 @@ class InfractionScheduler:
                 log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
             infr_message = ""
         else:
-            infr_message = f" **{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
+            infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -216,7 +236,7 @@ class InfractionScheduler:
             footer=f"ID {infraction['id']}"
         )
 
-        log.info(f"Applied {infr_type} infraction #{id_} to {user}.")
+        log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
         return not failed
 
     async def pardon_infraction(
@@ -352,9 +372,16 @@ class InfractionScheduler:
             log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
-            log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-            log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
-            log_content = mod_role.mention
+            if e.code == 10007 or e.status == 404:
+                log.info(
+                    f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
+                )
+                log_text["Failure"] = "User left the guild."
+                log_content = mod_role.mention
+            else:
+                log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
+                log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
+                log_content = mod_role.mention
 
         # Check if the user is currently being watched by Big Brother.
         try:

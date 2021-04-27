@@ -3,7 +3,7 @@ import random
 import re
 from typing import Iterable, Optional
 
-from discord import Colour, Embed, Message, TextChannel, User
+from discord import Colour, Embed, Message, TextChannel, User, errors
 from discord.ext import commands
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -115,7 +115,11 @@ class Clean(Cog):
 
         # Delete the invocation first
         self.mod_log.ignore(Event.message_delete, ctx.message.id)
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except errors.NotFound:
+            # Invocation message has already been deleted
+            log.info("Tried to delete invocation message, but it was already deleted.")
 
         messages = []
         message_ids = []
@@ -191,7 +195,7 @@ class Clean(Cog):
             channel_id=Channels.mod_log,
         )
 
-    @group(invoke_without_command=True, name="clean", aliases=["purge"])
+    @group(invoke_without_command=True, name="clean", aliases=["clear", "purge"])
     @has_any_role(*MODERATION_ROLES)
     async def clean_group(self, ctx: Context) -> None:
         """Commands for cleaning messages in channels."""

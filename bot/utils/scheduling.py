@@ -59,14 +59,18 @@ class Scheduler:
 
     def schedule_at(self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
-        Schedule `coroutine` to be executed at the given naïve UTC `time`.
+        Schedule `coroutine` to be executed at the given `time`.
+
+        If `time` is timezone aware, then use that timezone to calculate now() when subtracting.
+        If `time` is naïve, then use UTC.
 
         If `time` is in the past, schedule `coroutine` immediately.
 
         If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
         prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
-        delay = (time - datetime.utcnow()).total_seconds()
+        now_datetime = datetime.now(time.tzinfo) if time.tzinfo else datetime.utcnow()
+        delay = (time - now_datetime).total_seconds()
         if delay > 0:
             coroutine = self._await_later(delay, task_id, coroutine)
 
@@ -155,3 +159,20 @@ class Scheduler:
             # Log the exception if one exists.
             if exception:
                 self._log.error(f"Error in task #{task_id} {id(done_task)}!", exc_info=exception)
+
+
+def create_task(coro: t.Awaitable, *suppressed_exceptions: t.Type[Exception], **kwargs) -> asyncio.Task:
+    """Wrapper for `asyncio.create_task` which logs exceptions raised in the task."""
+    task = asyncio.create_task(coro, **kwargs)
+    task.add_done_callback(partial(_log_task_exception, suppressed_exceptions=suppressed_exceptions))
+    return task
+
+
+def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.Type[Exception]]) -> None:
+    """Retrieve and log the exception raised in `task` if one exists."""
+    with contextlib.suppress(asyncio.CancelledError):
+        exception = task.exception()
+        # Log the exception if one exists.
+        if exception and not isinstance(exception, suppressed_exceptions):
+            log = logging.getLogger(__name__)
+            log.error(f"Error in task {task.get_name()} {id(task)}!", exc_info=exception)

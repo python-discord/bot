@@ -2,12 +2,14 @@ import asyncio
 import logging
 import typing as t
 from contextlib import suppress
+from functools import partial
 
 import discord
 from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
 from bot import constants
+from bot.utils import messages
 
 FIRST_EMOJI = "\u23EE"   # [:track_previous:]
 LEFT_EMOJI = "\u2B05"    # [:arrow_left:]
@@ -210,37 +212,20 @@ class LinePaginator(Paginator):
 
         Pagination will also be removed automatically if no reaction is added for five minutes (300 seconds).
 
+        The interaction will be limited to `restrict_to_user` (ctx.author by default) or
+        to any user with a moderation role.
+
         Example:
         >>> embed = discord.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
         >>> await LinePaginator.paginate([line for line in lines], ctx, embed)
         """
-        def event_check(reaction_: discord.Reaction, user_: discord.Member) -> bool:
-            """Make sure that this reaction is what we want to operate on."""
-            no_restrictions = (
-                # Pagination is not restricted
-                not restrict_to_user
-                # The reaction was by a whitelisted user
-                or user_.id == restrict_to_user.id
-            )
-
-            return (
-                # Conditions for a successful pagination:
-                all((
-                    # Reaction is on this message
-                    reaction_.message.id == message.id,
-                    # Reaction is one of the pagination emotes
-                    str(reaction_.emoji) in PAGINATION_EMOJI,
-                    # Reaction was not made by the Bot
-                    user_.id != ctx.bot.user.id,
-                    # There were no restrictions
-                    no_restrictions
-                ))
-            )
-
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines,
                         scale_to_size=scale_to_size)
         current_page = 0
+
+        if not restrict_to_user:
+            restrict_to_user = ctx.author
 
         if not lines:
             if exception_on_empty_embed:
@@ -295,9 +280,16 @@ class LinePaginator(Paginator):
             log.trace(f"Adding reaction: {repr(emoji)}")
             await message.add_reaction(emoji)
 
+        check = partial(
+            messages.reaction_check,
+            message_id=message.id,
+            allowed_emoji=PAGINATION_EMOJI,
+            allowed_users=(restrict_to_user.id,),
+        )
+
         while True:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=event_check)
+                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=check)
                 log.trace(f"Got reaction: {reaction}")
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")

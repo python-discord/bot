@@ -1,12 +1,15 @@
+import asyncio
 import inspect
 import logging
+import types
 from collections import defaultdict
-from functools import partial, wraps
+from functools import partial
 from typing import Any, Awaitable, Callable, Hashable, Union
 from weakref import WeakValueDictionary
 
 from bot.errors import LockedResourceError
 from bot.utils import function
+from bot.utils.function import command_wraps
 
 log = logging.getLogger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
@@ -16,39 +19,50 @@ _IdCallable = Callable[[function.BoundArgs], _IdCallableReturn]
 ResourceId = Union[Hashable, _IdCallable]
 
 
-class LockGuard:
+class SharedEvent:
     """
-    A context manager which acquires and releases a lock (mutex).
+    Context manager managing an internal event exposed through the wait coro.
 
-    Raise RuntimeError if trying to acquire a locked lock.
+    While any code is executing in this context manager, the underlying event will not be set;
+    when all of the holders finish the event will be set.
     """
 
     def __init__(self):
-        self._locked = False
-
-    @property
-    def locked(self) -> bool:
-        """Return True if currently locked or False if unlocked."""
-        return self._locked
+        self._active_count = 0
+        self._event = asyncio.Event()
+        self._event.set()
 
     def __enter__(self):
-        if self._locked:
-            raise RuntimeError("Cannot acquire a locked lock.")
+        """Increment the count of the active holders and clear the internal event."""
+        self._active_count += 1
+        self._event.clear()
 
-        self._locked = True
+    def __exit__(self, _exc_type, _exc_val, _exc_tb):  # noqa: ANN001
+        """Decrement the count of the active holders; if 0 is reached set the internal event."""
+        self._active_count -= 1
+        if not self._active_count:
+            self._event.set()
 
-    def __exit__(self, _exc_type, _exc_value, _traceback):  # noqa: ANN001
-        self._locked = False
-        return False  # Indicate any raised exception shouldn't be suppressed.
+    async def wait(self) -> None:
+        """Wait for all active holders to exit."""
+        await self._event.wait()
 
 
-def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = False) -> Callable:
+def lock(
+    namespace: Hashable,
+    resource_id: ResourceId,
+    *,
+    raise_error: bool = False,
+    wait: bool = False,
+) -> Callable:
     """
     Turn the decorated coroutine function into a mutually exclusive operation on a `resource_id`.
 
-    If any other mutually exclusive function currently holds the lock for a resource, do not run the
-    decorated function and return None. If `raise_error` is True, raise `LockedResourceError` if
-    the lock cannot be acquired.
+    If `wait` is True, wait until the lock becomes available. Otherwise, if any other mutually
+    exclusive function currently holds the lock for a resource, do not run the decorated function
+    and return None.
+
+    If `raise_error` is True, raise `LockedResourceError` if the lock cannot be acquired.
 
     `namespace` is an identifier used to prevent collisions among resource IDs.
 
@@ -58,10 +72,10 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
 
     If decorating a command, this decorator must go before (below) the `command` decorator.
     """
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: types.FunctionType) -> types.FunctionType:
         name = func.__name__
 
-        @wraps(func)
+        @command_wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
             log.trace(f"{name}: mutually exclusive decorator called")
 
@@ -78,15 +92,19 @@ def lock(namespace: Hashable, resource_id: ResourceId, *, raise_error: bool = Fa
             else:
                 id_ = resource_id
 
-            log.trace(f"{name}: getting lock for resource {id_!r} under namespace {namespace!r}")
+            log.trace(f"{name}: getting the lock object for resource {namespace!r}:{id_!r}")
 
             # Get the lock for the ID. Create a lock if one doesn't exist yet.
             locks = __lock_dicts[namespace]
-            lock_guard = locks.setdefault(id_, LockGuard())
+            lock_ = locks.setdefault(id_, asyncio.Lock())
 
-            if not lock_guard.locked:
-                log.debug(f"{name}: resource {namespace!r}:{id_!r} is free; acquiring it...")
-                with lock_guard:
+            # It's safe to check an asyncio.Lock is free before acquiring it because:
+            #   1. Synchronous code like `if not lock_.locked()` does not yield execution
+            #   2. `asyncio.Lock.acquire()` does not internally await anything if the lock is free
+            #   3. awaits only yield execution to the event loop at actual I/O boundaries
+            if wait or not lock_.locked():
+                log.debug(f"{name}: acquiring lock for resource {namespace!r}:{id_!r}...")
+                async with lock_:
                     return await func(*args, **kwargs)
             else:
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
@@ -103,6 +121,7 @@ def lock_arg(
     func: Callable[[Any], _IdCallableReturn] = None,
     *,
     raise_error: bool = False,
+    wait: bool = False,
 ) -> Callable:
     """
     Apply the `lock` decorator using the value of the arg at the given name/position as the ID.
@@ -110,5 +129,5 @@ def lock_arg(
     `func` is an optional callable or awaitable which will return the ID given the argument value.
     See `lock` docs for more information.
     """
-    decorator_func = partial(lock, namespace, raise_error=raise_error)
+    decorator_func = partial(lock, namespace, raise_error=raise_error, wait=wait)
     return function.get_arg_value_wrapper(decorator_func, name_or_pos, func)

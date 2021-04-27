@@ -1,10 +1,12 @@
+import inspect
 import textwrap
 import unittest
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, Mock, patch
 
 from bot.constants import Event
+from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
-from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole
+from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole, MockUser, autospec
 
 
 class TruncationTests(unittest.IsolatedAsyncioTestCase):
@@ -37,7 +39,7 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
             delete_message_days=0
         )
         self.cog.apply_infraction.assert_awaited_once_with(
-            self.ctx, {"foo": "bar"}, self.target, self.ctx.guild.ban.return_value
+            self.ctx, {"foo": "bar", "purge": ""}, self.target, self.ctx.guild.ban.return_value
         )
 
     @patch("bot.exts.moderation.infraction._utils.post_infraction")
@@ -132,20 +134,29 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
         self.cog.mod_log.ignore.assert_called_once_with(Event.member_update, self.user.id)
 
+    async def action_tester(self, action, reason: str) -> None:
+        """Helper method to test voice ban action."""
+        self.assertTrue(inspect.iscoroutine(action))
+        await action
+
+        self.user.move_to.assert_called_once_with(None, reason=ANY)
+        self.user.remove_roles.assert_called_once_with(self.cog._voice_verified_role, reason=reason)
+
     @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
     @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
     async def test_voice_ban_apply_infraction(self, get_active_infraction, post_infraction_mock):
         """Should ignore Voice Verified role removing."""
         self.cog.mod_log.ignore = MagicMock()
         self.cog.apply_infraction = AsyncMock()
-        self.user.remove_roles = MagicMock(return_value="my_return_value")
 
         get_active_infraction.return_value = None
         post_infraction_mock.return_value = {"foo": "bar"}
 
-        self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
-        self.user.remove_roles.assert_called_once_with(self.cog._voice_verified_role, reason="foobar")
-        self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, "my_return_value")
+        reason = "foobar"
+        self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, reason))
+        self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, ANY)
+
+        await self.action_tester(self.cog.apply_infraction.call_args[0][-1], reason)
 
     @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
     @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
@@ -153,16 +164,33 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         """Should truncate reason for voice ban."""
         self.cog.mod_log.ignore = MagicMock()
         self.cog.apply_infraction = AsyncMock()
-        self.user.remove_roles = MagicMock(return_value="my_return_value")
 
         get_active_infraction.return_value = None
         post_infraction_mock.return_value = {"foo": "bar"}
 
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar" * 3000))
-        self.user.remove_roles.assert_called_once_with(
-            self.cog._voice_verified_role, reason=textwrap.shorten("foobar" * 3000, 512, placeholder="...")
-        )
-        self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, "my_return_value")
+        self.cog.apply_infraction.assert_awaited_once_with(self.ctx, {"foo": "bar"}, self.user, ANY)
+
+        # Test action
+        action = self.cog.apply_infraction.call_args[0][-1]
+        await self.action_tester(action, textwrap.shorten("foobar" * 3000, 512, placeholder="..."))
+
+    @autospec(_utils, "post_infraction", "get_active_infraction", return_value=None)
+    @autospec(Infractions, "apply_infraction")
+    async def test_voice_ban_user_left_guild(self, apply_infraction_mock, post_infraction_mock, _):
+        """Should voice ban user that left the guild without throwing an error."""
+        infraction = {"foo": "bar"}
+        post_infraction_mock.return_value = {"foo": "bar"}
+
+        user = MockUser()
+        await self.cog.voiceban(self.cog, self.ctx, user, reason=None)
+        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_ban", None, active=True)
+        apply_infraction_mock.assert_called_once_with(self.cog, self.ctx, infraction, user, ANY)
+
+        # Test action
+        action = self.cog.apply_infraction.call_args[0][-1]
+        self.assertTrue(inspect.iscoroutine(action))
+        await action
 
     async def test_voice_unban_user_not_found(self):
         """Should include info to return dict when user was not found from guild."""

@@ -175,13 +175,14 @@ class YAMLGetter(type):
             if cls.subsection is not None:
                 return _CONFIG_YAML[cls.section][cls.subsection][name]
             return _CONFIG_YAML[cls.section][name]
-        except KeyError:
+        except KeyError as e:
             dotted_path = '.'.join(
                 (cls.section, cls.subsection, name)
                 if cls.subsection is not None else (cls.section, name)
             )
-            log.critical(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
-            raise
+            # Only an INFO log since this can be caught through `hasattr` or `getattr`.
+            log.info(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            raise AttributeError(repr(name)) from e
 
     def __getitem__(cls, name):
         return cls.__getattr__(name)
@@ -197,8 +198,9 @@ class Bot(metaclass=YAMLGetter):
     section = "bot"
 
     prefix: str
-    token: str
     sentry_dsn: Optional[str]
+    token: str
+    trace_loggers: Optional[str]
 
 
 class Redis(metaclass=YAMLGetter):
@@ -206,29 +208,30 @@ class Redis(metaclass=YAMLGetter):
     subsection = "redis"
 
     host: str
-    port: int
     password: Optional[str]
+    port: int
     use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
 
 
 class Filter(metaclass=YAMLGetter):
     section = "filter"
 
-    filter_zalgo: bool
-    filter_invites: bool
     filter_domains: bool
     filter_everyone_ping: bool
+    filter_invites: bool
+    filter_zalgo: bool
     watch_regex: bool
     watch_rich_embeds: bool
 
     # Notifications are not expected for "watchlist" type filters
-    notify_user_zalgo: bool
-    notify_user_invites: bool
+
     notify_user_domains: bool
     notify_user_everyone_ping: bool
+    notify_user_invites: bool
+    notify_user_zalgo: bool
 
-    ping_everyone: bool
     offensive_msg_delete_days: int
+    ping_everyone: bool
 
     channel_whitelist: List[int]
     role_whitelist: List[int]
@@ -245,10 +248,16 @@ class Colours(metaclass=YAMLGetter):
     section = "style"
     subsection = "colours"
 
-    soft_red: int
+    blue: int
+    bright_green: int
+    orange: int
+    pink: int
+    purple: int
     soft_green: int
     soft_orange: int
-    bright_green: int
+    soft_red: int
+    white: int
+    yellow: int
 
 
 class DuckPond(metaclass=YAMLGetter):
@@ -262,42 +271,47 @@ class Emojis(metaclass=YAMLGetter):
     section = "style"
     subsection = "emojis"
 
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str  # noqa: E704
-    defcon_updated: str  # noqa: E704
-
-    status_online: str
-    status_offline: str
-    status_idle: str
-    status_dnd: str
-
-    badge_staff: str
-    badge_partner: str
-    badge_hypesquad: str
     badge_bug_hunter: str
+    badge_bug_hunter_level_2: str
+    badge_early_supporter: str
+    badge_hypesquad: str
+    badge_hypesquad_balance: str
     badge_hypesquad_bravery: str
     badge_hypesquad_brilliance: str
-    badge_hypesquad_balance: str
-    badge_early_supporter: str
-    badge_bug_hunter_level_2: str
+    badge_partner: str
+    badge_staff: str
     badge_verified_bot_developer: str
+    verified_bot: str
+    bot: str
 
-    incident_actioned: str
-    incident_unactioned: str
-    incident_investigating: str
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str  # noqa: E704
+    defcon_update: str  # noqa: E704
 
     failmail: str
+
+    incident_actioned: str
+    incident_investigating: str
+    incident_unactioned: str
+
+    status_dnd: str
+    status_idle: str
+    status_offline: str
+    status_online: str
+
     trashcan: str
 
     bullet: str
+    check_mark: str
+    cross_mark: str
     new: str
     pencil: str
-    cross_mark: str
-    check_mark: str
 
-    upvotes: str
     comments: str
+    upvotes: str
     user: str
+
+    ok_hand: str
 
 
 class Icons(metaclass=YAMLGetter):
@@ -309,12 +323,14 @@ class Icons(metaclass=YAMLGetter):
     crown_red: str
 
     defcon_denied: str    # noqa: E704
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str   # noqa: E704
-    defcon_updated: str   # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str   # noqa: E704
+    defcon_update: str   # noqa: E704
 
     filtering: str
 
+    green_checkmark: str
+    green_questionmark: str
     guild_update: str
 
     hash_blurple: str
@@ -325,37 +341,33 @@ class Icons(metaclass=YAMLGetter):
     message_delete: str
     message_edit: str
 
-    sign_in: str
-    sign_out: str
-
-    token_removed: str
-
-    user_ban: str
-    user_unban: str
-    user_update: str
-
-    user_mute: str
-    user_unmute: str
-    user_verified: str
-
-    user_warn: str
-
     pencil: str
+
+    questionmark: str
 
     remind_blurple: str
     remind_green: str
     remind_red: str
 
-    questionmark: str
+    sign_in: str
+    sign_out: str
 
     superstarify: str
     unsuperstarify: str
 
+    token_removed: str
+
+    user_ban: str
+    user_mute: str
+    user_unban: str
+    user_unmute: str
+    user_update: str
+    user_verified: str
+    user_warn: str
+
     voice_state_blue: str
     voice_state_green: str
     voice_state_red: str
-
-    green_checkmark: str
 
 
 class CleanMessages(metaclass=YAMLGetter):
@@ -378,8 +390,9 @@ class Categories(metaclass=YAMLGetter):
     subsection = "categories"
 
     help_available: int
-    help_in_use: int
     help_dormant: int
+    help_in_use: int
+    moderators: int
     modmail: int
     voice: int
 
@@ -388,56 +401,66 @@ class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
 
-    admin_announcements: int
-    admin_spam: int
-    admins: int
-    admins_voice: int
     announcements: int
-    attachment_log: int
-    big_brother_logs: int
-    bot_commands: int
     change_log: int
-    code_help_chat_1: int
-    code_help_chat_2: int
-    code_help_voice_1: int
-    code_help_voice_2: int
-    cooldown: int
-    defcon: int
-    dev_contrib: int
-    dev_core: int
-    dev_log: int
-    dm_log: int
-    esoteric: int
-    general_voice: int
-    helpers: int
-    incidents: int
-    incidents_archive: int
     mailing_lists: int
-    message_log: int
-    meta: int
-    mod_alerts: int
-    mod_announcements: int
-    mod_log: int
-    mod_spam: int
-    mods: int
-    off_topic_0: int
-    off_topic_1: int
-    off_topic_2: int
-    organisation: int
-    python_discussion: int
     python_events: int
     python_news: int
     reddit: int
-    staff_announcements: int
-    staff_voice: int
-    staff_voice_chat: int
-    talent_pool: int
-    user_event_announcements: int
+
+    dev_contrib: int
+    dev_core: int
+    dev_log: int
+
+    meta: int
+    python_general: int
+
+    cooldown: int
+    how_to_get_help: int
+
+    attachment_log: int
+    message_log: int
+    mod_log: int
     user_log: int
-    verification: int
-    voice_chat: int
-    voice_gate: int
     voice_log: int
+
+    off_topic_0: int
+    off_topic_1: int
+    off_topic_2: int
+
+    bot_commands: int
+    discord_py: int
+    esoteric: int
+    voice_gate: int
+
+    admins: int
+    admin_spam: int
+    defcon: int
+    helpers: int
+    incidents: int
+    incidents_archive: int
+    mod_alerts: int
+    nominations: int
+    nomination_voting: int
+    organisation: int
+
+    admin_announcements: int
+    mod_announcements: int
+    staff_announcements: int
+
+    admins_voice: int
+    code_help_voice_1: int
+    code_help_voice_2: int
+    general_voice: int
+    staff_voice: int
+
+    code_help_chat_1: int
+    code_help_chat_2: int
+    staff_voice_chat: int
+    voice_chat: int
+
+    big_brother_logs: int
+    talent_pool: int
 
 
 class Webhooks(metaclass=YAMLGetter):
@@ -446,7 +469,6 @@ class Webhooks(metaclass=YAMLGetter):
 
     big_brother: int
     dev_log: int
-    dm_log: int
     duck_pond: int
     incidents_archive: int
     reddit: int
@@ -457,23 +479,28 @@ class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
-    admins: int
     announcements: int
     contributors: int
-    core_developers: int
     help_cooldown: int
-    helpers: int
-    jammers: int
-    moderators: int
     muted: int
-    owners: int
     partners: int
     python_community: int
     sprinters: int
-    team_leaders: int
-    unverified: int
-    verified: int  # This is the Developers role on PyDis, here named verified for readability reasons.
     voice_verified: int
+    video: int
+
+    admins: int
+    core_developers: int
+    devops: int
+    domain_leads: int
+    helpers: int
+    moderators: int
+    mod_team: int
+    owners: int
+    project_leads: int
+
+    jammers: int
+    team_leaders: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -481,17 +508,19 @@ class Guild(metaclass=YAMLGetter):
 
     id: int
     invite: str  # Discord invite, gets embedded in chat
-    moderation_channels: List[int]
+
     moderation_categories: List[int]
-    moderation_roles: List[int]
+    moderation_channels: List[int]
     modlog_blacklist: List[int]
     reminder_whitelist: List[int]
+    moderation_roles: List[int]
     staff_roles: List[int]
 
 
 class Keys(metaclass=YAMLGetter):
     section = "keys"
 
+    github: Optional[str]
     site_api: Optional[str]
 
 
@@ -510,9 +539,12 @@ class URLs(metaclass=YAMLGetter):
     github_bot_repo: str
 
     # Base site vars
+    connect_max_retries: int
+    connect_cooldown: int
     site: str
     site_api: str
     site_schema: str
+    site_api_schema: str
 
     # Site endpoints
     site_logs_view: str
@@ -522,9 +554,9 @@ class URLs(metaclass=YAMLGetter):
 class Reddit(metaclass=YAMLGetter):
     section = "reddit"
 
-    subreddits: list
     client_id: Optional[str]
     secret: Optional[str]
+    subreddits: list
 
 
 class AntiSpam(metaclass=YAMLGetter):
@@ -540,8 +572,8 @@ class AntiSpam(metaclass=YAMLGetter):
 class BigBrother(metaclass=YAMLGetter):
     section = 'big_brother'
 
-    log_delay: int
     header_message_limit: int
+    log_delay: int
 
 
 class CodeBlock(metaclass=YAMLGetter):
@@ -557,8 +589,8 @@ class Free(metaclass=YAMLGetter):
     section = 'free'
 
     activity_timeout: int
-    cooldown_rate: int
     cooldown_per: float
+    cooldown_rate: int
 
 
 class HelpChannels(metaclass=YAMLGetter):
@@ -567,7 +599,8 @@ class HelpChannels(metaclass=YAMLGetter):
     enable: bool
     claim_minutes: int
     cmd_whitelist: List[int]
-    idle_minutes: int
+    idle_minutes_claimant: int
+    idle_minutes_others: int
     deleted_idle_minutes: int
     max_available: int
     max_total_channels: int
@@ -581,36 +614,32 @@ class HelpChannels(metaclass=YAMLGetter):
 class RedirectOutput(metaclass=YAMLGetter):
     section = 'redirect_output'
 
-    delete_invocation: bool
     delete_delay: int
+    delete_invocation: bool
 
 
 class PythonNews(metaclass=YAMLGetter):
     section = 'python_news'
 
-    mail_lists: List[str]
     channel: int
     webhook: int
-
-
-class Verification(metaclass=YAMLGetter):
-    section = "verification"
-
-    unverified_after: int
-    kicked_after: int
-    reminder_frequency: int
-    bot_message_delete_delay: int
-    kick_confirmation_threshold: float
+    mail_lists: List[str]
 
 
 class VoiceGate(metaclass=YAMLGetter):
     section = "voice_gate"
 
-    minimum_days_verified: int
-    minimum_messages: int
     bot_message_delete_delay: int
     minimum_activity_blocks: int
+    minimum_days_member: int
+    minimum_messages: int
     voice_ping_delete_delay: int
+
+
+class Branding(metaclass=YAMLGetter):
+    section = "branding"
+
+    cycle_frequency: int
 
 
 class Event(Enum):
@@ -639,6 +668,12 @@ class Event(Enum):
     voice_state_update = "voice_state_update"
 
 
+class VideoPermission(metaclass=YAMLGetter):
+    section = "video_permission"
+
+    default_permission_duration: int
+
+
 # Debug mode
 DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
 
@@ -655,6 +690,9 @@ MODERATION_CHANNELS = Guild.moderation_channels
 
 # Category combinations
 MODERATION_CATEGORIES = Guild.moderation_categories
+
+# Git SHA for Sentry
+GIT_SHA = os.environ.get("GIT_SHA", "development")
 
 # Bot replies
 NEGATIVE_REPLIES = [
