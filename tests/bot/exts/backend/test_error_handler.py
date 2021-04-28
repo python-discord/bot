@@ -379,7 +379,7 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
             },
             {
                 "error": errors.BadUnionArgument(MagicMock(), MagicMock(), MagicMock()),
-                "call_prepared": False
+                "call_prepared": True
             },
             {
                 "error": errors.ArgumentParsingError(),
