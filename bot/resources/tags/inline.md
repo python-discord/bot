@@ -1,16 +1,7 @@
 **Inline codeblocks**
 
-In addition to multi-line codeblocks, discord has support for inline codeblocks as well. These are small codeblocks that are usually a single line, that can fit between non-codeblocks on the same line.
+Inline codeblocks look `like this`. To create them you surround text with single backticks, so \`hello\` would become `hello`.
 
-The following is an example of how it's done:
+Note that backticks are not quotes, see [this](https://superuser.com/questions/254076/how-do-i-type-the-tick-and-backtick-characters-on-windows/254077#254077) if you are struggling to find the backtick key.
 
-The \`\_\_init\_\_\` method customizes the newly created instance.
-
-And results in the following:
-
-The `__init__` method customizes the newly created instance.
-
-**Note:**  
-• These are **backticks** not quotes  
-• Avoid using them for multiple lines  
-• Useful for negating formatting you don't want
+For how to make multiline codeblocks see the `!codeblock` tag.

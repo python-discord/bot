@@ -11,7 +11,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry
+from bot.converters import Duration, Expiry
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.utils.messages import format_user
@@ -19,6 +19,7 @@ from bot.utils.time import format_infraction
 
 log = logging.getLogger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
+SUPERSTARIFY_DEFAULT_DURATION = "1h"
 
 with Path("bot/resources/stars.json").open(encoding="utf-8") as stars_file:
     STAR_NAMES = json.load(stars_file)
@@ -104,12 +105,12 @@ class Superstarify(InfractionScheduler, Cog):
 
             await self.reapply_infraction(infraction, action)
 
-    @command(name="superstarify", aliases=("force_nick", "star", "starify"))
+    @command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
     async def superstarify(
         self,
         ctx: Context,
         member: Member,
-        duration: Expiry,
+        duration: t.Optional[Expiry],
         *,
         reason: str = '',
     ) -> None:
@@ -133,6 +134,9 @@ class Superstarify(InfractionScheduler, Cog):
         """
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
+
+        # Set to default duration if none was provided.
+        duration = duration or await Duration().convert(ctx, SUPERSTARIFY_DEFAULT_DURATION)
 
         # Post the infraction to the API
         old_nick = member.display_name
@@ -183,7 +187,7 @@ class Superstarify(InfractionScheduler, Cog):
             )
             await ctx.send(embed=embed)
 
-    @command(name="unsuperstarify", aliases=("release_nick", "unstar", "unstarify"))
+    @command(name="unsuperstarify", aliases=("release_nick", "unstar", "unstarify", "unsuperstar"))
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
