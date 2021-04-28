@@ -444,7 +444,6 @@ class Channels(metaclass=YAMLGetter):
     mod_announcements: int
     staff_announcements: int
 
-    afk_voice: int
     admins_voice: int
     code_help_voice_1: int
     code_help_voice_2: int

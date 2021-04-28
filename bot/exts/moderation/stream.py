@@ -82,7 +82,7 @@ class Stream(commands.Cog):
         if voice_state.self_stream:
             # End user's stream by moving them to AFK voice channel and back.
             original_vc = voice_state.channel
-            await member.move_to(self.bot.get_channel(Channels.afk_voice))
+            await member.move_to(ctx.guild.afk_channel)
             await member.move_to(original_vc)
 
             # Notify.
