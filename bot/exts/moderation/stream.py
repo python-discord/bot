@@ -9,7 +9,7 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES, VideoPermission
+from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES, VideoPermission
 from bot.converters import Expiry
 from bot.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
