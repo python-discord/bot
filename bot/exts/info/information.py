@@ -230,6 +230,11 @@ class Information(Cog):
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
 
+        if user.public_flags.verified_bot:
+            name += f" {constants.Emojis.verified_bot}"
+        elif user.bot:
+            name += f" {constants.Emojis.bot}"
+
         badges = []
 
         for badge, is_set in user.public_flags:
