@@ -1,6 +1,7 @@
 import logging
 import re
 import textwrap
+from typing import Any
 from urllib.parse import quote_plus
 
 from aiohttp import ClientResponseError
@@ -43,7 +44,7 @@ class CodeSnippets(Cog):
     Matches each message against a regex and prints the contents of all matched snippets.
     """
 
-    async def _fetch_response(self, url: str, response_format: str, **kwargs) -> str:
+    async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
         async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
             if response_format == 'text':
@@ -61,7 +62,7 @@ class CodeSnippets(Cog):
                 ref = possible_ref['name']
                 file_path = path[len(ref) + 1:]
                 break
-        return (ref, file_path)
+        return ref, file_path
 
     async def _fetch_github_snippet(
         self,
@@ -145,8 +146,8 @@ class CodeSnippets(Cog):
         repo: str,
         ref: str,
         file_path: str,
-        start_line: int,
-        end_line: int
+        start_line: str,
+        end_line: str
     ) -> str:
         """Fetches a snippet from a BitBucket repo."""
         file_contents = await self._fetch_response(
