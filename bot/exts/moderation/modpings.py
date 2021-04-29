@@ -1,15 +1,12 @@
 import datetime
 import logging
 
-from async_rediscache import RedisCache
-from dateutil.parser import isoparse
-from discord import Member
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import Expiry
-from bot.utils.scheduling import Scheduler
+from bot.utils.persistent_scheduling import PersistentScheduler
 
 log = logging.getLogger(__name__)
 
@@ -17,47 +14,40 @@ log = logging.getLogger(__name__)
 class ModPings(Cog):
     """Commands for a moderator to turn moderator pings on and off."""
 
-    # RedisCache[discord.Member.id, 'Naïve ISO 8601 string']
-    # The cache's keys are mods who have pings off.
-    # The cache's values are the times when the role should be re-applied to them, stored in ISO format.
-    pings_off_mods = RedisCache()
-
     def __init__(self, bot: Bot):
         self.bot = bot
-        self._role_scheduler = Scheduler(self.__class__.__name__)
+        self._role_scheduler = PersistentScheduler(self.__class__.__name__, self.reapply_role, bot)
 
         self.guild = None
         self.moderators_role = None
 
-        self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="mod-pings-reschedule")
+        self.reschedule_task = self.bot.loop.create_task(self.normalize_roles(), name="mod-pings-reschedule")
 
-    async def reschedule_roles(self) -> None:
+    async def normalize_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
         await self.bot.wait_until_guild_available()
+        await self._role_scheduler.wait_until_ready()
+
         self.guild = self.bot.get_guild(Guild.id)
         self.moderators_role = self.guild.get_role(Roles.moderators)
 
         mod_team = self.guild.get_role(Roles.mod_team)
         pings_on = self.moderators_role.members
-        pings_off = await self.pings_off_mods.to_dict()
 
         log.trace("Applying the moderators role to the mod team where necessary.")
         for mod in mod_team.members:
             if mod in pings_on:  # Make sure that on-duty mods aren't in the cache.
-                if mod in pings_off:
-                    await self.pings_off_mods.delete(mod.id)
-                continue
+                if mod.id in self._role_scheduler:
+                    await self._role_scheduler.delete(mod.id)
 
             # Keep the role off only for those in the cache.
-            if mod.id not in pings_off:
-                await self.reapply_role(mod)
-            else:
-                expiry = isoparse(pings_off[mod.id]).replace(tzinfo=None)
-                self._role_scheduler.schedule_at(expiry, mod.id, self.reapply_role(mod))
+            elif mod.id not in self._role_scheduler:
+                await self.reapply_role(mod.id)
 
-    async def reapply_role(self, mod: Member) -> None:
+    async def reapply_role(self, mod_id: int) -> None:
         """Reapply the moderator's role to the given moderator."""
-        log.trace(f"Re-applying role to mod with ID {mod.id}.")
+        log.trace(f"Re-applying role to mod with ID {mod_id}.")
+        mod = self.guild.get_member(mod_id)
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
 
     @group(name='modpings', aliases=('modping',), invoke_without_command=True)
@@ -97,12 +87,10 @@ class ModPings(Cog):
         until_date = duration.replace(microsecond=0).isoformat()  # Looks noisy with microseconds.
         await mod.remove_roles(self.moderators_role, reason=f"Turned pings off until {until_date}.")
 
-        await self.pings_off_mods.set(mod.id, duration.isoformat())
-
         # Allow rescheduling the task without cancelling it separately via the `on` command.
         if mod.id in self._role_scheduler:
             self._role_scheduler.cancel(mod.id)
-        self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
+        await self._role_scheduler.schedule_at(duration, mod.id)
 
         await ctx.send(f"{Emojis.check_mark} Moderators role has been removed until {until_date}.")
 
@@ -117,10 +105,7 @@ class ModPings(Cog):
 
         await mod.add_roles(self.moderators_role, reason="Pings off period canceled.")
 
-        await self.pings_off_mods.delete(mod.id)
-
-        # We assume the task exists. Lack of it may indicate a bug.
-        self._role_scheduler.cancel(mod.id)
+        await self._role_scheduler.delete(mod.id)
 
         await ctx.send(f"{Emojis.check_mark} Moderators role has been re-applied.")
 
