@@ -45,14 +45,11 @@ class CodeSnippets(Cog):
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> str:
         """Makes http requests using aiohttp."""
-        try:
-            async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
-                if response_format == 'text':
-                    return await response.text()
-                elif response_format == 'json':
-                    return await response.json()
-        except ClientResponseError as error:
-            log.error(f'Failed to fetch code snippet from {url}. HTTP Status: {error.status}. Message: {str(error)}.')
+        async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
+            if response_format == 'text':
+                return await response.text()
+            elif response_format == 'json':
+                return await response.json()
 
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
@@ -228,8 +225,14 @@ class CodeSnippets(Cog):
 
             for pattern, handler in self.pattern_handlers:
                 for match in pattern.finditer(message.content):
-                    snippet = await handler(**match.groupdict())
-                    all_snippets.append((match.start(), snippet))
+                    try:
+                        snippet = await handler(**match.groupdict())
+                        all_snippets.append((match.start(), snippet))
+                    except ClientResponseError as error:
+                        log.error(
+                            f'Failed to fetch code snippet from {error.request_info.real_url}. '
+                            f'Status: {error.status}. Message: {error}.'
+                        )
 
             # Sorts the list of snippets by their match index and joins them into a single message
             message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
