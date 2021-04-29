@@ -229,7 +229,8 @@ class CodeSnippets(Cog):
                         snippet = await handler(**match.groupdict())
                         all_snippets.append((match.start(), snippet))
                     except ClientResponseError as error:
-                        log.error(
+                        log.log(
+                            logging.DEBUG if error.status == 404 else logging.ERROR,
                             f'Failed to fetch code snippet from {error.request_info.real_url}. '
                             f'Status: {error.status}. Message: {error}.'
                         )
