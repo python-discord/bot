@@ -1,6 +1,7 @@
 import logging
 import re
 import textwrap
+from typing import Any
 from urllib.parse import quote_plus
 
 from aiohttp import ClientResponseError
@@ -44,16 +45,13 @@ class CodeSnippets(Cog):
     Matches each message against a regex and prints the contents of all matched snippets.
     """
 
-    async def _fetch_response(self, url: str, response_format: str, **kwargs) -> str:
+    async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
-        try:
-            async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
-                if response_format == 'text':
-                    return await response.text()
-                elif response_format == 'json':
-                    return await response.json()
-        except ClientResponseError as error:
-            log.error(f'Failed to fetch code snippet from {url}. HTTP Status: {error.status}. Message: {str(error)}.')
+        async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
+            if response_format == 'text':
+                return await response.text()
+            elif response_format == 'json':
+                return await response.json()
 
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
@@ -65,7 +63,7 @@ class CodeSnippets(Cog):
                 ref = possible_ref['name']
                 file_path = path[len(ref) + 1:]
                 break
-        return (ref, file_path)
+        return ref, file_path
 
     async def _fetch_github_snippet(
         self,
@@ -149,8 +147,8 @@ class CodeSnippets(Cog):
         repo: str,
         ref: str,
         file_path: str,
-        start_line: int,
-        end_line: int
+        start_line: str,
+        end_line: str
     ) -> str:
         """Fetches a snippet from a BitBucket repo."""
         file_contents = await self._fetch_response(
@@ -229,8 +227,16 @@ class CodeSnippets(Cog):
 
             for pattern, handler in self.pattern_handlers:
                 for match in pattern.finditer(message.content):
-                    snippet = await handler(**match.groupdict())
-                    all_snippets.append((match.start(), snippet))
+                    try:
+                        snippet = await handler(**match.groupdict())
+                        all_snippets.append((match.start(), snippet))
+                    except ClientResponseError as error:
+                        error_message = error.message  # noqa: B306
+                        log.log(
+                            logging.DEBUG if error.status == 404 else logging.ERROR,
+                            f'Failed to fetch code snippet from {match[0]!r}: {error.status} '
+                            f'{error_message} for GET {error.request_info.real_url.human_repr()}'
+                        )
 
             # Sorts the list of snippets by their match index and joins them into a single message
             message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
