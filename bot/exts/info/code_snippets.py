@@ -1,6 +1,7 @@
 import logging
 import re
 import textwrap
+from typing import Any
 from urllib.parse import quote_plus
 
 from aiohttp import ClientResponseError
@@ -8,6 +9,7 @@ from discord import Message
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
+from bot.constants import Channels
 from bot.utils.messages import wait_for_deletion
 
 log = logging.getLogger(__name__)
@@ -43,16 +45,13 @@ class CodeSnippets(Cog):
     Matches each message against a regex and prints the contents of all matched snippets.
     """
 
-    async def _fetch_response(self, url: str, response_format: str, **kwargs) -> str:
+    async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
-        try:
-            async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
-                if response_format == 'text':
-                    return await response.text()
-                elif response_format == 'json':
-                    return await response.json()
-        except ClientResponseError as error:
-            log.error(f'Failed to fetch code snippet from {url}. HTTP Status: {error.status}. Message: {str(error)}.')
+        async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
+            if response_format == 'text':
+                return await response.text()
+            elif response_format == 'json':
+                return await response.json()
 
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
@@ -64,7 +63,7 @@ class CodeSnippets(Cog):
                 ref = possible_ref['name']
                 file_path = path[len(ref) + 1:]
                 break
-        return (ref, file_path)
+        return ref, file_path
 
     async def _fetch_github_snippet(
         self,
@@ -148,8 +147,8 @@ class CodeSnippets(Cog):
         repo: str,
         ref: str,
         file_path: str,
-        start_line: int,
-        end_line: int
+        start_line: str,
+        end_line: str
     ) -> str:
         """Fetches a snippet from a BitBucket repo."""
         file_contents = await self._fetch_response(
@@ -228,18 +227,37 @@ class CodeSnippets(Cog):
 
             for pattern, handler in self.pattern_handlers:
                 for match in pattern.finditer(message.content):
-                    snippet = await handler(**match.groupdict())
-                    all_snippets.append((match.start(), snippet))
+                    try:
+                        snippet = await handler(**match.groupdict())
+                        all_snippets.append((match.start(), snippet))
+                    except ClientResponseError as error:
+                        error_message = error.message  # noqa: B306
+                        log.log(
+                            logging.DEBUG if error.status == 404 else logging.ERROR,
+                            f'Failed to fetch code snippet from {match[0]!r}: {error.status} '
+                            f'{error_message} for GET {error.request_info.real_url.human_repr()}'
+                        )
 
             # Sorts the list of snippets by their match index and joins them into a single message
             message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
 
-            if 0 < len(message_to_send) <= 2000 and len(all_snippets) <= 15:
+            if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
                 await message.edit(suppress=True)
-                await wait_for_deletion(
-                    await message.channel.send(message_to_send),
-                    (message.author.id,)
-                )
+                if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
+                    # Redirects to #bot-commands if the snippet contents are too long
+                    await self.bot.wait_until_guild_available()
+                    await message.channel.send(('The snippet you tried to send was too long. Please '
+                                                f'see <#{Channels.bot_commands}> for the full snippet.'))
+                    bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
+                    await wait_for_deletion(
+                        await bot_commands_channel.send(message_to_send),
+                        (message.author.id,)
+                    )
+                else:
+                    await wait_for_deletion(
+                        await message.channel.send(message_to_send),
+                        (message.author.id,)
+                    )
 
 
 def setup(bot: Bot) -> None:
