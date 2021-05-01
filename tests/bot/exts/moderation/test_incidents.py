@@ -3,6 +3,7 @@ import enum
 import logging
 import typing as t
 import unittest
+from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import aiohttp
@@ -11,6 +12,8 @@ from async_rediscache import RedisSession
 
 from bot.constants import Colours
 from bot.exts.moderation import incidents
+from bot.exts.moderation.incidents import extract_message_links
+from bot.utils.messages import format_user
 from tests.helpers import (
     MockAsyncWebhook,
     MockAttachment,
@@ -785,3 +788,64 @@ class TestOnMessage(TestIncidents):
             await self.cog_instance.on_message(MockMessage())
 
         mock_add_signals.assert_not_called()
+
+
+class TestMessageLinkEmbeds(TestIncidents):
+    """Tests for `extract_message_links` coroutine."""
+
+    async def extract_and_form_message_link_embeds(self):
+        """
+        Extract message links from a mocked message and form the message link embed.
+
+        Considers all types of message links, discord supports.
+        """
+        self.guild_id_patcher = mock.patch("bot.exts.backend.sync._cog.constants.Guild.id", 5)
+        self.guild_id = self.guild_id_patcher.start()
+
+        msg = MockMessage(id=555, content="Hello, World!" * 3000)
+        msg.channel.mention = "#lemonade-stand"
+
+        msg_links = [
+            # Valid Message links
+            f"https://discord.com/channels/{self.guild_id}/{msg.channel.discord_id}/{msg.discord_id}",
+            f"http://canary.discord.com/channels/{self.guild_id}/{msg.channel.discord_id}/{msg.discord_id}",
+
+            # Invalid Message links
+            f"https://discord.com/channels/{msg.channel.discord_id}/{msg.discord_id}",
+            f"https://discord.com/channels/{self.guild_id}/{msg.channel.discord_id}000/{msg.discord_id}",
+        ]
+
+        incident_msg = MockMessage(
+            id=777,
+            content=f"I would like to report the following messages, "
+                    f"as they break our rules: \n{', '.join(msg_links)}"
+        )
+
+        embeds = await extract_message_links(incident_msg, self.cog_instance.bot)
+        description = (
+            f"**Author:** {format_user(msg.author)}\n"
+            f"**Channel:** {msg.channel.mention} ({msg.channel.category}/#{msg.channel.name})\n"
+            f"**Content:** {('Hello, World!' * 3000)[:300] + '...'}\n"
+        )
+
+        # Check number of embeds returned with number of valid links
+        self.assertEqual(
+            self, len(embeds), 2
+        )
+
+        # Check for the embed descriptions
+        for embed in embeds:
+            self.assertEqual(
+                self, embed.description, description
+            )
+
+    @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True))
+    async def test_incident_message_edit(self):
+        """Edit the incident message and check whether `extract_message_links` is called or not."""
+        self.cog_instance.incidents_webhook = MockAsyncWebhook()  # Patch in our webhook
+
+        edited_msg = MockMessage(id=123)
+        with patch("bot.exts.moderation.incidents.extract_message_links", AsyncMock()) as mock_extract_message_links:
+            await self.cog_instance.on_message_edit(MockMessage(id=123), edited_msg)
+
+        mock_extract_message_links.assert_awaited_once()
