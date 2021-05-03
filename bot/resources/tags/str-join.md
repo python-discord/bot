@@ -1,6 +1,6 @@
 **Joining Iterables**
 
-Suppose you want to nicely display a list (or some other iterable). The naive solution would be something like this.
+If you want to display a list (or some other iterable), you can write:
 ```py
 colors = ['red', 'green', 'blue', 'yellow']
 output = ""
@@ -10,16 +10,16 @@ for color in colors:
 print(output)
 # Prints 'red, green, blue, yellow, '
 ```
-However, this solution is flawed. The separator is still added to the last element, and it is slow.
+However, the separator is still added to the last element, and it is relatively slow.
 
-The better solution is to use `str.join`.
+A better solution is to use `str.join`.
 ```py
 colors = ['red', 'green', 'blue', 'yellow']
 separator = ", "
 print(separator.join(colors))
 # Prints 'red, green, blue, yellow'
 ```
-This solution is much simpler, faster, and solves the problem of the extra separator. An important thing to note is that you can only `str.join` strings. For a list of ints,
+An important thing to note is that you can only `str.join` strings. For a list of ints,
 you must convert each element to a string before joining.
 ```py
 integers = [1, 3, 6, 10, 15]
