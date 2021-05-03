@@ -139,6 +139,23 @@ def has_signals(message: discord.Message) -> bool:
     return ALL_SIGNALS.issubset(own_reactions(message))
 
 
+async def shorten_text(text: str) -> str:
+    lines = text.count("\n")
+    if lines > 3:
+        text = "\n".join(line for line in text.split('\n')[:3])
+        if len(text) >= 300:
+            text = f"{text[:300]}\n... (truncated - too long, too many lines)"
+        else:
+            text = f"{text}\n... (truncated - too many lines)"
+    elif len(text) >= 300:
+        if text.count(" ") < 1:
+            text = f"{text[:50]}\n... (truncated - single word)"
+        else:
+            text = f"{text[:300]}\n... (truncated - too long)"
+
+    return text
+
+
 async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional[discord.Embed]:
     """
     Create an embedded representation of the discord message link contained in the incident report.
@@ -149,22 +166,20 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         Content: This is a very important message!
     """
     try:
-        message = await MessageConverter().convert(ctx, message_link)
+        message: discord.Message = await MessageConverter().convert(ctx, message_link)
 
     except discord.DiscordException as e:
         log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
 
     else:
-        text = message.content.lstrip()
         channel = message.channel
-        shortened_text = text[:300] + (text[300:] and '...')
 
         embed = discord.Embed(
             colour=discord.Colour.gold(),
             description=(
                 f"**Author:** {format_user(message.author)}\n"
                 f"**Channel:** {channel.mention} ({channel.category}/#{channel.name})\n"
-                f"**Content:** {shortened_text}\n"
+                f"**Content:** {await shorten_text(message.content)}\n"
             )
         )
         embed.set_footer(text=f"Message ID: {message.id}")
