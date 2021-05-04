@@ -623,10 +623,11 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         """Permissions were not set and `False` was returned for an already unsilenced channel."""
         self.cog.scheduler.__contains__.return_value = False
         self.cog.previous_overwrites.get.return_value = None
-        channel = MockTextChannel()
 
-        self.assertFalse(await self.cog._unsilence(channel))
-        channel.set_permissions.assert_not_called()
+        for channel in (MockVoiceChannel(), MockTextChannel()):
+            with self.subTest(channel=channel):
+                self.assertFalse(await self.cog._unsilence(channel))
+                channel.set_permissions.assert_not_called()
 
     async def test_restored_overwrites_text(self):
         """Text channel's `send_message` and `add_reactions` overwrites were restored."""
