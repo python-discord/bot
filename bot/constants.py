@@ -175,13 +175,14 @@ class YAMLGetter(type):
             if cls.subsection is not None:
                 return _CONFIG_YAML[cls.section][cls.subsection][name]
             return _CONFIG_YAML[cls.section][name]
-        except KeyError:
+        except KeyError as e:
             dotted_path = '.'.join(
                 (cls.section, cls.subsection, name)
                 if cls.subsection is not None else (cls.section, name)
             )
-            log.critical(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
-            raise
+            # Only an INFO log since this can be caught through `hasattr` or `getattr`.
+            log.info(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            raise AttributeError(repr(name)) from e
 
     def __getitem__(cls, name):
         return cls.__getattr__(name)
@@ -199,6 +200,7 @@ class Bot(metaclass=YAMLGetter):
     prefix: str
     sentry_dsn: Optional[str]
     token: str
+    trace_loggers: Optional[str]
 
 
 class Redis(metaclass=YAMLGetter):
@@ -279,10 +281,12 @@ class Emojis(metaclass=YAMLGetter):
     badge_partner: str
     badge_staff: str
     badge_verified_bot_developer: str
+    verified_bot: str
+    bot: str
 
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str  # noqa: E704
-    defcon_updated: str  # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str  # noqa: E704
+    defcon_update: str  # noqa: E704
 
     failmail: str
 
@@ -319,9 +323,9 @@ class Icons(metaclass=YAMLGetter):
     crown_red: str
 
     defcon_denied: str    # noqa: E704
-    defcon_disabled: str  # noqa: E704
-    defcon_enabled: str   # noqa: E704
-    defcon_updated: str   # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str   # noqa: E704
+    defcon_update: str   # noqa: E704
 
     filtering: str
 
@@ -388,6 +392,7 @@ class Categories(metaclass=YAMLGetter):
     help_available: int
     help_dormant: int
     help_in_use: int
+    moderators: int
     modmail: int
     voice: int
 
@@ -402,7 +407,6 @@ class Channels(metaclass=YAMLGetter):
     python_events: int
     python_news: int
     reddit: int
-    user_event_announcements: int
 
     dev_contrib: int
     dev_core: int
@@ -412,9 +416,9 @@ class Channels(metaclass=YAMLGetter):
     python_general: int
 
     cooldown: int
+    how_to_get_help: int
 
     attachment_log: int
-    dm_log: int
     message_log: int
     mod_log: int
     user_log: int
@@ -435,9 +439,9 @@ class Channels(metaclass=YAMLGetter):
     helpers: int
     incidents: int
     incidents_archive: int
-    mods: int
     mod_alerts: int
-    mod_spam: int
+    nominations: int
+    nomination_voting: int
     organisation: int
 
     admin_announcements: int
@@ -465,7 +469,6 @@ class Webhooks(metaclass=YAMLGetter):
 
     big_brother: int
     dev_log: int
-    dm_log: int
     duck_pond: int
     incidents_archive: int
     reddit: int
@@ -484,12 +487,17 @@ class Roles(metaclass=YAMLGetter):
     python_community: int
     sprinters: int
     voice_verified: int
+    video: int
 
     admins: int
     core_developers: int
+    devops: int
+    domain_leads: int
     helpers: int
     moderators: int
+    mod_team: int
     owners: int
+    project_leads: int
 
     jammers: int
     team_leaders: int
@@ -531,6 +539,8 @@ class URLs(metaclass=YAMLGetter):
     github_bot_repo: str
 
     # Base site vars
+    connect_max_retries: int
+    connect_cooldown: int
     site: str
     site_api: str
     site_schema: str
@@ -589,7 +599,8 @@ class HelpChannels(metaclass=YAMLGetter):
     enable: bool
     claim_minutes: int
     cmd_whitelist: List[int]
-    idle_minutes: int
+    idle_minutes_claimant: int
+    idle_minutes_others: int
     deleted_idle_minutes: int
     max_available: int
     max_total_channels: int
@@ -655,6 +666,12 @@ class Event(Enum):
     message_edit = "message_edit"
 
     voice_state_update = "voice_state_update"
+
+
+class VideoPermission(metaclass=YAMLGetter):
+    section = "video_permission"
+
+    default_permission_duration: int
 
 
 # Debug mode

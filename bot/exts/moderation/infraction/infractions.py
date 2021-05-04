@@ -54,8 +54,12 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Permanent infractions
 
     @command()
-    async def warn(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
+    async def warn(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Warn a user for the given reason."""
+        if not isinstance(user, Member):
+            await ctx.send(":x: The user doesn't appear to be on the server.")
+            return
+
         infraction = await _utils.post_infraction(ctx, user, "warning", reason, active=False)
         if infraction is None:
             return
@@ -63,8 +67,12 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user)
 
     @command()
-    async def kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
+    async def kick(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Kick a user for the given reason."""
+        if not isinstance(user, Member):
+            await ctx.send(":x: The user doesn't appear to be on the server.")
+            return
+
         await self.apply_kick(ctx, user, reason)
 
     @command()
@@ -100,7 +108,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command(aliases=["mute"])
     async def tempmute(
         self, ctx: Context,
-        user: Member,
+        user: FetchedMember,
         duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str] = None
@@ -122,11 +130,15 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If no duration is given, a one hour duration is used by default.
         """
+        if not isinstance(user, Member):
+            await ctx.send(":x: The user doesn't appear to be on the server.")
+            return
+
         if duration is None:
             duration = await Duration().convert(ctx, "1h")
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
-    @command()
+    @command(aliases=("tban",))
     async def tempban(
         self,
         ctx: Context,
@@ -198,7 +210,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Temporary shadow infractions
 
-    @command(hidden=True, aliases=["shadowtempban", "stempban"])
+    @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
     async def shadow_tempban(
         self,
         ctx: Context,
@@ -317,6 +329,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
             return
+
+        infraction["purge"] = "purge " if purge_days else ""
 
         self.mod_log.ignore(Event.member_remove, user.id)
 

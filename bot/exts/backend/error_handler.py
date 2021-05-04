@@ -1,7 +1,5 @@
-import contextlib
 import difflib
 import logging
-import random
 import typing as t
 
 from discord import Embed
@@ -10,11 +8,10 @@ from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours, ERROR_REPLIES, Icons, MODERATION_ROLES
+from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import InvalidInfractedUser, LockedResourceError
-from bot.exts.backend.branding._errors import BrandingError
-from bot.utils.checks import InWhitelistCheckFailure
+from bot.utils.checks import ContextCheckFailure
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +59,7 @@ class ErrorHandler(Cog):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
 
-        if isinstance(e, errors.CommandNotFound) and not hasattr(ctx, "invoked_from_error_handler"):
+        if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
             if await self.try_silence(ctx):
                 return
             # Try to look for a tag with the command's name
@@ -79,9 +76,6 @@ class ErrorHandler(Cog):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
-            elif isinstance(e.original, BrandingError):
-                await ctx.send(embed=self._get_error_embed(random.choice(ERROR_REPLIES), str(e.original)))
-                return
             elif isinstance(e.original, InvalidInfractedUser):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
@@ -167,9 +161,8 @@ class ErrorHandler(Cog):
                 f"and the fallback tag failed validation in TagNameConverter."
             )
         else:
-            with contextlib.suppress(ResponseCodeError):
-                if await ctx.invoke(tags_get_command, tag_name=tag_name):
-                    return
+            if await ctx.invoke(tags_get_command, tag_name=tag_name):
+                return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
@@ -219,30 +212,30 @@ class ErrorHandler(Cog):
         * ArgumentParsingError: send an error message
         * Other: send an error message and the help command
         """
-        prepared_help_command = self.get_help_command(ctx)
-
         if isinstance(e, errors.MissingRequiredArgument):
             embed = self._get_error_embed("Missing required argument", e.param.name)
             await ctx.send(embed=embed)
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             embed = self._get_error_embed("Too many arguments", str(e))
             await ctx.send(embed=embed)
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             embed = self._get_error_embed("Bad argument", str(e))
             await ctx.send(embed=embed)
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
             embed = self._get_error_embed("Bad argument", f"{e}\n{e.errors[-1]}")
             await ctx.send(embed=embed)
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
             await ctx.send(embed=embed)
+            self.get_help_command(ctx).close()
             self.bot.stats.incr("errors.argument_parsing_error")
         else:
             embed = self._get_error_embed(
@@ -250,7 +243,7 @@ class ErrorHandler(Cog):
                 "Something about your input seems off. Check the arguments and try again."
             )
             await ctx.send(embed=embed)
-            await prepared_help_command
+            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.other_user_input_error")
 
     @staticmethod
@@ -277,7 +270,7 @@ class ErrorHandler(Cog):
             await ctx.send(
                 "Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, (InWhitelistCheckFailure, errors.NoPrivateMessage)):
+        elif isinstance(e, (ContextCheckFailure, errors.NoPrivateMessage)):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 

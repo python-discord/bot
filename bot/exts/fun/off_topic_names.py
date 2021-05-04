@@ -139,10 +139,20 @@ class OffTopicNames(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def search_command(self, ctx: Context, *, query: OffTopicName) -> None:
         """Search for an off-topic name."""
-        result = await self.bot.api_client.get('bot/off-topic-channel-names')
-        in_matches = {name for name in result if query in name}
-        close_matches = difflib.get_close_matches(query, result, n=10, cutoff=0.70)
-        lines = sorted(f"• {name}" for name in in_matches.union(close_matches))
+        query = OffTopicName.translate_name(query, from_unicode=False).lower()
+
+        # Map normalized names to returned names for search purposes
+        result = {
+            OffTopicName.translate_name(name, from_unicode=False).lower(): name
+            for name in await self.bot.api_client.get('bot/off-topic-channel-names')
+        }
+
+        # Search normalized keys
+        in_matches = {name for name in result.keys() if query in name}
+        close_matches = difflib.get_close_matches(query, result.keys(), n=10, cutoff=0.70)
+
+        # Send Results
+        lines = sorted(f"• {result[name]}" for name in in_matches.union(close_matches))
         embed = Embed(
             title="Query results",
             colour=Colour.blue()
