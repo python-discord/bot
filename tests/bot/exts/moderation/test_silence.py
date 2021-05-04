@@ -362,11 +362,11 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         asyncio.run(self.cog._async_init())  # Populate instance attributes.
 
         self.text_channel = MockTextChannel()
-        self.text_overwrite = PermissionOverwrite(stream=True, send_messages=True, add_reactions=False)
+        self.text_overwrite = PermissionOverwrite(send_messages=True, add_reactions=False)
         self.text_channel.overwrites_for.return_value = self.text_overwrite
 
         self.voice_channel = MockVoiceChannel()
-        self.voice_overwrite = PermissionOverwrite(speak=True)
+        self.voice_overwrite = PermissionOverwrite(connect=True, speak=True)
         self.voice_channel.overwrites_for.return_value = self.voice_overwrite
 
     async def test_sent_correct_message(self):
@@ -474,8 +474,8 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             overwrite=self.voice_overwrite
         )
 
-    async def test_preserved_other_overwrites(self):
-        """Channel's other unrelated overwrites were not changed."""
+    async def test_preserved_other_overwrites_text(self):
+        """Channel's other unrelated overwrites were not changed for a text channel mute."""
         prev_overwrite_dict = dict(self.text_overwrite)
         await self.cog._set_silence_overwrites(self.text_channel)
         new_overwrite_dict = dict(self.text_overwrite)
@@ -485,6 +485,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         del prev_overwrite_dict['add_reactions']
         del new_overwrite_dict['send_messages']
         del new_overwrite_dict['add_reactions']
+
+        self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
+
+    async def test_preserved_other_overwrites_voice(self):
+        """Channel's other unrelated overwrites were not changed for a voice channel mute."""
+        prev_overwrite_dict = dict(self.voice_overwrite)
+        await self.cog._set_silence_overwrites(self.voice_channel)
+        new_overwrite_dict = dict(self.voice_overwrite)
+
+        # Remove 'connect' & 'speak' keys because they were changed by the method.
+        del prev_overwrite_dict['connect']
+        del prev_overwrite_dict['speak']
+        del new_overwrite_dict['connect']
+        del new_overwrite_dict['speak']
 
         self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
@@ -568,9 +582,13 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.scheduler.__contains__.return_value = True
         overwrites_cache.get.return_value = '{"send_messages": true, "add_reactions": false}'
-        self.channel = MockTextChannel()
-        self.overwrite = PermissionOverwrite(stream=True, send_messages=False, add_reactions=False)
-        self.channel.overwrites_for.return_value = self.overwrite
+        self.text_channel = MockTextChannel()
+        self.text_overwrite = PermissionOverwrite(send_messages=False, add_reactions=False)
+        self.text_channel.overwrites_for.return_value = self.text_overwrite
+
+        self.voice_channel = MockVoiceChannel()
+        self.voice_overwrite = PermissionOverwrite(connect=True, speak=True)
+        self.voice_channel.overwrites_for.return_value = self.voice_overwrite
 
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
@@ -578,7 +596,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         test_cases = (
             (True, silence.MSG_UNSILENCE_SUCCESS, unsilenced_overwrite),
             (False, silence.MSG_UNSILENCE_FAIL, unsilenced_overwrite),
-            (False, silence.MSG_UNSILENCE_MANUAL, self.overwrite),
+            (False, silence.MSG_UNSILENCE_MANUAL, self.text_overwrite),
             (False, silence.MSG_UNSILENCE_MANUAL, PermissionOverwrite(send_messages=False)),
             (False, silence.MSG_UNSILENCE_MANUAL, PermissionOverwrite(add_reactions=False)),
         )
@@ -608,35 +626,60 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(await self.cog._unsilence(channel))
         channel.set_permissions.assert_not_called()
 
-    async def test_restored_overwrites(self):
-        """Channel's `send_message` and `add_reactions` overwrites were restored."""
-        await self.cog._unsilence(self.channel)
-        self.channel.set_permissions.assert_awaited_once_with(
+    async def test_restored_overwrites_text(self):
+        """Text channel's `send_message` and `add_reactions` overwrites were restored."""
+        await self.cog._unsilence(self.text_channel)
+        self.text_channel.set_permissions.assert_awaited_once_with(
             self.cog._everyone_role,
-            overwrite=self.overwrite,
+            overwrite=self.text_overwrite,
         )
 
         # Recall that these values are determined by the fixture.
-        self.assertTrue(self.overwrite.send_messages)
-        self.assertFalse(self.overwrite.add_reactions)
+        self.assertTrue(self.text_overwrite.send_messages)
+        self.assertFalse(self.text_overwrite.add_reactions)
 
-    async def test_cache_miss_used_default_overwrites(self):
-        """Both overwrites were set to None due previous values not being found in the cache."""
-        self.cog.previous_overwrites.get.return_value = None
-
-        await self.cog._unsilence(self.channel)
-        self.channel.set_permissions.assert_awaited_once_with(
-            self.cog._everyone_role,
-            overwrite=self.overwrite,
+    async def test_restored_overwrites_voice(self):
+        """Voice channel's `connect` and `speak` overwrites were restored."""
+        await self.cog._unsilence(self.voice_channel)
+        self.voice_channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_voice_role,
+            overwrite=self.voice_overwrite,
         )
 
-        self.assertIsNone(self.overwrite.send_messages)
-        self.assertIsNone(self.overwrite.add_reactions)
+        # Recall that these values are determined by the fixture.
+        self.assertTrue(self.voice_overwrite.connect)
+        self.assertTrue(self.voice_overwrite.speak)
+
+    async def test_cache_miss_used_default_overwrites_text(self):
+        """Text overwrites were set to None due previous values not being found in the cache."""
+        self.cog.previous_overwrites.get.return_value = None
+
+        await self.cog._unsilence(self.text_channel)
+        self.text_channel.set_permissions.assert_awaited_once_with(
+            self.cog._everyone_role,
+            overwrite=self.text_overwrite,
+        )
+
+        self.assertIsNone(self.text_overwrite.send_messages)
+        self.assertIsNone(self.text_overwrite.add_reactions)
+
+    async def test_cache_miss_used_default_overwrites_voice(self):
+        """Voice overwrites were set to None due previous values not being found in the cache."""
+        self.cog.previous_overwrites.get.return_value = None
+
+        await self.cog._unsilence(self.voice_channel)
+        self.voice_channel.set_permissions.assert_awaited_once_with(
+            self.cog._verified_voice_role,
+            overwrite=self.voice_overwrite,
+        )
+
+        self.assertIsNone(self.voice_overwrite.connect)
+        self.assertIsNone(self.voice_overwrite.speak)
 
     async def test_cache_miss_sent_mod_alert_text(self):
         """A message was sent to the mod alerts channel upon muting a text channel."""
         self.cog.previous_overwrites.get.return_value = None
-        await self.cog._unsilence(self.channel)
+        await self.cog._unsilence(self.text_channel)
         self.cog._mod_alerts_channel.send.assert_awaited_once()
 
     async def test_cache_miss_sent_mod_alert_voice(self):
@@ -647,39 +690,57 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_removed_notifier(self):
         """Channel was removed from `notifier`."""
-        await self.cog._unsilence(self.channel)
-        self.cog.notifier.remove_channel.assert_called_once_with(self.channel)
+        await self.cog._unsilence(self.text_channel)
+        self.cog.notifier.remove_channel.assert_called_once_with(self.text_channel)
 
     async def test_deleted_cached_overwrite(self):
         """Channel was deleted from the overwrites cache."""
-        await self.cog._unsilence(self.channel)
-        self.cog.previous_overwrites.delete.assert_awaited_once_with(self.channel.id)
+        await self.cog._unsilence(self.text_channel)
+        self.cog.previous_overwrites.delete.assert_awaited_once_with(self.text_channel.id)
 
     async def test_deleted_cached_time(self):
         """Channel was deleted from the timestamp cache."""
-        await self.cog._unsilence(self.channel)
-        self.cog.unsilence_timestamps.delete.assert_awaited_once_with(self.channel.id)
+        await self.cog._unsilence(self.text_channel)
+        self.cog.unsilence_timestamps.delete.assert_awaited_once_with(self.text_channel.id)
 
     async def test_cancelled_task(self):
         """The scheduled unsilence task should be cancelled."""
-        await self.cog._unsilence(self.channel)
-        self.cog.scheduler.cancel.assert_called_once_with(self.channel.id)
+        await self.cog._unsilence(self.text_channel)
+        self.cog.scheduler.cancel.assert_called_once_with(self.text_channel.id)
 
-    async def test_preserved_other_overwrites(self):
-        """Channel's other unrelated overwrites were not changed, including cache misses."""
+    async def test_preserved_other_overwrites_text(self):
+        """Text channel's other unrelated overwrites were not changed, including cache misses."""
         for overwrite_json in ('{"send_messages": true, "add_reactions": null}', None):
             with self.subTest(overwrite_json=overwrite_json):
                 self.cog.previous_overwrites.get.return_value = overwrite_json
 
-                prev_overwrite_dict = dict(self.overwrite)
-                await self.cog._unsilence(self.channel)
-                new_overwrite_dict = dict(self.overwrite)
+                prev_overwrite_dict = dict(self.text_overwrite)
+                await self.cog._unsilence(self.text_channel)
+                new_overwrite_dict = dict(self.text_overwrite)
 
                 # Remove these keys because they were modified by the unsilence.
                 del prev_overwrite_dict['send_messages']
                 del prev_overwrite_dict['add_reactions']
                 del new_overwrite_dict['send_messages']
                 del new_overwrite_dict['add_reactions']
+
+                self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
+
+    async def test_preserved_other_overwrites_voice(self):
+        """Voice channel's other unrelated overwrites were not changed, including cache misses."""
+        for overwrite_json in ('{"connect": true, "speak": true}', None):
+            with self.subTest(overwrite_json=overwrite_json):
+                self.cog.previous_overwrites.get.return_value = overwrite_json
+
+                prev_overwrite_dict = dict(self.voice_overwrite)
+                await self.cog._unsilence(self.voice_channel)
+                new_overwrite_dict = dict(self.voice_overwrite)
+
+                # Remove these keys because they were modified by the unsilence.
+                del prev_overwrite_dict['connect']
+                del prev_overwrite_dict['speak']
+                del new_overwrite_dict['connect']
+                del new_overwrite_dict['speak']
 
                 self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
@@ -694,52 +755,6 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(channel=channel, role=role):
                 await self.cog._unsilence_wrapper(channel, MockContext())
                 channel.overwrites_for.assert_called_with(role)
-
-    @mock.patch.object(silence.Silence, "_force_voice_sync")
-    @mock.patch.object(silence.Silence, "send_message")
-    async def test_correct_overwrites(self, send_message, _):
-        """Tests the overwrites returned by the _unsilence_wrapper are correct for voice and text channels."""
-        ctx = MockContext()
-
-        text_channel = MockTextChannel()
-        text_role = self.cog.bot.get_guild(Guild.id).default_role
-
-        voice_channel = MockVoiceChannel()
-        voice_role = self.cog.bot.get_guild(Guild.id).get_role(Roles.voice_verified)
-
-        async def reset():
-            await text_channel.set_permissions(text_role, PermissionOverwrite(send_messages=False, add_reactions=False))
-            await voice_channel.set_permissions(voice_role, PermissionOverwrite(speak=False, connect=False))
-
-            text_channel.reset_mock()
-            voice_channel.reset_mock()
-            send_message.reset_mock()
-        await reset()
-
-        default_text_overwrites = text_channel.overwrites_for(text_role)
-        default_voice_overwrites = voice_channel.overwrites_for(voice_role)
-
-        test_cases = (
-            (ctx, text_channel, text_role, default_text_overwrites, silence.MSG_UNSILENCE_SUCCESS),
-            (ctx, voice_channel, voice_role, default_voice_overwrites, silence.MSG_UNSILENCE_SUCCESS),
-            (ctx, ctx.channel, text_role, ctx.channel.overwrites_for(text_role), silence.MSG_UNSILENCE_SUCCESS),
-            (None, text_channel, text_role, default_text_overwrites, silence.MSG_UNSILENCE_SUCCESS),
-        )
-
-        for context, channel, role, overwrites, message in test_cases:
-            with self.subTest(ctx=context, channel=channel):
-                await self.cog._unsilence_wrapper(channel, context)
-
-                if context is None:
-                    send_message.assert_awaited_once_with(message, channel, channel, alert_target=True)
-                else:
-                    send_message.assert_awaited_once_with(message, context.channel, channel, alert_target=True)
-
-                channel.set_permissions.assert_awaited_once_with(role, overwrite=overwrites)
-                if channel != ctx.channel:
-                    ctx.channel.send.assert_not_called()
-
-            await reset()
 
 
 class SendMessageTests(unittest.IsolatedAsyncioTestCase):
