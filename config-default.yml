@@ -70,11 +70,6 @@ style:
         new:        "\U0001F195"
         pencil:     "\u270F"
 
-        # emotes used for #reddit
-        comments:       "<:reddit_comments:755845255001014384>"
-        upvotes:        "<:reddit_upvotes:755845219890757644>"
-        user:           "<:reddit_users:755845303822974997>"
-
         ok_hand: ":ok_hand:"
 
     icons:

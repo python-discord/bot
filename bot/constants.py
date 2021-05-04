@@ -303,10 +303,6 @@ class Emojis(metaclass=YAMLGetter):
     new: str
     pencil: str
 
-    comments: str
-    upvotes: str
-    user: str
-
     ok_hand: str
 
 
