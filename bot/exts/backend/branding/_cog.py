@@ -3,12 +3,13 @@ import contextlib
 import logging
 import random
 import typing as t
-from datetime import datetime, time, timedelta
+from datetime import timedelta
 from enum import Enum
 from operator import attrgetter
 
 import async_timeout
 import discord
+from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext import commands, tasks
 
@@ -57,6 +58,8 @@ def extract_event_duration(event: Event) -> str:
     Extract a human-readable, year-agnostic duration string from `event`.
 
     In the case that `event` is a fallback event, resolves to 'Fallback'.
+
+    For 1-day events, only the single date is shown, instead of a period.
     """
     if event.meta.is_fallback:
         return "Fallback"
@@ -64,6 +67,9 @@ def extract_event_duration(event: Event) -> str:
     fmt = "%B %d"  # Ex: August 23
     start_date = event.meta.start_date.strftime(fmt)
     end_date = event.meta.end_date.strftime(fmt)
+
+    if start_date == end_date:
+        return start_date
 
     return f"{start_date} - {end_date}"
 
@@ -208,7 +214,7 @@ class Branding(commands.Cog):
         if success:
             await self.cache_icons.increment(next_icon)  # Push the icon into the next iteration.
 
-            timestamp = datetime.utcnow().timestamp()
+            timestamp = Arrow.utcnow().timestamp()
             await self.cache_information.set("last_rotation_timestamp", timestamp)
 
         return success
@@ -229,8 +235,8 @@ class Branding(commands.Cog):
             await self.rotate_icons()
             return
 
-        last_rotation = datetime.fromtimestamp(last_rotation_timestamp)
-        difference = (datetime.utcnow() - last_rotation) + timedelta(minutes=5)
+        last_rotation = Arrow.utcfromtimestamp(last_rotation_timestamp)
+        difference = (Arrow.utcnow() - last_rotation) + timedelta(minutes=5)
 
         log.trace(f"Icons last rotated at {last_rotation} (difference: {difference}).")
 
@@ -485,11 +491,11 @@ class Branding(commands.Cog):
         await self.daemon_loop()
 
         log.trace("Daemon before: calculating time to sleep before loop begins.")
-        now = datetime.utcnow()
+        now = Arrow.utcnow()
 
         # The actual midnight moment is offset into the future to prevent issues with imprecise sleep.
-        tomorrow = now + timedelta(days=1)
-        midnight = datetime.combine(tomorrow, time(minute=1))
+        tomorrow = now.shift(days=1)
+        midnight = tomorrow.replace(hour=0, minute=1, second=0, microsecond=0)
 
         sleep_secs = (midnight - now).total_seconds()
         log.trace(f"Daemon before: sleeping {sleep_secs} seconds before next-up midnight: {midnight}.")
