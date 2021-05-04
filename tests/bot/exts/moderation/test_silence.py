@@ -432,15 +432,17 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_skipped_already_silenced(self):
         """Permissions were not set and `False` was returned for an already silenced channel."""
         subtests = (
-            (False, PermissionOverwrite(send_messages=False, add_reactions=False)),
-            (True, PermissionOverwrite(send_messages=True, add_reactions=True)),
-            (True, PermissionOverwrite(send_messages=False, add_reactions=False)),
+            (False, MockTextChannel(), PermissionOverwrite(send_messages=False, add_reactions=False)),
+            (True, MockTextChannel(), PermissionOverwrite(send_messages=True, add_reactions=True)),
+            (True, MockTextChannel(), PermissionOverwrite(send_messages=False, add_reactions=False)),
+            (False, MockVoiceChannel(), PermissionOverwrite(connect=False, speak=False)),
+            (True, MockVoiceChannel(), PermissionOverwrite(connect=True, speak=True)),
+            (True, MockVoiceChannel(), PermissionOverwrite(connect=False, speak=False)),
         )
 
-        for contains, overwrite in subtests:
-            with self.subTest(contains=contains, overwrite=overwrite):
+        for contains, channel, overwrite in subtests:
+            with self.subTest(contains=contains, is_text=isinstance(channel, MockTextChannel), overwrite=overwrite):
                 self.cog.scheduler.__contains__.return_value = contains
-                channel = MockTextChannel()
                 channel.overwrites_for.return_value = overwrite
 
                 self.assertFalse(await self.cog._set_silence_overwrites(channel))
