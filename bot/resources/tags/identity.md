@@ -11,7 +11,6 @@ if x == 3:
     print("x equals 3")
 # Prints 'x equals 5'
 ```
-
 To check if two things are actually the same thing in memory, use the identity comparison operator (`is`).
 ```py
 x = [1, 2, 3]
