@@ -385,6 +385,7 @@ message_instance = discord.Message(state=state, channel=channel, data=message_da
 
 # Create a Context instance to get a realistic MagicMock of `discord.ext.commands.Context`
 context_instance = Context(message=unittest.mock.MagicMock(), prefix=unittest.mock.MagicMock())
+context_instance.invoked_from_error_handler = None
 
 
 class MockContext(CustomMockMixin, unittest.mock.MagicMock):
@@ -402,6 +403,7 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         self.guild = kwargs.get('guild', MockGuild())
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
+        self.invoked_from_error_handler = kwargs.get('invoked_from_error_handler', False)
 
 
 attachment_instance = discord.Attachment(data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock())

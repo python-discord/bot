@@ -281,6 +281,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """The embed should use the string representation of the user if they don't have a nick."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
         user = helpers.MockMember()
+        user.public_flags = unittest.mock.MagicMock(verified_bot=False)
         user.nick = None
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
         user.colour = 0
@@ -297,6 +298,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """The embed should use the nick if it's available."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
         user = helpers.MockMember()
+        user.public_flags = unittest.mock.MagicMock(verified_bot=False)
         user.nick = "Cat lover"
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
         user.colour = 0
