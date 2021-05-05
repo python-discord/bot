@@ -76,9 +76,20 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_kick(ctx, user, reason)
 
     @command()
-    async def ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
-        """Permanently ban a user for the given reason and stop watching them with Big Brother."""
-        await self.apply_ban(ctx, user, reason)
+    async def ban(
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        duration: t.Optional[Expiry] = None,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
+        """
+        Permanently ban a user for the given reason and stop watching them with Big Brother.
+
+        If duration is specified, then it would temporarily ban that user for the given duration.
+        """
+        await self.apply_ban(ctx, user, reason, expires_at=duration)
 
     @command(aliases=('pban',))
     async def purgeban(
