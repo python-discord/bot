@@ -111,12 +111,15 @@ def redirect_output(
     destination_channel: int,
     bypass_roles: t.Optional[t.Container[int]] = None,
     channels: t.Optional[t.Container[int]] = None,
-    categories: t.Optional[t.Container[int]] = None
+    categories: t.Optional[t.Container[int]] = None,
+    ping_user: bool = True
 ) -> t.Callable:
     """
     Changes the channel in the context of the command to redirect the output to a certain channel.
 
     Redirect is bypassed if the author has a bypass role or if it is in a channel that can bypass redirection.
+
+    If ping_user is False, it will not send a message in the destination channel.
 
     This decorator must go before (below) the `command` decorator.
     """
@@ -147,7 +150,9 @@ def redirect_output(
 
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
-            await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
+
+            if ping_user:
+                await ctx.send(f"Here's the output of your command, {ctx.author.mention}")
             asyncio.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(

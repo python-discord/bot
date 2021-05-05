@@ -284,7 +284,8 @@ class Snekbox(Cog):
         destination_channel=Channels.bot_commands,
         bypass_roles=EVAL_ROLES,
         categories=NO_EVAL_CATEGORIES,
-        channels=NO_EVAL_CHANNELS
+        channels=NO_EVAL_CHANNELS,
+        ping_user=False
     )
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
