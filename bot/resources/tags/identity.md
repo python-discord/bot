@@ -2,7 +2,7 @@
 
 Should I be using `is` or `==`?
 
-To check if two things are equal, use the equality operator (`==`).
+To check if two objects are equal, use the equality operator (`==`).
 ```py
 x = 5
 if x == 5:
@@ -11,14 +11,14 @@ if x == 3:
     print("x equals 3")
 # Prints 'x equals 5'
 ```
-To check if two things are actually the same thing in memory, use the identity comparison operator (`is`).
+To check if two objects are actually the same thing in memory, use the identity comparison operator (`is`).
 ```py
-x = [1, 2, 3]
-y = [1, 2, 3]
-if x is [1, 2, 3]:
-    print("x is y")
-z = x
-if x is z:
-    print("x is z")
-# Prints 'x is z'
+list_1 = [1, 2, 3]
+list_2 = [1, 2, 3]
+if list_1 is [1, 2, 3]:
+    print("list_1 is list_2")
+reference_to_list_1 = list_1
+if list_1 is reference_to_list_1:
+    print("list_1 is reference_to_list_1")
+# Prints 'list_1 is reference_to_list_1'
 ```
