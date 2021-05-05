@@ -1,9 +1,10 @@
 import logging
 import textwrap
 import typing as t
-from datetime import datetime
 
+import arrow
 import discord
+from arrow import Arrow
 
 import bot
 from bot import constants
@@ -28,7 +29,7 @@ For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_UR
 
 AVAILABLE_TITLE = "Available help channel"
 
-AVAILABLE_FOOTER = f"Closes after {constants.HelpChannels.idle_minutes} minutes of inactivity or when you send !close."
+AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **Help: Dormant** \
@@ -42,25 +43,27 @@ through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
 """
 
 
-async def check_for_answer(message: discord.Message) -> None:
-    """Checks for whether new content in a help channel comes from non-claimants."""
+async def update_message_caches(message: discord.Message) -> None:
+    """Checks the source of new content in a help channel and updates the appropriate cache."""
     channel = message.channel
 
     # Confirm the channel is an in use help channel
     if is_in_category(channel, constants.Categories.help_in_use):
-        log.trace(f"Checking if #{channel} ({channel.id}) has been answered.")
+        log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
 
-        # Check if there is an entry in unanswered
-        if await _caches.unanswered.contains(channel.id):
-            claimant_id = await _caches.claimants.get(channel.id)
-            if not claimant_id:
-                # The mapping for this channel doesn't exist, we can't do anything.
-                return
+        claimant_id = await _caches.claimants.get(channel.id)
+        if not claimant_id:
+            # The mapping for this channel doesn't exist, we can't do anything.
+            return
 
-            # Check the message did not come from the claimant
-            if claimant_id != message.author.id:
-                # Mark the channel as answered
-                await _caches.unanswered.set(channel.id, False)
+        # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
+        timestamp = Arrow.fromdatetime(message.created_at).timestamp()
+
+        # Overwrite the appropriate last message cache depending on the author of the message
+        if message.author.id == claimant_id:
+            await _caches.claimant_last_message_times.set(channel.id, timestamp)
+        else:
+            await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
 
 
 async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
@@ -125,12 +128,12 @@ async def dm_on_open(message: discord.Message) -> None:
         )
 
 
-async def notify(channel: discord.TextChannel, last_notification: t.Optional[datetime]) -> t.Optional[datetime]:
+async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arrow]) -> t.Optional[Arrow]:
     """
     Send a message in `channel` notifying about a lack of available help channels.
 
-    If a notification was sent, return the `datetime` at which the message was sent. Otherwise,
-    return None.
+    If a notification was sent, return the time at which the message was sent.
+    Otherwise, return None.
 
     Configuration:
 
@@ -144,7 +147,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[dat
     log.trace("Notifying about lack of channels.")
 
     if last_notification:
-        elapsed = (datetime.utcnow() - last_notification).seconds
+        elapsed = (arrow.utcnow() - last_notification).seconds
         minimum_interval = constants.HelpChannels.notify_minutes * 60
         should_send = elapsed >= minimum_interval
     else:
@@ -167,7 +170,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[dat
             allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
         )
 
-        return message.created_at
+        return Arrow.fromdatetime(message.created_at)
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about lack of dormant channels!")

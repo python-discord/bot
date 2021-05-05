@@ -9,11 +9,12 @@ from discord.ext.commands import BadArgument, Cog, Context, clean_content, comma
 from discord.utils import snowflake_time
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, STAFF_ROLES
+from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
+from bot.utils.checks import has_no_roles_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ class Utils(Cog):
         # handle if it's an index int
         if isinstance(search_value, int):
             upper_bound = len(zen_lines) - 1
-            lower_bound = -1 * upper_bound
+            lower_bound = -1 * len(zen_lines)
             if not (lower_bound <= search_value <= upper_bound):
                 raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
 
@@ -156,21 +157,35 @@ class Utils(Cog):
 
     @command(aliases=("snf", "snfl", "sf"))
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
-    async def snowflake(self, ctx: Context, snowflake: Snowflake) -> None:
+    async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
         """Get Discord snowflake creation time."""
-        created_at = snowflake_time(snowflake)
-        embed = Embed(
-            description=f"**Created at {created_at}** ({time_since(created_at, max_units=3)}).",
-            colour=Colour.blue()
-        )
+        if len(snowflakes) > 1 and await has_no_roles_check(ctx, *STAFF_ROLES):
+            raise BadArgument("Cannot process more than one snowflake in one invocation.")
+
+        if not snowflakes:
+            raise BadArgument("At least one snowflake must be provided.")
+
+        embed = Embed(colour=Colour.blue())
         embed.set_author(
-            name=f"Snowflake: {snowflake}",
+            name=f"Snowflake{'s'[:len(snowflakes)^1]}",  # Deals with pluralisation
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
         )
-        await ctx.send(embed=embed)
+
+        lines = []
+        for snowflake in snowflakes:
+            created_at = snowflake_time(snowflake)
+            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at, max_units=3)}).")
+
+        await LinePaginator.paginate(
+            lines,
+            ctx=ctx,
+            embed=embed,
+            max_lines=5,
+            max_size=1000
+        )
 
     @command(aliases=("poll",))
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.project_leads, Roles.domain_leads)
     async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.

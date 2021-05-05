@@ -15,7 +15,9 @@ from discord.utils import DISCORD_EPOCH, snowflake_time
 
 from bot.api import ResponseCodeError
 from bot.constants import URLs
+from bot.exts.info.doc import _inventory_parser
 from bot.utils.regex import INVITE_RE
+from bot.utils.time import parse_duration_string
 
 log = logging.getLogger(__name__)
 
@@ -126,22 +128,20 @@ class ValidFilterListType(Converter):
         return list_type
 
 
-class ValidPythonIdentifier(Converter):
+class PackageName(Converter):
     """
-    A converter that checks whether the given string is a valid Python identifier.
+    A converter that checks whether the given string is a valid package name.
 
-    This is used to have package names that correspond to how you would use the package in your
-    code, e.g. `import package`.
-
-    Raises `BadArgument` if the argument is not a valid Python identifier, and simply passes through
-    the given argument otherwise.
+    Package names are used for stats and are restricted to the a-z and _ characters.
     """
 
-    @staticmethod
-    async def convert(ctx: Context, argument: str) -> str:
-        """Checks whether the given string is a valid Python identifier."""
-        if not argument.isidentifier():
-            raise BadArgument(f"`{argument}` is not a valid Python identifier")
+    PACKAGE_NAME_RE = re.compile(r"[^a-z0-9_]")
+
+    @classmethod
+    async def convert(cls, ctx: Context, argument: str) -> str:
+        """Checks whether the given string is a valid package name."""
+        if cls.PACKAGE_NAME_RE.search(argument):
+            raise BadArgument("The provided package name is not valid; please only use the _, 0-9, and a-z characters.")
         return argument
 
 
@@ -175,6 +175,27 @@ class ValidURL(Converter):
         except ClientConnectorError:
             raise BadArgument(f"Cannot connect to host with URL `{url}`.")
         return url
+
+
+class Inventory(Converter):
+    """
+    Represents an Intersphinx inventory URL.
+
+    This converter checks whether intersphinx accepts the given inventory URL, and raises
+    `BadArgument` if that is not the case or if the url is unreachable.
+
+    Otherwise, it returns the url and the fetched inventory dict in a tuple.
+    """
+
+    @staticmethod
+    async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
+        """Convert url to Intersphinx inventory URL."""
+        await ctx.trigger_typing()
+        if (inventory := await _inventory_parser.fetch_inventory(url)) is None:
+            raise BadArgument(
+                f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+            )
+        return url, inventory
 
 
 class Snowflake(IDConverter):
@@ -301,16 +322,6 @@ class TagContentConverter(Converter):
 class DurationDelta(Converter):
     """Convert duration strings into dateutil.relativedelta.relativedelta objects."""
 
-    duration_parser = re.compile(
-        r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
-        r"((?P<months>\d+?) ?(months|month|m) ?)?"
-        r"((?P<weeks>\d+?) ?(weeks|week|W|w) ?)?"
-        r"((?P<days>\d+?) ?(days|day|D|d) ?)?"
-        r"((?P<hours>\d+?) ?(hours|hour|H|h) ?)?"
-        r"((?P<minutes>\d+?) ?(minutes|minute|M) ?)?"
-        r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
-    )
-
     async def convert(self, ctx: Context, duration: str) -> relativedelta:
         """
         Converts a `duration` string to a relativedelta object.
@@ -326,12 +337,8 @@ class DurationDelta(Converter):
 
         The units need to be provided in descending order of magnitude.
         """
-        match = self.duration_parser.fullmatch(duration)
-        if not match:
+        if not (delta := parse_duration_string(duration)):
             raise BadArgument(f"`{duration}` is not a valid duration string.")
-
-        duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
-        delta = relativedelta(**duration_dict)
 
         return delta
 

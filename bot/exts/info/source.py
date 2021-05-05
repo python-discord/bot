@@ -14,9 +14,10 @@ SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, str, co
 class SourceConverter(commands.Converter):
     """Convert an argument into a help command, tag, command, or cog."""
 
-    async def convert(self, ctx: commands.Context, argument: str) -> SourceType:
+    @staticmethod
+    async def convert(ctx: commands.Context, argument: str) -> SourceType:
         """Convert argument into source object."""
-        if argument.lower().startswith("help"):
+        if argument.lower() == "help":
             return ctx.bot.help_command
 
         cog = ctx.bot.get_cog(argument)
@@ -68,7 +69,8 @@ class BotSource(commands.Cog):
         Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
         """
         if isinstance(source_item, commands.Command):
-            src = source_item.callback.__code__
+            source_item = inspect.unwrap(source_item.callback)
+            src = source_item.__code__
             filename = src.co_filename
         elif isinstance(source_item, str):
             tags_cog = self.bot.get_cog("Tags")
@@ -97,7 +99,7 @@ class BotSource(commands.Cog):
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
-        url = f"{URLs.github_bot_repo}/blob/master/{file_location}{lines_extension}"
+        url = f"{URLs.github_bot_repo}/blob/main/{file_location}{lines_extension}"
 
         return url, file_location, first_line_no or None
 
