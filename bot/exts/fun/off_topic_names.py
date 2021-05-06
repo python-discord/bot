@@ -1,6 +1,7 @@
 import difflib
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group, has_any_role
@@ -13,6 +14,8 @@ from bot.converters import OffTopicName
 from bot.pagination import LinePaginator
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
+OTN_FORMATTER = "ot{number}-{name}"
+
 log = logging.getLogger(__name__)
 
 
@@ -34,9 +37,10 @@ async def update_names(bot: Bot) -> None:
             continue
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
 
-        await channel_0.edit(name=f'ot0-{channel_0_name}')
-        await channel_1.edit(name=f'ot1-{channel_1_name}')
-        await channel_2.edit(name=f'ot2-{channel_2_name}')
+        await channel_0.edit(name=OTN_FORMATTER.format(number=0, name=channel_0_name))
+        await channel_1.edit(name=OTN_FORMATTER.format(number=1, name=channel_1_name))
+        await channel_2.edit(name=OTN_FORMATTER.format(number=2, name=channel_2_name))
+
         log.debug(
             "Updated off-topic channel names to"
             f" {channel_0_name}, {channel_1_name} and {channel_2_name}"
@@ -110,10 +114,59 @@ class OffTopicNames(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def delete_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Removes a off-topic name from the rotation."""
+        await self._delete_name(ctx, name)
+
+    async def _delete_name(self, ctx: Context, name: str) -> None:
+        """Delete an off-topic channel name."""
         await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
 
         log.info(f"{ctx.author} deleted the off-topic channel name '{name}'")
         await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
+
+    @otname_group.command(name='reroll')
+    @has_any_role(*MODERATION_ROLES)
+    async def re_roll_command(self, ctx: Context, ot_channel_index: Optional[int]) -> None:
+        """
+        Re-rolls off topic name for an off-topic channel and deletes the name.
+
+        ot_channel_index: [0, 1, 2, ...]
+        """
+        def parse_off_topic_name(name: str) -> str:
+            """Return name from ot{number}-{name}."""
+            return name[4:]
+
+        if ot_channel_index:
+            try:
+                channel = self.bot.get_channel(CHANNELS[ot_channel_index])
+            except KeyError:
+                await ctx.send(f":x: Off-topic channel not found with index {ot_channel_index}.")
+                return
+        elif ctx.channel.id in CHANNELS:
+            channel = ctx.channel
+
+        else:
+            await ctx.send("Please specify channel for which the off topic name should be re-rolled.")
+            return
+
+        response = await self.bot.api_client.get(
+            'bot/off-topic-channel-names', params={'random_items': 1}
+        )
+        new_channel_name = response[0]
+        old_channel_name = channel.name
+
+        await channel.edit(name=OTN_FORMATTER.format(number=old_channel_name[2], name=new_channel_name)),
+        log.info(
+            f"{ctx.author} Off-topic channel re-named from `{parse_off_topic_name(old_channel_name)}` "
+            f"to `{new_channel_name}`."
+        )
+
+        await ctx.send(
+            f":ok_hand: Off-topic channel re-named from `{parse_off_topic_name(old_channel_name)}` "
+            f"to `{new_channel_name}`. "
+            "Attempting to delete old off-topic name..."
+        )
+
+        await self._delete_name(ctx, parse_off_topic_name(old_channel_name))
 
     @otname_group.command(name='list', aliases=('l',))
     @has_any_role(*MODERATION_ROLES)
