@@ -140,18 +140,21 @@ def has_signals(message: discord.Message) -> bool:
 
 
 async def shorten_text(text: str) -> str:
+    """Truncate the text if there are over 3 lines or 300 characters, or if it is a single word."""
+    original_length = len(text)
     lines = text.count("\n")
+    # Limit to a maximum of three lines
     if lines > 3:
         text = "\n".join(line for line in text.split('\n')[:3])
-        if len(text) >= 300:
-            text = f"{text[:300]}\n... (truncated - too long, too many lines)"
-        else:
-            text = f"{text}\n... (truncated - too many lines)"
-    elif len(text) >= 300:
-        if text.count(" ") < 1:
-            text = f"{text[:50]}\n... (truncated - single word)"
-        else:
-            text = f"{text[:300]}\n... (truncated - too long)"
+    # If it is a single word, then truncate it to 50 characters
+    if text.count(" ") < 1:
+        text = text[:50]
+    # Truncate text to a maximum of 300 characters
+    if len(text) > 300:
+        text = text[:300]
+    # Add placeholder if the text was shortened
+    if len(text) < original_length:
+        text += "..."
 
     return text
 
@@ -179,8 +182,11 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
             description=(
                 f"**Author:** {format_user(message.author)}\n"
                 f"**Channel:** {channel.mention} ({channel.category}/#{channel.name})\n"
-                f"**Content:** {await shorten_text(message.content)}\n"
             )
+        )
+        embed.add_field(
+            name="Content",
+            value=await shorten_text(message.content)
         )
         embed.set_footer(text=f"Message ID: {message.id}")
 
