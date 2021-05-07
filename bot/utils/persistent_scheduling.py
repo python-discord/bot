@@ -13,7 +13,7 @@ SchedulerTaskFactory = t.Callable[[t.Union[str, int]], t.Coroutine[None, None, N
 CacheKey = t.Union[str, int]
 
 
-class PersistentScheduler(Scheduler):
+class PersistentScheduler:
     """
     Schedule the execution of coroutines and keep track of them even across restarts and cog reloads.
 
@@ -22,21 +22,23 @@ class PersistentScheduler(Scheduler):
     the instance is suggested. The same name must be provided after a restart for the tasks to be preserved.
 
     A coroutine must be provided in order to reschedule each of the keys contained in the cache at init.
-    The coroutine will take a single argument, the ID used to create the Scheduler task in the first place.
+    The coroutine will take a single argument -- the ID that was used to create the Scheduler task in the first place.
 
-    Coroutines can be scheduled immediately with `schedule` or in the future with `schedule_at`
-    or `schedule_later`. A unique ID is required to be given in order to keep track of the
-    resulting Tasks. Any scheduled task can be cancelled prematurely using `cancel` by providing
-    the same ID used to schedule it.  The `in` operator is supported for checking if a task with a
-    given ID is currently scheduled.
+    Coroutines can be scheduled with `schedule_at` or `schedule_later`.
+    A unique ID is required to be given in order to keep track of the resulting Tasks.
+    Any scheduled task can be cancelled prematurely using `cancel` by providing the same ID used to schedule it, but
+    the task will be rescheduled from the cache on the next initialization. To remove the task completely, you can
+    `delete` it.
+    The `in` operator is supported for checking if a task with a given ID is currently scheduled.
 
     Any exception raised in a scheduled task is logged when the task is done.
     """
 
     def __init__(self, name: str, task_factory: SchedulerTaskFactory, bot: Bot):
-        super().__init__(name)
+        name = f"{__name__}.{name}"
 
-        self.cache = RedisCache(namespace=f"{__name__}.{name}")
+        self._scheduler = Scheduler(name)
+        self.cache = RedisCache(namespace=name)
 
         self.task_factory = task_factory
         self.bot = bot
@@ -44,6 +46,10 @@ class PersistentScheduler(Scheduler):
         self.ready = asyncio.Event()
 
         self.reschedule_task = self.bot.loop.create_task(self._start_scheduler())
+
+    def __contains__(self, task_id: CacheKey) -> bool:
+        """Return True if a task with the given `task_id` is currently scheduled."""
+        return task_id in self._scheduler
 
     async def wait_until_ready(self) -> None:
         """Wait until the scheduler is ready and the cache is ready (and all cached tasks are scheduled)."""
@@ -68,15 +74,15 @@ class PersistentScheduler(Scheduler):
 
     async def reschedule_task(self, task_id: CacheKey) -> None:
         """Reschedule the task according to `task_factory` and `task_id`."""
-        time = await self.scheduled_at(task_id)
-        super().schedule_at(time, task_id, coroutine=self._to_schedule(task_id))
+        time = (await self.get(task_id)).datetime
+        self._scheduler.schedule_at(time, task_id, coroutine=self._to_schedule(task_id))
 
     async def reschedule_all_tasks(self) -> None:
         """Reschedule all tasks according to `task_factory` and the ID's in the cache."""
         tasks = await self.cache.items()
         for task_id, timestamp in tasks:
             time = Arrow.utcfromtimestamp(timestamp)
-            super().schedule_at(time.datetime, task_id, coroutine=self._to_schedule(task_id))
+            self._scheduler.schedule_at(time.datetime, task_id, coroutine=self._to_schedule(task_id))
 
     async def delete(self, task_id: CacheKey) -> None:
         """
@@ -87,7 +93,7 @@ class PersistentScheduler(Scheduler):
         """
         await self.cache.delete(task_id)
 
-        super().cancel(task_id)
+        self._scheduler.cancel(task_id)
 
     async def delete_all(self) -> None:
         """
@@ -98,7 +104,7 @@ class PersistentScheduler(Scheduler):
         self.reschedule_task.cancel()
         await self.cache.clear()
 
-        self.reschedule_task.add_done_callback(super().cancel_all())
+        self.reschedule_task.add_done_callback(self._scheduler.cancel_all())
 
     async def schedule_at(self, time: datetime, task_id: CacheKey) -> None:
         """
@@ -112,7 +118,7 @@ class PersistentScheduler(Scheduler):
         If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
         prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
-        super().schedule_at(time, task_id, self._to_schedule(task_id))
+        self._scheduler.schedule_at(time, task_id, self._to_schedule(task_id))
 
         if time.tzinfo is None:
             time.replace(tzinfo=timezone.utc)
@@ -125,7 +131,7 @@ class PersistentScheduler(Scheduler):
         If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
         prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
-        super().schedule_later(delay, task_id, self._to_schedule(task_id))
+        self._scheduler.schedule_later(delay, task_id, self._to_schedule(task_id))
 
         time = arrow.utcnow() + timedelta(seconds=delay)
         await self.cache.set(task_id, time.timestamp())
@@ -133,7 +139,7 @@ class PersistentScheduler(Scheduler):
     def cancel_all(self) -> None:
         """Unschedule all known tasks."""
         self.reschedule_task.cancel()
-        self.reschedule_task.add_done_callback(lambda _: super(PersistentScheduler, self).cancel_all())
+        self.reschedule_task.add_done_callback(lambda _: self._scheduler.cancel_all())
 
     async def _start_scheduler(self) -> None:
         """Starts the persistent scheduler by awaiting the guild before rescheduling the tasks."""
