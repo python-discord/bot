@@ -139,7 +139,7 @@ def has_signals(message: discord.Message) -> bool:
     return ALL_SIGNALS.issubset(own_reactions(message))
 
 
-async def shorten_text(text: str) -> str:
+def shorten_text(text: str) -> str:
     """Truncate the text if there are over 3 lines or 300 characters, or if it is a single word."""
     original_length = len(text)
     lines = text.count("\n")
@@ -186,7 +186,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         )
         embed.add_field(
             name="Content",
-            value=await shorten_text(message.content)
+            value=shorten_text(message.content)
         )
         embed.set_footer(text=f"Message ID: {message.id}")
 

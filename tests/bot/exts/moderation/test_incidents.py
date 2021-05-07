@@ -12,7 +12,6 @@ from async_rediscache import RedisSession
 
 from bot.constants import Colours
 from bot.exts.moderation import incidents
-from bot.exts.moderation.incidents import extract_message_links
 from bot.utils.messages import format_user
 from tests.helpers import (
     MockAsyncWebhook,
@@ -793,6 +792,19 @@ class TestOnMessage(TestIncidents):
 class TestMessageLinkEmbeds(TestIncidents):
     """Tests for `extract_message_links` coroutine."""
 
+    async def test_shorten_text(self):
+        """Test all cases of text shortening by mocking messages."""
+        tests = {
+            "thisisasingleword"*10: ('thisisasingleword'*10)[:50]+"...",
+            "\n".join("Lets make a new line test".split()): "Lets\nmake\na"+"...",
+            'Hello, World!' * 300: ('Hello, World!' * 300)[:300] + '...'
+        }
+
+        for test, value in tests.items():
+            self.assertEqual(
+                str(incidents.shorten_text(test)), value
+            )
+
     async def extract_and_form_message_link_embeds(self):
         """
         Extract message links from a mocked message and form the message link embed.
@@ -821,7 +833,7 @@ class TestMessageLinkEmbeds(TestIncidents):
                     f"as they break our rules: \n{', '.join(msg_links)}"
         )
 
-        embeds = await extract_message_links(incident_msg, self.cog_instance.bot)
+        embeds = await incidents.extract_message_links(incident_msg, self.cog_instance.bot)
         description = (
             f"**Author:** {format_user(msg.author)}\n"
             f"**Channel:** {msg.channel.mention} ({msg.channel.category}/#{msg.channel.name})\n"
@@ -829,15 +841,11 @@ class TestMessageLinkEmbeds(TestIncidents):
         )
 
         # Check number of embeds returned with number of valid links
-        self.assertEqual(
-            self, len(embeds), 2
-        )
+        self.assertEqual(len(embeds), 2)
 
         # Check for the embed descriptions
         for embed in embeds:
-            self.assertEqual(
-                self, embed.description, description
-            )
+            self.assertEqual(embed.description, description)
 
     @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True))
     async def test_incident_message_edit(self):
