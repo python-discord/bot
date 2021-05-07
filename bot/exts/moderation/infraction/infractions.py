@@ -96,17 +96,16 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: FetchedMember,
-        purge_days: t.Optional[int] = 1,
+        duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
         """
-        Same as ban but removes all their messages for the given number of days, default being 1.
+        Same as ban but removes all their messages of the current day.
 
-        `purge_days` can only be values between 0 and 7.
-        Anything outside these bounds are automatically adjusted to their respective limits.
+        If duration is specified, then it would temporarily ban that user for the given duration.
         """
-        await self.apply_ban(ctx, user, reason, max(min(purge_days, 7), 0))
+        await self.apply_ban(ctx, user, reason, 1, 0, expires_at=duration)
 
     @command(aliases=('vban',))
     async def voiceban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str]) -> None:
