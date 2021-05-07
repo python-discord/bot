@@ -87,7 +87,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         Permanently ban a user for the given reason and stop watching them with Big Brother.
 
-        If duration is specified, then it would temporarily ban that user for the given duration.
+        If duration is specified, it temporarily bans that user for the given duration.
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
@@ -101,9 +101,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str] = None
     ) -> None:
         """
-        Same as ban but removes all their messages of the current day.
+        Same as ban but removes all their messages of the last 24 hours.
 
-        If duration is specified, then it would temporarily ban that user for the given duration.
+        If duration is specified, it temporarily bans that user for the given duration.
         """
         await self.apply_ban(ctx, user, reason, 1, 0, expires_at=duration)
 
@@ -119,7 +119,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         Permanently ban user from using voice channels.
 
-        If duration is specified, then it would temporarily voice ban that user for the given duration.
+        If duration is specified, it temporarily voice bans that user for the given duration.
         """
         await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
 
