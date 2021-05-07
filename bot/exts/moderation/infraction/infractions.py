@@ -108,9 +108,20 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_ban(ctx, user, reason, 1, 0, expires_at=duration)
 
     @command(aliases=('vban',))
-    async def voiceban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str]) -> None:
-        """Permanently ban user from using voice channels."""
-        await self.apply_voice_ban(ctx, user, reason)
+    async def voiceban(
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        duration: t.Optional[Expiry] = None,
+        *,
+        reason: t.Optional[str]
+    ) -> None:
+        """
+        Permanently ban user from using voice channels.
+
+        If duration is specified, then it would temporarily voice ban that user for the given duration.
+        """
+        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Temporary infractions
