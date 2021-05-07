@@ -47,6 +47,28 @@ class Stream(commands.Cog):
 
         await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
+    async def _suspend_stream(self, ctx: commands.Context, member: discord.Member) -> None:
+        """Suspend a member's stream."""
+        await self.bot.wait_until_guild_available()
+        voice_state = member.voice
+
+        if not voice_state:
+            return
+
+        # If the user is streaming.
+        if voice_state.self_stream:
+            # End user's stream by moving them to AFK voice channel and back.
+            original_vc = voice_state.channel
+            await member.move_to(ctx.guild.afk_channel)
+            await member.move_to(original_vc)
+
+            # Notify.
+            await ctx.send(f"{member.mention}'s stream has been suspended!")
+            log.debug(f"Successfully suspended stream from {member} ({member.id}).")
+            return
+
+        log.debug(f"No stream found to suspend from {member} ({member.id}).")
+
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*MODERATION_ROLES)
     async def stream(self, ctx: commands.Context, member: discord.Member, duration: Expiry = None) -> None:
@@ -140,10 +162,12 @@ class Stream(commands.Cog):
 
             await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {member.mention}.")
             log.debug(f"Successfully revoked streaming permission from {member} ({member.id}).")
-            return
 
-        await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
-        log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
+        else:
+            await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
+            log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
+
+        await self._suspend_stream(ctx, member)
 
     @commands.command(aliases=('lstream',))
     @commands.has_any_role(*MODERATION_ROLES)
