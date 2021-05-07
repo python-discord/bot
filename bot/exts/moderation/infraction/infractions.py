@@ -105,7 +105,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If duration is specified, it temporarily bans that user for the given duration.
         """
-        await self.apply_ban(ctx, user, reason, 1, 0, expires_at=duration)
+        await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
 
     @command(aliases=('vban',))
     async def voiceban(
