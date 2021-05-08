@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import unittest
 from datetime import datetime, timezone
 from typing import List, Tuple
@@ -379,19 +380,20 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
             (5, silence.MSG_SILENCE_FAIL, False,),
         )
 
-        for duration, message, was_silenced in test_cases:
+        targets = (MockTextChannel(), MockVoiceChannel(), None)
+
+        for (duration, message, was_silenced), target in itertools.product(test_cases, targets):
             with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=was_silenced):
-                for target in [MockTextChannel(), MockVoiceChannel(), None]:
-                    with self.subTest(was_silenced=was_silenced, target=target, message=message):
-                        with mock.patch.object(self.cog, "send_message") as send_message:
-                            ctx = MockContext()
-                            await self.cog.silence.callback(self.cog, ctx, duration, target)
-                            send_message.assert_called_once_with(
-                                message,
-                                ctx.channel,
-                                target or ctx.channel,
-                                alert_target=was_silenced
-                            )
+                with self.subTest(was_silenced=was_silenced, target=target, message=message):
+                    with mock.patch.object(self.cog, "send_message") as send_message:
+                        ctx = MockContext()
+                        await self.cog.silence.callback(self.cog, ctx, duration, target)
+                        send_message.assert_called_once_with(
+                            message,
+                            ctx.channel,
+                            target or ctx.channel,
+                            alert_target=was_silenced
+                        )
 
     @voice_sync_helper
     async def test_sync_called(self, ctx, sync, kick):
@@ -603,21 +605,21 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
             (False, silence.MSG_UNSILENCE_MANUAL, PermissionOverwrite(add_reactions=False)),
         )
 
-        for was_unsilenced, message, overwrite in test_cases:
+        targets = (None, MockTextChannel())
+
+        for (was_unsilenced, message, overwrite), target in itertools.product(test_cases, targets):
             ctx = MockContext()
+            ctx.channel.overwrites_for.return_value = overwrite
+            if target:
+                target.overwrites_for.return_value = overwrite
 
-            for target in [None, MockTextChannel()]:
-                ctx.channel.overwrites_for.return_value = overwrite
-                if target:
-                    target.overwrites_for.return_value = overwrite
+            with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
+                with mock.patch.object(self.cog, "send_message") as send_message:
+                    with self.subTest(was_unsilenced=was_unsilenced, overwrite=overwrite, target=target):
+                        await self.cog.unsilence.callback(self.cog, ctx, channel=target)
 
-                with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
-                    with mock.patch.object(self.cog, "send_message") as send_message:
-                        with self.subTest(was_unsilenced=was_unsilenced, overwrite=overwrite, target=target):
-                            await self.cog.unsilence.callback(self.cog, ctx, channel=target)
-
-                            call_args = (message, ctx.channel, target or ctx.channel)
-                            send_message.assert_awaited_once_with(*call_args, alert_target=was_unsilenced)
+                        call_args = (message, ctx.channel, target or ctx.channel)
+                        send_message.assert_awaited_once_with(*call_args, alert_target=was_unsilenced)
 
     async def test_skipped_already_unsilenced(self):
         """Permissions were not set and `False` was returned for an already unsilenced channel."""
