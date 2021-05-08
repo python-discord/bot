@@ -109,7 +109,7 @@ class Extensions(commands.Cog):
         blacklisted = "\n".join(UNLOAD_BLACKLIST & set(extensions))
 
         if blacklisted:
-            msg = f":x: The following extension(s) may not be unloaded:```{blacklisted}```"
+            msg = f":x: The following extension(s) may not be unloaded:```\n{blacklisted}```"
         else:
             if "*" in extensions or "**" in extensions:
                 extensions = set(self.bot.extensions.keys()) - UNLOAD_BLACKLIST
@@ -212,7 +212,7 @@ class Extensions(commands.Cog):
 
         if failures:
             failures = "\n".join(f"{ext}\n    {err}" for ext, err in failures.items())
-            msg += f"\nFailures:```{failures}```"
+            msg += f"\nFailures:```\n{failures}```"
 
         log.debug(f"Batch {verb}ed extensions.")
 
@@ -239,7 +239,7 @@ class Extensions(commands.Cog):
             log.exception(f"Extension '{ext}' failed to {verb}.")
 
             error_msg = f"{e.__class__.__name__}: {e}"
-            msg = f":x: Failed to {verb} extension `{ext}`:\n```{error_msg}```"
+            msg = f":x: Failed to {verb} extension `{ext}`:\n```\n{error_msg}```"
         else:
             msg = f":ok_hand: Extension successfully {verb}ed: `{ext}`."
             log.debug(msg[10:])

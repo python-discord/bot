@@ -107,11 +107,19 @@ def has_no_roles(*roles: t.Union[str, int]) -> t.Callable:
     return commands.check(predicate)
 
 
-def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = None) -> t.Callable:
+def redirect_output(
+    destination_channel: int,
+    bypass_roles: t.Optional[t.Container[int]] = None,
+    channels: t.Optional[t.Container[int]] = None,
+    categories: t.Optional[t.Container[int]] = None,
+    ping_user: bool = True
+) -> t.Callable:
     """
     Changes the channel in the context of the command to redirect the output to a certain channel.
 
-    Redirect is bypassed if the author has a role to bypass redirection.
+    Redirect is bypassed if the author has a bypass role or if it is in a channel that can bypass redirection.
+
+    If ping_user is False, it will not send a message in the destination channel.
 
     This decorator must go before (below) the `command` decorator.
     """
@@ -119,7 +127,7 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
         @command_wraps(func)
         async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             if ctx.channel.id == destination_channel:
-                log.trace(f"Command {ctx.command.name} was invoked in destination_channel, not redirecting")
+                log.trace(f"Command {ctx.command} was invoked in destination_channel, not redirecting")
                 await func(self, ctx, *args, **kwargs)
                 return
 
@@ -128,12 +136,24 @@ def redirect_output(destination_channel: int, bypass_roles: t.Container[int] = N
                 await func(self, ctx, *args, **kwargs)
                 return
 
+            elif channels and ctx.channel.id not in channels:
+                log.trace(f"{ctx.author} used {ctx.command} in a channel that can bypass output redirection")
+                await func(self, ctx, *args, **kwargs)
+                return
+
+            elif categories and ctx.channel.category.id not in categories:
+                log.trace(f"{ctx.author} used {ctx.command} in a category that can bypass output redirection")
+                await func(self, ctx, *args, **kwargs)
+                return
+
             redirect_channel = ctx.guild.get_channel(destination_channel)
             old_channel = ctx.channel
 
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
-            await ctx.channel.send(f"Here's the output of your command, {ctx.author.mention}")
+
+            if ping_user:
+                await ctx.send(f"Here's the output of your command, {ctx.author.mention}")
             asyncio.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
