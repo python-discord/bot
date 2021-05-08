@@ -90,15 +90,18 @@ class Reminders(Cog):
         delivery_dt: t.Optional[datetime],
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
-        embed = discord.Embed()
-        embed.colour = discord.Colour.green()
-        embed.title = random.choice(POSITIVE_REPLIES)
-        embed.description = on_success
+        embed = discord.Embed(
+            description=on_success,
+            colour=discord.Colour.green(),
+            title=random.choice(POSITIVE_REPLIES)
+        )
 
         footer_str = f"ID: {reminder_id}"
+
         if delivery_dt:
             # Reminder deletion will have a `None` `delivery_dt`
-            footer_str = f"{footer_str}, Due: {delivery_dt.strftime('%Y-%m-%dT%H:%M:%S')}"
+            footer_str += ', Due'
+            embed.timestamp = delivery_dt
 
         embed.set_footer(text=footer_str)
 
