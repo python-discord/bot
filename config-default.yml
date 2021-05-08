@@ -429,6 +429,13 @@ reddit:
     subreddits:
         - 'r/Python'
 
+metabase:
+    username: !ENV "METABASE_USERNAME"
+    password: !ENV "METABASE_PASSWORD"
+    url: "http://metabase.default.svc.cluster.local/api"
+    # 14 days, see https://www.metabase.com/docs/latest/operations-guide/environment-variables.html#max_session_age
+    max_session_age: 20160
+
 
 big_brother:
     header_message_limit: 15

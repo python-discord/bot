@@ -558,6 +558,14 @@ class Reddit(metaclass=YAMLGetter):
     secret: Optional[str]
     subreddits: list
 
+class Metabase(metaclass=YAMLGetter):
+    section = "metabase"
+
+    username: Optional[str]
+    password: Optional[str]
+    url: str
+    max_session_age: int
+
 
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
