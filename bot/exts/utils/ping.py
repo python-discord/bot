@@ -35,7 +35,10 @@ class Latency(commands.Cog):
         # datetime.datetime objects do not have the "milliseconds" attribute.
         # It must be converted to seconds before converting to milliseconds.
         bot_ping = (datetime.utcnow() - ctx.message.created_at).total_seconds() * 1000
-        bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
+        if bot_ping <= 0:
+            bot_ping = "Your clock is out of sync, could not calculate ping."
+        else:
+            bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
             url = urllib.parse.urlparse(URLs.site_schema + URLs.site).hostname
