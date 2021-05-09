@@ -42,8 +42,12 @@ class Latency(commands.Cog):
 
         try:
             url = urllib.parse.urlparse(URLs.site_schema + URLs.site).hostname
-            delay = await aioping.ping(url, family=socket.AddressFamily.AF_INET) * 1000
-            site_ping = f"{delay:.{ROUND_LATENCY}f} ms"
+            try:
+                delay = await aioping.ping(url, family=socket.AddressFamily.AF_INET) * 1000
+                site_ping = f"{delay:.{ROUND_LATENCY}f} ms"
+            except OSError:
+                # Some machines do not have permission to run ping
+                site_ping = "Permission denied, could not ping."
 
         except TimeoutError:
             site_ping = f"{Emojis.cross_mark} Connection timed out."
