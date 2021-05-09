@@ -136,11 +136,9 @@ class Reviewer:
         # For that we try to get messages sent in this timeframe until none is returned and NoMoreItems is raised.
         messages = [message]
         with contextlib.suppress(NoMoreItems):
-            while True:
-                new_message = await message.channel.history(  # noqa: B305 - yes flake8, .next() is a thing here.
-                    before=messages[-1].created_at,
-                    after=messages[-1].created_at - timedelta(seconds=2)
-                ).next()
+            async for new_message in message.channel.history(before=message.created_at):
+                if messages[-1].created_at - new_message.created_at > timedelta(seconds=2):
+                    break
                 messages.append(new_message)
 
         content = "".join(message_.content for message_ in messages[::-1])
