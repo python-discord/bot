@@ -3,16 +3,16 @@ import json
 import logging
 from datetime import timedelta
 from io import StringIO
-from typing import Optional
 
 import arrow
 from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
-from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Metabase as MetabaseConfig, Roles
+from bot.converters import allowed_strings
 from bot.utils import send_to_paste_service
 from bot.utils.channel import is_mod_channel
 from bot.utils.scheduling import Scheduler
@@ -86,7 +86,12 @@ class Metabase(Cog):
         await ctx.send_help(ctx.command)
 
     @metabase_group.command(name="extract")
-    async def metabase_extract(self, ctx: Context, question_id: int, extension: Optional[str] = "csv") -> None:
+    async def metabase_extract(
+        self,
+        ctx: Context,
+        question_id: int,
+        extension: allowed_strings("csv", "json") = "csv"
+    ) -> None:
         """
         Extract data from a metabase question.
 
@@ -104,10 +109,6 @@ class Metabase(Cog):
 
             # Make sure we have a session token before running anything
             await self.init_task
-
-            if extension not in ("csv", "json"):
-                # "api" and "xlsx" are supported by metabase's api, but wouldn't work for exporting to pastebin
-                raise BadArgument(f"{extension} is not a valid extension!")
 
             url = f"{MetabaseConfig.url}/card/{question_id}/query/{extension}"
             async with self.bot.http_session.post(url, headers=self.headers) as resp:
