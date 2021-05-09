@@ -129,8 +129,6 @@ class Metabase(Cog):
                     out = json.dumps(out, indent=4, sort_keys=True)
 
             paste_link = await send_to_paste_service(out, extension=extension)
-            log.warn(paste_link)
-            paste_link = 'redacted'
             await ctx.send(f":+1: {ctx.author.mention} Here's your link: {paste_link}")
 
     # This cannot be static (must have a __func__ attribute).
