@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import timedelta
 from io import StringIO
+from typing import Dict, List, Optional
 
 import arrow
 from aiohttp.client_exceptions import ClientResponseError
@@ -33,11 +34,11 @@ class Metabase(Cog):
         self.bot = bot
         self._session_scheduler = Scheduler(self.__class__.__name__)
 
-        self.session_token = None  # session_info["session_token"]: str
-        self.session_expiry = None  # session_info["session_expiry"]: UtcPosixTimestamp
+        self.session_token: Optional[str] = None  # session_info["session_token"]: str
+        self.session_expiry: Optional[float] = None  # session_info["session_expiry"]: UtcPosixTimestamp
         self.headers = BASE_HEADERS
 
-        self.exports = {}  # Saves the output of each question, so internal eval can access it
+        self.exports: Dict[int, List[Dict]] = {}  # Saves the output of each question, so internal eval can access it
 
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
