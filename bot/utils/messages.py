@@ -8,7 +8,7 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
-from discord import Message, MessageType, Reaction
+from discord import Message, MessageType, Reaction, User
 from discord.errors import HTTPException
 from discord.ext.commands import Context
 
@@ -167,20 +167,22 @@ async def send_attachments(
 
 async def count_unique_users_reaction(
         message: discord.Message,
-        predicate: Callable[[Reaction], bool] = lambda _: True,
+        reaction_predicate: Callable[[Reaction], bool] = lambda _: True,
+        user_predicate: Callable[[User], bool] = lambda _: True,
         count_bots: bool = True
 ) -> int:
     """
     Count the amount of unique users who reacted to the message.
 
-    A predicate function can be passed to check if this reaction should be counted, along with a count_bot flag.
+    A reaction_predicate function can be passed to check if this reaction should be counted,
+    another user_predicate to check if the user should also be counted along with a count_bot flag.
     """
     unique_users = set()
 
     for reaction in message.reactions:
-        if predicate(reaction):
+        if reaction_predicate(reaction):
             async for user in reaction.users():
-                if count_bots or not user.bot:
+                if (count_bots or not user.bot) and user_predicate(user):
                     unique_users.add(user.id)
 
     return len(unique_users)

@@ -153,10 +153,18 @@ class Reviewer:
         seen = await count_unique_users_reaction(
             messages[0],
             lambda r: "ducky" in str(r) or str(r) == "\N{EYES}",
-            False
+            count_bots=False
         )
-        upvotes = await count_unique_users_reaction(messages[0], lambda r: str(r) == "\N{THUMBS UP SIGN}", False)
-        downvotes = await count_unique_users_reaction(messages[0], lambda r: str(r) == "\N{THUMBS DOWN SIGN}", False)
+        upvotes = await count_unique_users_reaction(
+            messages[0],
+            lambda r: str(r) == "\N{THUMBS UP SIGN}",
+            count_bots=False
+        )
+        downvotes = await count_unique_users_reaction(
+            messages[0],
+            lambda r: str(r) == "\N{THUMBS DOWN SIGN}",
+            count_bots=False
+        )
 
         # Remove the first and last paragraphs
         stripped_content = content.split("\n\n", maxsplit=1)[1].rsplit("\n\n", maxsplit=1)[0]
