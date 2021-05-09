@@ -119,8 +119,8 @@ class Metabase(Cog):
                         log.warn(f"Failed to auth with Metabase for question {question_id}.")
                         await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
                     else:
-                        # User credentials are invalid, or the refresh failed
-                        # Delete the expiry time, to force a refresh on next startup
+                        # User credentials are invalid, or the refresh failed.
+                        # Delete the expiry time, to force a refresh on next startup.
                         await self.session_info.delete("session_expiry")
                         log.exception("Session token is invalid or refresh failed.")
                         await ctx.send(f":x: {ctx.author.mention} Session token is invalid or refresh failed.")
@@ -128,14 +128,15 @@ class Metabase(Cog):
 
                 if extension == "csv":
                     out = await resp.text()
-                    # Save the output for user with int e
+                    # Save the output for use with int e
                     with StringIO(out) as f:
                         self.exports[question_id] = list(csv.DictReader(f))
 
                 elif extension == "json":
                     out = await resp.json()
-                    # Save the output for user with int e
+                    # Save the output for use with int e
                     self.exports[question_id] = out
+
                     # Format it nicely for human eyes
                     out = json.dumps(out, indent=4, sort_keys=True)
 
