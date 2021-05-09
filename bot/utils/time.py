@@ -144,22 +144,6 @@ def parse_rfc1123(stamp: str) -> datetime.datetime:
     return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
 
 
-# Hey, this could actually be used in the off_topic_names cog :)
-async def wait_until(time: datetime.datetime, start: Optional[datetime.datetime] = None) -> None:
-    """
-    Wait until a given time.
-
-    :param time: A datetime.datetime object to wait until.
-    :param start: The start from which to calculate the waiting duration. Defaults to UTC time.
-    """
-    delay = time - (start or datetime.datetime.utcnow())
-    delay_seconds = delay.total_seconds()
-
-    # Incorporate a small delay so we don't rapid-fire the event due to time precision errors
-    if delay_seconds > 1.0:
-        await asyncio.sleep(delay_seconds)
-
-
 def format_infraction(timestamp: str) -> str:
     """Format an infraction timestamp to a more readable ISO 8601 format."""
     return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
