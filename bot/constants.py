@@ -175,13 +175,14 @@ class YAMLGetter(type):
             if cls.subsection is not None:
                 return _CONFIG_YAML[cls.section][cls.subsection][name]
             return _CONFIG_YAML[cls.section][name]
-        except KeyError:
+        except KeyError as e:
             dotted_path = '.'.join(
                 (cls.section, cls.subsection, name)
                 if cls.subsection is not None else (cls.section, name)
             )
-            log.critical(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
-            raise
+            # Only an INFO log since this can be caught through `hasattr` or `getattr`.
+            log.info(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            raise AttributeError(repr(name)) from e
 
     def __getitem__(cls, name):
         return cls.__getattr__(name)
@@ -199,6 +200,7 @@ class Bot(metaclass=YAMLGetter):
     prefix: str
     sentry_dsn: Optional[str]
     token: str
+    trace_loggers: Optional[str]
 
 
 class Redis(metaclass=YAMLGetter):
@@ -279,6 +281,8 @@ class Emojis(metaclass=YAMLGetter):
     badge_partner: str
     badge_staff: str
     badge_verified_bot_developer: str
+    verified_bot: str
+    bot: str
 
     defcon_shutdown: str  # noqa: E704
     defcon_unshutdown: str  # noqa: E704
@@ -486,6 +490,7 @@ class Roles(metaclass=YAMLGetter):
     domain_leads: int
     helpers: int
     moderators: int
+    mod_team: int
     owners: int
     project_leads: int
 
