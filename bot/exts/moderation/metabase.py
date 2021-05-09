@@ -129,8 +129,7 @@ class Metabase(Cog):
                 if extension == "csv":
                     out = await resp.text()
                     # Save the output for use with int e
-                    with StringIO(out) as f:
-                        self.exports[question_id] = list(csv.DictReader(f))
+                    self.exports[question_id] = list(csv.DictReader(StringIO(out)))
 
                 elif extension == "json":
                     out = await resp.json()
