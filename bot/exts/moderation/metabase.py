@@ -1,6 +1,8 @@
+import csv
 import json
 import logging
 from datetime import timedelta
+from io import StringIO
 from typing import Optional
 
 import arrow
@@ -34,6 +36,8 @@ class Metabase(Cog):
         self.session_token = None  # session_info["session_token"]: str
         self.session_expiry = None  # session_info["session_expiry"]: UtcPosixTimestamp
         self.headers = BASE_HEADERS
+
+        self.exports = {}  # Saves the output of each question, so internal eval can access it
 
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
@@ -124,12 +128,22 @@ class Metabase(Cog):
 
                 if extension == "csv":
                     out = await resp.text()
+                    # Save the output for user with int e
+                    with StringIO(out) as f:
+                        self.exports[question_id] = list(csv.DictReader(f))
+
                 elif extension == "json":
                     out = await resp.json()
+                    # Save the output for user with int e
+                    self.exports[question_id] = out
+                    # Format it nicely for human eyes
                     out = json.dumps(out, indent=4, sort_keys=True)
 
             paste_link = await send_to_paste_service(out, extension=extension)
-            await ctx.send(f":+1: {ctx.author.mention} Here's your link: {paste_link}")
+            await ctx.send(
+                f":+1: {ctx.author.mention} Here's your link: {paste_link}\n"
+                f"I've also saved it to `metabase[{question_id}]`, within the internal eval environment for you!"
+            )
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_check(self, ctx: Context) -> bool:

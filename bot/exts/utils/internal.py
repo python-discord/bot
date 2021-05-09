@@ -156,6 +156,9 @@ class Internal(Cog):
             "contextlib": contextlib
         }
 
+        if metabase := self.bot.get_cog("Metabase"):
+            env["metabase"] = metabase.exports
+
         self.env.update(env)
 
         # Ignore this code, it works
