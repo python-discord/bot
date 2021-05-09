@@ -116,7 +116,7 @@ class Metabase(Cog):
                 except ClientResponseError as e:
                     if e.status == 403:
                         # User doesn't have access to the given question
-                        log.warn(f"Failed to auth with Metabase for question {question_id}.")
+                        log.warning(f"Failed to auth with Metabase for question {question_id}.")
                         await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
                     else:
                         # User credentials are invalid, or the refresh failed.
@@ -157,7 +157,7 @@ class Metabase(Cog):
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks."""
-        # It's important to wait for init_taskto be cancelled before cancelling scheduled
+        # It's important to wait for init_task to be cancelled before cancelling scheduled
         # tasks. Otherwise, it's possible for _session_scheduler to schedule another task
         # after cancel_all has finished, despite _init_task.cancel being called first.
         # This is cause cancel() on its own doesn't block until the task is cancelled.
