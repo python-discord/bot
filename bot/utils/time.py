@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import re
 from typing import Optional
@@ -142,22 +141,6 @@ def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max
 def parse_rfc1123(stamp: str) -> datetime.datetime:
     """Parse RFC1123 time string into datetime."""
     return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
-
-
-# Hey, this could actually be used in the off_topic_names and reddit cogs :)
-async def wait_until(time: datetime.datetime, start: Optional[datetime.datetime] = None) -> None:
-    """
-    Wait until a given time.
-
-    :param time: A datetime.datetime object to wait until.
-    :param start: The start from which to calculate the waiting duration. Defaults to UTC time.
-    """
-    delay = time - (start or datetime.datetime.utcnow())
-    delay_seconds = delay.total_seconds()
-
-    # Incorporate a small delay so we don't rapid-fire the event due to time precision errors
-    if delay_seconds > 1.0:
-        await asyncio.sleep(delay_seconds)
 
 
 def format_infraction(timestamp: str) -> str:
