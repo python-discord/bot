@@ -32,6 +32,9 @@ MAX_DAYS_IN_POOL = 30
 # Maximum amount of characters allowed in a message
 MAX_MESSAGE_SIZE = 2000
 
+# Regex finding the user ID of a user mention
+MENTION_RE = re.compile(r"<@!?(\d+?)>")
+
 
 class Reviewer:
     """Schedules, formats, and publishes reviews of helper nominees."""
@@ -144,7 +147,7 @@ class Reviewer:
         content = "".join(message_.content for message_ in messages[::-1])
 
         # We assume that the first user mentioned is the user that we are voting on
-        user_id = int(re.search(r"<@!?(\d+?)>", content).group(1))
+        user_id = int(MENTION_RE.search(content).group(1))
 
         # Get reaction counts
         seen = await count_unique_users_reaction(
