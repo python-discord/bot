@@ -1,4 +1,5 @@
 import socket
+import urllib.parse
 from datetime import datetime
 
 import aioping
@@ -34,11 +35,19 @@ class Latency(commands.Cog):
         # datetime.datetime objects do not have the "milliseconds" attribute.
         # It must be converted to seconds before converting to milliseconds.
         bot_ping = (datetime.utcnow() - ctx.message.created_at).total_seconds() * 1000
-        bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
+        if bot_ping <= 0:
+            bot_ping = "Your clock is out of sync, could not calculate ping."
+        else:
+            bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
-            delay = await aioping.ping(URLs.site, family=socket.AddressFamily.AF_INET) * 1000
-            site_ping = f"{delay:.{ROUND_LATENCY}f} ms"
+            url = urllib.parse.urlparse(URLs.site_schema + URLs.site).hostname
+            try:
+                delay = await aioping.ping(url, family=socket.AddressFamily.AF_INET) * 1000
+                site_ping = f"{delay:.{ROUND_LATENCY}f} ms"
+            except OSError:
+                # Some machines do not have permission to run ping
+                site_ping = "Permission denied, could not ping."
 
         except TimeoutError:
             site_ping = f"{Emojis.cross_mark} Connection timed out."
