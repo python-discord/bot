@@ -111,34 +111,32 @@ class Metabase(Cog):
             await self.init_task
 
             url = f"{MetabaseConfig.url}/card/{question_id}/query/{extension}"
-            async with self.bot.http_session.post(url, headers=self.headers) as resp:
-                try:
-                    resp.raise_for_status()
-                except ClientResponseError as e:
-                    if e.status == 403:
-                        # User doesn't have access to the given question
-                        log.warning(f"Failed to auth with Metabase for question {question_id}.")
-                        await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
-                    else:
-                        # User credentials are invalid, or the refresh failed.
-                        # Delete the expiry time, to force a refresh on next startup.
-                        await self.session_info.delete("session_expiry")
-                        log.exception("Session token is invalid or refresh failed.")
-                        await ctx.send(f":x: {ctx.author.mention} Session token is invalid or refresh failed.")
-                    return
+            try:
+                async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
+                    if extension == "csv":
+                        out = await resp.text()
+                        # Save the output for use with int e
+                        self.exports[question_id] = list(csv.DictReader(StringIO(out)))
 
-                if extension == "csv":
-                    out = await resp.text()
-                    # Save the output for use with int e
-                    self.exports[question_id] = list(csv.DictReader(StringIO(out)))
+                    elif extension == "json":
+                        out = await resp.json()
+                        # Save the output for use with int e
+                        self.exports[question_id] = out
 
-                elif extension == "json":
-                    out = await resp.json()
-                    # Save the output for use with int e
-                    self.exports[question_id] = out
-
-                    # Format it nicely for human eyes
-                    out = json.dumps(out, indent=4, sort_keys=True)
+                        # Format it nicely for human eyes
+                        out = json.dumps(out, indent=4, sort_keys=True)
+            except ClientResponseError as e:
+                if e.status == 403:
+                    # User doesn't have access to the given question
+                    log.warning(f"Failed to auth with Metabase for question {question_id}.")
+                    await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
+                else:
+                    # User credentials are invalid, or the refresh failed.
+                    # Delete the expiry time, to force a refresh on next startup.
+                    await self.session_info.delete("session_expiry")
+                    log.exception("Session token is invalid or refresh failed.")
+                    await ctx.send(f":x: {ctx.author.mention} Session token is invalid or refresh failed.")
+                return
 
             paste_link = await send_to_paste_service(out, extension=extension)
             await ctx.send(
