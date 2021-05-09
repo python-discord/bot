@@ -1,4 +1,5 @@
 import socket
+import urllib.parse
 from datetime import datetime
 
 import aioping
@@ -37,7 +38,8 @@ class Latency(commands.Cog):
         bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
-            delay = await aioping.ping(URLs.site, family=socket.AddressFamily.AF_INET) * 1000
+            url = urllib.parse.urlparse(URLs.site_schema + URLs.site).hostname
+            delay = await aioping.ping(url, family=socket.AddressFamily.AF_INET) * 1000
             site_ping = f"{delay:.{ROUND_LATENCY}f} ms"
 
         except TimeoutError:
