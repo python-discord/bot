@@ -139,9 +139,13 @@ class Metabase(Cog):
                 return
 
             paste_link = await send_to_paste_service(out, extension=extension)
+            if paste_link:
+                message = f":+1: {ctx.author.mention} Here's your link: {paste_link}"
+            else:
+                message = f":x: {ctx.author.mention} Link service is unavailible."
             await ctx.send(
-                f":+1: {ctx.author.mention} Here's your link: {paste_link}\n"
-                f"I've also saved it to `metabase[{question_id}]`, within the internal eval environment for you!"
+                f"{message}\nYou can also access this data within internal eval by doing: "
+                f"`bot.get_cog('Metabase').exports[{question_id}]`"
             )
 
     # This cannot be static (must have a __func__ attribute).
