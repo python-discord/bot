@@ -196,6 +196,41 @@ class Silence(commands.Cog):
             formatted_message = MSG_SILENCE_SUCCESS.format(duration=duration)
             await self.send_message(formatted_message, ctx.channel, channel, alert_target=True)
 
+    async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, *, kick: bool = False) -> bool:
+        """Set silence permission overwrites for `channel` and return True if successful."""
+        # Get the original channel overwrites
+        if isinstance(channel, TextChannel):
+            role = self._everyone_role
+            overwrite = channel.overwrites_for(role)
+            prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
+
+        else:
+            role = self._verified_voice_role
+            overwrite = channel.overwrites_for(role)
+            prev_overwrites = dict(speak=overwrite.speak)
+            if kick:
+                prev_overwrites.update(connect=overwrite.connect)
+
+        # Stop if channel was already silenced
+        if channel.id in self.scheduler or all(val is False for val in prev_overwrites.values()):
+            return False
+
+        # Set new permissions, store
+        overwrite.update(**dict.fromkeys(prev_overwrites, False))
+        await channel.set_permissions(role, overwrite=overwrite)
+        await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
+
+        return True
+
+    async def _schedule_unsilence(self, ctx: Context, channel: TextOrVoiceChannel, duration: Optional[int]) -> None:
+        """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
+        if duration is None:
+            await self.unsilence_timestamps.set(channel.id, -1)
+        else:
+            self.scheduler.schedule_later(duration * 60, channel.id, ctx.invoke(self.unsilence, channel=channel))
+            unsilence_time = datetime.now(tz=timezone.utc) + timedelta(minutes=duration)
+            await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
+
     @commands.command(aliases=("unhush",))
     async def unsilence(self, ctx: Context, *, channel: TextOrVoiceChannel = None) -> None:
         """
@@ -238,29 +273,58 @@ class Silence(commands.Cog):
         else:
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, alert_target=True)
 
-    async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, *, kick: bool = False) -> bool:
-        """Set silence permission overwrites for `channel` and return True if successful."""
-        # Get the original channel overwrites
+    async def _unsilence(self, channel: TextOrVoiceChannel) -> bool:
+        """
+        Unsilence `channel`.
+
+        If `channel` has a silence task scheduled or has its previous overwrites cached, unsilence
+        it, cancel the task, and remove it from the notifier. Notify admins if it has a task but
+        not cached overwrites.
+
+        Return `True` if channel permissions were changed, `False` otherwise.
+        """
+        # Get stored overwrites, and return if channel is unsilenced
+        prev_overwrites = await self.previous_overwrites.get(channel.id)
+        if channel.id not in self.scheduler and prev_overwrites is None:
+            log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
+            return False
+
+        # Select the role based on channel type, and get current overwrites
         if isinstance(channel, TextChannel):
             role = self._everyone_role
             overwrite = channel.overwrites_for(role)
-            prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
-
+            permissions = "`Send Messages` and `Add Reactions`"
         else:
             role = self._verified_voice_role
             overwrite = channel.overwrites_for(role)
-            prev_overwrites = dict(speak=overwrite.speak)
-            if kick:
-                prev_overwrites.update(connect=overwrite.connect)
+            permissions = "`Speak` and `Connect`"
 
-        # Stop if channel was already silenced
-        if channel.id in self.scheduler or all(val is False for val in prev_overwrites.values()):
-            return False
+        # Check if old overwrites were not stored
+        if prev_overwrites is None:
+            log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")
+            overwrite.update(send_messages=None, add_reactions=None, speak=None, connect=None)
+        else:
+            overwrite.update(**json.loads(prev_overwrites))
 
-        # Set new permissions, store
-        overwrite.update(**dict.fromkeys(prev_overwrites, False))
+        # Update Permissions
         await channel.set_permissions(role, overwrite=overwrite)
-        await self.previous_overwrites.set(channel.id, json.dumps(prev_overwrites))
+        if isinstance(channel, VoiceChannel):
+            await self._force_voice_sync(channel)
+
+        log.info(f"Unsilenced channel #{channel} ({channel.id}).")
+
+        self.scheduler.cancel(channel.id)
+        self.notifier.remove_channel(channel)
+        await self.previous_overwrites.delete(channel.id)
+        await self.unsilence_timestamps.delete(channel.id)
+
+        # Alert Admin team if old overwrites were not available
+        if prev_overwrites is None:
+            await self._mod_alerts_channel.send(
+                f"<@&{constants.Roles.admins}> Restored overwrites with default values after unsilencing "
+                f"{channel.mention}. Please check that the {permissions} "
+                f"overwrites for {role.mention} are at their desired values."
+            )
 
         return True
 
@@ -328,70 +392,6 @@ class Silence(commands.Cog):
             # Delete VC channel if it was created.
             if delete_channel:
                 await afk_channel.delete(reason="Deleting temporary mute channel.")
-
-    async def _schedule_unsilence(self, ctx: Context, channel: TextOrVoiceChannel, duration: Optional[int]) -> None:
-        """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
-        if duration is None:
-            await self.unsilence_timestamps.set(channel.id, -1)
-        else:
-            self.scheduler.schedule_later(duration * 60, channel.id, ctx.invoke(self.unsilence, channel=channel))
-            unsilence_time = datetime.now(tz=timezone.utc) + timedelta(minutes=duration)
-            await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
-
-    async def _unsilence(self, channel: TextOrVoiceChannel) -> bool:
-        """
-        Unsilence `channel`.
-
-        If `channel` has a silence task scheduled or has its previous overwrites cached, unsilence
-        it, cancel the task, and remove it from the notifier. Notify admins if it has a task but
-        not cached overwrites.
-
-        Return `True` if channel permissions were changed, `False` otherwise.
-        """
-        # Get stored overwrites, and return if channel is unsilenced
-        prev_overwrites = await self.previous_overwrites.get(channel.id)
-        if channel.id not in self.scheduler and prev_overwrites is None:
-            log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
-            return False
-
-        # Select the role based on channel type, and get current overwrites
-        if isinstance(channel, TextChannel):
-            role = self._everyone_role
-            overwrite = channel.overwrites_for(role)
-            permissions = "`Send Messages` and `Add Reactions`"
-        else:
-            role = self._verified_voice_role
-            overwrite = channel.overwrites_for(role)
-            permissions = "`Speak` and `Connect`"
-
-        # Check if old overwrites were not stored
-        if prev_overwrites is None:
-            log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")
-            overwrite.update(send_messages=None, add_reactions=None, speak=None, connect=None)
-        else:
-            overwrite.update(**json.loads(prev_overwrites))
-
-        # Update Permissions
-        await channel.set_permissions(role, overwrite=overwrite)
-        if isinstance(channel, VoiceChannel):
-            await self._force_voice_sync(channel)
-
-        log.info(f"Unsilenced channel #{channel} ({channel.id}).")
-
-        self.scheduler.cancel(channel.id)
-        self.notifier.remove_channel(channel)
-        await self.previous_overwrites.delete(channel.id)
-        await self.unsilence_timestamps.delete(channel.id)
-
-        # Alert Admin team if old overwrites were not available
-        if prev_overwrites is None:
-            await self._mod_alerts_channel.send(
-                f"<@&{constants.Roles.admins}> Restored overwrites with default values after unsilencing "
-                f"{channel.mention}. Please check that the {permissions} "
-                f"overwrites for {role.mention} are at their desired values."
-            )
-
-        return True
 
     async def _reschedule(self) -> None:
         """Reschedule unsilencing of active silences and add permanent ones to the notifier."""
