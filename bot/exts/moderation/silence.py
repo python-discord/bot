@@ -259,13 +259,13 @@ class Silence(commands.Cog):
         if not await self._unsilence(channel):
             if isinstance(channel, VoiceChannel):
                 overwrite = channel.overwrites_for(self._verified_voice_role)
-                manual = overwrite.speak is False
+                has_channel_overwrites = overwrite.speak is False
             else:
                 overwrite = channel.overwrites_for(self._everyone_role)
-                manual = overwrite.send_messages is False or overwrite.add_reactions is False
+                has_channel_overwrites = overwrite.send_messages is False or overwrite.add_reactions is False
 
             # Send fail message to muted channel or voice chat channel, and invocation channel
-            if manual:
+            if has_channel_overwrites:
                 await self.send_message(MSG_UNSILENCE_MANUAL, msg_channel, channel, alert_target=False)
             else:
                 await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel, alert_target=False)
