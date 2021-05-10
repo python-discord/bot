@@ -800,10 +800,10 @@ class TestMessageLinkEmbeds(TestIncidents):
             'Hello, World!' * 300: ('Hello, World!' * 300)[:300] + '...'
         }
 
-        for test, value in tests.items():
-            self.assertEqual(
-                str(incidents.shorten_text(test)), value
-            )
+        for content, expected_conversion in tests.items():
+            with self.subTest(content=content, expected_conversion=expected_conversion):
+                conversion = incidents.shorten_text(content)
+                self.assertEqual(conversion, expected_conversion)
 
     async def extract_and_form_message_link_embeds(self):
         """
