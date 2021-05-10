@@ -128,7 +128,8 @@ class Silence(commands.Cog):
         message: str,
         source_channel: TextChannel,
         target_channel: TextOrVoiceChannel,
-        *, alert_target: bool = False
+        *,
+        alert_target: bool = False
     ) -> None:
         """Helper function to send message confirmation to `source_channel`, and notification to `target_channel`."""
         # Reply to invocation channel
@@ -154,7 +155,8 @@ class Silence(commands.Cog):
         ctx: Context,
         duration: HushDurationConverter = 10,
         channel: TextOrVoiceChannel = None,
-        *, kick: bool = False
+        *,
+        kick: bool = False
     ) -> None:
         """
         Silence the current channel for `duration` minutes or `forever`.
