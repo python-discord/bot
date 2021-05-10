@@ -4,7 +4,7 @@
 
 Dotenv files are especially suited for storing secrets as they are a key-value store in a file, which can be easily loaded in most programming languages and ignored by version control systems like Git with a single entry in a `.gitignore` file.
 
-In python you can use dotenv files with the `python-dotenv` module from PyPI, which can be installed with `pip install python-dotenv`. To use dotenv files you'll first need a file called `.env`, with content such as the following:
+In python you can use dotenv files with the [`python-dotenv`](https://pypi.org/project/python-dotenv) module from PyPI, which can be installed with `pip install python-dotenv`. To use dotenv files you'll first need a file called `.env`, with content such as the following:
 ```
 TOKEN=a00418c85bff087b49f23923efe40aa5
 ```
