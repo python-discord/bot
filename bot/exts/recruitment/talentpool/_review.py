@@ -144,7 +144,11 @@ class Reviewer:
                     break
                 messages.append(new_message)
 
-        content = "".join(message_.content for message_ in messages[::-1])
+        parts = []
+        for message_ in messages[::-1]:
+            parts.append(message_.content)
+            parts.append("\n" if message_.content.endswith(".") else " ")
+        content = "".join(parts)
 
         # We assume that the first user mentioned is the user that we are voting on
         user_id = int(MENTION_RE.search(content).group(1))
@@ -185,7 +189,9 @@ class Reviewer:
             embed_title = f"Vote for `{user_id}`"
 
         channel = self.bot.get_channel(Channels.nomination_archive)
-        for number, part in enumerate(textwrap.wrap(embed_content, width=MAX_MESSAGE_SIZE, replace_whitespace=False)):
+        for number, part in enumerate(
+                textwrap.wrap(embed_content, width=MAX_MESSAGE_SIZE, replace_whitespace=False, placeholder="")
+        ):
             await channel.send(embed=Embed(
                 title=embed_title if number == 0 else None,
                 description="[...] " + part if number != 0 else part,
