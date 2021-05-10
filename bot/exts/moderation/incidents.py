@@ -297,6 +297,9 @@ class Incidents(Cog):
         await self.bot.wait_until_guild_available()
         self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
 
+        if not self.incidents_webhook:
+            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents}`.")
+
     async def crawl_incidents(self) -> None:
         """
         Crawl #incidents and add missing emoji where necessary.
