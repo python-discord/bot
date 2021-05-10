@@ -274,7 +274,7 @@ class Silence(commands.Cog):
                 guild.default_role: PermissionOverwrite(speak=False, connect=False, view_channel=False)
             }
             afk_channel = await guild.create_voice_channel("mute-temp", overwrites=overwrites)
-            log.info(f"Failed to get afk-channel, created temporary channel #{afk_channel} ({afk_channel.id})")
+            log.info(f"Failed to get afk-channel, created #{afk_channel} ({afk_channel.id})")
 
         return afk_channel
 
@@ -290,7 +290,7 @@ class Silence(commands.Cog):
 
             try:
                 await member.move_to(None, reason="Kicking member from voice channel.")
-                log.debug(f"Kicked {member.name} from voice channel.")
+                log.trace(f"Kicked {member.name} from voice channel.")
             except Exception as e:
                 log.debug(f"Failed to move {member.name}. Reason: {e}")
                 continue
@@ -316,10 +316,10 @@ class Silence(commands.Cog):
 
                 try:
                     await member.move_to(afk_channel, reason="Muting VC member.")
-                    log.debug(f"Moved {member.name} to afk channel.")
+                    log.trace(f"Moved {member.name} to afk channel.")
 
                     await member.move_to(channel, reason="Muting VC member.")
-                    log.debug(f"Moved {member.name} to original voice channel.")
+                    log.trace(f"Moved {member.name} to original voice channel.")
                 except Exception as e:
                     log.debug(f"Failed to move {member.name}. Reason: {e}")
                     continue
