@@ -232,13 +232,11 @@ async def extract_message_links(message: discord.Message, bot: Bot) -> t.Optiona
 
     if message_links:
         embeds = []
-        for message_link in message_links:
+        for message_link in message_links[:10]:
             ctx = await bot.get_context(message)
             embed = await make_message_link_embed(ctx, message_link[0])
             if embed:
                 embeds.append(embed)
-
-        return embeds[:10]
 
     log.trace(
         f"Skipping discord message link detection on {message.id}: message doesn't qualify."
