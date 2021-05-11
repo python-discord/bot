@@ -238,6 +238,8 @@ async def extract_message_links(message: discord.Message, bot: Bot) -> t.Optiona
             if embed:
                 embeds.append(embed)
 
+        return embeds
+
     log.trace(
         f"Skipping discord message link detection on {message.id}: message doesn't qualify."
     )
@@ -567,7 +569,7 @@ class Incidents(Cog):
             if webhook_msg_id:
                 await self.incidents_webhook.edit_message(
                     message_id=webhook_msg_id,
-                    embeds=[x for x in webhook_embed_list if x is not None],
+                    embeds=[embed for embed in webhook_embed_list if embed is not None],
                 )
                 return
 
@@ -600,7 +602,7 @@ class Incidents(Cog):
         """
         try:
             webhook_msg = await webhook.send(
-                embeds=[x for x in webhook_embed_list if x is not None],
+                embeds=[embed for embed in webhook_embed_list if embed is not None],
                 username=sub_clyde(message.author.name),
                 avatar_url=message.author.avatar_url,
                 wait=True,
