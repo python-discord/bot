@@ -271,7 +271,7 @@ class Incidents(Cog):
         * If `Signal.ACTIONED` or `Signal.NOT_ACTIONED` were chosen, attempt to
           relay the incident message to #incidents-archive
         * If relay successful, delete original message
-        * Search the cache for the webhook message for this message, if found delete it.
+        * Delete quotation message if cached
         * See: `on_raw_reaction_add`
 
     Please refer to function docstrings for implementation details.
@@ -533,9 +533,9 @@ class Incidents(Cog):
         """
         Pass `message` to `add_signals` and `extract_message_links` if it satisfies `is_incident`.
 
-        If the message (`message`) is an incident report, then run it through `extract_message_links`
-        to get all the message link embeds (embeds which contain information about that particular
-        link).These message link embeds are then sent into the channel.
+        If `message` is an incident report, then run it through `extract_message_links` to get all
+        the message link embeds (embeds which contain information about that particular link).
+        These message link embeds are then sent into the channel.
 
         Also passes the message into `add_signals` if the message is an incident.
         """
