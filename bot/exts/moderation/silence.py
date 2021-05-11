@@ -19,17 +19,17 @@ log = logging.getLogger(__name__)
 
 LOCK_NAMESPACE = "silence"
 
-MSG_SILENCE_FAIL = f"{constants.Emojis.cross_mark} current channel is already silenced."
-MSG_SILENCE_PERMANENT = f"{constants.Emojis.check_mark} silenced current channel indefinitely."
-MSG_SILENCE_SUCCESS = f"{constants.Emojis.check_mark} silenced current channel for {{duration}} minute(s)."
+MSG_SILENCE_FAIL = f"{constants.Emojis.cross_mark} {{channel}} is already silenced."
+MSG_SILENCE_PERMANENT = f"{constants.Emojis.check_mark} silenced {{channel}} indefinitely."
+MSG_SILENCE_SUCCESS = f"{constants.Emojis.check_mark} silenced {{{{channel}}}} for {{duration}} minute(s)."
 
-MSG_UNSILENCE_FAIL = f"{constants.Emojis.cross_mark} current channel was not silenced."
+MSG_UNSILENCE_FAIL = f"{constants.Emojis.cross_mark} {{channel}} was not silenced."
 MSG_UNSILENCE_MANUAL = (
-    f"{constants.Emojis.cross_mark} current channel was not unsilenced because the current overwrites were "
+    f"{constants.Emojis.cross_mark} {{channel}} was not unsilenced because the current overwrites were "
     f"set manually or the cache was prematurely cleared. "
     f"Please edit the overwrites manually to unsilence."
 )
-MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced current channel."
+MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced {{channel}}."
 
 TextOrVoiceChannel = Union[TextChannel, VoiceChannel]
 
@@ -135,7 +135,9 @@ class Silence(commands.Cog):
         # Reply to invocation channel
         source_reply = message
         if source_channel != target_channel:
-            source_reply = source_reply.replace("current channel", target_channel.mention)
+            source_reply = source_reply.format(channel=target_channel.mention)
+        else:
+            source_reply = source_reply.format(channel="current channel")
         await source_channel.send(source_reply)
 
         # Reply to target channel
@@ -143,10 +145,10 @@ class Silence(commands.Cog):
             if isinstance(target_channel, VoiceChannel):
                 voice_chat = self.bot.get_channel(VOICE_CHANNELS.get(target_channel.id))
                 if voice_chat and source_channel != voice_chat:
-                    await voice_chat.send(message.replace("current channel", target_channel.mention))
+                    await voice_chat.send(message.format(channel=target_channel.mention))
 
             elif source_channel != target_channel:
-                await target_channel.send(message)
+                await target_channel.send(message.format(channel="current channel"))
 
     @commands.command(aliases=("hush",))
     @lock(LOCK_NAMESPACE, _select_lock_channel, raise_error=True)

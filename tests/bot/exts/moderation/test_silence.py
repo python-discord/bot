@@ -792,21 +792,20 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_duration_replacement(self):
         """Tests that the channel name was set correctly for one target channel."""
-        message = "Current. The following should be replaced: current channel."
+        message = "Current. The following should be replaced: {channel}."
         await self.cog.send_message(message, *self.text_channels, alert_target=False)
 
-        updated_message = message.replace("current channel", self.text_channels[0].mention)
+        updated_message = message.format(channel=self.text_channels[0].mention)
         self.text_channels[0].send.assert_awaited_once_with(updated_message)
         self.text_channels[1].send.assert_not_called()
 
     async def test_name_replacement_multiple_channels(self):
         """Tests that the channel name was set correctly for two channels."""
-        message = "Current. The following should be replaced: current channel."
+        message = "Current. The following should be replaced: {channel}."
         await self.cog.send_message(message, *self.text_channels, alert_target=True)
 
-        updated_message = message.replace("current channel", self.text_channels[0].mention)
-        self.text_channels[0].send.assert_awaited_once_with(updated_message)
-        self.text_channels[1].send.assert_awaited_once_with(message)
+        self.text_channels[0].send.assert_awaited_once_with(message.format(channel=self.text_channels[0].mention))
+        self.text_channels[1].send.assert_awaited_once_with(message.format(channel="current channel"))
 
     async def test_silence_voice(self):
         """Tests that the correct message was sent when a voice channel is muted without alerting."""
@@ -820,10 +819,10 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         with unittest.mock.patch.object(silence, "VOICE_CHANNELS") as mock_voice_channels:
             mock_voice_channels.get.return_value = self.text_channels[1].id
 
-            message = "This should show up as current channel."
+            message = "This should show up as {channel}."
             await self.cog.send_message(message, self.text_channels[0], self.voice_channel, alert_target=True)
 
-        updated_message = message.replace("current channel", self.voice_channel.mention)
+        updated_message = message.format(channel=self.voice_channel.mention)
         self.text_channels[0].send.assert_awaited_once_with(updated_message)
         self.text_channels[1].send.assert_awaited_once_with(updated_message)
 
@@ -834,10 +833,10 @@ class SendMessageTests(unittest.IsolatedAsyncioTestCase):
         with unittest.mock.patch.object(silence, "VOICE_CHANNELS") as mock_voice_channels:
             mock_voice_channels.get.return_value = self.text_channels[1].id
 
-            message = "This should show up as current channel."
+            message = "This should show up as {channel}."
             await self.cog.send_message(message, self.text_channels[1], self.voice_channel, alert_target=True)
 
-            updated_message = message.replace("current channel", self.voice_channel.mention)
+            updated_message = message.format(channel=self.voice_channel.mention)
             self.text_channels[1].send.assert_awaited_once_with(updated_message)
 
             mock_voice_channels.get.assert_called_once_with(self.voice_channel.id)
