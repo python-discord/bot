@@ -520,9 +520,12 @@ class Incidents(Cog):
                 await self.send_message_link_embeds(webhook_embed_list, message, self.incidents_webhook)
 
     @Cog.listener()
-    async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
+    async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent) -> None:
         """
-        Pass `msg_after` to `extract_message_links` and edit `msg_before` webhook msg.
+        Pass processed `payload` to `extract_message_links` and edit `msg_before` webhook msg.
+
+        Fetch the message found in payload, if not found i.e. the message got deleted then delete its
+        webhook message and return.
 
         Deletes cache value (`message_link_embeds_cache`) of `msg_before` if it exists and removes the
         webhook message for that particular link from the channel.
@@ -533,9 +536,15 @@ class Incidents(Cog):
 
         The edited message is also passed into `add_signals` if it is a incident message.
         """
+        try:
+            channel = self.bot.get_channel(int(payload.data["channel_id"]))
+            msg_after = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:  # Was deleted before we got the event
+            return
+
         if is_incident(msg_after):
             webhook_embed_list = await self.extract_message_links(msg_after)
-            webhook_msg_id = await self.message_link_embeds_cache.get(msg_before.id)
+            webhook_msg_id = await self.message_link_embeds_cache.get(payload.message_id)
 
             if not webhook_embed_list:
                 await self.delete_msg_link_embed(msg_after)
