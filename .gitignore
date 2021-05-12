@@ -115,6 +115,7 @@ log.*
 
 # Custom user configuration
 config.yml
+docker-compose.override.yml
 
 # xmlrunner unittest XML reports
 TEST-**.xml
