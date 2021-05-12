@@ -216,35 +216,6 @@ async def add_signals(incident: discord.Message) -> None:
                 return
 
 
-async def extract_message_links(message: discord.Message, bot: Bot) -> t.Optional[list]:
-    """
-    Checks if there's any message links in the text content.
-
-    Then passes the the message_link into `make_message_link_embed` to format a
-    embed for it containing information about the link.
-
-    As discord only allows a max of 10 embeds in a single webhook, just send the
-    first 10 embeds and don't care about the rest.
-
-    If no links are found for the message, it logs a trace statement.
-    """
-    message_links = DISCORD_MESSAGE_LINK_RE.findall(str(message.content))
-
-    if message_links:
-        embeds = []
-        for message_link in message_links[:10]:
-            ctx = await bot.get_context(message)
-            embed = await make_message_link_embed(ctx, message_link[0])
-            if embed:
-                embeds.append(embed)
-
-        return embeds
-
-    log.trace(
-        f"Skipping discord message link detection on {message.id}: message doesn't qualify."
-    )
-
-
 class Incidents(Cog):
     """
     Automation for the #incidents channel.
@@ -544,7 +515,7 @@ class Incidents(Cog):
         if is_incident(message):
             await add_signals(message)
 
-            webhook_embed_list = await extract_message_links(message, self.bot)
+            webhook_embed_list = await self.extract_message_links(message)
             if webhook_embed_list:
                 await self.send_message_link_embeds(webhook_embed_list, message, self.incidents_webhook)
 
@@ -563,7 +534,7 @@ class Incidents(Cog):
         The edited message is also passed into `add_signals` if it is a incident message.
         """
         if is_incident(msg_after):
-            webhook_embed_list = await extract_message_links(msg_after, self.bot)
+            webhook_embed_list = await self.extract_message_links(msg_after)
             webhook_msg_id = await self.message_link_embeds_cache.get(msg_before.id)
 
             if webhook_msg_id:
@@ -584,6 +555,34 @@ class Incidents(Cog):
         """
         if is_incident(message):
             await self.delete_msg_link_embed(message)
+
+    async def extract_message_links(self, message: discord.Message) -> t.Optional[t.List[discord.Embed]]:
+        """
+        Checks if there's any message links in the text content.
+
+        Then passes the the message_link into `make_message_link_embed` to format a
+        embed for it containing information about the link.
+
+        As discord only allows a max of 10 embeds in a single webhook, just send the
+        first 10 embeds and don't care about the rest.
+
+        If no links are found for the message, it logs a trace statement.
+        """
+        message_links = DISCORD_MESSAGE_LINK_RE.findall(str(message.content))
+
+        if message_links:
+            embeds = []
+            for message_link in message_links[:10]:
+                ctx = await self.bot.get_context(message)
+                embed = await make_message_link_embed(ctx, message_link[0])
+                if embed:
+                    embeds.append(embed)
+
+            return embeds
+
+        log.trace(
+            f"Skipping discord message link detection on {message.id}: message doesn't qualify."
+        )
 
     async def send_message_link_embeds(
             self,
