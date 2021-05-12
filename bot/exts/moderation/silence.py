@@ -1,5 +1,6 @@
 import json
 import logging
+import typing
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from typing import Optional, OrderedDict, Union
@@ -84,12 +85,8 @@ class SilenceNotifier(tasks.Loop):
 
 async def _select_lock_channel(args: OrderedDict[str, any]) -> TextOrVoiceChannel:
     """Passes the channel to be silenced to the resource lock."""
-    channel = args["channel"]
-    if channel is not None:
-        return channel
-
-    else:
-        return args["ctx"].channel
+    channel, _ = Silence.parse_silence_args(args["ctx"], args["duration_or_channel"], args["duration"])
+    return channel
 
 
 class Silence(commands.Cog):
@@ -155,8 +152,8 @@ class Silence(commands.Cog):
     async def silence(
         self,
         ctx: Context,
+        duration_or_channel: typing.Union[TextOrVoiceChannel, HushDurationConverter] = None,
         duration: HushDurationConverter = 10,
-        channel: TextOrVoiceChannel = None,
         *,
         kick: bool = False
     ) -> None:
@@ -170,8 +167,8 @@ class Silence(commands.Cog):
         If `kick` is True, members will not be added back to the voice channel, and members will be unable to rejoin.
         """
         await self._init_task
-        if channel is None:
-            channel = ctx.channel
+        channel, duration = self.parse_silence_args(ctx, duration_or_channel, duration)
+
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
 
@@ -197,6 +194,26 @@ class Silence(commands.Cog):
             log.info(f"Silenced {channel_info} for {duration} minute(s).")
             formatted_message = MSG_SILENCE_SUCCESS.format(duration=duration)
             await self.send_message(formatted_message, ctx.channel, channel, alert_target=True)
+
+    @staticmethod
+    def parse_silence_args(
+        ctx: Context,
+        duration_or_channel: typing.Union[TextOrVoiceChannel, int],
+        duration: HushDurationConverter
+    ) -> typing.Tuple[TextOrVoiceChannel, int]:
+        """Helper method to parse the arguments of the silence command."""
+        duration: int
+
+        if duration_or_channel:
+            if isinstance(duration_or_channel, (TextChannel, VoiceChannel)):
+                channel = duration_or_channel
+            else:
+                channel = ctx.channel
+                duration = duration_or_channel
+        else:
+            channel = ctx.channel
+
+        return channel, duration
 
     async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, *, kick: bool = False) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
