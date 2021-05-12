@@ -537,6 +537,10 @@ class Incidents(Cog):
             webhook_embed_list = await self.extract_message_links(msg_after)
             webhook_msg_id = await self.message_link_embeds_cache.get(msg_before.id)
 
+            if not webhook_embed_list:
+                await self.delete_msg_link_embed(msg_after)
+                return
+
             if webhook_msg_id:
                 await self.incidents_webhook.edit_message(
                     message_id=webhook_msg_id,
