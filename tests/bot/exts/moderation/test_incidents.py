@@ -833,27 +833,41 @@ class TestMessageLinkEmbeds(TestIncidents):
                     f"as they break our rules: \n{', '.join(msg_links)}"
         )
 
-        embeds = await incidents.extract_message_links(incident_msg, self.cog_instance.bot)
-        description = (
-            f"**Author:** {format_user(msg.author)}\n"
-            f"**Channel:** {msg.channel.mention} ({msg.channel.category}/#{msg.channel.name})\n"
-            f"**Content:** {('Hello, World!' * 3000)[:300] + '...'}\n"
-        )
+        with patch(
+                "bot.exts.moderation.incidents.Incidents.extract_message_links", AsyncMock()
+        ) as mock_extract_message_links:
+            embeds = mock_extract_message_links(incident_msg)
+            description = (
+                f"**Author:** {format_user(msg.author)}\n"
+                f"**Channel:** {msg.channel.mention} ({msg.channel.category}/#{msg.channel.name})\n"
+                f"**Content:** {('Hello, World!' * 3000)[:300] + '...'}\n"
+            )
 
-        # Check number of embeds returned with number of valid links
-        self.assertEqual(len(embeds), 2)
+            # Check number of embeds returned with number of valid links
+            self.assertEqual(len(embeds), 2)
 
-        # Check for the embed descriptions
-        for embed in embeds:
-            self.assertEqual(embed.description, description)
+            # Check for the embed descriptions
+            for embed in embeds:
+                self.assertEqual(embed.description, description)
 
     @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True))
     async def test_incident_message_edit(self):
         """Edit the incident message and check whether `extract_message_links` is called or not."""
         self.cog_instance.incidents_webhook = MockAsyncWebhook()  # Patch in our webhook
 
-        edited_msg = MockMessage(id=123)
-        with patch("bot.exts.moderation.incidents.extract_message_links", AsyncMock()) as mock_extract_message_links:
-            await self.cog_instance.on_message_edit(MockMessage(id=123), edited_msg)
+        text_channel = MockTextChannel()
+        self.cog_instance.bot.get_channel = MagicMock(return_value=text_channel)
+        text_channel.fetch_message = AsyncMock(return_value=MockMessage())
+
+        payload = AsyncMock(
+            discord.RawMessageUpdateEvent,
+            channel_id=123,
+            message_id=456
+        )
+
+        with patch(
+                "bot.exts.moderation.incidents.Incidents.extract_message_links", AsyncMock()
+        ) as mock_extract_message_links:
+            await self.cog_instance.on_raw_message_edit(payload)
 
         mock_extract_message_links.assert_awaited_once()

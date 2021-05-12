@@ -422,7 +422,7 @@ class Incidents(Cog):
             log.trace("Deletion was confirmed")
 
         # Deletes the message link embeds found in cache from the channel and cache.
-        await self.delete_msg_link_embed(incident)
+        await self.delete_msg_link_embed(incident.id)
 
     async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
         """
