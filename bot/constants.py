@@ -546,6 +546,15 @@ class URLs(metaclass=YAMLGetter):
     paste_service: str
 
 
+class Metabase(metaclass=YAMLGetter):
+    section = "metabase"
+
+    username: Optional[str]
+    password: Optional[str]
+    url: str
+    max_session_age: int
+
+
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
