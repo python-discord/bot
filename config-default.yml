@@ -418,13 +418,6 @@ anti_spam:
 
 
 
-reddit:
-    client_id: !ENV "REDDIT_CLIENT_ID"
-    secret: !ENV "REDDIT_SECRET"
-    subreddits:
-        - 'r/Python'
-
-
 metabase:
     username: !ENV "METABASE_USERNAME"
     password: !ENV "METABASE_PASSWORD"

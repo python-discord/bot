@@ -546,14 +546,6 @@ class URLs(metaclass=YAMLGetter):
     paste_service: str
 
 
-
-class Reddit(metaclass=YAMLGetter):
-    section = "reddit"
-
-    client_id: Optional[str]
-    secret: Optional[str]
-    subreddits: list
-
 class Metabase(metaclass=YAMLGetter):
     section = "metabase"
 
