@@ -252,7 +252,7 @@ class VoiceGate(Cog):
         # and sending it if appropriate is delegated to an atomic helper
         notification_sent, message_channel = await self._ping_newcomer(member)
 
-        # Schedule the notification to be deleted after the configured delay, which is
+        # Schedule the channel ping notification to be deleted after the configured delay, which is
         # again delegated to an atomic helper
         if notification_sent and isinstance(message_channel, discord.TextChannel):
             await asyncio.sleep(GateConf.voice_ping_delete_delay)
