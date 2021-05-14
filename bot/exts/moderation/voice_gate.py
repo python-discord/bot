@@ -40,6 +40,12 @@ VOICE_PING = (
     "If you don't yet qualify, you'll be told why!"
 )
 
+VOICE_PING_DM = (
+    "Wondering why you can't talk in the voice channels? "
+    "Use the `!voiceverify` command in {channel_mention} to verify. "
+    "If you don't yet qualify, you'll be told why!"
+)
+
 
 class VoiceGate(Cog):
     """Voice channels verification management."""
@@ -75,7 +81,7 @@ class VoiceGate(Cog):
             log.trace(f"Voice gate reminder message for user {member_id} was already removed")
 
     @redis_cache.atomic_transaction
-    async def _ping_newcomer(self, member: discord.Member) -> bool:
+    async def _ping_newcomer(self, member: discord.Member) -> tuple:
         """
         See if `member` should be sent a voice verification notification, and send it if so.
 
@@ -87,23 +93,28 @@ class VoiceGate(Cog):
         """
         if await self.redis_cache.contains(member.id):
             log.trace("User already in cache. Ignore.")
-            return False
+            return False, None
 
         log.trace("User not in cache and is in a voice channel.")
         verified = any(Roles.voice_verified == role.id for role in member.roles)
         if verified:
             log.trace("User is verified, add to the cache and ignore.")
             await self.redis_cache.set(member.id, NO_MSG)
-            return False
+            return False, None
 
         log.trace("User is unverified. Send ping.")
+
         await self.bot.wait_until_guild_available()
-        voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
+        voice_verification_channel = self.bot.get_channel(756769546777395203)
 
-        message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
+        try:
+            message = await member.send(VOICE_PING_DM.format(channel_mention=voice_verification_channel.mention))
+        except discord.Forbidden:
+            log.trace("DM failed for Voice ping message. Sending in channel.")
+            message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
+
         await self.redis_cache.set(member.id, message.id)
-
-        return True
+        return True, message.channel
 
     @command(aliases=('voiceverify',))
     @has_no_roles(Roles.voice_verified)
@@ -239,11 +250,11 @@ class VoiceGate(Cog):
 
         # To avoid race conditions, checking if the user should receive a notification
         # and sending it if appropriate is delegated to an atomic helper
-        notification_sent = await self._ping_newcomer(member)
+        notification_sent, message_channel = await self._ping_newcomer(member)
 
         # Schedule the notification to be deleted after the configured delay, which is
         # again delegated to an atomic helper
-        if notification_sent:
+        if notification_sent and isinstance(message_channel, discord.TextChannel):
             await asyncio.sleep(GateConf.voice_ping_delete_delay)
             await self._delete_ping(member.id)
 
