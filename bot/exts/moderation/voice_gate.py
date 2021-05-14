@@ -105,7 +105,7 @@ class VoiceGate(Cog):
         log.trace("User is unverified. Send ping.")
 
         await self.bot.wait_until_guild_available()
-        voice_verification_channel = self.bot.get_channel(756769546777395203)
+        voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
 
         try:
             message = await member.send(VOICE_PING_DM.format(channel_mention=voice_verification_channel.mention))
