@@ -175,7 +175,7 @@ class Reviewer:
 
         result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
         colour = Colours.soft_green if passed else Colours.soft_red
-        timestamp = datetime.utcnow().strftime("%d/%m/%Y")
+        timestamp = datetime.utcnow().strftime("%Y/%m/%d")
 
         embed_content = (
             f"{result} on {timestamp}\n"
