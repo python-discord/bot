@@ -34,6 +34,8 @@ MAX_MESSAGE_SIZE = 2000
 
 # Regex finding the user ID of a user mention
 MENTION_RE = re.compile(r"<@!?(\d+?)>")
+# Regex matching role pings
+ROLE_MENTION_RE = re.compile(r"<@&\d+>")
 
 
 class Reviewer:
@@ -134,15 +136,17 @@ class Reviewer:
         """Archive this vote to #nomination-archive."""
         message = await message.fetch()
 
-        # We consider that if a message has been sent less than 2 second before the one being archived
-        # it is part of the same nomination.
-        # For that we try to get messages sent in this timeframe until none is returned and NoMoreItems is raised.
+        # We consider the first message in the nomination to contain the two role pings
         messages = [message]
-        with contextlib.suppress(NoMoreItems):
-            async for new_message in message.channel.history(before=message.created_at):
-                if messages[-1].created_at - new_message.created_at > timedelta(seconds=2):
-                    break
-                messages.append(new_message)
+        if not len(ROLE_MENTION_RE.findall(message.content)) >= 2:
+            with contextlib.suppress(NoMoreItems):
+                async for new_message in message.channel.history(before=message.created_at):
+                    messages.append(new_message)
+
+                    if len(ROLE_MENTION_RE.findall(new_message.content)) >= 2:
+                        break
+
+        log.debug(f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}")
 
         parts = []
         for message_ in messages[::-1]:
