@@ -166,10 +166,10 @@ async def send_attachments(
 
 
 async def count_unique_users_reaction(
-        message: discord.Message,
-        reaction_predicate: Callable[[Reaction], bool] = lambda _: True,
-        user_predicate: Callable[[User], bool] = lambda _: True,
-        count_bots: bool = True
+    message: discord.Message,
+    reaction_predicate: Callable[[Reaction], bool] = lambda _: True,
+    user_predicate: Callable[[User], bool] = lambda _: True,
+    count_bots: bool = True
 ) -> int:
     """
     Count the amount of unique users who reacted to the message.
