@@ -3,11 +3,11 @@ import logging
 
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse
-from discord import Member
+from discord import Embed, Member
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Emojis, Guild, MODERATION_ROLES, Roles
+from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
 from bot.utils.scheduling import Scheduler
 
@@ -104,7 +104,9 @@ class ModPings(Cog):
             self._role_scheduler.cancel(mod.id)
         self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
 
-        await ctx.send(f"{Emojis.check_mark} Moderators role has been removed until {until_date}.")
+        embed = Embed(timestamp=duration, colour=Colours.bright_green)
+        embed.set_footer(text="Moderators role has been removed until", icon_url=Icons.green_checkmark)
+        await ctx.send(embed=embed)
 
     @modpings_group.command(name='on')
     @has_any_role(*MODERATION_ROLES)

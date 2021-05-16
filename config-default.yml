@@ -1,7 +1,8 @@
 bot:
-    prefix:      "!"
-    sentry_dsn:  !ENV "BOT_SENTRY_DSN"
-    token:       !ENV "BOT_TOKEN"
+    prefix:         "!"
+    sentry_dsn:     !ENV "BOT_SENTRY_DSN"
+    token:          !ENV "BOT_TOKEN"
+    trace_loggers:  !ENV "BOT_TRACE_LOGGERS"
 
     clean:
         # Maximum number of messages to traverse for clean commands
@@ -46,6 +47,8 @@ style:
         badge_partner: "<:partner:748666453242413136>"
         badge_staff: "<:discord_staff:743882896498098226>"
         badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
+        bot: "<:bot:812712599464443914>"
+        verified_bot: "<:verified_bot:811645219220750347>"
 
         defcon_shutdown:    "<:defcondisabled:470326273952972810>"
         defcon_unshutdown:  "<:defconenabled:470326274213150730>"
@@ -71,11 +74,6 @@ style:
         cross_mark: "\u274C"
         new:        "\U0001F195"
         pencil:     "\u270F"
-
-        # emotes used for #reddit
-        comments:       "<:reddit_comments:755845255001014384>"
-        upvotes:        "<:reddit_upvotes:755845219890757644>"
-        user:           "<:reddit_users:755845303822974997>"
 
         ok_hand: ":ok_hand:"
 
@@ -293,7 +291,6 @@ guild:
         duck_pond:                          637821475327311927
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
-        reddit:                             635408384794951680
         talent_pool:                        569145364800602132
 
 
@@ -423,11 +420,14 @@ anti_spam:
             max: 3
 
 
-reddit:
-    client_id: !ENV "REDDIT_CLIENT_ID"
-    secret: !ENV "REDDIT_SECRET"
-    subreddits:
-        - 'r/Python'
+
+metabase:
+    username: !ENV "METABASE_USERNAME"
+    password: !ENV "METABASE_PASSWORD"
+    url: "http://metabase.default.svc.cluster.local/api"
+    # 14 days, see https://www.metabase.com/docs/latest/operations-guide/environment-variables.html#max_session_age
+    max_session_age: 20160
+
 
 
 big_brother:
