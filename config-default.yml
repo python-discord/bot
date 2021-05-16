@@ -56,14 +56,16 @@ style:
 
         failmail: "<:failmail:633660039931887616>"
 
-        incident_actioned: "<:incident_actioned:719645530128646266>"
-        incident_investigating: "<:incident_investigating:719645658671480924>"
-        incident_unactioned: "<:incident_unactioned:719645583245180960>"
+        incident_actioned: "<:incident_actioned:714221559279255583>"
+        incident_investigating: "<:incident_investigating:714224190928191551>"
+        incident_unactioned: "<:incident_unactioned:714223099645526026>"
 
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_idle:    "<:status_idle:470326266625785866>"
         status_offline: "<:status_offline:470326266537705472>"
         status_online:  "<:status_online:470326272351010816>"
+
+        ducky_dave: "<:ducky_dave:742058418692423772>"
 
         trashcan: "<:trashcan:637136429717389331>"
 
@@ -72,11 +74,6 @@ style:
         cross_mark: "\u274C"
         new:        "\U0001F195"
         pencil:     "\u270F"
-
-        # emotes used for #reddit
-        comments:       "<:reddit_comments:755845255001014384>"
-        upvotes:        "<:reddit_upvotes:755845219890757644>"
-        user:           "<:reddit_users:755845303822974997>"
 
         ok_hand: ":ok_hand:"
 
@@ -175,6 +172,7 @@ guild:
         attachment_log:     &ATTACH_LOG     649243850006855680
         message_log:        &MESSAGE_LOG    467752170159079424
         mod_log:            &MOD_LOG        282638479504965634
+        nomination_archive:                 833371042046148738
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
 
@@ -293,7 +291,6 @@ guild:
         duck_pond:                          637821475327311927
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
-        reddit:                             635408384794951680
         talent_pool:                        569145364800602132
 
 
@@ -423,11 +420,14 @@ anti_spam:
             max: 3
 
 
-reddit:
-    client_id: !ENV "REDDIT_CLIENT_ID"
-    secret: !ENV "REDDIT_SECRET"
-    subreddits:
-        - 'r/Python'
+
+metabase:
+    username: !ENV "METABASE_USERNAME"
+    password: !ENV "METABASE_PASSWORD"
+    url: "http://metabase.default.svc.cluster.local/api"
+    # 14 days, see https://www.metabase.com/docs/latest/operations-guide/environment-variables.html#max_session_age
+    max_session_age: 20160
+
 
 
 big_brother:
