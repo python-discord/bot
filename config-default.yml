@@ -56,9 +56,9 @@ style:
 
         failmail: "<:failmail:633660039931887616>"
 
-        incident_actioned: "<:incident_actioned:719645530128646266>"
-        incident_investigating: "<:incident_investigating:719645658671480924>"
-        incident_unactioned: "<:incident_unactioned:719645583245180960>"
+        incident_actioned: "<:incident_actioned:714221559279255583>"
+        incident_investigating: "<:incident_investigating:714224190928191551>"
+        incident_unactioned: "<:incident_unactioned:714223099645526026>"
 
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_idle:    "<:status_idle:470326266625785866>"
