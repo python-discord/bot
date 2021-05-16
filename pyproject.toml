@@ -1,23 +1,26 @@
-[[source]]
-url = "https://pypi.python.org/simple"
-verify_ssl = true
-name = "pypi"
+[tool.poetry]
+name = "bot"
+version = "1.0.0"
+description = "The community bot for the Python Discord community."
+authors = ["Python Discord <info@pythondiscord.com>"]
+license = "MIT"
 
-[packages]
+[tool.poetry.dependencies]
+python = "3.9.*"
 aio-pika = "~=6.1"
 aiodns = "~=2.0"
 aiohttp = "~=3.7"
 aioping = "~=0.3.1"
 aioredis = "~=1.3.1"
 arrow = "~=1.0.3"
-"async-rediscache[fakeredis]" = "~=0.1.2"
+async-rediscache = { version = "~=0.1.2", extras = ["fakeredis"] }
 beautifulsoup4 = "~=4.9"
-colorama = {version = "~=0.4.3",sys_platform = "== 'win32'"}
+colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
 deepdiff = "~=4.0"
 "discord.py" = "~=1.6.0"
 emoji = "~=0.6"
-feedparser = "~=5.2"
+feedparser = "~=6.0.2"
 fuzzywuzzy = "~=0.17"
 lxml = "~=4.4"
 markdownify = "==0.6.1"
@@ -29,7 +32,7 @@ regex = "==2021.4.4"
 sentry-sdk = "~=0.19"
 statsd = "~=3.3"
 
-[dev-packages]
+[tool.poetry.dev-dependencies]
 coverage = "~=5.0"
 coveralls = "~=2.1"
 flake8 = "~=3.8"
@@ -42,11 +45,14 @@ flake8-tidy-imports = "~=4.0"
 flake8-todo = "~=0.7"
 pep8-naming = "~=0.9"
 pre-commit = "~=2.1"
+taskipy = "~=1.7.0"
+python-dotenv = "~=0.17.1"
 
-[requires]
-python_version = "3.8"
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[scripts]
+[tool.taskipy.tasks]
 start = "python -m bot"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"

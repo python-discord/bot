@@ -19,6 +19,12 @@ from typing import Dict, List, Optional
 
 import yaml
 
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ModuleNotFoundError:
+    pass
+
 log = logging.getLogger(__name__)
 
 
