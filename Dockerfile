@@ -13,7 +13,7 @@ WORKDIR /bot
 
 # Install project dependencies
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --prod
+RUN poetry install --no-dev
 
 # Define Git SHA build argument
 ARG git_sha="development"
