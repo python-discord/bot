@@ -5,7 +5,7 @@ from io import StringIO
 from typing import Union
 
 import discord
-from discord import Color, Embed, Member, User
+from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
@@ -359,6 +359,26 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     async def on_member_ban(self, guild: Guild, user: Union[User, Member]) -> None:
         """Remove `user` from the talent pool after they are banned."""
         await self.unwatch(user.id, "User was banned.")
+
+    @Cog.listener()
+    async def on_raw_reaction_add(self, payload: RawReactionActionEvent) -> None:
+        """
+        Watch for reactions in the #nomination-voting channel to automate it.
+
+        Adding a ticket emoji will unpin the message.
+        Adding an incident reaction will archive the message.
+        """
+        if payload.channel_id != Channels.nomination_voting:
+            return
+
+        message: PartialMessage = self.bot.get_channel(payload.channel_id).get_partial_message(payload.message_id)
+        emoji = str(payload.emoji)
+
+        if emoji == "\N{TICKET}":
+            await message.unpin(reason="Admin task created.")
+        elif emoji in {Emojis.incident_actioned, Emojis.incident_unactioned}:
+            log.info(f"Archiving nomination {message.id}")
+            await self.reviewer.archive_vote(message, emoji == Emojis.incident_actioned)
 
     async def unwatch(self, user_id: int, reason: str) -> bool:
         """End the active nomination of a user with the given reason and return True on success."""
