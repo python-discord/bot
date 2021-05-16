@@ -4,4 +4,4 @@ Imagine that you're coding a Discord bot and every time somebody uses a command,
 
 **What is asynchronous programming?**
 
-An asynchronous programme utilises the `async` and `await` keywords. An asynchronous programme pauses what it's doing and does something else whilst it waits for some third-party service to complete whatever it's supposed to do.
+An asynchronous program utilises the `async` and `await` keywords. An asynchronous program pauses what it's doing and does something else whilst it waits for some third-party service to complete whatever it's supposed to do.
