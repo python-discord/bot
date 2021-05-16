@@ -1,6 +1,8 @@
 import asyncio
+import contextlib
 import logging
 import random
+import re
 import textwrap
 import typing
 from collections import Counter
@@ -9,12 +11,13 @@ from typing import List, Optional, Union
 
 from dateutil.parser import isoparse
 from dateutil.relativedelta import relativedelta
-from discord import Emoji, Member, Message, TextChannel
+from discord import Embed, Emoji, Member, Message, NoMoreItems, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Guild, Roles
+from bot.constants import Channels, Colours, Emojis, Guild, Roles
+from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import get_time_delta, humanize_delta, time_since
 
@@ -28,6 +31,11 @@ MAX_DAYS_IN_POOL = 30
 
 # Maximum amount of characters allowed in a message
 MAX_MESSAGE_SIZE = 2000
+
+# Regex finding the user ID of a user mention
+MENTION_RE = re.compile(r"<@!?(\d+?)>")
+# Regex matching role pings
+ROLE_MENTION_RE = re.compile(r"<@&\d+>")
 
 
 class Reviewer:
@@ -75,10 +83,14 @@ class Reviewer:
         channel = guild.get_channel(Channels.nomination_voting)
 
         log.trace(f"Posting the review of {user_id}")
-        message = (await self._bulk_send(channel, review))[-1]
+        messages = await self._bulk_send(channel, review)
+
+        await pin_no_system_message(messages[0])
+
+        last_message = messages[-1]
         if seen_emoji:
             for reaction in (seen_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
-                await message.add_reaction(reaction)
+                await last_message.add_reaction(reaction)
 
         if update_database:
             nomination = self._pool.watched_users.get(user_id)
@@ -105,7 +117,7 @@ class Reviewer:
                 f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
             ), None
 
-        opening = f"<@&{Roles.moderators}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
+        opening = f"<@&{Roles.mod_team}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
 
         current_nominations = "\n\n".join(
             f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}" for entry in nomination['entries']
@@ -123,6 +135,79 @@ class Reviewer:
 
         review = "\n\n".join((opening, current_nominations, review_body, vote_request))
         return review, seen_emoji
+
+    async def archive_vote(self, message: PartialMessage, passed: bool) -> None:
+        """Archive this vote to #nomination-archive."""
+        message = await message.fetch()
+
+        # We consider the first message in the nomination to contain the two role pings
+        messages = [message]
+        if not len(ROLE_MENTION_RE.findall(message.content)) >= 2:
+            with contextlib.suppress(NoMoreItems):
+                async for new_message in message.channel.history(before=message.created_at):
+                    messages.append(new_message)
+
+                    if len(ROLE_MENTION_RE.findall(new_message.content)) >= 2:
+                        break
+
+        log.debug(f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}")
+
+        parts = []
+        for message_ in messages[::-1]:
+            parts.append(message_.content)
+            parts.append("\n" if message_.content.endswith(".") else " ")
+        content = "".join(parts)
+
+        # We assume that the first user mentioned is the user that we are voting on
+        user_id = int(MENTION_RE.search(content).group(1))
+
+        # Get reaction counts
+        seen = await count_unique_users_reaction(
+            messages[0],
+            lambda r: "ducky" in str(r) or str(r) == "\N{EYES}",
+            count_bots=False
+        )
+        upvotes = await count_unique_users_reaction(
+            messages[0],
+            lambda r: str(r) == "\N{THUMBS UP SIGN}",
+            count_bots=False
+        )
+        downvotes = await count_unique_users_reaction(
+            messages[0],
+            lambda r: str(r) == "\N{THUMBS DOWN SIGN}",
+            count_bots=False
+        )
+
+        # Remove the first and last paragraphs
+        stripped_content = content.split("\n\n", maxsplit=1)[1].rsplit("\n\n", maxsplit=1)[0]
+
+        result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
+        colour = Colours.soft_green if passed else Colours.soft_red
+        timestamp = datetime.utcnow().strftime("%Y/%m/%d")
+
+        embed_content = (
+            f"{result} on {timestamp}\n"
+            f"With {seen} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
+            f"{stripped_content}"
+        )
+
+        if user := await self.bot.fetch_user(user_id):
+            embed_title = f"Vote for {user} (`{user.id}`)"
+        else:
+            embed_title = f"Vote for `{user_id}`"
+
+        channel = self.bot.get_channel(Channels.nomination_archive)
+        for number, part in enumerate(
+                textwrap.wrap(embed_content, width=MAX_MESSAGE_SIZE, replace_whitespace=False, placeholder="")
+        ):
+            await channel.send(embed=Embed(
+                title=embed_title if number == 0 else None,
+                description="[...] " + part if number != 0 else part,
+                colour=colour
+            ))
+
+        for message_ in messages:
+            await message_.delete()
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""

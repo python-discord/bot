@@ -305,6 +305,8 @@ class Emojis(metaclass=YAMLGetter):
     status_offline: str
     status_online: str
 
+    ducky_dave: str
+
     trashcan: str
 
     bullet: str
@@ -423,6 +425,7 @@ class Channels(metaclass=YAMLGetter):
     attachment_log: int
     message_log: int
     mod_log: int
+    nomination_archive: int
     user_log: int
     voice_log: int
 
