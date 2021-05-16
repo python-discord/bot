@@ -65,6 +65,8 @@ style:
         status_offline: "<:status_offline:470326266537705472>"
         status_online:  "<:status_online:470326272351010816>"
 
+        ducky_dave: "<:ducky_dave:742058418692423772>"
+
         trashcan: "<:trashcan:637136429717389331>"
 
         bullet:     "\u2022"
@@ -170,6 +172,7 @@ guild:
         attachment_log:     &ATTACH_LOG     649243850006855680
         message_log:        &MESSAGE_LOG    467752170159079424
         mod_log:            &MOD_LOG        282638479504965634
+        nomination_archive:                 833371042046148738
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
 
