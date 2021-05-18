@@ -159,9 +159,8 @@ class VoiceGate(Cog):
                 await ctx.author.send(embed=embed)
             except discord.Forbidden:
                 log.info("Could not send user DM. Sending in voice-verify channel and scheduling delete.")
-                message = await ctx.send(embed=embed)
-                await asyncio.sleep(GateConf.voice_ping_delete_delay)
-                await message.delete()
+                await ctx.send(embed=embed)
+
             return
 
         checks = {
