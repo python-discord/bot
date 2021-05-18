@@ -8,6 +8,7 @@ from async_rediscache import RedisCache
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
+
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf
@@ -85,11 +86,12 @@ class VoiceGate(Cog):
         """
         See if `member` should be sent a voice verification notification, and send it if so.
 
-        Returns False if the notification was not sent. This happens when:
+        Returns (False, None) if the notification was not sent. This happens when:
         * The `member` has already received the notification
         * The `member` is already voice-verified
 
-        Otherwise, the notification message ID is stored in `redis_cache` and True is returned.
+        Otherwise, the notification message ID is stored in `redis_cache` and return (True, channel).
+        channel is either [discord.TextChannel, discord.DMChannel].
         """
         if await self.redis_cache.contains(member.id):
             log.trace("User already in cache. Ignore.")
