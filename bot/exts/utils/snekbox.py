@@ -201,7 +201,7 @@ class Snekbox(Cog):
                 output, paste_link = await self.format_output(results["stdout"])
 
             icon = self.get_status_emoji(results)
-            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
+            msg = f"{icon} {msg}.\n\n```\n{output}\n```"
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
@@ -216,9 +216,9 @@ class Snekbox(Cog):
             if filter_cog:
                 filter_triggered = await filter_cog.filter_eval(msg, ctx.message)
             if filter_triggered:
-                response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
+                response = await ctx.reply("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
-                response = await ctx.send(msg)
+                response = await ctx.reply(msg)
             self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,)))
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
