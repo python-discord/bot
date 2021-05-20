@@ -69,7 +69,7 @@ class Snekbox(Cog):
         self.bot = bot
         self.jobs = {}
 
-    async def post_eval(self, code: str, *, args: Optional[list[str]]) -> dict:
+    async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = URLs.snekbox_eval_api
         data = {"input": code}
@@ -205,7 +205,7 @@ class Snekbox(Cog):
         ctx: Context,
         code: str,
         *,
-        args: Optional[list[str]],
+        args: Optional[list[str]] = None,
         format_func: FormatFunc
     ) -> Message:
         """

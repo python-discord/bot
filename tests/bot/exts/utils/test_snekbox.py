@@ -161,7 +161,9 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.assert_called_once_with('MyAwesomeCode')
-        self.cog.send_eval.assert_called_once_with(ctx, 'MyAwesomeFormattedCode')
+        self.cog.send_eval.assert_called_once_with(
+            ctx, 'MyAwesomeFormattedCode', args=None, format_func=self.cog.format_output
+        )
         self.cog.continue_eval.assert_called_once_with(ctx, response)
 
     async def test_eval_command_evaluate_twice(self):
@@ -171,11 +173,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.prepare_input = MagicMock(return_value='MyAwesomeFormattedCode')
         self.cog.send_eval = AsyncMock(return_value=response)
         self.cog.continue_eval = AsyncMock()
-        self.cog.continue_eval.side_effect = ('MyAwesomeCode-2', None)
+        self.cog.continue_eval.side_effect = ('MyAwesomeFormattedCode', None)
 
         await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.has_calls(call('MyAwesomeCode'), call('MyAwesomeCode-2'))
-        self.cog.send_eval.assert_called_with(ctx, 'MyAwesomeFormattedCode')
+        self.cog.send_eval.assert_called_with(
+            ctx, 'MyAwesomeFormattedCode', args=None, format_func=self.cog.format_output
+        )
         self.cog.continue_eval.assert_called_with(ctx, response)
 
     async def test_eval_command_reject_two_eval_at_the_same_time(self):
@@ -189,12 +193,6 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.send.assert_called_once_with(
             "@LemonLemonishBeard#0042 You've already got a job running - please wait for it to finish!"
         )
-
-    async def test_eval_command_call_help(self):
-        """Test if the eval command call the help command if no code is provided."""
-        ctx = MockContext(command="sentinel")
-        await self.cog.eval_command(self.cog, ctx=ctx, code='')
-        ctx.send_help.assert_called_once_with(ctx.command)
 
     async def test_send_eval(self):
         """Test the send_eval function."""
@@ -212,11 +210,11 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        await self.cog.send_eval(ctx, 'MyAwesomeCode')
+        await self.cog.send_eval(ctx, 'MyAwesomeCode', format_func=self.cog.format_output)
         ctx.send.assert_called_once_with(
             '@LemonLemonishBeard#0042 :yay!: Return code 0.\n\n```\n[No output]\n```'
         )
-        self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
+        self.cog.post_eval.assert_called_once_with('MyAwesomeCode', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': '', 'returncode': 0})
         self.cog.get_results_message.assert_called_once_with({'stdout': '', 'returncode': 0})
         self.cog.format_output.assert_called_once_with('')
@@ -237,12 +235,12 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        await self.cog.send_eval(ctx, 'MyAwesomeCode')
+        await self.cog.send_eval(ctx, 'MyAwesomeCode', format_func=self.cog.format_output)
         ctx.send.assert_called_once_with(
             '@LemonLemonishBeard#0042 :yay!: Return code 0.'
             '\n\n```\nWay too long beard\n```\nFull output: lookatmybeard.com'
         )
-        self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
+        self.cog.post_eval.assert_called_once_with('MyAwesomeCode', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0})
         self.cog.get_results_message.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0})
         self.cog.format_output.assert_called_once_with('Way too long beard')
@@ -262,11 +260,11 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_eval = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        await self.cog.send_eval(ctx, 'MyAwesomeCode')
+        await self.cog.send_eval(ctx, 'MyAwesomeCode', format_func=self.cog.format_output)
         ctx.send.assert_called_once_with(
             '@LemonLemonishBeard#0042 :nope!: Return code 127.\n\n```\nBeard got stuck in the eval\n```'
         )
-        self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
+        self.cog.post_eval.assert_called_once_with('MyAwesomeCode', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
         self.cog.get_results_message.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
         self.cog.format_output.assert_not_called()
@@ -282,7 +280,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.get_code = create_autospec(self.cog.get_code, spec_set=True, return_value=expected)
 
         actual = await self.cog.continue_eval(ctx, response)
-        self.cog.get_code.assert_awaited_once_with(new_msg)
+        self.cog.get_code.assert_awaited_once_with(new_msg, ctx.command)
         self.assertEqual(actual, expected)
         self.bot.wait_for.assert_has_awaits(
             (
@@ -327,7 +325,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 self.bot.get_context.return_value = MockContext(command=command)
                 message = MockMessage(content=content)
 
-                actual_code = await self.cog.get_code(message)
+                actual_code = await self.cog.get_code(message, self.cog.eval_command)
 
                 self.bot.get_context.assert_awaited_once_with(message)
                 self.assertEqual(actual_code, expected_code)
