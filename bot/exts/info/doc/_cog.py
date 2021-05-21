@@ -27,11 +27,11 @@ log = logging.getLogger(__name__)
 
 # symbols with a group contained here will get the group prefixed on duplicates
 FORCE_PREFIX_GROUPS = (
-    "2to3fixer",
-    "token",
-    "label",
-    "pdbcommand",
     "term",
+    "label",
+    "token",
+    "pdbcommand",
+    "2to3fixer",
 )
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 # Delay to wait before trying to reach a rescheduled inventory again, in minutes
@@ -191,7 +191,11 @@ class DocCog(commands.Cog):
         # If the symbol's group is a non-priority group from FORCE_PREFIX_GROUPS,
         # add it as a prefix to disambiguate the symbols.
         elif group_name in FORCE_PREFIX_GROUPS:
-            return rename(item.group)
+            if item.group in FORCE_PREFIX_GROUPS:
+                needs_moving = FORCE_PREFIX_GROUPS.index(group_name) < FORCE_PREFIX_GROUPS.index(item.group)
+            else:
+                needs_moving = False
+            return rename(item.group if needs_moving else group_name, rename_extant=needs_moving)
 
         # If the above conditions didn't pass, either the existing symbol has its group in FORCE_PREFIX_GROUPS,
         # or deciding which item to rename would be arbitrary, so we rename the existing symbol.
