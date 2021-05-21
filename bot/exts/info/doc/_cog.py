@@ -181,22 +181,22 @@ class DocCog(commands.Cog):
             else:
                 return new_name
 
-        # Certain groups are added as prefixes to disambiguate the symbols.
-        if group_name in FORCE_PREFIX_GROUPS:
-            return rename(group_name)
+        # When there's a conflict, and the package names of the items differ, use the package name as a prefix.
+        if package_name != item.package:
+            if package_name in PRIORITY_PACKAGES:
+                return rename(item.package, rename_extant=True)
+            else:
+                return rename(package_name)
 
-        # The existing symbol with which the current symbol conflicts should have a group prefix.
-        # It currently doesn't have the group prefix because it's only added once there's a conflict.
-        elif item.group in FORCE_PREFIX_GROUPS:
-            return rename(item.group, rename_extant=True)
+        # If the symbol's group is a non-priority group from FORCE_PREFIX_GROUPS,
+        # add it as a prefix to disambiguate the symbols.
+        elif group_name in FORCE_PREFIX_GROUPS:
+            return rename(item.group)
 
-        elif package_name in PRIORITY_PACKAGES:
-            return rename(item.package, rename_extant=True)
-
-        # If we can't specially handle the symbol through its group or package,
-        # fall back to prepending its package name to the front.
+        # If the above conditions didn't pass, either the existing symbol has its group in FORCE_PREFIX_GROUPS,
+        # or deciding which item to rename would be arbitrary, so we rename the existing symbol.
         else:
-            return rename(package_name)
+            return rename(item.group, rename_extant=True)
 
     async def refresh_inventories(self) -> None:
         """Refresh internal documentation inventories."""
