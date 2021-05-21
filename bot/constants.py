@@ -602,7 +602,6 @@ class HelpChannels(metaclass=YAMLGetter):
     section = 'help_channels'
 
     enable: bool
-    claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes_claimant: int
     idle_minutes_others: int
