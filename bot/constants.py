@@ -19,6 +19,12 @@ from typing import Dict, List, Optional
 
 import yaml
 
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ModuleNotFoundError:
+    pass
+
 log = logging.getLogger(__name__)
 
 
@@ -299,6 +305,8 @@ class Emojis(metaclass=YAMLGetter):
     status_offline: str
     status_online: str
 
+    ducky_dave: str
+
     trashcan: str
 
     bullet: str
@@ -417,6 +425,7 @@ class Channels(metaclass=YAMLGetter):
     attachment_log: int
     message_log: int
     mod_log: int
+    nomination_archive: int
     user_log: int
     voice_log: int
 
@@ -544,6 +553,15 @@ class URLs(metaclass=YAMLGetter):
     # Site endpoints
     site_logs_view: str
     paste_service: str
+
+
+class Metabase(metaclass=YAMLGetter):
+    section = "metabase"
+
+    username: Optional[str]
+    password: Optional[str]
+    url: str
+    max_session_age: int
 
 
 class AntiSpam(metaclass=YAMLGetter):

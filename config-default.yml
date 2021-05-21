@@ -56,14 +56,16 @@ style:
 
         failmail: "<:failmail:633660039931887616>"
 
-        incident_actioned: "<:incident_actioned:719645530128646266>"
-        incident_investigating: "<:incident_investigating:719645658671480924>"
-        incident_unactioned: "<:incident_unactioned:719645583245180960>"
+        incident_actioned: "<:incident_actioned:714221559279255583>"
+        incident_investigating: "<:incident_investigating:714224190928191551>"
+        incident_unactioned: "<:incident_unactioned:714223099645526026>"
 
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_idle:    "<:status_idle:470326266625785866>"
         status_offline: "<:status_offline:470326266537705472>"
         status_online:  "<:status_online:470326272351010816>"
+
+        ducky_dave: "<:ducky_dave:742058418692423772>"
 
         trashcan: "<:trashcan:637136429717389331>"
 
@@ -170,6 +172,7 @@ guild:
         attachment_log:     &ATTACH_LOG     649243850006855680
         message_log:        &MESSAGE_LOG    467752170159079424
         mod_log:            &MOD_LOG        282638479504965634
+        nomination_archive:                 833371042046148738
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
 
@@ -415,6 +418,16 @@ anti_spam:
         role_mentions:
             interval: 10
             max: 3
+
+
+
+metabase:
+    username: !ENV "METABASE_USERNAME"
+    password: !ENV "METABASE_PASSWORD"
+    url: "http://metabase.default.svc.cluster.local/api"
+    # 14 days, see https://www.metabase.com/docs/latest/operations-guide/environment-variables.html#max_session_age
+    max_session_age: 20160
+
 
 
 big_brother:
