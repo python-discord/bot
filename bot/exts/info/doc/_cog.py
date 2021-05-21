@@ -30,6 +30,7 @@ FORCE_PREFIX_GROUPS = (
     "term",
     "label",
     "token",
+    "doc",
     "pdbcommand",
     "2to3fixer",
 )
