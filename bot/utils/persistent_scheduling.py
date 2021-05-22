@@ -8,8 +8,8 @@ from async_rediscache import RedisCache
 from bot.bot import Bot
 from bot.utils.scheduling import Scheduler
 
-SchedulerTaskFactory = t.Callable[[t.Union[str, int]], t.Coroutine[None, None, None]]
 CacheKey = t.Union[str, int]
+SchedulerTaskFactory = t.Callable[[CacheKey], t.Coroutine]
 
 
 class PersistentScheduler:
@@ -148,8 +148,8 @@ class PersistentScheduler:
         """
         Wraps the task to run, so that we can delete the key from the cache.
 
-        We delete the task from the cache first. If deletion fails for some reason the task will be run on
-        the next load. If the task fails we don't care about rerunning it on the next load.
+        The task is deleted from the cache first. If deletion fails for some reason the scheduler will retry on the next
+        load. If the task fails, the scheduler has done its part and it won't be re-run on the next load.
         """
         await self.cache.delete(task_id)
 
