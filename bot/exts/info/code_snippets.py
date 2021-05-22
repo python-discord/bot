@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 GITHUB_RE = re.compile(
     r'https://github\.com/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/blob/'
-    r'(?P<path>[^#>]+)(\?[^#>]+)?(#L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)'
+    r'(?P<path>[^#>]+)(\?[^#>]+)?(#L(?P<start_line>\d+)(([-~:]|(\.\.))L(?P<end_line>\d+))?)'
 )
 
 GITHUB_GIST_RE = re.compile(

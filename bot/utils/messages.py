@@ -5,9 +5,10 @@ import random
 import re
 from functools import partial
 from io import BytesIO
-from typing import List, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union
 
 import discord
+from discord import Message, MessageType, Reaction, User
 from discord.errors import HTTPException
 from discord.ext.commands import Context
 
@@ -162,6 +163,44 @@ async def send_attachments(
             await destination.send(embed=embed, **webhook_send_kwargs)
 
     return urls
+
+
+async def count_unique_users_reaction(
+    message: discord.Message,
+    reaction_predicate: Callable[[Reaction], bool] = lambda _: True,
+    user_predicate: Callable[[User], bool] = lambda _: True,
+    count_bots: bool = True
+) -> int:
+    """
+    Count the amount of unique users who reacted to the message.
+
+    A reaction_predicate function can be passed to check if this reaction should be counted,
+    another user_predicate to check if the user should also be counted along with a count_bot flag.
+    """
+    unique_users = set()
+
+    for reaction in message.reactions:
+        if reaction_predicate(reaction):
+            async for user in reaction.users():
+                if (count_bots or not user.bot) and user_predicate(user):
+                    unique_users.add(user.id)
+
+    return len(unique_users)
+
+
+async def pin_no_system_message(message: Message) -> bool:
+    """Pin the given message, wait a couple of seconds and try to delete the system message."""
+    await message.pin()
+
+    # Make sure that we give it enough time to deliver the message
+    await asyncio.sleep(2)
+    # Search for the system message in the last 10 messages
+    async for historical_message in message.channel.history(limit=10):
+        if historical_message.type == MessageType.pins_add:
+            await historical_message.delete()
+            return True
+
+    return False
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:
