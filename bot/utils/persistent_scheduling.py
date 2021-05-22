@@ -1,4 +1,3 @@
-import asyncio
 import typing as t
 from datetime import datetime, timedelta, timezone
 
@@ -43,9 +42,7 @@ class PersistentScheduler:
         self.task_factory = task_factory
         self.bot = bot
 
-        self.ready = asyncio.Event()
-
-        self.reschedule_task = self.bot.loop.create_task(self._start_scheduler())
+        self._reschedule_task = self.bot.loop.create_task(self._start_scheduler())
 
     def __contains__(self, task_id: CacheKey) -> bool:
         """Return True if a task with the given `task_id` is currently scheduled."""
@@ -53,7 +50,7 @@ class PersistentScheduler:
 
     async def wait_until_ready(self) -> None:
         """Wait until the scheduler is ready and the cache is ready (and all cached tasks are scheduled)."""
-        await self.ready.wait()
+        await self._reschedule_task
 
     async def get(self, task_id: CacheKey) -> t.Optional[Arrow]:
         """Get the time in which `task_id`'s task should go off. If the task is not found return None."""
@@ -101,10 +98,10 @@ class PersistentScheduler:
 
         `cancel_all` remains untouched so that it can be used in instances such as cog unloads while preserving cache.
         """
-        self.reschedule_task.cancel()
+        self._reschedule_task.cancel()
         await self.cache.clear()
 
-        self.reschedule_task.add_done_callback(self._scheduler.cancel_all())
+        self._reschedule_task.add_done_callback(self._scheduler.cancel_all())
 
     async def schedule_at(self, time: datetime, task_id: CacheKey) -> None:
         """
@@ -138,16 +135,14 @@ class PersistentScheduler:
 
     def cancel_all(self) -> None:
         """Unschedule all known tasks."""
-        self.reschedule_task.cancel()
-        self.reschedule_task.add_done_callback(lambda _: self._scheduler.cancel_all())
+        self._reschedule_task.cancel()
+        self._reschedule_task.add_done_callback(lambda _: self._scheduler.cancel_all())
 
     async def _start_scheduler(self) -> None:
         """Starts the persistent scheduler by awaiting the guild before rescheduling the tasks."""
         await self.bot.wait_until_guild_available()
 
         await self.reschedule_all_tasks()
-
-        self.ready.set()
 
     async def _to_schedule(self, task_id: CacheKey) -> None:
         """
