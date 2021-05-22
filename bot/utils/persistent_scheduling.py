@@ -90,6 +90,7 @@ class PersistentScheduler:
         """
         await self.cache.delete(task_id)
 
+        await self._reschedule_task  # Wait for rescheduling to finish to avoid race conditions.
         self._scheduler.cancel(task_id)
 
     async def delete_all(self) -> None:
@@ -132,6 +133,11 @@ class PersistentScheduler:
 
         time = arrow.utcnow().shift(seconds=delay)
         await self.cache.set(task_id, time.timestamp())
+
+    def cancel(self, task_id: CacheKey) -> None:
+        """Unschedule the task identified by `task_id`. Log a warning if the task doesn't exist."""
+        # Wait for rescheduling to finish to avoid race conditions.
+        self._reschedule_task.add_done_callback(lambda _: self._scheduler.cancel(task_id))
 
     def cancel_all(self) -> None:
         """Unschedule all known tasks."""
