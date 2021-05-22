@@ -47,16 +47,16 @@ class InfractionScheduler:
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
         infractions = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'active': 'true',
-                'ordering': 'expires_at',
-                'permanent': 'false',
-                'types': ','.join(supported_infractions),
+                "active": "true",
+                "ordering": "expires_at",
+                "permanent": "false",
+                "types": ",".join(supported_infractions),
             },
         )
 
-        to_schedule = [i for i in infractions if not i['id'] in self.scheduler]
+        to_schedule = [i for i in infractions if i["id"] not in self.scheduler]
 
         for infraction in to_schedule:
             log.trace("Scheduling %r", infraction)
