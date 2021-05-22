@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import arrow
 from arrow import Arrow
@@ -130,7 +130,7 @@ class PersistentScheduler:
         """
         self._scheduler.schedule_later(delay, task_id, self._to_schedule(task_id))
 
-        time = arrow.utcnow() + timedelta(seconds=delay)
+        time = arrow.utcnow().shift(seconds=delay)
         await self.cache.set(task_id, time.timestamp())
 
     def cancel_all(self) -> None:
