@@ -21,7 +21,7 @@ DELETION_MESSAGE_TEMPLATE = (
     "You can go to <https://pixels.pythondiscord.com/authorize> to get a new key."
 )
 
-PIXELS_TOKEN_RE = re.compile(r"[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+\=]*")
+PIXELS_TOKEN_RE = re.compile(r"[A-Za-z0-9-_=]{30,}\.[A-Za-z0-9-_=]{50,}\.[A-Za-z0-9-_.+\=]{30,}")
 
 
 class PixelsTokenRemover(Cog):
