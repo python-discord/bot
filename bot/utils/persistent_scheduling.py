@@ -40,7 +40,7 @@ class PersistentScheduler:
         self.task_factory = task_factory
         self.bot = bot
 
-        self._reschedule_task = self.bot.loop.create_task(self._start_scheduler())
+        self._reschedule_task = self.bot.loop.create_task(self.reschedule_all_tasks())
 
     def __contains__(self, task_id: CacheKey) -> bool:
         """Return True if a task with the given `task_id` is currently scheduled."""
@@ -141,12 +141,6 @@ class PersistentScheduler:
         """Unschedule all known tasks."""
         self._reschedule_task.cancel()
         self._reschedule_task.add_done_callback(lambda _: self._scheduler.cancel_all())
-
-    async def _start_scheduler(self) -> None:
-        """Starts the persistent scheduler by awaiting the guild before rescheduling the tasks."""
-        await self.bot.wait_until_guild_available()
-
-        await self.reschedule_all_tasks()
 
     async def _to_schedule(self, task_id: CacheKey) -> None:
         """

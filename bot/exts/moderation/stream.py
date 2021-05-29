@@ -30,6 +30,8 @@ class Stream(commands.Cog):
 
     async def _revoke_streaming_permission(self, member_id: int) -> None:
         """Remove the streaming permission from the given Member."""
+        await self.bot.wait_until_guild_available()
+
         guild = self.bot.get_guild(Guild.id)
         member = guild.get_member(member_id)
         if not member:
