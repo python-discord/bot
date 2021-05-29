@@ -68,8 +68,10 @@ class PersistentScheduler:
 
     async def reschedule_task(self, task_id: CacheKey) -> None:
         """Reschedule the task according to `task_factory` and `task_id`."""
-        time = (await self.get(task_id)).datetime
-        self._scheduler.schedule_at(time, task_id, coroutine=self._to_schedule(task_id))
+        time = await self.get(task_id)
+        if not time:
+            return
+        self._scheduler.schedule_at(time.datetime, task_id, coroutine=self._to_schedule(task_id))
 
     async def reschedule_all_tasks(self) -> None:
         """Reschedule all tasks according to `task_factory` and the ID's in the cache."""
