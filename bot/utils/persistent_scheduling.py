@@ -34,8 +34,6 @@ class PersistentScheduler:
     """
 
     def __init__(self, name: str, task_factory: SchedulerTaskFactory, bot: Bot):
-        name = f"{__name__}.{name}"
-
         self._scheduler = Scheduler(name)
         self.cache = RedisCache(namespace=name)
 
