@@ -22,7 +22,7 @@ class Stream(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = PersistentScheduler(self.__class__.__name__, self._revoke_streaming_permission, bot)
+        self.scheduler = PersistentScheduler(self.__class__.__name__, self._revoke_streaming_permission, bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel all scheduled tasks."""

@@ -1,11 +1,11 @@
 import typing as t
+from asyncio import AbstractEventLoop
 from datetime import datetime, timezone
 
 import arrow
 from arrow import Arrow
 from async_rediscache import RedisCache
 
-from bot.bot import Bot
 from bot.utils.scheduling import Scheduler
 
 CacheKey = t.Union[str, int]
@@ -33,14 +33,13 @@ class PersistentScheduler:
     Any exception raised in a scheduled task is logged when the task is done.
     """
 
-    def __init__(self, name: str, task_factory: SchedulerTaskFactory, bot: Bot):
+    def __init__(self, name: str, task_factory: SchedulerTaskFactory, event_loop: AbstractEventLoop):
         self._scheduler = Scheduler(name)
         self.cache = RedisCache(namespace=name)
 
         self.task_factory = task_factory
-        self.bot = bot
 
-        self._reschedule_task = self.bot.loop.create_task(self.reschedule_all_tasks())
+        self._reschedule_task = event_loop.create_task(self.reschedule_all_tasks())
 
     def __contains__(self, task_id: CacheKey) -> bool:
         """Return True if a task with the given `task_id` is currently scheduled."""

@@ -17,7 +17,7 @@ class ModPings(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self._role_scheduler = PersistentScheduler(self.__class__.__name__, self.reapply_role, bot)
+        self._role_scheduler = PersistentScheduler(self.__class__.__name__, self.reapply_role, bot.loop)
 
         self.guild = None
         self.moderators_role = None
