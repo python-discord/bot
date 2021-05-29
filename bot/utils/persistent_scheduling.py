@@ -99,7 +99,8 @@ class PersistentScheduler:
         self._reschedule_task.cancel()
         await self.cache.clear()
 
-        self._reschedule_task.add_done_callback(self._scheduler.cancel_all())
+        self._reschedule_task.cancel()
+        self._scheduler.cancel_all()
 
     async def schedule_at(self, time: datetime, task_id: CacheKey) -> None:
         """
