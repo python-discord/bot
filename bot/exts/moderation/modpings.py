@@ -27,10 +27,10 @@ class ModPings(Cog):
     async def normalize_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
         await self.bot.wait_until_guild_available()
-        await self._role_scheduler.wait_until_ready()
-
         self.guild = self.bot.get_guild(Guild.id)
         self.moderators_role = self.guild.get_role(Roles.moderators)
+
+        await self._role_scheduler.wait_until_ready()
 
         mod_team = self.guild.get_role(Roles.mod_team)
         pings_on = self.moderators_role.members
@@ -48,7 +48,7 @@ class ModPings(Cog):
     async def reapply_role(self, mod_id: int) -> None:
         """Reapply the moderator's role to the given moderator."""
         log.trace(f"Re-applying role to mod with ID {mod_id}.")
-        await self.bot.wait_until_guild_available()
+        await self.reschedule_task
         mod = self.guild.get_member(mod_id)
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
 
