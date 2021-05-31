@@ -463,9 +463,6 @@ free:
 help_channels:
     enable: true
 
-    # Minimum interval before allowing a certain user to claim a new help channel
-    claim_minutes: 15
-
     # Roles which are allowed to use the command which makes channels dormant
     cmd_whitelist:
         - *HELPERS_ROLE
