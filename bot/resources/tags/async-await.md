@@ -25,4 +25,4 @@ loop.run_until_complete(main())
 ```
 Note that in the `run_until_complete()` where we appear to be calling `main()`, this does not execute the code in `main`, rather it returns a `coroutine` object which is then handled and run by the event loop via `run_until_complete()`.
 
-To learn more about asyncio and it's use, see the [asyncio documentation](https://docs.python.org/3/library/asyncio.html).
+To learn more about asyncio and its use, see the [asyncio documentation](https://docs.python.org/3/library/asyncio.html).
