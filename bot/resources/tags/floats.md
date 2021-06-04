@@ -5,7 +5,7 @@ You may have noticed that when doing arithmetic with floats in Python you someti
 0.30000000000000004
 ```
 **Why this happens**
-Internally your computer stores floats as as binary fractions. Many decimal values cannot be stored as exact binary fractions, which means an approximation has to be used.
+Internally your computer stores floats as binary fractions. Many decimal values cannot be stored as exact binary fractions, which means an approximation has to be used.
 
 **How you can avoid this**
  You can use [math.isclose](https://docs.python.org/3/library/math.html#math.isclose) to check if two floats are close, or to get an exact decimal representation, you can use the [decimal](https://docs.python.org/3/library/decimal.html) or [fractions](https://docs.python.org/3/library/fractions.html) module. Here are some examples:

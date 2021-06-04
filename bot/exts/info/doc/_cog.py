@@ -27,11 +27,12 @@ log = logging.getLogger(__name__)
 
 # symbols with a group contained here will get the group prefixed on duplicates
 FORCE_PREFIX_GROUPS = (
-    "2to3fixer",
-    "token",
-    "label",
-    "pdbcommand",
     "term",
+    "label",
+    "token",
+    "doc",
+    "pdbcommand",
+    "2to3fixer",
 )
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 # Delay to wait before trying to reach a rescheduled inventory again, in minutes
@@ -181,22 +182,26 @@ class DocCog(commands.Cog):
             else:
                 return new_name
 
-        # Certain groups are added as prefixes to disambiguate the symbols.
-        if group_name in FORCE_PREFIX_GROUPS:
-            return rename(group_name)
+        # When there's a conflict, and the package names of the items differ, use the package name as a prefix.
+        if package_name != item.package:
+            if package_name in PRIORITY_PACKAGES:
+                return rename(item.package, rename_extant=True)
+            else:
+                return rename(package_name)
 
-        # The existing symbol with which the current symbol conflicts should have a group prefix.
-        # It currently doesn't have the group prefix because it's only added once there's a conflict.
-        elif item.group in FORCE_PREFIX_GROUPS:
-            return rename(item.group, rename_extant=True)
+        # If the symbol's group is a non-priority group from FORCE_PREFIX_GROUPS,
+        # add it as a prefix to disambiguate the symbols.
+        elif group_name in FORCE_PREFIX_GROUPS:
+            if item.group in FORCE_PREFIX_GROUPS:
+                needs_moving = FORCE_PREFIX_GROUPS.index(group_name) < FORCE_PREFIX_GROUPS.index(item.group)
+            else:
+                needs_moving = False
+            return rename(item.group if needs_moving else group_name, rename_extant=needs_moving)
 
-        elif package_name in PRIORITY_PACKAGES:
-            return rename(item.package, rename_extant=True)
-
-        # If we can't specially handle the symbol through its group or package,
-        # fall back to prepending its package name to the front.
+        # If the above conditions didn't pass, either the existing symbol has its group in FORCE_PREFIX_GROUPS,
+        # or deciding which item to rename would be arbitrary, so we rename the existing symbol.
         else:
-            return rename(package_name)
+            return rename(item.group, rename_extant=True)
 
     async def refresh_inventories(self) -> None:
         """Refresh internal documentation inventories."""

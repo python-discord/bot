@@ -12,6 +12,7 @@ from deepdiff import DeepDiff
 from discord import Colour
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
@@ -640,9 +641,10 @@ class ModLog(Cog, name="ModLog"):
         channel = msg_before.channel
         channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
+        cleaned_contents = (escape_markdown(msg.clean_content).split() for msg in (msg_before, msg_after))
         # Getting the difference per words and group them by type - add, remove, same
         # Note that this is intended grouping without sorting
-        diff = difflib.ndiff(msg_before.clean_content.split(), msg_after.clean_content.split())
+        diff = difflib.ndiff(*cleaned_contents)
         diff_groups = tuple(
             (diff_type, tuple(s[2:] for s in diff_words))
             for diff_type, diff_words in itertools.groupby(diff, key=lambda s: s[0])

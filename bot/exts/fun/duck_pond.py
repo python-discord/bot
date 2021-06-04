@@ -9,7 +9,7 @@ from discord.ext.commands import Cog, Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.utils.checks import has_any_role
-from bot.utils.messages import send_attachments
+from bot.utils.messages import count_unique_users_reaction, send_attachments
 from bot.utils.webhooks import send_webhook
 
 log = logging.getLogger(__name__)
@@ -78,18 +78,12 @@ class DuckPond(Cog):
 
         Only counts ducks added by staff members.
         """
-        duck_reactors = set()
-
-        # iterate over all reactions
-        for reaction in message.reactions:
-            # check if the current reaction is a duck
-            if not self._is_duck_emoji(reaction.emoji):
-                continue
-
-            # update the set of reactors with all staff reactors
-            duck_reactors |= {user.id async for user in reaction.users() if self.is_staff(user)}
-
-        return len(duck_reactors)
+        return await count_unique_users_reaction(
+            message,
+            lambda r: self._is_duck_emoji(r.emoji),
+            self.is_staff,
+            False
+        )
 
     async def relay_message(self, message: Message) -> None:
         """Relays the message's content and attachments to the duck pond channel."""
