@@ -1,7 +1,7 @@
 from bot.bot import Bot
-from bot.exts.backend.branding._cog import BrandingManager
+from bot.exts.backend.branding._cog import Branding
 
 
 def setup(bot: Bot) -> None:
-    """Loads BrandingManager cog."""
-    bot.add_cog(BrandingManager(bot))
+    """Load Branding cog."""
+    bot.add_cog(Branding(bot))

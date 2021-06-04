@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
 import fuzzywuzzy
-from discord import Colour, Embed, Guild, Message, Role
+from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
 from bot import constants
@@ -230,6 +230,11 @@ class Information(Cog):
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
 
+        if user.public_flags.verified_bot:
+            name += f" {constants.Emojis.verified_bot}"
+        elif user.bot:
+            name += f" {constants.Emojis.bot}"
+
         badges = []
 
         for badge, is_set in user.public_flags:
@@ -284,7 +289,7 @@ class Information(Cog):
             embed.add_field(name=field_name, value=field_content, inline=False)
 
         embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
-        embed.colour = user.top_role.colour if roles else Colour.blurple()
+        embed.colour = user.colour if user.colour != Colour.default() else Colour.blurple()
 
         return embed
 
@@ -447,9 +452,9 @@ class Information(Cog):
 
         def add_content(title: str, content: str) -> None:
             paginator.add_line(f'== {title} ==\n')
-            # replace backticks as it breaks out of code blocks. Spaces seemed to be the most reasonable solution.
-            # we hope it's not close to 2000
-            paginator.add_line(content.replace('```', '`` `'))
+            # Replace backticks as it breaks out of code blocks.
+            # An invisible character seemed to be the most reasonable solution. We hope it's not close to 2000.
+            paginator.add_line(content.replace('`', '`\u200b'))
             paginator.close_page()
 
         if message.content:
@@ -468,7 +473,7 @@ class Information(Cog):
                 add_content(title, transformer(item))
 
         for page in paginator.pages:
-            await ctx.send(page)
+            await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:

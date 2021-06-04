@@ -3,33 +3,77 @@ import contextlib
 import logging
 import random
 import re
+from functools import partial
 from io import BytesIO
-from typing import List, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union
 
 import discord
+from discord import Message, MessageType, Reaction, User
 from discord.errors import HTTPException
 from discord.ext.commands import Context
 
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.utils import scheduling
 
 log = logging.getLogger(__name__)
 
 
+def reaction_check(
+    reaction: discord.Reaction,
+    user: discord.abc.User,
+    *,
+    message_id: int,
+    allowed_emoji: Sequence[str],
+    allowed_users: Sequence[int],
+    allow_mods: bool = True,
+) -> bool:
+    """
+    Check if a reaction's emoji and author are allowed and the message is `message_id`.
+
+    If the user is not allowed, remove the reaction. Ignore reactions made by the bot.
+    If `allow_mods` is True, allow users with moderator roles even if they're not in `allowed_users`.
+    """
+    right_reaction = (
+        user != bot.instance.user
+        and reaction.message.id == message_id
+        and str(reaction.emoji) in allowed_emoji
+    )
+    if not right_reaction:
+        return False
+
+    is_moderator = (
+        allow_mods
+        and any(role.id in MODERATION_ROLES for role in getattr(user, "roles", []))
+    )
+
+    if user.id in allowed_users or is_moderator:
+        log.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
+        return True
+    else:
+        log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
+        scheduling.create_task(
+            reaction.message.remove_reaction(reaction.emoji, user),
+            HTTPException,  # Suppress the HTTPException if adding the reaction fails
+            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
+        )
+        return False
+
+
 async def wait_for_deletion(
     message: discord.Message,
-    user_ids: Sequence[discord.abc.Snowflake],
+    user_ids: Sequence[int],
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
-    allow_moderation_roles: bool = True
+    allow_mods: bool = True
 ) -> None:
     """
     Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
 
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`.
-    An `allow_moderation_roles` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
+    An `allow_mods` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
     the message.
     """
     if message.guild is None:
@@ -43,16 +87,13 @@ async def wait_for_deletion(
                 log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
                 return
 
-    def check(reaction: discord.Reaction, user: discord.Member) -> bool:
-        """Check that the deletion emoji is reacted by the appropriate user."""
-        return (
-            reaction.message.id == message.id
-            and str(reaction.emoji) in deletion_emojis
-            and (
-                user.id in user_ids
-                or allow_moderation_roles and any(role.id in MODERATION_ROLES for role in user.roles)
-            )
-        )
+    check = partial(
+        reaction_check,
+        message_id=message.id,
+        allowed_emoji=deletion_emojis,
+        allowed_users=user_ids,
+        allow_mods=allow_mods,
+    )
 
     with contextlib.suppress(asyncio.TimeoutError):
         await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
@@ -124,6 +165,44 @@ async def send_attachments(
     return urls
 
 
+async def count_unique_users_reaction(
+    message: discord.Message,
+    reaction_predicate: Callable[[Reaction], bool] = lambda _: True,
+    user_predicate: Callable[[User], bool] = lambda _: True,
+    count_bots: bool = True
+) -> int:
+    """
+    Count the amount of unique users who reacted to the message.
+
+    A reaction_predicate function can be passed to check if this reaction should be counted,
+    another user_predicate to check if the user should also be counted along with a count_bot flag.
+    """
+    unique_users = set()
+
+    for reaction in message.reactions:
+        if reaction_predicate(reaction):
+            async for user in reaction.users():
+                if (count_bots or not user.bot) and user_predicate(user):
+                    unique_users.add(user.id)
+
+    return len(unique_users)
+
+
+async def pin_no_system_message(message: Message) -> bool:
+    """Pin the given message, wait a couple of seconds and try to delete the system message."""
+    await message.pin()
+
+    # Make sure that we give it enough time to deliver the message
+    await asyncio.sleep(2)
+    # Search for the system message in the last 10 messages
+    async for historical_message in message.channel.history(limit=10):
+        if historical_message.type == MessageType.pins_add:
+            await historical_message.delete()
+            return True
+
+    return False
+
+
 def sub_clyde(username: Optional[str]) -> Optional[str]:
     """
     Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
@@ -141,14 +220,14 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
         return username  # Empty string or None
 
 
-async def send_denial(ctx: Context, reason: str) -> None:
+async def send_denial(ctx: Context, reason: str) -> discord.Message:
     """Send an embed denying the user with the given reason."""
     embed = discord.Embed()
     embed.colour = discord.Colour.red()
     embed.title = random.choice(NEGATIVE_REPLIES)
     embed.description = reason
 
-    await ctx.send(embed=embed)
+    return await ctx.send(embed=embed)
 
 
 def format_user(user: discord.abc.User) -> str:

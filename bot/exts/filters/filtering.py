@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import dateutil
 import discord.errors
+import regex
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
@@ -34,7 +35,11 @@ CODE_BLOCK_RE = re.compile(
 EVERYONE_PING_RE = re.compile(rf"@everyone|<@&{Guild.id}>|@here")
 SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
-ZALGO_RE = re.compile(r"[\u0300-\u036F\u0489]")
+
+# Exclude variation selectors from zalgo because they're actually invisible.
+VARIATION_SELECTORS = r"\uFE00-\uFE0F\U000E0100-\U000E01EF"
+INVISIBLE_RE = regex.compile(rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT}}\p{{CONTROL}}--\s]", regex.V1)
+ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIATION_SELECTORS}]]", regex.V1)
 
 # Other constants.
 DAYS_BETWEEN_ALERTS = 3
@@ -178,6 +183,7 @@ class Filtering(Cog):
 
     def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
+        name = self.clean_input(name)
         matches = []
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
@@ -444,6 +450,8 @@ class Filtering(Cog):
         if SPOILER_RE.search(text):
             text = self._expand_spoilers(text)
 
+        text = self.clean_input(text)
+
         # Make sure it's not a URL
         if URL_RE.search(text):
             return False, None
@@ -462,6 +470,7 @@ class Filtering(Cog):
 
         Second return value is a reason of URL blacklisting (can be None).
         """
+        text = self.clean_input(text)
         if not URL_RE.search(text):
             return False, None
 
@@ -492,6 +501,8 @@ class Filtering(Cog):
 
         Attempts to catch some of common ways to try to cheat the system.
         """
+        text = self.clean_input(text)
+
         # Remove backslashes to prevent escape character aroundfuckery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
@@ -627,6 +638,15 @@ class Filtering(Cog):
 
         await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
         log.info(f"Deleted the offensive message with id {msg['id']}.")
+
+    @staticmethod
+    def clean_input(string: str) -> str:
+        """Remove zalgo and invisible characters from `string`."""
+        # For future consideration: remove characters in the Mc, Sk, and Lm categories too.
+        # Can be normalised with form C to merge char + combining char into a single char to avoid
+        # removing legit diacritics, but this would open up a way to bypass filters.
+        no_zalgo = ZALGO_RE.sub("", string)
+        return INVISIBLE_RE.sub("", no_zalgo)
 
 
 def setup(bot: Bot) -> None:
