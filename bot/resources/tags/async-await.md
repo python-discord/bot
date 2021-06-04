@@ -13,7 +13,7 @@ async def main():
 ```
 Which means we can call `await something_awaitable()` directly from within the function. If this were a non-async function this would have raised an exception like: `SyntaxError: 'await' outside async function`
 
-To run the top level async function from outside of the even loop we can get an event loop from `asyncio`, and then use that loop to run the function:
+To run the top level async function from outside of the event loop we can get an event loop from `asyncio`, and then use that loop to run the function:
 ```py
 from asyncio import get_event_loop
 
