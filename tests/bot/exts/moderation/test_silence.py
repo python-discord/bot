@@ -641,6 +641,13 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.silence.callback(self.cog, ctx, None, None)
         self.cog.scheduler.schedule_later.assert_not_called()
 
+    async def test_indefinite_silence(self):
+        """Test silencing a channel forever."""
+        with mock.patch.object(self.cog, "_schedule_unsilence") as unsilence:
+            ctx = MockContext(channel=self.text_channel)
+            await self.cog.silence.callback(self.cog, ctx, -1)
+            unsilence.assert_awaited_once_with(ctx, ctx.channel, None)
+
 
 @autospec(silence.Silence, "unsilence_timestamps", pass_mocks=False)
 class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
