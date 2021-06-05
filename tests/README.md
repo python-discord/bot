@@ -12,13 +12,13 @@ We are using the following modules and packages for our unit tests:
 - [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) (standard library)
 - [coverage.py](https://coverage.readthedocs.io/en/stable/)
 
-To ensure the results you obtain on your personal machine are comparable to those generated in the Azure pipeline, please make sure to run your tests with the virtual environment defined by our [Pipfile](/Pipfile). To run your tests with `pipenv`, we've provided two "scripts" shortcuts:
+To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [Poetry Project](/pyproject.toml). To run your tests with `poetry`, we've provided two "scripts" shortcuts:
 
-- `pipenv run test` will run `unittest` with `coverage.py`
-- `pipenv run test path/to/test.py` will run a specific test.
-- `pipenv run report` will generate a coverage report of the tests you've run with `pipenv run test`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
+- `poetry run task test` will run `unittest` with `coverage.py`
+- `poetry run task test path/to/test.py` will run a specific test.
+- `poetry run task report` will generate a coverage report of the tests you've run with `poetry run task test`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
 
-If you want a coverage report, make sure to run the tests with `pipenv run test` *first*.
+If you want a coverage report, make sure to run the tests with `poetry run task test` *first*.
 
 ## Writing tests
 

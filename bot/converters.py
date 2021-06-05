@@ -236,35 +236,6 @@ class Snowflake(IDConverter):
         return snowflake
 
 
-class Subreddit(Converter):
-    """Forces a string to begin with "r/" and checks if it's a valid subreddit."""
-
-    @staticmethod
-    async def convert(ctx: Context, sub: str) -> str:
-        """
-        Force sub to begin with "r/" and check if it's a valid subreddit.
-
-        If sub is a valid subreddit, return it prepended with "r/"
-        """
-        sub = sub.lower()
-
-        if not sub.startswith("r/"):
-            sub = f"r/{sub}"
-
-        resp = await ctx.bot.http_session.get(
-            "https://www.reddit.com/subreddits/search.json",
-            params={"q": sub}
-        )
-
-        json = await resp.json()
-        if not json["data"]["children"]:
-            raise BadArgument(
-                f"The subreddit `{sub}` either doesn't exist, or it has no posts."
-            )
-
-        return sub
-
-
 class TagNameConverter(Converter):
     """
     Ensure that a proposed tag name is valid.

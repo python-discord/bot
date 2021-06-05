@@ -1,7 +1,5 @@
-import asyncio
 import unittest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
 
 from dateutil.relativedelta import relativedelta
 
@@ -55,17 +53,6 @@ class TimeTests(unittest.TestCase):
     def test_format_infraction(self):
         """Testing format_infraction."""
         self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '2019-12-12 00:01')
-
-    @patch('asyncio.sleep', new_callable=AsyncMock)
-    def test_wait_until(self, mock):
-        """Testing wait_until."""
-        start = datetime(2019, 1, 1, 0, 0)
-        then = datetime(2019, 1, 1, 0, 10)
-
-        # No return value
-        self.assertIs(asyncio.run(time.wait_until(then, start)), None)
-
-        mock.assert_called_once_with(10 * 60)
 
     def test_format_infraction_with_duration_none_expiry(self):
         """format_infraction_with_duration should work for None expiry."""
