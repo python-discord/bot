@@ -12,7 +12,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name, _stats
+from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
 log = logging.getLogger(__name__)
@@ -94,6 +94,24 @@ class HelpChannels(commands.Cog):
 
         self.scheduler.cancel_all()
 
+    async def _handle_role_change(self, member: discord.Member, coro: t.Callable[..., t.Coroutine]) -> None:
+        """
+        Change `member`'s cooldown role via awaiting `coro` and handle errors.
+
+        `coro` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
+        """
+        try:
+            await coro(self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.help_cooldown))
+        except discord.NotFound:
+            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
+        except discord.Forbidden:
+            log.debug(
+                f"Forbidden to change role for {member} ({member.id}); "
+                f"possibly due to role hierarchy"
+            )
+        except discord.HTTPException as e:
+            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
+
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True)
@@ -106,9 +124,10 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
         await self.move_to_in_use(message.channel)
-        await _cooldown.revoke_send_permissions(message.author, self.scheduler)
+        await self._handle_role_change(message.author, message.author.add_roles)
 
         await _message.pin(message)
+
         try:
             await _message.dm_on_open(message)
         except Exception as e:
@@ -276,7 +295,6 @@ class HelpChannels(commands.Cog):
 
         log.trace("Initialising the cog.")
         await self.init_categories()
-        await _cooldown.check_cooldowns(self.scheduler)
 
         self.channel_queue = self.create_channel_queue()
         self.name_queue = _name.create_name_queue(
@@ -407,16 +425,11 @@ class HelpChannels(commands.Cog):
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
 
-        # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
-        if claimant_id in self.scheduler:
-            self.scheduler.cancel(claimant_id)
-
         claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
         if claimant is None:
             log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
-        elif not any(claimant.id == user_id for _, user_id in await _caches.claimants.items()):
-            # Remove the cooldown role if the claimant has no other channels left
-            await _cooldown.remove_cooldown_role(claimant)
+        else:
+            await self._handle_role_change(claimant, claimant.remove_roles)
 
         await _message.unpin(channel)
         await _stats.report_complete_session(channel.id, closed_on)

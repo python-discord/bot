@@ -120,7 +120,8 @@ class Reviewer:
         opening = f"<@&{Roles.mod_team}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
 
         current_nominations = "\n\n".join(
-            f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}" for entry in nomination['entries']
+            f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}"
+            for entry in nomination['entries'][::-1]
         )
         current_nominations = f"**Nominated by:**\n{current_nominations}"
 
