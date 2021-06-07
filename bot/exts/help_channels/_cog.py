@@ -469,6 +469,8 @@ class HelpChannels(commands.Cog):
         else:
             await _message.update_message_caches(message)
 
+            await self.notify_session_participants(message)
+
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message) -> None:
         """
@@ -535,3 +537,61 @@ class HelpChannels(commands.Cog):
         )
         self.dynamic_message = new_dynamic_message["id"]
         await _caches.dynamic_message.set("message_id", self.dynamic_message)
+
+    async def notify_session_participants(self, message: discord.Message) -> None:
+        if await _caches.claimants.get(message.channel.id) == message.author.id:
+            return  # Ignore messages sent by claimants
+
+        if not await _caches.help_dm.get(message.author.id):
+            return  # Ignore message if user is opted out of help dms
+
+        await self.notify_session_participants(message)
+
+        session_participants = _caches.session_participants.get(message.channel.id)
+
+    @commands.group(name="helpdm")
+    async def help_dm_group(self, ctx: commands.Context) -> None:
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @help_dm_group.command(name="on")
+    async def on_command(self, ctx: commands.Context) -> None:
+        if await _caches.help_dm.get(ctx.author.id):
+            await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already ON!")
+
+            log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already ON")
+            return
+
+        await _caches.help_dm.set(ctx.author.id, True)
+
+        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs ON!")
+
+        log.trace(f"{ctx.author.id} Help DMs OFF")
+
+    @help_dm_group.command(name="off")
+    async def off_command(self, ctx: commands.Context) -> None:
+        if not await _caches.help_dm.get(ctx.author.id):
+            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already OFF!")
+
+            log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already OFF")
+            return
+
+        await _caches.help_dm.set(ctx.author.id, False)
+
+        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs OFF!")
+
+        log.trace(f"{ctx.author.id} Help DMs OFF")
+
+    @help_dm_group.command()
+    async def embed_test(self, ctx):
+        user = self.bot.get_user(ctx.author.id)
+
+        embed = discord.Embed(
+            title="Currently Helping",
+            description=f"You're currently helping in <#{ctx.channel.id}>",
+            color=discord.Colour.green(),
+            timestamp=ctx.message.created_at
+        )
+        embed.add_field(name="Conversation", value=f"[Jump to message]({ctx.message.jump_url})")
+        await user.send(embed=embed)
+
