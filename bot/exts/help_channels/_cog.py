@@ -623,17 +623,3 @@ class HelpChannels(commands.Cog):
         await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs OFF!")
 
         log.trace(f"{ctx.author.id} Help DMs OFF")
-
-    # TODO: REMOVE BEFORE COMMIT
-    @help_dm_group.command()
-    async def embed_test(self, ctx):
-        user = self.bot.get_user(ctx.author.id)
-
-        embed = discord.Embed(
-            title="Currently Helping",
-            description=f"You're currently helping in <#{ctx.channel.id}>",
-            color=discord.Colour.green(),
-            timestamp=ctx.message.created_at
-        )
-        embed.add_field(name="Conversation", value=f"[Jump to message]({ctx.message.jump_url})")
-        await user.send(embed=embed)
