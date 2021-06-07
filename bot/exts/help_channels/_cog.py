@@ -424,6 +424,7 @@ class HelpChannels(commands.Cog):
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
+        await _caches.session_participants.delete(channel.id)
 
         claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
         if claimant is None:
@@ -466,10 +467,13 @@ class HelpChannels(commands.Cog):
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
+
+        elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
+            await self.notify_session_participants(message)
+
         else:
             await _message.update_message_caches(message)
 
-            await self.notify_session_participants(message)
 
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message) -> None:
@@ -538,16 +542,43 @@ class HelpChannels(commands.Cog):
         self.dynamic_message = new_dynamic_message["id"]
         await _caches.dynamic_message.set("message_id", self.dynamic_message)
 
+    @staticmethod
+    def _serialise_session_participants(participants: set[int]) -> str:
+        """Convert a set to a comma separated string."""
+        return ','.join(str(p) for p in participants)
+
+    @staticmethod
+    def _deserialise_session_participants(s: str) -> set[int]:
+        """Convert a comma separated string into a set."""
+        return set(int(user_id) for user_id in s.split(",") if user_id != "")
+
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
     async def notify_session_participants(self, message: discord.Message) -> None:
+        """
+        Check if the message author meets the requirements to be notified.
+        If they meet the requirements they are notified.
+        """
         if await _caches.claimants.get(message.channel.id) == message.author.id:
             return  # Ignore messages sent by claimants
 
         if not await _caches.help_dm.get(message.author.id):
             return  # Ignore message if user is opted out of help dms
 
-        await self.notify_session_participants(message)
+        if message.content == f"{self.bot.command_prefix}close":
+            return  # Ignore messages that are closing the channel
 
-        session_participants = _caches.session_participants.get(message.channel.id)
+        session_participants = self._deserialise_session_participants(
+            await _caches.session_participants.get(message.channel.id) or ""
+        )
+
+        if not message.author.id in session_participants:
+            session_participants.add(message.author.id)
+            await message.author.send("Purple")
+            await _caches.session_participants.set(
+                message.channel.id,
+                self._serialise_session_participants(session_participants)
+            )
 
     @commands.group(name="helpdm")
     async def help_dm_group(self, ctx: commands.Context) -> None:
@@ -582,6 +613,7 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"{ctx.author.id} Help DMs OFF")
 
+    # TODO: REMOVE BEFORE COMMIT
     @help_dm_group.command()
     async def embed_test(self, ctx):
         user = self.bot.get_user(ctx.author.id)
@@ -594,4 +626,3 @@ class HelpChannels(commands.Cog):
         )
         embed.add_field(name="Conversation", value=f"[Jump to message]({ctx.message.jump_url})")
         await user.send(embed=embed)
-
