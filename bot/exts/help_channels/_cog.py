@@ -556,6 +556,7 @@ class HelpChannels(commands.Cog):
     async def notify_session_participants(self, message: discord.Message) -> None:
         """
         Check if the message author meets the requirements to be notified.
+
         If they meet the requirements they are notified.
         """
         if await _caches.claimants.get(message.channel.id) == message.author.id:
@@ -571,7 +572,7 @@ class HelpChannels(commands.Cog):
             await _caches.session_participants.get(message.channel.id) or ""
         )
 
-        if not message.author.id in session_participants:
+        if message.author.id not in session_participants:
             session_participants.add(message.author.id)
 
             user = self.bot.get_user(message.author.id)
@@ -593,16 +594,17 @@ class HelpChannels(commands.Cog):
     @commands.group(name="helpdm")
     async def help_dm_group(self, ctx: commands.Context) -> None:
         """
-        Users who are participating in the help channel(not the claimant)
-        will receive a dm showing what help channel they are "Helping in."
-        This will be ignored if the message content == close.
+        User will receive a embed when they are "helping" in a help channel.
+
+        If they have helpdms off they will won't receive an embed.
+        If they have helpdms on they will receive an embed.
         """
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
     @help_dm_group.command(name="on")
     async def on_command(self, ctx: commands.Context) -> None:
-        """Turns help dms on so the user will receive the participating dm"""
+        """Turns help dms on so the user will receive the participating dm."""
         if await _caches.help_dm.get(ctx.author.id):
             await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already ON!")
 
@@ -617,7 +619,7 @@ class HelpChannels(commands.Cog):
 
     @help_dm_group.command(name="off")
     async def off_command(self, ctx: commands.Context) -> None:
-        """Turns help dms off so the user wont receive the participating dm"""
+        """Turns help dms off so the user wont receive the participating dm."""
         if not await _caches.help_dm.get(ctx.author.id):
             await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already OFF!")
 
