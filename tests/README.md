@@ -16,7 +16,7 @@ We are using the following modules and packages for our unit tests:
 We also use the following package as a test runner:
 - [pytest](https://docs.pytest.org/en/6.2.x/)
 
-To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [Poetry Project](/pyproject.toml). To run your tests with `poetry`, we've provided two "scripts" shortcuts:
+To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [Poetry Project](/pyproject.toml). To run your tests with `poetry`, we've provided the following "script" shortcuts:
 
 - `poetry run task fast-test` will run `pytest`.
 - `poetry run task test` will run `pytest` with `pytest-cov`.
