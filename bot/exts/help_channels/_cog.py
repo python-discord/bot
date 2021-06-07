@@ -470,8 +470,6 @@ class HelpChannels(commands.Cog):
 
         elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
             await self.notify_session_participants(message)
-
-        else:
             await _message.update_message_caches(message)
 
     @commands.Cog.listener()
