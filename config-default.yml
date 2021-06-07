@@ -357,14 +357,14 @@ urls:
     connect_max_retries:       3
     connect_cooldown:          5
     site:        &DOMAIN       "pythondiscord.com"
-    site_api:    &API          "pydis-api.default.svc.cluster.local"
+    site_api:    &API          "site.default.svc.cluster.local/api"
     site_api_schema:           "http://"
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
-    site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
+    site_staff:  &STAFF  !JOIN [*SCHEMA, *DOMAIN, "/staff"]
 
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
-    site_logs_view:                     !JOIN [*SCHEMA, *STAFF, "/bot/logs"]
+    site_logs_view:                     !JOIN [*STAFF, "/bot/logs"]
 
     # Snekbox
     snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"
