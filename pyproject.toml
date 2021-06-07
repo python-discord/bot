@@ -47,6 +47,9 @@ pep8-naming = "~=0.9"
 pre-commit = "~=2.1"
 taskipy = "~=1.7.0"
 python-dotenv = "~=0.17.1"
+pytest = "~=6.2.4"
+pytest-cov = "~=2.12.1"
+pytest-xdist = { version = "~=2.2.1", extras = ["psutil"] }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -58,6 +61,6 @@ lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
 push = "docker push ghcr.io/python-discord/bot:latest"
-test = "coverage run -m unittest"
+test = "pytest -n auto --cov-report= --cov bot "
 html = "coverage html"
 report = "coverage report"
