@@ -12,7 +12,7 @@ x-logging: &logging
       max-size: "10m"
 
 x-restart-policy: &restart_policy
-  restart: always
+  restart: unless-stopped
 
 services:
   postgres:
