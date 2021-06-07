@@ -417,10 +417,10 @@ class HelpChannels(commands.Cog):
         return await _unclaim_channel(channel, claimant_id, closed_on)
 
     async def _unclaim_channel(
-        self,
-        channel: discord.TextChannel,
-        claimant_id: int,
-        closed_on: _channel.ClosingReason
+            self,
+            channel: discord.TextChannel,
+            claimant_id: int,
+            closed_on: _channel.ClosingReason
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
@@ -473,7 +473,6 @@ class HelpChannels(commands.Cog):
 
         else:
             await _message.update_message_caches(message)
-
 
     @commands.Cog.listener()
     async def on_message_delete(self, msg: discord.Message) -> None:
@@ -593,11 +592,17 @@ class HelpChannels(commands.Cog):
 
     @commands.group(name="helpdm")
     async def help_dm_group(self, ctx: commands.Context) -> None:
+        """
+        Users who are participating in the help channel(not the claimant)
+        will receive a dm showing what help channel they are "Helping in."
+        This will be ignored if the message content == close.
+        """
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
     @help_dm_group.command(name="on")
     async def on_command(self, ctx: commands.Context) -> None:
+        """Turns help dms on so the user will receive the participating dm"""
         if await _caches.help_dm.get(ctx.author.id):
             await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already ON!")
 
@@ -612,6 +617,7 @@ class HelpChannels(commands.Cog):
 
     @help_dm_group.command(name="off")
     async def off_command(self, ctx: commands.Context) -> None:
+        """Turns help dms off so the user wont receive the participating dm"""
         if not await _caches.help_dm.get(ctx.author.id):
             await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already OFF!")
 
