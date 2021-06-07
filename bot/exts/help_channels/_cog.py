@@ -574,7 +574,18 @@ class HelpChannels(commands.Cog):
 
         if not message.author.id in session_participants:
             session_participants.add(message.author.id)
-            await message.author.send("Purple")
+
+            user = self.bot.get_user(message.author.id)
+
+            embed = discord.Embed(
+                title="Currently Helping",
+                description=f"You're currently helping in <#{message.channel.id}>",
+                color=discord.Colour.green(),
+                timestamp=message.created_at
+            )
+            embed.add_field(name="Conversation", value=f"[Jump to message]({message.message.jump_url})")
+            await user.send(embed=embed)
+
             await _caches.session_participants.set(
                 message.channel.id,
                 self._serialise_session_participants(session_participants)
