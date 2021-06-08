@@ -592,40 +592,23 @@ class HelpChannels(commands.Cog):
     async def helpdm_command(
             self,
             ctx: commands.Context,
-            state: allowed_strings("on", "off") = None  # noqa: F821
+            state: allowed_strings("on", "off")  # noqa: F821
     ) -> None:
         """
         Allows user to toggle "Helping" dms.
 
-        If this is set to off the user will not receive a dm for channel that they are participating in.
         If this is set to on the user will receive a dm for the channel they are participating in.
+
+        If this is set to off the user will not receive a dm for channel that they are participating in.
         """
-        state_bool = state.lower() == "on"
-
         requested_state_bool = state.lower() == "on"
+
         if requested_state_bool == await _caches.help_dm.get(ctx.author.id, False):
-            if await _caches.help_dm.get(ctx.author.id):
-                await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already ON!")
-
-                log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already ON")
-                return
-
-            if not await _caches.help_dm.get(ctx.author.id):
-                await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already OFF!")
-
-                log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already OFF")
-                return
-
-        if state_bool:
-            await _caches.help_dm.set(ctx.author.id, True)
-
-            await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs ON!")
-
-            log.trace(f"{ctx.author.id} Help DMs ON")
+            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state.upper()}")
             return
 
-        await _caches.help_dm.delete(ctx.author.id)
-
-        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs OFF!")
-
-        log.trace(f"{ctx.author.id} Help DMs OFF")
+        if requested_state_bool:
+            await _caches.help_dm.set(ctx.author.id, True)
+        else:
+            await _caches.help_dm.delete(ctx.author.id)
+        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state.upper()}!")
