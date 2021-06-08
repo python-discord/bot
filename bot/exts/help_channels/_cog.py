@@ -577,7 +577,7 @@ class HelpChannels(commands.Cog):
 
             embed = discord.Embed(
                 title="Currently Helping",
-                description=f"You're currently helping in <#{message.channel.id}>",
+                description=f"You're currently helping in {message.channel.mention}",
                 color=discord.Colour.green(),
                 timestamp=message.created_at
             )
