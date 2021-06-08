@@ -418,10 +418,10 @@ class HelpChannels(commands.Cog):
         return await _unclaim_channel(channel, claimant_id, closed_on)
 
     async def _unclaim_channel(
-            self,
-            channel: discord.TextChannel,
-            claimant_id: int,
-            closed_on: _channel.ClosingReason
+        self,
+        channel: discord.TextChannel,
+        claimant_id: int,
+        closed_on: _channel.ClosingReason
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
@@ -574,16 +574,14 @@ class HelpChannels(commands.Cog):
         if message.author.id not in session_participants:
             session_participants.add(message.author.id)
 
-            user = self.bot.get_user(message.author.id)
-
             embed = discord.Embed(
                 title="Currently Helping",
                 description=f"You're currently helping in <#{message.channel.id}>",
                 color=discord.Colour.green(),
                 timestamp=message.created_at
             )
-            embed.add_field(name="Conversation", value=f"[Jump to message]({message.message.jump_url})")
-            await user.send(embed=embed)
+            embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
+            await message.author.send(embed=embed)
 
             await _caches.session_participants.set(
                 message.channel.id,
