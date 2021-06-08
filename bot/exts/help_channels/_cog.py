@@ -12,6 +12,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import allowed_strings
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
@@ -577,7 +578,7 @@ class HelpChannels(commands.Cog):
 
             embed = discord.Embed(
                 title="Currently Helping",
-                description=f"You're currently helping in {message.channel.mention}",
+                description=f"You're currently helping in <#{message.channel.id}>",
                 color=discord.Colour.green(),
                 timestamp=message.created_at
             )
@@ -589,42 +590,43 @@ class HelpChannels(commands.Cog):
                 self._serialise_session_participants(session_participants)
             )
 
-    @commands.group(name="helpdm")
-    async def help_dm_group(self, ctx: commands.Context) -> None:
+    @commands.command(name="helpdm")
+    async def helpdm_command(
+            self,
+            ctx: commands.Context,
+            state: allowed_strings("on", "off") = None  # noqa: F821
+    ) -> None:
         """
-        User will receive a embed when they are "helping" in a help channel.
+        Allows user to toggle "Helping" dms.
 
-        If they have helpdms off they will won't receive an embed.
-        If they have helpdms on they will receive an embed.
+        If this is set to off the user will not receive a dm for channel that they are participating in.
+        If this is set to on the user will receive a dm for the channel they are participating in.
         """
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help(ctx.command)
+        state_bool = state.lower() == "on"
 
-    @help_dm_group.command(name="on")
-    async def on_command(self, ctx: commands.Context) -> None:
-        """Turns help dms on so the user will receive the participating dm."""
-        if await _caches.help_dm.get(ctx.author.id):
-            await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already ON!")
+        requested_state_bool = state.lower() == "on"
+        if requested_state_bool == await _caches.help_dm.get(ctx.author.id, False):
+            if await _caches.help_dm.get(ctx.author.id):
+                await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already ON!")
 
-            log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already ON")
+                log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already ON")
+                return
+
+            if not await _caches.help_dm.get(ctx.author.id):
+                await ctx.send(f"{constants.Emojis.cross_mark}{ctx.author.mention} Help DMs are already OFF!")
+
+                log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already OFF")
+                return
+
+        if state_bool:
+            await _caches.help_dm.set(ctx.author.id, True)
+
+            await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs ON!")
+
+            log.trace(f"{ctx.author.id} Help DMs ON")
             return
 
-        await _caches.help_dm.set(ctx.author.id, True)
-
-        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs ON!")
-
-        log.trace(f"{ctx.author.id} Help DMs OFF")
-
-    @help_dm_group.command(name="off")
-    async def off_command(self, ctx: commands.Context) -> None:
-        """Turns help dms off so the user wont receive the participating dm."""
-        if not await _caches.help_dm.get(ctx.author.id):
-            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already OFF!")
-
-            log.trace(f"{ctx.author.id} Attempted to turn Help DMs on but they are already OFF")
-            return
-
-        await _caches.help_dm.set(ctx.author.id, False)
+        await _caches.help_dm.delete(ctx.author.id)
 
         await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs OFF!")
 
