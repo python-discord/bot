@@ -564,7 +564,7 @@ class HelpChannels(commands.Cog):
         if not await _caches.help_dm.get(message.author.id):
             return  # Ignore message if user is opted out of help dms
 
-        if message.content == f"{self.bot.command_prefix}close":
+        if (await self.bot.get_context(message)).command == self.close_command:
             return  # Ignore messages that are closing the channel
 
         session_participants = self._deserialise_session_participants(
