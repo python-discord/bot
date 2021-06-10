@@ -1,8 +1,9 @@
+import asyncio
 import datetime
 import logging
 
 from async_rediscache import RedisCache
-from dateutil.parser import isoparse
+from dateutil.parser import isoparse, parse
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -13,6 +14,7 @@ from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
+MINIMUM_WORK_LIMIT = 16
 
 class ModPings(Cog):
     """Commands for a moderator to turn moderator pings on and off."""
@@ -22,6 +24,12 @@ class ModPings(Cog):
     # The cache's values are the times when the role should be re-applied to them, stored in ISO format.
     pings_off_mods = RedisCache()
 
+
+    # RedisCache[discord.Member.id, 'start timestamp|total worktime in seconds']
+    # The cache's keys are mod's ID
+    # The cache's values are their pings on schedule timestamp and the total seconds (work time) until pings off
+    modpings_schedule = RedisCache()
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self._role_scheduler = Scheduler(self.__class__.__name__)
@@ -30,6 +38,7 @@ class ModPings(Cog):
         self.moderators_role = None
 
         self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="mod-pings-reschedule")
+        self.modpings_schedule_task = self.bot.loop.create_task(self.reschedule_modpings_schedule())
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -54,6 +63,50 @@ class ModPings(Cog):
             else:
                 expiry = isoparse(pings_off[mod.id]).replace(tzinfo=None)
                 self._role_scheduler.schedule_at(expiry, mod.id, self.reapply_role(mod))
+
+    async def reschedule_modpings_schedule(self) -> None:
+        """Reschedule moderators schedule ping."""
+        await self.bot.wait_until_guild_available()
+        schedule_cache = await self.modpings_schedule.to_dict()
+
+        log.info("Scheduling modpings schedule for applicable moderators found in cache.")
+        for mod_id, schedule in schedule_cache:
+            start_timestamp, work_time = schedule.split("|")
+            start = datetime.datetime.fromtimestamp(start_timestamp)
+
+            mod = self.bot.fetch_user(mod_id)
+            self._role_scheduler.schedule_at(
+                start,
+                mod_id,
+                self.add_role_schedule(mod, work_time, start)
+            )
+
+    async def remove_role_schedule(self, mod: Member, work_time: int, schedule_start: datetime.datetime) -> None:
+        """Removes the moderator's role to the given moderator."""
+        log.trace(f"Removing moderator role to mod with ID {mod.id}")
+        await mod.remove_roles(self.moderators_role, reason="Moderator schedule time expired.")
+
+        # Add the task again
+        log.trace(f"Adding mod pings schedule task again for mod with ID {mod.id}")
+        schedule_start += datetime.timedelta(minutes=1)
+        self._role_scheduler.schedule_at(
+            schedule_start,
+            mod.id,
+            self.add_role_schedule(mod, work_time, schedule_start)
+        )
+
+    async def add_role_schedule(self, mod: Member, work_time: int, schedule_start: datetime.datetime) -> None:
+        """Adds the moderator's role to the given moderator."""
+        # If the moderator has pings off, then skip adding role
+        if mod in await self.pings_off_mods.to_dict():
+            log.trace(f"Skipping adding moderator role to mod with ID {mod.id}")
+        else:
+            log.trace(f"Applying moderator role to mod with ID {mod.id}")
+            await mod.add_roles(self.moderators_role, reason="Moderator schedule time started!")
+
+        log.trace(f"Sleeping for {work_time} seconds, worktime for mod with ID {mod.id}")
+        await asyncio.sleep(work_time)
+        await self.remove_role_schedule(mod, work_time, schedule_start)
 
     async def reapply_role(self, mod: Member) -> None:
         """Reapply the moderator's role to the given moderator."""
@@ -125,6 +178,33 @@ class ModPings(Cog):
         self._role_scheduler.cancel(mod.id)
 
         await ctx.send(f"{Emojis.check_mark} Moderators role has been re-applied.")
+
+    @modpings_group.command(name='schedule')
+    @has_any_role(*MODERATION_ROLES)
+    async def schedule_modpings(self, ctx: Context, start: str, end: str) -> None:
+        start, end = parse(start), parse(end)
+
+        if end < start:
+            end += datetime.timedelta(days=1)
+
+        if (end - start) < datetime.timedelta(hours=MINIMUM_WORK_LIMIT):
+            await ctx.send(f":x: {ctx.author.mention} You need to have the role on for a minimum of {MINIMUM_WORK_LIMIT} hours!")
+            return
+
+        start, end = start.replace(tzinfo=None), end.replace(tzinfo=None)
+        work_time = (end - start).total_seconds()
+
+        await self.modpings_schedule.set(ctx.author.id, f"{start.timestamp()}|{work_time}")
+
+        self._role_scheduler.schedule_at(
+            start,
+            ctx.author.id,
+            self.add_role_schedule(ctx.author, work_time, start)
+        )
+
+        await ctx.send(
+            f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from {start: %I:%M%p} to {end: %I:%M%p} UTC Timing!"
+        )
 
     def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
