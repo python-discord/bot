@@ -164,7 +164,7 @@ async def notify_infraction(
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=expires_at or "N/A",
+        expires=f"{expires_at} UTC" if expires_at else "N/A",
         reason=reason or "No reason provided."
     )
 
