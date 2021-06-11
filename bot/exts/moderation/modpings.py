@@ -221,6 +221,9 @@ class ModPings(Cog):
         self.reschedule_task.cancel()
         self._role_scheduler.cancel_all()
 
+        self.modpings_schedule_task.cancel()
+        self._modpings_scheduler.cancel_all()
+
 
 def setup(bot: Bot) -> None:
     """Load the ModPings cog."""
