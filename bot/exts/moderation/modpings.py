@@ -32,7 +32,8 @@ class ModPings(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self._role_scheduler = Scheduler(self.__class__.__name__)
+        self._role_scheduler = Scheduler("ModPingsOnOff")
+        self._modpings_scheduler = Scheduler("ModPingsSchedule")
 
         self.guild = None
         self.moderators_role = None
@@ -75,7 +76,7 @@ class ModPings(Cog):
             start = datetime.datetime.fromtimestamp(start_timestamp)
 
             mod = self.bot.fetch_user(mod_id)
-            self._role_scheduler.schedule_at(
+            self._modpings_scheduler.schedule_at(
                 start,
                 mod_id,
                 self.add_role_schedule(mod, work_time, start)
@@ -87,12 +88,12 @@ class ModPings(Cog):
         await mod.remove_roles(self.moderators_role, reason="Moderator schedule time expired.")
 
         # Remove the task before scheduling it again
-        self._role_scheduler.cancel(mod.id)
+        self._modpings_scheduler.cancel(mod.id)
 
         # Add the task again
         log.trace(f"Adding mod pings schedule task again for mod with ID {mod.id}")
         schedule_start += datetime.timedelta(minutes=1)
-        self._role_scheduler.schedule_at(
+        self._modpings_scheduler.schedule_at(
             schedule_start,
             mod.id,
             self.add_role_schedule(mod, work_time, schedule_start)
@@ -101,8 +102,8 @@ class ModPings(Cog):
     async def add_role_schedule(self, mod: Member, work_time: int, schedule_start: datetime.datetime) -> None:
         """Adds the moderator's role to the given moderator."""
         # If the moderator has pings off, then skip adding role
-        if mod in await self.pings_off_mods.to_dict():
-            log.trace(f"Skipping adding moderator role to mod with ID {mod.id}")
+        if mod.id in await self.pings_off_mods.to_dict():
+            log.trace(f"Skipping adding moderator role to mod with ID {mod.id} - found in pings off cache.")
         else:
             log.trace(f"Applying moderator role to mod with ID {mod.id}")
             await mod.add_roles(self.moderators_role, reason="Moderator schedule time started!")
@@ -199,7 +200,7 @@ class ModPings(Cog):
 
         await self.modpings_schedule.set(ctx.author.id, f"{start.timestamp()}|{work_time}")
 
-        self._role_scheduler.schedule_at(
+        self._modpings_scheduler.schedule_at(
             start,
             ctx.author.id,
             self.add_role_schedule(ctx.author, work_time, start)
