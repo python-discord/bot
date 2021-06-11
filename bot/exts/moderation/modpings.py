@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 MINIMUM_WORK_LIMIT = 16
 
+
 class ModPings(Cog):
     """Commands for a moderator to turn moderator pings on and off."""
 
@@ -23,7 +24,6 @@ class ModPings(Cog):
     # The cache's keys are mods who have pings off.
     # The cache's values are the times when the role should be re-applied to them, stored in ISO format.
     pings_off_mods = RedisCache()
-
 
     # RedisCache[discord.Member.id, 'start timestamp|total worktime in seconds']
     # The cache's keys are mod's ID
@@ -186,13 +186,17 @@ class ModPings(Cog):
     @modpings_group.command(name='schedule')
     @has_any_role(*MODERATION_ROLES)
     async def schedule_modpings(self, ctx: Context, start: str, end: str) -> None:
+        """Schedule modpings role to be added at <start> and removed at <end> everyday at UTC time!"""
         start, end = parse(start), parse(end)
 
         if end < start:
             end += datetime.timedelta(days=1)
 
         if (end - start) < datetime.timedelta(hours=MINIMUM_WORK_LIMIT):
-            await ctx.send(f":x: {ctx.author.mention} You need to have the role on for a minimum of {MINIMUM_WORK_LIMIT} hours!")
+            await ctx.send(
+                f":x: {ctx.author.mention} You need to have the role on for "
+                f"a minimum of {MINIMUM_WORK_LIMIT} hours!"
+            )
             return
 
         start, end = start.replace(tzinfo=None), end.replace(tzinfo=None)
@@ -207,7 +211,8 @@ class ModPings(Cog):
         )
 
         await ctx.send(
-            f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from {start: %I:%M%p} to {end: %I:%M%p} UTC Timing!"
+            f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from "
+            f"{start: %I:%M%p} to {end: %I:%M%p} UTC Timing!"
         )
 
     def cog_unload(self) -> None:
