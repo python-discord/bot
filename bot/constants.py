@@ -433,6 +433,8 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
 
+    black_formatter: int
+
     bot_commands: int
     discord_py: int
     esoteric: int
