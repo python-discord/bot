@@ -86,6 +86,9 @@ class ModPings(Cog):
         log.trace(f"Removing moderator role to mod with ID {mod.id}")
         await mod.remove_roles(self.moderators_role, reason="Moderator schedule time expired.")
 
+        # Remove the task before scheduling it again
+        self._role_scheduler.cancel(mod.id)
+
         # Add the task again
         log.trace(f"Adding mod pings schedule task again for mod with ID {mod.id}")
         schedule_start += datetime.timedelta(minutes=1)
