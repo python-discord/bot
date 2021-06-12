@@ -99,7 +99,7 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: |
-            pytest -n auto --cov bot --cov tests --disable-warnings -q
+            pytest -n auto --cov --disable-warnings -q
 
       # This step will publish the coverage reports coveralls.io and
       # print a "job" link in the output of the GitHub Action
