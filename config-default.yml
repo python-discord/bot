@@ -176,6 +176,9 @@ guild:
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
 
+        # Open Source Projects
+        black_formatter:    &BLACK_FORMATTER 846434317021741086
+
         # Off-topic
         off_topic_0:    291284109232308226
         off_topic_1:    463035241142026251
@@ -244,6 +247,7 @@ guild:
     reminder_whitelist:
         - *BOT_CMD
         - *DEV_CONTRIB
+        - *BLACK_FORMATTER
 
     roles:
         announcements:                          463658397560995840
