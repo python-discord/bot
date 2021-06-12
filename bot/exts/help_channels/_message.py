@@ -9,7 +9,6 @@ from arrow import Arrow
 import bot
 from bot import constants
 from bot.exts.help_channels import _caches
-from bot.utils.channel import is_in_category
 
 log = logging.getLogger(__name__)
 
@@ -47,23 +46,21 @@ async def update_message_caches(message: discord.Message) -> None:
     """Checks the source of new content in a help channel and updates the appropriate cache."""
     channel = message.channel
 
-    # Confirm the channel is an in use help channel
-    if is_in_category(channel, constants.Categories.help_in_use):
-        log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
+    log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
 
-        claimant_id = await _caches.claimants.get(channel.id)
-        if not claimant_id:
-            # The mapping for this channel doesn't exist, we can't do anything.
-            return
+    claimant_id = await _caches.claimants.get(channel.id)
+    if not claimant_id:
+        # The mapping for this channel doesn't exist, we can't do anything.
+        return
 
-        # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
-        timestamp = Arrow.fromdatetime(message.created_at).timestamp()
+    # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
+    timestamp = Arrow.fromdatetime(message.created_at).timestamp()
 
-        # Overwrite the appropriate last message cache depending on the author of the message
-        if message.author.id == claimant_id:
-            await _caches.claimant_last_message_times.set(channel.id, timestamp)
-        else:
-            await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
+    # Overwrite the appropriate last message cache depending on the author of the message
+    if message.author.id == claimant_id:
+        await _caches.claimant_last_message_times.set(channel.id, timestamp)
+    else:
+        await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
 
 
 async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
