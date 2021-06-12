@@ -12,7 +12,6 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import allowed_strings
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
@@ -418,10 +417,10 @@ class HelpChannels(commands.Cog):
         return await _unclaim_channel(channel, claimant_id, closed_on)
 
     async def _unclaim_channel(
-        self,
-        channel: discord.TextChannel,
-        claimant_id: int,
-        closed_on: _channel.ClosingReason
+            self,
+            channel: discord.TextChannel,
+            claimant_id: int,
+            closed_on: _channel.ClosingReason
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
@@ -592,7 +591,7 @@ class HelpChannels(commands.Cog):
     async def helpdm_command(
             self,
             ctx: commands.Context,
-            state: allowed_strings("on", "off")  # noqa: F821
+            state_bool: bool
     ) -> None:
         """
         Allows user to toggle "Helping" dms.
@@ -601,14 +600,14 @@ class HelpChannels(commands.Cog):
 
         If this is set to off the user will not receive a dm for channel that they are participating in.
         """
-        requested_state_bool = state.lower() == "on"
+        state_str = "ON" if state_bool else "OFF"
 
-        if requested_state_bool == await _caches.help_dm.get(ctx.author.id, False):
-            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state.upper()}")
+        if state_bool == await _caches.help_dm.get(ctx.author.id, False):
+            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state_str}")
             return
 
-        if requested_state_bool:
+        if state_bool:
             await _caches.help_dm.set(ctx.author.id, True)
         else:
             await _caches.help_dm.delete(ctx.author.id)
-        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state.upper()}!")
+        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")
