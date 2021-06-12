@@ -98,8 +98,7 @@ jobs:
         [flake8] %(code)s: %(text)s'"
 
       - name: Run tests and generate coverage report
-        run: |
-            pytest -n auto --cov --disable-warnings -q
+        run: pytest -n auto --cov --disable-warnings -q
 
       # This step will publish the coverage reports coveralls.io and
       # print a "job" link in the output of the GitHub Action
