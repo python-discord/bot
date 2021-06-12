@@ -589,9 +589,9 @@ class HelpChannels(commands.Cog):
 
     @commands.command(name="helpdm")
     async def helpdm_command(
-            self,
-            ctx: commands.Context,
-            state_bool: bool
+        self,
+        ctx: commands.Context,
+        state_bool: bool
     ) -> None:
         """
         Allows user to toggle "Helping" dms.
