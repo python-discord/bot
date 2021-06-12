@@ -162,10 +162,10 @@ class Scheduler:
 
 
 def create_task(
-        coro: t.Awaitable,
-        *suppressed_exceptions: t.Type[Exception],
-        event_loop: asyncio.AbstractEventLoop = None,
-        **kwargs
+    coro: t.Awaitable,
+    *suppressed_exceptions: t.Type[Exception],
+    event_loop: t.Optional[asyncio.AbstractEventLoop] = None,
+    **kwargs,
 ) -> asyncio.Task:
     """
     Wrapper for creating asyncio `Task`s which logs exceptions raised in the task.
