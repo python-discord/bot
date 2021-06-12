@@ -161,9 +161,21 @@ class Scheduler:
                 self._log.error(f"Error in task #{task_id} {id(done_task)}!", exc_info=exception)
 
 
-def create_task(coro: t.Awaitable, *suppressed_exceptions: t.Type[Exception], **kwargs) -> asyncio.Task:
-    """Wrapper for `asyncio.create_task` which logs exceptions raised in the task."""
-    task = asyncio.create_task(coro, **kwargs)
+def create_task(
+        coro: t.Awaitable,
+        *suppressed_exceptions: t.Type[Exception],
+        event_loop: asyncio.AbstractEventLoop = None,
+        **kwargs
+) -> asyncio.Task:
+    """
+    Wrapper for creating asyncio `Task`s which logs exceptions raised in the task.
+
+    If the loop kwarg is provided, the task is created from that event loop, otherwise the running loop is used.
+    """
+    if event_loop is not None:
+        task = event_loop.create_task(coro, **kwargs)
+    else:
+        task = asyncio.create_task(coro, **kwargs)
     task.add_done_callback(partial(_log_task_exception, suppressed_exceptions=suppressed_exceptions))
     return task
 
