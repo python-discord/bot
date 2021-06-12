@@ -417,10 +417,10 @@ class HelpChannels(commands.Cog):
         return await _unclaim_channel(channel, claimant_id, closed_on)
 
     async def _unclaim_channel(
-            self,
-            channel: discord.TextChannel,
-            claimant_id: int,
-            closed_on: _channel.ClosingReason
+        self,
+        channel: discord.TextChannel,
+        claimant_id: int,
+        closed_on: _channel.ClosingReason
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
