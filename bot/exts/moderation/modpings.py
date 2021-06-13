@@ -183,7 +183,11 @@ class ModPings(Cog):
 
         await ctx.send(f"{Emojis.check_mark} Moderators role has been re-applied.")
 
-    @modpings_group.command(name='schedule')
+    @modpings_group.group(
+        name='schedule',
+        aliases=('s',),
+        invoke_without_command=True
+    )
     @has_any_role(*MODERATION_ROLES)
     async def schedule_modpings(self, ctx: Context, start: str, end: str) -> None:
         """Schedule modpings role to be added at <start> and removed at <end> everyday at UTC time!"""
@@ -214,6 +218,14 @@ class ModPings(Cog):
             f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from "
             f"{start: %H:%M} to {end: %H:%M} UTC Timing!"
         )
+
+    @schedule_modpings.command(name='delete', aliases=('del', 'd'))
+    async def modpings_schedule_delete(self, ctx: Context):
+        """Delete your modpings schedule."""
+        self._modpings_scheduler.cancel(ctx.author.id)
+        await self.modpings_schedule.delete(ctx.author.id)
+        await ctx.send(f"{Emojis.ok_hand} {ctx.author.mention} Deleted your modpings schedule!")
+
 
     def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
