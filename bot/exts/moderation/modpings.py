@@ -14,7 +14,7 @@ from bot.utils.scheduling import Scheduler, create_task
 
 log = logging.getLogger(__name__)
 
-MINIMUM_WORK_LIMIT = 16
+MAXIMUM_WORK_LIMIT = 16
 
 
 class ModPings(Cog):
@@ -192,12 +192,12 @@ class ModPings(Cog):
         if end < start:
             end += datetime.timedelta(days=1)
 
-        # if (end - start) < datetime.timedelta(hours=MINIMUM_WORK_LIMIT):
-        #     await ctx.send(
-        #         f":x: {ctx.author.mention} You need to have the role on for "
-        #         f"a minimum of {MINIMUM_WORK_LIMIT} hours!"
-        #     )
-        #     return
+        if (end - start) > datetime.timedelta(hours=MAXIMUM_WORK_LIMIT):
+            await ctx.send(
+                f":x: {ctx.author.mention} You can't have the modpings role for"
+                f" more than {MAXIMUM_WORK_LIMIT} hours!"
+            )
+            return
 
         start, end = start.replace(tzinfo=None), end.replace(tzinfo=None)
         work_time = (end - start).total_seconds()
