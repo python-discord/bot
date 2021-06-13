@@ -92,7 +92,7 @@ class ModPings(Cog):
 
         # Add the task again
         log.trace(f"Adding mod pings schedule task again for mod with ID {mod.id}")
-        schedule_start += datetime.timedelta(day=1)
+        schedule_start += datetime.timedelta(days=1)
         self._modpings_scheduler.schedule_at(
             schedule_start,
             mod.id,
@@ -203,10 +203,18 @@ class ModPings(Cog):
             )
             return
 
+        if start < datetime.datetime.utcnow():
+            # The datetime has already gone for the day, so make it tomorrow
+            # otherwise the scheduler would schedule it immediately
+            start += datetime.timedelta(days=1)
+
         start, end = start.replace(tzinfo=None), end.replace(tzinfo=None)
         work_time = (end - start).total_seconds()
 
         await self.modpings_schedule.set(ctx.author.id, f"{start.timestamp()}|{work_time}")
+
+        if ctx.author.id in self._modpings_scheduler:
+            self._modpings_scheduler.cancel(ctx.author.id)
 
         self._modpings_scheduler.schedule_at(
             start,
