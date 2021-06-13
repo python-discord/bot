@@ -228,12 +228,11 @@ class ModPings(Cog):
         )
 
     @schedule_modpings.command(name='delete', aliases=('del', 'd'))
-    async def modpings_schedule_delete(self, ctx: Context):
+    async def modpings_schedule_delete(self, ctx: Context) -> None:
         """Delete your modpings schedule."""
         self._modpings_scheduler.cancel(ctx.author.id)
         await self.modpings_schedule.delete(ctx.author.id)
         await ctx.send(f"{Emojis.ok_hand} {ctx.author.mention} Deleted your modpings schedule!")
-
 
     def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
