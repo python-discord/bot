@@ -40,6 +40,7 @@ If the implementation is hard to explain, it's a bad idea.
 If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 """
+LEADS_AND_COMMUNITY = (Roles.project_leads, Roles.domain_leads, Roles.partners, Roles.python_community)
 
 
 class Utils(Cog):
@@ -185,7 +186,7 @@ class Utils(Cog):
         )
 
     @command(aliases=("poll",))
-    @has_any_role(*MODERATION_ROLES, Roles.project_leads, Roles.domain_leads)
+    @has_any_role(*MODERATION_ROLES, *LEADS_AND_COMMUNITY)
     async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.
