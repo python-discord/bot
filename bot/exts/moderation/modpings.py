@@ -10,7 +10,7 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
-from bot.utils.scheduling import Scheduler
+from bot.utils.scheduling import Scheduler, create_task
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class ModPings(Cog):
         self.moderators_role = None
 
         self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="mod-pings-reschedule")
-        self.modpings_schedule_task = self.bot.loop.create_task(self.reschedule_modpings_schedule())
+        self.modpings_schedule_task = create_task(self.reschedule_modpings_schedule(), event_loop=self.bot.loop)
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -92,7 +92,7 @@ class ModPings(Cog):
 
         # Add the task again
         log.trace(f"Adding mod pings schedule task again for mod with ID {mod.id}")
-        schedule_start += datetime.timedelta(minutes=1)
+        schedule_start += datetime.timedelta(day=1)
         self._modpings_scheduler.schedule_at(
             schedule_start,
             mod.id,
@@ -192,12 +192,12 @@ class ModPings(Cog):
         if end < start:
             end += datetime.timedelta(days=1)
 
-        if (end - start) < datetime.timedelta(hours=MINIMUM_WORK_LIMIT):
-            await ctx.send(
-                f":x: {ctx.author.mention} You need to have the role on for "
-                f"a minimum of {MINIMUM_WORK_LIMIT} hours!"
-            )
-            return
+        # if (end - start) < datetime.timedelta(hours=MINIMUM_WORK_LIMIT):
+        #     await ctx.send(
+        #         f":x: {ctx.author.mention} You need to have the role on for "
+        #         f"a minimum of {MINIMUM_WORK_LIMIT} hours!"
+        #     )
+        #     return
 
         start, end = start.replace(tzinfo=None), end.replace(tzinfo=None)
         work_time = (end - start).total_seconds()
