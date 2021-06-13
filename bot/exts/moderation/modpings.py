@@ -212,7 +212,7 @@ class ModPings(Cog):
 
         await ctx.send(
             f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from "
-            f"{start: %I:%M%p} to {end: %I:%M%p} UTC Timing!"
+            f"{start: %H:%M} to {end: %H:%M} UTC Timing!"
         )
 
     def cog_unload(self) -> None:
