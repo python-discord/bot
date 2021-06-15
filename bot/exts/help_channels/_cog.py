@@ -14,6 +14,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
+from bot.constants import Channels
 
 log = logging.getLogger(__name__)
 
@@ -580,7 +581,24 @@ class HelpChannels(commands.Cog):
                 timestamp=message.created_at
             )
             embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
-            await message.author.send(embed=embed)
+
+            try:
+                await message.author.send(embed=embed)
+            except discord.errors.ForBidden:
+                log.trace(
+                    f"Failed to send helpdm message to {message.author.id}. DMs Closed/Blocked. "
+                    "Removing user from helpdm."
+                )
+                bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
+                await _caches.help_dm.delete(message.author.id)
+                await bot_commands_channel.send(
+                    f"Hi, {message.author.mention} {constants.Emojis.cross_mark}. "
+                    f"Couldn't DM you helpdm message regarding {message.channel.mention} "
+                    "because your DMs are closed. helpdm has been automatically turned to off. "
+                    "to activate again type `!helpdm on`.",
+                    delete_after=10
+                )
+                return
 
             await _caches.session_participants.set(
                 message.channel.id,
