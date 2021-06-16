@@ -12,9 +12,10 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import Channels
+from bot.constants import RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
-from bot.constants import Channels
 
 log = logging.getLogger(__name__)
 
@@ -593,8 +594,8 @@ class HelpChannels(commands.Cog):
                 await _caches.help_dm.delete(message.author.id)
                 await bot_commands_channel.send(
                     f"{message.author.mention} {constants.Emojis.cross_mark} "
-                    "To receive updates on help channels you're active in, enable your DMs."
-                    delete_after=10
+                    "To receive updates on help channels you're active in, enable your DMs.",
+                    delete_after=RedirectOutput.delete_after
                 )
                 return
 
