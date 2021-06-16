@@ -12,8 +12,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels
-from bot.constants import RedirectOutput
+from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
