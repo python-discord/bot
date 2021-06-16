@@ -15,15 +15,14 @@ log = logging.getLogger(__name__)
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 
 AVAILABLE_MSG = f"""
-**Send your question here to claim the channel**
-This channel will be dedicated to answering your question only. Others will try to answer and help you solve the issue.
+Send your question here to claim the channel.
 
-**Keep in mind:**
-• It's always ok to just ask your question. You don't need permission.
-• Explain what you expect to happen and what actually happens.
-• Include a code sample and error message, if you got any.
+**Remember to:**
+• **Ask** your Python question, not if you can ask or if there's an expert who can help.
+• **Show** a code sample as text (rather than a screenshot) and the error message, if you got one.
+• **Explain** what you expect to happen and what actually happens.
 
-For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
+For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
 
 AVAILABLE_TITLE = "Available help channel"
