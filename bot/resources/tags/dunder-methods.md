@@ -4,4 +4,20 @@ When you create a new class, all the default dunder methods are inherited from i
 
 Other common dunder methods to override are `__str__` and `__repr__`. `__str__` is the user-friendly string representation of an object, and is implicitly called on arguments passed into the `str` function. `__repr__` is the developer-friendly string representation of an object - usually the syntax to recreate it - and is called by the `repr` function.
 
+```py
+>>> class Foo:
+        def __init__(self, value):  # constructor
+            self.value = value
+        def __str__(self):
+            return f"This is a Foo object, with a value of {self.value}!"  # string representation
+        def __repr__(self):
+            return f"Foo({self.value})"  # way to recreate this object
+            
+>>> bar = Foo(5)
+>>> print(bar)  # print also implicitly calls __str__
+This is a Foo object, with a value of 5!
+>>> print(repr(bar))  # dev-friendly representation
+Foo(5)
+```
+
 Another example: did you know that when you use the `<left operand> + <right operand>` syntax, you're implicitly calling `<left operand>.__add__(<right operand>)`? The same applies to other operators!
