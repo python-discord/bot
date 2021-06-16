@@ -18,6 +18,7 @@ bar = Foo(5)
 
 print(bar)  # print also implicitly calls __str__
 # Output: This is a Foo object, with a value of 5!
+
 print(repr(bar))  # dev-friendly representation
 # Output: Foo(5)
 ```
