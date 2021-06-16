@@ -592,10 +592,8 @@ class HelpChannels(commands.Cog):
                 bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
                 await _caches.help_dm.delete(message.author.id)
                 await bot_commands_channel.send(
-                    f"Hi, {message.author.mention} {constants.Emojis.cross_mark}. "
-                    f"Couldn't DM you helpdm message regarding {message.channel.mention} "
-                    "because your DMs are closed. helpdm has been automatically turned to off. "
-                    "to activate again type `!helpdm on`.",
+                    f"{message.author.mention} {constants.Emojis.cross_mark} "
+                    "To receive updates on help channels you're active in, enable your DMs."
                     delete_after=10
                 )
                 return
