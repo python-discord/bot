@@ -584,7 +584,7 @@ class HelpChannels(commands.Cog):
 
             try:
                 await message.author.send(embed=embed)
-            except discord.errors.ForBidden:
+            except discord.Forbidden:
                 log.trace(
                     f"Failed to send helpdm message to {message.author.id}. DMs Closed/Blocked. "
                     "Removing user from helpdm."
