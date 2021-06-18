@@ -255,7 +255,7 @@ class VoiceGate(Cog):
             return
 
         if isinstance(after.channel, discord.StageChannel):
-            log.trace("User joined a stage chanel. Ignore.")
+            log.trace("User joined a stage channel. Ignore.")
             return
 
         # To avoid race conditions, checking if the user should receive a notification
