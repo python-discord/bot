@@ -14,7 +14,11 @@ from bot.converters import OffTopicName
 from bot.pagination import LinePaginator
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
+
+# In case, the off topic channel name format is modified.
 OTN_FORMATTER = "ot{number}-{name}"
+OT_NUMBER_INDEX = OTN_FORMATTER.index("{number}")
+NAME_START_INDEX = OTN_FORMATTER.index("{name}")
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +72,14 @@ class OffTopicNames(Cog):
             coro = update_names(self.bot)
             self.updater_task = self.bot.loop.create_task(coro)
 
+    async def toggle_ot_name_activity(self, ctx: Context, name: str, active: bool) -> None:
+        """Toggle active attribute for an off topic name."""
+        data = {
+            "active": active
+        }
+        await self.bot.api_client.patch(f"bot/off-topic-channel-names/{name}", data=data)
+        await ctx.send(f"Off topic name `{name}` has been {'whitelisted' if active else 'blacklisted'}.")
+
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def otname_group(self, ctx: Context) -> None:
@@ -114,31 +126,35 @@ class OffTopicNames(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def delete_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Removes a off-topic name from the rotation."""
-        await self._delete_name(ctx, name)
-
-    async def _delete_name(self, ctx: Context, name: str) -> None:
-        """Delete an off-topic channel name."""
         await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
 
         log.info(f"{ctx.author} deleted the off-topic channel name '{name}'")
         await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
 
+    @otname_group.command(name='activate', aliases=('whitelist',))
+    @has_any_role(*MODERATION_ROLES)
+    async def activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
+        """Deactivate/blacklist off topic name."""
+        await self.toggle_ot_name_activity(ctx, name, True)
+
+    @otname_group.command(name='deactivate', aliases=('blacklist',))
+    @has_any_role(*MODERATION_ROLES)
+    async def de_activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
+        """Deactivate/blacklist off topic name."""
+        await self.toggle_ot_name_activity(ctx, name, False)
+
     @otname_group.command(name='reroll')
     @has_any_role(*MODERATION_ROLES)
     async def re_roll_command(self, ctx: Context, ot_channel_index: Optional[int]) -> None:
         """
-        Re-rolls off topic name for an off-topic channel and deletes the name.
+        Re-rolls off topic name for an off-topic channel and blacklists the name.
 
         ot_channel_index: [0, 1, 2, ...]
         """
-        def parse_off_topic_name(name: str) -> str:
-            """Return name from ot{number}-{name}."""
-            return name[4:]
-
         if ot_channel_index:
             try:
                 channel = self.bot.get_channel(CHANNELS[ot_channel_index])
-            except KeyError:
+            except IndexError:
                 await ctx.send(f":x: Off-topic channel not found with index {ot_channel_index}.")
                 return
         elif ctx.channel.id in CHANNELS:
@@ -154,19 +170,19 @@ class OffTopicNames(Cog):
         new_channel_name = response[0]
         old_channel_name = channel.name
 
-        await channel.edit(name=OTN_FORMATTER.format(number=old_channel_name[2], name=new_channel_name)),
+        await channel.edit(name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name)),
+        old_channel_name = old_channel_name[NAME_START_INDEX]
         log.info(
-            f"{ctx.author} Off-topic channel re-named from `{parse_off_topic_name(old_channel_name)}` "
+            f"{ctx.author} Off-topic channel re-named from `{old_channel_name}` "
             f"to `{new_channel_name}`."
         )
 
         await ctx.send(
-            f":ok_hand: Off-topic channel re-named from `{parse_off_topic_name(old_channel_name)}` "
+            f":ok_hand: Off-topic channel re-named from `{old_channel_name}` "
             f"to `{new_channel_name}`. "
-            "Attempting to delete old off-topic name..."
         )
 
-        await self._delete_name(ctx, parse_off_topic_name(old_channel_name))
+        await self.de_activate_ot_name(ctx, old_channel_name)
 
     @otname_group.command(name='list', aliases=('l',))
     @has_any_role(*MODERATION_ROLES)
