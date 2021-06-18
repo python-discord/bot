@@ -254,6 +254,10 @@ class VoiceGate(Cog):
             log.trace("User not in a voice channel. Ignore.")
             return
 
+        if isinstance(after.channel, discord.StageChannel):
+            log.trace("User joined a stage chanel. Ignore.")
+            return
+
         # To avoid race conditions, checking if the user should receive a notification
         # and sending it if appropriate is delegated to an atomic helper
         notification_sent, message_channel = await self._ping_newcomer(member)
