@@ -398,7 +398,7 @@ anti_spam:
 
         chars:
             interval: 5
-            max: 3_000
+            max: 4_200
 
         discord_emojis:
             interval: 10
