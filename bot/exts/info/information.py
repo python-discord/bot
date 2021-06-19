@@ -241,8 +241,6 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
-        activity = await self.user_messages(user)
-
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
@@ -272,8 +270,7 @@ class Information(Cog):
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
-            fields.append(activity)
-
+            fields.append(await self.user_messages(user))
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
