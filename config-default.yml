@@ -198,6 +198,7 @@ guild:
         incidents:                          714214212200562749
         incidents_archive:                  720668923636351037
         mod_alerts:                         473092532147060736
+        mods:               &MODS           305126844661760000
         nominations:                        822920136150745168
         nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
@@ -234,6 +235,7 @@ guild:
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
+        - *MODS
 
     # Modlog cog ignores events which occur in these channels
     modlog_blacklist:
@@ -396,7 +398,7 @@ anti_spam:
 
         chars:
             interval: 5
-            max: 3_000
+            max: 4_200
 
         discord_emojis:
             interval: 10
