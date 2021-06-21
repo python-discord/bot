@@ -2,9 +2,7 @@
 
 Double-underscore methods, or "dunder" methods, are special methods defined in a class that are invoked implicitly. Like the name suggests, they are prefixed and suffixed with dunders. You've probably already seen some, such as the `__init__` dunder method, also known as the "constructor" of a class, which is implicitly invoked when you instantiate an instance of a class.
 
-When you create a new class, all methods - including dunder methods - are inherited from its superclass, which is by default `object`. `object` has a set of default dunder methods, but we can override them by redefining the methods within this new class. For example, the default `__init__` method from `object` doesn't take any arguments, so we almost always override that to fit our needs.
-
-> NOTE: You can use `dir(object)` to see the available default dunder methods.
+When you create a new class, there will be default dunder methods inherited from the `object` class. However, we can override them by redefining these methods within the new class. For example, the default `__init__` method from `object` doesn't take any arguments, so we almost always override that to fit our needs.
 
 Other common dunder methods to override are `__str__` and `__repr__`. `__repr__` is the developer-friendly string representation of an object - usually the syntax to recreate it - and is implicitly called on arguments passed into the `repr` function. `__str__` is the user-friendly string representation of an object, and is called by the `str` function. Note here that, if not overriden, the default `__str__` invokes `__repr__` as a fallback.
 
