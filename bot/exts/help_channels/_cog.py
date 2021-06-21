@@ -594,7 +594,7 @@ class HelpChannels(commands.Cog):
                 await bot_commands_channel.send(
                     f"{message.author.mention} {constants.Emojis.cross_mark} "
                     "To receive updates on help channels you're active in, enable your DMs.",
-                    delete_after=RedirectOutput.delete_after
+                    delete_after=RedirectOutput.delete_delay
                 )
                 return
 
