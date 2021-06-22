@@ -103,19 +103,6 @@ class Filtering(Cog):
                 ),
                 "schedule_deletion": False
             },
-            "filter_everyone_ping": {
-                "enabled": Filter.filter_everyone_ping,
-                "function": self._has_everyone_ping,
-                "type": "filter",
-                "content_only": True,
-                "user_notification": Filter.notify_user_everyone_ping,
-                "notification_msg": (
-                    "Please don't try to ping `@everyone` or `@here`. "
-                    f"Your message has been removed. {staff_mistake_str}"
-                ),
-                "schedule_deletion": False,
-                "ping_everyone": False
-            },
             "watch_regex": {
                 "enabled": Filter.watch_regex,
                 "function": self._has_watch_regex_match,
@@ -129,7 +116,20 @@ class Filtering(Cog):
                 "type": "watchlist",
                 "content_only": False,
                 "schedule_deletion": False
-            }
+            },
+            "filter_everyone_ping": {
+                "enabled": Filter.filter_everyone_ping,
+                "function": self._has_everyone_ping,
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_everyone_ping,
+                "notification_msg": (
+                    "Please don't try to ping `@everyone` or `@here`. "
+                    f"Your message has been removed. {staff_mistake_str}"
+                ),
+                "schedule_deletion": False,
+                "ping_everyone": False
+            },
         }
 
         self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
