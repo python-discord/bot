@@ -45,7 +45,7 @@ class BotCog(Cog, name="Bot"):
         if channel is None:
             await ctx.send(text)
         elif not channel.permissions_for(ctx.author).send_messages:
-            await ctx.send('You don\'t have permission to speak in that channel.')
+            await ctx.send("You don't have permission to speak in that channel.")
         else:
             await channel.send(text)
 
