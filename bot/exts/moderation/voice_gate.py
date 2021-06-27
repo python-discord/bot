@@ -118,7 +118,7 @@ class VoiceGate(Cog):
         await self.redis_cache.set(member.id, message.id)
         return True, message.channel
 
-    @command(aliases=('voiceverify',))
+    @command(aliases=("voiceverify", "voice-verify",))
     @has_no_roles(Roles.voice_verified)
     @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
     async def voice_verify(self, ctx: Context, *_) -> None:
