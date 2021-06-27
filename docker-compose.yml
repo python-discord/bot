@@ -18,7 +18,7 @@ services:
   postgres:
     << : *logging
     << : *restart_policy
-    image: postgres:12-alpine
+    image: postgres:13-alpine
     environment:
       POSTGRES_DB: pysite
       POSTGRES_PASSWORD: pysite

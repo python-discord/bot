@@ -118,7 +118,7 @@ class VoiceGate(Cog):
         await self.redis_cache.set(member.id, message.id)
         return True, message.channel
 
-    @command(aliases=('voiceverify',))
+    @command(aliases=("voiceverify", "voice-verify",))
     @has_no_roles(Roles.voice_verified)
     @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
     async def voice_verify(self, ctx: Context, *_) -> None:
@@ -252,6 +252,10 @@ class VoiceGate(Cog):
         # member.voice will return None if the user is not in a voice channel
         if member.voice is None:
             log.trace("User not in a voice channel. Ignore.")
+            return
+
+        if isinstance(after.channel, discord.StageChannel):
+            log.trace("User joined a stage channel. Ignore.")
             return
 
         # To avoid race conditions, checking if the user should receive a notification
