@@ -65,3 +65,8 @@ test-nocov = "pytest -n auto"
 test = "pytest -n auto --cov-report= --cov"
 html = "coverage html"
 report = "coverage report"
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["bot"]
+source = ["tests"]
