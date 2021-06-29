@@ -94,6 +94,11 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             await ctx.send(f":x: {user} is already being watched.")
             return
 
+        # FetchedUser instances don't have a roles attribute
+        if hasattr(user, "roles") and any(role.id in MODERATION_ROLES for role in user.roles):
+            await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I must be kind to my masters.")
+            return
+
         response = await post_infraction(ctx, user, 'watch', reason, hidden=True, active=True)
 
         if response is not None:
