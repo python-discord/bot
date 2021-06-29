@@ -49,7 +49,7 @@ taskipy = "~=1.7.0"
 python-dotenv = "~=0.17.1"
 pytest = "~=6.2.4"
 pytest-cov = "~=2.12.1"
-pytest-xdist = { version = "~=2.2.1", extras = ["psutil"] }
+pytest-xdist = { version = "~=2.3.0", extras = ["psutil"] }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -65,3 +65,8 @@ test-nocov = "pytest -n auto"
 test = "pytest -n auto --cov-report= --cov"
 html = "coverage html"
 report = "coverage report"
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["bot"]
+source = ["tests"]
