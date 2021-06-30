@@ -67,6 +67,7 @@ class Tag:
         self.content = post.content
         self.metadata = post.metadata
         self._restricted_to: set[int] = set(self.metadata.get("restricted_to", ()))
+        self._cooldowns: dict[discord.TextChannel, float] = {}
 
     @property
     def embed(self) -> Embed:
@@ -81,6 +82,14 @@ class Tag:
             not self._restricted_to
             or self._restricted_to & {role.id for role in member.roles}
         )
+
+    def on_cooldown_in(self, channel: discord.TextChannel) -> bool:
+        """Check whether the tag is on cooldown in `channel`."""
+        return channel in self._cooldowns and self._cooldowns[channel] > time.time()
+
+    def set_cooldown_for(self, channel: discord.TextChannel) -> None:
+        """Set the tag to be on cooldown in `channel` for `constants.Cooldowns.tags` seconds."""
+        self._cooldowns[channel] = time.time() + constants.Cooldowns.tags
 
 
 def _fuzzy_search(search: str, target: str) -> float:
@@ -105,7 +114,6 @@ class Tags(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.tag_cooldowns = {}
         self._tags: dict[TagIdentifier, Tag] = {}
         self.initialize_tags()
 
@@ -238,42 +246,14 @@ class Tags(Cog):
         Tags are on cooldowns on a per-tag, per-channel basis. If a tag is on cooldown, display
         nothing and return True.
         """
-        def _command_on_cooldown(tag_name: str) -> bool:
-            """
-            Check if the command is currently on cooldown, on a per-tag, per-channel basis.
-
-            The cooldown duration is set in constants.py.
-            """
-            now = time.time()
-
-            cooldown_conditions = (
-                tag_name
-                and tag_name in self.tag_cooldowns
-                and (now - self.tag_cooldowns[tag_name]["time"]) < constants.Cooldowns.tags
-                and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
-            )
-
-            if cooldown_conditions:
-                return True
-            return False
-
-        if _command_on_cooldown(tag_identifier.name):
-            time_elapsed = time.time() - self.tag_cooldowns[tag_identifier.name]["time"]
-            time_left = constants.Cooldowns.tags - time_elapsed
-            log.info(
-                f"{ctx.author} tried to get the '{tag_identifier.name}' tag, but the tag is on cooldown. "
-                f"Cooldown ends in {time_left:.1f} seconds."
-            )
-            return True
-
         if tag_identifier.name is not None:
 
             if (tag := self._tags.get(tag_identifier)) is not None and tag.accessible_by(ctx.author):
-                if ctx.channel.id not in TEST_CHANNELS:
-                    self.tag_cooldowns[tag_identifier.name] = {
-                        "time": time.time(),
-                        "channel": ctx.channel.id
-                    }
+
+                if tag.on_cooldown_in(ctx.channel):
+                    log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
+                    return True
+                tag.set_cooldown_for(ctx.channel)
 
                 self.bot.stats.incr(
                     f"tags.usages"
@@ -295,6 +275,7 @@ class Tags(Cog):
                     str(identifier)
                     for identifier, tag in suggested_tags
                     if tag.accessible_by(ctx.author)
+                    and not tag.on_cooldown_in(ctx.channel)
                 )
                 await wait_for_deletion(
                     await ctx.send(
