@@ -263,8 +263,18 @@ class Tags(Cog):
 
         If the requested tag is on cooldown or no suggestions were found, return None.
         """
-        if (tag := self._tags.get(tag_identifier)) is not None and tag.accessible_by(ctx.author):
+        filtered_tags = [
+            (ident, tag) for ident, tag in
+            self.get_fuzzy_matches(tag_identifier)[:10]
+            if tag.accessible_by(ctx.author)
+        ]
 
+        if (tag := self._tags.get(tag_identifier)) is None:
+            if len(filtered_tags) == 1:
+                tag_identifier = filtered_tags[0][0]
+                tag = filtered_tags[0][1]
+
+        if tag is not None:
             if tag.on_cooldown_in(ctx.channel):
                 log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
                 return COOLDOWN.obj
@@ -278,14 +288,12 @@ class Tags(Cog):
             return tag.embed
 
         else:
-            suggested_tags = self.get_fuzzy_matches(tag_identifier)[:10]
-            if not suggested_tags:
+            if not filtered_tags:
                 return None
             suggested_tags_text = "\n".join(
                 f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
-                for identifier, tag in suggested_tags
-                if tag.accessible_by(ctx.author)
-                and not tag.on_cooldown_in(ctx.channel)
+                for identifier, tag in filtered_tags
+                if not tag.on_cooldown_in(ctx.channel)
             )
             return Embed(
                 title="Did you mean ...",
