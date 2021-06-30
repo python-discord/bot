@@ -274,7 +274,7 @@ class Tags(Cog):
             if not suggested_tags:
                 return None
             suggested_tags_text = "\n".join(
-                str(identifier)
+                f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
                 for identifier, tag in suggested_tags
                 if tag.accessible_by(ctx.author)
                 and not tag.on_cooldown_in(ctx.channel)
