@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import enum
 import logging
 import re
 import time
 from pathlib import Path
-from typing import Callable, Iterable, List, NamedTuple, Optional
+from typing import Callable, Iterable, List, Literal, NamedTuple, Optional, Union
 
 import discord
 import frontmatter
-from discord import Colour, Embed, Member
+from discord import Embed, Member
 from discord.ext.commands import Cog, Context, group
 
 from bot import constants
@@ -26,6 +27,12 @@ TEST_CHANNELS = (
 
 REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
 FOOTER_TEXT = f"To show a tag, type {constants.Bot.prefix}tags <tagname>."
+
+
+class COOLDOWN(enum.Enum):
+    """Sentinel value to signal that a tag is on cooldown."""
+
+    obj = object()
 
 
 class TagIdentifier(NamedTuple):
@@ -237,81 +244,80 @@ class Tags(Cog):
         matching_tags = self._get_tags_via_content(any, keywords or 'any', ctx.author)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
-    async def display_tag(self, ctx: Context, tag_identifier: TagIdentifier) -> bool:
+    async def get_tag_embed(
+            self,
+            ctx: Context,
+            tag_identifier: TagIdentifier,
+    ) -> Optional[Union[Embed, Literal[COOLDOWN.obj]]]:
         """
-        If a tag is not found, display similar tag names as suggestions.
+        Generate an embed of the requested tag or of suggestions if the tag doesn't exist/isn't accessible by the user.
 
-        If a tag is not specified, display a paginated embed of all tags.
-
-        Tags are on cooldowns on a per-tag, per-channel basis. If a tag is on cooldown, display
-        nothing and return True.
+        If the requested tag is on cooldown or no suggestions were found, return None.
         """
-        if tag_identifier.name is not None:
+        if (tag := self._tags.get(tag_identifier)) is not None and tag.accessible_by(ctx.author):
 
-            if (tag := self._tags.get(tag_identifier)) is not None and tag.accessible_by(ctx.author):
+            if tag.on_cooldown_in(ctx.channel):
+                log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
+                return COOLDOWN.obj
+            tag.set_cooldown_for(ctx.channel)
 
-                if tag.on_cooldown_in(ctx.channel):
-                    log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
-                    return True
-                tag.set_cooldown_for(ctx.channel)
+            self.bot.stats.incr(
+                f"tags.usages"
+                f"{'.' + tag_identifier.group.replace('-', '_') if tag_identifier.group else ''}"
+                f".{tag_identifier.name.replace('-', '_')}"
+            )
+            return tag.embed
 
-                self.bot.stats.incr(
-                    f"tags.usages"
-                    f"{'.' + tag_identifier.group.replace('-', '_') if tag_identifier.group else ''}"
-                    f".{tag_identifier.name.replace('-', '_')}"
-                )
+        elif len(tag_identifier.name) >= 3:
+            suggested_tags = self.get_fuzzy_matches(tag_identifier)[:10]
+            if not suggested_tags:
+                return None
+            suggested_tags_text = "\n".join(
+                str(identifier)
+                for identifier, tag in suggested_tags
+                if tag.accessible_by(ctx.author)
+                and not tag.on_cooldown_in(ctx.channel)
+            )
+            return Embed(
+                title="Did you mean ...",
+                description=suggested_tags_text
+            )
 
-                await wait_for_deletion(
-                    await ctx.send(embed=tag.embed),
-                    [ctx.author.id],
-                )
-                return True
-
-            elif len(tag_identifier.name) >= 3:
-                suggested_tags = self.get_fuzzy_matches(tag_identifier)[:10]
-                if not suggested_tags:
-                    return False
-                suggested_tags_text = "\n".join(
-                    str(identifier)
-                    for identifier, tag in suggested_tags
-                    if tag.accessible_by(ctx.author)
-                    and not tag.on_cooldown_in(ctx.channel)
-                )
-                await wait_for_deletion(
-                    await ctx.send(
-                        embed=Embed(
-                            title="Did you mean ...",
-                            description=suggested_tags_text
-                        )
-                    ),
-                    [ctx.author.id],
-                )
-                return True
-
-        else:
-            tags = self._cache.values()
-            if not tags:
-                await ctx.send(embed=Embed(
-                    description="**There are no tags in the database!**",
-                    colour=Colour.red()
-                ))
-                return True
+    async def list_all_tags(self, ctx: Context) -> None:
+        """Send a paginator with all loaded tags accessible by `ctx.author`, groups first, and alphabetically sorted."""
+        def tag_sort_key(tag_item: tuple[TagIdentifier, tag]) -> str:
+            ident = tag_item[0]
+            if ident.group is None:
+                # Max codepoint character to force tags without a group to the end
+                group = chr(0x10ffff)
             else:
-                embed: Embed = Embed(title="**Current tags**")
-                await LinePaginator.paginate(
-                    sorted(
-                        f"**»**   {tag['title']}" for tag in tags
-                        if self.check_accessibility(ctx.author, tag)
-                    ),
-                    ctx,
-                    embed,
-                    footer_text=FOOTER_TEXT,
-                    empty=False,
-                    max_lines=15
-                )
-                return True
+                group = ident.group
+            return group+ident.name
 
-        return False
+        result_lines = []
+        current_group = object()
+        group_accessible = True
+
+        for identifier, tag in sorted(self._tags.items(), key=tag_sort_key):
+
+            if identifier.group != current_group:
+                if not group_accessible:
+                    # Remove group separator line if no tags in the previous group were accessible by the user.
+                    result_lines.pop()
+                # A new group began, add a separator with the group name.
+                if identifier.group is not None:
+                    group_accessible = False
+                    result_lines.append(f"\n\N{BULLET} **{identifier.group}**")
+                else:
+                    result_lines.append("\n\N{BULLET}")
+                current_group = identifier.group
+
+            if tag.accessible_by(ctx.author):
+                result_lines.append(f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier.name}")
+                group_accessible = True
+
+        embed = Embed(title="Current tags")
+        await LinePaginator.paginate(result_lines, ctx, embed=embed, max_lines=15, empty=False, footer_text=FOOTER_TEXT)
 
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(
@@ -322,15 +328,33 @@ class Tags(Cog):
         """
         Get a specified tag, or a list of all tags if no tag is specified.
 
-        Returns True if something can be sent, or if the tag is on cooldown.
-        Returns False if no matches are found.
+        Returns True if something was sent, or if the tag is on cooldown.
+        Returns False if no message was sent.
         """
+        if tag_name_or_group is None and tag_name is None:
+            if self._tags:
+                await self.list_all_tags(ctx)
+                return True
+            else:
+                await ctx.send(embed=Embed(description="**There are no tags!**"))
+                return True
+
         if tag_name is None:
             tag_name = tag_name_or_group
             tag_group = None
         else:
             tag_group = tag_name_or_group
-        return await self.display_tag(ctx, TagIdentifier(tag_group, tag_name))
+
+        embed = await self.get_tag_embed(ctx, TagIdentifier(tag_group, tag_name))
+        if embed is not None:
+            if embed is not COOLDOWN.obj:
+                await wait_for_deletion(
+                    await ctx.send(embed=embed),
+                    (ctx.author.id,)
+                )
+            return True
+        else:
+            return False
 
 
 def setup(bot: Bot) -> None:
