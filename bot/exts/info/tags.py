@@ -117,7 +117,7 @@ def _fuzzy_search(search: str, target: str) -> float:
 
 
 class Tags(Cog):
-    """Save new tags and fetch existing tags."""
+    """Fetch tags by name or content."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
