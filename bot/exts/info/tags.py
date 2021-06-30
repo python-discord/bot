@@ -166,7 +166,12 @@ class Tags(Cog):
             suggestions += self._get_suggestions(tag_identifier)
         return suggestions
 
-    def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str, user: Member) -> list:
+    def _get_tags_via_content(
+            self,
+            check: Callable[[Iterable], bool],
+            keywords: str,
+            user: Member,
+    ) -> list[tuple[TagIdentifier, Tag]]:
         """
         Search for tags via contents.
 
@@ -186,27 +191,29 @@ class Tags(Cog):
             keywords_processed = [keywords]
 
         matching_tags = []
-        for tag in self._cache.values():
-            matches = (query in tag['embed']['description'].casefold() for query in keywords_processed)
-            if self.check_accessibility(user, tag) and check(matches):
-                matching_tags.append(tag)
+        for identifier, tag in self._tags.items():
+            matches = (query in tag.content.casefold() for query in keywords_processed)
+            if tag.accessible_by(user) and check(matches):
+                matching_tags.append((identifier, tag))
 
         return matching_tags
 
-    async def _send_matching_tags(self, ctx: Context, keywords: str, matching_tags: list) -> None:
+    async def _send_matching_tags(
+            self,
+            ctx: Context,
+            keywords: str,
+            matching_tags: list[tuple[TagIdentifier, Tag]],
+    ) -> None:
         """Send the result of matching tags to user."""
-        if not matching_tags:
-            pass
-        elif len(matching_tags) == 1:
-            await ctx.send(embed=Embed().from_dict(matching_tags[0]['embed']))
-        else:
+        if len(matching_tags) == 1:
+            await ctx.send(embed=matching_tags[0][1].embed)
+        elif matching_tags:
             is_plural = keywords.strip().count(' ') > 0 or keywords.strip().count(',') > 0
             embed = Embed(
                 title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
-                description='\n'.join(tag['title'] for tag in matching_tags[:10])
             )
             await LinePaginator.paginate(
-                sorted(f"**»**   {tag['title']}" for tag in matching_tags),
+                sorted(f"**»**   {identifier.name}" for identifier, _ in matching_tags),
                 ctx,
                 embed,
                 footer_text=FOOTER_TEXT,
