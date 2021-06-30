@@ -11,6 +11,7 @@ from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
 from bot.errors import InvalidInfractedUser, LockedResourceError
+from bot.exts.info import tags
 from bot.utils.checks import ContextCheckFailure
 
 log = logging.getLogger(__name__)
@@ -154,14 +155,21 @@ class ErrorHandler(Cog):
             return
 
         try:
-            tag_name = await TagNameConverter.convert(ctx, ctx.invoked_with)
+            tag_identifier = tags.extract_tag_identifier(ctx.message.content)
+            if tag_identifier.group is not None:
+                tag_name = await TagNameConverter.convert(ctx, tag_identifier.name)
+                tag_name_or_group = await TagNameConverter.convert(ctx, tag_identifier.group)
+            else:
+                tag_name = None
+                tag_name_or_group = await TagNameConverter.convert(ctx, tag_identifier.name)
+
         except errors.BadArgument:
             log.debug(
                 f"{ctx.author} tried to use an invalid command "
                 f"and the fallback tag failed validation in TagNameConverter."
             )
         else:
-            if await ctx.invoke(tags_get_command, tag_name=tag_name):
+            if await ctx.invoke(tags_get_command, tag_name_or_group, tag_name):
                 return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
