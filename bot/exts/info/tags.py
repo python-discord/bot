@@ -5,7 +5,7 @@ import logging
 import re
 import time
 from pathlib import Path
-from typing import Callable, Iterable, List, Literal, NamedTuple, Optional, Union
+from typing import Callable, Iterable, Literal, NamedTuple, Optional, Union
 
 import discord
 import frontmatter
@@ -171,7 +171,7 @@ class Tags(Cog):
 
         `predicate` will be the built-in any, all, or a custom callable. Must return a bool.
         """
-        keywords_processed: List[str] = []
+        keywords_processed = []
         for keyword in keywords.split(","):
             keyword_sanitized = keyword.strip().casefold()
             if not keyword_sanitized:
