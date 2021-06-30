@@ -172,7 +172,7 @@ class Tags(Cog):
         `predicate` will be the built-in any, all, or a custom callable. Must return a bool.
         """
         keywords_processed: List[str] = []
-        for keyword in keywords.split(','):
+        for keyword in keywords.split(","):
             keyword_sanitized = keyword.strip().casefold()
             if not keyword_sanitized:
                 # this happens when there are leading / trailing / consecutive comma.
@@ -180,7 +180,7 @@ class Tags(Cog):
             keywords_processed.append(keyword_sanitized)
 
         if not keywords_processed:
-            # after sanitizing, we can end up with an empty list, for example when keywords is ','
+            # after sanitizing, we can end up with an empty list, for example when keywords is ","
             # in that case, we simply want to search for such keywords directly instead.
             keywords_processed = [keywords]
 
@@ -202,7 +202,7 @@ class Tags(Cog):
         if len(matching_tags) == 1:
             await ctx.send(embed=matching_tags[0][1].embed)
         elif matching_tags:
-            is_plural = keywords.strip().count(' ') > 0 or keywords.strip().count(',') > 0
+            is_plural = keywords.strip().count(" ") > 0 or keywords.strip().count(",") > 0
             embed = Embed(
                 title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
             )
@@ -215,7 +215,7 @@ class Tags(Cog):
                 max_lines=15
             )
 
-    @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
+    @group(name="tags", aliases=("tag", "t"), invoke_without_command=True)
     async def tags_group(
             self,
             ctx: Context,
@@ -225,7 +225,7 @@ class Tags(Cog):
         """Show all known tags, a single tag, or run a subcommand."""
         await self.get_command(ctx, tag_name_or_group=tag_name_or_group, tag_name=tag_name)
 
-    @tags_group.group(name='search', invoke_without_command=True)
+    @tags_group.group(name="search", invoke_without_command=True)
     async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
         """
         Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
@@ -235,14 +235,14 @@ class Tags(Cog):
         matching_tags = self._get_tags_via_content(all, keywords, ctx.author)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
-    @search_tag_content.command(name='any')
-    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = 'any') -> None:
+    @search_tag_content.command(name="any")
+    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = "any") -> None:
         """
         Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
 
         Search for tags that has ANY of the keywords.
         """
-        matching_tags = self._get_tags_via_content(any, keywords or 'any', ctx.author)
+        matching_tags = self._get_tags_via_content(any, keywords or "any", ctx.author)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
     async def get_tag_embed(
@@ -330,7 +330,7 @@ class Tags(Cog):
         )
         await LinePaginator.paginate(tag_lines, ctx, embed, footer_text=FOOTER_TEXT, empty=False, max_lines=15)
 
-    @tags_group.command(name='get', aliases=('show', 'g'))
+    @tags_group.command(name="get", aliases=("show", "g"))
     async def get_command(
             self, ctx: Context,
             tag_name_or_group: TagNameConverter = None,
