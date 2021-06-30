@@ -319,6 +319,16 @@ class Tags(Cog):
         embed = Embed(title="Current tags")
         await LinePaginator.paginate(result_lines, ctx, embed=embed, max_lines=15, empty=False, footer_text=FOOTER_TEXT)
 
+    async def list_tags_in_group(self, ctx: Context, group: str) -> None:
+        """Send a paginator with all tags under `group`, that are accessible by `ctx.author`."""
+        embed = Embed(title=f"**Tags under *{group}***")
+        tag_lines = sorted(
+            f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
+            for identifier, tag in self._tags.items()
+            if identifier.group == group and tag.accessible_by(ctx.author)
+        )
+        await LinePaginator.paginate(tag_lines, ctx, embed, footer_text=FOOTER_TEXT, empty=False, max_lines=15)
+
     @tags_group.command(name='get', aliases=('show', 'g'))
     async def get_command(
             self, ctx: Context,
@@ -340,8 +350,15 @@ class Tags(Cog):
                 return True
 
         if tag_name is None:
-            tag_name = tag_name_or_group
-            tag_group = None
+            if any(
+                tag_name_or_group == identifier.group and tag.accessible_by(ctx.author)
+                for identifier, tag in self._tags.items()
+            ):
+                await self.list_tags_in_group(ctx, tag_name_or_group)
+                return True
+            else:
+                tag_name = tag_name_or_group
+                tag_group = None
         else:
             tag_group = tag_name_or_group
 
