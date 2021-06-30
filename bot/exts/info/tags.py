@@ -137,15 +137,9 @@ class Tags(Cog):
 
                 self._tags[TagIdentifier(tag_group, tag_name)] = Tag(file.read_text("utf-8"))
 
-    def _get_suggestions(
-            self,
-            tag_identifier: TagIdentifier,
-            thresholds: Optional[list[int]] = None
-    ) -> list[tuple[TagIdentifier, Tag]]:
+    def _get_suggestions(self, tag_identifier: TagIdentifier) -> list[tuple[TagIdentifier, Tag]]:
         """Return a list of suggested tags for `tag_identifier`."""
-        thresholds = thresholds or [100, 90, 80, 70, 60]
-
-        for threshold in thresholds:
+        for threshold in [100, 90, 80, 70, 60]:
             suggestions = [
                 (identifier, tag)
                 for identifier, tag in self._tags.items()
