@@ -47,12 +47,33 @@ class InfractionScheduler:
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
         infractions = await self.bot.api_client.get(
-            'bot/infractions',
-            params={'active': 'true'}
+            "bot/infractions",
+            params={
+                "active": "true",
+                "ordering": "expires_at",
+                "permanent": "false",
+                "types": ",".join(supported_infractions),
+            },
         )
-        for infraction in infractions:
-            if infraction["expires_at"] is not None and infraction["type"] in supported_infractions:
-                self.schedule_expiration(infraction)
+
+        to_schedule = [i for i in infractions if i["id"] not in self.scheduler]
+
+        for infraction in to_schedule:
+            log.trace("Scheduling %r", infraction)
+            self.schedule_expiration(infraction)
+
+        # Call ourselves again when the last infraction would expire. This will be the "oldest" infraction we've seen
+        # from the database so far, and new ones are scheduled as part of application.
+        # We make sure to fire this
+        if to_schedule:
+            next_reschedule_point = max(
+                dateutil.parser.isoparse(infr["expires_at"]).replace(tzinfo=None) for infr in to_schedule
+            )
+            log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
+
+            self.scheduler.schedule_at(next_reschedule_point, -1, self.reschedule_infractions(supported_infractions))
+
+        log.trace("Done rescheduling")
 
     async def reapply_infraction(
         self,

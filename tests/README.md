@@ -11,10 +11,15 @@ We are using the following modules and packages for our unit tests:
 - [unittest](https://docs.python.org/3/library/unittest.html) (standard library)
 - [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) (standard library)
 - [coverage.py](https://coverage.readthedocs.io/en/stable/)
+- [pytest-cov](https://pytest-cov.readthedocs.io/en/latest/index.html)
 
-To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [Poetry Project](/pyproject.toml). To run your tests with `poetry`, we've provided two "scripts" shortcuts:
+We also use the following package as a test runner:
+- [pytest](https://docs.pytest.org/en/6.2.x/)
 
-- `poetry run task test` will run `unittest` with `coverage.py`
+To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [Poetry Project](/pyproject.toml). To run your tests with `poetry`, we've provided the following "script" shortcuts:
+
+- `poetry run task test-nocov` will run `pytest`.
+- `poetry run task test` will run `pytest` with `pytest-cov`.
 - `poetry run task test path/to/test.py` will run a specific test.
 - `poetry run task report` will generate a coverage report of the tests you've run with `poetry run task test`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
 
