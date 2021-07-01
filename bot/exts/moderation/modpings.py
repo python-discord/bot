@@ -17,18 +17,23 @@ class ModPings(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self._role_scheduler = PersistentScheduler(self.__class__.__name__, self.reapply_role, bot.loop)
 
         self.guild = None
         self.moderators_role = None
 
+        self.start_task = self.bot.loop.create_task(self.start_cog(), name="mod-pings-start")
+        self._role_scheduler = PersistentScheduler(self.__class__.__name__, self.reapply_role, bot.loop)
         self.reschedule_task = self.bot.loop.create_task(self.normalize_roles(), name="mod-pings-reschedule")
 
-    async def normalize_roles(self) -> None:
-        """Reschedule moderators role re-apply times."""
+    async def start_cog(self) -> None:
+        """Sets the guild related attributes to use in the cog."""
         await self.bot.wait_until_guild_available()
         self.guild = self.bot.get_guild(Guild.id)
         self.moderators_role = self.guild.get_role(Roles.moderators)
+
+    async def normalize_roles(self) -> None:
+        """Reschedule moderators role re-apply times."""
+        await self.start_task
 
         await self._role_scheduler.wait_until_ready()
 
@@ -48,7 +53,7 @@ class ModPings(Cog):
     async def reapply_role(self, mod_id: int) -> None:
         """Reapply the moderator's role to the given moderator."""
         log.trace(f"Re-applying role to mod with ID {mod_id}.")
-        await self.reschedule_task
+        await self.start_task
         mod = self.guild.get_member(mod_id)
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
 
@@ -114,8 +119,9 @@ class ModPings(Cog):
         await ctx.send(f"{Emojis.check_mark} Moderators role has been re-applied.")
 
     def cog_unload(self) -> None:
-        """Cancel role tasks when the cog unloads."""
+        """Cancel tasks when the cog unloads."""
         log.trace("Cog unload: canceling role tasks.")
+        self.start_task.cancel()
         self.reschedule_task.cancel()
         self._role_scheduler.cancel_all()
 
