@@ -70,7 +70,7 @@ class PersistentScheduler:
         """Reschedule the task according to `task_factory` and `task_id`."""
         time = await self.get(task_id)
         if not time:
-            return
+            raise ValueError(f"Task with ID {task_id} was not found for rescheduling.")
         self._scheduler.schedule_at(time.datetime, task_id, coroutine=self._to_schedule(task_id))
 
     async def reschedule_all_tasks(self) -> None:
