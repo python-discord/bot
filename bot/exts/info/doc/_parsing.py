@@ -34,7 +34,7 @@ _EMBED_CODE_BLOCK_LINE_LENGTH = 61
 # _MAX_SIGNATURE_AMOUNT code block wrapped lines with py syntax highlight
 _MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LINE_LENGTH + 8) * MAX_SIGNATURE_AMOUNT
 # Maximum embed description length - signatures on top
-_MAX_DESCRIPTION_LENGTH = 2048 - _MAX_SIGNATURES_LENGTH
+_MAX_DESCRIPTION_LENGTH = 4096 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
 
 BracketPair = namedtuple("BracketPair", ["opening_bracket", "closing_bracket"])

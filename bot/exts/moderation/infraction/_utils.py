@@ -169,8 +169,8 @@ async def notify_infraction(
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
-    if len(text) > 2048:
-        text = f"{text[:2045]}..."
+    if len(text) > 4096:
+        text = f"{text[:4093]}..."
 
     embed = discord.Embed(
         description=text,

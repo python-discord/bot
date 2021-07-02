@@ -213,7 +213,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         type="Mute",
                         expires="N/A",
                         reason="foo bar" * 4000
-                    )[:2045] + "...",
+                    )[:4093] + "...",
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(

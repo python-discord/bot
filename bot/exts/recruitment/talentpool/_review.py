@@ -31,6 +31,8 @@ MAX_DAYS_IN_POOL = 30
 
 # Maximum amount of characters allowed in a message
 MAX_MESSAGE_SIZE = 2000
+# Maximum amount of characters allowed in an embed
+MAX_EMBED_SIZE = 4000
 
 # Regex finding the user ID of a user mention
 MENTION_RE = re.compile(r"<@!?(\d+?)>")
@@ -199,7 +201,7 @@ class Reviewer:
 
         channel = self.bot.get_channel(Channels.nomination_archive)
         for number, part in enumerate(
-                textwrap.wrap(embed_content, width=MAX_MESSAGE_SIZE, replace_whitespace=False, placeholder="")
+                textwrap.wrap(embed_content, width=MAX_EMBED_SIZE, replace_whitespace=False, placeholder="")
         ):
             await channel.send(embed=Embed(
                 title=embed_title if number == 0 else None,
