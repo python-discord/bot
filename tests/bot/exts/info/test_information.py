@@ -347,7 +347,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -356,7 +356,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Verified: {"True"}
                 Roles: &Moderators
             """).strip(),
@@ -379,7 +379,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -388,7 +388,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Roles: &Moderators
             """).strip(),
             embed.fields[1].value
