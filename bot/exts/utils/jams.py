@@ -113,7 +113,6 @@ class CodeJams(commands.Cog):
         """Get code jam team channels permission overwrites."""
         team_channel_overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            guild.get_role(Roles.moderators): discord.PermissionOverwrite(read_messages=True),
             guild.get_role(Roles.code_jam_event_team): discord.PermissionOverwrite(read_messages=True)
         }
 
