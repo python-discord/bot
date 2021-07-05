@@ -142,6 +142,7 @@ guild:
         moderators:         &MODS_CATEGORY  749736277464842262
         modmail:            &MODMAIL        714494672835444826
         voice:                              356013253765234688
+        summer_code_jam:                    861692638540857384
 
     channels:
         # Public announcement and news channels
@@ -185,6 +186,7 @@ guild:
         bot_commands:       &BOT_CMD        267659945086812160
         esoteric:                           470884583684964352
         voice_gate:                         764802555427029012
+        code_jam_planning:                  490217981872177157
 
         # Staff
         admins:             &ADMINS         365960823622991872
@@ -258,8 +260,10 @@ guild:
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
         core_developers:                    587606783669829632
+        code_jam_event_team:                787816728474288181
         devops:                             409416496733880320
         domain_leads:                       807415650778742785
+        events_lead:                        778361735739998228
         helpers:            &HELPERS_ROLE   267630620367257601
         moderators:         &MODS_ROLE      831776746206265384
         mod_team:           &MOD_TEAM_ROLE  267629731250176001
@@ -268,7 +272,6 @@ guild:
 
         # Code Jam
         jammers:        737249140966162473
-        team_leaders:   737250302834638889
 
         # Streaming
         video:          764245844798079016
