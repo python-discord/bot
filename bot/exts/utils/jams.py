@@ -79,7 +79,6 @@ class CodeJams(commands.Cog):
         If all categories are full or none exist, create a new category.
         """
         for category in guild.categories:
-            # Need 2 available spaces: one for the text channel and one for voice.
             if category.name == CATEGORY_NAME and len(category.channels) < MAX_CHANNELS:
                 return category
 
