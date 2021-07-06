@@ -18,7 +18,7 @@ beautifulsoup4 = "~=4.9"
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
 deepdiff = "~=4.0"
-"discord.py" = "~=1.6.0"
+"discord.py" = "~=1.7.3"
 emoji = "~=0.6"
 feedparser = "~=6.0.2"
 fuzzywuzzy = "~=0.17"
@@ -47,6 +47,9 @@ pep8-naming = "~=0.9"
 pre-commit = "~=2.1"
 taskipy = "~=1.7.0"
 python-dotenv = "~=0.17.1"
+pytest = "~=6.2.4"
+pytest-cov = "~=2.12.1"
+pytest-xdist = { version = "~=2.3.0", extras = ["psutil"] }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -58,6 +61,12 @@ lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
 push = "docker push ghcr.io/python-discord/bot:latest"
-test = "coverage run -m unittest"
+test-nocov = "pytest -n auto"
+test = "pytest -n auto --cov-report= --cov"
 html = "coverage html"
 report = "coverage report"
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["bot"]
+source = ["tests"]
