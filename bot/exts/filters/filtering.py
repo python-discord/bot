@@ -282,7 +282,7 @@ class Filtering(Cog):
                         if delta is not None and delta < 100:
                             continue
 
-                    if filter_name == "filter_invites":
+                    if filter_name in ("filter_invites", "filter_everyone_ping"):
                         # Disable invites filter in codejam team channels
                         category = getattr(msg.channel, "category", None)
                         if category and category.name == JAM_CATEGORY_NAME:
