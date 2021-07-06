@@ -149,7 +149,7 @@ class AntiSpam(Cog):
             not message.guild
             or message.guild.id != GuildConfig.id
             or message.author.bot
-            or (hasattr(msg.channel, "category") and msg.channel.category.name == JAM_CATEGORY_NAME)
+            or (hasattr(message.channel, "category") and message.channel.category.name == JAM_CATEGORY_NAME)
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
         ):
