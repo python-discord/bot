@@ -417,7 +417,7 @@ anti_spam:
 
         mentions:
             interval: 10
-            max: 5
+            max: 8
 
         newlines:
             interval: 10
