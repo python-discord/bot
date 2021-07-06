@@ -64,7 +64,7 @@ class CodeJams(commands.Cog):
 
                 teams[row["Team Name"]].append((member, row["Team Leader"].upper() == "Y"))
 
-            team_leaders = await ctx.guild.create_role(name="Team Leaders", colour=TEAM_LEADERS_COLOUR)
+            team_leaders = await ctx.guild.create_role(name="Code Jam Team Leaders", colour=TEAM_LEADERS_COLOUR)
 
             for team_name, members in teams.items():
                 await self.create_team_channel(ctx.guild, team_name, members, team_leaders)
