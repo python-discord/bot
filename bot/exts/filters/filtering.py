@@ -284,7 +284,7 @@ class Filtering(Cog):
 
                     if filter_name == "filter_invites":
                         # Disable invites filter in codejam team channels
-                        category = msg.channel.category
+                        category = getattr(msg.channel, "category", None)
                         if category and category.name == JAM_CATEGORY_NAME:
                             continue
 
