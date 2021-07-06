@@ -20,6 +20,7 @@ from bot.constants import (
     Guild, Icons, URLs
 )
 from bot.exts.moderation.modlog import ModLog
+from bot.exts.utils.jams import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
 from bot.utils.scheduling import Scheduler
@@ -279,6 +280,12 @@ class Filtering(Cog):
                         # If the edit delta is less than 0.001 seconds, then we're probably dealing
                         # with a double filter trigger.
                         if delta is not None and delta < 100:
+                            continue
+
+                    if filter_name == "filter_invites":
+                        # Disable invites filter in codejam team channels
+                        category = msg.channel.category
+                        if category and category.name == JAM_CATEGORY_NAME:
                             continue
 
                     # Does the filter only need the message content or the full message?
