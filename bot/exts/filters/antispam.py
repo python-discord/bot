@@ -18,8 +18,8 @@ from bot.constants import (
 )
 from bot.converters import Duration
 from bot.exts.moderation.modlog import ModLog
-from bot.utils import lock, scheduling
 from bot.exts.utils.jams import CATEGORY_NAME as JAM_CATEGORY_NAME
+from bot.utils import lock, scheduling
 from bot.utils.messages import format_user, send_attachments
 
 
