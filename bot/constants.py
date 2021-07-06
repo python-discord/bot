@@ -400,6 +400,8 @@ class Categories(metaclass=YAMLGetter):
     modmail: int
     voice: int
 
+    # 2021 Summer Code Jam
+    summer_code_jam: int
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
@@ -439,6 +441,7 @@ class Channels(metaclass=YAMLGetter):
     discord_py: int
     esoteric: int
     voice_gate: int
+    code_jam_planning: int
 
     admins: int
     admin_spam: int
@@ -497,8 +500,10 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     core_developers: int
+    code_jam_event_team: int
     devops: int
     domain_leads: int
+    events_lead: int
     helpers: int
     moderators: int
     mod_team: int
@@ -506,7 +511,6 @@ class Roles(metaclass=YAMLGetter):
     project_leads: int
 
     jammers: int
-    team_leaders: int
 
 
 class Guild(metaclass=YAMLGetter):
