@@ -283,7 +283,7 @@ class Filtering(Cog):
                             continue
 
                     if filter_name == "filter_invites":
-                        # Disable domains filter in codejam team channels
+                        # Disable invites filter in codejam team channels
                         category = msg.channel.category
                         if category and category.name == JAM_CATEGORY_NAME:
                             continue
