@@ -39,9 +39,9 @@ class Latency(commands.Cog):
             bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
-            request = await self.bot.http_session.get(f"{URLs.site_api_schema}{URLs.site_api}/healthcheck")
-            request.raise_for_status()
-            site_status = "Healthy"
+            async with self.bot.http_session.get(f"{URLs.site_api_schema}{URLs.site_api}/healthcheck") as request:
+                request.raise_for_status()
+                site_status = "Healthy"
 
         except client_exceptions.ClientResponseError as e:
             """The site returned an unexpected response."""
