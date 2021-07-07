@@ -44,18 +44,6 @@ yarl = ">=1.0,<2.0"
 speedups = ["aiodns", "brotlipy", "cchardet"]
 
 [[package]]
-name = "aioping"
-version = "0.3.1"
-description = "Asyncio ping implementation"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-aiodns = "*"
-async-timeout = "*"
-
-[[package]]
 name = "aioredis"
 version = "1.3.1"
 description = "asyncio (PEP 3156) Redis support"
@@ -1030,7 +1018,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.*"
-content-hash = "c7ea9fa5c2dc62eebba817dc0c98c58cfed4cf298b12a1b86a157e63d0882ef9"
+content-hash = "85160036e3b07c9d5d24a32302462591e82cc3bf3d5490b87550d9c26bc5648d"
 
 [metadata.files]
 aio-pika = [
@@ -1079,10 +1067,6 @@ aiohttp = [
     {file = "aiohttp-3.7.4.post0-cp39-cp39-win32.whl", hash = "sha256:932bb1ea39a54e9ea27fc9232163059a0b8855256f4052e776357ad9add6f1c9"},
     {file = "aiohttp-3.7.4.post0-cp39-cp39-win_amd64.whl", hash = "sha256:02f46fc0e3c5ac58b80d4d56eb0a7c7d97fcef69ace9326289fb9f1955e65cfe"},
     {file = "aiohttp-3.7.4.post0.tar.gz", hash = "sha256:493d3299ebe5f5a7c66b9819eacdcfbbaaf1a8e84911ddffcdc48888497afecf"},
-]
-aioping = [
-    {file = "aioping-0.3.1-py3-none-any.whl", hash = "sha256:8900ef2f5a589ba0c12aaa9c2d586f5371820d468d21b374ddb47ef5fc8f297c"},
-    {file = "aioping-0.3.1.tar.gz", hash = "sha256:f983d86acab3a04c322731ce88d42c55d04d2842565fc8532fe10c838abfd275"},
 ]
 aioredis = [
     {file = "aioredis-1.3.1-py3-none-any.whl", hash = "sha256:b61808d7e97b7cd5a92ed574937a079c9387fdadd22bfbfa7ad2fd319ecc26e3"},
