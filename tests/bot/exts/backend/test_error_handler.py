@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from discord.ext.commands import errors
 
 from bot.api import ResponseCodeError
-from bot.errors import InvalidInfractedUser, LockedResourceError
+from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.exts.backend.error_handler import ErrorHandler, setup
 from bot.exts.info.tags import Tags
 from bot.exts.moderation.silence import Silence
@@ -130,7 +130,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 "expect_mock_call": "send"
             },
             {
-                "args": (self.ctx, errors.CommandInvokeError(InvalidInfractedUser(self.ctx.author))),
+                "args": (self.ctx, errors.CommandInvokeError(InvalidInfractedUserError(self.ctx.author))),
                 "expect_mock_call": "send"
             }
         )
