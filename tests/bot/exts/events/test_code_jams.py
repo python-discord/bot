@@ -5,7 +5,7 @@ from discord import CategoryChannel
 from discord.ext.commands import BadArgument
 
 from bot.constants import Roles
-from bot.exts.utils import jams
+from bot.exts.events.code_jams import _cog
 from tests.helpers import (
     MockAttachment, MockBot, MockCategoryChannel, MockContext,
     MockGuild, MockMember, MockRole, MockTextChannel
@@ -40,7 +40,7 @@ class JamCodejamCreateTests(unittest.IsolatedAsyncioTestCase):
         self.command_user = MockMember([self.admin_role])
         self.guild = MockGuild([self.admin_role])
         self.ctx = MockContext(bot=self.bot, author=self.command_user, guild=self.guild)
-        self.cog = jams.CodeJams(self.bot)
+        self.cog = _cog.CodeJams(self.bot)
 
     async def test_message_without_attachments(self):
         """If no link or attachments are provided, commands.BadArgument should be raised."""
@@ -85,8 +85,8 @@ class JamCodejamCreateTests(unittest.IsolatedAsyncioTestCase):
         """Should create a new code jam category."""
         subtests = (
             [],
-            [get_mock_category(jams.MAX_CHANNELS, jams.CATEGORY_NAME)],
-            [get_mock_category(jams.MAX_CHANNELS - 2, "other")],
+            [get_mock_category(_cog.MAX_CHANNELS, _cog.CATEGORY_NAME)],
+            [get_mock_category(_cog.MAX_CHANNELS - 2, "other")],
         )
 
         self.cog.send_status_update = AsyncMock()
@@ -109,11 +109,11 @@ class JamCodejamCreateTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_category_channel_exist(self):
         """Should not try to create category channel."""
-        expected_category = get_mock_category(jams.MAX_CHANNELS - 2, jams.CATEGORY_NAME)
+        expected_category = get_mock_category(_cog.MAX_CHANNELS - 2, _cog.CATEGORY_NAME)
         self.guild.categories = [
-            get_mock_category(jams.MAX_CHANNELS - 2, "other"),
+            get_mock_category(_cog.MAX_CHANNELS - 2, "other"),
             expected_category,
-            get_mock_category(0, jams.CATEGORY_NAME),
+            get_mock_category(0, _cog.CATEGORY_NAME),
         ]
 
         actual_category = await self.cog.get_category(self.guild)
@@ -170,5 +170,5 @@ class CodeJamSetup(unittest.TestCase):
     def test_setup(self):
         """Should call `bot.add_cog`."""
         bot = MockBot()
-        jams.setup(bot)
+        _cog.setup(bot)
         bot.add_cog.assert_called_once()
