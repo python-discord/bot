@@ -63,7 +63,10 @@ class TagIdentifier(NamedTuple):
         return fuzzy_score
 
     def __str__(self) -> str:
-        return f"{self.group or ''} {self.name}"
+        if self.group is not None:
+            return f"{self.group} {self.name}"
+        else:
+            return self.name
 
 
 class Tag:
