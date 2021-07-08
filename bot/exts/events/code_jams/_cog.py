@@ -78,9 +78,9 @@ class CodeJams(commands.Cog):
     @commands.has_any_role(Roles.admins)
     async def end(self, ctx: commands.Context) -> None:
         """
-        Call it three times while spinning around for it all to end.
+        Deletes all code jam channels.
 
-        Deletes all code jam channels and wipes the cache.
+        Call it three times while spinning around for it all to end.
         """
         self.end_counter += 1
         if self.end_counter == 1:
