@@ -3,6 +3,8 @@ import logging
 import typing as t
 from collections import defaultdict
 
+import discord
+from discord import Colour, Embed, Guild, Member
 from discord.ext import commands
 
 from bot.bot import Bot
@@ -20,7 +22,9 @@ class CodeJams(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.group()
+        self.end_counter = 0
+
+    @commands.group(aliases=("cj", "jam"))
     @commands.has_any_role(Roles.admins)
     async def codejam(self, ctx: commands.Context) -> None:
         """A Group of commands for managing Code Jams."""
@@ -69,3 +73,102 @@ class CodeJams(commands.Cog):
 
             await _channels.create_team_leader_channel(ctx.guild, team_leaders)
             await ctx.send(f"{Emojis.check_mark} Created Code Jam with {len(teams)} teams.")
+
+    @codejam.command()
+    @commands.has_any_role(Roles.admins)
+    async def end(self, ctx: commands.Context) -> None:
+        """
+        Call it three times while spinning around for it all to end.
+
+        Deletes all code jam channels and wipes the cache.
+        """
+        self.end_counter += 1
+        if self.end_counter == 1:
+            await ctx.send("Are you sure about that?")
+            return
+        if self.end_counter == 2:
+            await ctx.send("Are you *really really* sure about that?")
+            return
+
+        self.end_counter = 0
+
+        for category in self.jam_categories(ctx.guild):
+            for channel in category.channels:
+                await channel.delete(reason="Code jam ended.")
+            await category.delete(reason="Code jam ended.")
+
+        await ctx.message.add_reaction(Emojis.check_mark)
+
+    @codejam.command()
+    @commands.has_any_role(Roles.admins, Roles.code_jam_event_team)
+    async def info(self, ctx: commands.Context, member: Member) -> None:
+        """
+        Send an info embed about the member with the team they're in.
+
+        The team is found by searching the permissions of the team channels.
+        """
+        channel = self.team_channel(ctx.guild, member)
+        if not channel:
+            await ctx.send(":x: I can't find the team channel for this member.")
+            return
+
+        embed = Embed(
+            title=str(member),
+            colour=Colour.blurple()
+        )
+        embed.add_field(name="Team", value=self.team_name(channel), inline=True)
+
+        await ctx.send(embed=embed)
+
+    @codejam.command()
+    @commands.has_any_role(Roles.admins)
+    async def move(self, ctx: commands.Context, member: Member, new_team_name: str) -> None:
+        """Move participant from one team to another by changing the user's permissions for the relevant channels."""
+        old_team_channel = self.team_channel(ctx.guild, member)
+        if not old_team_channel:
+            await ctx.send(":x: I can't find the team channel for this member.")
+            return
+
+        if old_team_channel.name == new_team_name or self.team_name(old_team_channel) == new_team_name:
+            await ctx.send(f"`{member}` is already in `{new_team_name}`.")
+            return
+
+        new_team_channel = self.team_channel(ctx.guild, new_team_name)
+        if not new_team_channel:
+            await ctx.send(f":x: I can't find a team channel named `{new_team_name}`.")
+            return
+
+        await old_team_channel.set_permissions(member, overwrite=None, reason=f"Participant moved to {new_team_name}")
+        await new_team_channel.set_permissions(
+            member,
+            overwrite=discord.PermissionOverwrite(read_messages=True),
+            reason=f"Participant moved from {old_team_channel.name}"
+        )
+
+        await ctx.send(
+            f"Participant moved from `{self.team_name(old_team_channel)}` to `{self.team_name(new_team_channel)}`."
+        )
+
+    @staticmethod
+    def jam_categories(guild: Guild) -> list[discord.CategoryChannel]:
+        """Get all the code jam team categories."""
+        return [category for category in guild.categories if category.name == _channels.CATEGORY_NAME]
+
+    @staticmethod
+    def team_channel(guild: Guild, criterion: t.Union[str, Member]) -> t.Optional[discord.TextChannel]:
+        """Get a team channel through either a participant or the team name."""
+        for category in CodeJams.jam_categories(guild):
+            for channel in category.channels:
+                if isinstance(channel, discord.TextChannel):
+                    if (
+                        # If it's a string.
+                        criterion == channel.name or criterion == CodeJams.team_name(channel)
+                        # If it's a member.
+                        or criterion in channel.overwrites
+                    ):
+                        return channel
+
+    @staticmethod
+    def team_name(channel: discord.TextChannel) -> str:
+        """Retrieves the team name from the given channel."""
+        return channel.name.replace("-", " ").title()
