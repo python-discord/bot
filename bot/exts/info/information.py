@@ -17,7 +17,9 @@ from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
+from bot.utils.helpers import join_role_stats
 from bot.utils.time import humanize_delta, time_since
+
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +52,10 @@ class Information(Cog):
                 constants.Roles.owners, constants.Roles.contributors,
             )
         )
-        return {role.name.title(): len(role.members) for role in roles}
+        role_stats = {role.name.title(): len(role.members) for role in roles}
+        role_stats.update(
+            **join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], "Leads", guild))
+        return role_stats
 
     def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""

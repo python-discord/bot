@@ -1,6 +1,5 @@
 from abc import ABCMeta
-from types import List
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from discord import Guild
 from discord.ext.commands import CogMeta
