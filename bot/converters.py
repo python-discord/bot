@@ -416,11 +416,11 @@ class HushDurationConverter(Converter):
 
     MINUTES_RE = re.compile(r"(\d+)(?:M|m|$)")
 
-    async def convert(self, ctx: Context, argument: str) -> t.Optional[int]:
+    async def convert(self, ctx: Context, argument: str) -> int:
         """
         Convert `argument` to a duration that's max 15 minutes or None.
 
-        If `"forever"` is passed, None is returned; otherwise an int of the extracted time.
+        If `"forever"` is passed, -1 is returned; otherwise an int of the extracted time.
         Accepted formats are:
         * <duration>,
         * <duration>m,
@@ -428,7 +428,7 @@ class HushDurationConverter(Converter):
         * forever.
         """
         if argument == "forever":
-            return None
+            return -1
         match = self.MINUTES_RE.match(argument)
         if not match:
             raise BadArgument(f"{argument} is not a valid minutes duration.")
