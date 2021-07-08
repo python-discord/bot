@@ -149,6 +149,18 @@ class CodeJams(commands.Cog):
             f"Participant moved from `{self.team_name(old_team_channel)}` to `{self.team_name(new_team_channel)}`."
         )
 
+    @codejam.command()
+    @commands.has_any_role(Roles.admins)
+    async def remove(self, ctx: commands.Context, member: Member) -> None:
+        """Removes the participant from their team. Does not remove the participants or leader roles."""
+        channel = self.team_channel(ctx.guild, member)
+        if not channel:
+            await ctx.send(":x: I can't find the team channel for this member.")
+            return
+
+        await channel.set_permissions(member, overwrite=None, reason="Participant removed from the team.")
+        await ctx.send(f"Removed the participant from `{self.team_name(channel)}`.")
+
     @staticmethod
     def jam_categories(guild: Guild) -> list[discord.CategoryChannel]:
         """Get all the code jam team categories."""
