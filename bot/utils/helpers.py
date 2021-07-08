@@ -1,6 +1,8 @@
 from abc import ABCMeta
-from typing import Optional
+from types import List
+from typing import Dict, Optional
 
+from discord import Guild
 from discord.ext.commands import CogMeta
 
 
@@ -30,3 +32,11 @@ def has_lines(string: str, count: int) -> bool:
 def pad_base64(data: str) -> str:
     """Return base64 `data` with padding characters to ensure its length is a multiple of 4."""
     return data + "=" * (-len(data) % 4)
+
+
+def join_role_stats(role_ids: List[int], name: str, guild: Guild) -> Dict[str, int]:
+    """Return a dict object with the number of `members` of each role given, and the `name` for this joined group."""
+    members = []
+    for role_id in role_ids:
+        members += guild.get_role(role_id).members
+    return {name: len(set(members))}
