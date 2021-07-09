@@ -10,7 +10,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
-from bot.errors import InvalidInfractedUser, LockedResourceError
+from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.utils.checks import ContextCheckFailure
 
 log = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class ErrorHandler(Cog):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
-            elif isinstance(e.original, InvalidInfractedUser):
+            elif isinstance(e.original, InvalidInfractedUserError):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
                 await self.handle_unexpected_error(ctx, e.original)
