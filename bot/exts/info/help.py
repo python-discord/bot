@@ -125,9 +125,9 @@ class CustomHelpCommand(HelpCommand):
 
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
-        choices = await self.get_all_help_choices()
+        choices = list(await self.get_all_help_choices())
         result = process.extract(default_process(string), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
-        return HelpQueryNotFound(f'Query "{string}" not found.', dict(result))
+        return HelpQueryNotFound(f'Query "{string}" not found.', {choice[0]: choice[1] for choice in result})
 
     async def subcommand_not_found(self, command: Command, string: str) -> "HelpQueryNotFound":
         """
