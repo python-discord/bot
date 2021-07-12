@@ -71,9 +71,9 @@ class ModPings(Cog):
         schedule_cache = await self.modpings_schedule.to_dict()
 
         log.info("Scheduling modpings schedule for applicable moderators found in cache.")
-        for mod_id, schedule in schedule_cache:
+        for mod_id, schedule in schedule_cache.items():
             start_timestamp, work_time = schedule.split("|")
-            start = datetime.datetime.fromtimestamp(start_timestamp)
+            start = datetime.datetime.fromtimestamp(float(start_timestamp))
 
             mod = self.bot.fetch_user(mod_id)
             self._modpings_scheduler.schedule_at(
