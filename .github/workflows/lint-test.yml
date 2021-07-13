@@ -97,12 +97,8 @@ jobs:
         --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
         [flake8] %(code)s: %(text)s'"
 
-      # We run `coverage` using the `python` command so we can suppress
-      # irrelevant warnings in our CI output.
       - name: Run tests and generate coverage report
-        run: |
-            python -Wignore -m coverage run -m unittest
-            coverage report -m
+        run: pytest -n auto --cov --disable-warnings -q
 
       # This step will publish the coverage reports coveralls.io and
       # print a "job" link in the output of the GitHub Action

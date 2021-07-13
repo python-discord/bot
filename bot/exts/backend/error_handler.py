@@ -3,14 +3,14 @@ import logging
 import typing as t
 
 from discord import Embed
-from discord.ext.commands import Cog, Context, errors
+from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.converters import TagNameConverter
-from bot.errors import InvalidInfractedUser, LockedResourceError
+from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.utils.checks import ContextCheckFailure
 
 log = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class ErrorHandler(Cog):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
-            elif isinstance(e.original, InvalidInfractedUser):
+            elif isinstance(e.original, InvalidInfractedUserError):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
                 await self.handle_unexpected_error(ctx, e.original)
@@ -115,8 +115,10 @@ class ErrorHandler(Cog):
         Return bool depending on success of command.
         """
         command = ctx.invoked_with.lower()
+        args = ctx.message.content.lower().split(" ")
         silence_command = self.bot.get_command("silence")
         ctx.invoked_from_error_handler = True
+
         try:
             if not await silence_command.can_run(ctx):
                 log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
@@ -124,11 +126,30 @@ class ErrorHandler(Cog):
         except errors.CommandError:
             log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
             return False
+
+        # Parse optional args
+        channel = None
+        duration = min(command.count("h") * 2, 15)
+        kick = False
+
+        if len(args) > 1:
+            # Parse channel
+            for converter in (TextChannelConverter(), VoiceChannelConverter()):
+                try:
+                    channel = await converter.convert(ctx, args[1])
+                    break
+                except ChannelNotFound:
+                    continue
+
+        if len(args) > 2 and channel is not None:
+            # Parse kick
+            kick = args[2].lower() == "true"
+
         if command.startswith("shh"):
-            await ctx.invoke(silence_command, duration=min(command.count("h")*2, 15))
+            await ctx.invoke(silence_command, duration_or_channel=channel, duration=duration, kick=kick)
             return True
         elif command.startswith("unshh"):
-            await ctx.invoke(self.bot.get_command("unsilence"))
+            await ctx.invoke(self.bot.get_command("unsilence"), channel=channel)
             return True
         return False
 

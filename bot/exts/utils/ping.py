@@ -1,18 +1,16 @@
-import socket
-import urllib.parse
 from datetime import datetime
 
-import aioping
+from aiohttp import client_exceptions
 from discord import Embed
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, STAFF_ROLES, URLs
+from bot.constants import Channels, STAFF_ROLES, URLs
 from bot.decorators import in_whitelist
 
 DESCRIPTIONS = (
     "Command processing time",
-    "Python Discord website latency",
+    "Python Discord website status",
     "Discord API latency"
 )
 ROUND_LATENCY = 3
@@ -41,23 +39,23 @@ class Latency(commands.Cog):
             bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
-            url = urllib.parse.urlparse(URLs.site_schema + URLs.site).hostname
-            try:
-                delay = await aioping.ping(url, family=socket.AddressFamily.AF_INET) * 1000
-                site_ping = f"{delay:.{ROUND_LATENCY}f} ms"
-            except OSError:
-                # Some machines do not have permission to run ping
-                site_ping = "Permission denied, could not ping."
+            async with self.bot.http_session.get(f"{URLs.site_api_schema}{URLs.site_api}/healthcheck") as request:
+                request.raise_for_status()
+                site_status = "Healthy"
 
-        except TimeoutError:
-            site_ping = f"{Emojis.cross_mark} Connection timed out."
+        except client_exceptions.ClientResponseError as e:
+            """The site returned an unexpected response."""
+            site_status = f"The site returned an error in the response: ({e.status}) {e}"
+        except client_exceptions.ClientConnectionError:
+            """Something went wrong with the connection."""
+            site_status = "Could not establish connection with the site."
 
         # Discord Protocol latency return value is in seconds, must be multiplied by 1000 to get milliseconds.
         discord_ping = f"{self.bot.latency * 1000:.{ROUND_LATENCY}f} ms"
 
         embed = Embed(title="Pong!")
 
-        for desc, latency in zip(DESCRIPTIONS, [bot_ping, site_ping, discord_ping]):
+        for desc, latency in zip(DESCRIPTIONS, [bot_ping, site_status, discord_ping]):
             embed.add_field(name=desc, value=latency, inline=False)
 
         await ctx.send(embed=embed)

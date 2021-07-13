@@ -142,6 +142,7 @@ guild:
         moderators:         &MODS_CATEGORY  749736277464842262
         modmail:            &MODMAIL        714494672835444826
         voice:                              356013253765234688
+        summer_code_jam:                    861692638540857384
 
     channels:
         # Public announcement and news channels
@@ -188,6 +189,7 @@ guild:
         bot_commands:       &BOT_CMD        267659945086812160
         esoteric:                           470884583684964352
         voice_gate:                         764802555427029012
+        code_jam_planning:                  490217981872177157
 
         # Staff
         admins:             &ADMINS         365960823622991872
@@ -198,6 +200,7 @@ guild:
         incidents:                          714214212200562749
         incidents_archive:                  720668923636351037
         mod_alerts:                         473092532147060736
+        mods:               &MODS           305126844661760000
         nominations:                        822920136150745168
         nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
@@ -211,16 +214,18 @@ guild:
 
         # Voice Channels
         admins_voice:       &ADMINS_VOICE   500734494840717332
-        code_help_voice_1:                  751592231726481530
-        code_help_voice_2:                  764232549840846858
-        general_voice:                      751591688538947646
+        code_help_voice_0:                  751592231726481530
+        code_help_voice_1:                  764232549840846858
+        general_voice_0:                    751591688538947646
+        general_voice_1:                    799641437645701151
         staff_voice:        &STAFF_VOICE    412375055910043655
 
         # Voice Chat
-        code_help_chat_1:                   755154969761677312
-        code_help_chat_2:                   766330079135268884
+        code_help_chat_0:                   755154969761677312
+        code_help_chat_1:                   766330079135268884
         staff_voice_chat:                   541638762007101470
-        voice_chat:                         412357430186344448
+        voice_chat_0:                       412357430186344448
+        voice_chat_1:                       799647045886541885
 
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
@@ -234,6 +239,7 @@ guild:
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
+        - *MODS
 
     # Modlog cog ignores events which occur in these channels
     modlog_blacklist:
@@ -262,8 +268,10 @@ guild:
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
         core_developers:                    587606783669829632
+        code_jam_event_team:                787816728474288181
         devops:                             409416496733880320
         domain_leads:                       807415650778742785
+        events_lead:                        778361735739998228
         helpers:            &HELPERS_ROLE   267630620367257601
         moderators:         &MODS_ROLE      831776746206265384
         mod_team:           &MOD_TEAM_ROLE  267629731250176001
@@ -272,7 +280,6 @@ guild:
 
         # Code Jam
         jammers:        737249140966162473
-        team_leaders:   737250302834638889
 
         # Streaming
         video:          764245844798079016
@@ -396,7 +403,7 @@ anti_spam:
 
         chars:
             interval: 5
-            max: 3_000
+            max: 4_200
 
         discord_emojis:
             interval: 10

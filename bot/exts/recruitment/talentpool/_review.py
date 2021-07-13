@@ -75,7 +75,7 @@ class Reviewer:
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
-        review, seen_emoji = await self.make_review(user_id)
+        review, reviewed_emoji = await self.make_review(user_id)
         if not review:
             return
 
@@ -88,8 +88,8 @@ class Reviewer:
         await pin_no_system_message(messages[0])
 
         last_message = messages[-1]
-        if seen_emoji:
-            for reaction in (seen_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
+        if reviewed_emoji:
+            for reaction in (reviewed_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
                 await last_message.add_reaction(reaction)
 
         if update_database:
@@ -97,7 +97,7 @@ class Reviewer:
             await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
 
     async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji]]:
-        """Format a generic review of a user and return it with the seen emoji."""
+        """Format a generic review of a user and return it with the reviewed emoji."""
         log.trace(f"Formatting the review of {user_id}")
 
         # Since `watched_users` is a defaultdict, we should take care
@@ -127,15 +127,15 @@ class Reviewer:
 
         review_body = await self._construct_review_body(member)
 
-        seen_emoji = self._random_ducky(guild)
+        reviewed_emoji = self._random_ducky(guild)
         vote_request = (
             "*Refer to their nomination and infraction histories for further details*.\n"
-            f"*Please react {seen_emoji} if you've seen this post."
-            " Then react :+1: for approval, or :-1: for disapproval*."
+            f"*Please react {reviewed_emoji} once you have reviewed this user,"
+            " and react :+1: for approval, or :-1: for disapproval*."
         )
 
         review = "\n\n".join((opening, current_nominations, review_body, vote_request))
-        return review, seen_emoji
+        return review, reviewed_emoji
 
     async def archive_vote(self, message: PartialMessage, passed: bool) -> None:
         """Archive this vote to #nomination-archive."""
@@ -163,7 +163,7 @@ class Reviewer:
         user_id = int(MENTION_RE.search(content).group(1))
 
         # Get reaction counts
-        seen = await count_unique_users_reaction(
+        reviewed = await count_unique_users_reaction(
             messages[0],
             lambda r: "ducky" in str(r) or str(r) == "\N{EYES}",
             count_bots=False
@@ -188,7 +188,7 @@ class Reviewer:
 
         embed_content = (
             f"{result} on {timestamp}\n"
-            f"With {seen} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
+            f"With {reviewed} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
             f"{stripped_content}"
         )
 
@@ -357,7 +357,7 @@ class Reviewer:
 
     @staticmethod
     def _random_ducky(guild: Guild) -> Union[Emoji, str]:
-        """Picks a random ducky emoji to be used to mark the vote as seen. If no duckies found returns :eyes:."""
+        """Picks a random ducky emoji. If no duckies found returns :eyes:."""
         duckies = [emoji for emoji in guild.emojis if emoji.name.startswith("ducky")]
         if not duckies:
             return ":eyes:"
