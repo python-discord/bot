@@ -11,6 +11,7 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry, Infraction, Snowflake, UserMention, allowed_strings, proxy_user
+from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -38,12 +39,21 @@ class ModManagement(commands.Cog):
         """Get currently loaded Infractions cog instance."""
         return self.bot.get_cog("Infractions")
 
-    # region: Edit infraction commands
-
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context) -> None:
-        """Infraction manipulation commands."""
+        """Infraction management commands."""
         await ctx.send_help(ctx.command)
+
+    @infraction_group.command(name="resend", aliases=("send", "rs", "dm"))
+    async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
+        """Resend a DM to a user about a given infraction of theirs."""
+        id_ = infraction["id"]
+        if await _utils.notify_infraction(infraction):
+            await ctx.send(f":incoming_envelope: Resent DM for infraction `{id_}`.")
+        else:
+            await ctx.send(f"{constants.Emojis.failmail} Failed to resend DM for infraction `{id_}`.")
+
+    # region: Edit infraction commands
 
     @infraction_group.command(name="append", aliases=("amend", "add", "a"))
     async def infraction_append(
