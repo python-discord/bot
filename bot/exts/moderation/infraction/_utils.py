@@ -5,9 +5,11 @@ from datetime import datetime
 import discord
 from discord.ext.commands import Context
 
+import bot
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
 from bot.errors import InvalidInfractedUserError
+from bot.utils import time
 
 log = logging.getLogger(__name__)
 
@@ -152,7 +154,7 @@ async def get_active_infraction(
         log.trace(f"{user} does not have active infractions of type {infr_type}.")
 
 
-async def notify_infraction(
+async def send_infraction_embed(
         user: UserObject,
         infr_type: str,
         expires_at: t.Optional[str] = None,
@@ -186,6 +188,40 @@ async def notify_infraction(
     )
 
     return await send_private_embed(user, embed)
+
+
+async def notify_infraction(
+        infraction: Infraction,
+        user: t.Optional[UserSnowflake] = None,
+        reason: t.Optional[str] = None
+) -> bool:
+    """
+    DM a user about their new infraction and return True if the DM is successful.
+
+    `user` and `reason` can be used to override what is in `infraction`. Otherwise, this data will
+    be retrieved from `infraction`.
+
+    Also return False if the user needs to be fetched but fails to be fetched.
+    """
+    if user is None:
+        user = discord.Object(infraction["user"])
+
+    # Sometimes user is a discord.Object; make it a proper user.
+    try:
+        if not isinstance(user, (discord.Member, discord.User)):
+            user = await bot.instance.fetch_user(user.id)
+    except discord.HTTPException as e:
+        log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
+        return False
+
+    type_ = infraction["type"].replace("_", " ").title()
+    icon = INFRACTION_ICONS[infraction["type"]][0]
+    expiry = time.format_infraction_with_duration(infraction["expires_at"])
+
+    if reason is None:
+        reason = infraction["reason"]
+
+    return await send_infraction_embed(user, type_, expiry, reason, icon)
 
 
 async def notify_pardon(

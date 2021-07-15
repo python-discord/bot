@@ -162,20 +162,12 @@ class InfractionScheduler:
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
         if not infraction["hidden"]:
-            dm_result = f"{constants.Emojis.failmail} "
-            dm_log_text = "\nDM: **Failed**"
-
-            # Sometimes user is a discord.Object; make it a proper user.
-            try:
-                if not isinstance(user, (discord.Member, discord.User)):
-                    user = await self.bot.fetch_user(user.id)
-            except discord.HTTPException as e:
-                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
+            if await _utils.notify_infraction(infraction, user, user_reason):
+                dm_result = ":incoming_envelope: "
+                dm_log_text = "\nDM: Sent"
             else:
-                # Accordingly display whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
-                    dm_result = ":incoming_envelope: "
-                    dm_log_text = "\nDM: Sent"
+                dm_result = f"{constants.Emojis.failmail} "
+                dm_log_text = "\nDM: **Failed**"
 
         end_msg = ""
         if infraction["actor"] == self.bot.user.id:

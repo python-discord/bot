@@ -124,7 +124,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     self.ctx.send.assert_not_awaited()
 
     @patch("bot.exts.moderation.infraction._utils.send_private_embed")
-    async def test_notify_infraction(self, send_private_embed_mock):
+    async def test_send_infraction_embed(self, send_private_embed_mock):
         """
         Should send an embed of a certain format as a DM and return `True` if DM successful.
 
@@ -230,7 +230,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 send_private_embed_mock.reset_mock()
 
                 send_private_embed_mock.return_value = case["send_result"]
-                result = await utils.notify_infraction(*case["args"])
+                result = await utils.send_infraction_embed(*case["args"])
 
                 self.assertEqual(case["send_result"], result)
 

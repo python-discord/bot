@@ -70,15 +70,13 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         notified = await _utils.notify_infraction(
+            infraction=infraction,
             user=after,
-            infr_type="Superstarify",
-            expires_at=format_infraction(infraction["expires_at"]),
             reason=(
                 "You have tried to change your nickname on the **Python Discord** server "
                 f"from **{before.display_name}** to **{after.display_name}**, but as you "
                 "are currently in superstar-prison, you do not have permission to do so."
             ),
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0]
         )
 
         if not notified:
