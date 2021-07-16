@@ -280,8 +280,13 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await _utils.get_active_infraction(ctx, user, "mute"):
-            return
+        if active := await _utils.get_active_infraction(ctx, user, "mute", send_msg=False):
+            if active["actor"] != self.bot.user.id:
+                await _utils.send_active_infraction_message(ctx, active)
+                return
+
+            # Let the current mute attempt override an automatically triggered mute.
+            await self.deactivate_infraction(active)
 
         infraction = await _utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
         if infraction is None:
