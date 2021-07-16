@@ -47,6 +47,10 @@ class ModManagement(commands.Cog):
     @infraction_group.command(name="resend", aliases=("send", "rs", "dm"))
     async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
         """Resend a DM to a user about a given infraction of theirs."""
+        if infraction["hidden"]:
+            await ctx.send(f"{constants.Emojis.failmail} You may not resend hidden infractions.")
+            return
+
         id_ = infraction["id"]
         if await _utils.notify_infraction(infraction):
             await ctx.send(f":incoming_envelope: Resent DM for infraction `{id_}`.")
