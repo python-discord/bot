@@ -455,7 +455,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def pardon_voice_ban(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
+    async def pardon_voice_ban(self, user_id: int, guild: discord.Guild) -> t.Dict[str, str]:
         """Add Voice Verified role back to user, DM them a notification, and return a log dict."""
         user = guild.get_member(user_id)
         log_text = {}
@@ -491,7 +491,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         elif infraction["type"] == "ban":
             return await self.pardon_ban(user_id, guild, reason)
         elif infraction["type"] == "voice_ban":
-            return await self.pardon_voice_ban(user_id, guild, reason)
+            return await self.pardon_voice_ban(user_id, guild)
 
     # endregion
 
