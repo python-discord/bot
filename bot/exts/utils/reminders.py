@@ -3,12 +3,11 @@ import logging
 import random
 import textwrap
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime
 from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
-from dateutil.relativedelta import relativedelta
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
@@ -19,7 +18,7 @@ from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta
+from bot.utils.time import TimestampFormats, discord_timestamp, time_since
 
 log = logging.getLogger(__name__)
 
@@ -62,8 +61,7 @@ class Reminders(Cog):
 
             # If the reminder is already overdue ...
             if remind_at < now:
-                late = relativedelta(now, remind_at)
-                await self.send_reminder(reminder, late)
+                await self.send_reminder(reminder, remind_at)
             else:
                 self.schedule_reminder(reminder)
 
@@ -174,7 +172,7 @@ class Reminders(Cog):
         self.schedule_reminder(reminder)
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
-    async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
+    async def send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
         """Send the reminder."""
         is_valid, user, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
@@ -188,16 +186,17 @@ class Reminders(Cog):
             name="It has arrived!"
         )
 
-        embed.description = f"Here's your reminder: `{reminder['content']}`."
+        # Let's not use a codeblock to keep emojis and mentions working. Embeds are safe anyway.
+        embed.description = f"Here's your reminder: {reminder['content']}."
 
         if reminder.get("jump_url"):  # keep backward compatibility
             embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
 
-        if late:
+        if expected_time:
             embed.colour = discord.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
-                name=f"Sorry it arrived {humanize_delta(late, max_units=2)} late!"
+                name=f"Sorry it should have arrived {time_since(expected_time)} !"
             )
 
         additional_mentions = ' '.join(
@@ -270,9 +269,7 @@ class Reminders(Cog):
             }
         )
 
-        now = datetime.utcnow() - timedelta(seconds=1)
-        humanized_delta = humanize_delta(relativedelta(expiration, now))
-        mention_string = f"Your reminder will arrive in {humanized_delta}"
+        mention_string = f"Your reminder will arrive {discord_timestamp(expiration, TimestampFormats.RELATIVE)}"
 
         if mentions:
             mention_string += f" and will mention {len(mentions)} other(s)"
@@ -297,8 +294,6 @@ class Reminders(Cog):
             params={'author__id': str(ctx.author.id)}
         )
 
-        now = datetime.utcnow()
-
         # Make a list of tuples so it can be sorted by time.
         reminders = sorted(
             (
@@ -313,7 +308,7 @@ class Reminders(Cog):
         for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
             remind_datetime = isoparse(remind_at).replace(tzinfo=None)
-            time = humanize_delta(relativedelta(remind_datetime, now))
+            time = discord_timestamp(remind_datetime, TimestampFormats.RELATIVE)
 
             mentions = ", ".join(
                 # Both Role and User objects have the `name` attribute
@@ -322,7 +317,7 @@ class Reminders(Cog):
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
             text = textwrap.dedent(f"""
-            **Reminder #{id_}:** *expires in {time}* (ID: {id_}){mention_string}
+            **Reminder #{id_}:** *expires {time}* (ID: {id_}){mention_string}
             {content}
             """).strip()
 

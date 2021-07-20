@@ -164,13 +164,13 @@ async def notify_infraction(
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=f"{expires_at} UTC" if expires_at else "N/A",
+        expires=expires_at or "N/A",
         reason=reason or "No reason provided."
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
-    if len(text) > 2048:
-        text = f"{text[:2045]}..."
+    if len(text) > 4096:
+        text = f"{text[:4093]}..."
 
     embed = discord.Embed(
         description=text,

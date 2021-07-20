@@ -1,12 +1,13 @@
 import datetime
 import re
-from typing import Optional
+from enum import Enum
+from typing import Optional, Union
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
 RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-INFRACTION_FORMAT = "%Y-%m-%d %H:%M"
+DISCORD_TIMESTAMP_REGEX = re.compile(r"<t:(\d+):f>")
 
 _DURATION_REGEX = re.compile(
     r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
@@ -17,6 +18,25 @@ _DURATION_REGEX = re.compile(
     r"((?P<minutes>\d+?) ?(minutes|minute|M) ?)?"
     r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
 )
+
+
+ValidTimestamp = Union[int, datetime.datetime, datetime.date, datetime.timedelta, relativedelta]
+
+
+class TimestampFormats(Enum):
+    """
+    Represents the different formats possible for Discord timestamps.
+
+    Examples are given in epoch time.
+    """
+
+    DATE_TIME = "f"  # January 1, 1970 1:00 AM
+    DAY_TIME = "F"  # Thursday, January 1, 1970 1:00 AM
+    DATE_SHORT = "d"  # 01/01/1970
+    DATE = "D"  # January 1, 1970
+    TIME = "t"  # 1:00 AM
+    TIME_SECONDS = "T"  # 1:00:00 AM
+    RELATIVE = "R"  # 52 years ago
 
 
 def _stringify_time_unit(value: int, unit: str) -> str:
@@ -38,6 +58,24 @@ def _stringify_time_unit(value: int, unit: str) -> str:
         return f"less than a {unit[:-1]}"
     else:
         return f"{value} {unit}"
+
+
+def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
+    """Create and format a Discord flavored markdown timestamp."""
+    if format not in TimestampFormats:
+        raise ValueError(f"Format can only be one of {', '.join(TimestampFormats.args)}, not {format}.")
+
+    # Convert each possible timestamp class to an integer.
+    if isinstance(timestamp, datetime.datetime):
+        timestamp = (timestamp.replace(tzinfo=None) - datetime.datetime.utcfromtimestamp(0)).total_seconds()
+    elif isinstance(timestamp, datetime.date):
+        timestamp = (timestamp - datetime.date.fromtimestamp(0)).total_seconds()
+    elif isinstance(timestamp, datetime.timedelta):
+        timestamp = timestamp.total_seconds()
+    elif isinstance(timestamp, relativedelta):
+        timestamp = timestamp.seconds
+
+    return f"<t:{int(timestamp)}:{format.value}>"
 
 
 def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: int = 6) -> str:
@@ -87,7 +125,7 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
 def get_time_delta(time_string: str) -> str:
     """Returns the time in human-readable time delta format."""
     date_time = dateutil.parser.isoparse(time_string).replace(tzinfo=None)
-    time_delta = time_since(date_time, precision="minutes", max_units=1)
+    time_delta = time_since(date_time)
 
     return time_delta
 
@@ -123,19 +161,9 @@ def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
     return utcnow + delta - utcnow
 
 
-def time_since(past_datetime: datetime.datetime, precision: str = "seconds", max_units: int = 6) -> str:
-    """
-    Takes a datetime and returns a human-readable string that describes how long ago that datetime was.
-
-    precision specifies the smallest unit of time to include (e.g. "seconds", "minutes").
-    max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
-    """
-    now = datetime.datetime.utcnow()
-    delta = abs(relativedelta(now, past_datetime))
-
-    humanized = humanize_delta(delta, precision, max_units)
-
-    return f"{humanized} ago"
+def time_since(past_datetime: datetime.datetime) -> str:
+    """Takes a datetime and returns a discord timestamp that describes how long ago that datetime was."""
+    return discord_timestamp(past_datetime, TimestampFormats.RELATIVE)
 
 
 def parse_rfc1123(stamp: str) -> datetime.datetime:
@@ -144,8 +172,8 @@ def parse_rfc1123(stamp: str) -> datetime.datetime:
 
 
 def format_infraction(timestamp: str) -> str:
-    """Format an infraction timestamp to a more readable ISO 8601 format."""
-    return dateutil.parser.isoparse(timestamp).strftime(INFRACTION_FORMAT)
+    """Format an infraction timestamp to a discord timestamp."""
+    return discord_timestamp(dateutil.parser.isoparse(timestamp))
 
 
 def format_infraction_with_duration(
@@ -155,11 +183,7 @@ def format_infraction_with_duration(
     absolute: bool = True
 ) -> Optional[str]:
     """
-    Return `date_to` formatted as a readable ISO-8601 with the humanized duration since `date_from`.
-
-    `date_from` must be an ISO-8601 formatted timestamp. The duration is calculated as from
-    `date_from` until `date_to` with a precision of seconds. If `date_from` is unspecified, the
-    current time is used.
+    Return `date_to` formatted as a discord timestamp with the timestamp duration since `date_from`.
 
     `max_units` specifies the maximum number of units of time to include in the duration. For
     example, a value of 1 may include days but not hours.
@@ -186,25 +210,22 @@ def format_infraction_with_duration(
 
 
 def until_expiration(
-    expiry: Optional[str],
-    now: Optional[datetime.datetime] = None,
-    max_units: int = 2
+    expiry: Optional[str]
 ) -> Optional[str]:
     """
-    Get the remaining time until infraction's expiration, in a human-readable version of the relativedelta.
+    Get the remaining time until infraction's expiration, in a discord timestamp.
 
     Returns a human-readable version of the remaining duration between datetime.utcnow() and an expiry.
-    Unlike `humanize_delta`, this function will force the `precision` to be `seconds` by not passing it.
-    `max_units` specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
-    By default, max_units is 2.
+    Similar to time_since, except that this function doesn't error on a null input
+    and return null if the expiry is in the paste
     """
     if not expiry:
         return None
 
-    now = now or datetime.datetime.utcnow()
+    now = datetime.datetime.utcnow()
     since = dateutil.parser.isoparse(expiry).replace(tzinfo=None, microsecond=0)
 
     if since < now:
         return None
 
-    return humanize_delta(relativedelta(since, now), max_units=max_units)
+    return discord_timestamp(since, TimestampFormats.RELATIVE)
