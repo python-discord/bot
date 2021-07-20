@@ -291,7 +291,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
             ("10", 10),
             ("5m", 5),
             ("5M", 5),
-            ("forever", None),
+            ("forever", -1),
         )
         converter = HushDurationConverter()
         for minutes_string, expected_minutes in test_values:

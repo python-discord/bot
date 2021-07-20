@@ -5,7 +5,7 @@ import textwrap
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
-import fuzzywuzzy
+import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
@@ -117,9 +117,9 @@ class Information(Cog):
                 parsed_roles.add(role_name)
                 continue
 
-            match = fuzzywuzzy.process.extractOne(
+            match = rapidfuzz.process.extractOne(
                 role_name, all_roles, score_cutoff=80,
-                scorer=fuzzywuzzy.fuzz.ratio
+                scorer=rapidfuzz.fuzz.ratio
             )
 
             if not match:
