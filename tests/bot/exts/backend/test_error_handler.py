@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from discord.ext.commands import errors
 
 from bot.api import ResponseCodeError
-from bot.errors import InvalidInfractedUser, LockedResourceError
+from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.exts.backend.error_handler import ErrorHandler, setup
 from bot.exts.info.tags import Tags
 from bot.exts.moderation.silence import Silence
 from bot.utils.checks import InWhitelistCheckFailure
-from tests.helpers import MockBot, MockContext, MockGuild, MockRole
+from tests.helpers import MockBot, MockContext, MockGuild, MockRole, MockTextChannel
 
 
 class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
@@ -130,7 +130,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 "expect_mock_call": "send"
             },
             {
-                "args": (self.ctx, errors.CommandInvokeError(InvalidInfractedUser(self.ctx.author))),
+                "args": (self.ctx, errors.CommandInvokeError(InvalidInfractedUserError(self.ctx.author))),
                 "expect_mock_call": "send"
             }
         )
@@ -226,8 +226,8 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_command.return_value.can_run = AsyncMock(side_effect=errors.CommandError())
         self.assertFalse(await self.cog.try_silence(self.ctx))
 
-    async def test_try_silence_silencing(self):
-        """Should run silence command with correct arguments."""
+    async def test_try_silence_silence_duration(self):
+        """Should run silence command with correct duration argument."""
         self.bot.get_command.return_value.can_run = AsyncMock(return_value=True)
         test_cases = ("shh", "shhh", "shhhhhh", "shhhhhhhhhhhhhhhhhhh")
 
@@ -238,21 +238,85 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(await self.cog.try_silence(self.ctx))
                 self.ctx.invoke.assert_awaited_once_with(
                     self.bot.get_command.return_value,
-                    duration=min(case.count("h")*2, 15)
+                    duration_or_channel=None,
+                    duration=min(case.count("h")*2, 15),
+                    kick=False
                 )
 
-    async def test_try_silence_unsilence(self):
-        """Should call unsilence command."""
-        self.silence.silence.can_run = AsyncMock(return_value=True)
-        test_cases = ("unshh", "unshhhhh", "unshhhhhhhhh")
+    async def test_try_silence_silence_arguments(self):
+        """Should run silence with the correct channel, duration, and kick arguments."""
+        self.bot.get_command.return_value.can_run = AsyncMock(return_value=True)
 
-        for case in test_cases:
-            with self.subTest(message=case):
+        test_cases = (
+            (MockTextChannel(), None),  # None represents the case when no argument is passed
+            (MockTextChannel(), False),
+            (MockTextChannel(), True)
+        )
+
+        for channel, kick in test_cases:
+            with self.subTest(kick=kick, channel=channel):
+                self.ctx.reset_mock()
+                self.ctx.invoked_with = "shh"
+
+                self.ctx.message.content = f"!shh {channel.name} {kick if kick is not None else ''}"
+                self.ctx.guild.text_channels = [channel]
+
+                self.assertTrue(await self.cog.try_silence(self.ctx))
+                self.ctx.invoke.assert_awaited_once_with(
+                    self.bot.get_command.return_value,
+                    duration_or_channel=channel,
+                    duration=4,
+                    kick=(kick if kick is not None else False)
+                )
+
+    async def test_try_silence_silence_message(self):
+        """If the words after the command could not be converted to a channel, None should be passed as channel."""
+        self.bot.get_command.return_value.can_run = AsyncMock(return_value=True)
+        self.ctx.invoked_with = "shh"
+        self.ctx.message.content = "!shh not_a_channel true"
+
+        self.assertTrue(await self.cog.try_silence(self.ctx))
+        self.ctx.invoke.assert_awaited_once_with(
+            self.bot.get_command.return_value,
+            duration_or_channel=None,
+            duration=4,
+            kick=False
+        )
+
+    async def test_try_silence_unsilence(self):
+        """Should call unsilence command with correct duration and channel arguments."""
+        self.silence.silence.can_run = AsyncMock(return_value=True)
+        test_cases = (
+            ("unshh", None),
+            ("unshhhhh", None),
+            ("unshhhhhhhhh", None),
+            ("unshh", MockTextChannel())
+        )
+
+        for invoke, channel in test_cases:
+            with self.subTest(message=invoke, channel=channel):
                 self.bot.get_command.side_effect = (self.silence.silence, self.silence.unsilence)
                 self.ctx.reset_mock()
-                self.ctx.invoked_with = case
+
+                self.ctx.invoked_with = invoke
+                self.ctx.message.content = f"!{invoke}"
+                if channel is not None:
+                    self.ctx.message.content += f" {channel.name}"
+                    self.ctx.guild.text_channels = [channel]
+
                 self.assertTrue(await self.cog.try_silence(self.ctx))
-                self.ctx.invoke.assert_awaited_once_with(self.silence.unsilence)
+                self.ctx.invoke.assert_awaited_once_with(self.silence.unsilence, channel=channel)
+
+    async def test_try_silence_unsilence_message(self):
+        """If the words after the command could not be converted to a channel, None should be passed as channel."""
+        self.silence.silence.can_run = AsyncMock(return_value=True)
+        self.bot.get_command.side_effect = (self.silence.silence, self.silence.unsilence)
+
+        self.ctx.invoked_with = "unshh"
+        self.ctx.message.content = "!unshh not_a_channel"
+
+        self.assertTrue(await self.cog.try_silence(self.ctx))
+        self.ctx.invoke.assert_awaited_once_with(self.silence.unsilence, channel=None)
 
     async def test_try_silence_no_match(self):
         """Should return `False` when message don't match."""

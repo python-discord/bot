@@ -5,7 +5,7 @@ import textwrap
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
-import fuzzywuzzy
+import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
@@ -117,9 +117,9 @@ class Information(Cog):
                 parsed_roles.add(role_name)
                 continue
 
-            match = fuzzywuzzy.process.extractOne(
+            match = rapidfuzz.process.extractOne(
                 role_name, all_roles, score_cutoff=80,
-                scorer=fuzzywuzzy.fuzz.ratio
+                scorer=rapidfuzz.fuzz.ratio
             )
 
             if not match:
@@ -241,8 +241,6 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
-        activity = await self.user_messages(user)
-
         if on_server:
             joined = time_since(user.joined_at, max_units=3)
             roles = ", ".join(role.mention for role in user.roles[1:])
@@ -272,8 +270,7 @@ class Information(Cog):
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
-            fields.append(activity)
-
+            fields.append(await self.user_messages(user))
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:

@@ -400,6 +400,8 @@ class Categories(metaclass=YAMLGetter):
     modmail: int
     voice: int
 
+    # 2021 Summer Code Jam
+    summer_code_jam: int
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
@@ -433,10 +435,13 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
 
+    black_formatter: int
+
     bot_commands: int
     discord_py: int
     esoteric: int
     voice_gate: int
+    code_jam_planning: int
 
     admins: int
     admin_spam: int
@@ -454,15 +459,17 @@ class Channels(metaclass=YAMLGetter):
     staff_announcements: int
 
     admins_voice: int
+    code_help_voice_0: int
     code_help_voice_1: int
-    code_help_voice_2: int
-    general_voice: int
+    general_voice_0: int
+    general_voice_1: int
     staff_voice: int
 
+    code_help_chat_0: int
     code_help_chat_1: int
-    code_help_chat_2: int
     staff_voice_chat: int
-    voice_chat: int
+    voice_chat_0: int
+    voice_chat_1: int
 
     big_brother_logs: int
     talent_pool: int
@@ -495,8 +502,10 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     core_developers: int
+    code_jam_event_team: int
     devops: int
     domain_leads: int
+    events_lead: int
     helpers: int
     moderators: int
     mod_team: int
@@ -504,7 +513,6 @@ class Roles(metaclass=YAMLGetter):
     project_leads: int
 
     jammers: int
-    team_leaders: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -602,7 +610,6 @@ class HelpChannels(metaclass=YAMLGetter):
     section = 'help_channels'
 
     enable: bool
-    claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes_claimant: int
     idle_minutes_others: int

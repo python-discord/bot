@@ -7,7 +7,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
-from bot.errors import InvalidInfractedUser
+from bot.errors import InvalidInfractedUserError
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ async def post_infraction(
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
         log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
-        raise InvalidInfractedUser(user)
+        raise InvalidInfractedUserError(user)
 
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
@@ -164,7 +164,7 @@ async def notify_infraction(
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=expires_at or "N/A",
+        expires=f"{expires_at} UTC" if expires_at else "N/A",
         reason=reason or "No reason provided."
     )
 
