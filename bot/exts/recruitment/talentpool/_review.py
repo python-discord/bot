@@ -254,7 +254,7 @@ class Reviewer:
                 last_channel = user_activity["top_channel_activity"][-1]
                 channels += f", and {last_channel[1]} in {last_channel[0]}"
 
-        joined_at_formatted = time_since(member.join_at)
+        joined_at_formatted = time_since(member.joined_at)
         review = (
             f"{member.name} joined the server **{joined_at_formatted}**"
             f" and has **{messages} messages**{channels}."
