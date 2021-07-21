@@ -96,11 +96,6 @@ class Reminders(Cog):
 
         footer_str = f"ID: {reminder_id}"
 
-        if delivery_dt:
-            # Reminder deletion will have a `None` `delivery_dt`
-            footer_str += ', Due'
-            embed.timestamp = delivery_dt
-
         embed.set_footer(text=footer_str)
 
         await ctx.send(embed=embed)
