@@ -46,7 +46,7 @@ class Information(Cog):
         """Return the total number of members for certain roles in `guild`."""
         roles = (
             guild.get_role(role_id) for role_id in (
-                constants.Roles.helpers, constants.Roles.moderators, constants.Roles.admins,
+                constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
                 constants.Roles.owners, constants.Roles.contributors,
             )
         )
