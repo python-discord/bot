@@ -1,4 +1,4 @@
-A [`docstring`](https://docs.python.org/3/glossary.html#term-docstring) is a string with triple quotes that's placed at the top of files, classes and functions. A docstring should contain a clear explanation of what it's describing. You can also include descriptions of the subject's parameter(s) and what it returns, as shown below:
+A [`docstring`](https://docs.python.org/3/glossary.html#term-docstring) is a string - always using triple quotes - that's placed at the top of files, classes and functions. A docstring should contain a clear explanation of what it's describing. You can also include descriptions of the subject's parameter(s) and what it returns, as shown below:
 ```py
 def greet(name: str, age: int) -> str:
     """
@@ -7,7 +7,7 @@ def greet(name: str, age: int) -> str:
     :param name: The name of the person to greet.
     :param age: The age of the person to greet.
 
-    :return: String representation of the greeting.
+    :return: The greeting.
     """
     return f"Hello {name}, you are {age} years old!"
 ```
