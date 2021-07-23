@@ -6,7 +6,6 @@ import sys
 import textwrap
 from collections import defaultdict
 from contextlib import suppress
-from functools import partial
 from types import SimpleNamespace
 from typing import Dict, NamedTuple, Optional, Tuple, Union
 
@@ -35,7 +34,6 @@ FORCE_PREFIX_GROUPS = (
     "pdbcommand",
     "2to3fixer",
 )
-DELETE_ERROR_MESSAGE_REACTION = '\u274c'  # :x:
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 # Delay to wait before trying to reach a rescheduled inventory again, in minutes
 FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
@@ -343,29 +341,12 @@ class DocCog(commands.Cog):
             if doc_embed is None:
                 error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
 
-                if ctx.message.mentions or ctx.message.role_mentions:
-                    await error_message.add_reaction(DELETE_ERROR_MESSAGE_REACTION)
+                await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
 
-                    _predicate_emoji_reaction = partial(predicate_emoji_reaction, ctx, error_message)
-                    try:
-                        await self.bot.wait_for(
-                            'reaction_add',
-                            check=_predicate_emoji_reaction,
-                            timeout=NOT_FOUND_DELETE_DELAY
-                        )
-
-                        with suppress(discord.NotFound):
-                            await error_message.delete()
-
-                    except asyncio.TimeoutError:
-                        await error_message.clear_reaction(DELETE_ERROR_MESSAGE_REACTION)
-
-                else:
-                    await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
+                if not (ctx.message.mentions or ctx.message.role_mentions):
                     with suppress(discord.NotFound):
                         await ctx.message.delete()
-                    with suppress(discord.NotFound):
-                        await error_message.delete()
+
             else:
                 msg = await ctx.send(embed=doc_embed)
                 await wait_for_deletion(msg, (ctx.author.id,))
