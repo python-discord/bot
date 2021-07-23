@@ -447,13 +447,3 @@ class DocCog(commands.Cog):
         self.inventory_scheduler.cancel_all()
         self.init_refresh_task.cancel()
         asyncio.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
-
-
-def predicate_emoji_reaction(
-        ctx: commands.Context,
-        message: discord.Message,
-        reaction: discord.Reaction,
-        user: discord.User
-) -> bool:
-    """Return whether command author added the `:x:` emote to the `message`."""
-    return reaction.message == message and user == ctx.author and str(reaction) == DELETE_ERROR_MESSAGE_REACTION
