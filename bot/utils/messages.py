@@ -95,8 +95,11 @@ async def wait_for_deletion(
         allow_mods=allow_mods,
     )
 
-    with contextlib.suppress(asyncio.TimeoutError):
+    try:
         await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
+    except asyncio.TimeoutError:
+        await message.clear_reactions()
+    else:
         await message.delete()
 
 
