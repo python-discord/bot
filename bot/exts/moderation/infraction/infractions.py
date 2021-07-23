@@ -356,7 +356,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 return
 
             log.trace("Old tempban is being replaced by new permaban.")
-            await self.pardon_infraction(ctx, "ban", user, is_temporary)
+            await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
 
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
