@@ -352,7 +352,7 @@ class DocCog(Cog):
                     try:
                         await self.bot.wait_for(
                             'reaction_add',
-                            check=_predicate_emoji_reaction
+                            check=_predicate_emoji_reaction,
                             timeout=NOT_FOUND_DELETE_DELAY
                         )
 
