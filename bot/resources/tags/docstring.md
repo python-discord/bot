@@ -4,7 +4,7 @@ Here's an example of a docstring:
 ```py
 def greet(name, age) -> str:
   """
-  Greet someone with their name and age.
+  Return a string that greets the given person, including their name and age.
 
   :param name: The name to greet.
   :type name: str
