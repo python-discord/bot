@@ -343,7 +343,7 @@ class DocCog(commands.Cog):
                 await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
 
                 with suppress(discord.NotFound):
-                    await message.clear_reaction(Emojis.trashcan)
+                    await error_message.clear_reaction(Emojis.trashcan)
 
                 if not (ctx.message.mentions or ctx.message.role_mentions):
                     with suppress(discord.NotFound):
