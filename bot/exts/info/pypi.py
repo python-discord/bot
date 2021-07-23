@@ -1,14 +1,16 @@
+import contextlib
 import itertools
 import logging
 import random
 import re
 
-from discord import Embed
+from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
+from bot.utils.messages import wait_for_deletion
 
 URL = "https://pypi.org/pypi/{package}/json"
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
@@ -72,7 +74,7 @@ class PyPi(Cog):
 
             # If won't ghost-ping when deleting message
             if not (ctx.message.mentions or ctx.message.role_mentions):
-                with suppress(NotFound):
+                with contextlib.suppress(NotFound):
                     await ctx.message.delete()
 
         else:
