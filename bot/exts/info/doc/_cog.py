@@ -13,7 +13,6 @@ from typing import Dict, NamedTuple, Optional, Tuple, Union
 import aiohttp
 import discord
 from discord import Colour, Embed, Message, NotFound, Reaction, User
-
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.bot import Bot
