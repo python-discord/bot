@@ -10,7 +10,6 @@ from types import SimpleNamespace
 from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
-import asyncio
 import discord
 from discord.ext import commands
 
