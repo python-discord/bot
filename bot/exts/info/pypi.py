@@ -72,7 +72,7 @@ class PyPi(Cog):
             error_message = await ctx.send(embed=embed)
             await wait_for_deletion(error_message, (ctx.author.id,), timeout=INVALID_INPUT_DELETE_DELAY)
 
-            # If won't ghost-ping when deleting message
+            # Make sure that we won't cause a ghost-ping by deleting the message
             if not (ctx.message.mentions or ctx.message.role_mentions):
                 with contextlib.suppress(NotFound):
                     await ctx.message.delete()
