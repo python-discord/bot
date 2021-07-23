@@ -470,5 +470,6 @@ class DocCog(Cog):
         asyncio.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
 
 
-def predicate_emoji_reaction(ctx: Context, error_message: Message, reaction: Reaction, user: User):
+def predicate_emoji_reaction(ctx: Context, error_message: Message, reaction: Reaction, user: User) -> bool:
+    """Return whether command author added the `:x:` emote to the `error_message`."""
     return reaction.message == error_message and user == ctx.author and str(reaction) == DELETE_ERROR_MESSAGE_REACTION
