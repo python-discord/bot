@@ -1,4 +1,4 @@
-A [`docstring`](https://docs.python.org/3/glossary.html#term-docstring) is a string with triple quotes that often used in file, classes, functions, etc. A docstring should have a clear explanation of exactly what the function does. You can also include descriptions of the function's parameter(s) and its return type, as shown below.
+A [`docstring`](https://docs.python.org/3/glossary.html#term-docstring) is a string with triple quotes that's placed at the top of files, classes and functions. A docstring should contain a clear explanation of what it's describing. You can also include descriptions of the subject's parameter(s) and its return type, as shown below:
 ```py
 def greet(name, age) -> str:
     """
@@ -9,11 +9,10 @@ def greet(name, age) -> str:
     :param age: The age to display.
     :type age: int
 
-    :return: String of the greeting.
+    :return: String representation of the greeting.
     """
-    return_string = f"Hello, {name} you are {age} years old!"
-    return return_string
+    return f"Hello {name}, you are {age} years old!"
 ```
-You can get the docstring by using `.__doc__` attribute. For the last example you can get it through: `print(greet.__doc__)`.
+You can get the docstring by using the `.__doc__` attribute. For the last example, you can print it by doing this: `print(greet.__doc__)`.
 
-For more details about what docstring is and it's usage check out this guide by [Real Python](https://realpython.com/documenting-python-code/#docstrings-background), or the [PEP-257 docs](https://www.python.org/dev/peps/pep-0257/#what-is-a-docstring).
+For more details about what a docstring is and its usage, check out this guide by [Real Python](https://realpython.com/documenting-python-code/#docstrings-background), or the [PEP-257 docs](https://www.python.org/dev/peps/pep-0257/#what-is-a-docstring).
