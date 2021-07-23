@@ -344,6 +344,7 @@ class DocCog(commands.Cog):
                 with suppress(discord.NotFound):
                     await error_message.clear_reaction(Emojis.trashcan)
 
+                # Make sure that we won't cause a ghost-ping by deleting the message
                 if not (ctx.message.mentions or ctx.message.role_mentions):
                     with suppress(discord.NotFound):
                         await ctx.message.delete()
