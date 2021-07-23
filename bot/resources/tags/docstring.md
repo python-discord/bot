@@ -11,6 +11,8 @@ def greet(name: str, age: int) -> str:
     """
     return f"Hello {name}, you are {age} years old!"
 ```
-You can get the docstring by using the `.__doc__` attribute. For the last example, you can print it by doing this: `print(greet.__doc__)`.
+You can get the docstring by using the [`inspect.getdoc`](https://docs.python.org/3/library/inspect.html#inspect.getdoc) function, from the built-in [`inspect`](https://docs.python.org/3/library/inspect.html) module, or by accessing the `.__doc__` attribute. `inspect.getdoc` is often preferred, as it clears indents from the docstring.
+
+For the last example, you can print it by doing this: `print(inspect.getdoc(greet))`.
 
 For more details about what a docstring is and its usage, check out this guide by [Real Python](https://realpython.com/documenting-python-code/#docstrings-background), or the [official docstring specification](https://www.python.org/dev/peps/pep-0257/#what-is-a-docstring).
