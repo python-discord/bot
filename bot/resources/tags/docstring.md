@@ -17,4 +17,4 @@ def greet(name, age) -> str:
 ```
 You can get the docstring by using `.__doc__` attribute. For the last example you can get it through: `print(greet.__doc__)`.
 
-For more details about what docstring is and it's usage check out [https://realpython.com/documenting-python-code/#docstrings-background](realpython) or [https://www.python.org/dev/peps/pep-0257/#what-is-a-docstring](official PEP docs).
+For more details about what docstring is and it's usage check out this guide by [Real Python](https://realpython.com/documenting-python-code/#docstrings-background), or the [PEP-257 docs](https://www.python.org/dev/peps/pep-0257/#what-is-a-docstring).
