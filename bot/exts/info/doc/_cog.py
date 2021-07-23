@@ -12,8 +12,8 @@ from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
 import discord
-from discord import Colour, Embed, Message, NotFound, Reaction, User
-from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+
+from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
@@ -59,7 +59,7 @@ class DocItem(NamedTuple):
         return self.base_url + self.relative_url_path
 
 
-class DocCog(Cog):
+class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Bot):
@@ -101,11 +101,11 @@ class DocCog(Cog):
         """
         self.base_urls[package_name] = base_url
 
-        for _group, items in inventory.items():
+        for group, items in inventory.items():
             for symbol_name, relative_doc_url in items:
 
                 # e.g. get 'class' from 'py:class'
-                group_name = _group.split(":")[1]
+                group_name = group.split(":")[1]
                 symbol_name = self.ensure_unique_symbol_name(
                     package_name,
                     group_name,
@@ -267,7 +267,7 @@ class DocCog(Cog):
                 return "Unable to parse the requested symbol."
         return markdown
 
-    async def create_symbol_embed(self, symbol_name: str) -> Optional[Embed]:
+    async def create_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -296,7 +296,7 @@ class DocCog(Cog):
             else:
                 footer_text = ""
 
-            embed = Embed(
+            embed = discord.Embed(
                 title=discord.utils.escape_markdown(symbol_name),
                 url=f"{doc_item.url}#{doc_item.symbol_id}",
                 description=await self.get_symbol_markdown(doc_item)
@@ -304,13 +304,13 @@ class DocCog(Cog):
             embed.set_footer(text=footer_text)
             return embed
 
-    @group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
-    async def docs_group(self, ctx: Context, *, symbol_name: Optional[str]) -> None:
+    @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
+    async def docs_group(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
         await self.get_command(ctx, symbol_name=symbol_name)
 
     @docs_group.command(name="getdoc", aliases=("g",))
-    async def get_command(self, ctx: Context, *, symbol_name: Optional[str]) -> None:
+    async def get_command(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
         """
         Return a documentation embed for a given symbol.
 
@@ -323,9 +323,9 @@ class DocCog(Cog):
             !docs getdoc aiohttp.ClientSession
         """
         if not symbol_name:
-            inventory_embed = Embed(
+            inventory_embed = discord.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)",
-                colour=Colour.blue()
+                colour=discord.Colour.blue()
             )
 
             lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
@@ -355,7 +355,7 @@ class DocCog(Cog):
                             timeout=NOT_FOUND_DELETE_DELAY
                         )
 
-                        with suppress(NotFound):
+                        with suppress(discord.NotFound):
                             await error_message.delete()
 
                     except asyncio.TimeoutError:
@@ -363,20 +363,20 @@ class DocCog(Cog):
 
                 else:
                     await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
-                    with suppress(NotFound):
+                    with suppress(discord.NotFound):
                         await ctx.message.delete()
-                    with suppress(NotFound):
+                    with suppress(discord.NotFound):
                         await error_message.delete()
             else:
                 msg = await ctx.send(embed=doc_embed)
                 await wait_for_deletion(msg, (ctx.author.id,))
 
     @docs_group.command(name="setdoc", aliases=("s",))
-    @has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def set_command(
         self,
-        ctx: Context,
+        ctx: commands.Context,
         package_name: PackageName,
         base_url: ValidURL,
         inventory: Inventory,
@@ -393,7 +393,7 @@ class DocCog(Cog):
                     https://docs.python.org/3/objects.inv
         """
         if not base_url.endswith("/"):
-            raise BadArgument("The base url must end with a slash.")
+            raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
         body = {
             "package": package_name,
@@ -411,9 +411,9 @@ class DocCog(Cog):
         await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
 
     @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
-    @has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
-    async def delete_command(self, ctx: Context, package_name: PackageName) -> None:
+    async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
         """
         Removes the specified package from the database.
 
@@ -428,9 +428,9 @@ class DocCog(Cog):
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.")
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
-    @has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
-    async def refresh_command(self, ctx: Context) -> None:
+    async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
         with ctx.typing():
@@ -443,17 +443,17 @@ class DocCog(Cog):
         if removed := ", ".join(old_inventories - new_inventories):
             removed = "- " + removed
 
-        embed = Embed(
+        embed = discord.Embed(
             title="Inventories refreshed",
             description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )
         await ctx.send(embed=embed)
 
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
-    @has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES)
     async def clear_cache_command(
         self,
-        ctx: Context,
+        ctx: commands.Context,
         package_name: Union[PackageName, allowed_strings("*")]  # noqa: F722
     ) -> None:
         """Clear the persistent redis cache for `package`."""
@@ -469,6 +469,11 @@ class DocCog(Cog):
         asyncio.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
 
 
-def predicate_emoji_reaction(ctx: Context, error_message: Message, reaction: Reaction, user: User) -> bool:
-    """Return whether command author added the `:x:` emote to the `error_message`."""
-    return reaction.message == error_message and user == ctx.author and str(reaction) == DELETE_ERROR_MESSAGE_REACTION
+def predicate_emoji_reaction(
+        ctx: commands.Context,
+        message: discord.Message,
+        reaction: discord.Reaction,
+        user: discord.User
+) -> bool:
+    """Return whether command author added the `:x:` emote to the `message`."""
+    return reaction.message == message and user == ctx.author and str(reaction) == DELETE_ERROR_MESSAGE_REACTION
