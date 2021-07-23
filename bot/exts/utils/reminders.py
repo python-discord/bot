@@ -84,8 +84,7 @@ class Reminders(Cog):
     async def _send_confirmation(
         ctx: Context,
         on_success: str,
-        reminder_id: t.Union[str, int],
-        delivery_dt: t.Optional[datetime],
+        reminder_id: t.Union[str, int]
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
         embed = discord.Embed(
@@ -95,11 +94,6 @@ class Reminders(Cog):
         )
 
         footer_str = f"ID: {reminder_id}"
-
-        if delivery_dt:
-            # Reminder deletion will have a `None` `delivery_dt`
-            footer_str += ', Due'
-            embed.timestamp = delivery_dt
 
         embed.set_footer(text=footer_str)
 
@@ -279,8 +273,7 @@ class Reminders(Cog):
         await self._send_confirmation(
             ctx,
             on_success=mention_string,
-            reminder_id=reminder["id"],
-            delivery_dt=expiration,
+            reminder_id=reminder["id"]
         )
 
         self.schedule_reminder(reminder)
@@ -383,15 +376,11 @@ class Reminders(Cog):
             return
         reminder = await self._edit_reminder(id_, payload)
 
-        # Parse the reminder expiration back into a datetime
-        expiration = isoparse(reminder["expiration"]).replace(tzinfo=None)
-
         # Send a confirmation message to the channel
         await self._send_confirmation(
             ctx,
             on_success="That reminder has been edited successfully!",
             reminder_id=id_,
-            delivery_dt=expiration,
         )
         await self._reschedule_reminder(reminder)
 
@@ -408,8 +397,7 @@ class Reminders(Cog):
         await self._send_confirmation(
             ctx,
             on_success="That reminder has been deleted successfully!",
-            reminder_id=id_,
-            delivery_dt=None,
+            reminder_id=id_
         )
 
     async def _can_modify(self, ctx: Context, reminder_id: t.Union[str, int]) -> bool:
