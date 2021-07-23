@@ -1,6 +1,4 @@
-A [`docstring`](https://docs.python.org/3/glossary.html#term-docstring) is a string with triple quotes that often used in file, classes, functions, etc. A docstring usually has clear explanation (such as what the function do, purposes of the function, and other details of the function), parameter(s) and a return type.
-
-Here's an example of a docstring:
+A [`docstring`](https://docs.python.org/3/glossary.html#term-docstring) is a string with triple quotes that often used in file, classes, functions, etc. A docstring should have a clear explanation of exactly what the function does. You can also include descriptions of the function's parameter(s) and its return type, as shown below.
 ```py
 def greet(name, age) -> str:
   """
