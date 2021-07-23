@@ -262,7 +262,6 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
         await self._method_subtests(self.cog.user_nomination_counts, test_values, header)
 
 
-@unittest.mock.patch("bot.exts.info.information.time_since", new=unittest.mock.MagicMock(return_value="1 year ago"))
 @unittest.mock.patch("bot.exts.info.information.constants.MODERATION_CHANNELS", new=[50])
 class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the creation of the `!user` embed."""
@@ -347,7 +346,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -356,7 +355,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Verified: {"True"}
                 Roles: &Moderators
             """).strip(),
@@ -379,7 +378,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -388,7 +387,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Roles: &Moderators
             """).strip(),
             embed.fields[1].value

@@ -13,7 +13,7 @@ from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF
 from bot.converters import Expiry
 from bot.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import format_infraction_with_duration
+from bot.utils.time import discord_timestamp, format_infraction_with_duration
 
 log = logging.getLogger(__name__)
 
@@ -134,16 +134,7 @@ class Stream(commands.Cog):
 
         await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
 
-        # Use embed as embed timestamps do timezone conversions.
-        embed = discord.Embed(
-            description=f"{Emojis.check_mark} {member.mention} can now stream.",
-            colour=Colours.soft_green
-        )
-        embed.set_footer(text=f"Streaming permission has been given to {member} until")
-        embed.timestamp = duration
-
-        # Mention in content as mentions in embeds don't ping
-        await ctx.send(content=member.mention, embed=embed)
+        await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {discord_timestamp(duration)}.")
 
         # Convert here for nicer logging
         revoke_time = format_infraction_with_duration(str(duration))

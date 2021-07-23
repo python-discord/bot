@@ -137,7 +137,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Ban",
-                        expires="2020-02-26 09:20 (23 hours and 59 minutes) UTC",
+                        expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="No reason provided."
                     ),
                     colour=Colours.soft_red,
@@ -193,7 +193,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
-                        expires="2020-02-26 09:20 (23 hours and 59 minutes) UTC",
+                        expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="Test"
                     ),
                     colour=Colours.soft_red,
@@ -213,7 +213,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         type="Mute",
                         expires="N/A",
                         reason="foo bar" * 4000
-                    )[:2045] + "...",
+                    )[:4093] + "...",
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(

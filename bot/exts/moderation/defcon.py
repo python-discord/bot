@@ -19,7 +19,9 @@ from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.messages import format_user
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta, parse_duration_string, relativedelta_to_timedelta
+from bot.utils.time import (
+    TimestampFormats, discord_timestamp, humanize_delta, parse_duration_string, relativedelta_to_timedelta
+)
 
 log = logging.getLogger(__name__)
 
@@ -150,7 +152,7 @@ class Defcon(Cog):
             colour=Colour.blurple(), title="DEFCON Status",
             description=f"""
                 **Threshold:** {humanize_delta(self.threshold) if self.threshold else "-"}
-                **Expires in:** {humanize_delta(relativedelta(self.expiry, datetime.utcnow())) if self.expiry else "-"}
+                **Expires:** {discord_timestamp(self.expiry, TimestampFormats.RELATIVE) if self.expiry else "-"}
                 **Verification level:** {ctx.guild.verification_level.name}
                 """
         )

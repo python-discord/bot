@@ -5,7 +5,7 @@ import textwrap
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
 
-import fuzzywuzzy
+import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
@@ -18,7 +18,7 @@ from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.helpers import join_role_stats
-from bot.utils.time import humanize_delta, time_since
+from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
 
 log = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class Information(Cog):
         """Return the total number of members for certain roles in `guild`."""
         roles = (
             guild.get_role(role_id) for role_id in (
-                constants.Roles.helpers, constants.Roles.moderators, constants.Roles.admins,
+                constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
                 constants.Roles.owners, constants.Roles.contributors,
             )
         )
@@ -122,9 +122,9 @@ class Information(Cog):
                 parsed_roles.add(role_name)
                 continue
 
-            match = fuzzywuzzy.process.extractOne(
+            match = rapidfuzz.process.extractOne(
                 role_name, all_roles, score_cutoff=80,
-                scorer=fuzzywuzzy.fuzz.ratio
+                scorer=rapidfuzz.fuzz.ratio
             )
 
             if not match:
@@ -159,7 +159,7 @@ class Information(Cog):
         """Returns an embed full of server information."""
         embed = Embed(colour=Colour.blurple(), title="Server Information")
 
-        created = time_since(ctx.guild.created_at, precision="days")
+        created = discord_timestamp(ctx.guild.created_at, TimestampFormats.RELATIVE)
         region = ctx.guild.region
         num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
@@ -229,7 +229,7 @@ class Information(Cog):
         """Creates an embed containing information on the `user`."""
         on_server = bool(ctx.guild.get_member(user.id))
 
-        created = time_since(user.created_at, max_units=3)
+        created = discord_timestamp(user.created_at, TimestampFormats.RELATIVE)
 
         name = str(user)
         if on_server and user.nick:
@@ -247,7 +247,7 @@ class Information(Cog):
                 badges.append(emoji)
 
         if on_server:
-            joined = time_since(user.joined_at, max_units=3)
+            joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
             roles = ", ".join(role.mention for role in user.roles[1:])
             membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
             if not is_mod_channel(ctx.channel):
