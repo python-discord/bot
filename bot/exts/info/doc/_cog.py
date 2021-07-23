@@ -341,8 +341,6 @@ class DocCog(commands.Cog):
             if doc_embed is None:
                 error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
                 await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
-                with suppress(discord.NotFound):
-                    await error_message.clear_reaction(Emojis.trashcan)
 
                 # Make sure that we won't cause a ghost-ping by deleting the message
                 if not (ctx.message.mentions or ctx.message.role_mentions):
