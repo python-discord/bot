@@ -68,8 +68,9 @@ async def wait_for_deletion(
     allow_mods: bool = True
 ) -> None:
     """
-    Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
-    If user doesn't respond in time, will clear all reactions to indicate option to delete has expired.
+    Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
+
+    If `timeout` expires then reactions are cleared to indicate the option to delete has expired.
 
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`.
