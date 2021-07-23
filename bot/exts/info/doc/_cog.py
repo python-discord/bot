@@ -12,7 +12,6 @@ from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
 import discord
-
 from discord.ext import commands
 
 from bot.bot import Bot
