@@ -1,8 +1,8 @@
-import contextlib
 import itertools
 import logging
 import random
 import re
+from contextlib import suppress
 
 from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
@@ -74,7 +74,7 @@ class PyPi(Cog):
 
             # Make sure that we won't cause a ghost-ping by deleting the message
             if not (ctx.message.mentions or ctx.message.role_mentions):
-                with contextlib.suppress(NotFound):
+                with suppress(NotFound):
                     await ctx.message.delete()
 
         else:
