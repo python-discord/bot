@@ -10,12 +10,11 @@ from types import SimpleNamespace
 from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
-import asyncio
 import discord
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import MODERATION_ROLES, RedirectOutput
+from bot.constants import Emojis, MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
 from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
@@ -35,7 +34,6 @@ FORCE_PREFIX_GROUPS = (
     "pdbcommand",
     "2to3fixer",
 )
-DELETE_ERROR_MESSAGE_REACTION = '\u274c'  # :x:
 NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 # Delay to wait before trying to reach a rescheduled inventory again, in minutes
 FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
@@ -342,29 +340,15 @@ class DocCog(commands.Cog):
 
             if doc_embed is None:
                 error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
+                await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
+                with suppress(discord.NotFound):
+                    await error_message.clear_reaction(Emojis.trashcan)
 
-                if ctx.message.mentions or ctx.message.role_mentions:
-                    await error_message.add_reaction(DELETE_ERROR_MESSAGE_REACTION)
-
-                    try:
-                        await self.bot.wait_for(
-                            'reaction_add',
-                            check=lambda reaction, user: reaction.message == error_message and user == ctx.author and str(reaction) == DELETE_ERROR_MESSAGE_REACTION,
-                            timeout=NOT_FOUND_DELETE_DELAY
-                        )
-
-                        with suppress(discord.HTTPException):
-                            await error_message.delete()
-
-                    except asyncio.TimeoutError:
-                        await error_message.clear_reaction(DELETE_ERROR_MESSAGE_REACTION)
-
-                else:
-                    await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
+                # Make sure that we won't cause a ghost-ping by deleting the message
+                if not (ctx.message.mentions or ctx.message.role_mentions):
                     with suppress(discord.NotFound):
                         await ctx.message.delete()
-                    with suppress(discord.NotFound):
-                        await error_message.delete()
+
             else:
                 msg = await ctx.send(embed=doc_embed)
                 await wait_for_deletion(msg, (ctx.author.id,))
