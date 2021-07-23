@@ -6,6 +6,7 @@ import sys
 import textwrap
 from collections import defaultdict
 from contextlib import suppress
+from functools import partial
 from types import SimpleNamespace
 from typing import Dict, NamedTuple, Optional, Tuple, Union
 
