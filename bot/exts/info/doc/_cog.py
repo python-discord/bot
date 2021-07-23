@@ -14,7 +14,7 @@ import discord
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES, RedirectOutput
+from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
 from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
