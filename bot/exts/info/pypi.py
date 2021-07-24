@@ -76,6 +76,7 @@ class PyPi(Cog):
             if not (ctx.message.mentions or ctx.message.role_mentions):
                 with suppress(NotFound):
                     await ctx.message.delete()
+                    await error_message.delete()
 
         else:
             await ctx.send(embed=embed)
