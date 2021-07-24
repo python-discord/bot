@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import logging
 import typing as t
@@ -10,10 +11,12 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import Emojis, Roles
 from bot.exts.events.code_jams import _channels
+from bot.utils.services import send_to_paste_service
 
 log = logging.getLogger(__name__)
 
 TEAM_LEADERS_COLOUR = 0x11806a
+DELETION_REACTION = "\U0001f4a5"
 
 
 class CodeJams(commands.Cog):
@@ -21,8 +24,6 @@ class CodeJams(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-
-        self.end_counter = 0
 
     @commands.group(aliases=("cj", "jam"))
     @commands.has_any_role(Roles.admins)
@@ -80,24 +81,67 @@ class CodeJams(commands.Cog):
         """
         Deletes all code jam channels.
 
-        Call it three times while spinning around for it all to end.
+        Displays a confirmation message with the categories and channels to be deleted. Pressing the added reaction
+        deletes those channels.
         """
-        self.end_counter += 1
-        if self.end_counter == 1:
-            await ctx.send("Are you sure about that?")
+        def predicate_deletion_emoji_reaction(reaction: discord.Reaction, user: discord.User) -> bool:
+            """Return True if the reaction :boom: was added by the context message author on this message."""
+            return (
+                reaction.message.id == message.id
+                and user.id == ctx.author.id
+                and str(reaction) == DELETION_REACTION
+            )
+
+        # A copy of the list of channels is stored. This is to make sure that we delete precisely the channels displayed
+        # in the confirmation message.
+        categories = self.jam_categories(ctx.guild)
+        category_channels = {category: category.channels.copy() for category in categories}
+
+        confirmation_message = await self._build_confirmation_message(category_channels)
+        message = await ctx.send(confirmation_message)
+        await message.add_reaction(DELETION_REACTION)
+        try:
+            await self.bot.wait_for(
+                'reaction_add',
+                check=predicate_deletion_emoji_reaction,
+                timeout=10
+            )
+
+        except asyncio.TimeoutError:
+            await message.clear_reaction(DELETION_REACTION)
             return
-        if self.end_counter == 2:
-            await ctx.send("Are you *really really* sure about that?")
-            return
 
-        self.end_counter = 0
+        else:
+            await message.clear_reaction(DELETION_REACTION)
+            for category, channels in category_channels.items():
+                for channel in channels:
+                    await channel.delete(reason="Code jam ended.")
+                await category.delete(reason="Code jam ended.")
 
-        for category in self.jam_categories(ctx.guild):
-            for channel in category.channels:
-                await channel.delete(reason="Code jam ended.")
-            await category.delete(reason="Code jam ended.")
+            await message.add_reaction(Emojis.check_mark)
 
-        await ctx.message.add_reaction(Emojis.check_mark)
+    @staticmethod
+    async def _build_confirmation_message(
+        categories: dict[discord.CategoryChannel, list[discord.abc.GuildChannel]]
+    ) -> str:
+        """Sends details of the channels to be deleted to the pasting service, and formats the confirmation message."""
+        def channel_repr(channel: discord.abc.GuildChannel) -> str:
+            """Formats the channel name and ID and a readable format."""
+            return f"{channel.name} ({channel.id})"
+
+        def format_category_info(category: discord.CategoryChannel, channels: list[discord.abc.GuildChannel]) -> str:
+            """Displays the category and the channels within it in a readable format."""
+            return f"{channel_repr(category)}:" + "".join(f"\n  - {channel_repr(channel)}" for channel in channels)
+
+        deletion_details = "\n\n".join(
+            format_category_info(category, channels) for category, channels in categories.items()
+        )
+
+        url = await send_to_paste_service(deletion_details)
+        if url is None:
+            url = "**Unable to send deletion details to the pasting service.**"
+
+        return f"Are you sure you want to delete all code jam channels?\n\nThe channels to be deleted: {url}"
 
     @codejam.command()
     @commands.has_any_role(Roles.admins, Roles.code_jam_event_team)
