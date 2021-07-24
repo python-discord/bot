@@ -285,7 +285,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 await _utils.send_active_infraction_message(ctx, active)
                 return
 
-            # Let the current mute attempt override an automatically triggered mute.
+            # Allow the current mute attempt to override an automatically triggered mute.
             log_text = await self.deactivate_infraction(active, notify=False)
             if "Failure" in log_text:
                 await ctx.send(
