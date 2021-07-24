@@ -346,6 +346,7 @@ class DocCog(commands.Cog):
                 if not (ctx.message.mentions or ctx.message.role_mentions):
                     with suppress(discord.NotFound):
                         await ctx.message.delete()
+                        await error_message.delete()
 
             else:
                 msg = await ctx.send(embed=doc_embed)
