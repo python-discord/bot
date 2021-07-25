@@ -14,7 +14,7 @@ import discord
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES, RedirectOutput
+from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
 from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
@@ -341,13 +341,12 @@ class DocCog(commands.Cog):
             if doc_embed is None:
                 error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
                 await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
-                with suppress(discord.NotFound):
-                    await error_message.clear_reaction(Emojis.trashcan)
 
                 # Make sure that we won't cause a ghost-ping by deleting the message
                 if not (ctx.message.mentions or ctx.message.role_mentions):
                     with suppress(discord.NotFound):
                         await ctx.message.delete()
+                        await error_message.delete()
 
             else:
                 msg = await ctx.send(embed=doc_embed)
