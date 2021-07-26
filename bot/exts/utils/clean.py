@@ -3,7 +3,7 @@ import random
 import re
 import time
 from collections import defaultdict
-from typing import Callable, DefaultDict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, DefaultDict, Iterable, List, Optional, Tuple
 
 from discord import Colour, Embed, Message, NotFound, TextChannel, User, errors
 from discord.ext import commands
@@ -79,7 +79,7 @@ class Clean(Cog):
         channels: Iterable[TextChannel],
         to_delete: Predicate,
         until_message: Optional[Message] = None
-    ) -> DefaultDict:
+    ) -> tuple[defaultdict[Any, list], list]:
         message_mappings = defaultdict(list)
         message_ids = []
 
