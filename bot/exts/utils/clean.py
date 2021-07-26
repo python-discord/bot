@@ -42,6 +42,18 @@ class Clean(Cog):
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
+    @staticmethod
+    def is_older_than_14d(message: Message) -> bool:
+        """
+        Precisely checks if message is older than 14 days, bulk deletion limit.
+
+        Inspired by how purge works internally.
+        Comparison on message age could possibly be less accurate which in turn would resort in problems
+        with message deletion if said messages are very close to the 14d mark.
+        """
+        two_weeks_old_snowflake = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
+        return message.id < two_weeks_old_snowflake
+
     async def _delete_messages_individually(self, messages: List[Message]) -> None:
         for message in messages:
             # Ensure that deletion was not canceled
@@ -104,17 +116,6 @@ class Clean(Cog):
                     message_ids.append(message.id)
 
         return message_mappings, message_ids
-
-    def is_older_than_14d(self, message: Message) -> bool:
-        """
-        Precisely checks if message is older than 14 days, bulk deletion limit.
-
-        Inspired by how purge works internally.
-        Comparison on message age could possibly be less accurate which in turn would resort in problems
-        with message deletion if said messages are very close to the 14d mark.
-        """
-        two_weeks_old_snowflake = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
-        return message.id < two_weeks_old_snowflake
 
     async def _clean_messages(
         self,
