@@ -12,9 +12,10 @@ from deepdiff import DeepDiff
 from discord import Colour
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, URLs
+from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
 from bot.utils.messages import format_user
 from bot.utils.time import humanize_delta
 
@@ -98,7 +99,7 @@ class ModLog(Cog, name="ModLog"):
         """Generate log embed and send to logging channel."""
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
-            description=text[:2045] + "..." if len(text) > 2048 else text
+            description=text[:4093] + "..." if len(text) > 4096 else text
         )
 
         if title and icon_url:
@@ -115,9 +116,9 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"@everyone\n{content}"
+                content = f"<@&{Roles.moderators}>\n{content}"
             else:
-                content = "@everyone"
+                content = f"<@&{Roles.moderators}>"
 
         # Truncate content to 2000 characters and append an ellipsis.
         if content and len(content) > 2000:
@@ -127,8 +128,7 @@ class ModLog(Cog, name="ModLog"):
         log_message = await channel.send(
             content=content,
             embed=embed,
-            files=files,
-            allowed_mentions=discord.AllowedMentions(everyone=True)
+            files=files
         )
 
         if additional_embeds:
@@ -564,7 +564,7 @@ class ModLog(Cog, name="ModLog"):
 
         # Shorten the message content if necessary
         content = message.clean_content
-        remaining_chars = 2040 - len(response)
+        remaining_chars = 4090 - len(response)
 
         if len(content) > remaining_chars:
             botlog_url = await self.upload_log(messages=[message], actor_id=message.author.id)
@@ -641,9 +641,10 @@ class ModLog(Cog, name="ModLog"):
         channel = msg_before.channel
         channel_name = f"{channel.category}/#{channel.name}" if channel.category else f"#{channel.name}"
 
+        cleaned_contents = (escape_markdown(msg.clean_content).split() for msg in (msg_before, msg_after))
         # Getting the difference per words and group them by type - add, remove, same
         # Note that this is intended grouping without sorting
-        diff = difflib.ndiff(msg_before.clean_content.split(), msg_after.clean_content.split())
+        diff = difflib.ndiff(*cleaned_contents)
         diff_groups = tuple(
             (diff_type, tuple(s[2:] for s in diff_words))
             for diff_type, diff_words in itertools.groupby(diff, key=lambda s: s[0])

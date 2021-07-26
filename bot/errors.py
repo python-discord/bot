@@ -22,7 +22,7 @@ class LockedResourceError(RuntimeError):
         )
 
 
-class InvalidInfractedUser(Exception):
+class InvalidInfractedUserError(Exception):
     """
     Exception raised upon attempt of infracting an invalid user.
 

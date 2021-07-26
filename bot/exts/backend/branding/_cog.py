@@ -50,7 +50,7 @@ def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
     For both `title` and `description`, empty string are valid values ~ fields will be empty.
     """
     colour = Colours.soft_green if success else Colours.soft_red
-    return discord.Embed(title=title[:256], description=description[:2048], colour=colour)
+    return discord.Embed(title=title[:256], description=description[:4096], colour=colour)
 
 
 def extract_event_duration(event: Event) -> str:
@@ -293,8 +293,8 @@ class Branding(commands.Cog):
 
         else:
             content = "Python Discord is entering a new event!" if is_notification else None
-            embed = discord.Embed(description=description[:2048], colour=discord.Colour.blurple())
-            embed.set_footer(text=duration[:2048])
+            embed = discord.Embed(description=description[:4096], colour=discord.Colour.blurple())
+            embed.set_footer(text=duration[:4096])
 
         await channel.send(content=content, embed=embed)
 

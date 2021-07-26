@@ -54,8 +54,12 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Permanent infractions
 
     @command()
-    async def warn(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
+    async def warn(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Warn a user for the given reason."""
+        if not isinstance(user, Member):
+            await ctx.send(":x: The user doesn't appear to be on the server.")
+            return
+
         infraction = await _utils.post_infraction(ctx, user, "warning", reason, active=False)
         if infraction is None:
             return
@@ -63,36 +67,61 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user)
 
     @command()
-    async def kick(self, ctx: Context, user: Member, *, reason: t.Optional[str] = None) -> None:
+    async def kick(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
         """Kick a user for the given reason."""
+        if not isinstance(user, Member):
+            await ctx.send(":x: The user doesn't appear to be on the server.")
+            return
+
         await self.apply_kick(ctx, user, reason)
 
     @command()
-    async def ban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str] = None) -> None:
-        """Permanently ban a user for the given reason and stop watching them with Big Brother."""
-        await self.apply_ban(ctx, user, reason)
+    async def ban(
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        duration: t.Optional[Expiry] = None,
+        *,
+        reason: t.Optional[str] = None
+    ) -> None:
+        """
+        Permanently ban a user for the given reason and stop watching them with Big Brother.
+
+        If duration is specified, it temporarily bans that user for the given duration.
+        """
+        await self.apply_ban(ctx, user, reason, expires_at=duration)
 
     @command(aliases=('pban',))
     async def purgeban(
         self,
         ctx: Context,
         user: FetchedMember,
-        purge_days: t.Optional[int] = 1,
+        duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
         """
-        Same as ban but removes all their messages for the given number of days, default being 1.
+        Same as ban but removes all their messages of the last 24 hours.
 
-        `purge_days` can only be values between 0 and 7.
-        Anything outside these bounds are automatically adjusted to their respective limits.
+        If duration is specified, it temporarily bans that user for the given duration.
         """
-        await self.apply_ban(ctx, user, reason, max(min(purge_days, 7), 0))
+        await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
 
     @command(aliases=('vban',))
-    async def voiceban(self, ctx: Context, user: FetchedMember, *, reason: t.Optional[str]) -> None:
-        """Permanently ban user from using voice channels."""
-        await self.apply_voice_ban(ctx, user, reason)
+    async def voiceban(
+        self,
+        ctx: Context,
+        user: FetchedMember,
+        duration: t.Optional[Expiry] = None,
+        *,
+        reason: t.Optional[str]
+    ) -> None:
+        """
+        Permanently ban user from using voice channels.
+
+        If duration is specified, it temporarily voice bans that user for the given duration.
+        """
+        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Temporary infractions
@@ -100,7 +129,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command(aliases=["mute"])
     async def tempmute(
         self, ctx: Context,
-        user: Member,
+        user: FetchedMember,
         duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str] = None
@@ -122,6 +151,10 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If no duration is given, a one hour duration is used by default.
         """
+        if not isinstance(user, Member):
+            await ctx.send(":x: The user doesn't appear to be on the server.")
+            return
+
         if duration is None:
             duration = await Duration().convert(ctx, "1h")
         await self.apply_mute(ctx, user, reason, expires_at=duration)

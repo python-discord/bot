@@ -19,6 +19,12 @@ from typing import Dict, List, Optional
 
 import yaml
 
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ModuleNotFoundError:
+    pass
+
 log = logging.getLogger(__name__)
 
 
@@ -175,13 +181,14 @@ class YAMLGetter(type):
             if cls.subsection is not None:
                 return _CONFIG_YAML[cls.section][cls.subsection][name]
             return _CONFIG_YAML[cls.section][name]
-        except KeyError:
+        except KeyError as e:
             dotted_path = '.'.join(
                 (cls.section, cls.subsection, name)
                 if cls.subsection is not None else (cls.section, name)
             )
-            log.critical(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
-            raise
+            # Only an INFO log since this can be caught through `hasattr` or `getattr`.
+            log.info(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            raise AttributeError(repr(name)) from e
 
     def __getitem__(cls, name):
         return cls.__getattr__(name)
@@ -199,6 +206,7 @@ class Bot(metaclass=YAMLGetter):
     prefix: str
     sentry_dsn: Optional[str]
     token: str
+    trace_loggers: Optional[str]
 
 
 class Redis(metaclass=YAMLGetter):
@@ -279,6 +287,8 @@ class Emojis(metaclass=YAMLGetter):
     badge_partner: str
     badge_staff: str
     badge_verified_bot_developer: str
+    verified_bot: str
+    bot: str
 
     defcon_shutdown: str  # noqa: E704
     defcon_unshutdown: str  # noqa: E704
@@ -295,6 +305,8 @@ class Emojis(metaclass=YAMLGetter):
     status_offline: str
     status_online: str
 
+    ducky_dave: str
+
     trashcan: str
 
     bullet: str
@@ -302,10 +314,6 @@ class Emojis(metaclass=YAMLGetter):
     cross_mark: str
     new: str
     pencil: str
-
-    comments: str
-    upvotes: str
-    user: str
 
     ok_hand: str
 
@@ -392,6 +400,8 @@ class Categories(metaclass=YAMLGetter):
     modmail: int
     voice: int
 
+    # 2021 Summer Code Jam
+    summer_code_jam: int
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
@@ -417,6 +427,7 @@ class Channels(metaclass=YAMLGetter):
     attachment_log: int
     message_log: int
     mod_log: int
+    nomination_archive: int
     user_log: int
     voice_log: int
 
@@ -424,10 +435,13 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
 
+    black_formatter: int
+
     bot_commands: int
     discord_py: int
     esoteric: int
     voice_gate: int
+    code_jam_planning: int
 
     admins: int
     admin_spam: int
@@ -445,15 +459,17 @@ class Channels(metaclass=YAMLGetter):
     staff_announcements: int
 
     admins_voice: int
+    code_help_voice_0: int
     code_help_voice_1: int
-    code_help_voice_2: int
-    general_voice: int
+    general_voice_0: int
+    general_voice_1: int
     staff_voice: int
 
+    code_help_chat_0: int
     code_help_chat_1: int
-    code_help_chat_2: int
     staff_voice_chat: int
-    voice_chat: int
+    voice_chat_0: int
+    voice_chat_1: int
 
     big_brother_logs: int
     talent_pool: int
@@ -467,7 +483,6 @@ class Webhooks(metaclass=YAMLGetter):
     dev_log: int
     duck_pond: int
     incidents_archive: int
-    reddit: int
     talent_pool: int
 
 
@@ -487,15 +502,17 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     core_developers: int
+    code_jam_event_team: int
     devops: int
     domain_leads: int
+    events_lead: int
     helpers: int
     moderators: int
+    mod_team: int
     owners: int
     project_leads: int
 
     jammers: int
-    team_leaders: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -546,12 +563,13 @@ class URLs(metaclass=YAMLGetter):
     paste_service: str
 
 
-class Reddit(metaclass=YAMLGetter):
-    section = "reddit"
+class Metabase(metaclass=YAMLGetter):
+    section = "metabase"
 
-    client_id: Optional[str]
-    secret: Optional[str]
-    subreddits: list
+    username: Optional[str]
+    password: Optional[str]
+    url: str
+    max_session_age: int
 
 
 class AntiSpam(metaclass=YAMLGetter):
@@ -592,7 +610,6 @@ class HelpChannels(metaclass=YAMLGetter):
     section = 'help_channels'
 
     enable: bool
-    claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes_claimant: int
     idle_minutes_others: int

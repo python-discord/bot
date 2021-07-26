@@ -23,15 +23,12 @@ jobs:
       PIP_NO_CACHE_DIR: false
       PIP_USER: 1
 
-      # Hide the graphical elements from pipenv's output
-      PIPENV_HIDE_EMOJIS: 1
-      PIPENV_NOSPIN: 1
-
-      # Make sure pipenv does not try reuse an environment it's running in
-      PIPENV_IGNORE_VIRTUALENVS: 1
+      # Make sure package manager does not use virtualenv
+      POETRY_VIRTUALENVS_CREATE: false
 
       # Specify explicit paths for python dependencies and the pre-commit
       # environment so we know which directories to cache
+      POETRY_CACHE_DIR: ${{ github.workspace }}/.cache/py-user-base
       PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
       PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
 
@@ -46,7 +43,7 @@ jobs:
         id: python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       # This step caches our Python dependencies. To make sure we
       # only restore a cache when the dependencies, the python version,
@@ -61,14 +58,14 @@ jobs:
           path: ${{ env.PYTHONUSERBASE }}
           key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
           ${{ steps.python.outputs.python-version }}-\
-          ${{ hashFiles('./Pipfile', './Pipfile.lock') }}"
+          ${{ hashFiles('./pyproject.toml', './poetry.lock') }}"
 
       # Install our dependencies if we did not restore a dependency cache
-      - name: Install dependencies using pipenv
+      - name: Install dependencies using poetry
         if: steps.python_cache.outputs.cache-hit != 'true'
         run: |
-          pip install pipenv
-          pipenv install --dev --deploy --system
+          pip install poetry
+          poetry install
 
       # This step caches our pre-commit environment. To make sure we
       # do create a new environment when our pre-commit setup changes,
@@ -100,12 +97,8 @@ jobs:
         --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
         [flake8] %(code)s: %(text)s'"
 
-      # We run `coverage` using the `python` command so we can suppress
-      # irrelevant warnings in our CI output.
       - name: Run tests and generate coverage report
-        run: |
-            python -Wignore -m coverage run -m unittest
-            coverage report -m
+        run: pytest -n auto --cov --disable-warnings -q
 
       # This step will publish the coverage reports coveralls.io and
       # print a "job" link in the output of the GitHub Action

@@ -18,6 +18,7 @@ from bot.constants import (
 )
 from bot.converters import Duration
 from bot.exts.moderation.modlog import ModLog
+from bot.exts.utils.jams import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.utils import lock, scheduling
 from bot.utils.messages import format_user, send_attachments
 
@@ -84,7 +85,7 @@ class DeletionContext:
             mod_alert_message += "Message:\n"
             [message] = self.messages.values()
             content = message.clean_content
-            remaining_chars = 2040 - len(mod_alert_message)
+            remaining_chars = 4080 - len(mod_alert_message)
 
             if len(content) > remaining_chars:
                 content = content[:remaining_chars] + "..."
@@ -148,6 +149,7 @@ class AntiSpam(Cog):
             not message.guild
             or message.guild.id != GuildConfig.id
             or message.author.bot
+            or (hasattr(message.channel, "category") and message.channel.category.name == JAM_CATEGORY_NAME)
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
         ):

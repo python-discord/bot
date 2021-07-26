@@ -44,6 +44,8 @@ class BotCog(Cog, name="Bot"):
         """Repeat the given message in either a specified channel or the current channel."""
         if channel is None:
             await ctx.send(text)
+        elif not channel.permissions_for(ctx.author).send_messages:
+            await ctx.send("You don't have permission to speak in that channel.")
         else:
             await channel.send(text)
 

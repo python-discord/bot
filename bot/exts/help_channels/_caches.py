@@ -24,3 +24,12 @@ question_messages = RedisCache(namespace="HelpChannels.question_messages")
 # This cache keeps track of the dynamic message ID for
 # the continuously updated message in the #How-to-get-help channel.
 dynamic_message = RedisCache(namespace="HelpChannels.dynamic_message")
+
+# This cache keeps track of who has help-dms on.
+# RedisCache[discord.User.id, bool]
+help_dm = RedisCache(namespace="HelpChannels.help_dm")
+
+# This cache tracks member who are participating and opted in to help channel dms.
+# serialise the set as a comma separated string to allow usage with redis
+# RedisCache[discord.TextChannel.id, str[set[discord.User.id]]]
+session_participants = RedisCache(namespace="HelpChannels.session_participants")

@@ -1,7 +1,8 @@
 bot:
-    prefix:      "!"
-    sentry_dsn:  !ENV "BOT_SENTRY_DSN"
-    token:       !ENV "BOT_TOKEN"
+    prefix:         "!"
+    sentry_dsn:     !ENV "BOT_SENTRY_DSN"
+    token:          !ENV "BOT_TOKEN"
+    trace_loggers:  !ENV "BOT_TRACE_LOGGERS"
 
     clean:
         # Maximum number of messages to traverse for clean commands
@@ -46,6 +47,8 @@ style:
         badge_partner: "<:partner:748666453242413136>"
         badge_staff: "<:discord_staff:743882896498098226>"
         badge_verified_bot_developer: "<:verified_bot_dev:743882897299210310>"
+        bot: "<:bot:812712599464443914>"
+        verified_bot: "<:verified_bot:811645219220750347>"
 
         defcon_shutdown:    "<:defcondisabled:470326273952972810>"
         defcon_unshutdown:  "<:defconenabled:470326274213150730>"
@@ -53,14 +56,16 @@ style:
 
         failmail: "<:failmail:633660039931887616>"
 
-        incident_actioned: "<:incident_actioned:719645530128646266>"
-        incident_investigating: "<:incident_investigating:719645658671480924>"
-        incident_unactioned: "<:incident_unactioned:719645583245180960>"
+        incident_actioned: "<:incident_actioned:714221559279255583>"
+        incident_investigating: "<:incident_investigating:714224190928191551>"
+        incident_unactioned: "<:incident_unactioned:714223099645526026>"
 
         status_dnd:     "<:status_dnd:470326272082313216>"
         status_idle:    "<:status_idle:470326266625785866>"
         status_offline: "<:status_offline:470326266537705472>"
         status_online:  "<:status_online:470326272351010816>"
+
+        ducky_dave: "<:ducky_dave:742058418692423772>"
 
         trashcan: "<:trashcan:637136429717389331>"
 
@@ -69,11 +74,6 @@ style:
         cross_mark: "\u274C"
         new:        "\U0001F195"
         pencil:     "\u270F"
-
-        # emotes used for #reddit
-        comments:       "<:reddit_comments:755845255001014384>"
-        upvotes:        "<:reddit_upvotes:755845219890757644>"
-        user:           "<:reddit_users:755845303822974997>"
 
         ok_hand: ":ok_hand:"
 
@@ -142,6 +142,7 @@ guild:
         moderators:         &MODS_CATEGORY  749736277464842262
         modmail:            &MODMAIL        714494672835444826
         voice:                              356013253765234688
+        summer_code_jam:                    861692638540857384
 
     channels:
         # Public announcement and news channels
@@ -172,8 +173,12 @@ guild:
         attachment_log:     &ATTACH_LOG     649243850006855680
         message_log:        &MESSAGE_LOG    467752170159079424
         mod_log:            &MOD_LOG        282638479504965634
+        nomination_archive:                 833371042046148738
         user_log:                           528976905546760203
         voice_log:                          640292421988646961
+
+        # Open Source Projects
+        black_formatter:    &BLACK_FORMATTER 846434317021741086
 
         # Off-topic
         off_topic_0:    291284109232308226
@@ -184,6 +189,7 @@ guild:
         bot_commands:       &BOT_CMD        267659945086812160
         esoteric:                           470884583684964352
         voice_gate:                         764802555427029012
+        code_jam_planning:                  490217981872177157
 
         # Staff
         admins:             &ADMINS         365960823622991872
@@ -194,6 +200,7 @@ guild:
         incidents:                          714214212200562749
         incidents_archive:                  720668923636351037
         mod_alerts:                         473092532147060736
+        mods:               &MODS           305126844661760000
         nominations:                        822920136150745168
         nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
@@ -207,16 +214,18 @@ guild:
 
         # Voice Channels
         admins_voice:       &ADMINS_VOICE   500734494840717332
-        code_help_voice_1:                  751592231726481530
-        code_help_voice_2:                  764232549840846858
-        general_voice:                      751591688538947646
+        code_help_voice_0:                  751592231726481530
+        code_help_voice_1:                  764232549840846858
+        general_voice_0:                    751591688538947646
+        general_voice_1:                    799641437645701151
         staff_voice:        &STAFF_VOICE    412375055910043655
 
         # Voice Chat
-        code_help_chat_1:                   755154969761677312
-        code_help_chat_2:                   766330079135268884
+        code_help_chat_0:                   755154969761677312
+        code_help_chat_1:                   766330079135268884
         staff_voice_chat:                   541638762007101470
-        voice_chat:                         412357430186344448
+        voice_chat_0:                       412357430186344448
+        voice_chat_1:                       799647045886541885
 
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
@@ -230,6 +239,7 @@ guild:
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
+        - *MODS
 
     # Modlog cog ignores events which occur in these channels
     modlog_blacklist:
@@ -243,6 +253,7 @@ guild:
     reminder_whitelist:
         - *BOT_CMD
         - *DEV_CONTRIB
+        - *BLACK_FORMATTER
 
     roles:
         announcements:                          463658397560995840
@@ -257,29 +268,32 @@ guild:
         # Staff
         admins:             &ADMINS_ROLE    267628507062992896
         core_developers:                    587606783669829632
+        code_jam_event_team:                787816728474288181
         devops:                             409416496733880320
         domain_leads:                       807415650778742785
+        events_lead:                        778361735739998228
         helpers:            &HELPERS_ROLE   267630620367257601
-        moderators:         &MODS_ROLE      267629731250176001
+        moderators:         &MODS_ROLE      831776746206265384
+        mod_team:           &MOD_TEAM_ROLE  267629731250176001
         owners:             &OWNERS_ROLE    267627879762755584
         project_leads:                      815701647526330398
 
         # Code Jam
         jammers:        737249140966162473
-        team_leaders:   737250302834638889
 
         # Streaming
         video:          764245844798079016
 
     moderation_roles:
         - *ADMINS_ROLE
+        - *MOD_TEAM_ROLE
         - *MODS_ROLE
         - *OWNERS_ROLE
 
     staff_roles:
         - *ADMINS_ROLE
         - *HELPERS_ROLE
-        - *MODS_ROLE
+        - *MOD_TEAM_ROLE
         - *OWNERS_ROLE
 
     webhooks:
@@ -288,7 +302,6 @@ guild:
         duck_pond:                          637821475327311927
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
-        reddit:                             635408384794951680
         talent_pool:                        569145364800602132
 
 
@@ -390,7 +403,7 @@ anti_spam:
 
         chars:
             interval: 5
-            max: 3_000
+            max: 4_200
 
         discord_emojis:
             interval: 10
@@ -418,11 +431,14 @@ anti_spam:
             max: 3
 
 
-reddit:
-    client_id: !ENV "REDDIT_CLIENT_ID"
-    secret: !ENV "REDDIT_SECRET"
-    subreddits:
-        - 'r/Python'
+
+metabase:
+    username: !ENV "METABASE_USERNAME"
+    password: !ENV "METABASE_PASSWORD"
+    url: "http://metabase.default.svc.cluster.local/api"
+    # 14 days, see https://www.metabase.com/docs/latest/operations-guide/environment-variables.html#max_session_age
+    max_session_age: 20160
+
 
 
 big_brother:
@@ -457,9 +473,6 @@ free:
 
 help_channels:
     enable: true
-
-    # Minimum interval before allowing a certain user to claim a new help channel
-    claim_minutes: 15
 
     # Roles which are allowed to use the command which makes channels dormant
     cmd_whitelist:
@@ -506,7 +519,7 @@ redirect_output:
 
 
 duck_pond:
-    threshold: 5
+    threshold: 7
     channel_blacklist:
         - *ANNOUNCEMENTS
         - *PYNEWS_CHANNEL

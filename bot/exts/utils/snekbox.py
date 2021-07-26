@@ -13,7 +13,7 @@ from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Roles, URLs
-from bot.decorators import in_whitelist
+from bot.decorators import redirect_output
 from bot.utils import send_to_paste_service
 from bot.utils.messages import wait_for_deletion
 
@@ -38,9 +38,9 @@ RAW_CODE_REGEX = re.compile(
 
 MAX_PASTE_LEN = 10000
 
-# `!eval` command whitelists
-EVAL_CHANNELS = (Channels.bot_commands, Channels.esoteric)
-EVAL_CATEGORIES = (Categories.help_available, Categories.help_in_use, Categories.voice)
+# `!eval` command whitelists and blacklists.
+NO_EVAL_CHANNELS = (Channels.python_general,)
+NO_EVAL_CATEGORIES = ()
 EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 SIGKILL = 9
@@ -280,7 +280,13 @@ class Snekbox(Cog):
 
     @command(name="eval", aliases=("e",))
     @guild_only()
-    @in_whitelist(channels=EVAL_CHANNELS, categories=EVAL_CATEGORIES, roles=EVAL_ROLES)
+    @redirect_output(
+        destination_channel=Channels.bot_commands,
+        bypass_roles=EVAL_ROLES,
+        categories=NO_EVAL_CATEGORIES,
+        channels=NO_EVAL_CHANNELS,
+        ping_user=False
+    )
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.

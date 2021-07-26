@@ -4,6 +4,14 @@ Our bot is one of the most important tools we have for running our community. As
 
 _**Note:** This is a practical guide to getting started with writing tests for our bot, not a general introduction to writing unit tests in Python. If you're looking for a more general introduction, you can take a look at the [Additional resources](#additional-resources) section at the bottom of this page._
 
+### Table of contents:
+- [Tools](#tools)
+- [Running tests](#running-tests)  
+- [Writing tests](#writing-tests)
+- [Mocking](#mocking)
+- [Some considerations](#some-considerations)
+- [Additional resources](#additional-resources)
+
 ## Tools
 
 We are using the following modules and packages for our unit tests:
@@ -11,14 +19,42 @@ We are using the following modules and packages for our unit tests:
 - [unittest](https://docs.python.org/3/library/unittest.html) (standard library)
 - [unittest.mock](https://docs.python.org/3/library/unittest.mock.html) (standard library)
 - [coverage.py](https://coverage.readthedocs.io/en/stable/)
+- [pytest-cov](https://pytest-cov.readthedocs.io/en/latest/index.html)
 
-To ensure the results you obtain on your personal machine are comparable to those generated in the Azure pipeline, please make sure to run your tests with the virtual environment defined by our [Pipfile](/Pipfile). To run your tests with `pipenv`, we've provided two "scripts" shortcuts:
+We also use the following package as a test runner:
+- [pytest](https://docs.pytest.org/en/6.2.x/)
 
-- `pipenv run test` will run `unittest` with `coverage.py`
-- `pipenv run test path/to/test.py` will run a specific test.
-- `pipenv run report` will generate a coverage report of the tests you've run with `pipenv run test`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
+To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [Poetry Project](/pyproject.toml). To run your tests with `poetry`, we've provided the following "script" shortcuts:
 
-If you want a coverage report, make sure to run the tests with `pipenv run test` *first*.
+- `poetry run task test-nocov` will run `pytest`.
+- `poetry run task test` will run `pytest` with `pytest-cov`.
+- `poetry run task test path/to/test.py` will run a specific test.
+- `poetry run task report` will generate a coverage report of the tests you've run with `poetry run task test`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
+
+If you want a coverage report, make sure to run the tests with `poetry run task test` *first*.
+
+## Running tests
+There are multiple ways to run the tests, which one you use will be determined by your goal, and stage in development.
+
+When actively developing, you'll most likely be working on one portion of the codebase, and as a result, won't need to run the entire test suite.
+To run just one file, and save time, you can use the following command:
+```shell
+poetry run task test-nocov <path/to/file.py>
+```
+
+For example:
+```shell
+poetry run task test-nocov tests/bot/exts/test_cogs.py
+```
+will run the test suite in the `test_cogs` file.
+
+If you'd like to collect coverage as well, you can append `--cov` to the command above.
+
+
+If you're done and are preparing to commit and push your code, it's a good idea to run the entire test suite as a sanity check:
+```shell
+poetry run task test
+```
 
 ## Writing tests
 
@@ -114,7 +150,7 @@ class BotCogTests(unittest.TestCase):
 
 ### Mocking coroutines
 
-By default, the `unittest.mock.Mock` and `unittest.mock.MagicMock` classes cannot mock coroutines, since the `__call__` method they provide is synchronous. In anticipation of the `AsyncMock` that will be [introduced in Python 3.8](https://docs.python.org/3.9/whatsnew/3.8.html#unittest), we have added an `AsyncMock` helper to [`helpers.py`](/tests/helpers.py). Do note that this drop-in replacement only implements an asynchronous `__call__` method, not the additional assertions that will come with the new `AsyncMock` type in Python 3.8.
+By default, the `unittest.mock.Mock` and `unittest.mock.MagicMock` classes cannot mock coroutines, since the `__call__` method they provide is synchronous. The [`AsyncMock`](https://docs.python.org/3/library/unittest.mock.html#unittest.mock.AsyncMock) that has been [introduced in Python 3.8](https://docs.python.org/3.9/whatsnew/3.8.html#unittest) is an asynchronous version of `MagicMock` that can be used anywhere a coroutine is expected.
 
 ### Special mocks for some `discord.py` types
 

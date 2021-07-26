@@ -12,7 +12,8 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _caches, _channel, _cooldown, _message, _name, _stats
+from bot.constants import Channels, RedirectOutput
+from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
 log = logging.getLogger(__name__)
@@ -94,6 +95,24 @@ class HelpChannels(commands.Cog):
 
         self.scheduler.cancel_all()
 
+    async def _handle_role_change(self, member: discord.Member, coro: t.Callable[..., t.Coroutine]) -> None:
+        """
+        Change `member`'s cooldown role via awaiting `coro` and handle errors.
+
+        `coro` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
+        """
+        try:
+            await coro(self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.help_cooldown))
+        except discord.NotFound:
+            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
+        except discord.Forbidden:
+            log.debug(
+                f"Forbidden to change role for {member} ({member.id}); "
+                f"possibly due to role hierarchy"
+            )
+        except discord.HTTPException as e:
+            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
+
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True)
@@ -106,9 +125,10 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
         await self.move_to_in_use(message.channel)
-        await _cooldown.revoke_send_permissions(message.author, self.scheduler)
+        await self._handle_role_change(message.author, message.author.add_roles)
 
         await _message.pin(message)
+
         try:
             await _message.dm_on_open(message)
         except Exception as e:
@@ -276,7 +296,6 @@ class HelpChannels(commands.Cog):
 
         log.trace("Initialising the cog.")
         await self.init_categories()
-        await _cooldown.check_cooldowns(self.scheduler)
 
         self.channel_queue = self.create_channel_queue()
         self.name_queue = _name.create_name_queue(
@@ -406,17 +425,13 @@ class HelpChannels(commands.Cog):
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
-
-        # Ignore missing tasks because a channel may still be dormant after the cooldown expires.
-        if claimant_id in self.scheduler:
-            self.scheduler.cancel(claimant_id)
+        await _caches.session_participants.delete(channel.id)
 
         claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
         if claimant is None:
             log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
-        elif not any(claimant.id == user_id for _, user_id in await _caches.claimants.items()):
-            # Remove the cooldown role if the claimant has no other channels left
-            await _cooldown.remove_cooldown_role(claimant)
+        else:
+            await self._handle_role_change(claimant, claimant.remove_roles)
 
         await _message.unpin(channel)
         await _stats.report_complete_session(channel.id, closed_on)
@@ -453,7 +468,9 @@ class HelpChannels(commands.Cog):
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
-        else:
+
+        elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
+            await self.notify_session_participants(message)
             await _message.update_message_caches(message)
 
     @commands.Cog.listener()
@@ -522,3 +539,91 @@ class HelpChannels(commands.Cog):
         )
         self.dynamic_message = new_dynamic_message["id"]
         await _caches.dynamic_message.set("message_id", self.dynamic_message)
+
+    @staticmethod
+    def _serialise_session_participants(participants: set[int]) -> str:
+        """Convert a set to a comma separated string."""
+        return ','.join(str(p) for p in participants)
+
+    @staticmethod
+    def _deserialise_session_participants(s: str) -> set[int]:
+        """Convert a comma separated string into a set."""
+        return set(int(user_id) for user_id in s.split(",") if user_id != "")
+
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
+    async def notify_session_participants(self, message: discord.Message) -> None:
+        """
+        Check if the message author meets the requirements to be notified.
+
+        If they meet the requirements they are notified.
+        """
+        if await _caches.claimants.get(message.channel.id) == message.author.id:
+            return  # Ignore messages sent by claimants
+
+        if not await _caches.help_dm.get(message.author.id):
+            return  # Ignore message if user is opted out of help dms
+
+        if (await self.bot.get_context(message)).command == self.close_command:
+            return  # Ignore messages that are closing the channel
+
+        session_participants = self._deserialise_session_participants(
+            await _caches.session_participants.get(message.channel.id) or ""
+        )
+
+        if message.author.id not in session_participants:
+            session_participants.add(message.author.id)
+
+            embed = discord.Embed(
+                title="Currently Helping",
+                description=f"You're currently helping in {message.channel.mention}",
+                color=constants.Colours.soft_green,
+                timestamp=message.created_at
+            )
+            embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
+
+            try:
+                await message.author.send(embed=embed)
+            except discord.Forbidden:
+                log.trace(
+                    f"Failed to send helpdm message to {message.author.id}. DMs Closed/Blocked. "
+                    "Removing user from helpdm."
+                )
+                bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
+                await _caches.help_dm.delete(message.author.id)
+                await bot_commands_channel.send(
+                    f"{message.author.mention} {constants.Emojis.cross_mark} "
+                    "To receive updates on help channels you're active in, enable your DMs.",
+                    delete_after=RedirectOutput.delete_delay
+                )
+                return
+
+            await _caches.session_participants.set(
+                message.channel.id,
+                self._serialise_session_participants(session_participants)
+            )
+
+    @commands.command(name="helpdm")
+    async def helpdm_command(
+        self,
+        ctx: commands.Context,
+        state_bool: bool
+    ) -> None:
+        """
+        Allows user to toggle "Helping" dms.
+
+        If this is set to on the user will receive a dm for the channel they are participating in.
+
+        If this is set to off the user will not receive a dm for channel that they are participating in.
+        """
+        state_str = "ON" if state_bool else "OFF"
+
+        if state_bool == await _caches.help_dm.get(ctx.author.id, False):
+            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state_str}")
+            return
+
+        if state_bool:
+            await _caches.help_dm.set(ctx.author.id, True)
+        else:
+            await _caches.help_dm.delete(ctx.author.id)
+        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")
