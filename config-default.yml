@@ -1,3 +1,6 @@
+debug: false
+
+
 bot:
     prefix:         "!"
     sentry_dsn:     !ENV "BOT_SENTRY_DSN"

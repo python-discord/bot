@@ -687,7 +687,7 @@ class VideoPermission(metaclass=YAMLGetter):
 
 
 # Debug mode
-DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
+DEBUG_MODE: bool = _CONFIG_YAML["debug"]
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
