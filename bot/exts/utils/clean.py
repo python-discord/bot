@@ -1,5 +1,4 @@
 import logging
-import random
 import re
 import time
 from collections import defaultdict
@@ -8,10 +7,11 @@ from typing import Any, Callable, DefaultDict, Iterable, List, Optional, Tuple
 from discord import Colour, Embed, Message, NotFound, TextChannel, User, errors
 from discord.ext import commands
 from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands.errors import BadArgument, MaxConcurrencyReached, MissingRequiredArgument
 
 from bot.bot import Bot
 from bot.constants import (
-    Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
+    Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES
 )
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.channel import is_mod_channel
@@ -168,55 +168,24 @@ class Clean(Cog):
 
         # Is this an acceptable amount of messages to clean?
         if amount > CleanMessages.message_limit:
-            embed = Embed(
-                color=Colour(Colours.soft_red),
-                title=random.choice(NEGATIVE_REPLIES),
-                description=f"You cannot clean more than {CleanMessages.message_limit} messages."
-            )
-            await ctx.send(embed=embed)
-            return
+            raise BadArgument(f"You cannot clean more than {CleanMessages.message_limit} messages.")
 
         if after_message:
-
             # Ensure that until_message is specified.
             if not until_message:
-                embed = Embed(
-                    color=Colour(Colours.soft_red),
-                    title=random.choice(NEGATIVE_REPLIES),
-                    description="`until_message` must be specified if `after_message` is specified."
-                )
-                await ctx.send(embed=embed)
-                return
+                raise MissingRequiredArgument("`until_message` must be specified if `after_message` is specified.")
 
-            # Check if the messages are not in same channel
+            # Messages are not in same channel
             if after_message.channel != until_message.channel:
-                embed = Embed(
-                    color=Colour(Colours.soft_red),
-                    title=random.choice(NEGATIVE_REPLIES),
-                    description="You cannot do range clean across several channel."
-                )
-                await ctx.send(embed=embed)
-                return
+                raise BadArgument("You cannot do range clean across several channel.")
 
             # Ensure that after_message is younger than until_message
             if after_message.created_at >= until_message.created_at:
-                embed = Embed(
-                    color=Colour(Colours.soft_red),
-                    title=random.choice(NEGATIVE_REPLIES),
-                    description="`after` message must be younger than `until` message"
-                )
-                await ctx.send(embed=embed)
-                return
+                raise BadArgument("`after` message must be younger than `until` message")
 
         # Are we already performing a clean?
         if self.cleaning:
-            embed = Embed(
-                color=Colour(Colours.soft_red),
-                title=random.choice(NEGATIVE_REPLIES),
-                description="Please wait for the currently ongoing clean operation to complete."
-            )
-            await ctx.send(embed=embed)
-            return
+            raise MaxConcurrencyReached("Please wait for the currently ongoing clean operation to complete.")
 
         # Set up the correct predicate
         if bots_only:
@@ -305,12 +274,7 @@ class Clean(Cog):
             log_url = await self.mod_log.upload_log(log_messages, ctx.author.id)
         else:
             # Can't build an embed, nothing to clean!
-            embed = Embed(
-                color=Colour(Colours.soft_red),
-                description="No matching messages could be found."
-            )
-            await ctx.send(embed=embed, delete_after=10)
-            return
+            raise BadArgument("No matching messages could be found.")
 
         # Build the embed and send it
         target_channels = ", ".join(channel.mention for channel in channels)
