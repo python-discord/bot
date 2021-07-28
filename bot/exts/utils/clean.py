@@ -164,7 +164,7 @@ class Clean(Cog):
 
         def predicate_range(message: Message) -> bool:
             """Check if message is older than message provided in after_message but younger than until_message."""
-            return message.created_at >= after_message.created_at and message.created_at <= until_message.created_at
+            return after_message.created_at <= message.created_at <= until_message.created_at
 
         # Is this an acceptable amount of messages to clean?
         if amount > CleanMessages.message_limit:
