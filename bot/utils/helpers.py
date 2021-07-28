@@ -2,7 +2,7 @@ from abc import ABCMeta
 from typing import Dict, List, Optional
 
 from discord import Guild
-from discord.ext.commands import CogMeta
+from discord.ext.commands import BadArgument, CogMeta
 
 
 class CogABCMeta(CogMeta, ABCMeta):
@@ -37,5 +37,8 @@ def join_role_stats(role_ids: List[int], name: str, guild: Guild) -> Dict[str, i
     """Return a dict object with the number of `members` of each role given, and the `name` for this joined group."""
     members = []
     for role_id in role_ids:
-        members += guild.get_role(role_id).members
+        if (role := guild.get_role(role_id)) is None:
+            raise BadArgument("Unable to fetch role data, the specified role does not exist.")
+        else:
+            members += role.members
     return {name: len(set(members))}
