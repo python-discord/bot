@@ -216,12 +216,12 @@ class Clean(Cog):
         self.cleaning = True
 
         if use_cache:
-            message_mappings, message_ids = self._get_messages_from_cache(amount=amount, predicate=predicate)
+            message_mappings, message_ids = self._get_messages_from_cache(amount=amount, to_delete=predicate)
         else:
             message_mappings, message_ids = await self._get_messages_from_channels(
                 amount=amount,
                 channels=channels,
-                predicate=predicate,
+                to_delete=predicate,
                 until_message=until_message
             )
 
