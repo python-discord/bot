@@ -100,8 +100,8 @@ class Clean(Cog):
             async for message in channel.history(limit=amount):
 
                 if not self.cleaning:
-                    # Cleaning was canceled
-                    return (message_mappings, message_ids)
+                    # Cleaning was canceled, return empty containers
+                    return defaultdict(list), []
 
                 if until_message:
 
