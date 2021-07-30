@@ -3,7 +3,7 @@ import logging
 import pprint
 import textwrap
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
@@ -14,11 +14,11 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
+from bot.errors import NonExistentRoleError
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
-
 
 log = logging.getLogger(__name__)
 
@@ -43,25 +43,27 @@ class Information(Cog):
         return channel_counter
 
     @staticmethod
-    def join_role_stats(role_ids: List[int], name: str, guild: Guild) -> Dict[str, int]:
+    def join_role_stats(role_ids: list[int], name: str, guild: Guild) -> dict[str, int]:
         """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
         members = []
         for role_id in role_ids:
             if (role := guild.get_role(role_id)) is None:
-                raise ValueError(f"Could not fetch data for role {role} for server embed.")
+                raise NonExistentRoleError(role_id)
             else:
                 members += role.members
         return {name: len(set(members))}
 
     @staticmethod
-    def get_member_counts(guild: Guild) -> Dict[str, int]:
+    def get_member_counts(guild: Guild) -> dict[str, int]:
         """Return the total number of members for certain roles in `guild`."""
-        roles = (
-            guild.get_role(role_id) for role_id in (
-                constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
-                constants.Roles.owners, constants.Roles.contributors,
-            )
-        )
+        role_ids = [constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
+                    constants.Roles.owners, constants.Roles.contributors]
+        roles = []
+        for role_id in role_ids:
+            if (role := guild.get_role(role_id)) is None:
+                raise NonExistentRoleError(role_id)
+            else:
+                roles.append(role)
         role_stats = {role.name.title(): len(role.members) for role in roles}
         role_stats.update(
             **Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], "Leads", guild)
