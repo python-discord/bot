@@ -260,7 +260,7 @@ guild:
         contributors:                           295488872404484098
         help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
-        partners:                               323426753857191936
+        partners:           &PY_PARTNER_ROLE    323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
         sprinters:          &SPRINTERS          758422482289426471
         voice_verified:                         764802720779337729
@@ -342,6 +342,7 @@ filter:
         - *OWNERS_ROLE
         - *PY_COMMUNITY_ROLE
         - *SPRINTERS
+        - *PY_PARTNER_ROLE
 
 
 keys:
