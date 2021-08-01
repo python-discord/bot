@@ -159,7 +159,11 @@ class Tags(Cog):
     @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
     async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
-        # Use invoke here for testability purposes
+        # Use invoke here for testability purposes.
+        # In some cases calling self.get_command directly results error,
+        # because this may pass Context as self and then every argument
+        # after this is wrong. Passing self to call doesn't help also,
+        # because this is not problem every time.
         await ctx.invoke(self.get_command, tag_name=tag_name)
 
     @tags_group.group(name='search', invoke_without_command=True)
