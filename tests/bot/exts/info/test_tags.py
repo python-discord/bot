@@ -239,15 +239,14 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
             },
             {
                 "args": (self.ctx, "bar", [cache["ytdl"], cache["class"], cache["classmethod"]]),
-                "expected": Embed.from_dict({
-                    "description": (
+                "expected": Embed(
+                    description=(
                         "\n**»**   class\n"
                         "**»**   classmethod\n"
                         "**»**   ytdl\n"
                     ),
-                    "footer": {"text": tags.FOOTER_TEXT},
-                    "title": "Here are the tags containing the given keyword:"
-                })
+                    title="Here are the tags containing the given keyword:"
+                ).set_footer(text=tags.FOOTER_TEXT)
             }
         ]
 
