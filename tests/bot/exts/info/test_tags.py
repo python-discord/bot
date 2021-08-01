@@ -10,7 +10,7 @@ from tests.helpers import MockBot, MockContext, MockMember, MockRole, MockTextCh
 
 
 class TagsBaseTests(unittest.TestCase):
-    """Basic function tests in `Tags` cog that don't need very specific testing."""
+    """Tests for Tags cog utility functions."""
 
     def setUp(self) -> None:
         self.bot = MockBot()
@@ -20,7 +20,7 @@ class TagsBaseTests(unittest.TestCase):
         self.member = MockMember()
 
     def test_get_tags(self):
-        """Should return `Dict` of tags, fetched from resources and have correct keys."""
+        """Should return `Dict` of tags, fetched from resources and have embed and restriction keys."""
         testing_path = Path("tests", "bot", "resources", "testing-tags")
         with patch("bot.exts.info.tags.Path") as path:
             path.return_value = testing_path
@@ -38,7 +38,7 @@ class TagsBaseTests(unittest.TestCase):
 
     @patch("bot.exts.info.tags.REGEX_NON_ALPHABET")
     def test_fuzzy_search(self, regex):
-        """Should return correct words match rate."""
+        """Should return expected words match rate."""
         test_cases = [
             {
                 "args": ("foo", "foo"),
@@ -69,7 +69,7 @@ class TagsBaseTests(unittest.TestCase):
                 regex.split.called_once_with(case["args"][1].lower())
 
     def test_get_tag(self):
-        """Should return correct tag from Cog cache."""
+        """Should return requested tag from Cog cache."""
         cache = self.cog._cache
         test_cases = [
             {"name": tag_name, "expected": tag} for tag_name, tag in cache.items()
@@ -118,7 +118,7 @@ class TagsBaseTests(unittest.TestCase):
                     self.assertTrue(any(expected_tag["title"] == actual_tag["title"] for actual_tag in actual))
 
     def test_get_tags_via_content(self):
-        """Should return list of correct tags and call access check."""
+        """Should return list of correct tags by content keywords and call access check."""
         cache = self.cog._cache
         self.cog.check_accessibility = MagicMock()
         # Create tags names list for visual formatting
@@ -195,7 +195,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         self.ctx.invoke.assert_awaited_once_with(self.cog.get_command, tag_name="class")
 
     async def test_search_tags_with_keyword_command(self):
-        """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
+        """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with provided keywords."""
         self.cog._get_tags_via_content = MagicMock(return_value="foo")
         self.cog._send_matching_tags = AsyncMock()
 
@@ -204,7 +204,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
         self.cog._send_matching_tags.assert_awaited_once_with(self.ctx, "youtube,audio", "foo")
 
     async def test_search_tags_any_command(self):
-        """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct parameters."""
+        """Should call `Tags._get_tags_via_content` and `Tags._send_matching_tags` with correct keywords."""
         test_cases = [
             {"keywords": "youtube,discord,foo"},
             {"keywords": "any"}
@@ -226,7 +226,7 @@ class TagsCommandsTests(unittest.IsolatedAsyncioTestCase):
                 self.cog._send_matching_tags.assert_awaited_once_with(self.ctx, case["keywords"], "foo")
 
     async def test_send_matching_tags(self):
-        """Should return `None` and send correct embed."""
+        """Should return `None` and send tag embed."""
         cache = self.cog._cache
         test_cases = [
             {
@@ -279,14 +279,14 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
             self.cog = tags.Tags(self.bot)
 
     async def test_tag_on_cooldown(self):
-        """Should not respond to chat due tag is under cooldown."""
+        """Should not respond to chat when tag is under cooldown."""
         self.cog.tag_cooldowns["ytdl"] = {"channel": 1234, "time": time.time()}
 
         self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="ytdl"))
         self.ctx.send.assert_not_awaited()
 
     async def test_tags_list_empty(self):
-        """Should send to chat (`ctx.send`) correct embed with information about no tags."""
+        """Should send to chat (`ctx.send`) embed with information about no tags."""
         self.cog._cache = {}
         self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name=None))
         embed = self.ctx.send.call_args[1]["embed"]
@@ -316,7 +316,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(embed.description, f"\n{tags_string}\n")
 
     async def test_tag(self):
-        """Should send correct embed to chat (`ctx.send`) with tag content."""
+        """Should send embed to chat (`ctx.send`) with tag content."""
         test_cases = [
             {
                 "tag": tag["title"],
@@ -373,13 +373,13 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.exts.info.tags.time.time", MagicMock(return_value=1234))
     async def test_tag_cooldown(self):
-        """Should set tag to cooldown when not in test channels."""
+        """Should set tag to cooldown when command was not invoked in test channel."""
         self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
         self.assertIn("class", self.cog.tag_cooldowns)
         self.assertEqual(self.cog.tag_cooldowns["class"], {"time": 1234, "channel": self.ctx.channel.id})
 
     async def test_tag_cooldown_test_channel(self):
-        """Should not set tag to cooldown when in test channels."""
+        """Should not set tag to cooldown when command was invoked in test channel."""
         with patch("bot.exts.info.tags.TEST_CHANNELS", (1234,)):
             self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="class"))
         self.assertNotIn("class", self.cog.tag_cooldowns)
