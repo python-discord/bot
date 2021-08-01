@@ -47,10 +47,10 @@ class Information(Cog):
         """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
         members = []
         for role_id in role_ids:
-            if (role := guild.get_role(role_id)) is None:
-                raise NonExistentRoleError(role_id)
+            if (role := guild.get_role(role_id)) is not None:
+                members.append(role.members)
             else:
-                members += role.members
+                raise NonExistentRoleError(role_id)
         return {name: len(set(members))}
 
     @staticmethod
@@ -60,10 +60,11 @@ class Information(Cog):
                     constants.Roles.owners, constants.Roles.contributors]
         roles = []
         for role_id in role_ids:
-            if (role := guild.get_role(role_id)) is None:
-                raise NonExistentRoleError(role_id)
-            else:
+            if (role := guild.get_role(role_id)) is not None:
                 roles.append(role)
+            else:
+                raise NonExistentRoleError(role_id)
+
         role_stats = {role.name.title(): len(role.members) for role in roles}
         role_stats.update(
             **Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], "Leads", guild)
