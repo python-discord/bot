@@ -282,7 +282,7 @@ class GetTagsCommandTests(unittest.IsolatedAsyncioTestCase):
         """Should not respond to chat due tag is under cooldown."""
         self.cog.tag_cooldowns["ytdl"] = {"channel": 1234, "time": time.time()}
 
-        self.assertFalse(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="ytdl"))
+        self.assertTrue(await self.cog.get_command.callback(self.cog, self.ctx, tag_name="ytdl"))
         self.ctx.send.assert_not_awaited()
 
     async def test_tags_list_empty(self):
