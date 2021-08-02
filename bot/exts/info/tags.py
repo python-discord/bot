@@ -398,15 +398,16 @@ class Tags(Cog):
             tag_group = tag_name_or_group
 
         embed = await self.get_tag_embed(ctx, TagIdentifier(tag_group, tag_name))
-        if embed is not None:
-            if embed is not COOLDOWN.obj:
-                await wait_for_deletion(
-                    await ctx.send(embed=embed),
-                    (ctx.author.id,)
-                )
-            return True
-        else:
+        if embed is None:
             return False
+
+        if embed is not COOLDOWN.obj:
+            await wait_for_deletion(
+                await ctx.send(embed=embed),
+                (ctx.author.id,)
+            )
+        # A valid tag was found and was either sent, or is on cooldown
+        return True
 
 
 def setup(bot: Bot) -> None:
