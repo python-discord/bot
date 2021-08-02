@@ -356,11 +356,15 @@ class Tags(Cog):
             tag_name: TagNameConverter = None,
     ) -> bool:
         """
-        Get a specified tag, or a list of all tags if no tag is specified.
+        When arguments are passed in:
+        If a single argument is given and it matches a group name, list accessible all tags from that group.
+        Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name
+
+        With no arguments, list all accessible tags
 
         Returns True if something was sent, or if the tag is on cooldown.
         Returns False if no message was sent.
-        """
+        """  # noqa: D205, D415
         if tag_name_or_group is None and tag_name is None:
             if self._tags:
                 await self.list_all_tags(ctx)
