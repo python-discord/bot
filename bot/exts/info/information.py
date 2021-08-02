@@ -43,31 +43,27 @@ class Information(Cog):
         return channel_counter
 
     @staticmethod
-    def join_role_stats(role_ids: list[int], name: str, guild: Guild) -> dict[str, int]:
+    def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
         """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
-        members = []
+        members = int()
         for role_id in role_ids:
             if (role := guild.get_role(role_id)) is not None:
-                members.append(role.members)
+                members += len(role.members)
             else:
                 raise NonExistentRoleError(role_id)
-        return {name: len(set(members))}
+        return {name or role.name.title(): members}
 
     @staticmethod
     def get_member_counts(guild: Guild) -> dict[str, int]:
         """Return the total number of members for certain roles in `guild`."""
         role_ids = [constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
                     constants.Roles.owners, constants.Roles.contributors]
-        roles = []
-        for role_id in role_ids:
-            if (role := guild.get_role(role_id)) is not None:
-                roles.append(role)
-            else:
-                raise NonExistentRoleError(role_id)
 
-        role_stats = {role.name.title(): len(role.members) for role in roles}
+        role_stats = {}
+        for role_id in role_ids:
+            role_stats.update(Information.join_role_stats([role_id], guild))
         role_stats.update(
-            **Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], "Leads", guild)
+            Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], guild, "Leads")
         )
         return role_stats
 

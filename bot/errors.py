@@ -52,5 +52,6 @@ class NonExistentRoleError(ValueError):
     """
 
     def __init__(self, role_id: int):
+        super().__init__(f"Could not fetch data for role {role_id}")
+
         self.role_id = role_id
-        super().__init__(f"Could not fetch data for role {self.role_id}")
