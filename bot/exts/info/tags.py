@@ -340,7 +340,7 @@ class Tags(Cog):
                 group_accessible = True
 
         embed = Embed(title="Current tags")
-        await LinePaginator.paginate(result_lines, ctx, embed=embed, max_lines=15, empty=False, footer_text=FOOTER_TEXT)
+        await LinePaginator.paginate(result_lines, ctx, embed, max_lines=15, empty=False, footer_text=FOOTER_TEXT)
 
     async def list_tags_in_group(self, ctx: Context, group: str) -> None:
         """Send a paginator with all tags under `group`, that are accessible by `ctx.author`."""
