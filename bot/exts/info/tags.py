@@ -344,7 +344,7 @@ class Tags(Cog):
 
     async def list_tags_in_group(self, ctx: Context, group: str) -> None:
         """Send a paginator with all tags under `group`, that are accessible by `ctx.author`."""
-        embed = Embed(title=f"**Tags under *{group}***")
+        embed = Embed(title=f"Tags under *{group}*")
         tag_lines = sorted(
             f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
             for identifier, tag in self._tags.items()
