@@ -218,7 +218,10 @@ class Tags(Cog):
                 title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
             )
             await LinePaginator.paginate(
-                sorted(f"**»**   {identifier.name}" for identifier, _ in matching_tags),
+                sorted(
+                    f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier.name}"
+                    for identifier, _ in matching_tags
+                ),
                 ctx,
                 embed,
                 footer_text=FOOTER_TEXT,
