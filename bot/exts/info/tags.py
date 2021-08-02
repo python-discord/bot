@@ -366,7 +366,7 @@ class Tags(Cog):
 
         With no arguments, list all accessible tags
 
-        Returns True if something was sent, or if the tag is on cooldown.
+        Returns True if a message was sent, or if the tag is on cooldown.
         Returns False if no message was sent.
         """  # noqa: D205, D415
         if tag_name_or_group is None and tag_name is None:
