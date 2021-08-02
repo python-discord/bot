@@ -400,7 +400,7 @@ def setup(bot: Bot) -> None:
 
 
 def extract_tag_identifier(string: str) -> TagIdentifier:
-    """Create a `TagIdentifier` instance from beginning of `string`."""
+    """Create a `TagIdentifier` instance from the beginning of `string`."""
     split_string = string.removeprefix(constants.Bot.prefix).split(" ", maxsplit=2)
     if len(split_string) == 1:
         return TagIdentifier(None, split_string[0])
