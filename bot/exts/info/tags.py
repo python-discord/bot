@@ -329,12 +329,12 @@ class Tags(Cog):
                     # Remove group separator line if no tags in the previous group were accessible by the user.
                     result_lines.pop()
                 # A new group began, add a separator with the group name.
-                if identifier.group is not None:
+                current_group = identifier.group
+                if current_group is not None:
                     group_accessible = False
-                    result_lines.append(f"\n\N{BULLET} **{identifier.group}**")
+                    result_lines.append(f"\n\N{BULLET} **{current_group}**")
                 else:
                     result_lines.append("\n\N{BULLET}")
-                current_group = identifier.group
 
             if tag.accessible_by(ctx.author):
                 result_lines.append(f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier.name}")
