@@ -15,4 +15,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 Packages can then be installed to the virtual environment using `pip`, as normal.
 
-For more information, take a read of the [documentation](https://docs.python.org/3/library/venv.html).
+For more information, take a read of the [documentation](https://docs.python.org/3/library/venv.html). Your editor may also have venv integration, in which case you should check out your editors documentation. Here's the docs for [VSCode](https://code.visualstudio.com/docs/python/environments#_select-and-activate-an-environment) and [PyCharm](https://www.jetbrains.com/help/pycharm/creating-virtual-environment.html)
+
+There are also tools such as [poetry](https://python-poetry.org/docs/basic-usage/) and [pipenv](https://pipenv.pypa.io/en/latest/) you can use for managing creation of venvs as well as project dependency management, among other things
