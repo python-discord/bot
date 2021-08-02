@@ -18,6 +18,7 @@ from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import time
 
+AUTOREVIEW_ENABLED_KEY = 'autoreview_enabled'
 REASON_MAX_CHARS = 1000
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     async def autoreview_enabled(self) -> bool:
         """Return whether automatic posting of nomination reviews is enabled."""
-        return await self.talentpool_settings.get('autoreview_enabled', True)
+        return await self.talentpool_settings.get(AUTOREVIEW_ENABLED_KEY, True)
 
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
@@ -59,7 +60,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
 
-    @nomination_group.group(name='autoreview', invoke_without_command=True)
+    @nomination_group.group(name='autoreview', aliases=('ar',), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def nomination_autoreview_group(self, ctx: Context) -> None:
         """Commands for enabling or disabling autoreview."""
@@ -71,10 +72,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """
         Turn on automatic posting of reviews.
 
-        This will post reviews up to one day overdue, older nominations can be
+        This will post reviews up to one day overdue. Older nominations can be
         manually reviewed with `!tp post_review <user_id>`.
         """
-        await self.talentpool_settings.set('autoreview_enabled', True)
+        await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
         await self.reviewer.reschedule_reviews()
         await ctx.send(':white_check_mark: Autoreview turned on')
 
@@ -82,12 +83,12 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @has_any_role(Roles.admins)
     async def autoreview_off(self, ctx: Context) -> None:
         """Turn off automatic posting of reviews."""
-        await self.talentpool_settings.set('autoreview_enabled', False)
+        await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
         self.reviewer.cancel_all()
         await ctx.send(':white_check_mark: Autoreview turned off')
 
-    @has_any_role(*MODERATION_ROLES)
     @nomination_autoreview_group.command(name='status')
+    @has_any_role(*MODERATION_ROLES)
     async def autoreview_status(self, ctx: Context) -> None:
         """Show whether automatic posting of reviews is enabled or disabled."""
         if await self.autoreview_enabled():
