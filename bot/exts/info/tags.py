@@ -68,6 +68,15 @@ class TagIdentifier(NamedTuple):
         else:
             return self.name
 
+    @classmethod
+    def from_string(cls, string: str) -> TagIdentifier:
+        """Create a `TagIdentifier` instance from the beginning of `string`."""
+        split_string = string.removeprefix(constants.Bot.prefix).split(" ", maxsplit=2)
+        if len(split_string) == 1:
+            return cls(None, split_string[0])
+        else:
+            return cls(split_string[0], split_string[1])
+
 
 class Tag:
     """Provide an interface to a tag from resources with `file_content`."""
@@ -404,12 +413,3 @@ class Tags(Cog):
 def setup(bot: Bot) -> None:
     """Load the Tags cog."""
     bot.add_cog(Tags(bot))
-
-
-def extract_tag_identifier(string: str) -> TagIdentifier:
-    """Create a `TagIdentifier` instance from the beginning of `string`."""
-    split_string = string.removeprefix(constants.Bot.prefix).split(" ", maxsplit=2)
-    if len(split_string) == 1:
-        return TagIdentifier(None, split_string[0])
-    else:
-        return TagIdentifier(split_string[0], split_string[1])

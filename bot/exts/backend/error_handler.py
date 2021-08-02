@@ -155,7 +155,7 @@ class ErrorHandler(Cog):
             return
 
         try:
-            tag_identifier = tags.extract_tag_identifier(ctx.message.content)
+            tag_identifier = tags.TagIdentifier.from_string(ctx.message.content)
             if tag_identifier.group is not None:
                 tag_name = await TagNameConverter.convert(ctx, tag_identifier.name)
                 tag_name_or_group = await TagNameConverter.convert(ctx, tag_identifier.group)
