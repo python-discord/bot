@@ -10,7 +10,7 @@ Then, to activate the new virtual environment:
 or (Command Prompt): `.venv\Scripts\activate.bat`
 **MacOS / Linux** (Bash): `source .venv/bin/activate`
 
-Note: On Windows, you may need to change the [execution policy](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies) first. This is only required once:
+Note: When using Windows PowerShell, you may need to change the [execution policy](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies) first. This is only required once:
 `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 Packages can then be installed to the virtual environment using `pip`, as normal.
