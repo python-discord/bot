@@ -176,7 +176,7 @@ class Tags(Cog):
                 # Try fuzzy matching with only a name first
                 suggestions = self._get_suggestions(TagIdentifier(None, tag_identifier.group))
 
-            if not len(tag_identifier.name) < 3:
+            if len(tag_identifier.name) >= 3:
                 suggestions += self._get_suggestions(tag_identifier)
             return suggestions
 
