@@ -275,7 +275,8 @@ class Tags(Cog):
             if tag.accessible_by(ctx.author)
         ]
 
-        if (tag := self._tags.get(tag_identifier)) is None:
+        tag = self._tags.get(tag_identifier)
+        if tag is None:
             if len(filtered_tags) == 1:
                 tag_identifier = filtered_tags[0][0]
                 tag = filtered_tags[0][1]
