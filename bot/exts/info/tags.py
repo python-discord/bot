@@ -276,10 +276,9 @@ class Tags(Cog):
         ]
 
         tag = self._tags.get(tag_identifier)
-        if tag is None:
-            if len(filtered_tags) == 1:
-                tag_identifier = filtered_tags[0][0]
-                tag = filtered_tags[0][1]
+        if tag is None and len(filtered_tags) == 1:
+            tag_identifier = filtered_tags[0][0]
+            tag = filtered_tags[0][1]
 
         if tag is not None:
             if tag.on_cooldown_in(ctx.channel):
