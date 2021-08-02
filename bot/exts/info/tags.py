@@ -376,7 +376,7 @@ class Tags(Cog):
                 await ctx.send(embed=Embed(description="**There are no tags!**"))
                 return True
 
-        if tag_name is None:
+        elif tag_name is None:
             if any(
                 tag_name_or_group == identifier.group and tag.accessible_by(ctx.author)
                 for identifier, tag in self._tags.items()
