@@ -45,7 +45,7 @@ class Information(Cog):
     @staticmethod
     def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
         """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
-        members = int()
+        members = 0
         for role_id in role_ids:
             if (role := guild.get_role(role_id)) is not None:
                 members += len(role.members)

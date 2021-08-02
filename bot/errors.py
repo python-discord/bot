@@ -45,7 +45,7 @@ class BrandingMisconfiguration(RuntimeError):
 
 class NonExistentRoleError(ValueError):
     """
-    Raised by the Information Cog when encountering a role that does not exist.
+    Raised by the Information Cog when encountering a Role that does not exist.
 
     Attributes:
         `role_id` -- the ID of the role that does not exist
