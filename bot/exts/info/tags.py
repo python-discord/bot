@@ -264,7 +264,7 @@ class Tags(Cog):
         """
         Generate an embed of the requested tag or of suggestions if the tag doesn't exist/isn't accessible by the user.
 
-        If the requested tag is on cooldown or no suggestions were found, return None.
+        If the requested tag is on cooldown return `COOLDOWN.obj`, otherwise if no suggestions were found return None.
         """
         filtered_tags = [
             (ident, tag) for ident, tag in
