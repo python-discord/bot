@@ -4,8 +4,8 @@ import textwrap
 from typing import Any
 from urllib.parse import quote_plus
 
+import discord
 from aiohttp import ClientResponseError
-from discord import Message
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
@@ -240,7 +240,7 @@ class CodeSnippets(Cog):
         return '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
 
     @Cog.listener()
-    async def on_message(self, message: Message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if message.author.bot:
             return
@@ -249,7 +249,11 @@ class CodeSnippets(Cog):
         destination = message.channel
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
-            await message.edit(suppress=True)
+            try:
+                await message.edit(suppress=True)
+            except discord.NotFound:
+                # Don't send snippets if the original message was deleted.
+                return
 
             if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
                 # Redirects to #bot-commands if the snippet contents are too long
