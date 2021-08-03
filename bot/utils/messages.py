@@ -7,8 +7,6 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
-from discord import Message, MessageType, Reaction, User
-from discord.errors import HTTPException
 from discord.ext.commands import Context
 
 import bot
@@ -53,7 +51,7 @@ def reaction_check(
         log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
         scheduling.create_task(
             reaction.message.remove_reaction(reaction.emoji, user),
-            suppressed_exceptions=(HTTPException,),
+            suppressed_exceptions=(discord.HTTPException,),
             name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
         )
         return False
@@ -153,7 +151,7 @@ async def send_attachments(
                 large.append(attachment)
             else:
                 log.info(f"{failure_msg} because it's too large.")
-        except HTTPException as e:
+        except discord.HTTPException as e:
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
@@ -174,8 +172,8 @@ async def send_attachments(
 
 async def count_unique_users_reaction(
     message: discord.Message,
-    reaction_predicate: Callable[[Reaction], bool] = lambda _: True,
-    user_predicate: Callable[[User], bool] = lambda _: True,
+    reaction_predicate: Callable[[discord.Reaction], bool] = lambda _: True,
+    user_predicate: Callable[[discord.User], bool] = lambda _: True,
     count_bots: bool = True
 ) -> int:
     """
@@ -195,7 +193,7 @@ async def count_unique_users_reaction(
     return len(unique_users)
 
 
-async def pin_no_system_message(message: Message) -> bool:
+async def pin_no_system_message(message: discord.Message) -> bool:
     """Pin the given message, wait a couple of seconds and try to delete the system message."""
     await message.pin()
 
@@ -203,7 +201,7 @@ async def pin_no_system_message(message: Message) -> bool:
     await asyncio.sleep(2)
     # Search for the system message in the last 10 messages
     async for historical_message in message.channel.history(limit=10):
-        if historical_message.type == MessageType.pins_add:
+        if historical_message.type == discord.MessageType.pins_add:
             await historical_message.delete()
             return True
 
