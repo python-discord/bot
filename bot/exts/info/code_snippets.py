@@ -219,16 +219,12 @@ class CodeSnippets(Cog):
         # Returns an empty codeblock if the snippet is empty
         return f'{ret}``` ```'
 
-    @Cog.listener()
-    async def on_message(self, message: Message) -> None:
-        """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
-        if message.author.bot:
-            return
-
+    async def _parse_snippets(self, content: str) -> str:
+        """Parse message content and return a string with a code block for each URL found."""
         all_snippets = []
 
         for pattern, handler in self.pattern_handlers:
-            for match in pattern.finditer(message.content):
+            for match in pattern.finditer(content):
                 try:
                     snippet = await handler(**match.groupdict())
                     all_snippets.append((match.start(), snippet))
@@ -241,7 +237,15 @@ class CodeSnippets(Cog):
                     )
 
         # Sorts the list of snippets by their match index and joins them into a single message
-        message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
+        return '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
+
+    @Cog.listener()
+    async def on_message(self, message: Message) -> None:
+        """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
+        if message.author.bot:
+            return
+
+        message_to_send = await self._parse_snippets(message.content)
         destination = message.channel
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
