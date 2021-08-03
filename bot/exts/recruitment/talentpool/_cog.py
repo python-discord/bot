@@ -18,7 +18,7 @@ from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import time
 
-AUTOREVIEW_ENABLED_KEY = 'autoreview_enabled'
+AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
 
 log = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         if await self.autoreview_enabled():
             await self.reviewer.reschedule_reviews()
         else:
-            self.log.trace('Not scheduling reviews as autoreview is disabled.')
+            self.log.trace("Not scheduling reviews as autoreview is disabled.")
 
     async def autoreview_enabled(self) -> bool:
         """Return whether automatic posting of nomination reviews is enabled."""
@@ -60,41 +60,41 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
 
-    @nomination_group.group(name='autoreview', aliases=('ar',), invoke_without_command=True)
+    @nomination_group.group(name="autoreview", aliases=("ar",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def nomination_autoreview_group(self, ctx: Context) -> None:
         """Commands for enabling or disabling autoreview."""
         await ctx.send_help(ctx.command)
 
-    @nomination_autoreview_group.command(name='enable', aliases=('on',))
+    @nomination_autoreview_group.command(name="enable", aliases=("on",))
     @has_any_role(Roles.admins)
     async def autoreview_enable(self, ctx: Context) -> None:
         """
         Enable automatic posting of reviews.
 
         This will post reviews up to one day overdue. Older nominations can be
-        manually reviewed with `!tp post_review <user_id>`.
+        manually reviewed with the `tp post_review <user_id>` command.
         """
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
         await self.reviewer.reschedule_reviews()
-        await ctx.send(':white_check_mark: Autoreview enabled')
+        await ctx.send(":white_check_mark: Autoreview enabled")
 
-    @nomination_autoreview_group.command(name='disable', aliases=('off',))
+    @nomination_autoreview_group.command(name="disable", aliases=("off",))
     @has_any_role(Roles.admins)
     async def autoreview_disable(self, ctx: Context) -> None:
         """Disable automatic posting of reviews."""
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
         self.reviewer.cancel_all()
-        await ctx.send(':white_check_mark: Autoreview disabled')
+        await ctx.send(":white_check_mark: Autoreview disabled")
 
-    @nomination_autoreview_group.command(name='status')
+    @nomination_autoreview_group.command(name="status")
     @has_any_role(*MODERATION_ROLES)
     async def autoreview_status(self, ctx: Context) -> None:
         """Show whether automatic posting of reviews is enabled or disabled."""
         if await self.autoreview_enabled():
-            await ctx.send('Autoreview is currently enabled')
+            await ctx.send("Autoreview is currently enabled")
         else:
-            await ctx.send('Autoreview is currently disabled')
+            await ctx.send("Autoreview is currently disabled")
 
     @nomination_group.command(name='watched', aliases=('all', 'list'), root_aliases=("nominees",))
     @has_any_role(*MODERATION_ROLES)
