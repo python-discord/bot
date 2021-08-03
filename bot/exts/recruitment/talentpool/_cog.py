@@ -75,6 +75,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         This will post reviews up to one day overdue. Older nominations can be
         manually reviewed with the `tp post_review <user_id>` command.
         """
+        if await self.autoreview_enabled():
+            await ctx.send(":x: Autoreview is already enabled")
+            return
+
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
         await self.reviewer.reschedule_reviews()
         await ctx.send(":white_check_mark: Autoreview enabled")
@@ -83,6 +87,10 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
     @has_any_role(Roles.admins)
     async def autoreview_disable(self, ctx: Context) -> None:
         """Disable automatic posting of reviews."""
+        if not await self.autoreview_enabled():
+            await ctx.send(":x: Autoreview is already disabled")
+            return
+
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
         self.reviewer.cancel_all()
         await ctx.send(":white_check_mark: Autoreview disabled")
