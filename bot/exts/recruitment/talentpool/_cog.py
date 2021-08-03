@@ -27,6 +27,8 @@ log = logging.getLogger(__name__)
 class TalentPool(WatchChannel, Cog, name="Talentpool"):
     """Relays messages of helper candidates to a watch channel to observe them."""
 
+    # RedisCache[str, bool]
+    # Can contain a single key, "autoreview_enabled", with the value a bool indicating if autoreview is enabled.
     talentpool_settings = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
