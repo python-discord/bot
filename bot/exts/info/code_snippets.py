@@ -222,42 +222,45 @@ class CodeSnippets(Cog):
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
-        if not message.author.bot:
-            all_snippets = []
+        if message.author.bot:
+            return
 
-            for pattern, handler in self.pattern_handlers:
-                for match in pattern.finditer(message.content):
-                    try:
-                        snippet = await handler(**match.groupdict())
-                        all_snippets.append((match.start(), snippet))
-                    except ClientResponseError as error:
-                        error_message = error.message  # noqa: B306
-                        log.log(
-                            logging.DEBUG if error.status == 404 else logging.ERROR,
-                            f'Failed to fetch code snippet from {match[0]!r}: {error.status} '
-                            f'{error_message} for GET {error.request_info.real_url.human_repr()}'
-                        )
+        all_snippets = []
 
-            # Sorts the list of snippets by their match index and joins them into a single message
-            message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
-
-            if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
-                await message.edit(suppress=True)
-                if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
-                    # Redirects to #bot-commands if the snippet contents are too long
-                    await self.bot.wait_until_guild_available()
-                    await message.channel.send(('The snippet you tried to send was too long. Please '
-                                                f'see <#{Channels.bot_commands}> for the full snippet.'))
-                    bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
-                    await wait_for_deletion(
-                        await bot_commands_channel.send(message_to_send),
-                        (message.author.id,)
+        for pattern, handler in self.pattern_handlers:
+            for match in pattern.finditer(message.content):
+                try:
+                    snippet = await handler(**match.groupdict())
+                    all_snippets.append((match.start(), snippet))
+                except ClientResponseError as error:
+                    error_message = error.message  # noqa: B306
+                    log.log(
+                        logging.DEBUG if error.status == 404 else logging.ERROR,
+                        f'Failed to fetch code snippet from {match[0]!r}: {error.status} '
+                        f'{error_message} for GET {error.request_info.real_url.human_repr()}'
                     )
-                else:
-                    await wait_for_deletion(
-                        await message.channel.send(message_to_send),
-                        (message.author.id,)
-                    )
+
+        # Sorts the list of snippets by their match index and joins them into a single message
+        message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
+        destination = message.channel
+
+        if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
+            await message.edit(suppress=True)
+
+            if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
+                # Redirects to #bot-commands if the snippet contents are too long
+                await self.bot.wait_until_guild_available()
+                destination = self.bot.get_channel(Channels.bot_commands)
+
+                await message.channel.send(
+                    'The snippet you tried to send was too long. '
+                    f'Please see {destination.mention} for the full snippet.'
+                )
+
+            await wait_for_deletion(
+                await destination.send(message_to_send),
+                (message.author.id,)
+            )
 
 
 def setup(bot: Bot) -> None:
