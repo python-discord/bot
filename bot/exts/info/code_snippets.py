@@ -45,6 +45,17 @@ class CodeSnippets(Cog):
     Matches each message against a regex and prints the contents of all matched snippets.
     """
 
+    def __init__(self, bot: Bot):
+        """Initializes the cog's bot."""
+        self.bot = bot
+
+        self.pattern_handlers = [
+            (GITHUB_RE, self._fetch_github_snippet),
+            (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
+            (GITLAB_RE, self._fetch_gitlab_snippet),
+            (BITBUCKET_RE, self._fetch_bitbucket_snippet)
+        ]
+
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
         async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
@@ -207,17 +218,6 @@ class CodeSnippets(Cog):
             return f'{ret}```{language}\n{required}```'
         # Returns an empty codeblock if the snippet is empty
         return f'{ret}``` ```'
-
-    def __init__(self, bot: Bot):
-        """Initializes the cog's bot."""
-        self.bot = bot
-
-        self.pattern_handlers = [
-            (GITHUB_RE, self._fetch_github_snippet),
-            (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
-            (GITLAB_RE, self._fetch_gitlab_snippet),
-            (BITBUCKET_RE, self._fetch_bitbucket_snippet)
-        ]
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
