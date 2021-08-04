@@ -1,0 +1,80 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    env:
+      # Configure pip to cache dependencies and do a user install
+      PIP_NO_CACHE_DIR: false
+      PIP_USER: 1
+
+      # Disable Poetry virtualenv creation
+      POETRY_VIRTUALENVS_CREATE: false
+
+      # Specify explicit paths for python dependency environment so we know
+      # which directories to cache
+      PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
+
+    steps:
+      - name: Add custom PYTHONUSERBASE to PATH
+        run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      # This step caches our Python dependencies. To make sure we
+      # only restore a cache when the dependencies, the python version,
+      # the runner operating system, and the dependency location haven't
+      # changed, we create a cache key that is a composite of those states.
+      #
+      # Only when the context is exactly the same, we will restore the cache.
+      - name: Python Dependency Caching
+        uses: actions/cache@v2
+        id: python_cache
+        with:
+          path: ${{ env.PYTHONUSERBASE }}
+          key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
+          ${{ steps.python.outputs.python-version }}-\
+          ${{ hashFiles('./pyproject.toml', './poetry.lock') }}"
+
+      # Install our dependencies if we did not restore a dependency cache
+      - name: Install dependencies using poetry
+        if: steps.python_cache.outputs.cache-hit != 'true'
+        run: |
+          pip install poetry
+          poetry install --no-interaction --no-ansi
+          # Set the `CODEQL-PYTHON` environment variable to the Python executable
+          # that includes the dependencies, so the next step doesn't try to
+          # auto-install python deps.
+          echo "CODEQL_PYTHON=$(which python)" >> $GITHUB_ENV
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: python
+          setup-python-dependencies: false
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
