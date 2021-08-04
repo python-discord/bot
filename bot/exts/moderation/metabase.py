@@ -115,12 +115,12 @@ class Metabase(Cog):
             try:
                 async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
                     if extension == "csv":
-                        out = await resp.text()
+                        out = await resp.text(encoding="utf-8")
                         # Save the output for use with int e
                         self.exports[question_id] = list(csv.DictReader(StringIO(out)))
 
                     elif extension == "json":
-                        out = await resp.json()
+                        out = await resp.json(encoding="utf-8")
                         # Save the output for use with int e
                         self.exports[question_id] = out
 

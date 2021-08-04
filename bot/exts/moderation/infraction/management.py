@@ -81,7 +81,7 @@ class ModManagement(commands.Cog):
         """
         old_reason = infraction["reason"]
 
-        if old_reason is not None:
+        if old_reason is not None and reason is not None:
             add_period = not old_reason.endswith((".", "!", "?"))
             reason = old_reason + (". " if add_period else " ") + reason
 
