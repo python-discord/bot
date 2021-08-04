@@ -243,7 +243,7 @@ class Information(Cog):
 
         if on_server:
             joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
-            roles = ", ".join(role.mention for role in user.roles[1:])
+            roles = ", ".join(role.mention for role in user.roles[:0:-1])
             membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
             if not is_mod_channel(ctx.channel):
                 membership.pop("Verified")
