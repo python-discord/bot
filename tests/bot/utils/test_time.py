@@ -43,13 +43,6 @@ class TimeTests(unittest.TestCase):
                 time.humanize_delta(relativedelta(days=2, hours=2), 'hours', max_units)
             self.assertEqual(str(error.exception), 'max_units must be positive')
 
-    def test_parse_rfc1123(self):
-        """Testing parse_rfc1123."""
-        self.assertEqual(
-            time.parse_rfc1123('Sun, 15 Sep 2019 12:00:00 GMT'),
-            datetime(2019, 9, 15, 12, 0, 0, tzinfo=timezone.utc)
-        )
-
     def test_format_infraction(self):
         """Testing format_infraction."""
         self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '<t:1576108860:f>')

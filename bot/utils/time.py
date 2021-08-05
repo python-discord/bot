@@ -7,7 +7,6 @@ import arrow
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
-RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 DISCORD_TIMESTAMP_REGEX = re.compile(r"<t:(\d+):f>")
 
 _DURATION_REGEX = re.compile(
@@ -165,11 +164,6 @@ def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
 def time_since(past_datetime: datetime.datetime) -> str:
     """Takes a datetime and returns a discord timestamp that describes how long ago that datetime was."""
     return discord_timestamp(past_datetime, TimestampFormats.RELATIVE)
-
-
-def parse_rfc1123(stamp: str) -> datetime.datetime:
-    """Parse RFC1123 time string into datetime."""
-    return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
 
 
 def format_infraction(timestamp: str) -> str:
