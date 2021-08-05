@@ -180,16 +180,12 @@ def format_infraction_with_duration(
     date_to: Optional[str],
     date_from: Optional[datetime.datetime] = None,
     max_units: int = 2,
-    absolute: bool = True
 ) -> Optional[str]:
     """
     Return `date_to` formatted as a discord timestamp with the timestamp duration since `date_from`.
 
     `max_units` specifies the maximum number of units of time to include in the duration. For
     example, a value of 1 may include days but not hours.
-
-    If `absolute` is True, the absolute value of the duration delta is used. This prevents negative
-    values in the case that `date_to` is in the past relative to `date_from`.
     """
     if not date_to:
         return None
@@ -199,10 +195,7 @@ def format_infraction_with_duration(
     date_from = date_from or datetime.datetime.now(datetime.timezone.utc)
     date_to = dateutil.parser.isoparse(date_to).replace(microsecond=0)
 
-    delta = relativedelta(date_to, date_from)
-    if absolute:
-        delta = abs(delta)
-
+    delta = abs(relativedelta(date_to, date_from))
     duration = humanize_delta(delta, max_units=max_units)
     duration_formatted = f" ({duration})" if duration else ""
 
