@@ -148,7 +148,7 @@ class Defcon(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
-        expiry = time.discord_timestamp(self.expiry, time.TimestampFormats.RELATIVE) if self.expiry else "-"
+        expiry = time.format_relative(self.expiry) if self.expiry else "-"
         embed = Embed(
             colour=Colour.og_blurple(), title="DEFCON Status",
             description=f"""

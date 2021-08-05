@@ -228,4 +228,4 @@ def until_expiration(
     if since < now:
         return None
 
-    return discord_timestamp(since, TimestampFormats.RELATIVE)
+    return format_relative(since)
