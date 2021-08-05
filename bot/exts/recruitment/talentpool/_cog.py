@@ -17,7 +17,6 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import scheduling, time
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import get_time_delta
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
@@ -181,7 +180,7 @@ class TalentPool(Cog, name="Talentpool"):
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data['inserted_at']
-            line += f", added {get_time_delta(inserted_at)}"
+            line += f", added {time.get_time_delta(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"
             if user_data['reviewed']:

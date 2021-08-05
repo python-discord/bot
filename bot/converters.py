@@ -20,9 +20,9 @@ from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
 from bot.exts.info.tags import TagIdentifier
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
-from bot.utils.time import parse_duration_string
 
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
@@ -338,7 +338,7 @@ class DurationDelta(Converter):
 
         The units need to be provided in descending order of magnitude.
         """
-        if not (delta := parse_duration_string(duration)):
+        if not (delta := time.parse_duration_string(duration)):
             raise BadArgument(f"`{duration}` is not a valid duration string.")
 
         return delta
