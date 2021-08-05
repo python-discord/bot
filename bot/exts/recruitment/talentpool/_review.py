@@ -273,7 +273,7 @@ class Reviewer:
                 last_channel = user_activity["top_channel_activity"][-1]
                 channels += f", and {last_channel[1]} in {last_channel[0]}"
 
-        joined_at_formatted = time.time_since(member.joined_at)
+        joined_at_formatted = time.format_relative(member.joined_at)
         review = (
             f"{member.name} joined the server **{joined_at_formatted}**"
             f" and has **{messages} messages**{channels}."
@@ -365,7 +365,7 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time.time_since(isoparse(history[0]['ended_at']))
+        end_time = time.format_relative(isoparse(history[0]['ended_at']))
 
         review = (
             f"They were nominated **{nomination_times}** before"

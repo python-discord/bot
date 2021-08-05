@@ -172,7 +172,7 @@ class Utils(Cog):
         lines = []
         for snowflake in snowflakes:
             created_at = snowflake_time(snowflake)
-            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time.time_since(created_at)}).")
+            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time.format_relative(created_at)}).")
 
         await LinePaginator.paginate(
             lines,
