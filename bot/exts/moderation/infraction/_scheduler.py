@@ -136,7 +136,7 @@ class InfractionScheduler:
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = time.format_infraction_with_duration(infraction["expires_at"])
+        expiry = time.format_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
         if user_reason is None:
@@ -387,7 +387,7 @@ class InfractionScheduler:
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
         expiry = dateutil.parser.isoparse(expiry) if expiry else None
-        created = time.format_infraction_with_duration(inserted_at, expiry)
+        created = time.format_with_duration(inserted_at, expiry)
 
         log_content = None
         log_text = {

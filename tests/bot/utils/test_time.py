@@ -47,8 +47,8 @@ class TimeTests(unittest.TestCase):
         """Testing format_infraction."""
         self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '<t:1576108860:f>')
 
-    def test_format_infraction_with_duration_none_expiry(self):
-        """format_infraction_with_duration should work for None expiry."""
+    def test_format_with_duration_none_expiry(self):
+        """format_with_duration should work for None expiry."""
         test_cases = (
             (None, None, None, None),
 
@@ -60,10 +60,10 @@ class TimeTests(unittest.TestCase):
 
         for expiry, date_from, max_units, expected in test_cases:
             with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
-                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
+                self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
-    def test_format_infraction_with_duration_custom_units(self):
-        """format_infraction_with_duration should work for custom max_units."""
+    def test_format_with_duration_custom_units(self):
+        """format_with_duration should work for custom max_units."""
         test_cases = (
             ('3000-12-12T00:01:00Z', datetime(3000, 12, 11, 12, 5, 5, tzinfo=timezone.utc), 6,
              '<t:32533488060:f> (11 hours, 55 minutes and 55 seconds)'),
@@ -73,10 +73,10 @@ class TimeTests(unittest.TestCase):
 
         for expiry, date_from, max_units, expected in test_cases:
             with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
-                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
+                self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
-    def test_format_infraction_with_duration_normal_usage(self):
-        """format_infraction_with_duration should work for normal usage, across various durations."""
+    def test_format_with_duration_normal_usage(self):
+        """format_with_duration should work for normal usage, across various durations."""
         utc = timezone.utc
         test_cases = (
             ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5, tzinfo=utc), 2,
@@ -98,7 +98,7 @@ class TimeTests(unittest.TestCase):
 
         for expiry, date_from, max_units, expected in test_cases:
             with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
-                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
+                self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
     def test_until_expiration_with_duration_none_expiry(self):
         """until_expiration should work for None expiry."""
