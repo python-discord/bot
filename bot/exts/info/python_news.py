@@ -1,7 +1,7 @@
 import logging
+import re
 import typing as t
 from datetime import date, datetime
-import re
 
 import discord
 import feedparser
@@ -75,7 +75,7 @@ class PythonNews(Cog):
 
     @staticmethod
     def escape_markdown(content: str) -> str:
-        """Escape the markdown underlines"""
+        """Escape the markdown underlines."""
         # taken from discord.utils.escape_markdown
         return re.sub(r'[_\\~|]', lambda match: '\\' + match[0], content, 0, re.MULTILINE)
 
