@@ -3,7 +3,7 @@ import logging
 import pprint
 import textwrap
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
@@ -14,6 +14,7 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
+from bot.errors import NonExistentRoleError
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
@@ -42,15 +43,29 @@ class Information(Cog):
         return channel_counter
 
     @staticmethod
-    def get_member_counts(guild: Guild) -> Dict[str, int]:
+    def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
+        """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
+        members = 0
+        for role_id in role_ids:
+            if (role := guild.get_role(role_id)) is not None:
+                members += len(role.members)
+            else:
+                raise NonExistentRoleError(role_id)
+        return {name or role.name.title(): members}
+
+    @staticmethod
+    def get_member_counts(guild: Guild) -> dict[str, int]:
         """Return the total number of members for certain roles in `guild`."""
-        roles = (
-            guild.get_role(role_id) for role_id in (
-                constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
-                constants.Roles.owners, constants.Roles.contributors,
-            )
+        role_ids = [constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
+                    constants.Roles.owners, constants.Roles.contributors]
+
+        role_stats = {}
+        for role_id in role_ids:
+            role_stats.update(Information.join_role_stats([role_id], guild))
+        role_stats.update(
+            Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], guild, "Leads")
         )
-        return {role.name.title(): len(role.members) for role in roles}
+        return role_stats
 
     def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
