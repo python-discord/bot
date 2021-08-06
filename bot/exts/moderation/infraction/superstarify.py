@@ -73,7 +73,7 @@ class Superstarify(InfractionScheduler, Cog):
         notified = await _utils.notify_infraction(
             user=after,
             infr_type="Superstarify",
-            expires_at=time.format_infraction(infraction["expires_at"]),
+            expires_at=time.discord_timestamp(infraction["expires_at"]),
             reason=(
                 "You have tried to change your nickname on the **Python Discord** server "
                 f"from **{before.display_name}** to **{after.display_name}**, but as you "
@@ -150,7 +150,7 @@ class Superstarify(InfractionScheduler, Cog):
         id_ = infraction["id"]
 
         forced_nick = self.get_nick(id_, member.id)
-        expiry_str = time.format_infraction(infraction["expires_at"])
+        expiry_str = time.discord_timestamp(infraction["expires_at"])
 
         # Apply the infraction
         async def action() -> None:

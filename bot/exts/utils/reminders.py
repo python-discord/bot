@@ -168,7 +168,7 @@ class Reminders(Cog):
         self.schedule_reminder(reminder)
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
-    async def send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
+    async def send_reminder(self, reminder: dict, expected_time: t.Optional[time.Timestamp] = None) -> None:
         """Send the reminder."""
         is_valid, user, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
@@ -347,8 +347,7 @@ class Reminders(Cog):
 
         for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
-            remind_datetime = isoparse(remind_at)
-            expiry = time.format_relative(remind_datetime)
+            expiry = time.format_relative(remind_at)
 
             mentions = ", ".join([
                 # Both Role and User objects have the `name` attribute

@@ -43,10 +43,6 @@ class TimeTests(unittest.TestCase):
                 time.humanize_delta(relativedelta(days=2, hours=2), 'hours', max_units)
             self.assertEqual(str(error.exception), 'max_units must be positive')
 
-    def test_format_infraction(self):
-        """Testing format_infraction."""
-        self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '<t:1576108860:f>')
-
     def test_format_with_duration_none_expiry(self):
         """format_with_duration should work for None expiry."""
         test_cases = (

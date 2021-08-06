@@ -1,10 +1,10 @@
 import datetime
 import re
 from enum import Enum
+from time import struct_time
 from typing import Optional, Union
 
 import arrow
-import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
 DISCORD_TIMESTAMP_REGEX = re.compile(r"<t:(\d+):f>")
@@ -19,8 +19,18 @@ _DURATION_REGEX = re.compile(
     r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
 )
 
-
-ValidTimestamp = Union[int, datetime.datetime, datetime.date]
+# All supported types for the single-argument overload of arrow.get(). tzinfo is excluded because
+# it's too implicit of a way for the caller to specify that they want the current time.
+Timestamp = Union[
+    arrow.Arrow,
+    datetime.datetime,
+    datetime.date,
+    struct_time,
+    int,  # POSIX timestamp
+    float,  # POSIX timestamp
+    str,  # ISO 8601-formatted string
+    tuple[int, int, int],  # ISO calendar tuple
+]
 
 
 class TimestampFormats(Enum):
@@ -60,15 +70,14 @@ def _stringify_time_unit(value: int, unit: str) -> str:
         return f"{value} {unit}"
 
 
-def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
-    """Create and format a Discord flavored markdown timestamp."""
-    # Convert each possible timestamp class to an integer.
-    if isinstance(timestamp, datetime.datetime):
-        timestamp = (timestamp - arrow.get(0)).total_seconds()
-    elif isinstance(timestamp, datetime.date):
-        timestamp = (timestamp - arrow.get(0)).total_seconds()
+def discord_timestamp(timestamp: Timestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
+    """
+    Format a timestamp as a Discord-flavored Markdown timestamp.
 
-    return f"<t:{int(timestamp)}:{format.value}>"
+    `timestamp` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
+    """
+    timestamp = int(arrow.get(timestamp).timestamp())
+    return f"<t:{timestamp}:{format.value}>"
 
 
 def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: int = 6) -> str:
@@ -115,14 +124,6 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
     return humanized
 
 
-def get_time_delta(time_string: str) -> str:
-    """Returns the time in human-readable time delta format."""
-    date_time = dateutil.parser.isoparse(time_string)
-    time_delta = format_relative(date_time)
-
-    return time_delta
-
-
 def parse_duration_string(duration: str) -> Optional[relativedelta]:
     """
     Converts a `duration` string to a relativedelta object.
@@ -154,64 +155,63 @@ def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
     return utcnow + delta - utcnow
 
 
-def format_relative(timestamp: ValidTimestamp) -> str:
+def format_relative(timestamp: Timestamp) -> str:
     """
     Format `timestamp` as a relative Discord timestamp.
 
     A relative timestamp describes how much time has elapsed since `timestamp` or how much time
-    remains until `timestamp` is reached. See `time.discord_timestamp`.
+    remains until `timestamp` is reached.
+
+    `timestamp` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
     """
     return discord_timestamp(timestamp, TimestampFormats.RELATIVE)
 
 
-def format_infraction(timestamp: str) -> str:
-    """Format an infraction timestamp to a discord timestamp."""
-    return discord_timestamp(dateutil.parser.isoparse(timestamp))
-
-
 def format_with_duration(
-    timestamp: Optional[str],
-    other_timestamp: Optional[datetime.datetime] = None,
+    timestamp: Optional[Timestamp],
+    other_timestamp: Optional[Timestamp] = None,
     max_units: int = 2,
 ) -> Optional[str]:
     """
     Return `timestamp` formatted as a discord timestamp with the timestamp duration since `other_timestamp`.
 
+    `timestamp` and `other_timestamp` can be any type supported by the single-arg `arrow.get()`,
+    except for a `tzinfo`. Use the current time if `other_timestamp` is falsy or unspecified.
+
     `max_units` specifies the maximum number of units of time to include in the duration. For
     example, a value of 1 may include days but not hours.
+
+    Return None if `timestamp` is falsy.
     """
     if not timestamp:
         return None
 
-    date_to_formatted = format_infraction(timestamp)
+    timestamp = arrow.get(timestamp)
+    if not other_timestamp:
+        other_timestamp = arrow.utcnow()
+    else:
+        other_timestamp = arrow.get(other_timestamp)
 
-    other_timestamp = other_timestamp or datetime.datetime.now(datetime.timezone.utc)
-    timestamp = dateutil.parser.isoparse(timestamp).replace(microsecond=0)
-
-    delta = abs(relativedelta(timestamp, other_timestamp))
+    formatted_timestamp = discord_timestamp(timestamp)
+    delta = abs(relativedelta(timestamp.datetime, other_timestamp.datetime))
     duration = humanize_delta(delta, max_units=max_units)
-    duration_formatted = f" ({duration})" if duration else ""
 
-    return f"{date_to_formatted}{duration_formatted}"
+    return f"{formatted_timestamp} ({duration})"
 
 
-def until_expiration(
-    expiry: Optional[str]
-) -> Optional[str]:
+def until_expiration(expiry: Optional[Timestamp]) -> Optional[str]:
     """
-    Get the remaining time until infraction's expiration, in a discord timestamp.
+    Get the remaining time until an infraction's expiration as a Discord timestamp.
 
-    Returns a human-readable version of the remaining duration between arrow.utcnow() and an expiry.
-    Similar to format_relative, except that this function doesn't error on a null input
-    and return null if the expiry is in the paste
+    `expiry` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
+
+    Return None if `expiry` is falsy or is in the past.
     """
     if not expiry:
         return None
 
-    now = arrow.utcnow()
-    since = dateutil.parser.isoparse(expiry).replace(microsecond=0)
-
-    if since < now:
+    expiry = arrow.get(expiry)
+    if expiry < arrow.utcnow():
         return None
 
-    return format_relative(since)
+    return format_relative(expiry)

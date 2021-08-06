@@ -285,7 +285,7 @@ class WatchChannel(metaclass=CogABCMeta):
         actor = actor.display_name if actor else self.watched_users[user_id]['actor']
 
         inserted_at = self.watched_users[user_id]['inserted_at']
-        time_delta = time.get_time_delta(inserted_at)
+        time_delta = time.format_relative(inserted_at)
 
         reason = self.watched_users[user_id]['reason']
 
@@ -359,7 +359,7 @@ class WatchChannel(metaclass=CogABCMeta):
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data['inserted_at']
-            line += f", added {time.get_time_delta(inserted_at)}"
+            line += f", added {time.format_relative(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"
             list_data["info"][user_id] = line

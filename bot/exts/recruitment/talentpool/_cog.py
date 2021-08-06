@@ -180,7 +180,7 @@ class TalentPool(Cog, name="Talentpool"):
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data['inserted_at']
-            line += f", added {time.get_time_delta(inserted_at)}"
+            line += f", added {time.format_relative(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"
             if user_data['reviewed']:
@@ -561,7 +561,7 @@ class TalentPool(Cog, name="Talentpool"):
             actor = await get_or_fetch_member(guild, actor_id)
 
             reason = site_entry["reason"] or "*None*"
-            created = time.format_infraction(site_entry["inserted_at"])
+            created = time.discord_timestamp(site_entry["inserted_at"])
             entries.append(
                 f"Actor: {actor.mention if actor else actor_id}\nCreated: {created}\nReason: {reason}"
             )
@@ -570,7 +570,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         active = nomination_object["active"]
 
-        start_date = time.format_infraction(nomination_object["inserted_at"])
+        start_date = time.discord_timestamp(nomination_object["inserted_at"])
         if active:
             lines = textwrap.dedent(
                 f"""
@@ -584,7 +584,7 @@ class TalentPool(Cog, name="Talentpool"):
                 """
             )
         else:
-            end_date = time.format_infraction(nomination_object["ended_at"])
+            end_date = time.discord_timestamp(nomination_object["ended_at"])
             lines = textwrap.dedent(
                 f"""
                 ===============

@@ -321,7 +321,7 @@ class Reviewer:
             infractions += ", with the last infraction issued "
 
         # Infractions were ordered by time since insertion descending.
-        infractions += time.get_time_delta(infraction_list[0]['inserted_at'])
+        infractions += time.format_relative(infraction_list[0]['inserted_at'])
 
         return f"They have {infractions}."
 
@@ -365,7 +365,7 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time.format_relative(isoparse(history[0]['ended_at']))
+        end_time = time.format_relative(history[0]['ended_at'])
 
         review = (
             f"They were nominated **{nomination_times}** before"
