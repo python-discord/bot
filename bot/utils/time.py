@@ -2,7 +2,7 @@ import datetime
 import re
 from enum import Enum
 from time import struct_time
-from typing import Optional, Union, overload
+from typing import Literal, Optional, Union, overload
 
 import arrow
 from dateutil.relativedelta import relativedelta
@@ -29,6 +29,7 @@ Timestamp = Union[
     str,  # ISO 8601-formatted string
     tuple[int, int, int],  # ISO calendar tuple
 ]
+_Precision = Literal["years", "months", "days", "hours", "minutes", "seconds"]
 
 
 class TimestampFormats(Enum):
@@ -83,7 +84,7 @@ def humanize_delta(
     arg1: Union[relativedelta, Timestamp],
     /,
     *,
-    precision: str = "seconds",
+    precision: _Precision = "seconds",
     max_units: int = 6,
     absolute: bool = True,
 ) -> str:
@@ -96,7 +97,7 @@ def humanize_delta(
     start: Timestamp,
     /,
     *,
-    precision: str = "seconds",
+    precision: _Precision = "seconds",
     max_units: int = 6,
     absolute: bool = True,
 ) -> str:
@@ -113,7 +114,7 @@ def humanize_delta(
     hours: float = 0,
     minutes: float = 0,
     seconds: float = 0,
-    precision: str = "seconds",
+    precision: _Precision = "seconds",
     max_units: int = 6,
     absolute: bool = True,
 ) -> str:
@@ -122,7 +123,7 @@ def humanize_delta(
 
 def humanize_delta(
     *args,
-    precision: str = "seconds",
+    precision: _Precision = "seconds",
     max_units: int = 6,
     absolute: bool = True,
     **kwargs,
