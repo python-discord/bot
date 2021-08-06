@@ -254,8 +254,8 @@ class Defcon(Cog):
 
         expiry_message = ""
         if expiry:
-            activity_duration = relativedelta(expiry, arrow.utcnow().datetime)
-            expiry_message = f" for the next {time.humanize_delta(activity_duration, max_units=2)}"
+            formatted_expiry = time.humanize_delta(expiry, max_units=2)
+            expiry_message = f" for the next {formatted_expiry}"
 
         if self.threshold:
             channel_message = (

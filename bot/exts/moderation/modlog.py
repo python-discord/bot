@@ -713,7 +713,7 @@ class ModLog(Cog, name="ModLog"):
             # datetime as the baseline and create a human-readable delta between this edit event
             # and the last time the message was edited
             timestamp = msg_before.edited_at
-            delta = time.humanize_delta(relativedelta(msg_after.edited_at, msg_before.edited_at))
+            delta = time.humanize_delta(msg_after.edited_at, msg_before.edited_at)
             footer = f"Last edited {delta} ago"
         else:
             # Message was not previously edited, use the created_at datetime as the baseline, no

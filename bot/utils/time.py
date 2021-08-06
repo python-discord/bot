@@ -2,7 +2,7 @@ import datetime
 import re
 from enum import Enum
 from time import struct_time
-from typing import Optional, Union
+from typing import Optional, Union, overload
 
 import arrow
 from dateutil.relativedelta import relativedelta
@@ -78,15 +78,99 @@ def discord_timestamp(timestamp: Timestamp, format: TimestampFormats = Timestamp
     return f"<t:{timestamp}:{format.value}>"
 
 
-def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: int = 6) -> str:
-    """
-    Returns a human-readable version of the relativedelta.
+@overload
+def humanize_delta(
+    arg1: Union[relativedelta, Timestamp],
+    /,
+    *,
+    precision: str = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+) -> str:
+    ...
 
-    precision specifies the smallest unit of time to include (e.g. "seconds", "minutes").
-    max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
+
+@overload
+def humanize_delta(
+    end: Timestamp,
+    start: Timestamp,
+    /,
+    *,
+    precision: str = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+) -> str:
+    ...
+
+
+def humanize_delta(
+    *args,
+    precision: str = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+) -> str:
     """
+    Return a human-readable version of a time duration.
+
+    `precision` is the smallest unit of time to include (e.g. "seconds", "minutes").
+
+    `max_units` is the maximum number of units of time to include.
+    Count units from largest to smallest (e.g. count days before months).
+
+    Use the absolute value of the duration if `absolute` is True.
+
+    Usage:
+
+    **One** `relativedelta` object, to humanize the duration represented by it:
+
+    >>> humanize_delta(relativedelta(years=12, months=6))
+    '12 years and 6 months'
+
+    Note that `leapdays` and absolute info (singular names) will be ignored during humanization.
+
+    **One** timestamp of a type supported by the single-arg `arrow.get()`, except for `tzinfo`,
+    to humanize the duration between it and the current time:
+
+    >>> humanize_delta('2021-08-06T12:43:01Z', absolute=True)  # now = 2021-08-06T12:33:33Z
+    '9 minutes and 28 seconds'
+
+    >>> humanize_delta('2021-08-06T12:43:01Z', absolute=False)  # now = 2021-08-06T12:33:33Z
+    '-9 minutes and -28 seconds'
+
+    **Two** timestamps, each of a type supported by the single-arg `arrow.get()`, except for
+    `tzinfo`, to humanize the duration between them:
+
+    >>> humanize_delta(datetime.datetime(2020, 1, 1), '2021-01-01T12:00:00Z', absolute=False)
+    '1 year and 12 hours'
+
+    >>> humanize_delta('2021-01-01T12:00:00Z', datetime.datetime(2020, 1, 1), absolute=False)
+    '-1 years and -12 hours'
+
+    Note that order of the arguments can result in a different output even if `absolute` is True:
+
+    >>> x = datetime.datetime(3000, 11, 1)
+    >>> y = datetime.datetime(3000, 9, 2)
+    >>> humanize_delta(y, x, absolute=True), humanize_delta(x, y, absolute=True)
+    ('1 month and 30 days', '1 month and 29 days')
+
+    This is due to the nature of `relativedelta`; it does not represent a fixed period of time.
+    Instead, it's relative to the `datetime` to which it's added to get the other `datetime`.
+    In the example, the difference arises because all months don't have the same number of days.
+    """
+    if len(args) == 1 and isinstance(args[0], relativedelta):
+        delta = args[0]
+    elif 1 <= len(args) <= 2:
+        end = arrow.get(args[0])
+        start = arrow.get(args[1]) if len(args) == 2 else arrow.utcnow()
+
+        delta = relativedelta(end.datetime, start.datetime)
+        if absolute:
+            delta = abs(delta)
+    else:
+        raise ValueError(f"Received {len(args)} positional arguments, but expected 1 or 2.")
+
     if max_units <= 0:
-        raise ValueError("max_units must be positive")
+        raise ValueError("max_units must be positive.")
 
     units = (
         ("years", delta.years),
@@ -174,25 +258,17 @@ def format_with_duration(
     Return `timestamp` formatted as a discord timestamp with the timestamp duration since `other_timestamp`.
 
     `timestamp` and `other_timestamp` can be any type supported by the single-arg `arrow.get()`,
-    except for a `tzinfo`. Use the current time if `other_timestamp` is falsy or unspecified.
+    except for a `tzinfo`. Use the current time if `other_timestamp` is None or unspecified.
 
-    `max_units` specifies the maximum number of units of time to include in the duration. For
-    example, a value of 1 may include days but not hours.
+    `max_units` is forwarded to `time.humanize_delta`. See its documentation for more information.
 
     Return None if `timestamp` is falsy.
     """
     if not timestamp:
         return None
 
-    timestamp = arrow.get(timestamp)
-    if not other_timestamp:
-        other_timestamp = arrow.utcnow()
-    else:
-        other_timestamp = arrow.get(other_timestamp)
-
     formatted_timestamp = discord_timestamp(timestamp)
-    delta = abs(relativedelta(timestamp.datetime, other_timestamp.datetime))
-    duration = humanize_delta(delta, max_units=max_units)
+    duration = humanize_delta(timestamp, other_timestamp, max_units=max_units)
 
     return f"{formatted_timestamp} ({duration})"
 
