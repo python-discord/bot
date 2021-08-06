@@ -7,8 +7,6 @@ from typing import Optional, Union
 import arrow
 from dateutil.relativedelta import relativedelta
 
-DISCORD_TIMESTAMP_REGEX = re.compile(r"<t:(\d+):f>")
-
 _DURATION_REGEX = re.compile(
     r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
     r"((?P<months>\d+?) ?(months|month|m) ?)?"

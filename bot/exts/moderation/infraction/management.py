@@ -1,8 +1,7 @@
 import textwrap
 import typing as t
-from datetime import datetime, timezone
 
-import dateutil.parser
+import arrow
 import discord
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
@@ -351,7 +350,8 @@ class ModManagement(commands.Cog):
         active = infraction["active"]
         user = infraction["user"]
         expires_at = infraction["expires_at"]
-        created = time.discord_timestamp(infraction["inserted_at"])
+        inserted_at = infraction["inserted_at"]
+        created = time.discord_timestamp(inserted_at)
         dm_sent = infraction["dm_sent"]
 
         # Format the user string.
@@ -371,12 +371,9 @@ class ModManagement(commands.Cog):
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = datetime.fromtimestamp(
-                float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
-                timezone.utc
-            )
-            date_to = dateutil.parser.isoparse(expires_at)
-            duration = time.humanize_delta(relativedelta(date_to, date_from))
+            start = arrow.get(inserted_at).datetime
+            end = arrow.get(expires_at).datetime
+            duration = time.humanize_delta(relativedelta(start, end))
 
         # Format `dm_sent`
         if dm_sent is None:
