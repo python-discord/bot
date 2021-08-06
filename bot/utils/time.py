@@ -103,11 +103,29 @@ def humanize_delta(
     ...
 
 
+@overload
+def humanize_delta(
+    *,
+    years: int = 0,
+    months: int = 0,
+    weeks: float = 0,
+    days: float = 0,
+    hours: float = 0,
+    minutes: float = 0,
+    seconds: float = 0,
+    precision: str = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+) -> str:
+    ...
+
+
 def humanize_delta(
     *args,
     precision: str = "seconds",
     max_units: int = 6,
     absolute: bool = True,
+    **kwargs,
 ) -> str:
     """
     Return a human-readable version of a time duration.
@@ -120,6 +138,12 @@ def humanize_delta(
     Use the absolute value of the duration if `absolute` is True.
 
     Usage:
+
+    Keyword arguments specifying values for time units, to construct a `relativedelta` and humanize
+    the duration represented by it:
+
+    >>> humanize_delta(days=2, hours=16, seconds=23)
+    '2 days, 16 hours and 23 seconds'
 
     **One** `relativedelta` object, to humanize the duration represented by it:
 
@@ -157,9 +181,14 @@ def humanize_delta(
     Instead, it's relative to the `datetime` to which it's added to get the other `datetime`.
     In the example, the difference arises because all months don't have the same number of days.
     """
-    if len(args) == 1 and isinstance(args[0], relativedelta):
+    if args and kwargs:
+        raise ValueError("Unsupported combination of positional and keyword arguments.")
+
+    if len(args) == 0:
+        delta = relativedelta(**kwargs)
+    elif len(args) == 1 and isinstance(args[0], relativedelta):
         delta = args[0]
-    elif 1 <= len(args) <= 2:
+    elif len(args) <= 2:
         end = arrow.get(args[0])
         start = arrow.get(args[1]) if len(args) == 2 else arrow.utcnow()
 
