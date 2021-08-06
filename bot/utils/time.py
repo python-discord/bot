@@ -62,9 +62,6 @@ def _stringify_time_unit(value: int, unit: str) -> str:
 
 def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
     """Create and format a Discord flavored markdown timestamp."""
-    if format not in TimestampFormats:
-        raise ValueError(f"Format can only be one of {', '.join(TimestampFormats.args)}, not {format}.")
-
     # Convert each possible timestamp class to an integer.
     if isinstance(timestamp, datetime.datetime):
         timestamp = (timestamp - arrow.get(0)).total_seconds()
