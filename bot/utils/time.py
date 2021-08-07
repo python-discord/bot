@@ -292,9 +292,9 @@ def format_with_duration(
 
     `max_units` is forwarded to `time.humanize_delta`. See its documentation for more information.
 
-    Return None if `timestamp` is falsy.
+    Return None if `timestamp` is None.
     """
-    if not timestamp:
+    if timestamp is None:
         return None
 
     formatted_timestamp = discord_timestamp(timestamp)
@@ -309,9 +309,9 @@ def until_expiration(expiry: Optional[Timestamp]) -> str:
 
     `expiry` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
 
-    Return "Permanent" if `expiry` is falsy. Return "Expired" if `expiry` is in the past.
+    Return "Permanent" if `expiry` is None. Return "Expired" if `expiry` is in the past.
     """
-    if not expiry:
+    if expiry is None:
         return "Permanent"
 
     expiry = arrow.get(expiry)
