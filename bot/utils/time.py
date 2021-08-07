@@ -303,19 +303,19 @@ def format_with_duration(
     return f"{formatted_timestamp} ({duration})"
 
 
-def until_expiration(expiry: Optional[Timestamp]) -> Optional[str]:
+def until_expiration(expiry: Optional[Timestamp]) -> str:
     """
     Get the remaining time until an infraction's expiration as a Discord timestamp.
 
     `expiry` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
 
-    Return None if `expiry` is falsy or is in the past.
+    Return "Permanent" if `expiry` is falsy. Return "Expired" if `expiry` is in the past.
     """
     if not expiry:
-        return None
+        return "Permanent"
 
     expiry = arrow.get(expiry)
     if expiry < arrow.utcnow():
-        return None
+        return "Expired"
 
     return format_relative(expiry)

@@ -179,8 +179,8 @@ class ModManagement(commands.Cog):
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
-                Previous expiry: {time.until_expiration(infraction['expires_at']) or "Permanent"}
-                New expiry: {time.until_expiration(new_infraction['expires_at']) or "Permanent"}
+                Previous expiry: {time.until_expiration(infraction['expires_at'])}
+                New expiry: {time.until_expiration(new_infraction['expires_at'])}
             """.rstrip()
 
         changes = ' & '.join(confirm_messages)
@@ -362,7 +362,7 @@ class ModManagement(commands.Cog):
             user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
         if active:
-            remaining = time.until_expiration(expires_at) or "Expired"
+            remaining = time.until_expiration(expires_at)
         else:
             remaining = "Inactive"
 

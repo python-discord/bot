@@ -100,8 +100,8 @@ class TimeTests(unittest.TestCase):
                 self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
     def test_until_expiration_with_duration_none_expiry(self):
-        """until_expiration should work for None expiry."""
-        self.assertEqual(time.until_expiration(None), None)
+        """until_expiration should return "Permanent" is expiry is None."""
+        self.assertEqual(time.until_expiration(None), "Permanent")
 
     def test_until_expiration_with_duration_custom_units(self):
         """until_expiration should work for custom max_units."""
@@ -122,7 +122,6 @@ class TimeTests(unittest.TestCase):
             ('3000-12-12T00:00:00Z', '<t:32533488000:R>'),
             ('3000-11-23T20:09:00Z', '<t:32531918940:R>'),
             ('3000-11-23T20:09:00Z', '<t:32531918940:R>'),
-            (None, None),
         )
 
         for expiry, expected in test_cases:
