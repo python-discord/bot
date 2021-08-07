@@ -76,7 +76,6 @@ class PythonNews(Cog):
     @staticmethod
     def escape_markdown(content: str) -> str:
         """Escape the markdown underlines."""
-        # taken from discord.utils.escape_markdown
         return re.sub(r'[_\\~|]', lambda match: '\\' + match[0], content, 0, re.MULTILINE)
 
     async def post_pep_news(self) -> None:
