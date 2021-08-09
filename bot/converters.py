@@ -609,7 +609,7 @@ def _snowflake_from_regex(pattern: t.Pattern, arg: str) -> int:
     """
     match = pattern.match(arg)
     if not match:
-        raise BadArgument(f"Mention {str!r} is invalid.")
+        raise BadArgument(f"Mention {arg!r} is invalid.")
 
     return int(match.group(1))
 
