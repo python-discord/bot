@@ -643,6 +643,26 @@ class Infraction(Converter):
             return await ctx.bot.api_client.get(f"bot/infractions/{arg}")
 
 
+if t.TYPE_CHECKING:
+    ValidDiscordServerInvite = dict  # noqa: F811
+    ValidFilterListType = str  # noqa: F811
+    Extension = str  # noqa: F811
+    PackageName = str  # noqa: F811
+    ValidURL = str  # noqa: F811
+    Inventory = t.Tuple[str, _inventory_parser.InventoryDict]  # noqa: F811
+    Snowflake = int  # noqa: F811
+    TagNameConverter = str  # noqa: F811
+    TagContentConverter = str  # noqa: F811
+    SourceConverter = SourceType  # noqa: F811
+    DurationDelta = relativedelta  # noqa: F811
+    Duration = datetime  # noqa: F811
+    OffTopicName = str  # noqa: F811
+    ISODateTime = datetime  # noqa: F811
+    HushDurationConverter = int  # noqa: F811
+    UserMentionOrID = discord.User  # noqa: F811
+    FetchedUser = t.Union[discord.User, discord.Object]  # noqa: F811
+    Infraction = t.Optional[dict]  # noqa: F811
+
 Expiry = t.Union[Duration, ISODateTime]
 FetchedMember = t.Union[discord.Member, FetchedUser]
 UserMention = partial(_snowflake_from_regex, RE_USER_MENTION)
