@@ -75,7 +75,7 @@ class LinePaginator(Paginator):
             raise ValueError(f"scale_to_size must be >= max_size. ({scale_to_size} < {max_size})")
 
         if scale_to_size > 4000:
-            raise ValueError(f"scale_to_size must be <= 2,000 characters. ({scale_to_size} > 4000)")
+            raise ValueError(f"scale_to_size must be <= 4,000 characters. ({scale_to_size} > 4000)")
 
         self.scale_to_size = scale_to_size - len(suffix)
         self.max_lines = max_lines
