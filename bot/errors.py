@@ -1,6 +1,6 @@
 from typing import Hashable
 
-from converters import MemberOrUser
+from bot.converters import MemberOrUser
 
 
 class LockedResourceError(RuntimeError):
