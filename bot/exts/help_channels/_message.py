@@ -29,7 +29,7 @@ AVAILABLE_TITLE = "Available help channel"
 
 AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
 
-DORMANT_MSG = f"""
+DORMANT_MSG = """
 This help channel has been marked as **dormant**, and has been moved into the **{dormant}** \
 category at the bottom of the channel list. It is no longer possible to send messages in this \
 channel until it becomes available again.
