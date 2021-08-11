@@ -12,7 +12,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, MemberOrUser, allowed_strings
+from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, allowed_strings
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -201,21 +201,24 @@ class ModManagement(commands.Cog):
     # region: Search infractions
 
     @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: t.Union[MemberOrUser, str]) -> None:
+    async def infraction_search_group(self, ctx: Context, query: t.Union[MemberOrUser, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
-        if isinstance(query, MemberOrUser):
-            await self.search_user(ctx, query)
-        else:
+        if isinstance(query, int):
+            await self.search_user(ctx, discord.Object(query))
+        elif isinstance(query, str):
             await self.search_reason(ctx, query)
+        else:
+            await self.search_user(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx: Context, user: MemberOrUser) -> None:
+    async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={'user__id': str(user.id)}
         )
 
+        user_string = str(user if isinstance(user, (discord.Member, discord.User)) else user.id)
         embed = discord.Embed(
             title=f"Infractions for {user} ({len(infraction_list)} total)",
             colour=discord.Colour.orange()
