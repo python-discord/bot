@@ -387,10 +387,11 @@ class HelpChannels(commands.Cog):
         )
 
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
+        dormant_category = await channel_utils.try_get_channel(constants.Categories.help_dormant)
         available_category = await channel_utils.try_get_channel(constants.Categories.help_available)
         embed = discord.Embed(
             description=_message.DORMANT_MSG.format(
-                dormant=channel.category.name,
+                dormant=dormant_category.name,
                 available=available_category.name,
                 asking_guide=_message.ASKING_GUIDE_URL
             )
