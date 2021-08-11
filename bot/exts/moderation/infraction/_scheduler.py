@@ -13,7 +13,7 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours
-from bot.converters import FetchedMember
+from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.modlog import ModLog
 from bot.utils import messages, scheduling, time
@@ -115,7 +115,7 @@ class InfractionScheduler:
         self,
         ctx: Context,
         infraction: _utils.Infraction,
-        user: FetchedMember,
+        user: MemberOrUser,
         action_coro: t.Optional[t.Awaitable] = None,
         user_reason: t.Optional[str] = None,
         additional_info: str = "",
@@ -264,7 +264,7 @@ class InfractionScheduler:
             self,
             ctx: Context,
             infr_type: str,
-            user: FetchedMember,
+            user: MemberOrUser,
             send_msg: bool = True
     ) -> None:
         """

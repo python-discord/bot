@@ -1,6 +1,6 @@
 from typing import Hashable
 
-from discord import Member, User
+from converters import MemberOrUser
 
 
 class LockedResourceError(RuntimeError):
@@ -30,7 +30,8 @@ class InvalidInfractedUserError(Exception):
         `user` -- User or Member which is invalid
     """
 
-    def __init__(self, user: Union[Member, User], reason: str = "User infracted is a bot."):
+    def __init__(self, user: MemberOrUser, reason: str = "User infracted is a bot."):
+
         self.user = user
         self.reason = reason
 

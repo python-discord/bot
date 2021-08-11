@@ -12,7 +12,7 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES, Webhooks
-from bot.converters import FetchedMember
+from bot.converters import MemberOrUser
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
@@ -178,7 +178,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='forcewatch', aliases=('fw', 'forceadd', 'fa'), root_aliases=("forcenominate",))
     @has_any_role(*MODERATION_ROLES)
-    async def force_watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+    async def force_watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
         """
         Adds the given `user` to the talent pool, from any channel.
 
@@ -188,7 +188,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+    async def watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
         """
         Adds the given `user` to the talent pool.
 
@@ -207,7 +207,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
         await self._watch_user(ctx, user, reason)
 
-    async def _watch_user(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+    async def _watch_user(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """Adds the given user to the talent pool."""
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
@@ -271,7 +271,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @has_any_role(*MODERATION_ROLES)
-    async def history_command(self, ctx: Context, user: FetchedMember) -> None:
+    async def history_command(self, ctx: Context, user: MemberOrUser) -> None:
         """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
             self.api_endpoint,
@@ -300,7 +300,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_group.command(name='unwatch', aliases=('end', ), root_aliases=("unnominate",))
     @has_any_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 
@@ -323,7 +323,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
 
     @nomination_edit_group.command(name='reason')
     @has_any_role(*MODERATION_ROLES)
-    async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: FetchedMember, *, reason: str) -> None:
+    async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: MemberOrUser, *, reason: str) -> None:
         """Edits the reason of a specific nominator in a specific active nomination."""
         if len(reason) > REASON_MAX_CHARS:
             await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
@@ -417,7 +417,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
         await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
-    async def on_member_ban(self, guild: Guild, user: Union[FetchedMember]) -> None:
+    async def on_member_ban(self, guild: Guild, user: Union[MemberOrUser]) -> None:
         """Remove `user` from the talent pool after they are banned."""
         await self.unwatch(user.id, "User was banned.")
 

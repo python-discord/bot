@@ -499,4 +499,4 @@ class Infraction(Converter):
 
 
 Expiry = t.Union[Duration, ISODateTime]
-FetchedMember = t.Union[discord.Member, discord.User]
+MemberOrUser = t.Union[discord.Member, discord.User]

@@ -12,7 +12,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, FetchedMember, Infraction, allowed_strings
+from bot.converters import Expiry, MemberOrUser, Infraction, allowed_strings
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -201,15 +201,15 @@ class ModManagement(commands.Cog):
     # region: Search infractions
 
     @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: t.Union[FetchedMember, str]) -> None:
+    async def infraction_search_group(self, ctx: Context, query: t.Union[MemberOrUser, str]) -> None:
         """Searches for infractions in the database."""
-        if isinstance(query, FetchedMember):
+        if isinstance(query, MemberOrUser):
             await self.search_user(ctx, query)
         else:
             await self.search_reason(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx: Context, user: FetchedMember) -> None:
+    async def search_user(self, ctx: Context, user: MemberOrUser) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',

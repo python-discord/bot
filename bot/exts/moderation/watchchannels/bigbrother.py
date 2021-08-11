@@ -6,7 +6,7 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Webhooks
-from bot.converters import FetchedMember
+from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction._utils import post_infraction
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
 
@@ -60,7 +60,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='watch', aliases=('w',), root_aliases=('watch',))
     @has_any_role(*MODERATION_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
 
@@ -71,11 +71,11 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',), root_aliases=('unwatch',))
     @has_any_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
         await self.apply_unwatch(ctx, user, reason)
 
-    async def apply_watch(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+    async def apply_watch(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """
         Add `user` to watched users and apply a watch infraction with `reason`.
 
@@ -125,7 +125,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         await ctx.send(msg)
 
-    async def apply_unwatch(self, ctx: Context, user: FetchedMember, reason: str, send_message: bool = True) -> None:
+    async def apply_unwatch(self, ctx: Context, user: MemberOrUser, reason: str, send_message: bool = True) -> None:
         """
         Remove `user` from watched users and mark their infraction as inactive with `reason`.
 
