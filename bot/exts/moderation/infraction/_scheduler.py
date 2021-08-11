@@ -13,8 +13,8 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours
+from bot.converters import FetchedMember
 from bot.exts.moderation.infraction import _utils
-from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.exts.moderation.modlog import ModLog
 from bot.utils import messages, scheduling, time
 from bot.utils.channel import is_mod_channel
@@ -115,7 +115,7 @@ class InfractionScheduler:
         self,
         ctx: Context,
         infraction: _utils.Infraction,
-        user: UserSnowflake,
+        user: FetchedMember,
         action_coro: t.Optional[t.Awaitable] = None,
         user_reason: t.Optional[str] = None,
         additional_info: str = "",
@@ -264,7 +264,7 @@ class InfractionScheduler:
             self,
             ctx: Context,
             infr_type: str,
-            user: UserSnowflake,
+            user: FetchedMember,
             send_msg: bool = True
     ) -> None:
         """

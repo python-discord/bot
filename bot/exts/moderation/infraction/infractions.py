@@ -14,7 +14,6 @@ from bot.converters import Duration, Expiry, FetchedMember
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
-from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
@@ -320,7 +319,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def apply_ban(
         self,
         ctx: Context,
-        user: UserSnowflake,
+        user: FetchedMember,
         reason: t.Optional[str],
         purge_days: t.Optional[int] = 0,
         **kwargs
@@ -376,7 +375,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
 
     @respect_role_hierarchy(member_arg=2)
-    async def apply_voice_ban(self, ctx: Context, user: UserSnowflake, reason: t.Optional[str], **kwargs) -> None:
+    async def apply_voice_ban(self, ctx: Context, user: FetchedMember, reason: t.Optional[str], **kwargs) -> None:
         """Apply a voice ban infraction with kwargs passed to `post_infraction`."""
         if await _utils.get_active_infraction(ctx, user, "voice_ban"):
             return

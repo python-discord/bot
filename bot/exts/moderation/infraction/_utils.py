@@ -7,6 +7,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
+from bot.converters import FetchedMember
 from bot.errors import InvalidInfractedUserError
 
 log = logging.getLogger(__name__)
@@ -43,16 +44,13 @@ INFRACTION_DESCRIPTION_TEMPLATE = (
 )
 
 
-async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
+async def post_user(ctx: Context, user: FetchedMember) -> t.Optional[dict]:
     """
     Create a new user in the database.
 
     Used when an infraction needs to be applied on a user absent in the guild.
     """
     log.trace(f"Attempting to add user {user.id} to the database.")
-
-    if not isinstance(user, (discord.Member, discord.User)):
-        log.debug("The user being added to the DB is not a Member or User object.")
 
     payload = {
         'discriminator': int(getattr(user, 'discriminator', 0)),
@@ -73,7 +71,7 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
 
 async def post_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: FetchedMember,
         infr_type: str,
         reason: str,
         expires_at: datetime = None,
@@ -81,7 +79,7 @@ async def post_infraction(
         active: bool = True
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
-    if isinstance(user, (discord.Member, discord.User)) and user.bot:
+    if isinstance(user, FetchedMember) and user.bot:
         log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
         raise InvalidInfractedUserError(user)
 
@@ -116,7 +114,7 @@ async def post_infraction(
 
 async def get_active_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: FetchedMember,
         infr_type: str,
         send_msg: bool = True
 ) -> t.Optional[dict]:
@@ -151,7 +149,7 @@ async def get_active_infraction(
 
 
 async def notify_infraction(
-        user: UserObject,
+        user: FetchedMember,
         infr_type: str,
         expires_at: t.Optional[str] = None,
         reason: t.Optional[str] = None,
@@ -187,7 +185,7 @@ async def notify_infraction(
 
 
 async def notify_pardon(
-        user: UserObject,
+        user: FetchedMember,
         title: str,
         content: str,
         icon_url: str = Icons.user_verified
@@ -205,7 +203,7 @@ async def notify_pardon(
     return await send_private_embed(user, embed)
 
 
-async def send_private_embed(user: UserObject, embed: discord.Embed) -> bool:
+async def send_private_embed(user: FetchedMember, embed: discord.Embed) -> bool:
     """
     A helper method for sending an embed to a user's DMs.
 
