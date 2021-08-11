@@ -79,7 +79,7 @@ async def post_infraction(
         active: bool = True
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
-    if isinstance(user, MemberOrUser) and user.bot:
+    if isinstance(user, (discord.Member, discord.User)) and user.bot:
         log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
         raise InvalidInfractedUserError(user)
 
