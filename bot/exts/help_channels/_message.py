@@ -30,14 +30,14 @@ AVAILABLE_TITLE = "Available help channel"
 AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
 
 DORMANT_MSG = f"""
-This help channel has been marked as **dormant**, and has been moved into the **{}** \
+This help channel has been marked as **dormant**, and has been moved into the **{dormant}** \
 category at the bottom of the channel list. It is no longer possible to send messages in this \
 channel until it becomes available again.
 
 If your question wasn't answered yet, you can claim a new help channel from the \
-**{}** category by simply asking your question again. Consider rephrasing the \
+**{available}** category by simply asking your question again. Consider rephrasing the \
 question to maximize your chance of getting a good answer. If you're not sure how, have a look \
-through our guide for **[asking a good question]({})**.
+through our guide for **[asking a good question]({asking_guide})**.
 """
 
 
