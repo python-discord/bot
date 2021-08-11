@@ -24,8 +24,6 @@ INFRACTION_ICONS = {
 RULES_URL = "https://pythondiscord.com/pages/rules"
 
 # Type aliases
-UserObject = t.Union[discord.Member, discord.User]
-UserSnowflake = t.Union[UserObject, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 
 APPEAL_EMAIL = "appeals@pythondiscord.com"
