@@ -12,7 +12,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, MemberOrUser, Infraction, allowed_strings
+from bot.converters import Expiry, Infraction, MemberOrUser, allowed_strings
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
