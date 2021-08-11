@@ -456,19 +456,6 @@ class UserMentionOrID(UserConverter):
             raise BadArgument(f"`{argument}` is not a User mention or a User ID.")
 
 
-def _snowflake_from_regex(pattern: t.Pattern, arg: str) -> int:
-    """
-    Extract the snowflake from `arg` using a regex `pattern` and return it as an int.
-
-    The snowflake is expected to be within the first capture group in `pattern`.
-    """
-    match = pattern.match(arg)
-    if not match:
-        raise BadArgument(f"Mention {str!r} is invalid.")
-
-    return int(match.group(1))
-
-
 class Infraction(Converter):
     """
     Attempts to convert a given infraction ID into an infraction.
