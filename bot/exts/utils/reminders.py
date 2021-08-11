@@ -181,7 +181,7 @@ class Reminders(Cog):
         )
 
         # Let's not use a codeblock to keep emojis and mentions working. Embeds are safe anyway.
-        embed.description = f"Here's your reminder: {reminder['content']}."
+        embed.description = f"Here's your reminder: {reminder['content']}"
 
         if reminder.get("jump_url"):  # keep backward compatibility
             embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
