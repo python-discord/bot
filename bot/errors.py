@@ -1,4 +1,4 @@
-from typing import Hashable, Union
+from typing import Hashable
 
 from discord import Member, User
 

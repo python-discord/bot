@@ -2,7 +2,6 @@ import logging
 import re
 import typing as t
 from datetime import datetime
-from functools import partial
 from ssl import CertificateError
 
 import dateutil.parser

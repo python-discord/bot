@@ -6,7 +6,7 @@ from typing import Union
 
 import discord
 from async_rediscache import RedisCache
-from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
+from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError

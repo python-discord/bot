@@ -3,7 +3,7 @@ import logging
 from typing import Union
 
 import discord
-from discord import Color, Embed, Member, Message, RawReactionActionEvent, TextChannel, User, errors
+from discord import Color, Embed, Message, RawReactionActionEvent, TextChannel, errors
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
