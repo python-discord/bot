@@ -171,8 +171,14 @@ class DuckPond(Cog):
         if not self.is_helper_viewable(channel):
             return
 
-        message = await channel.fetch_message(payload.message_id)
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:
+            return  # Message was deleted.
+
         member = discord.utils.get(message.guild.members, id=payload.user_id)
+        if not member:
+            return  # Member left or wasn't in the cache.
 
         # Was the message sent by a human staff member?
         if not self.is_staff(message.author) or message.author.bot:
