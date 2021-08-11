@@ -15,7 +15,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Guild, Roles
+from bot.constants import Channels, Colours, Emojis, Guild
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import get_time_delta, time_since
@@ -118,7 +118,7 @@ class Reviewer:
                 f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
             ), None
 
-        opening = f"<@&{Roles.mod_team}> <@&{Roles.admins}>\n{member.mention} ({member}) for Helper!"
+        opening = f"{member.mention} ({member}) for Helper!"
 
         current_nominations = "\n\n".join(
             f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}"
