@@ -81,8 +81,9 @@ class TagIdentifier(NamedTuple):
 class Tag:
     """Provide an interface to a tag from resources with `file_content`."""
 
-    def __init__(self, file_content: str):
-        post = frontmatter.loads(file_content)
+    def __init__(self, content_path: Path):
+        post = frontmatter.loads(content_path.read_text("utf8"))
+        self.file_path = content_path
         self.content = post.content
         self.metadata = post.metadata
         self._restricted_to: set[int] = set(self.metadata.get("restricted_to", ()))
@@ -147,7 +148,7 @@ class Tags(Cog):
                 tag_name = file.stem
                 tag_group = parent_dir.name if parent_dir.name else None
 
-                self._tags[TagIdentifier(tag_group, tag_name)] = Tag(file.read_text("utf-8"))
+                self._tags[TagIdentifier(tag_group, tag_name)] = Tag(file)
 
     def _get_suggestions(self, tag_identifier: TagIdentifier) -> list[tuple[TagIdentifier, Tag]]:
         """Return a list of suggested tags for `tag_identifier`."""
