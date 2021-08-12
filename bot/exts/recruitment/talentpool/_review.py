@@ -33,10 +33,12 @@ MAX_MESSAGE_SIZE = 2000
 # Maximum amount of characters allowed in an embed
 MAX_EMBED_SIZE = 4000
 
-# Regex finding the user ID of a user mention
-MENTION_RE = re.compile(r"<@!?(\d+?)>")
-# Regex matching role pings
-ROLE_MENTION_RE = re.compile(r"<@&\d+>")
+# Regex for finding the first message of a nomination, and extracting the nominee.
+# Historic nominations will have 2 role mentions at the start, new ones won't, optionally match for this.
+NOMINATION_MESSAGE_REGEX = re.compile(
+    r"(?:<@&\d+> <@&\d+>\n)*?<@!?(\d+?)> \(.+#\d{4}\) for Helper!\n\n\*\*Nominated by:\*\*",
+    re.MULTILINE
+)
 
 
 class Reviewer:
@@ -142,14 +144,14 @@ class Reviewer:
         """Archive this vote to #nomination-archive."""
         message = await message.fetch()
 
-        # We consider the first message in the nomination to contain the two role pings
+        # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
-        if not len(ROLE_MENTION_RE.findall(message.content)) >= 2:
+        if not NOMINATION_MESSAGE_REGEX.search(message.content):
             with contextlib.suppress(NoMoreItems):
                 async for new_message in message.channel.history(before=message.created_at):
                     messages.append(new_message)
 
-                    if len(ROLE_MENTION_RE.findall(new_message.content)) >= 2:
+                    if NOMINATION_MESSAGE_REGEX.search(new_message.content):
                         break
 
         log.debug(f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}")
@@ -161,7 +163,7 @@ class Reviewer:
         content = "".join(parts)
 
         # We assume that the first user mentioned is the user that we are voting on
-        user_id = int(MENTION_RE.search(content).group(1))
+        user_id = int(NOMINATION_MESSAGE_REGEX.search(content).group(1))
 
         # Get reaction counts
         reviewed = await count_unique_users_reaction(
