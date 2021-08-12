@@ -134,11 +134,11 @@ class Tags(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self._tags: dict[TagIdentifier, Tag] = {}
+        self.tags: dict[TagIdentifier, Tag] = {}
         self.initialize_tags()
 
     def initialize_tags(self) -> None:
-        """Load all tags from resources into `self._tags`."""
+        """Load all tags from resources into `self.tags`."""
         base_path = Path("bot", "resources", "tags")
 
         for file in base_path.glob("**/*"):
@@ -148,14 +148,14 @@ class Tags(Cog):
                 tag_name = file.stem
                 tag_group = parent_dir.name if parent_dir.name else None
 
-                self._tags[TagIdentifier(tag_group, tag_name)] = Tag(file)
+                self.tags[TagIdentifier(tag_group, tag_name)] = Tag(file)
 
     def _get_suggestions(self, tag_identifier: TagIdentifier) -> list[tuple[TagIdentifier, Tag]]:
         """Return a list of suggested tags for `tag_identifier`."""
         for threshold in [100, 90, 80, 70, 60]:
             suggestions = [
                 (identifier, tag)
-                for identifier, tag in self._tags.items()
+                for identifier, tag in self.tags.items()
                 if identifier.get_fuzzy_score(tag_identifier) >= threshold
             ]
             if suggestions:
@@ -206,7 +206,7 @@ class Tags(Cog):
             keywords_processed = [keywords]
 
         matching_tags = []
-        for identifier, tag in self._tags.items():
+        for identifier, tag in self.tags.items():
             matches = (query in tag.content.casefold() for query in keywords_processed)
             if tag.accessible_by(user) and check(matches):
                 matching_tags.append((identifier, tag))
@@ -285,7 +285,7 @@ class Tags(Cog):
             if tag.accessible_by(ctx.author)
         ]
 
-        tag = self._tags.get(tag_identifier)
+        tag = self.tags.get(tag_identifier)
         if tag is None and len(filtered_tags) == 1:
             tag_identifier = filtered_tags[0][0]
             tag = filtered_tags[0][1]
@@ -330,7 +330,7 @@ class Tags(Cog):
         current_group = object()
         group_accessible = True
 
-        for identifier, tag in sorted(self._tags.items(), key=tag_sort_key):
+        for identifier, tag in sorted(self.tags.items(), key=tag_sort_key):
 
             if identifier.group != current_group:
                 if not group_accessible:
@@ -356,7 +356,7 @@ class Tags(Cog):
         embed = Embed(title=f"Tags under *{group}*")
         tag_lines = sorted(
             f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
-            for identifier, tag in self._tags.items()
+            for identifier, tag in self.tags.items()
             if identifier.group == group and tag.accessible_by(ctx.author)
         )
         await LinePaginator.paginate(tag_lines, ctx, embed, footer_text=FOOTER_TEXT, empty=False, max_lines=15)
@@ -378,7 +378,7 @@ class Tags(Cog):
         Returns False if no message was sent.
         """  # noqa: D205, D415
         if tag_name_or_group is None and tag_name is None:
-            if self._tags:
+            if self.tags:
                 await self.list_all_tags(ctx)
                 return True
             else:
@@ -388,7 +388,7 @@ class Tags(Cog):
         elif tag_name is None:
             if any(
                 tag_name_or_group == identifier.group and tag.accessible_by(ctx.author)
-                for identifier, tag in self._tags.items()
+                for identifier, tag in self.tags.items()
             ):
                 await self.list_tags_in_group(ctx, tag_name_or_group)
                 return True
