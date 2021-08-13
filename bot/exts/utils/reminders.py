@@ -8,7 +8,7 @@ from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
-from discord.ext.commands import Cog, Context, Greedy, HTTPException, group
+from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_ROLES
@@ -198,7 +198,7 @@ class Reminders(Cog):
         partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
         try:
             await partial_message.reply(content=f"{additional_mentions}", embed=embed)
-        except HTTPException as e:
+        except discord.HTTPException as e:
             log.error(
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
