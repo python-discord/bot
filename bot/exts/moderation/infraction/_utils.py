@@ -53,10 +53,10 @@ async def post_user(ctx: Context, user: MemberOrUser) -> t.Optional[dict]:
     log.trace(f"Attempting to add user {user.id} to the database.")
 
     payload = {
-        'discriminator': int(getattr(user, 'discriminator', 0)),
+        'discriminator': int(user.discriminator),
         'id': user.id,
         'in_guild': False,
-        'name': getattr(user, 'name', 'Name unknown'),
+        'name': user.name,
         'roles': []
     }
 
