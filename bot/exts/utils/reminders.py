@@ -8,7 +8,7 @@ from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
-from discord.ext.commands import Cog, Context, Greedy, group
+from discord.ext.commands import Cog, Context, Greedy, HTTPException, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_ROLES
@@ -172,32 +172,39 @@ class Reminders(Cog):
         if not is_valid:
             # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
-
         embed = discord.Embed()
-        embed.colour = discord.Colour.blurple()
-        embed.set_author(
-            icon_url=Icons.remind_blurple,
-            name="It has arrived!"
-        )
-
-        # Let's not use a codeblock to keep emojis and mentions working. Embeds are safe anyway.
-        embed.description = f"Here's your reminder: {reminder['content']}"
-
-        if reminder.get("jump_url"):  # keep backward compatibility
-            embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
-
         if expected_time:
             embed.colour = discord.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
                 name=f"Sorry it should have arrived {time_since(expected_time)} !"
             )
+        else:
+            embed.colour = discord.Colour.blurple()
+            embed.set_author(
+                icon_url=Icons.remind_blurple,
+                name="It has arrived!"
+            )
 
+        # Let's not use a codeblock to keep emojis and mentions working. Embeds are safe anyway.
+        embed.description = f"Here's your reminder: {reminder['content']}"
+
+        # Here the jump URL is in the format of base_url/guild_id/channel_id/message_id
         additional_mentions = ' '.join(
             mentionable.mention for mentionable in self.get_mentionables(reminder["mentions"])
         )
 
-        await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
+        jump_url = reminder.get("jump_url")
+        partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
+        try:
+            await partial_message.reply(content=f"{additional_mentions}", embed=embed)
+        except HTTPException as e:
+            log.error(
+                f"There was an error when trying to reply to a reminder invocation message, {e}, "
+                "fall back to using jump_url"
+            )
+            embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
+            await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
