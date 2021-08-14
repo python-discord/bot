@@ -219,9 +219,13 @@ class ModManagement(commands.Cog):
         )
 
         if isinstance(user, (discord.Member, discord.User)):
-            user_str = escape_markdown(user.name) + user.discriminator
+            user_str = escape_markdown(str(user))
         else:
-            user_str = str(user.id)
+            if infraction_list:
+                user = infraction_list[0]["user"]
+                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+            else:
+                user_str = str(user.id)
 
         embed = discord.Embed(
             title=f"Infractions for {user_str} ({len(infraction_list)} total)",
