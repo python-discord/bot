@@ -87,7 +87,6 @@ class ModPings(Cog):
 
         The duration cannot be longer than 30 days.
         """
-        duration: datetime.datetime
         delta = duration - datetime.datetime.utcnow()
         if delta > datetime.timedelta(days=30):
             await ctx.send(":x: Cannot remove the role for longer than 30 days.")
