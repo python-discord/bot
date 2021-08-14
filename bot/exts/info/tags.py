@@ -327,7 +327,7 @@ class Tags(Cog):
             return group + name
 
         result_lines = []
-        current_group = object()
+        current_group = ""
         group_accessible = True
 
         for identifier, tag in sorted(self.tags.items(), key=tag_sort_key):
