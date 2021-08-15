@@ -19,8 +19,8 @@ from bot.constants import (
     Channels, Colours, Filter,
     Guild, Icons, URLs
 )
+from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
-from bot.exts.utils.jams import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
 from bot.utils.scheduling import Scheduler
