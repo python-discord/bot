@@ -202,7 +202,11 @@ class CodeJams(commands.Cog):
             await ctx.send(":x: I can't find the team channel for this member.")
             return
 
-        await channel.set_permissions(member, overwrite=None, reason="Participant removed from the team.")
+        await channel.set_permissions(
+            member,
+            overwrite=None,
+            reason=f"Participant removed from the team  {self.team_name(channel)}."
+        )
         await ctx.send(f"Removed the participant from `{self.team_name(channel)}`.")
 
     @staticmethod
