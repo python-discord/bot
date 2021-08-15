@@ -33,7 +33,7 @@ class CodeJams(commands.Cog):
             await ctx.send_help(ctx.command)
 
     @codejam.command()
-    async def create(self, ctx: commands.Context, csv_file: t.Optional[str]) -> None:
+    async def create(self, ctx: commands.Context, csv_file: t.Optional[str] = None) -> None:
         """
         Create code-jam teams from a CSV file or a link to one, specifying the team names, leaders and members.
 
