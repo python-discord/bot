@@ -369,7 +369,7 @@ class Tags(Cog):
     ) -> bool:
         """
         When arguments are passed in:
-        If a single argument is given and it matches a group name, list accessible all tags from that group.
+        If a single argument matching a group name is given, list all accessible tags from that group
         Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name
 
         With no arguments, list all accessible tags
