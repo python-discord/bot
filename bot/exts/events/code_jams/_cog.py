@@ -79,9 +79,9 @@ class CodeJams(commands.Cog):
     @commands.has_any_role(Roles.admins)
     async def end(self, ctx: commands.Context) -> None:
         """
-        Deletes all code jam channels.
+        Delete all code jam channels.
 
-        Displays a confirmation message with the categories and channels to be deleted. Pressing the added reaction
+        A confirmation message is displayed with the categories and channels to be deleted.. Pressing the added reaction
         deletes those channels.
         """
         def predicate_deletion_emoji_reaction(reaction: discord.Reaction, user: discord.User) -> bool:
@@ -196,7 +196,7 @@ class CodeJams(commands.Cog):
     @codejam.command()
     @commands.has_any_role(Roles.admins)
     async def remove(self, ctx: commands.Context, member: Member) -> None:
-        """Removes the participant from their team. Does not remove the participants or leader roles."""
+        """Remove the participant from their team. Does not remove the participants or leader roles."""
         channel = self.team_channel(ctx.guild, member)
         if not channel:
             await ctx.send(":x: I can't find the team channel for this member.")

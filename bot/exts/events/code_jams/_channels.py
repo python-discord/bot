@@ -107,7 +107,7 @@ async def _send_status_update(guild: discord.Guild, message: str) -> None:
 
 
 async def _add_team_leader_roles(members: list[tuple[discord.Member, bool]], team_leaders: discord.Role) -> None:
-    """Assign team leader role, the jammer role and their team role."""
+    """Assign the team leader role to the team leaders."""
     for member, is_leader in members:
         if is_leader:
             await member.add_roles(team_leaders)
