@@ -85,7 +85,7 @@ class DeletionContext:
             mod_alert_message += "Message:\n"
             [message] = self.messages.values()
             content = message.clean_content
-            remaining_chars = 2040 - len(mod_alert_message)
+            remaining_chars = 4080 - len(mod_alert_message)
 
             if len(content) > remaining_chars:
                 content = content[:remaining_chars] + "..."
