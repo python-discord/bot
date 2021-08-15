@@ -109,6 +109,7 @@ class CodeJams(commands.Cog):
 
         except asyncio.TimeoutError:
             await message.clear_reaction(DELETION_REACTION)
+            await ctx.send("Command timed out.", reference=message)
             return
 
         else:
@@ -131,7 +132,7 @@ class CodeJams(commands.Cog):
 
         def format_category_info(category: discord.CategoryChannel, channels: list[discord.abc.GuildChannel]) -> str:
             """Displays the category and the channels within it in a readable format."""
-            return f"{channel_repr(category)}:" + "".join(f"\n  - {channel_repr(channel)}" for channel in channels)
+            return f"{channel_repr(category)}:\n" + "\n".join("  - " + channel_repr(channel) for channel in channels)
 
         deletion_details = "\n\n".join(
             format_category_info(category, channels) for category, channels in categories.items()
