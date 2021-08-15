@@ -318,7 +318,7 @@ class Tags(Cog):
 
     async def list_all_tags(self, ctx: Context) -> None:
         """Send a paginator with all loaded tags accessible by `ctx.author`, groups first, and alphabetically sorted."""
-        def tag_sort_key(tag_item: tuple[TagIdentifier, tag]) -> str:
+        def tag_sort_key(tag_item: tuple[TagIdentifier, Tag]) -> str:
             group, name = tag_item[0]
             if group is None:
                 # Max codepoint character to force tags without a group to the end
