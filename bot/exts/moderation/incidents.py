@@ -614,7 +614,7 @@ class Incidents(Cog):
         """
         try:
             webhook_msg = await webhook.send(
-                embeds=[embed for embed in webhook_embed_list if embed is not None],
+                embeds=[embed for embed in webhook_embed_list],
                 username=sub_clyde(message.author.name),
                 avatar_url=message.author.avatar_url,
                 wait=True,
