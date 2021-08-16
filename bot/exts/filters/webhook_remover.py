@@ -9,7 +9,10 @@ from bot.constants import Channels, Colours, Event, Icons
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.messages import format_user
 
-WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discord(?:app)?\.com/api/webhooks/\d+/)\S+/?", re.IGNORECASE)
+WEBHOOK_URL_RE = re.compile(
+    r"((?:https?:\/\/)?(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/)\S+\/?",
+    re.IGNORECASE
+)
 
 ALERT_MESSAGE_TEMPLATE = (
     "{user}, looks like you posted a Discord webhook URL. Therefore, your "
