@@ -594,7 +594,7 @@ class Incidents(Cog):
             return embeds
 
         log.trace(
-            f"Skipping discord message link detection on {message.id}: message doesn't qualify."
+            f"No message links detected on incident message with id {message.id}."
         )
 
     async def send_message_link_embeds(
