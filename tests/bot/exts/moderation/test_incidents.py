@@ -853,11 +853,12 @@ class TestMessageLinkEmbeds(TestIncidents):
     @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True))
     async def test_incident_message_edit(self):
         """Edit the incident message and check whether `extract_message_links` is called or not."""
-        self.cog_instance.incidents_webhook = MockAsyncWebhook()  # Patch in our webhook
+        self.cog_instance.incidents_webhook = MockAsyncWebhook(id=101)  # Patch in our webhook
+        self.cog_instance.incidents_webhook.send = AsyncMock(return_value=MockMessage(id=191))
 
-        text_channel = MockTextChannel()
+        text_channel = MockTextChannel(id=123)
         self.cog_instance.bot.get_channel = MagicMock(return_value=text_channel)
-        text_channel.fetch_message = AsyncMock(return_value=MockMessage())
+        text_channel.fetch_message = AsyncMock(return_value=MockMessage(id=777, content="Did jason just screw up?"))
 
         payload = AsyncMock(
             discord.RawMessageUpdateEvent,

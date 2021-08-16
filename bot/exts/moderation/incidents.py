@@ -537,7 +537,7 @@ class Incidents(Cog):
         The edited message is also passed into `add_signals` if it is a incident message.
         """
         try:
-            channel = self.bot.get_channel(int(payload.data["channel_id"]))
+            channel = self.bot.get_channel(payload.channel_id)
             msg_after = await channel.fetch_message(payload.message_id)
         except discord.NotFound:  # Was deleted before we got the event
             await self.delete_msg_link_embed(payload.message_id)
@@ -626,7 +626,7 @@ class Incidents(Cog):
             )
 
         else:
-            await self.message_link_embeds_cache.set(int(message.id), int(webhook_msg.id))
+            await self.message_link_embeds_cache.set(message.id, webhook_msg.id)
             log.trace("Message Link Embed Sent successfully!")
             return webhook_msg.id
 
