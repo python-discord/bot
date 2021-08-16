@@ -13,7 +13,7 @@ WEBHOOK_URL_RE = re.compile(r"((?:https?://)?discord(?:app)?\.com/api/webhooks/\
 
 ALERT_MESSAGE_TEMPLATE = (
     "{user}, looks like you posted a Discord webhook URL. Therefore, your "
-    "message has been removed, alongside with your webhook."
+    "message has been removed, and your webhook has been deleted."
     "You can re-create it if you wish to. If you believe this was a "
     "mistake, please let us know."
 )
@@ -75,7 +75,7 @@ class WebhookRemover(Cog):
 
         matches = WEBHOOK_URL_RE.search(msg.content)
         if matches:
-            async with self.bot.http_session.delete(msg.content) as resp:
+            async with self.bot.http_session.delete(matches[0]) as resp:
                 # The Discord API Returns a 204 NO CONTENT response on success.
                 deleted_successfully = resp.status == 204
             await self.delete_and_respond(msg, matches[1] + "xxx", webhook_deleted=deleted_successfully)
