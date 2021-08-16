@@ -267,9 +267,7 @@ class HelpChannels(commands.Cog):
             for channel in channels[:abs(missing)]:
                 await self.unclaim_channel(channel, closed_on=_channel.ClosingReason.CLEANUP)
 
-        self.available_help_channels = {
-            c for c in self.available_category.channels if not _channel.is_excluded_channel(c)
-        }
+        self.available_help_channels = set(_channel.get_category_channels(self.available_category))
 
         # Getting channels that need to be included in the dynamic message.
         await self.update_available_help_channels()
