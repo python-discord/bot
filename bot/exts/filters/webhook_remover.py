@@ -16,7 +16,7 @@ WEBHOOK_URL_RE = re.compile(
 
 ALERT_MESSAGE_TEMPLATE = (
     "{user}, looks like you posted a Discord webhook URL. Therefore, your "
-    "message has been removed, and your webhook has been deleted."
+    "message has been removed, and your webhook has been deleted. "
     "You can re-create it if you wish to. If you believe this was a "
     "mistake, please let us know."
 )
