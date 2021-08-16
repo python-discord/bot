@@ -6,4 +6,4 @@ It supports attachments, codeblocks, and reactions. As communication happens ove
 
 **To use it, simply send a direct message to the bot.**
 
-Should there be an urgent and immediate need for a moderator or admin to look at a channel, feel free to ping the <@&831776746206265384> or <@&267628507062992896> role instead.
+Should there be an urgent and immediate need for a moderator to look at a channel, feel free to ping the <@&831776746206265384> role instead.
