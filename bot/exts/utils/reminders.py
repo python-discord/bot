@@ -195,6 +195,7 @@ class Reminders(Cog):
         )
 
         jump_url = reminder.get("jump_url")
+        embed.description += f"\n[Jump back to when you created the reminder]({jump_url})"
         partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
         try:
             await partial_message.reply(content=f"{additional_mentions}", embed=embed)
@@ -203,7 +204,6 @@ class Reminders(Cog):
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
             )
-            embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
             await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
