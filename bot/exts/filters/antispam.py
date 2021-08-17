@@ -116,6 +116,13 @@ class AntiSpam(Cog):
 
         self.message_deletion_queue = dict()
 
+        # Fetch the rule configuration with the highest rule interval.
+        max_interval_config = max(
+            AntiSpamConfig.rules.values(),
+            key=itemgetter('interval')
+        )
+        self.max_interval = max_interval_config['interval']
+
         self.bot.loop.create_task(self.alert_on_validation_error(), name="AntiSpam.alert_on_validation_error")
 
     @property
@@ -155,15 +162,8 @@ class AntiSpam(Cog):
         ):
             return
 
-        # Fetch the rule configuration with the highest rule interval.
-        max_interval_config = max(
-            AntiSpamConfig.rules.values(),
-            key=itemgetter('interval')
-        )
-        max_interval = max_interval_config['interval']
-
         # Store history messages since `interval` seconds ago in a list to prevent unnecessary API calls.
-        earliest_relevant_at = datetime.utcnow() - timedelta(seconds=max_interval)
+        earliest_relevant_at = datetime.utcnow() - timedelta(seconds=self.max_interval)
         relevant_messages = [
             msg async for msg in message.channel.history(after=earliest_relevant_at, oldest_first=False)
             if not msg.author.bot
