@@ -267,6 +267,8 @@ class HelpChannels(commands.Cog):
             for channel in channels[:abs(missing)]:
                 await self.unclaim_channel(channel, closed_on=_channel.ClosingReason.CLEANUP)
 
+        self.available_help_channels = set(_channel.get_category_channels(self.available_category))
+
         # Getting channels that need to be included in the dynamic message.
         await self.update_available_help_channels()
         log.trace("Dynamic available help message updated.")
@@ -387,13 +389,10 @@ class HelpChannels(commands.Cog):
         )
 
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
-        dormant_category = await channel_utils.try_get_channel(constants.Categories.help_dormant)
-        available_category = await channel_utils.try_get_channel(constants.Categories.help_available)
         embed = discord.Embed(
             description=_message.DORMANT_MSG.format(
-                dormant=dormant_category.name,
-                available=available_category.name,
-                asking_guide=_message.ASKING_GUIDE_URL
+                dormant=self.dormant_category.name,
+                available=self.available_category.name,
             )
         )
         await channel.send(embed=embed)
@@ -519,11 +518,6 @@ class HelpChannels(commands.Cog):
 
     async def update_available_help_channels(self) -> None:
         """Updates the dynamic message within #how-to-get-help for available help channels."""
-        if not self.available_help_channels:
-            self.available_help_channels = set(
-                c for c in self.available_category.channels if not _channel.is_excluded_channel(c)
-            )
-
         available_channels = AVAILABLE_HELP_CHANNELS.format(
             available=", ".join(
                 c.mention for c in sorted(self.available_help_channels, key=attrgetter("position"))
