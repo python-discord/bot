@@ -190,13 +190,13 @@ class Information(Cog):
             f"{constants.Emojis.status_offline} {offline_presences}"
         )
 
-        embed.description = textwrap.dedent(f"""
-            Created: {created}
-            Voice region: {region}\
-            {features}
-            Roles: {num_roles}
-            Member status: {member_status}
-        """)
+        embed.description = (
+            f"Created: {created}"
+            f"\nVoice region: {region}"
+            f"{features}"
+            f"\nRoles: {num_roles}"
+            f"\nMember status: {member_status}"
+        )
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         # Members
