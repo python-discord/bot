@@ -377,6 +377,8 @@ urls:
 
 
 anti_spam:
+    cache_size: 100
+
     # Clean messages that violate a rule.
     clean_offending: true
     ping_everyone: true

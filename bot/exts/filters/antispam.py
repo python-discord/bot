@@ -3,6 +3,7 @@ import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from itertools import takewhile
 from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
@@ -20,6 +21,7 @@ from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.utils import lock, scheduling
+from bot.utils.message_cache import MessageCache
 from bot.utils.messages import format_user, send_attachments
 
 
@@ -122,6 +124,7 @@ class AntiSpam(Cog):
             key=itemgetter('interval')
         )
         self.max_interval = max_interval_config['interval']
+        self.cache = MessageCache(AntiSpamConfig.cache_size, newest_first=True)
 
         self.bot.loop.create_task(self.alert_on_validation_error(), name="AntiSpam.alert_on_validation_error")
 
@@ -162,12 +165,11 @@ class AntiSpam(Cog):
         ):
             return
 
+        self.cache.append(message)
+
         # Store history messages since `interval` seconds ago in a list to prevent unnecessary API calls.
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=self.max_interval)
-        relevant_messages = [
-            msg async for msg in message.channel.history(after=earliest_relevant_at, oldest_first=False)
-            if not msg.author.bot
-        ]
+        relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
         for rule_name in AntiSpamConfig.rules:
             rule_config = AntiSpamConfig.rules[rule_name]
@@ -175,9 +177,10 @@ class AntiSpam(Cog):
 
             # Create a list of messages that were sent in the interval that the rule cares about.
             latest_interesting_stamp = datetime.utcnow() - timedelta(seconds=rule_config['interval'])
-            messages_for_rule = [
-                msg for msg in relevant_messages if msg.created_at > latest_interesting_stamp
-            ]
+            messages_for_rule = list(
+                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)
+            )
+
             result = await rule_function(message, messages_for_rule, rule_config)
 
             # If the rule returns `None`, that means the message didn't violate it.
@@ -212,7 +215,7 @@ class AntiSpam(Cog):
                         name=f"AntiSpam.punish(message={message.id}, member={member.id}, rule={rule_name})"
                     )
 
-                await self.maybe_delete_messages(channel, relevant_messages)
+                await self.maybe_delete_messages(channel, messages_for_rule)
                 break
 
     @lock.lock_arg("antispam.punish", "member", attrgetter("id"))
@@ -263,6 +266,11 @@ class AntiSpam(Cog):
 
         deletion_context = self.message_deletion_queue.pop(context_id)
         await deletion_context.upload_messages(self.bot.user.id, self.mod_log)
+
+    @Cog.listener()
+    async def on_message_edit(self, before: Message, after: Message) -> None:
+        """Updates the message in the cache, if it's cached."""
+        self.cache.update(after)
 
 
 def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
