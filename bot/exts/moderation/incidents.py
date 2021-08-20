@@ -143,7 +143,14 @@ async def add_signals(incident: discord.Message) -> None:
             log.trace(f"Skipping emoji as it's already been placed: {signal_emoji}")
         else:
             log.trace(f"Adding reaction: {signal_emoji}")
-            await incident.add_reaction(signal_emoji.value)
+            try:
+                await incident.add_reaction(signal_emoji.value)
+            except discord.NotFound as e:
+                if e.code != 10008:
+                    raise
+
+                log.trace(f"Couldn't react with signal because message {incident.id} was deleted; skipping incident")
+                return
 
 
 class Incidents(Cog):
@@ -288,14 +295,20 @@ class Incidents(Cog):
         members_roles: t.Set[int] = {role.id for role in member.roles}
         if not members_roles & ALLOWED_ROLES:  # Intersection is truthy on at least 1 common element
             log.debug(f"Removing invalid reaction: user {member} is not permitted to send signals")
-            await incident.remove_reaction(reaction, member)
+            try:
+                await incident.remove_reaction(reaction, member)
+            except discord.NotFound:
+                log.trace("Couldn't remove reaction because the reaction or its message was deleted")
             return
 
         try:
             signal = Signal(reaction)
         except ValueError:
             log.debug(f"Removing invalid reaction: emoji {reaction} is not a valid signal")
-            await incident.remove_reaction(reaction, member)
+            try:
+                await incident.remove_reaction(reaction, member)
+            except discord.NotFound:
+                log.trace("Couldn't remove reaction because the reaction or its message was deleted")
             return
 
         log.trace(f"Received signal: {signal}")
@@ -313,7 +326,10 @@ class Incidents(Cog):
         confirmation_task = self.make_confirmation_task(incident, timeout)
 
         log.trace("Deleting original message")
-        await incident.delete()
+        try:
+            await incident.delete()
+        except discord.NotFound:
+            log.trace("Couldn't delete message because it was already deleted")
 
         log.trace(f"Awaiting deletion confirmation: {timeout=} seconds")
         try:

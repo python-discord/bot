@@ -7,7 +7,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
-from bot.errors import InvalidInfractedUser
+from bot.errors import InvalidInfractedUserError
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ async def post_infraction(
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
         log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
-        raise InvalidInfractedUser(user)
+        raise InvalidInfractedUserError(user)
 
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
@@ -169,8 +169,8 @@ async def notify_infraction(
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
-    if len(text) > 2048:
-        text = f"{text[:2045]}..."
+    if len(text) > 4096:
+        text = f"{text[:4093]}..."
 
     embed = discord.Embed(
         description=text,

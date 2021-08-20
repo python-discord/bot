@@ -3,9 +3,9 @@ import logging
 import pprint
 import textwrap
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
-import fuzzywuzzy
+import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 
@@ -14,10 +14,11 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import FetchedMember
 from bot.decorators import in_whitelist
+from bot.errors import NonExistentRoleError
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
-from bot.utils.time import humanize_delta, time_since
+from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
 log = logging.getLogger(__name__)
 
@@ -42,15 +43,29 @@ class Information(Cog):
         return channel_counter
 
     @staticmethod
-    def get_member_counts(guild: Guild) -> Dict[str, int]:
+    def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
+        """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
+        members = 0
+        for role_id in role_ids:
+            if (role := guild.get_role(role_id)) is not None:
+                members += len(role.members)
+            else:
+                raise NonExistentRoleError(role_id)
+        return {name or role.name.title(): members}
+
+    @staticmethod
+    def get_member_counts(guild: Guild) -> dict[str, int]:
         """Return the total number of members for certain roles in `guild`."""
-        roles = (
-            guild.get_role(role_id) for role_id in (
-                constants.Roles.helpers, constants.Roles.moderators, constants.Roles.admins,
-                constants.Roles.owners, constants.Roles.contributors,
-            )
+        role_ids = [constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
+                    constants.Roles.owners, constants.Roles.contributors]
+
+        role_stats = {}
+        for role_id in role_ids:
+            role_stats.update(Information.join_role_stats([role_id], guild))
+        role_stats.update(
+            Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], guild, "Leads")
         )
-        return {role.name.title(): len(role.members) for role in roles}
+        return role_stats
 
     def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
@@ -117,9 +132,9 @@ class Information(Cog):
                 parsed_roles.add(role_name)
                 continue
 
-            match = fuzzywuzzy.process.extractOne(
+            match = rapidfuzz.process.extractOne(
                 role_name, all_roles, score_cutoff=80,
-                scorer=fuzzywuzzy.fuzz.ratio
+                scorer=rapidfuzz.fuzz.ratio
             )
 
             if not match:
@@ -154,7 +169,7 @@ class Information(Cog):
         """Returns an embed full of server information."""
         embed = Embed(colour=Colour.blurple(), title="Server Information")
 
-        created = time_since(ctx.guild.created_at, precision="days")
+        created = discord_timestamp(ctx.guild.created_at, TimestampFormats.RELATIVE)
         region = ctx.guild.region
         num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
@@ -171,21 +186,21 @@ class Information(Cog):
         online_presences = py_invite.approximate_presence_count
         offline_presences = py_invite.approximate_member_count - online_presences
         member_status = (
-            f"{constants.Emojis.status_online} {online_presences} "
-            f"{constants.Emojis.status_offline} {offline_presences}"
+            f"{constants.Emojis.status_online} {online_presences:,} "
+            f"{constants.Emojis.status_offline} {offline_presences:,}"
         )
 
-        embed.description = textwrap.dedent(f"""
-            Created: {created}
-            Voice region: {region}\
-            {features}
-            Roles: {num_roles}
-            Member status: {member_status}
-        """)
+        embed.description = (
+            f"Created: {created}"
+            f"\nVoice region: {region}"
+            f"{features}"
+            f"\nRoles: {num_roles}"
+            f"\nMember status: {member_status}"
+        )
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         # Members
-        total_members = ctx.guild.member_count
+        total_members = f"{ctx.guild.member_count:,}"
         member_counts = self.get_member_counts(ctx.guild)
         member_info = "\n".join(f"{role}: {count}" for role, count in member_counts.items())
         embed.add_field(name=f"Members: {total_members}", value=member_info)
@@ -224,7 +239,7 @@ class Information(Cog):
         """Creates an embed containing information on the `user`."""
         on_server = bool(ctx.guild.get_member(user.id))
 
-        created = time_since(user.created_at, max_units=3)
+        created = discord_timestamp(user.created_at, TimestampFormats.RELATIVE)
 
         name = str(user)
         if on_server and user.nick:
@@ -241,11 +256,11 @@ class Information(Cog):
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
 
-        activity = await self.user_messages(user)
-
         if on_server:
-            joined = time_since(user.joined_at, max_units=3)
-            roles = ", ".join(role.mention for role in user.roles[1:])
+            joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            # The 0 is for excluding the default @everyone role,
+            # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
+            roles = ", ".join(role.mention for role in user.roles[:0:-1])
             membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
             if not is_mod_channel(ctx.channel):
                 membership.pop("Verified")
@@ -272,8 +287,7 @@ class Information(Cog):
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
-            fields.append(activity)
-
+            fields.append(await self.user_messages(user))
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:

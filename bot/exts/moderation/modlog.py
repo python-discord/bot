@@ -99,7 +99,7 @@ class ModLog(Cog, name="ModLog"):
         """Generate log embed and send to logging channel."""
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
-            description=text[:2045] + "..." if len(text) > 2048 else text
+            description=text[:4093] + "..." if len(text) > 4096 else text
         )
 
         if title and icon_url:
@@ -564,7 +564,7 @@ class ModLog(Cog, name="ModLog"):
 
         # Shorten the message content if necessary
         content = message.clean_content
-        remaining_chars = 2040 - len(response)
+        remaining_chars = 4090 - len(response)
 
         if len(content) > remaining_chars:
             botlog_url = await self.upload_log(messages=[message], actor_id=message.author.id)

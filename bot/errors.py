@@ -22,7 +22,7 @@ class LockedResourceError(RuntimeError):
         )
 
 
-class InvalidInfractedUser(Exception):
+class InvalidInfractedUserError(Exception):
     """
     Exception raised upon attempt of infracting an invalid user.
 
@@ -41,3 +41,17 @@ class BrandingMisconfiguration(RuntimeError):
     """Raised by the Branding cog when a misconfigured event is encountered."""
 
     pass
+
+
+class NonExistentRoleError(ValueError):
+    """
+    Raised by the Information Cog when encountering a Role that does not exist.
+
+    Attributes:
+        `role_id` -- the ID of the role that does not exist
+    """
+
+    def __init__(self, role_id: int):
+        super().__init__(f"Could not fetch data for role {role_id}")
+
+        self.role_id = role_id

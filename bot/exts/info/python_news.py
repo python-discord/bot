@@ -173,7 +173,7 @@ class PythonNews(Cog):
                 # Build an embed and send a message to the webhook
                 embed = discord.Embed(
                     title=thread_information["subject"],
-                    description=content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
+                    description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
                     timestamp=new_date,
                     url=link,
                     colour=constants.Colours.soft_green
