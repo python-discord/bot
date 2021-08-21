@@ -163,40 +163,46 @@ class TestMessageCache(unittest.TestCase):
 
     def test_slicing_with_unfilled_cache(self):
         """Test if slicing returns the correct messages if the cache is not yet fully filled."""
-        cache = MessageCache(maxlen=5)
-        messages = [MockMessage() for _ in range(4)]
+        sizes = (5, 10, 55, 101)
 
-        for msg in messages:
-            cache.append(msg)
-
-        test_cases = (
+        slices = (
             slice(None), slice(2, None), slice(None, 2), slice(None, None, 2), slice(None, None, 3), slice(-1, 2),
             slice(-1, 3000), slice(-3, -1), slice(-10, 3), slice(-10, 4, 2), slice(None, None, -1), slice(None, 3, -2),
             slice(None, None, -3)
         )
 
-        for current_loop in test_cases:
-            with self.subTest(current_loop=current_loop):
-                self.assertListEqual(cache[current_loop], messages[current_loop])
+        for size in sizes:
+            cache = MessageCache(maxlen=size)
+            messages = [MockMessage() for _ in range(size // 3 * 2)]
+
+            for msg in messages:
+                cache.append(msg)
+
+            for slice_ in slices:
+                with self.subTest(current_loop=(size, slice_)):
+                    self.assertListEqual(cache[slice_], messages[slice_])
 
     def test_slicing_with_overfilled_cache(self):
         """Test if slicing returns the correct messages if the cache was appended with more messages it can contain."""
-        cache = MessageCache(maxlen=5)
-        messages = [MockMessage() for _ in range(8)]
+        sizes = (5, 10, 55, 101)
 
-        for msg in messages:
-            cache.append(msg)
-        messages = messages[3:]
-
-        test_cases = (
+        slices = (
             slice(None), slice(2, None), slice(None, 2), slice(None, None, 2), slice(None, None, 3), slice(-1, 2),
             slice(-1, 3000), slice(-3, -1), slice(-10, 3), slice(-10, 4, 2), slice(None, None, -1), slice(None, 3, -2),
             slice(None, None, -3)
         )
 
-        for current_loop in test_cases:
-            with self.subTest(current_loop=current_loop):
-                self.assertListEqual(cache[current_loop], messages[current_loop])
+        for size in sizes:
+            cache = MessageCache(maxlen=size)
+            messages = [MockMessage() for _ in range(size * 3 // 2)]
+
+            for msg in messages:
+                cache.append(msg)
+            messages = messages[size // 2:]
+
+            for slice_ in slices:
+                with self.subTest(current_loop=(size, slice_)):
+                    self.assertListEqual(cache[slice_], messages[slice_])
 
     def test_length(self):
         """Test if len returns the correct number of items in the cache."""

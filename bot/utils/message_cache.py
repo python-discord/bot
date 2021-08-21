@@ -142,20 +142,29 @@ class MessageCache:
 
             # Having empty cells is an implementation detail. To the user the cache contains as many elements as they
             # inserted, therefore any empty cells should be ignored. There can only be Nones at the tail.
-            if (
-                (self._start < self._end and not self._start < stop <= self._end)
-                or (self._start > self._end and self._end < stop <= self._start)
-            ):
-                stop = self._end
+            if step > 0:
+                if (
+                    (self._start < self._end and not self._start < stop <= self._end)
+                    or (self._start > self._end and self._end < stop <= self._start)
+                ):
+                    stop = self._end
+            else:
+                lower_boundary = (self._start - 1) % self.maxlen
+                if (
+                    (self._start < self._end and not self._start - 1 <= stop < self._end)
+                    or (self._start > self._end and self._end < stop < lower_boundary)
+                ):
+                    stop = lower_boundary
 
             if (start < stop and step > 0) or (start > stop and step < 0):
                 return self._messages[start:stop:step]
             # step != 1 may require a start offset in the second slicing.
             if step > 0:
                 offset = ceil((self.maxlen - start) / step) * step + start - self.maxlen
+                return self._messages[start::step] + self._messages[offset:stop:step]
             else:
-                offset = self.maxlen - ((start + 1) % step)
-            return self._messages[start::step] + self._messages[offset:stop:step]
+                offset = ceil((start + 1) / -step) * -step - start - 1
+                return self._messages[start::step] + self._messages[self.maxlen - 1 - offset:stop:step]
 
         else:
             raise TypeError(f"cache indices must be integers or slices, not {type(item)}")
