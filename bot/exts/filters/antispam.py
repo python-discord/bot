@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -46,7 +47,8 @@ RULE_FUNCTION_MAPPING = {
 class DeletionContext:
     """Represents a Deletion Context for a single spam event."""
 
-    channel: TextChannel
+    triggered_in: TextChannel
+    channels: set[TextChannel]
     members: Dict[int, Member] = field(default_factory=dict)
     rules: Set[str] = field(default_factory=set)
     messages: Dict[int, Message] = field(default_factory=dict)
@@ -72,10 +74,13 @@ class DeletionContext:
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
         triggered_by_users = ", ".join(format_user(m) for m in self.members.values())
+        triggered_in_channel = f"**Triggered in:** {self.triggered_in.mention}\n" if len(self.channels) > 1 else ""
+        channels_description = ", ".join(channel.mention for channel in self.channels)
 
         mod_alert_message = (
             f"**Triggered by:** {triggered_by_users}\n"
-            f"**Channel:** {self.channel.mention}\n"
+            f"{triggered_in_channel}"
+            f"**Channels:** {channels_description}\n"
             f"**Rules:** {', '.join(rule for rule in self.rules)}\n"
         )
 
@@ -167,7 +172,6 @@ class AntiSpam(Cog):
 
         self.cache.append(message)
 
-        # Store history messages since `interval` seconds ago in a list to prevent unnecessary API calls.
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=self.max_interval)
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
@@ -196,7 +200,8 @@ class AntiSpam(Cog):
                 channel = message.channel
                 if channel.id not in self.message_deletion_queue:
                     log.trace(f"Creating queue for channel `{channel.id}`")
-                    self.message_deletion_queue[message.channel.id] = DeletionContext(channel)
+                    affected_channels = set(message.channel for message in messages_for_rule)
+                    self.message_deletion_queue[message.channel.id] = DeletionContext(channel, affected_channels)
                     scheduling.create_task(
                         self._process_deletion_context(message.channel.id),
                         name=f"AntiSpam._process_deletion_context({message.channel.id})"
@@ -215,7 +220,7 @@ class AntiSpam(Cog):
                         name=f"AntiSpam.punish(message={message.id}, member={member.id}, rule={rule_name})"
                     )
 
-                await self.maybe_delete_messages(channel, messages_for_rule)
+                await self.maybe_delete_messages(messages_for_rule)
                 break
 
     @lock.lock_arg("antispam.punish", "member", attrgetter("id"))
@@ -237,14 +242,18 @@ class AntiSpam(Cog):
                 reason=reason
             )
 
-    async def maybe_delete_messages(self, channel: TextChannel, messages: List[Message]) -> None:
+    async def maybe_delete_messages(self, messages: List[Message]) -> None:
         """Cleans the messages if cleaning is configured."""
         if AntiSpamConfig.clean_offending:
             # If we have more than one message, we can use bulk delete.
             if len(messages) > 1:
                 message_ids = [message.id for message in messages]
                 self.mod_log.ignore(Event.message_delete, *message_ids)
-                await channel.delete_messages(messages)
+                channel_messages = defaultdict(list)
+                for message in messages:
+                    channel_messages[message.channel].append(message)
+                for channel, messages in channel_messages.items():
+                    await channel.delete_messages(messages)
 
             # Otherwise, the bulk delete endpoint will throw up.
             # Delete the message directly instead.
