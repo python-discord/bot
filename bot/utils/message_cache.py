@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import typing as t
 from math import ceil
 
@@ -10,7 +8,7 @@ class MessageCache:
     """
     A data structure for caching messages.
 
-    The cache is implemented as a circular buffer to allow constant time append, prepend, push, pop,
+    The cache is implemented as a circular buffer to allow constant time append, prepend, pop from either side,
     and lookup by index. The cache therefore does not support removal at an arbitrary index (although it can be
     implemented to work in linear time relative to the maximum size).
 
@@ -89,7 +87,7 @@ class MessageCache:
 
     def clear(self) -> None:
         """Remove all messages from the cache."""
-        self._messages: list[t.Optional[Message]] = [None] * self.maxlen
+        self._messages = [None] * self.maxlen
         self._message_id_mapping = {}
 
         self._start = 0
