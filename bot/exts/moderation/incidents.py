@@ -7,7 +7,7 @@ from enum import Enum
 
 import discord
 from async_rediscache import RedisCache
-from discord.ext.commands import Cog, Context, MessageConverter
+from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
@@ -168,8 +168,35 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         Channel: Special/#bot-commands (814190307980607493)
         Content: This is a very important message!
     """
+    embed = None
+
     try:
         message: discord.Message = await MessageConverter().convert(ctx, message_link)
+
+    except MessageNotFound:
+        mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
+        last_100_logs: list[discord.Message] = await mod_logs_channel.history(limit=100).flatten()
+
+        for log_entry in last_100_logs:
+            log_embed: discord.Embed = log_entry.embeds[0]
+            if (
+                    log_embed.author.name == "Message deleted"
+                    and f"[Jump to message]({message_link})" in log_embed.description
+            ):
+                embed = discord.Embed(
+                    colour=discord.Colour.dark_gold(),
+                    title="Deleted Message Link",
+                    description=(
+                        f"Found <#{Channels.mod_log}> entry for deleted message: "
+                        f"[Jump to message]({log_entry.jump_url})."
+                    )
+                )
+        if not embed:
+            embed = discord.Embed(
+                colour=discord.Colour.red(),
+                title="Bad Message Link",
+                description=f"Message {message_link} not found."
+            )
 
     except discord.DiscordException as e:
         log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
@@ -190,7 +217,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
         )
         embed.set_footer(text=f"Message ID: {message.id}")
 
-        return embed
+    return embed
 
 
 async def add_signals(incident: discord.Message) -> None:
