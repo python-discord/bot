@@ -47,20 +47,18 @@ RULE_FUNCTION_MAPPING = {
 class DeletionContext:
     """Represents a Deletion Context for a single spam event."""
 
+    members: frozenset[Member]
     triggered_in: TextChannel
-    channels: set[TextChannel]
-    members: Dict[int, Member] = field(default_factory=dict)
+    channels: set[TextChannel] = field(default_factory=set)
     rules: Set[str] = field(default_factory=set)
     messages: Dict[int, Message] = field(default_factory=dict)
     attachments: List[List[str]] = field(default_factory=list)
 
-    async def add(self, rule_name: str, members: Iterable[Member], messages: Iterable[Message]) -> None:
+    async def add(self, rule_name: str, channels: Iterable[TextChannel], messages: Iterable[Message]) -> None:
         """Adds new rule violation events to the deletion context."""
         self.rules.add(rule_name)
 
-        for member in members:
-            if member.id not in self.members:
-                self.members[member.id] = member
+        self.channels.update(channels)
 
         for message in messages:
             if message.id not in self.messages:
@@ -73,7 +71,7 @@ class DeletionContext:
 
     async def upload_messages(self, actor_id: int, modlog: ModLog) -> None:
         """Method that takes care of uploading the queue and posting modlog alert."""
-        triggered_by_users = ", ".join(format_user(m) for m in self.members.values())
+        triggered_by_users = ", ".join(format_user(m) for m in self.members)
         triggered_in_channel = f"**Triggered in:** {self.triggered_in.mention}\n" if len(self.channels) > 1 else ""
         channels_description = ", ".join(channel.mention for channel in self.channels)
 
@@ -197,20 +195,19 @@ class AntiSpam(Cog):
                 full_reason = f"`{rule_name}` rule: {reason}"
 
                 # If there's no spam event going on for this channel, start a new Message Deletion Context
-                channel = message.channel
-                if channel.id not in self.message_deletion_queue:
-                    log.trace(f"Creating queue for channel `{channel.id}`")
-                    affected_channels = set(message.channel for message in messages_for_rule)
-                    self.message_deletion_queue[message.channel.id] = DeletionContext(channel, affected_channels)
+                authors_set = frozenset(members)
+                if authors_set not in self.message_deletion_queue:
+                    log.trace(f"Creating queue for members `{authors_set}`")
+                    self.message_deletion_queue[authors_set] = DeletionContext(authors_set, message.channel)
                     scheduling.create_task(
-                        self._process_deletion_context(message.channel.id),
-                        name=f"AntiSpam._process_deletion_context({message.channel.id})"
+                        self._process_deletion_context(authors_set),
+                        name=f"AntiSpam._process_deletion_context({authors_set})"
                     )
 
                 # Add the relevant of this trigger to the Deletion Context
-                await self.message_deletion_queue[message.channel.id].add(
+                await self.message_deletion_queue[authors_set].add(
                     rule_name=rule_name,
-                    members=members,
+                    channels=set(message.channel for message in messages_for_rule),
                     messages=relevant_messages
                 )
 
@@ -264,7 +261,7 @@ class AntiSpam(Cog):
                 except NotFound:
                     log.info(f"Tried to delete message `{messages[0].id}`, but message could not be found.")
 
-    async def _process_deletion_context(self, context_id: int) -> None:
+    async def _process_deletion_context(self, context_id: frozenset) -> None:
         """Processes the Deletion Context queue."""
         log.trace("Sleeping before processing message deletion queue.")
         await asyncio.sleep(10)
