@@ -168,7 +168,7 @@ class TestMessageCache(unittest.TestCase):
         slices = (
             slice(None), slice(2, None), slice(None, 2), slice(None, None, 2), slice(None, None, 3), slice(-1, 2),
             slice(-1, 3000), slice(-3, -1), slice(-10, 3), slice(-10, 4, 2), slice(None, None, -1), slice(None, 3, -2),
-            slice(None, None, -3)
+            slice(None, None, -3), slice(-1, -10, -2), slice(-3, -7, -1)
         )
 
         for size in sizes:
@@ -189,7 +189,7 @@ class TestMessageCache(unittest.TestCase):
         slices = (
             slice(None), slice(2, None), slice(None, 2), slice(None, None, 2), slice(None, None, 3), slice(-1, 2),
             slice(-1, 3000), slice(-3, -1), slice(-10, 3), slice(-10, 4, 2), slice(None, None, -1), slice(None, 3, -2),
-            slice(None, None, -3)
+            slice(None, None, -3), slice(-1, -10, -2), slice(-3, -7, -1)
         )
 
         for size in sizes:

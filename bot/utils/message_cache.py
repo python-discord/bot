@@ -122,6 +122,9 @@ class MessageCache:
         Providing 0 will return the message at the position perceived by the user to be the beginning of the cache,
         meaning at `self._start`.
         """
+        # Keep in mind that for the modulo operator used throughout this function, Python modulo behaves similarly when
+        # the left operand is negative. E.g -1 % 5 == 4, because the closest number from the bottom that wholly divides
+        # by 5 is -5.
         if isinstance(item, int):
             if item >= len(self) or item < -len(self):
                 raise IndexError("cache index out of range")
