@@ -200,7 +200,7 @@ class Reminders(Cog):
         try:
             await partial_message.reply(content=f"{additional_mentions}", embed=embed)
         except discord.HTTPException as e:
-            log.error(
+            log.info(
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
             )
