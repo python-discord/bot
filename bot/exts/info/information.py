@@ -186,21 +186,21 @@ class Information(Cog):
         online_presences = py_invite.approximate_presence_count
         offline_presences = py_invite.approximate_member_count - online_presences
         member_status = (
-            f"{constants.Emojis.status_online} {online_presences} "
-            f"{constants.Emojis.status_offline} {offline_presences}"
+            f"{constants.Emojis.status_online} {online_presences:,} "
+            f"{constants.Emojis.status_offline} {offline_presences:,}"
         )
 
-        embed.description = textwrap.dedent(f"""
-            Created: {created}
-            Voice region: {region}\
-            {features}
-            Roles: {num_roles}
-            Member status: {member_status}
-        """)
+        embed.description = (
+            f"Created: {created}"
+            f"\nVoice region: {region}"
+            f"{features}"
+            f"\nRoles: {num_roles}"
+            f"\nMember status: {member_status}"
+        )
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         # Members
-        total_members = ctx.guild.member_count
+        total_members = f"{ctx.guild.member_count:,}"
         member_counts = self.get_member_counts(ctx.guild)
         member_info = "\n".join(f"{role}: {count}" for role, count in member_counts.items())
         embed.add_field(name=f"Members: {total_members}", value=member_info)
