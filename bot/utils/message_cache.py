@@ -170,6 +170,16 @@ class MessageCache:
         else:
             raise TypeError(f"cache indices must be integers or slices, not {type(item)}")
 
+    def __iter__(self) -> t.Iterator[Message]:
+        if self._is_empty():
+            return
+
+        if self._start < self._end:
+            yield from self._messages[self._start:self._end]
+        else:
+            yield from self._messages[self._start:]
+            yield from self._messages[:self._end]
+
     def __len__(self):
         """Get the number of non-empty cells in the cache."""
         if self._is_empty():
