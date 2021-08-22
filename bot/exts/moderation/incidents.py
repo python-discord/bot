@@ -10,7 +10,7 @@ from async_rediscache import RedisCache
 from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
+from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks
 from bot.utils import scheduling
 from bot.utils.messages import format_user, sub_clyde
 
@@ -203,6 +203,13 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional
 
     else:
         channel = message.channel
+        helpers_role = message.guild.get_role(Roles.helpers)
+        if not channel.overwrites_for(helpers_role).read_messages:
+            log.info(
+                f"Helpers don't have read permissions in #{channel.name},"
+                " not sending message link embed for {message_link}"
+            )
+            return
 
         embed = discord.Embed(
             colour=discord.Colour.gold(),
@@ -641,7 +648,7 @@ class Incidents(Cog):
         """
         try:
             webhook_msg = await webhook.send(
-                embeds=[embed for embed in webhook_embed_list],
+                embeds=[embed for embed in webhook_embed_list if embed],
                 username=sub_clyde(message.author.name),
                 avatar_url=message.author.avatar_url,
                 wait=True,
