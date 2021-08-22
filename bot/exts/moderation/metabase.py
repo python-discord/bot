@@ -156,6 +156,20 @@ class Metabase(Cog):
             f"`bot.get_cog('Metabase').exports[{question_id}]`"
         )
 
+    @metabase_group.command(name="publish", aliases=("share",))
+    async def metabase_publish(self, ctx: Context, question_id: int) -> None:
+        """Publically shares the given question and posts the link."""
+        await ctx.trigger_typing()
+        # Make sure we have a session token before running anything
+        await self.init_task
+
+        url = f"{MetabaseConfig.base_url}/api/card/{question_id}/public_link"
+
+        async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
+            response_json = await resp.json(encoding="utf-8")
+            sharing_url = f"{MetabaseConfig.base_url}/public/question/{response_json['uuid']}"
+            await ctx.send(f":+1: {ctx.author.mention} Here's your sharing link: {sharing_url}")
+
     # This cannot be static (must have a __func__ attribute).
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow admins inside moderator channels to invoke the commands in this cog."""
