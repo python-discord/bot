@@ -18,7 +18,7 @@ from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import TimestampFormats, discord_timestamp, time_since
+from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = logging.getLogger(__name__)
 
@@ -177,7 +177,7 @@ class Reminders(Cog):
             embed.colour = discord.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
-                name=f"Sorry it should have arrived {time_since(expected_time)} !"
+                name="Sorry, your reminder should have arrived earlier!"
             )
         else:
             embed.colour = discord.Colour.blurple()
