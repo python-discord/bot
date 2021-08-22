@@ -12,7 +12,7 @@ from discord.ext.commands import BucketType, Cog, Context, Paginator, command, g
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.converters import FetchedMember
+from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
 from bot.pagination import LinePaginator
@@ -220,7 +220,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
+    async def user_info(self, ctx: Context, user: MemberOrUser = None) -> None:
         """Returns info about a user."""
         if user is None:
             user = ctx.author
@@ -235,7 +235,7 @@ class Information(Cog):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: FetchedMember) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: MemberOrUser) -> Embed:
         """Creates an embed containing information on the `user`."""
         on_server = bool(ctx.guild.get_member(user.id))
 
@@ -257,7 +257,11 @@ class Information(Cog):
                 badges.append(emoji)
 
         if on_server:
-            joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            if user.joined_at:
+                joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            else:
+                joined = "Unable to get join date"
+
             # The 0 is for excluding the default @everyone role,
             # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
             roles = ", ".join(role.mention for role in user.roles[:0:-1])
@@ -307,7 +311,7 @@ class Information(Cog):
 
         return embed
 
-    async def basic_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def basic_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
@@ -324,7 +328,7 @@ class Information(Cog):
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -365,7 +369,7 @@ class Information(Cog):
 
         return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def user_nomination_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
@@ -390,7 +394,7 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
-    async def user_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
+    async def user_messages(self, user: MemberOrUser) -> Tuple[Union[bool, str], Tuple[str, str]]:
         """
         Gets the amount of messages for `member`.
 
