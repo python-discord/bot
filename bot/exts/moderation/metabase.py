@@ -84,7 +84,7 @@ class Metabase(Cog):
             "username": MetabaseConfig.username,
             "password": MetabaseConfig.password
         }
-        async with self.bot.http_session.post(f"{MetabaseConfig.url}/session", json=data) as resp:
+        async with self.bot.http_session.post(f"{MetabaseConfig.base_url}/api/session", json=data) as resp:
             json_data = await resp.json()
             self.session_token = json_data.get("id")
 
@@ -130,7 +130,7 @@ class Metabase(Cog):
             # Make sure we have a session token before running anything
             await self.init_task
 
-            url = f"{MetabaseConfig.url}/card/{question_id}/query/{extension}"
+            url = f"{MetabaseConfig.base_url}/api/card/{question_id}/query/{extension}"
 
             async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
                 if extension == "csv":
