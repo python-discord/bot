@@ -4,8 +4,8 @@ import textwrap
 from typing import Any
 from urllib.parse import quote_plus
 
+import discord
 from aiohttp import ClientResponseError
-from discord import Message
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
@@ -44,6 +44,17 @@ class CodeSnippets(Cog):
 
     Matches each message against a regex and prints the contents of all matched snippets.
     """
+
+    def __init__(self, bot: Bot):
+        """Initializes the cog's bot."""
+        self.bot = bot
+
+        self.pattern_handlers = [
+            (GITHUB_RE, self._fetch_github_snippet),
+            (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
+            (GITLAB_RE, self._fetch_gitlab_snippet),
+            (BITBUCKET_RE, self._fetch_bitbucket_snippet)
+        ]
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
@@ -208,56 +219,56 @@ class CodeSnippets(Cog):
         # Returns an empty codeblock if the snippet is empty
         return f'{ret}``` ```'
 
-    def __init__(self, bot: Bot):
-        """Initializes the cog's bot."""
-        self.bot = bot
+    async def _parse_snippets(self, content: str) -> str:
+        """Parse message content and return a string with a code block for each URL found."""
+        all_snippets = []
 
-        self.pattern_handlers = [
-            (GITHUB_RE, self._fetch_github_snippet),
-            (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
-            (GITLAB_RE, self._fetch_gitlab_snippet),
-            (BITBUCKET_RE, self._fetch_bitbucket_snippet)
-        ]
+        for pattern, handler in self.pattern_handlers:
+            for match in pattern.finditer(content):
+                try:
+                    snippet = await handler(**match.groupdict())
+                    all_snippets.append((match.start(), snippet))
+                except ClientResponseError as error:
+                    error_message = error.message  # noqa: B306
+                    log.log(
+                        logging.DEBUG if error.status == 404 else logging.ERROR,
+                        f'Failed to fetch code snippet from {match[0]!r}: {error.status} '
+                        f'{error_message} for GET {error.request_info.real_url.human_repr()}'
+                    )
+
+        # Sorts the list of snippets by their match index and joins them into a single message
+        return '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
 
     @Cog.listener()
-    async def on_message(self, message: Message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
-        if not message.author.bot:
-            all_snippets = []
+        if message.author.bot:
+            return
 
-            for pattern, handler in self.pattern_handlers:
-                for match in pattern.finditer(message.content):
-                    try:
-                        snippet = await handler(**match.groupdict())
-                        all_snippets.append((match.start(), snippet))
-                    except ClientResponseError as error:
-                        error_message = error.message  # noqa: B306
-                        log.log(
-                            logging.DEBUG if error.status == 404 else logging.ERROR,
-                            f'Failed to fetch code snippet from {match[0]!r}: {error.status} '
-                            f'{error_message} for GET {error.request_info.real_url.human_repr()}'
-                        )
+        message_to_send = await self._parse_snippets(message.content)
+        destination = message.channel
 
-            # Sorts the list of snippets by their match index and joins them into a single message
-            message_to_send = '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
-
-            if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
+        if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
+            try:
                 await message.edit(suppress=True)
-                if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
-                    # Redirects to #bot-commands if the snippet contents are too long
-                    await self.bot.wait_until_guild_available()
-                    await message.channel.send(('The snippet you tried to send was too long. Please '
-                                                f'see <#{Channels.bot_commands}> for the full snippet.'))
-                    bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
-                    await wait_for_deletion(
-                        await bot_commands_channel.send(message_to_send),
-                        (message.author.id,)
-                    )
-                else:
-                    await wait_for_deletion(
-                        await message.channel.send(message_to_send),
-                        (message.author.id,)
-                    )
+            except discord.NotFound:
+                # Don't send snippets if the original message was deleted.
+                return
+
+            if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
+                # Redirects to #bot-commands if the snippet contents are too long
+                await self.bot.wait_until_guild_available()
+                destination = self.bot.get_channel(Channels.bot_commands)
+
+                await message.channel.send(
+                    'The snippet you tried to send was too long. '
+                    f'Please see {destination.mention} for the full snippet.'
+                )
+
+            await wait_for_deletion(
+                await destination.send(message_to_send),
+                (message.author.id,)
+            )
 
 
 def setup(bot: Bot) -> None:
