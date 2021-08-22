@@ -12,7 +12,7 @@ from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_ROLES
-from bot.converters import Duration
+from bot.converters import Duration, UserMentionOrID
 from bot.pagination import LinePaginator
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
@@ -27,6 +27,7 @@ WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
 Mentionable = t.Union[discord.Member, discord.Role]
+ReminderMention = t.Union[UserMentionOrID, discord.Role]
 
 
 class Reminders(Cog):
@@ -211,14 +212,14 @@ class Reminders(Cog):
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
     ) -> None:
         """Commands for managing your reminders."""
         await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
-        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
     ) -> None:
         """
         Set yourself a simple reminder.
@@ -363,7 +364,7 @@ class Reminders(Cog):
         await self.edit_reminder(ctx, id_, {"content": content})
 
     @edit_reminder_group.command(name="mentions", aliases=("pings",))
-    async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[Mentionable]) -> None:
+    async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[ReminderMention]) -> None:
         """Edit one of your reminder's mentions."""
         # Remove duplicate mentions
         mentions = set(mentions)
