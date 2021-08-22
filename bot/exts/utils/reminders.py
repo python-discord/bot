@@ -270,7 +270,7 @@ class Reminders(Cog):
             }
         )
 
-        mention_string = f"Your reminder will arrive {discord_timestamp(expiration, TimestampFormats.RELATIVE)}"
+        mention_string = f"Your reminder will arrive {discord_timestamp(expiration, TimestampFormats.DAY_TIME)}"
 
         if mentions:
             mention_string += f" and will mention {len(mentions)} other(s)"
