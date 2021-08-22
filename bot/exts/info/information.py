@@ -257,7 +257,11 @@ class Information(Cog):
                 badges.append(emoji)
 
         if on_server:
-            joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            if user.joined_at:
+                joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            else:
+                joined = "Unable to get join date"
+
             # The 0 is for excluding the default @everyone role,
             # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
             roles = ", ".join(role.mention for role in user.roles[:0:-1])
