@@ -105,7 +105,7 @@ class Metabase(Cog):
         """A group of commands for interacting with metabase."""
         await ctx.send_help(ctx.command)
 
-    @metabase_group.command(name="extract")
+    @metabase_group.command(name="extract", aliases=("export",))
     async def metabase_extract(
         self,
         ctx: Context,
