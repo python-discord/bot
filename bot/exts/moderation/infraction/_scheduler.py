@@ -13,8 +13,8 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours
+from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
-from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.exts.moderation.modlog import ModLog
 from bot.utils import messages, scheduling, time
 from bot.utils.channel import is_mod_channel
@@ -115,7 +115,7 @@ class InfractionScheduler:
         self,
         ctx: Context,
         infraction: _utils.Infraction,
-        user: UserSnowflake,
+        user: MemberOrUser,
         action_coro: t.Optional[t.Awaitable] = None,
         user_reason: t.Optional[str] = None,
         additional_info: str = "",
@@ -165,17 +165,10 @@ class InfractionScheduler:
             dm_result = f"{constants.Emojis.failmail} "
             dm_log_text = "\nDM: **Failed**"
 
-            # Sometimes user is a discord.Object; make it a proper user.
-            try:
-                if not isinstance(user, (discord.Member, discord.User)):
-                    user = await self.bot.fetch_user(user.id)
-            except discord.HTTPException as e:
-                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
-            else:
-                # Accordingly display whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
-                    dm_result = ":incoming_envelope: "
-                    dm_log_text = "\nDM: Sent"
+            # Accordingly display whether the user was successfully notified via DM.
+            if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+                dm_result = ":incoming_envelope: "
+                dm_log_text = "\nDM: Sent"
 
         end_msg = ""
         if infraction["actor"] == self.bot.user.id:
@@ -264,7 +257,7 @@ class InfractionScheduler:
             self,
             ctx: Context,
             infr_type: str,
-            user: UserSnowflake,
+            user: MemberOrUser,
             send_msg: bool = True
     ) -> None:
         """
