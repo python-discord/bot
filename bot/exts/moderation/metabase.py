@@ -42,6 +42,25 @@ class Metabase(Cog):
 
         self.init_task = self.bot.loop.create_task(self.init_cog())
 
+    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
+        """Handle ClientResponseError errors locally to invalidate token if needed."""
+        if not isinstance(error.original, ClientResponseError):
+            return
+
+        if error.original.status == 403:
+            # User doesn't have access to the given question
+            log.warning(f"Failed to auth with Metabase for {error.original.url}.")
+            await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
+        elif error.original.status == 404:
+            await ctx.send(f":x: {ctx.author.mention} That question could not be found.")
+        else:
+            # User credentials are invalid, or the refresh failed.
+            # Delete the expiry time, to force a refresh on next startup.
+            await self.session_info.delete("session_expiry")
+            log.exception("Session token is invalid or refresh failed.")
+            await ctx.send(f":x: {ctx.author.mention} Session token is invalid or refresh failed.")
+        error.handled = True
+
     async def init_cog(self) -> None:
         """Initialise the metabase session."""
         expiry_time = await self.session_info.get("session_expiry")
@@ -65,7 +84,7 @@ class Metabase(Cog):
             "username": MetabaseConfig.username,
             "password": MetabaseConfig.password
         }
-        async with self.bot.http_session.post(f"{MetabaseConfig.url}/session", json=data) as resp:
+        async with self.bot.http_session.post(f"{MetabaseConfig.base_url}/api/session", json=data) as resp:
             json_data = await resp.json()
             self.session_token = json_data.get("id")
 
@@ -86,7 +105,7 @@ class Metabase(Cog):
         """A group of commands for interacting with metabase."""
         await ctx.send_help(ctx.command)
 
-    @metabase_group.command(name="extract")
+    @metabase_group.command(name="extract", aliases=("export",))
     async def metabase_extract(
         self,
         ctx: Context,
@@ -106,48 +125,50 @@ class Metabase(Cog):
 
         Valid extensions are: csv and json.
         """
-        async with ctx.typing():
+        await ctx.trigger_typing()
 
-            # Make sure we have a session token before running anything
-            await self.init_task
+        # Make sure we have a session token before running anything
+        await self.init_task
 
-            url = f"{MetabaseConfig.url}/card/{question_id}/query/{extension}"
-            try:
-                async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
-                    if extension == "csv":
-                        out = await resp.text(encoding="utf-8")
-                        # Save the output for use with int e
-                        self.exports[question_id] = list(csv.DictReader(StringIO(out)))
+        url = f"{MetabaseConfig.base_url}/api/card/{question_id}/query/{extension}"
 
-                    elif extension == "json":
-                        out = await resp.json(encoding="utf-8")
-                        # Save the output for use with int e
-                        self.exports[question_id] = out
+        async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
+            if extension == "csv":
+                out = await resp.text(encoding="utf-8")
+                # Save the output for use with int e
+                self.exports[question_id] = list(csv.DictReader(StringIO(out)))
 
-                        # Format it nicely for human eyes
-                        out = json.dumps(out, indent=4, sort_keys=True)
-            except ClientResponseError as e:
-                if e.status == 403:
-                    # User doesn't have access to the given question
-                    log.warning(f"Failed to auth with Metabase for question {question_id}.")
-                    await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
-                else:
-                    # User credentials are invalid, or the refresh failed.
-                    # Delete the expiry time, to force a refresh on next startup.
-                    await self.session_info.delete("session_expiry")
-                    log.exception("Session token is invalid or refresh failed.")
-                    await ctx.send(f":x: {ctx.author.mention} Session token is invalid or refresh failed.")
-                return
+            elif extension == "json":
+                out = await resp.json(encoding="utf-8")
+                # Save the output for use with int e
+                self.exports[question_id] = out
 
-            paste_link = await send_to_paste_service(out, extension=extension)
-            if paste_link:
-                message = f":+1: {ctx.author.mention} Here's your link: {paste_link}"
-            else:
-                message = f":x: {ctx.author.mention} Link service is unavailible."
-            await ctx.send(
-                f"{message}\nYou can also access this data within internal eval by doing: "
-                f"`bot.get_cog('Metabase').exports[{question_id}]`"
-            )
+                # Format it nicely for human eyes
+                out = json.dumps(out, indent=4, sort_keys=True)
+
+        paste_link = await send_to_paste_service(out, extension=extension)
+        if paste_link:
+            message = f":+1: {ctx.author.mention} Here's your link: {paste_link}"
+        else:
+            message = f":x: {ctx.author.mention} Link service is unavailible."
+        await ctx.send(
+            f"{message}\nYou can also access this data within internal eval by doing: "
+            f"`bot.get_cog('Metabase').exports[{question_id}]`"
+        )
+
+    @metabase_group.command(name="publish", aliases=("share",))
+    async def metabase_publish(self, ctx: Context, question_id: int) -> None:
+        """Publically shares the given question and posts the link."""
+        await ctx.trigger_typing()
+        # Make sure we have a session token before running anything
+        await self.init_task
+
+        url = f"{MetabaseConfig.base_url}/api/card/{question_id}/public_link"
+
+        async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
+            response_json = await resp.json(encoding="utf-8")
+            sharing_url = f"{MetabaseConfig.base_url}/public/question/{response_json['uuid']}"
+            await ctx.send(f":+1: {ctx.author.mention} Here's your sharing link: {sharing_url}")
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_check(self, ctx: Context) -> bool:
