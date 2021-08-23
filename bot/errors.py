@@ -1,6 +1,8 @@
-from typing import Hashable
+from __future__ import annotations
 
-from bot.converters import MemberOrUser
+from typing import Hashable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from bot.converters import MemberOrUser
 
 
 class LockedResourceError(RuntimeError):
