@@ -139,13 +139,18 @@ async def get_active_infraction(
         # Checks to see if the moderator should be told there is an active infraction
         if send_msg:
             log.trace(f"{user} has active infractions of type {infr_type}.")
-            await ctx.send(
-                f":x: According to my records, this user already has a {infr_type} infraction. "
-                f"See infraction **#{active_infractions[0]['id']}**."
-            )
+            await send_active_infraction_message(ctx, active_infractions[0])
         return active_infractions[0]
     else:
         log.trace(f"{user} does not have active infractions of type {infr_type}.")
+
+
+async def send_active_infraction_message(ctx: Context, infraction: Infraction) -> None:
+    """Send a message stating that the given infraction is active."""
+    await ctx.send(
+        f":x: According to my records, this user already has a {infraction['type']} infraction. "
+        f"See infraction **#{infraction['id']}**."
+    )
 
 
 async def notify_infraction(

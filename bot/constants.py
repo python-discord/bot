@@ -575,6 +575,8 @@ class Metabase(metaclass=YAMLGetter):
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
+    cache_size: int
+
     clean_offending: bool
     ping_everyone: bool
 
