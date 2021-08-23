@@ -50,10 +50,26 @@ class TestMentions(RuleTest):
                 [make_msg("bob", 2), make_msg("alice", 3), make_msg("bob", 2)],
                 ("bob",),
                 4,
-            )
+            ),
+            DisallowedCase(
+                [make_msg("bob", 3, 1)],
+                ("bob",),
+                3,
+            ),
         )
 
         await self.run_disallowed(cases)
+
+    async def test_ignore_bot_mentions(self):
+        """Messages with an allowed amount of mentions, also containing bot mentions."""
+        cases = (
+            [make_msg("bob", 0, 3)],
+            [make_msg("bob", 2, 1)],
+            [make_msg("bob", 1, 2), make_msg("bob", 1, 2)],
+            [make_msg("bob", 1, 5), make_msg("alice", 2, 5)]
+        )
+
+        await self.run_allowed(cases)
 
     def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
         last_message = case.recent_messages[0]
