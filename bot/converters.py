@@ -314,25 +314,6 @@ class TagNameConverter(Converter):
         return tag_name
 
 
-class TagContentConverter(Converter):
-    """Ensure proposed tag content is not empty and contains at least one non-whitespace character."""
-
-    @staticmethod
-    async def convert(ctx: Context, tag_content: str) -> str:
-        """
-        Ensure tag_content is non-empty and contains at least one non-whitespace character.
-
-        If tag_content is valid, return the stripped version.
-        """
-        tag_content = tag_content.strip()
-
-        # The tag contents should not be empty, or filled with whitespace.
-        if not tag_content:
-            raise BadArgument("Tag contents should not be empty, or filled with whitespace.")
-
-        return tag_content
-
-
 class SourceConverter(Converter):
     """Convert an argument into a help command, tag, command, or cog."""
 
@@ -570,7 +551,6 @@ if t.TYPE_CHECKING:
     Inventory = t.Tuple[str, _inventory_parser.InventoryDict]  # noqa: F811
     Snowflake = int  # noqa: F811
     TagNameConverter = str  # noqa: F811
-    TagContentConverter = str  # noqa: F811
     SourceConverter = SourceType  # noqa: F811
     DurationDelta = relativedelta  # noqa: F811
     Duration = datetime  # noqa: F811
