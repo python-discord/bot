@@ -2,12 +2,14 @@ from typing import Iterable
 
 from bot.rules import mentions
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMessage
+from tests.helpers import MockMember, MockMessage
 
 
-def make_msg(author: str, total_mentions: int) -> MockMessage:
+def make_msg(author: str, total_user_mentions: int, total_bot_mentions: int = 0) -> MockMessage:
     """Makes a message with `total_mentions` mentions."""
-    return MockMessage(author=author, mentions=list(range(total_mentions)))
+    user_mentions = [MockMember() for _ in range(total_user_mentions)]
+    bot_mentions = [MockMember(bot=True) for _ in range(total_bot_mentions)]
+    return MockMessage(author=author, mentions=user_mentions+bot_mentions)
 
 
 class TestMentions(RuleTest):
