@@ -117,12 +117,12 @@ def _fuzzy_search(search: str, target: str) -> float:
     _search = REGEX_NON_ALPHABET.sub("", search.lower())
     _targets = iter(REGEX_NON_ALPHABET.split(target.lower()))
 
-    current, index = 0, 0
+    current = 0
     for _target in _targets:
+        index = 0
         while index < len(_target) and _search[current] == _target[index]:
             current += 1
             index += 1
-        index = 0
 
     return current / len(_search)
 
