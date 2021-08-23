@@ -8,6 +8,7 @@ from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
+from discord.utils import escape_markdown
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -244,6 +245,7 @@ class Information(Cog):
         name = str(user)
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
+        name = escape_markdown(name)
 
         if user.public_flags.verified_bot:
             name += f" {constants.Emojis.verified_bot}"
