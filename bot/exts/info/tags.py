@@ -120,9 +120,13 @@ def _fuzzy_search(search: str, target: str) -> float:
     current = 0
     for _target in _targets:
         index = 0
-        while index < len(_target) and _search[current] == _target[index]:
-            current += 1
-            index += 1
+        try:
+            while index < len(_target) and _search[current] == _target[index]:
+                current += 1
+                index += 1
+        except IndexError:
+            # Exit when _search runs out
+            break
 
     return current / len(_search)
 
