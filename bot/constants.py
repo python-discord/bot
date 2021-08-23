@@ -568,12 +568,14 @@ class Metabase(metaclass=YAMLGetter):
 
     username: Optional[str]
     password: Optional[str]
-    url: str
+    base_url: str
     max_session_age: int
 
 
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
+
+    cache_size: int
 
     clean_offending: bool
     ping_everyone: bool
