@@ -1,4 +1,4 @@
-debug: false
+debug: !ENV ["BOT_DEBUG", "true"]
 
 
 bot:

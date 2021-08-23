@@ -687,7 +687,7 @@ class VideoPermission(metaclass=YAMLGetter):
 
 
 # Debug mode
-DEBUG_MODE: bool = _CONFIG_YAML["debug"]
+DEBUG_MODE: bool = _CONFIG_YAML["debug"] == "true"
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
