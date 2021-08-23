@@ -17,8 +17,8 @@ from bot.constants import (
     Guild as GuildConfig, Icons,
 )
 from bot.converters import Duration
+from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
-from bot.exts.utils.jams import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.utils import lock, scheduling
 from bot.utils.messages import format_user, send_attachments
 
@@ -85,7 +85,7 @@ class DeletionContext:
             mod_alert_message += "Message:\n"
             [message] = self.messages.values()
             content = message.clean_content
-            remaining_chars = 2040 - len(mod_alert_message)
+            remaining_chars = 4080 - len(mod_alert_message)
 
             if len(content) > remaining_chars:
                 content = content[:remaining_chars] + "..."

@@ -7,6 +7,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
+from bot.converters import MemberOrUser
 from bot.errors import InvalidInfractedUserError
 
 log = logging.getLogger(__name__)
@@ -24,8 +25,6 @@ INFRACTION_ICONS = {
 RULES_URL = "https://pythondiscord.com/pages/rules"
 
 # Type aliases
-UserObject = t.Union[discord.Member, discord.User]
-UserSnowflake = t.Union[UserObject, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 
 APPEAL_EMAIL = "appeals@pythondiscord.com"
@@ -45,7 +44,7 @@ INFRACTION_DESCRIPTION_TEMPLATE = (
 )
 
 
-async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
+async def post_user(ctx: Context, user: MemberOrUser) -> t.Optional[dict]:
     """
     Create a new user in the database.
 
@@ -53,14 +52,11 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     """
     log.trace(f"Attempting to add user {user.id} to the database.")
 
-    if not isinstance(user, (discord.Member, discord.User)):
-        log.debug("The user being added to the DB is not a Member or User object.")
-
     payload = {
-        'discriminator': int(getattr(user, 'discriminator', 0)),
+        'discriminator': int(user.discriminator),
         'id': user.id,
         'in_guild': False,
-        'name': getattr(user, 'name', 'Name unknown'),
+        'name': user.name,
         'roles': []
     }
 
@@ -75,7 +71,7 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
 
 async def post_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: MemberOrUser,
         infr_type: str,
         reason: str,
         expires_at: datetime = None,
@@ -118,7 +114,7 @@ async def post_infraction(
 
 async def get_active_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: MemberOrUser,
         infr_type: str,
         send_msg: bool = True
 ) -> t.Optional[dict]:
@@ -158,7 +154,7 @@ async def send_active_infraction_message(ctx: Context, infraction: Infraction) -
 
 
 async def notify_infraction(
-        user: UserObject,
+        user: MemberOrUser,
         infr_type: str,
         expires_at: t.Optional[str] = None,
         reason: t.Optional[str] = None,
@@ -169,13 +165,13 @@ async def notify_infraction(
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=f"{expires_at} UTC" if expires_at else "N/A",
+        expires=expires_at or "N/A",
         reason=reason or "No reason provided."
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
-    if len(text) > 2048:
-        text = f"{text[:2045]}..."
+    if len(text) > 4096:
+        text = f"{text[:4093]}..."
 
     embed = discord.Embed(
         description=text,
@@ -194,7 +190,7 @@ async def notify_infraction(
 
 
 async def notify_pardon(
-        user: UserObject,
+        user: MemberOrUser,
         title: str,
         content: str,
         icon_url: str = Icons.user_verified
@@ -212,7 +208,7 @@ async def notify_pardon(
     return await send_private_embed(user, embed)
 
 
-async def send_private_embed(user: UserObject, embed: discord.Embed) -> bool:
+async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
     """
     A helper method for sending an embed to a user's DMs.
 
