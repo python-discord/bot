@@ -14,7 +14,6 @@ from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
-from bot.utils.checks import has_no_roles_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -162,9 +161,6 @@ class Utils(Cog):
     @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
         """Get Discord snowflake creation time."""
-        if len(snowflakes) > 1 and await has_no_roles_check(ctx, *STAFF_ROLES):
-            raise BadArgument("Cannot process more than one snowflake in one invocation.")
-
         if not snowflakes:
             raise BadArgument("At least one snowflake must be provided.")
 

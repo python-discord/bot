@@ -195,7 +195,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
     async def test_voice_unban_user_not_found(self):
         """Should include info to return dict when user was not found from guild."""
         self.guild.get_member.return_value = None
-        result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
+        result = await self.cog.pardon_voice_ban(self.user.id, self.guild)
         self.assertEqual(result, {"Info": "User was not found in the guild."})
 
     @patch("bot.exts.moderation.infraction.infractions._utils.notify_pardon")
@@ -206,7 +206,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         notify_pardon_mock.return_value = True
         format_user_mock.return_value = "my-user"
 
-        result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
+        result = await self.cog.pardon_voice_ban(self.user.id, self.guild)
         self.assertEqual(result, {
             "Member": "my-user",
             "DM": "Sent"
@@ -221,7 +221,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         notify_pardon_mock.return_value = False
         format_user_mock.return_value = "my-user"
 
-        result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
+        result = await self.cog.pardon_voice_ban(self.user.id, self.guild)
         self.assertEqual(result, {
             "Member": "my-user",
             "DM": "**Failed**"

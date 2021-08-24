@@ -279,8 +279,19 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     async def apply_mute(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a mute infraction with kwargs passed to `post_infraction`."""
-        if await _utils.get_active_infraction(ctx, user, "mute"):
-            return
+        if active := await _utils.get_active_infraction(ctx, user, "mute", send_msg=False):
+            if active["actor"] != self.bot.user.id:
+                await _utils.send_active_infraction_message(ctx, active)
+                return
+
+            # Allow the current mute attempt to override an automatically triggered mute.
+            log_text = await self.deactivate_infraction(active, notify=False)
+            if "Failure" in log_text:
+                await ctx.send(
+                    f":x: can't override infraction **mute** for {user.mention}: "
+                    f"failed to deactivate. {log_text['Failure']}"
+                )
+                return
 
         infraction = await _utils.post_infraction(ctx, user, "mute", reason, active=True, **kwargs)
         if infraction is None:
@@ -344,7 +355,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 return
 
             log.trace("Old tempban is being replaced by new permaban.")
-            await self.pardon_infraction(ctx, "ban", user, is_temporary)
+            await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
 
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
@@ -402,8 +413,15 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Base pardon functions
 
-    async def pardon_mute(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
-        """Remove a user's muted role, DM them a notification, and return a log dict."""
+    async def pardon_mute(
+        self,
+        user_id: int,
+        guild: discord.Guild,
+        reason: t.Optional[str],
+        *,
+        notify: bool = True
+    ) -> t.Dict[str, str]:
+        """Remove a user's muted role, optionally DM them a notification, and return a log dict."""
         user = guild.get_member(user_id)
         log_text = {}
 
@@ -412,16 +430,17 @@ class Infractions(InfractionScheduler, commands.Cog):
             self.mod_log.ignore(Event.member_update, user.id)
             await user.remove_roles(self._muted_role, reason=reason)
 
-            # DM the user about the expiration.
-            notified = await _utils.notify_pardon(
-                user=user,
-                title="You have been unmuted",
-                content="You may now send messages in the server.",
-                icon_url=_utils.INFRACTION_ICONS["mute"][1]
-            )
+            if notify:
+                # DM the user about the expiration.
+                notified = await _utils.notify_pardon(
+                    user=user,
+                    title="You have been unmuted",
+                    content="You may now send messages in the server.",
+                    icon_url=_utils.INFRACTION_ICONS["mute"][1]
+                )
+                log_text["DM"] = "Sent" if notified else "**Failed**"
 
             log_text["Member"] = format_user(user)
-            log_text["DM"] = "Sent" if notified else "**Failed**"
         else:
             log.info(f"Failed to unmute user {user_id}: user not found")
             log_text["Failure"] = "User was not found in the guild."
@@ -443,31 +462,39 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def pardon_voice_ban(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
-        """Add Voice Verified role back to user, DM them a notification, and return a log dict."""
+    async def pardon_voice_ban(
+        self,
+        user_id: int,
+        guild: discord.Guild,
+        *,
+        notify: bool = True
+    ) -> t.Dict[str, str]:
+        """Optionally DM the user a pardon notification and return a log dict."""
         user = guild.get_member(user_id)
         log_text = {}
 
         if user:
-            # DM user about infraction expiration
-            notified = await _utils.notify_pardon(
-                user=user,
-                title="Voice ban ended",
-                content="You have been unbanned and can verify yourself again in the server.",
-                icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
-            )
+            if notify:
+                # DM user about infraction expiration
+                notified = await _utils.notify_pardon(
+                    user=user,
+                    title="Voice ban ended",
+                    content="You have been unbanned and can verify yourself again in the server.",
+                    icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
+                )
+                log_text["DM"] = "Sent" if notified else "**Failed**"
 
             log_text["Member"] = format_user(user)
-            log_text["DM"] = "Sent" if notified else "**Failed**"
         else:
             log_text["Info"] = "User was not found in the guild."
 
         return log_text
 
-    async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+    async def _pardon_action(self, infraction: _utils.Infraction, notify: bool) -> t.Optional[t.Dict[str, str]]:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
 
+        If `notify` is True, notify the user of the pardon via DM where applicable.
         If an infraction type is unsupported, return None instead.
         """
         guild = self.bot.get_guild(constants.Guild.id)
@@ -475,11 +502,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason = f"Infraction #{infraction['id']} expired or was pardoned."
 
         if infraction["type"] == "mute":
-            return await self.pardon_mute(user_id, guild, reason)
+            return await self.pardon_mute(user_id, guild, reason, notify=notify)
         elif infraction["type"] == "ban":
             return await self.pardon_ban(user_id, guild, reason)
         elif infraction["type"] == "voice_ban":
-            return await self.pardon_voice_ban(user_id, guild, reason)
+            return await self.pardon_voice_ban(user_id, guild, notify=notify)
 
     # endregion
 

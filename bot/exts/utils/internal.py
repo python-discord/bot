@@ -11,10 +11,10 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
 
 from bot.bot import Bot
-from bot.constants import Roles
+from bot.constants import DEBUG_MODE, Roles
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
 log = logging.getLogger(__name__)
@@ -32,6 +32,9 @@ class Internal(Cog):
         self.socket_since = datetime.utcnow()
         self.socket_event_total = 0
         self.socket_events = Counter()
+
+        if DEBUG_MODE:
+            self.eval.add_check(is_owner().predicate)
 
     @Cog.listener()
     async def on_socket_response(self, msg: dict) -> None:
