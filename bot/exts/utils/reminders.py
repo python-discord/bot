@@ -11,7 +11,10 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_ROLES
+from bot.constants import (
+    Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
+    Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+)
 from bot.converters import Duration, UserMentionOrID
 from bot.pagination import LinePaginator
 from bot.utils.checks import has_any_role_check, has_no_roles_check
@@ -111,7 +114,7 @@ class Reminders(Cog):
 
         If mentions aren't allowed, also return the type of mention(s) disallowed.
         """
-        if await has_no_roles_check(ctx, *STAFF_ROLES):
+        if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
             return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
@@ -137,7 +140,7 @@ class Reminders(Cog):
         """Converts Role and Member ids to their corresponding objects if possible."""
         guild = self.bot.get_guild(Guild.id)
         for mention_id in mention_ids:
-            if (mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id))):
+            if mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id)):
                 yield mentionable
 
     def schedule_reminder(self, reminder: dict) -> None:
@@ -226,8 +229,9 @@ class Reminders(Cog):
 
         Expiration is parsed per: http://strftime.org/
         """
-        # If the user is not staff, we need to verify whether or not to make a reminder at all.
-        if await has_no_roles_check(ctx, *STAFF_ROLES):
+        # If the user is not staff, partner or part of the python community,
+        # we need to verify whether or not to make a reminder at all.
+        if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:

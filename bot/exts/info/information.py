@@ -95,7 +95,7 @@ class Information(Cog):
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
         """)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -115,7 +115,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -232,7 +232,7 @@ class Information(Cog):
             return
 
         # Will redirect to #bot-commands if it fails.
-        if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
+        if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
@@ -455,9 +455,9 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         if ctx.author not in message.channel.members:
