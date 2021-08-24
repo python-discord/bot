@@ -79,6 +79,7 @@ def discord_timestamp(timestamp: Timestamp, format: TimestampFormats = Timestamp
     return f"<t:{timestamp}:{format.value}>"
 
 
+# region humanize_delta overloads
 @overload
 def humanize_delta(
     arg1: Union[relativedelta, Timestamp],
@@ -119,6 +120,7 @@ def humanize_delta(
     absolute: bool = True,
 ) -> str:
     ...
+# endregion
 
 
 def humanize_delta(
