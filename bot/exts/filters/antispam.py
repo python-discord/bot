@@ -207,7 +207,7 @@ class AntiSpam(Cog):
                 # Add the relevant of this trigger to the Deletion Context
                 await self.message_deletion_queue[authors_set].add(
                     rule_name=rule_name,
-                    channels=set(message.channel for message in messages_for_rule),
+                    channels=set(message.channel for message in relevant_messages),
                     messages=relevant_messages
                 )
 
@@ -217,7 +217,7 @@ class AntiSpam(Cog):
                         name=f"AntiSpam.punish(message={message.id}, member={member.id}, rule={rule_name})"
                     )
 
-                await self.maybe_delete_messages(messages_for_rule)
+                await self.maybe_delete_messages(relevant_messages)
                 break
 
     @lock.lock_arg("antispam.punish", "member", attrgetter("id"))
