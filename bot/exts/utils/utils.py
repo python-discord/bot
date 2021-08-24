@@ -9,7 +9,7 @@ from discord.ext.commands import BadArgument, Cog, Context, clean_content, comma
 from discord.utils import snowflake_time
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, STAFF_ROLES
 from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
@@ -50,7 +50,7 @@ class Utils(Cog):
         self.bot = bot
 
     @command()
-    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_py), roles=STAFF_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_py), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
@@ -157,7 +157,7 @@ class Utils(Cog):
         await ctx.send(embed=embed)
 
     @command(aliases=("snf", "snfl", "sf"))
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
         """Get Discord snowflake creation time."""
         if len(snowflakes) > 1 and await has_no_roles_check(ctx, *STAFF_ROLES):

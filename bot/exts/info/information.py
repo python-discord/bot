@@ -231,7 +231,7 @@ class Information(Cog):
             return
 
         # Will redirect to #bot-commands if it fails.
-        if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
+        if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
