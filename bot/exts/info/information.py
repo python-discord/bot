@@ -453,9 +453,9 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         if ctx.author not in message.channel.members:
