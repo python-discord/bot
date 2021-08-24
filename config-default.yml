@@ -263,7 +263,7 @@ guild:
         contributors:                           295488872404484098
         help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
-        partners:                               323426753857191936
+        partners:           &PY_PARTNER_ROLE    323426753857191936
         python_community:   &PY_COMMUNITY_ROLE  458226413825294336
         sprinters:          &SPRINTERS          758422482289426471
         voice_verified:                         764802720779337729
@@ -345,6 +345,7 @@ filter:
         - *OWNERS_ROLE
         - *PY_COMMUNITY_ROLE
         - *SPRINTERS
+        - *PY_PARTNER_ROLE
 
 
 keys:
@@ -379,6 +380,8 @@ urls:
 
 
 anti_spam:
+    cache_size: 100
+
     # Clean messages that violate a rule.
     clean_offending: true
     ping_everyone: true
@@ -434,14 +437,12 @@ anti_spam:
             max: 3
 
 
-
 metabase:
-    username: !ENV "METABASE_USERNAME"
-    password: !ENV "METABASE_PASSWORD"
-    url: "http://metabase.default.svc.cluster.local/api"
+    username: !ENV      "METABASE_USERNAME"
+    password: !ENV      "METABASE_PASSWORD"
+    base_url:           "http://metabase.default.svc.cluster.local"
     # 14 days, see https://www.metabase.com/docs/latest/operations-guide/environment-variables.html#max_session_age
-    max_session_age: 20160
-
+    max_session_age:    20160
 
 
 big_brother:

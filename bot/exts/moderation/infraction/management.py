@@ -12,7 +12,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, Snowflake, UserMention, allowed_strings, proxy_user
+from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UserMentionOrID, allowed_strings
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -81,7 +81,7 @@ class ModManagement(commands.Cog):
         """
         old_reason = infraction["reason"]
 
-        if old_reason is not None:
+        if old_reason is not None and reason is not None:
             add_period = not old_reason.endswith((".", "!", "?"))
             reason = old_reason + (". " if add_period else " ") + reason
 
@@ -201,29 +201,34 @@ class ModManagement(commands.Cog):
     # region: Search infractions
 
     @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: t.Union[UserMention, Snowflake, str]) -> None:
+    async def infraction_search_group(self, ctx: Context, query: t.Union[UserMentionOrID, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
             await self.search_user(ctx, discord.Object(query))
-        else:
+        elif isinstance(query, str):
             await self.search_reason(ctx, query)
+        else:
+            await self.search_user(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx: Context, user: t.Union[discord.User, proxy_user]) -> None:
+    async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={'user__id': str(user.id)}
         )
 
-        user = self.bot.get_user(user.id)
-        if not user and infraction_list:
-            # Use the user data retrieved from the DB for the username.
-            user = infraction_list[0]["user"]
-            user = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+        if isinstance(user, (discord.Member, discord.User)):
+            user_str = escape_markdown(str(user))
+        else:
+            if infraction_list:
+                user = infraction_list[0]["user"]
+                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+            else:
+                user_str = str(user.id)
 
         embed = discord.Embed(
-            title=f"Infractions for {user} ({len(infraction_list)} total)",
+            title=f"Infractions for {user_str} ({len(infraction_list)} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
