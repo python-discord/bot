@@ -263,7 +263,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             }
         )
 
-        msg = f"✅ The nomination for {user} has been added to the talent pool"
+        msg = f"✅ The nomination for {user.mention} has been added to the talent pool"
         if history:
             msg += f"\n\n({len(history)} previous nominations in total)"
 
@@ -311,7 +311,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             return
 
         if await self.unwatch(user.id, reason):
-            await ctx.send(f":white_check_mark: Messages sent by {user} will no longer be relayed")
+            await ctx.send(f":white_check_mark: Messages sent by {user.mention} will no longer be relayed")
         else:
             await ctx.send(":x: The specified user does not have an active nomination")
 
@@ -344,7 +344,7 @@ class TalentPool(WatchChannel, Cog, name="Talentpool"):
             return
 
         if not any(entry["actor"] == actor.id for entry in nomination["entries"]):
-            await ctx.send(f":x: {actor} doesn't have an entry in this nomination.")
+            await ctx.send(f":x: {actor.mention} doesn't have an entry in this nomination.")
             return
 
         self.log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {repr(reason)}")
