@@ -94,7 +94,7 @@ class Information(Cog):
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
         """)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -114,7 +114,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
