@@ -9,7 +9,10 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
+from bot.constants import (
+    Colours, Emojis, Guild, MODERATION_ROLES, Roles,
+    STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
+)
 from bot.converters import Expiry
 from bot.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
@@ -193,9 +196,7 @@ class Stream(commands.Cog):
     @commands.command(aliases=('lstream',))
     @commands.has_any_role(*MODERATION_ROLES)
     async def liststream(self, ctx: commands.Context) -> None:
-        """
-        Lists all users who aren't staff, partners or members of the python community and have permission to stream.
-        """
+        """Lists all users who aren't staff, partners or members of the python community and have stream permissions."""
         non_staff_partners_community_members_with_stream = [
             member
             for member in ctx.guild.get_role(Roles.video).members

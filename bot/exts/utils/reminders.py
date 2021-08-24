@@ -228,7 +228,8 @@ class Reminders(Cog):
 
         Expiration is parsed per: http://strftime.org/
         """
-        # If the user is not staff, partner or part of the python community, we need to verify whether or not to make a reminder at all.
+        # If the user is not staff, partner or part of the python community,
+        # we need to verify whether or not to make a reminder at all.
         if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
 
             # If they don't have permission to set a reminder in this channel
