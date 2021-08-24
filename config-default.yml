@@ -1,3 +1,6 @@
+debug: !ENV ["BOT_DEBUG", "true"]
+
+
 bot:
     prefix:         "!"
     sentry_dsn:     !ENV "BOT_SENTRY_DSN"
@@ -377,6 +380,8 @@ urls:
 
 
 anti_spam:
+    cache_size: 100
+
     # Clean messages that violate a rule.
     clean_offending: true
     ping_everyone: true

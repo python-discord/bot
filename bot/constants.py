@@ -575,6 +575,8 @@ class Metabase(metaclass=YAMLGetter):
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
 
+    cache_size: int
+
     clean_offending: bool
     ping_everyone: bool
 
@@ -687,7 +689,7 @@ class VideoPermission(metaclass=YAMLGetter):
 
 
 # Debug mode
-DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
+DEBUG_MODE: bool = _CONFIG_YAML["debug"] == "true"
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
