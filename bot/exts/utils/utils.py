@@ -55,15 +55,17 @@ class Utils(Cog):
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
-            return await messages.send_denial(
+            await messages.send_denial(
                 ctx,
                 "**Non-Character Detected**\n"
                 "Only unicode characters can be processed, but a custom Discord emoji "
                 "was found. Please remove it and try again."
             )
+            return
 
         if len(characters) > 50:
-            return await messages.send_denial(ctx, f"Too many characters ({len(characters)}/50)")
+            await messages.send_denial(ctx, f"Too many characters ({len(characters)}/50)")
+            return
 
         def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"

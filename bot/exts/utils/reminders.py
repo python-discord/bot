@@ -11,7 +11,10 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, STAFF_ROLES
+from bot.constants import (
+    Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
+    Roles, STAFF_PARTNERS_COMMUNITY_ROLES, STAFF_ROLES
+)
 from bot.converters import Duration
 from bot.pagination import LinePaginator
 from bot.utils.checks import has_any_role_check, has_no_roles_check
@@ -136,7 +139,7 @@ class Reminders(Cog):
         """Converts Role and Member ids to their corresponding objects if possible."""
         guild = self.bot.get_guild(Guild.id)
         for mention_id in mention_ids:
-            if (mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id))):
+            if mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id)):
                 yield mentionable
 
     def schedule_reminder(self, reminder: dict) -> None:
