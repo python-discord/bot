@@ -13,7 +13,7 @@ from discord.ext.commands import Cog, Context, Greedy, group
 from bot.bot import Bot
 from bot.constants import (
     Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
-    Roles, STAFF_PARTNERS_COMMUNITY_ROLES, STAFF_ROLES
+    Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 )
 from bot.converters import Duration
 from bot.pagination import LinePaginator
@@ -113,7 +113,7 @@ class Reminders(Cog):
 
         If mentions aren't allowed, also return the type of mention(s) disallowed.
         """
-        if await has_no_roles_check(ctx, *STAFF_ROLES):
+        if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
             return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
