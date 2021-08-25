@@ -217,7 +217,20 @@ class Reminders(Cog):
     async def remind_group(
         self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
     ) -> None:
-        """Commands for managing your reminders."""
+        """
+        Commands for managing your reminders.
+
+        The `expiration` duration of `!remind new` supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
+        """
         await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
@@ -227,7 +240,16 @@ class Reminders(Cog):
         """
         Set yourself a simple reminder.
 
-        Expiration is parsed per: http://strftime.org/
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
         """
         # If the user is not staff, partner or part of the python community,
         # we need to verify whether or not to make a reminder at all.
