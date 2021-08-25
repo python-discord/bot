@@ -372,7 +372,20 @@ class Reminders(Cog):
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
     async def edit_reminder_group(self, ctx: Context) -> None:
-        """Commands for modifying your current reminders."""
+        """
+        Commands for modifying your current reminders.
+
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
+        """
         await ctx.send_help(ctx.command)
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
@@ -380,7 +393,16 @@ class Reminders(Cog):
         """
         Edit one of your reminder's expiration.
 
-        Expiration is parsed per: http://strftime.org/
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
         """
         await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
