@@ -19,4 +19,4 @@ async def bar(ctx: commands.Context, *, new_text: str):
 
 Bot variables are better than global variables because these variables can be accessed anywhere where your Bot instance is accessible!
 
-⚠️ Be sure **not** to overwrite any existing bot attribute, like `cogs` or `users`. Name your bot variables carefully!
+*Be sure **not** to overwrite any existing bot attribute, like `cogs` or `users`. Name your bot variables carefully!*
