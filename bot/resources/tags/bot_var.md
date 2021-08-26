@@ -40,4 +40,4 @@ async def on_message(self, message: discord.Message):
 
 Bot variables are better than global variables because these variables can be accessed anywhere where your Bot instance is accessible!
 
-⚠️ Be sure **not** to overwrite any existing bot attribute, like `cogs` or `users`. Be sure to name your bot variables carefully!
+⚠️ Be sure **not** to overwrite any existing bot attribute, like `cogs` or `users`. Name your bot variables carefully!
