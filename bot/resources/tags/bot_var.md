@@ -13,7 +13,7 @@ async def foo(ctx: commands.Context):
 async def bar(ctx: commands.Context, *, new_text: str):
     """A command to demonstrate, how to change the value of a bot variable"""
     bot.test = new_text
-    print(bot.test) # This will print the text u specified in new_text!
+    print(bot.test) # This will print the text specified in new_text!
 
 ```
 
