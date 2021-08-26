@@ -6,7 +6,7 @@ bot.test = "I am accessible everywhere!"
 
 @bot.command()
 async def get(ctx: commands.Context):
-    """A command to demonstrate how to use a bot variable"""
+    """Get the current value of `test`."""
     await ctx.send(ctx.bot.test) # This will send the text, I am accessible everywhere!
 
 @bot.command()
