@@ -10,7 +10,7 @@ async def get(ctx: commands.Context):
     await ctx.send(ctx.bot.test) # This will send the text, I am accessible everywhere!
 
 @bot.command()
-async def bar(ctx: commands.Context, *, new_text: str):
+async def set(ctx: commands.Context, *, new_text: str):
     """A command to demonstrate, how to change the value of a bot variable"""
     # Here we change the attribute to what was specified in new_text
     bot.test = new_text
