@@ -4,23 +4,16 @@ Bot variables are a new type of global variables, meant **only** for discord.py.
 bot = commands.Bot(...)
 bot.test = "I am accessible everywhere!"
 
-# In the same file
 @bot.command()
 async def foo(ctx: commands.Context):
     """A command to demonstrate how to use a bot variable"""
-    await ctx.send(bot.test) # This will send the text, I am accessible everywhere!
+    await ctx.send(ctx.bot.test) # This will send the text, I am accessible everywhere!
 
 @bot.command()
 async def bar(ctx: commands.Context, *, new_text: str):
     """A command to demonstrate, how to change the value of a bot variable"""
     bot.test = new_text
     print(bot.test) # This will print the text u specified in new_text!
-
-# In a commands.Cog file
-@commands.command()
-async def foo(self, ctx: commands.Context):
-    """A command to demonstrate how to use a bot variable in a commands.Cog"""
-    await ctx.send(ctx.bot.test)
 
 ```
 
