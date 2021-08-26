@@ -1,4 +1,4 @@
-Bot variables are a new type of global variables, meant **only** for discord.py. It is made as an attribute of your existing [commands.Bot](https://discordpy.readthedocs.io/en/latest/ext/commands/api.html#discord.ext.commands.Bot) instance and can be used and accessed **anywhere**, where your bot instance is accessible. An example on how to make a bot variable named `test` is shown below:
+Python allows you to set custom attributes to instances and your bot is one such instance. You can add custom attributes to your bot instance and access them **anywhere** you access you bot. In the discord.py library, these custom attributes are commonly known as `Bot Variables` and these can be a lifesaver if your bot is divided into many different files. An example on how to make a bot variable named `test` is shown below:
 
 ```py
 bot = commands.Bot(command_prefix="!")
