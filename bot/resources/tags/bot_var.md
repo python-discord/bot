@@ -15,7 +15,6 @@ async def bar(ctx: commands.Context, *, new_text: str):
     # Here we change the attribute to what was specified in new_text
     bot.test = new_text
     print(bot.test) # This will print the text specified in new_text!
-
 ```
 
 Bot variables are better than global variables because these variables can be accessed anywhere where your Bot instance is accessible!
