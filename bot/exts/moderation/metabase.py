@@ -167,7 +167,7 @@ class Metabase(Cog):
 
         async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
             response_json = await resp.json(encoding="utf-8")
-            sharing_url = f"{MetabaseConfig.base_url}/public/question/{response_json['uuid']}"
+            sharing_url = f"{MetabaseConfig.public_url}/public/question/{response_json['uuid']}"
             await ctx.send(f":+1: {ctx.author.mention} Here's your sharing link: {sharing_url}")
 
     # This cannot be static (must have a __func__ attribute).

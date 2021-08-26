@@ -569,6 +569,7 @@ class Metabase(metaclass=YAMLGetter):
     username: Optional[str]
     password: Optional[str]
     base_url: str
+    public_url: str
     max_session_age: int
 
 
