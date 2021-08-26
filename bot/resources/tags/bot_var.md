@@ -11,7 +11,7 @@ async def get(ctx: commands.Context):
 
 @bot.command()
 async def set(ctx: commands.Context, *, new_text: str):
-    """A command to demonstrate, how to change the value of a bot variable"""
+    """Set `test` to a new value that the get command will send."""
     # Here we change the attribute to what was specified in new_text
     bot.test = new_text
     print(bot.test) # This will print the text specified in new_text!
