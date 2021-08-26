@@ -441,6 +441,7 @@ metabase:
     username: !ENV      "METABASE_USERNAME"
     password: !ENV      "METABASE_PASSWORD"
     base_url:           "http://metabase.default.svc.cluster.local"
+    public_url:         "https://metabase.pythondiscord.com"
     # 14 days, see https://www.metabase.com/docs/latest/operations-guide/environment-variables.html#max_session_age
     max_session_age:    20160
 
