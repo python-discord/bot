@@ -18,6 +18,6 @@ async def setval(ctx: commands.Context, *, new_text: str):
     bot.test = new_text
 ```
 
-When setting your own custom attributes you can access those variables anywhere you have your bot instance, this becomes extra useful when your bot is split over multiple files. This all applies to cogs as well!
+This all applies to cogs as well! You can set attributes to `self` as you wish.
 
 *Be sure **not** to overwrite attributes discord.py uses, like `cogs` or `users`. Name your attributes carefully!*
