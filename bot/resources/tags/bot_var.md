@@ -17,6 +17,6 @@ async def set(ctx: commands.Context, *, new_text: str):
     print(bot.test) # This will print the text specified in new_text!
 ```
 
-Why are bot variables preferred over global variables? Because you can access those variables **anywhere** your bot instance is accessible, be that be the same or a different file.
+When setting your own custom attributes you can access those variables anywhere you have your bot instance, this becomes extra useful when your bot is split over multiple files. This all applies to cogs as well!
 
 *Be sure **not** to overwrite any existing attribute, like `cogs` or `users`. Name your attributes carefully!*
