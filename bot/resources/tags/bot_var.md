@@ -2,6 +2,7 @@ Python allows you to set custom attributes to class instances, like your bot! By
 
 ```py
 bot = commands.Bot(command_prefix="!")
+# Set an attribute on our bot
 bot.test = "I am accessible everywhere!"
 
 @bot.command()
