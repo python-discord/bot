@@ -11,7 +11,7 @@ async def get(ctx: commands.Context):
    await ctx.send(ctx.bot.test) # Send what the test attribute is currently set to
 
 @bot.command()
-async def set(ctx: commands.Context, *, new_text: str):
+async def setval(ctx: commands.Context, *, new_text: str):
     """A command to set a new value of `test`."""
     # Here we change the attribute to what was specified in new_text
     bot.test = new_text
