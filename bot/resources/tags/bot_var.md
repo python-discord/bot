@@ -7,7 +7,7 @@ bot.test = "I am accessible everywhere!"
 @bot.command()
 async def get(ctx: commands.Context):
     """Get the current value of `test`."""
-    await ctx.send(ctx.bot.test) # This will send the text, I am accessible everywhere!
+    await ctx.send(ctx.bot.test) # Send what the test attribute is currently set to
 
 @bot.command()
 async def set(ctx: commands.Context, *, new_text: str):
