@@ -15,7 +15,6 @@ async def set(ctx: commands.Context, *, new_text: str):
     """A command to set a new value of `test`."""
     # Here we change the attribute to what was specified in new_text
     bot.test = new_text
-    print(bot.test) # This will print the text specified in new_text!
 ```
 
 When setting your own custom attributes you can access those variables anywhere you have your bot instance, this becomes extra useful when your bot is split over multiple files. This all applies to cogs as well!
