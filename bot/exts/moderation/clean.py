@@ -271,7 +271,7 @@ class Clean(Cog):
             # Can't build an embed, nothing to clean!
             raise BadArgument("No matching messages could be found.")
 
-        # Reverse the list to restore chronological order
+        # Reverse the list to have reverse chronological order
         log_messages = reversed(messages)
         log_url = await self.mod_log.upload_log(log_messages, invoker.id)
 
