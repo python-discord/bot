@@ -379,7 +379,10 @@ class Clean(Cog):
             color=Colour.blurple(),
             description="Clean interrupted."
         )
-        await ctx.send(embed=embed, delete_after=10)
+        delete_after = 10
+        if is_mod_channel(ctx.channel):
+            delete_after = None
+        await ctx.send(embed=embed, delete_after=delete_after)
 
 
 def setup(bot: Bot) -> None:
