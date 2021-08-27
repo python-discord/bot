@@ -613,7 +613,7 @@ flake8-polyfill = ">=1.0.2,<2"
 
 [[package]]
 name = "pip-licenses"
-version = "3.5.1"
+version = "3.5.2"
 description = "Dump the software license list of Python packages installed with pip."
 category = "dev"
 optional = false
@@ -1069,7 +1069,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.*"
-content-hash = "dfa0b6e9cc8373cfa5c3bcf35c352b79a08ecca8fe23f21737d8beb6a8c89fa4"
+content-hash = "ceddbb2621849f480f736985d71f37cebefd08a9b38bc3943a6f72706258b6ee"
 
 [metadata.files]
 aio-pika = [
@@ -1536,8 +1536,8 @@ pep8-naming = [
     {file = "pep8_naming-0.12.1-py2.py3-none-any.whl", hash = "sha256:4a8daeaeb33cfcde779309fc0c9c0a68a3bbe2ad8a8308b763c5068f86eb9f37"},
 ]
 pip-licenses = [
-    {file = "pip-licenses-3.5.1.tar.gz", hash = "sha256:6c60096cfa1ee04d7db8d374d4326939369d5871368421e7a7d5da026519bc24"},
-    {file = "pip_licenses-3.5.1-py3-none-any.whl", hash = "sha256:e44e4e92e6af2b9d11dfafbf22a3052bf9a05fdaa5654befdba9db735832ac7f"},
+    {file = "pip-licenses-3.5.2.tar.gz", hash = "sha256:c5e984f461b34ad04dafa151d0048eb9d049e3d6439966c6440bb6b53ad077b6"},
+    {file = "pip_licenses-3.5.2-py3-none-any.whl", hash = "sha256:62deafc82d5dccea1a4cab55172706e02f228abcd67f4d53e382fcb1497e9b62"},
 ]
 platformdirs = [
     {file = "platformdirs-2.2.0-py3-none-any.whl", hash = "sha256:4666d822218db6a262bdfdc9c39d21f23b4cfdb08af331a81e92751daf6c866c"},
