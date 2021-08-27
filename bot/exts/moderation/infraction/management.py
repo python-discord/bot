@@ -215,7 +215,7 @@ class ModManagement(commands.Cog):
         else:
             await self.search_user(ctx, query)
 
-    @infraction_search_group.command(name="user", aliases=("member", "id"))
+    @infraction_search_group.command(name="user", aliases=("member", "userid"))
     async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
