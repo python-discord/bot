@@ -187,6 +187,7 @@ class Clean(Cog):
         # Are we already performing a clean?
         if self.cleaning:
             raise MaxConcurrencyReached("Please wait for the currently ongoing clean operation to complete.")
+        self.cleaning = True
 
         # Set up the correct predicate
         if bots_only:
@@ -213,8 +214,6 @@ class Clean(Cog):
             except errors.NotFound:
                 # Invocation message has already been deleted
                 log.info("Tried to delete invocation message, but it was already deleted.")
-
-        self.cleaning = True
 
         if use_cache:
             message_mappings, message_ids = self._get_messages_from_cache(amount=amount, to_delete=predicate)
