@@ -357,9 +357,9 @@ class Clean(Cog):
             until_message=message
         )
 
-    @clean_group.command(name="from-to", aliases=["after-until", "between"])
+    @clean_group.command(name="between", aliases=["after-until", "from-to"])
     @has_any_role(*MODERATION_ROLES)
-    async def clean_from_to(self, ctx: Context, after_message: Message, until_message: Message) -> None:
+    async def clean_between(self, ctx: Context, after_message: Message, until_message: Message) -> None:
         """Delete all messages within range of messages."""
         await self._clean_messages(
             CleanMessages.message_limit,
