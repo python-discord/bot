@@ -16,6 +16,7 @@ jobs:
       ALLOWED_LICENSE: Apache Software License;
         BSD License;
         GNU Library or Lesser General Public License (LGPL);
+        ISC License (ISCL);
         MIT License;
         Mozilla Public License 2.0 (MPL 2.0);
         Public Domain;
