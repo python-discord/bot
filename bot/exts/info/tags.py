@@ -146,9 +146,9 @@ class Tags(Cog):
         for file in base_path.glob("**/*"):
             if file.is_file():
                 parent_dir = file.relative_to(base_path).parent
-
                 tag_name = file.stem
-                tag_group = parent_dir.name if parent_dir.name else None
+                # Files directly under `base_path` have an empty string as the parent directory name
+                tag_group = parent_dir.name or None
 
                 self.tags[TagIdentifier(tag_group, tag_name)] = Tag(file)
 
