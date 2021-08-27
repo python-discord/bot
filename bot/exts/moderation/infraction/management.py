@@ -44,8 +44,10 @@ class ModManagement(commands.Cog):
     # region: Edit infraction commands
 
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
-    async def infraction_group(self, ctx: Context) -> None:
-        """Infraction manipulation commands."""
+    async def infraction_group(self, ctx: Context, infr_id: int = None) -> None:
+        """Infraction manipulation commands. If `infr_id` is passed then fetches that infraction."""
+        if infr_id:
+            await self.search_id(infr_id)
         await ctx.send_help(ctx.command)
 
     @infraction_group.command(name="append", aliases=("amend", "add", "a"))
@@ -201,10 +203,13 @@ class ModManagement(commands.Cog):
     # region: Search infractions
 
     @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: t.Union[UserMentionOrID, Snowflake, str]) -> None:
+    async def infraction_search_group(self, ctx: Context, query: t.Union[UserMentionOrID, Snowflake, int, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
-            await self.search_user(ctx, discord.Object(query))
+            if query > 10**14:  # query is a user id
+                await self.search_user(ctx, discord.Object(query))
+            else:  # query is an infraction id
+                await self.search_id(ctx, query)
         elif isinstance(query, str):
             await self.search_reason(ctx, query)
         else:
@@ -229,6 +234,16 @@ class ModManagement(commands.Cog):
 
         embed = discord.Embed(
             title=f"Infractions for {user_str} ({len(infraction_list)} total)",
+            colour=discord.Colour.orange()
+        )
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    @infraction_search_group.command(name="id", aliases=("i", "infrid", "infr_id"))
+    async def search_id(self, ctx: Context, infr_id: int) -> None:
+        """Search for infraction by the infraction id."""
+        infraction_list = await self.bot.api_client.get(f"bot/infractions/{infr_id}")
+        embed = discord.Embed(
+            title=f"Infraction #{infr_id}",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
