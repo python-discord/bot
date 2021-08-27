@@ -3,17 +3,19 @@ import logging
 import pprint
 import textwrap
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
+from discord.utils import escape_markdown
 
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.converters import FetchedMember
+from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
+from bot.errors import NonExistentRoleError
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
@@ -42,15 +44,29 @@ class Information(Cog):
         return channel_counter
 
     @staticmethod
-    def get_member_counts(guild: Guild) -> Dict[str, int]:
+    def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
+        """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
+        members = 0
+        for role_id in role_ids:
+            if (role := guild.get_role(role_id)) is not None:
+                members += len(role.members)
+            else:
+                raise NonExistentRoleError(role_id)
+        return {name or role.name.title(): members}
+
+    @staticmethod
+    def get_member_counts(guild: Guild) -> dict[str, int]:
         """Return the total number of members for certain roles in `guild`."""
-        roles = (
-            guild.get_role(role_id) for role_id in (
-                constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
-                constants.Roles.owners, constants.Roles.contributors,
-            )
+        role_ids = [constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
+                    constants.Roles.owners, constants.Roles.contributors]
+
+        role_stats = {}
+        for role_id in role_ids:
+            role_stats.update(Information.join_role_stats([role_id], guild))
+        role_stats.update(
+            Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], guild, "Leads")
         )
-        return {role.name.title(): len(role.members) for role in roles}
+        return role_stats
 
     def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
@@ -79,7 +95,7 @@ class Information(Cog):
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
         """)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -99,7 +115,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -171,21 +187,21 @@ class Information(Cog):
         online_presences = py_invite.approximate_presence_count
         offline_presences = py_invite.approximate_member_count - online_presences
         member_status = (
-            f"{constants.Emojis.status_online} {online_presences} "
-            f"{constants.Emojis.status_offline} {offline_presences}"
+            f"{constants.Emojis.status_online} {online_presences:,} "
+            f"{constants.Emojis.status_offline} {offline_presences:,}"
         )
 
-        embed.description = textwrap.dedent(f"""
-            Created: {created}
-            Voice region: {region}\
-            {features}
-            Roles: {num_roles}
-            Member status: {member_status}
-        """)
+        embed.description = (
+            f"Created: {created}"
+            f"\nVoice region: {region}"
+            f"{features}"
+            f"\nRoles: {num_roles}"
+            f"\nMember status: {member_status}"
+        )
         embed.set_thumbnail(url=ctx.guild.icon_url)
 
         # Members
-        total_members = ctx.guild.member_count
+        total_members = f"{ctx.guild.member_count:,}"
         member_counts = self.get_member_counts(ctx.guild)
         member_info = "\n".join(f"{role}: {count}" for role, count in member_counts.items())
         embed.add_field(name=f"Members: {total_members}", value=member_info)
@@ -205,8 +221,13 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
+    async def user_info(self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None) -> None:
         """Returns info about a user."""
+        if isinstance(user_or_message, Message):
+            user = user_or_message.author
+        else:
+            user = user_or_message
+
         if user is None:
             user = ctx.author
 
@@ -216,11 +237,11 @@ class Information(Cog):
             return
 
         # Will redirect to #bot-commands if it fails.
-        if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
+        if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: FetchedMember) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: MemberOrUser) -> Embed:
         """Creates an embed containing information on the `user`."""
         on_server = bool(ctx.guild.get_member(user.id))
 
@@ -229,6 +250,7 @@ class Information(Cog):
         name = str(user)
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
+        name = escape_markdown(name)
 
         if user.public_flags.verified_bot:
             name += f" {constants.Emojis.verified_bot}"
@@ -242,8 +264,14 @@ class Information(Cog):
                 badges.append(emoji)
 
         if on_server:
-            joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
-            roles = ", ".join(role.mention for role in user.roles[1:])
+            if user.joined_at:
+                joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            else:
+                joined = "Unable to get join date"
+
+            # The 0 is for excluding the default @everyone role,
+            # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
+            roles = ", ".join(role.mention for role in user.roles[:0:-1])
             membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
             if not is_mod_channel(ctx.channel):
                 membership.pop("Verified")
@@ -290,7 +318,7 @@ class Information(Cog):
 
         return embed
 
-    async def basic_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def basic_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
@@ -307,7 +335,7 @@ class Information(Cog):
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -348,7 +376,7 @@ class Information(Cog):
 
         return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def user_nomination_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
@@ -373,7 +401,7 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
-    async def user_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
+    async def user_messages(self, user: MemberOrUser) -> Tuple[Union[bool, str], Tuple[str, str]]:
         """
         Gets the amount of messages for `member`.
 
@@ -432,9 +460,9 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
         """Shows information about the raw API response."""
         if ctx.author not in message.channel.members:

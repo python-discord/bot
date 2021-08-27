@@ -568,12 +568,15 @@ class Metabase(metaclass=YAMLGetter):
 
     username: Optional[str]
     password: Optional[str]
-    url: str
+    base_url: str
+    public_url: str
     max_session_age: int
 
 
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
+
+    cache_size: int
 
     clean_offending: bool
     ping_everyone: bool
@@ -687,7 +690,7 @@ class VideoPermission(metaclass=YAMLGetter):
 
 
 # Debug mode
-DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
+DEBUG_MODE: bool = _CONFIG_YAML["debug"] == "true"
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
@@ -696,6 +699,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 # Default role combinations
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
+STAFF_PARTNERS_COMMUNITY_ROLES = STAFF_ROLES + [Roles.partners, Roles.python_community]
 
 # Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels

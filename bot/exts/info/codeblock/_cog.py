@@ -177,10 +177,13 @@ class CodeBlockCog(Cog, name="Code Block"):
         if not bot_message:
             return
 
-        if not instructions:
-            log.info("User's incorrect code block has been fixed. Removing instructions message.")
-            await bot_message.delete()
-            del self.codeblock_message_ids[payload.message_id]
-        else:
-            log.info("Message edited but still has invalid code blocks; editing the instructions.")
-            await bot_message.edit(embed=self.create_embed(instructions))
+        try:
+            if not instructions:
+                log.info("User's incorrect code block was fixed. Removing instructions message.")
+                await bot_message.delete()
+                del self.codeblock_message_ids[payload.message_id]
+            else:
+                log.info("Message edited but still has invalid code blocks; editing instructions.")
+                await bot_message.edit(embed=self.create_embed(instructions))
+        except discord.NotFound:
+            log.debug("Could not find instructions message; it was probably deleted.")

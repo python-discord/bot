@@ -202,8 +202,6 @@ class Silence(commands.Cog):
         duration: HushDurationConverter
     ) -> typing.Tuple[TextOrVoiceChannel, Optional[int]]:
         """Helper method to parse the arguments of the silence command."""
-        duration: Optional[int]
-
         if duration_or_channel:
             if isinstance(duration_or_channel, (TextChannel, VoiceChannel)):
                 channel = duration_or_channel
