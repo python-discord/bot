@@ -2,6 +2,7 @@ import logging
 import re
 import time
 from collections import defaultdict
+from itertools import chain
 from typing import Any, Callable, DefaultDict, Iterable, List, Optional, Tuple
 
 from discord import Colour, Embed, Message, NotFound, TextChannel, User, errors
@@ -263,25 +264,24 @@ class Clean(Cog):
 
         self.cleaning = False
 
-        log_messages = []
+        await self._log_clean(list(chain.from_iterable(message_mappings.values())), channels, ctx.author)
 
-        for messages in message_mappings.values():
-            log_messages.extend(messages)
-
-        if log_messages:
-            # Reverse the list to restore chronological order
-            log_messages = reversed(log_messages)
-            log_url = await self.mod_log.upload_log(log_messages, ctx.author.id)
-        else:
+    async def _log_clean(self, messages: list[Message], channels: Iterable[TextChannel], invoker: User) -> None:
+        """Log the deleted messages to the modlog."""
+        if not messages:
             # Can't build an embed, nothing to clean!
             raise BadArgument("No matching messages could be found.")
+
+        # Reverse the list to restore chronological order
+        log_messages = reversed(messages)
+        log_url = await self.mod_log.upload_log(log_messages, invoker.id)
 
         # Build the embed and send it
         target_channels = ", ".join(channel.mention for channel in channels)
 
         message = (
-            f"**{len(message_ids)}** messages deleted in {target_channels} by "
-            f"{ctx.author.mention}\n\n"
+            f"**{len(messages)}** messages deleted in {target_channels} by "
+            f"{invoker.mention}\n\n"
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 
