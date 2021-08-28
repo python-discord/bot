@@ -15,7 +15,7 @@ from bot.constants import (
     Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
     Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 )
-from bot.converters import Duration, UserMentionOrID
+from bot.converters import Duration, UnambiguousUser
 from bot.pagination import LinePaginator
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
@@ -30,7 +30,7 @@ WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
 Mentionable = t.Union[discord.Member, discord.Role]
-ReminderMention = t.Union[UserMentionOrID, discord.Role]
+ReminderMention = t.Union[UnambiguousUser, discord.Role]
 
 
 class Reminders(Cog):

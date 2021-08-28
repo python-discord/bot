@@ -495,22 +495,36 @@ class HushDurationConverter(Converter):
         return duration
 
 
-class UserMentionOrID(UserConverter):
-    """
-    Converts to a `discord.User`, but only if a mention or userID is provided.
+def _is_an_unambiguous_user_argument(argument: str) -> bool:
+    """Check if the provided argument is a user mention, user id, or username."""
+    has_id_or_mention = bool(IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
-    Unlike the default `UserConverter`, it doesn't allow conversion from a name or name#descrim.
+    if not has_id_or_mention:
+        if argument[0] == '@':
+            argument = argument[1:]
+
+        # Check to see if the author passed a username (a discriminator exists)
+        if len(argument) > 5 and argument[-5] == '#':
+            return True
+
+    return has_id_or_mention
+
+
+class UnambiguousUser(UserConverter):
+    """
+    Converts to a `discord.User`, but only if a mention, userID or a username is provided.
+
+    Unlike the default `UserConverter`, it doesn't allow conversion from a name.
     This is useful in cases where that lookup strategy would lead to ambiguity.
     """
 
     async def convert(self, ctx: Context, argument: str) -> discord.User:
         """Convert the `arg` to a `discord.User`."""
-        match = self._get_id_match(argument) or RE_USER_MENTION.match(argument)
-
-        if match is not None:
+        if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
         else:
-            raise BadArgument(f"`{argument}` is not a User mention or a User ID.")
+            raise BadArgument(f"`{argument}` is not a User mention, a User ID or a Username in the format"
+                              " `name#discriminator`.")
 
 
 class Infraction(Converter):
@@ -557,7 +571,7 @@ if t.TYPE_CHECKING:
     OffTopicName = str  # noqa: F811
     ISODateTime = datetime  # noqa: F811
     HushDurationConverter = int  # noqa: F811
-    UserMentionOrID = discord.User  # noqa: F811
+    UnambiguousUser = discord.User  # noqa: F811
     Infraction = t.Optional[dict]  # noqa: F811
 
 Expiry = t.Union[Duration, ISODateTime]
