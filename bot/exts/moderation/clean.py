@@ -209,15 +209,17 @@ class Clean(Cog):
 
         return deleted
 
-    async def _log_clean(self, messages: list[Message], channels: CleanChannels, invoker: User) -> None:
-        """Log the deleted messages to the modlog."""
+    async def _log_clean(self, messages: list[Message], channels: CleanChannels, ctx: Context) -> bool:
+        """Log the deleted messages to the modlog. Return True if logging was successful."""
         if not messages:
             # Can't build an embed, nothing to clean!
-            raise BadArgument("No matching messages could be found.")
+            delete_after = None if is_mod_channel(ctx.channel) else 5
+            await ctx.send(":x: No matching messages could be found.", delete_after=delete_after)
+            return False
 
         # Reverse the list to have reverse chronological order
         log_messages = reversed(messages)
-        log_url = await self.mod_log.upload_log(log_messages, invoker.id)
+        log_url = await self.mod_log.upload_log(log_messages, ctx.author.id)
 
         # Build the embed and send it
         if channels == "*":
@@ -227,7 +229,7 @@ class Clean(Cog):
 
         message = (
             f"**{len(messages)}** messages deleted in {target_channels} by "
-            f"{invoker.mention}\n\n"
+            f"{ctx.author.mention}\n\n"
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 
@@ -238,6 +240,8 @@ class Clean(Cog):
             text=message,
             channel_id=Channels.mod_log,
         )
+
+        return True
 
     # endregion
 
@@ -345,9 +349,9 @@ class Clean(Cog):
         deleted_messages = await self._delete_found(message_mappings)
         self.cleaning = False
 
-        await self._log_clean(deleted_messages, channels, ctx.author)
+        logged = await self._log_clean(deleted_messages, channels, ctx)
 
-        if is_mod_channel(ctx.channel):
+        if logged and is_mod_channel(ctx.channel):
             await ctx.message.add_reaction(Emojis.check_mark)
 
     # region: Commands
