@@ -82,7 +82,7 @@ class Clean(Cog):
                 # Message doesn't exist or was already deleted
                 continue
 
-    def _get_messages_from_cache(self, amount: int, to_delete: Predicate) -> Tuple[DefaultDict, List[int]]:
+    def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> Tuple[DefaultDict, List[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(list)
         message_ids = []
@@ -95,16 +95,16 @@ class Clean(Cog):
                 message_mappings[message.channel].append(message)
                 message_ids.append(message.id)
 
-                if len(message_ids) == amount:
-                    # We've got the requested amount of messages
+                if len(message_ids) == traverse:
+                    # We traversed the requested amount of messages.
                     return message_mappings, message_ids
 
-        # Amount exceeds amount of messages matching the check
+        # There are fewer messages in the cache than the number requested to traverse.
         return message_mappings, message_ids
 
     async def _get_messages_from_channels(
         self,
-        amount: int,
+        traverse: int,
         channels: Iterable[TextChannel],
         to_delete: Predicate,
         until_message: Optional[Message] = None
@@ -114,7 +114,7 @@ class Clean(Cog):
 
         for channel in channels:
 
-            async for message in channel.history(limit=amount):
+            async for message in channel.history(limit=traverse):
 
                 if not self.cleaning:
                     # Cleaning was canceled, return empty containers
@@ -136,7 +136,7 @@ class Clean(Cog):
 
     async def _clean_messages(
         self,
-        amount: int,
+        traverse: int,
         ctx: Context,
         channels: CleanChannels,
         bots_only: bool = False,
@@ -183,9 +183,9 @@ class Clean(Cog):
             """Check if message is older than message provided in after_message but younger than until_message."""
             return after_message.created_at <= message.created_at <= until_message.created_at
 
-        # Is this an acceptable amount of messages to clean?
-        if amount > CleanMessages.message_limit:
-            raise BadArgument(f"You cannot clean more than {CleanMessages.message_limit} messages.")
+        # Is this an acceptable amount of messages to traverse?
+        if traverse > CleanMessages.message_limit:
+            raise BadArgument(f"You cannot traverse more than {CleanMessages.message_limit} messages.")
 
         if after_message:
             # Ensure that until_message is specified.
@@ -232,13 +232,13 @@ class Clean(Cog):
                 log.info("Tried to delete invocation message, but it was already deleted.")
 
         if channels == "*" and use_cache:
-            message_mappings, message_ids = self._get_messages_from_cache(amount=amount, to_delete=predicate)
+            message_mappings, message_ids = self._get_messages_from_cache(traverse=traverse, to_delete=predicate)
         else:
             deletion_channels = channels
             if channels == "*":
                 deletion_channels = [channel for channel in ctx.guild.channels if isinstance(channel, TextChannel)]
             message_mappings, message_ids = await self._get_messages_from_channels(
-                amount=amount,
+                traverse=traverse,
                 channels=deletion_channels,
                 to_delete=predicate,
                 until_message=until_message
@@ -326,39 +326,39 @@ class Clean(Cog):
         self,
         ctx: Context,
         user: User,
-        amount: Optional[int] = 10,
+        traverse: Optional[int] = 10,
         use_cache: Optional[bool] = True,
         *,
         channels: Optional[CleanChannels] = None
     ) -> None:
-        """Delete messages posted by the provided user, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, user=user, channels=channels, use_cache=use_cache)
+        """Delete messages posted by the provided user, stop cleaning after traversing `traverse` messages."""
+        await self._clean_messages(traverse, ctx, user=user, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="all", aliases=["everything"])
     @has_any_role(*MODERATION_ROLES)
     async def clean_all(
         self,
         ctx: Context,
-        amount: Optional[int] = 10,
+        traverse: Optional[int] = 10,
         use_cache: Optional[bool] = True,
         *,
         channels: Optional[CleanChannels] = None
     ) -> None:
-        """Delete all messages, regardless of poster, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, channels=channels, use_cache=use_cache)
+        """Delete all messages, regardless of poster, stop cleaning after traversing `traverse` messages."""
+        await self._clean_messages(traverse, ctx, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="bots", aliases=["bot"])
     @has_any_role(*MODERATION_ROLES)
     async def clean_bots(
         self,
         ctx: Context,
-        amount: Optional[int] = 10,
+        traverse: Optional[int] = 10,
         use_cache: Optional[bool] = True,
         *,
         channels: Optional[CleanChannels] = None
     ) -> None:
-        """Delete all messages posted by a bot, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, bots_only=True, channels=channels, use_cache=use_cache)
+        """Delete all messages posted by a bot, stop cleaning after traversing `traverse` messages."""
+        await self._clean_messages(traverse, ctx, bots_only=True, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="regex", aliases=["word", "expression", "pattern"])
     @has_any_role(*MODERATION_ROLES)
@@ -366,13 +366,13 @@ class Clean(Cog):
         self,
         ctx: Context,
         regex: str,
-        amount: Optional[int] = 10,
+        traverse: Optional[int] = 10,
         use_cache: Optional[bool] = True,
         *,
         channels: Optional[CleanChannels] = None
     ) -> None:
-        """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, regex=regex, channels=channels, use_cache=use_cache)
+        """Delete all messages that match a certain regex, stop cleaning after traversing `traverse` messages."""
+        await self._clean_messages(traverse, ctx, regex=regex, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="until")
     @has_any_role(*MODERATION_ROLES)
