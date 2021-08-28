@@ -3,11 +3,11 @@ import re
 import time
 from collections import defaultdict
 from itertools import chain
-from typing import Any, Callable, DefaultDict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, DefaultDict, Iterable, List, Literal, Optional, TYPE_CHECKING, Tuple, Union
 
 from discord import Colour, Embed, Message, NotFound, TextChannel, User, errors
-from discord.ext import commands
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import Cog, Context, Converter, group, has_any_role
+from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument, MaxConcurrencyReached, MissingRequiredArgument
 
 from bot.bot import Bot
@@ -21,6 +21,22 @@ log = logging.getLogger(__name__)
 
 # Type alias for checks
 Predicate = Callable[[Message], bool]
+
+
+class CleanChannels(Converter):
+    """A converter that turns the given string to a list of channels to clean, or the literal `*` for all channels."""
+
+    _channel_converter = TextChannelConverter()
+
+    async def convert(self, ctx: Context, argument: str) -> Union[Literal["*"], list[TextChannel]]:
+        """Converts a string to a list of channels to clean, or the literal `*` for all channels."""
+        if argument == "*":
+            return "*"
+        return [await self._channel_converter.convert(ctx, channel) for channel in argument.split()]
+
+
+if TYPE_CHECKING:
+    CleanChannels = Union[Literal["*"], list[TextChannel]]  # noqa: F811
 
 
 class Clean(Cog):
@@ -122,13 +138,13 @@ class Clean(Cog):
         self,
         amount: int,
         ctx: Context,
-        channels: Iterable[TextChannel],
+        channels: CleanChannels,
         bots_only: bool = False,
-        use_cache: bool = False,
         user: User = None,
         regex: Optional[str] = None,
         until_message: Optional[Message] = None,
         after_message: Optional[Message] = None,
+        use_cache: Optional[bool] = True
     ) -> None:
         """A helper function that does the actual message cleaning."""
         def predicate_bots_only(message: Message) -> bool:
@@ -215,12 +231,15 @@ class Clean(Cog):
                 # Invocation message has already been deleted
                 log.info("Tried to delete invocation message, but it was already deleted.")
 
-        if use_cache:
+        if channels == "*" and use_cache:
             message_mappings, message_ids = self._get_messages_from_cache(amount=amount, to_delete=predicate)
         else:
+            deletion_channels = channels
+            if channels == "*":
+                deletion_channels = [channel for channel in ctx.guild.channels if isinstance(channel, TextChannel)]
             message_mappings, message_ids = await self._get_messages_from_channels(
                 amount=amount,
-                channels=channels,
+                channels=deletion_channels,
                 to_delete=predicate,
                 until_message=until_message
             )
@@ -265,7 +284,7 @@ class Clean(Cog):
 
         await self._log_clean(list(chain.from_iterable(message_mappings.values())), channels, ctx.author)
 
-    async def _log_clean(self, messages: list[Message], channels: Iterable[TextChannel], invoker: User) -> None:
+    async def _log_clean(self, messages: list[Message], channels: CleanChannels, invoker: User) -> None:
         """Log the deleted messages to the modlog."""
         if not messages:
             # Can't build an embed, nothing to clean!
@@ -276,7 +295,10 @@ class Clean(Cog):
         log_url = await self.mod_log.upload_log(log_messages, invoker.id)
 
         # Build the embed and send it
-        target_channels = ", ".join(channel.mention for channel in channels)
+        if channels == "*":
+            target_channels = "all channels"
+        else:
+            target_channels = ", ".join(channel.mention for channel in channels)
 
         message = (
             f"**{len(messages)}** messages deleted in {target_channels} by "
@@ -305,10 +327,11 @@ class Clean(Cog):
         ctx: Context,
         user: User,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        use_cache: Optional[bool] = True,
+        *,
+        channels: Optional[CleanChannels] = None
     ) -> None:
         """Delete messages posted by the provided user, stop cleaning after traversing `amount` messages."""
-        use_cache = not channels
         await self._clean_messages(amount, ctx, user=user, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="all", aliases=["everything"])
@@ -317,10 +340,12 @@ class Clean(Cog):
         self,
         ctx: Context,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        use_cache: Optional[bool] = True,
+        *,
+        channels: Optional[CleanChannels] = None
     ) -> None:
         """Delete all messages, regardless of poster, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, channels=channels)
+        await self._clean_messages(amount, ctx, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="bots", aliases=["bot"])
     @has_any_role(*MODERATION_ROLES)
@@ -328,22 +353,25 @@ class Clean(Cog):
         self,
         ctx: Context,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        use_cache: Optional[bool] = True,
+        *,
+        channels: Optional[CleanChannels] = None
     ) -> None:
         """Delete all messages posted by a bot, stop cleaning after traversing `amount` messages."""
-        await self._clean_messages(amount, ctx, bots_only=True, channels=channels)
+        await self._clean_messages(amount, ctx, bots_only=True, channels=channels, use_cache=use_cache)
 
-    @clean_group.command(name="regex", aliases=["word", "expression"])
+    @clean_group.command(name="regex", aliases=["word", "expression", "pattern"])
     @has_any_role(*MODERATION_ROLES)
     async def clean_regex(
         self,
         ctx: Context,
         regex: str,
         amount: Optional[int] = 10,
-        channels: commands.Greedy[TextChannel] = None
+        use_cache: Optional[bool] = True,
+        *,
+        channels: Optional[CleanChannels] = None
     ) -> None:
         """Delete all messages that match a certain regex, stop cleaning after traversing `amount` messages."""
-        use_cache = not channels
         await self._clean_messages(amount, ctx, regex=regex, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="until")
