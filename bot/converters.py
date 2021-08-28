@@ -523,7 +523,7 @@ class UnambiguousUser(UserConverter):
     """
 
     async def convert(self, ctx: Context, argument: str) -> discord.User:
-        """Convert the `arg` to a `discord.User`."""
+        """Convert the `argument` to a `discord.User`."""
         if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
         else:
@@ -539,7 +539,7 @@ class UnambiguousMember(MemberConverter):
     """
 
     async def convert(self, ctx: Context, argument: str) -> discord.Member:
-        """Convert the `arg` to a `discord.Member`."""
+        """Convert the `argument` to a `discord.Member`."""
         if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
         else:
