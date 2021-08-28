@@ -11,7 +11,7 @@ import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, UserConverter
+from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import DISCORD_EPOCH, escape_markdown, snowflake_time
 
 from bot import exts
@@ -510,6 +510,10 @@ def _is_an_unambiguous_user_argument(argument: str) -> bool:
     return has_id_or_mention
 
 
+AMBIGUOUS_ARGUMENT_MSG = ("`{argument}` is not a User mention, a User ID or a Username in the format"
+                          " `name#discriminator`.")
+
+
 class UnambiguousUser(UserConverter):
     """
     Converts to a `discord.User`, but only if a mention, userID or a username is provided.
@@ -523,8 +527,23 @@ class UnambiguousUser(UserConverter):
         if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
         else:
-            raise BadArgument(f"`{argument}` is not a User mention, a User ID or a Username in the format"
-                              " `name#discriminator`.")
+            raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
+
+
+class UnambiguousMember(MemberConverter):
+    """
+    Converts to a `discord.Member`, but only if a mention, userID or a username is provided.
+
+    Unlike the default `MemberConverter`, it doesn't allow conversion from a name or nickname.
+    This is useful in cases where that lookup strategy would lead to ambiguity.
+    """
+
+    async def convert(self, ctx: Context, argument: str) -> discord.Member:
+        """Convert the `arg` to a `discord.Member`."""
+        if _is_an_unambiguous_user_argument(argument):
+            return await super().convert(ctx, argument)
+        else:
+            raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
 
 
 class Infraction(Converter):
@@ -572,6 +591,7 @@ if t.TYPE_CHECKING:
     ISODateTime = datetime  # noqa: F811
     HushDurationConverter = int  # noqa: F811
     UnambiguousUser = discord.User  # noqa: F811
+    UnambiguousMember = discord.Member  # noqa: F811
     Infraction = t.Optional[dict]  # noqa: F811
 
 Expiry = t.Union[Duration, ISODateTime]
