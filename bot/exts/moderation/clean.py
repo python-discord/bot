@@ -11,7 +11,7 @@ from discord.ext.commands.errors import BadArgument, MaxConcurrencyReached, Miss
 
 from bot.bot import Bot
 from bot.constants import (
-    Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES
+    Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
 )
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.channel import is_mod_channel
@@ -346,6 +346,9 @@ class Clean(Cog):
         self.cleaning = False
 
         await self._log_clean(deleted_messages, channels, ctx.author)
+
+        if is_mod_channel(ctx.channel):
+            await ctx.message.add_reaction(Emojis.check_mark)
 
     # region: Commands
 
