@@ -496,7 +496,7 @@ class HushDurationConverter(Converter):
 
 
 def _is_an_unambiguous_user_argument(argument: str) -> bool:
-    """Check if the provided argument is a user mention, user id, or username."""
+    """Check if the provided argument is a user mention, user id, or username (name#discrim)."""
     has_id_or_mention = bool(IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
     # Check to see if the author passed a username (a discriminator exists)
@@ -512,10 +512,10 @@ AMBIGUOUS_ARGUMENT_MSG = ("`{argument}` is not a User mention, a User ID or a Us
 
 class UnambiguousUser(UserConverter):
     """
-    Converts to a `discord.User`, but only if a mention, userID or a username is provided.
+    Converts to a `discord.User`, but only if a mention, userID or a username (name#discrim) is provided.
 
     Unlike the default `UserConverter`, it doesn't allow conversion from a name.
-    This is useful in cases where that lookup strategy would lead to ambiguity.
+    This is useful in cases where that lookup strategy would lead to too much ambiguity.
     """
 
     async def convert(self, ctx: Context, argument: str) -> discord.User:
@@ -528,10 +528,10 @@ class UnambiguousUser(UserConverter):
 
 class UnambiguousMember(MemberConverter):
     """
-    Converts to a `discord.Member`, but only if a mention, userID or a username is provided.
+    Converts to a `discord.Member`, but only if a mention, userID or a username (name#discrim) is provided.
 
     Unlike the default `MemberConverter`, it doesn't allow conversion from a name or nickname.
-    This is useful in cases where that lookup strategy would lead to ambiguity.
+    This is useful in cases where that lookup strategy would lead to too much ambiguity.
     """
 
     async def convert(self, ctx: Context, argument: str) -> discord.Member:
