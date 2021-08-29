@@ -432,21 +432,19 @@ class Clean(Cog):
             self,
             ctx: Context,
             until: CleanLimit,
-            use_cache: Optional[bool] = True,
-            *,
-            channels: Optional[CleanChannels] = None) -> None:
+            channel: Optional[TextChannel] = None
+    ) -> None:
         """
         Delete all messages until a certain limit.
 
         A limit can be either a message, and ISO date-time string, or a time delta.
-        If a message is specified, `channels` cannot be specified.
+        If a message is specified, `channel` cannot be specified.
         """
         await self._clean_messages(
             CleanMessages.message_limit,
             ctx,
-            channels=channels,
+            channels=[channel] if channel else None,
             first_limit=until,
-            use_cache=use_cache
         )
 
     @clean_group.command(name="between", aliases=["after-until", "from-to"])
@@ -456,9 +454,7 @@ class Clean(Cog):
             ctx: Context,
             first_limit: CleanLimit,
             second_limit: CleanLimit,
-            use_cache: Optional[bool] = True,
-            *,
-            channels: Optional[CleanChannels] = None
+            channel: Optional[TextChannel] = None
     ) -> None:
         """
         Delete all messages within range.
@@ -467,15 +463,14 @@ class Clean(Cog):
         A limit can be either a message, and ISO date-time string, or a time delta.
 
         If two messages are specified, they both must be in the same channel.
-        If a message is specified, `channels` cannot be specified.
+        If a message is specified, `channel` cannot be specified.
         """
         await self._clean_messages(
             CleanMessages.message_limit,
             ctx,
-            channels=channels,
+            channels=[channel] if channel else None,
             first_limit=first_limit,
             second_limit=second_limit,
-            use_cache=use_cache
         )
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
