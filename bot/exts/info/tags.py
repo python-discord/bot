@@ -371,9 +371,9 @@ class Tags(Cog):
     ) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group
-        Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name
+        Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name.
 
-        With no arguments, list all accessible tags
+        With no arguments, list all accessible tags.
 
         Returns True if a message was sent, or if the tag is on cooldown.
         Returns False if no message was sent.
