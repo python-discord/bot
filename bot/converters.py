@@ -499,15 +499,11 @@ def _is_an_unambiguous_user_argument(argument: str) -> bool:
     """Check if the provided argument is a user mention, user id, or username."""
     has_id_or_mention = bool(IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
-    if not has_id_or_mention:
-        if argument[0] == '@':
-            argument = argument[1:]
+    # Check to see if the author passed a username (a discriminator exists)
+    argument = argument.removeprefix('@')
+    has_username = len(argument) > 5 and argument[-5] == '#'
 
-        # Check to see if the author passed a username (a discriminator exists)
-        if len(argument) > 5 and argument[-5] == '#':
-            return True
-
-    return has_id_or_mention
+    return has_id_or_mention or has_username
 
 
 AMBIGUOUS_ARGUMENT_MSG = ("`{argument}` is not a User mention, a User ID or a Username in the format"
