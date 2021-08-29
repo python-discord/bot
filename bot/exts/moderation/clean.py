@@ -367,13 +367,11 @@ class Clean(Cog):
     # region: Commands
 
     @group(invoke_without_command=True, name="clean", aliases=["clear", "purge"])
-    @has_any_role(*MODERATION_ROLES)
     async def clean_group(self, ctx: Context) -> None:
         """Commands for cleaning messages in channels."""
         await ctx.send_help(ctx.command)
 
     @clean_group.command(name="user", aliases=["users"])
-    @has_any_role(*MODERATION_ROLES)
     async def clean_user(
         self,
         ctx: Context,
@@ -387,7 +385,6 @@ class Clean(Cog):
         await self._clean_messages(traverse, ctx, user=user, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="all", aliases=["everything"])
-    @has_any_role(*MODERATION_ROLES)
     async def clean_all(
         self,
         ctx: Context,
@@ -400,7 +397,6 @@ class Clean(Cog):
         await self._clean_messages(traverse, ctx, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="bots", aliases=["bot"])
-    @has_any_role(*MODERATION_ROLES)
     async def clean_bots(
         self,
         ctx: Context,
@@ -413,7 +409,6 @@ class Clean(Cog):
         await self._clean_messages(traverse, ctx, bots_only=True, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="regex", aliases=["word", "expression", "pattern"])
-    @has_any_role(*MODERATION_ROLES)
     async def clean_regex(
         self,
         ctx: Context,
@@ -427,7 +422,6 @@ class Clean(Cog):
         await self._clean_messages(traverse, ctx, regex=regex, channels=channels, use_cache=use_cache)
 
     @clean_group.command(name="until")
-    @has_any_role(*MODERATION_ROLES)
     async def clean_until(
             self,
             ctx: Context,
@@ -448,7 +442,6 @@ class Clean(Cog):
         )
 
     @clean_group.command(name="between", aliases=["after-until", "from-to"])
-    @has_any_role(*MODERATION_ROLES)
     async def clean_between(
             self,
             ctx: Context,
@@ -474,7 +467,6 @@ class Clean(Cog):
         )
 
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
-    @has_any_role(*MODERATION_ROLES)
     async def clean_cancel(self, ctx: Context) -> None:
         """If there is an ongoing cleaning process, attempt to immediately cancel it."""
         self.cleaning = False
@@ -489,6 +481,10 @@ class Clean(Cog):
         await ctx.send(embed=embed, delete_after=delete_after)
 
     # endregion
+
+    async def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
 
 def setup(bot: Bot) -> None:
