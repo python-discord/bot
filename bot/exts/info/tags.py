@@ -43,19 +43,14 @@ class TagIdentifier(NamedTuple):
 
     def get_fuzzy_score(self, fuzz_tag_identifier: TagIdentifier) -> float:
         """Get fuzzy score, using `fuzz_tag_identifier` as the identifier to fuzzy match with."""
-        if self.group is None:
-            if fuzz_tag_identifier.group is None:
-                # We're only fuzzy matching the name
-                group_score = 1
-            else:
-                # Ignore tags without groups if the identifier contains a group
-                return .0
+        if (self.group is None) != (fuzz_tag_identifier.group is None):
+            # Ignore tags without groups if the identifier has a group and vice versa
+            return .0
+        if self.group == fuzz_tag_identifier.group:
+            # Completely identical, or both None
+            group_score = 1
         else:
-            if fuzz_tag_identifier.group is None:
-                # Ignore tags with groups if the identifier does not have a group
-                return .0
-            else:
-                group_score = _fuzzy_search(fuzz_tag_identifier.group, self.group)
+            group_score = _fuzzy_search(fuzz_tag_identifier.group, self.group)
 
         fuzzy_score = group_score * _fuzzy_search(fuzz_tag_identifier.name, self.name) * 100
         if fuzzy_score:
