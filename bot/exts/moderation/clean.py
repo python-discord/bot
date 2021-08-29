@@ -2,6 +2,7 @@ import logging
 import re
 import time
 from collections import defaultdict
+from contextlib import suppress
 from datetime import datetime
 from itertools import islice
 from typing import Any, Callable, DefaultDict, Iterable, List, Literal, Optional, TYPE_CHECKING, Tuple, Union
@@ -362,7 +363,8 @@ class Clean(Cog):
         logged = await self._log_clean(deleted_messages, channels, ctx)
 
         if logged and is_mod_channel(ctx.channel):
-            await ctx.message.add_reaction(Emojis.check_mark)
+            with suppress(NotFound):  # Can happen if the invoker deleted their own messages.
+                await ctx.message.add_reaction(Emojis.check_mark)
 
     # region: Commands
 
