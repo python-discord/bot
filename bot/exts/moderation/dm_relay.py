@@ -5,6 +5,7 @@ from discord.ext.commands import Cog, Context, command, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES
+from bot.utils.channel import is_mod_channel
 from bot.utils.services import send_to_paste_service
 
 log = logging.getLogger(__name__)
@@ -63,8 +64,9 @@ class DMRelay(Cog):
         await ctx.send(paste_link)
 
     async def cog_check(self, ctx: Context) -> bool:
-        """Only allow moderators to invoke the commands in this cog."""
-        return await has_any_role(*MODERATION_ROLES).predicate(ctx)
+        """Only allow moderators to invoke the commands in this cog in mod channels."""
+        return (await has_any_role(*MODERATION_ROLES).predicate(ctx)
+                and is_mod_channel(ctx.channel))
 
 
 def setup(bot: Bot) -> None:
