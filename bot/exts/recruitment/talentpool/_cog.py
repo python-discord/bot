@@ -340,7 +340,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         if await self.end_nomination(user.id, reason):
-            await ctx.send(f":white_check_mark: Messages sent by {user.mention} will no longer be relayed")
+            await ctx.send(f":white_check_mark: Successfully un-nominated {user}")
         else:
             await ctx.send(":x: The specified user does not have an active nomination")
 
