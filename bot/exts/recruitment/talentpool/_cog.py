@@ -118,7 +118,7 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send("Autoreview is currently disabled")
 
     @nomination_group.command(
-        name="nominess",
+        name="nominees",
         aliases=("nominated", "all", "list", "watched"),
         root_aliases=("nominees",)
     )
