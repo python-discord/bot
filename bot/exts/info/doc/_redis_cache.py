@@ -73,6 +73,18 @@ class StaleItemCounter(RedisObject):
             await connection.expire(key, WEEK_SECONDS * 3)
             return int(await connection.incr(key))
 
+    @namespace_lock
+    async def delete(self, package: str) -> bool:
+        """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
+        with await self._get_pool_connection() as connection:
+            package_keys = [
+                package_key async for package_key in connection.iscan(match=f"{self.namespace}:{package}:*")
+            ]
+            if package_keys:
+                await connection.delete(*package_keys)
+                return True
+            return False
+
 
 def item_key(item: DocItem) -> str:
     """Get the redis redis key string from `item`."""
