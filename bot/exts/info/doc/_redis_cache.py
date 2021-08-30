@@ -58,6 +58,22 @@ class DocRedisCache(RedisObject):
             return False
 
 
+class StaleItemCounter(RedisObject):
+    """Manage increment counters for stale `DocItem`s."""
+
+    @namespace_lock
+    async def increment_for(self, item: DocItem) -> int:
+        """
+        Increment the counter for `item` by 1, set it to expire in 3 weeks and return the new value.
+
+        If the counter didn't exist, initialize it with 1.
+        """
+        key = f"{self.namespace}:{item_key(item)}:{item.symbol_id}"
+        with await self._get_pool_connection() as connection:
+            await connection.expire(key, WEEK_SECONDS * 3)
+            return int(await connection.incr(key))
+
+
 def item_key(item: DocItem) -> str:
     """Get the redis redis key string from `item`."""
     return f"{item.package}:{item.relative_url_path.removesuffix('.html')}"
