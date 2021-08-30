@@ -42,7 +42,7 @@ class TalentPool(Cog, name="Talentpool"):
         if await self.autoreview_enabled():
             await self.reviewer.reschedule_reviews()
         else:
-            self.log.trace("Not scheduling reviews as autoreview is disabled.")
+            log.trace("Not scheduling reviews as autoreview is disabled.")
 
     async def autoreview_enabled(self) -> bool:
         """Return whether automatic posting of nomination reviews is enabled."""
