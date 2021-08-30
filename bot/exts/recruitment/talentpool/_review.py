@@ -103,10 +103,10 @@ class Reviewer:
         """Format a generic review of a user and return it with the reviewed emoji."""
         log.trace(f"Formatting the review of {user_id}")
 
-        # Since `watched_users` is a defaultdict, we should take care
+        # Since `cache` is a defaultdict, we should take care
         # not to accidentally insert the IDs of users that have no
-        # active nominated by using the `watched_users.get(user_id)`
-        # instead of `watched_users[user_id]`.
+        # active nominated by using the `cache.get(user_id)`
+        # instead of `cache[user_id]`.
         nomination = self._pool.cache.get(user_id)
         if not nomination:
             log.trace(f"There doesn't appear to be an active nomination for {user_id}")
