@@ -34,6 +34,7 @@ class TalentPool(Cog, name="Talentpool"):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
         self.reviewer = Reviewer(self.__class__.__name__, bot, self)
+        self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
         self.bot.loop.create_task(self.schedule_autoreviews())
 
     async def schedule_autoreviews(self) -> None:
