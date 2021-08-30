@@ -262,7 +262,6 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
         await self._method_subtests(self.cog.user_nomination_counts, test_values, header)
 
 
-@unittest.mock.patch("bot.exts.info.information.time_since", new=unittest.mock.MagicMock(return_value="1 year ago"))
 @unittest.mock.patch("bot.exts.info.information.constants.MODERATION_CHANNELS", new=[50])
 class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the creation of the `!user` embed."""
@@ -347,7 +346,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -356,7 +355,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Verified: {"True"}
                 Roles: &Moderators
             """).strip(),
@@ -379,7 +378,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -388,7 +387,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Roles: &Moderators
             """).strip(),
             embed.fields[1].value
@@ -508,7 +507,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
     async def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
-        constants.STAFF_ROLES = [self.moderator_role.id]
+        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 
         await self.cog.user_info(self.cog, ctx)
@@ -520,7 +519,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_moderators_can_target_another_member(self, create_embed, constants):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
-        constants.STAFF_ROLES = [self.moderator_role.id]
+        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
 
         await self.cog.user_info(self.cog, ctx, self.target)

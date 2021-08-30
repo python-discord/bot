@@ -44,7 +44,7 @@ class ModPings(Cog):
         log.trace("Applying the moderators role to the mod team where necessary.")
         for mod in mod_team.members:
             if mod in pings_on:  # Make sure that on-duty mods aren't in the cache.
-                if mod in pings_off:
+                if mod.id in pings_off:
                     await self.pings_off_mods.delete(mod.id)
                 continue
 
@@ -59,6 +59,7 @@ class ModPings(Cog):
         """Reapply the moderator's role to the given moderator."""
         log.trace(f"Re-applying role to mod with ID {mod.id}.")
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
+        await self.pings_off_mods.delete(mod.id)
 
     @group(name='modpings', aliases=('modping',), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
@@ -86,7 +87,6 @@ class ModPings(Cog):
 
         The duration cannot be longer than 30 days.
         """
-        duration: datetime.datetime
         delta = duration - datetime.datetime.utcnow()
         if delta > datetime.timedelta(days=30):
             await ctx.send(":x: Cannot remove the role for longer than 30 days.")

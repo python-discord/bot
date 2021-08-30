@@ -94,8 +94,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         test_case = namedtuple("test_case", ["get_return_value", "expected_output", "infraction_nr", "send_msg"])
         test_cases = [
             test_case([], None, None, True),
-            test_case([{"id": 123987}], {"id": 123987}, "123987", False),
-            test_case([{"id": 123987}], {"id": 123987}, "123987", True)
+            test_case([{"id": 123987, "type": "ban"}], {"id": 123987, "type": "ban"}, "123987", False),
+            test_case([{"id": 123987, "type": "ban"}], {"id": 123987, "type": "ban"}, "123987", True)
         ]
 
         for case in test_cases:
@@ -213,7 +213,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         type="Mute",
                         expires="N/A",
                         reason="foo bar" * 4000
-                    )[:2045] + "...",
+                    )[:4093] + "...",
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(

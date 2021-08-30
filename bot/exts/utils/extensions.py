@@ -10,8 +10,9 @@ from discord.ext.commands import Context, group
 from bot import exts
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
+from bot.converters import Extension
 from bot.pagination import LinePaginator
-from bot.utils.extensions import EXTENSIONS, unqualify
+from bot.utils.extensions import EXTENSIONS
 
 log = logging.getLogger(__name__)
 
@@ -27,44 +28,6 @@ class Action(Enum):
     LOAD = functools.partial(Bot.load_extension)
     UNLOAD = functools.partial(Bot.unload_extension)
     RELOAD = functools.partial(Bot.reload_extension)
-
-
-class Extension(commands.Converter):
-    """
-    Fully qualify the name of an extension and ensure it exists.
-
-    The * and ** values bypass this when used with the reload command.
-    """
-
-    async def convert(self, ctx: Context, argument: str) -> str:
-        """Fully qualify the name of an extension and ensure it exists."""
-        # Special values to reload all extensions
-        if argument == "*" or argument == "**":
-            return argument
-
-        argument = argument.lower()
-
-        if argument in EXTENSIONS:
-            return argument
-        elif (qualified_arg := f"{exts.__name__}.{argument}") in EXTENSIONS:
-            return qualified_arg
-
-        matches = []
-        for ext in EXTENSIONS:
-            if argument == unqualify(ext):
-                matches.append(ext)
-
-        if len(matches) > 1:
-            matches.sort()
-            names = "\n".join(matches)
-            raise commands.BadArgument(
-                f":x: `{argument}` is an ambiguous extension name. "
-                f"Please use one of the following fully-qualified names.```\n{names}```"
-            )
-        elif matches:
-            return matches[0]
-        else:
-            raise commands.BadArgument(f":x: Could not find the extension `{argument}`.")
 
 
 class Extensions(commands.Cog):

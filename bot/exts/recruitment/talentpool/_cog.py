@@ -5,18 +5,20 @@ from io import StringIO
 from typing import Union
 
 import discord
-from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
+from async_rediscache import RedisCache
+from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, STAFF_ROLES
-from bot.converters import FetchedMember
+from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.converters import MemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.time import get_time_delta
 
+AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
 
 log = logging.getLogger(__name__)
@@ -25,10 +27,25 @@ log = logging.getLogger(__name__)
 class TalentPool(Cog, name="Talentpool"):
     """Relays messages of helper candidates to a watch channel to observe them."""
 
+    # RedisCache[str, bool]
+    # Can contain a single key, "autoreview_enabled", with the value a bool indicating if autoreview is enabled.
+    talentpool_settings = RedisCache()
+
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
         self.reviewer = Reviewer(self.__class__.__name__, bot, self)
-        self.bot.loop.create_task(self.reviewer.reschedule_reviews())
+        self.bot.loop.create_task(self.schedule_autoreviews())
+
+    async def schedule_autoreviews(self) -> None:
+        """Reschedule reviews for active nominations if autoreview is enabled."""
+        if await self.autoreview_enabled():
+            await self.reviewer.reschedule_reviews()
+        else:
+            self.log.trace("Not scheduling reviews as autoreview is disabled.")
+
+    async def autoreview_enabled(self) -> bool:
+        """Return whether automatic posting of nomination reviews is enabled."""
+        return await self.talentpool_settings.get(AUTOREVIEW_ENABLED_KEY, True)
 
         # Stores talentpool users in cache
         self.cache = defaultdict(dict)
@@ -59,7 +76,51 @@ class TalentPool(Cog, name="Talentpool"):
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
 
-    @nomination_group.command(name='list', aliases=('all', 'watched'), root_aliases=("nominees",))
+    @nomination_group.group(name="autoreview", aliases=("ar",), invoke_without_command=True)
+    @has_any_role(*MODERATION_ROLES)
+    async def nomination_autoreview_group(self, ctx: Context) -> None:
+        """Commands for enabling or disabling autoreview."""
+        await ctx.send_help(ctx.command)
+
+    @nomination_autoreview_group.command(name="enable", aliases=("on",))
+    @has_any_role(Roles.admins)
+    async def autoreview_enable(self, ctx: Context) -> None:
+        """
+        Enable automatic posting of reviews.
+
+        This will post reviews up to one day overdue. Older nominations can be
+        manually reviewed with the `tp post_review <user_id>` command.
+        """
+        if await self.autoreview_enabled():
+            await ctx.send(":x: Autoreview is already enabled")
+            return
+
+        await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
+        await self.reviewer.reschedule_reviews()
+        await ctx.send(":white_check_mark: Autoreview enabled")
+
+    @nomination_autoreview_group.command(name="disable", aliases=("off",))
+    @has_any_role(Roles.admins)
+    async def autoreview_disable(self, ctx: Context) -> None:
+        """Disable automatic posting of reviews."""
+        if not await self.autoreview_enabled():
+            await ctx.send(":x: Autoreview is already disabled")
+            return
+
+        await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
+        self.reviewer.cancel_all()
+        await ctx.send(":white_check_mark: Autoreview disabled")
+
+    @nomination_autoreview_group.command(name="status")
+    @has_any_role(*MODERATION_ROLES)
+    async def autoreview_status(self, ctx: Context) -> None:
+        """Show whether automatic posting of reviews is enabled or disabled."""
+        if await self.autoreview_enabled():
+            await ctx.send("Autoreview is currently enabled")
+        else:
+            await ctx.send("Autoreview is currently disabled")
+
+    @nomination_group.command(name='watched', aliases=('all', 'list'), root_aliases=("nominees",))
     @has_any_role(*MODERATION_ROLES)
     async def list_command(
         self,
@@ -142,7 +203,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_group.command(name='forcewatch', aliases=('fw', 'forceadd', 'fa'), root_aliases=("forcenominate",))
     @has_any_role(*MODERATION_ROLES)
-    async def force_watch_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+    async def force_watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
         """
         Adds the given `user` to the talent pool, from any channel.
 
@@ -152,7 +213,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
-    async def add_command(self, ctx: Context, user: FetchedMember, *, reason: str = '') -> None:
+    async def watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
         """
         Adds the given `user` to the talent pool.
 
@@ -171,7 +232,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         await self._watch_user(ctx, user, reason)
 
-    async def _watch_user(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+    async def _watch_user(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """Adds the given user to the talent pool."""
         if user.bot:
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
@@ -215,7 +276,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         self.cache[user.id] = response_data
 
-        if user.id not in self.reviewer:
+        if await self.autoreview_enabled() and user.id not in self.reviewer:
             self.reviewer.schedule_review(user.id)
 
         history = await self.bot.api_client.get(
@@ -227,7 +288,7 @@ class TalentPool(Cog, name="Talentpool"):
             }
         )
 
-        msg = f"✅ The nomination for {user} has been added to the talent pool"
+        msg = f"✅ The nomination for {user.mention} has been added to the talent pool"
         if history:
             msg += f"\n\n({len(history)} previous nominations in total)"
 
@@ -235,7 +296,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @has_any_role(*MODERATION_ROLES)
-    async def history_command(self, ctx: Context, user: FetchedMember) -> None:
+    async def history_command(self, ctx: Context, user: MemberOrUser) -> None:
         """Shows the specified user's nomination history."""
         result = await self.bot.api_client.get(
             'bot/nominations',
@@ -264,7 +325,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_group.command(name='end', aliases=('unwatch',), root_aliases=("unnominate",))
     @has_any_role(*MODERATION_ROLES)
-    async def end_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 
@@ -275,7 +336,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         if await self.unwatch(user.id, reason):
-            await ctx.send(f":white_check_mark: Successfully un-nominated {user}")
+            await ctx.send(f":white_check_mark: Messages sent by {user.mention} will no longer be relayed")
         else:
             await ctx.send(":x: The specified user does not have an active nomination")
 
@@ -287,7 +348,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_edit_group.command(name='reason')
     @has_any_role(*MODERATION_ROLES)
-    async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: FetchedMember, *, reason: str) -> None:
+    async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: MemberOrUser, *, reason: str) -> None:
         """Edits the reason of a specific nominator in a specific active nomination."""
         if len(reason) > REASON_MAX_CHARS:
             await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
@@ -308,7 +369,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         if not any(entry["actor"] == actor.id for entry in nomination["entries"]):
-            await ctx.send(f":x: {actor} doesn't have an entry in this nomination.")
+            await ctx.send(f":x: {actor.mention} doesn't have an entry in this nomination.")
             return
 
         log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {repr(reason)}")
@@ -381,7 +442,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
-    async def on_member_ban(self, guild: Guild, user: Union[User, Member]) -> None:
+    async def on_member_ban(self, guild: Guild, user: Union[MemberOrUser]) -> None:
         """Remove `user` from the talent pool after they are banned."""
         await self.unwatch(user.id, "User was banned.")
 
@@ -427,7 +488,8 @@ class TalentPool(Cog, name="Talentpool"):
             json={'end_reason': reason, 'active': False}
         )
 
-        self.reviewer.cancel(user_id)
+        if await self.autoreview_enabled():
+            self.reviewer.cancel(user_id)
 
         return True
 

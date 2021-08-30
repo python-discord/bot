@@ -3,23 +3,25 @@ import logging
 import random
 import textwrap
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime
 from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
-from dateutil.relativedelta import relativedelta
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_ROLES
-from bot.converters import Duration
+from bot.constants import (
+    Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
+    Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+)
+from bot.converters import Duration, UnambiguousUser
 from bot.pagination import LinePaginator
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta
+from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +30,7 @@ WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
 Mentionable = t.Union[discord.Member, discord.Role]
+ReminderMention = t.Union[UnambiguousUser, discord.Role]
 
 
 class Reminders(Cog):
@@ -62,8 +65,7 @@ class Reminders(Cog):
 
             # If the reminder is already overdue ...
             if remind_at < now:
-                late = relativedelta(now, remind_at)
-                await self.send_reminder(reminder, late)
+                await self.send_reminder(reminder, remind_at)
             else:
                 self.schedule_reminder(reminder)
 
@@ -86,8 +88,7 @@ class Reminders(Cog):
     async def _send_confirmation(
         ctx: Context,
         on_success: str,
-        reminder_id: t.Union[str, int],
-        delivery_dt: t.Optional[datetime],
+        reminder_id: t.Union[str, int]
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
         embed = discord.Embed(
@@ -97,11 +98,6 @@ class Reminders(Cog):
         )
 
         footer_str = f"ID: {reminder_id}"
-
-        if delivery_dt:
-            # Reminder deletion will have a `None` `delivery_dt`
-            footer_str += ', Due'
-            embed.timestamp = delivery_dt
 
         embed.set_footer(text=footer_str)
 
@@ -118,7 +114,7 @@ class Reminders(Cog):
 
         If mentions aren't allowed, also return the type of mention(s) disallowed.
         """
-        if await has_no_roles_check(ctx, *STAFF_ROLES):
+        if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
             return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
@@ -144,7 +140,7 @@ class Reminders(Cog):
         """Converts Role and Member ids to their corresponding objects if possible."""
         guild = self.bot.get_guild(Guild.id)
         for mention_id in mention_ids:
-            if (mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id))):
+            if mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id)):
                 yield mentionable
 
     def schedule_reminder(self, reminder: dict) -> None:
@@ -174,59 +170,90 @@ class Reminders(Cog):
         self.schedule_reminder(reminder)
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
-    async def send_reminder(self, reminder: dict, late: relativedelta = None) -> None:
+    async def send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
         """Send the reminder."""
         is_valid, user, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
             # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
-
         embed = discord.Embed()
-        embed.colour = discord.Colour.blurple()
-        embed.set_author(
-            icon_url=Icons.remind_blurple,
-            name="It has arrived!"
-        )
-
-        embed.description = f"Here's your reminder: `{reminder['content']}`."
-
-        if reminder.get("jump_url"):  # keep backward compatibility
-            embed.description += f"\n[Jump back to when you created the reminder]({reminder['jump_url']})"
-
-        if late:
+        if expected_time:
             embed.colour = discord.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
-                name=f"Sorry it arrived {humanize_delta(late, max_units=2)} late!"
+                name="Sorry, your reminder should have arrived earlier!"
+            )
+        else:
+            embed.colour = discord.Colour.blurple()
+            embed.set_author(
+                icon_url=Icons.remind_blurple,
+                name="It has arrived!"
             )
 
+        # Let's not use a codeblock to keep emojis and mentions working. Embeds are safe anyway.
+        embed.description = f"Here's your reminder: {reminder['content']}"
+
+        # Here the jump URL is in the format of base_url/guild_id/channel_id/message_id
         additional_mentions = ' '.join(
             mentionable.mention for mentionable in self.get_mentionables(reminder["mentions"])
         )
 
-        await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
+        jump_url = reminder.get("jump_url")
+        embed.description += f"\n[Jump back to when you created the reminder]({jump_url})"
+        partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
+        try:
+            await partial_message.reply(content=f"{additional_mentions}", embed=embed)
+        except discord.HTTPException as e:
+            log.info(
+                f"There was an error when trying to reply to a reminder invocation message, {e}, "
+                "fall back to using jump_url"
+            )
+            await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
     ) -> None:
-        """Commands for managing your reminders."""
+        """
+        Commands for managing your reminders.
+
+        The `expiration` duration of `!remind new` supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
+        """
         await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
-        self, ctx: Context, mentions: Greedy[Mentionable], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
     ) -> None:
         """
         Set yourself a simple reminder.
 
-        Expiration is parsed per: http://strftime.org/
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
         """
-        # If the user is not staff, we need to verify whether or not to make a reminder at all.
-        if await has_no_roles_check(ctx, *STAFF_ROLES):
+        # If the user is not staff, partner or part of the python community,
+        # we need to verify whether or not to make a reminder at all.
+        if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
@@ -270,9 +297,7 @@ class Reminders(Cog):
             }
         )
 
-        now = datetime.utcnow() - timedelta(seconds=1)
-        humanized_delta = humanize_delta(relativedelta(expiration, now))
-        mention_string = f"Your reminder will arrive in {humanized_delta}"
+        mention_string = f"Your reminder will arrive on {discord_timestamp(expiration, TimestampFormats.DAY_TIME)}"
 
         if mentions:
             mention_string += f" and will mention {len(mentions)} other(s)"
@@ -282,8 +307,7 @@ class Reminders(Cog):
         await self._send_confirmation(
             ctx,
             on_success=mention_string,
-            reminder_id=reminder["id"],
-            delivery_dt=expiration,
+            reminder_id=reminder["id"]
         )
 
         self.schedule_reminder(reminder)
@@ -296,8 +320,6 @@ class Reminders(Cog):
             'bot/reminders',
             params={'author__id': str(ctx.author.id)}
         )
-
-        now = datetime.utcnow()
 
         # Make a list of tuples so it can be sorted by time.
         reminders = sorted(
@@ -313,7 +335,7 @@ class Reminders(Cog):
         for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
             remind_datetime = isoparse(remind_at).replace(tzinfo=None)
-            time = humanize_delta(relativedelta(remind_datetime, now))
+            time = discord_timestamp(remind_datetime, TimestampFormats.RELATIVE)
 
             mentions = ", ".join(
                 # Both Role and User objects have the `name` attribute
@@ -322,7 +344,7 @@ class Reminders(Cog):
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
             text = textwrap.dedent(f"""
-            **Reminder #{id_}:** *expires in {time}* (ID: {id_}){mention_string}
+            **Reminder #{id_}:** *expires {time}* (ID: {id_}){mention_string}
             {content}
             """).strip()
 
@@ -350,7 +372,20 @@ class Reminders(Cog):
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
     async def edit_reminder_group(self, ctx: Context) -> None:
-        """Commands for modifying your current reminders."""
+        """
+        Commands for modifying your current reminders.
+
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
+        """
         await ctx.send_help(ctx.command)
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
@@ -358,7 +393,16 @@ class Reminders(Cog):
         """
         Edit one of your reminder's expiration.
 
-        Expiration is parsed per: http://strftime.org/
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
         """
         await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
@@ -368,7 +412,7 @@ class Reminders(Cog):
         await self.edit_reminder(ctx, id_, {"content": content})
 
     @edit_reminder_group.command(name="mentions", aliases=("pings",))
-    async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[Mentionable]) -> None:
+    async def edit_reminder_mentions(self, ctx: Context, id_: int, mentions: Greedy[ReminderMention]) -> None:
         """Edit one of your reminder's mentions."""
         # Remove duplicate mentions
         mentions = set(mentions)
@@ -388,15 +432,11 @@ class Reminders(Cog):
             return
         reminder = await self._edit_reminder(id_, payload)
 
-        # Parse the reminder expiration back into a datetime
-        expiration = isoparse(reminder["expiration"]).replace(tzinfo=None)
-
         # Send a confirmation message to the channel
         await self._send_confirmation(
             ctx,
             on_success="That reminder has been edited successfully!",
             reminder_id=id_,
-            delivery_dt=expiration,
         )
         await self._reschedule_reminder(reminder)
 
@@ -413,8 +453,7 @@ class Reminders(Cog):
         await self._send_confirmation(
             ctx,
             on_success="That reminder has been deleted successfully!",
-            reminder_id=id_,
-            delivery_dt=None,
+            reminder_id=id_
         )
 
     async def _can_modify(self, ctx: Context, reminder_id: t.Union[str, int]) -> bool:

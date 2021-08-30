@@ -6,11 +6,11 @@ from typing import List, Union
 
 from discord import Colour, Embed
 from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
-from fuzzywuzzy import fuzz, process
-from fuzzywuzzy.utils import full_process
+from rapidfuzz import fuzz, process
+from rapidfuzz.utils import default_process
 
 from bot import constants
-from bot.constants import Channels, STAFF_ROLES
+from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.decorators import redirect_output
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
@@ -54,7 +54,7 @@ class CustomHelpCommand(HelpCommand):
     def __init__(self):
         super().__init__(command_attrs={"help": "Shows help for bot commands"})
 
-    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_ROLES)
+    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def command_callback(self, ctx: Context, *, command: str = None) -> None:
         """Attempts to match the provided query with a valid command or cog."""
         # the only reason we need to tamper with this is because d.py does not support "categories",
@@ -125,16 +125,9 @@ class CustomHelpCommand(HelpCommand):
 
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
-        choices = await self.get_all_help_choices()
-
-        # Run fuzzywuzzy's processor beforehand, and avoid matching if processed string is empty
-        # This avoids fuzzywuzzy from raising a warning on inputs with only non-alphanumeric characters
-        if (processed := full_process(string)):
-            result = process.extractBests(processed, choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
-        else:
-            result = []
-
-        return HelpQueryNotFound(f'Query "{string}" not found.', dict(result))
+        choices = list(await self.get_all_help_choices())
+        result = process.extract(default_process(string), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
+        return HelpQueryNotFound(f'Query "{string}" not found.', {choice[0]: choice[1] for choice in result})
 
     async def subcommand_not_found(self, command: Command, string: str) -> "HelpQueryNotFound":
         """

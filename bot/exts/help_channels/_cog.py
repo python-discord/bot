@@ -12,6 +12,7 @@ from discord.ext import commands
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.utils import channel as channel_utils, lock, scheduling
 
@@ -266,6 +267,8 @@ class HelpChannels(commands.Cog):
             for channel in channels[:abs(missing)]:
                 await self.unclaim_channel(channel, closed_on=_channel.ClosingReason.CLEANUP)
 
+        self.available_help_channels = set(_channel.get_category_channels(self.available_category))
+
         # Getting channels that need to be included in the dynamic message.
         await self.update_available_help_channels()
         log.trace("Dynamic available help message updated.")
@@ -386,7 +389,12 @@ class HelpChannels(commands.Cog):
         )
 
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
-        embed = discord.Embed(description=_message.DORMANT_MSG)
+        embed = discord.Embed(
+            description=_message.DORMANT_MSG.format(
+                dormant=self.dormant_category.name,
+                available=self.available_category.name,
+            )
+        )
         await channel.send(embed=embed)
 
         log.trace(f"Pushing #{channel} ({channel.id}) into the channel queue.")
@@ -424,6 +432,7 @@ class HelpChannels(commands.Cog):
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
+        await _caches.session_participants.delete(channel.id)
 
         claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
         if claimant is None:
@@ -466,7 +475,9 @@ class HelpChannels(commands.Cog):
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
-        else:
+
+        elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
+            await self.notify_session_participants(message)
             await _message.update_message_caches(message)
 
     @commands.Cog.listener()
@@ -507,11 +518,6 @@ class HelpChannels(commands.Cog):
 
     async def update_available_help_channels(self) -> None:
         """Updates the dynamic message within #how-to-get-help for available help channels."""
-        if not self.available_help_channels:
-            self.available_help_channels = set(
-                c for c in self.available_category.channels if not _channel.is_excluded_channel(c)
-            )
-
         available_channels = AVAILABLE_HELP_CHANNELS.format(
             available=", ".join(
                 c.mention for c in sorted(self.available_help_channels, key=attrgetter("position"))
@@ -535,3 +541,91 @@ class HelpChannels(commands.Cog):
         )
         self.dynamic_message = new_dynamic_message["id"]
         await _caches.dynamic_message.set("message_id", self.dynamic_message)
+
+    @staticmethod
+    def _serialise_session_participants(participants: set[int]) -> str:
+        """Convert a set to a comma separated string."""
+        return ','.join(str(p) for p in participants)
+
+    @staticmethod
+    def _deserialise_session_participants(s: str) -> set[int]:
+        """Convert a comma separated string into a set."""
+        return set(int(user_id) for user_id in s.split(",") if user_id != "")
+
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
+    @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
+    async def notify_session_participants(self, message: discord.Message) -> None:
+        """
+        Check if the message author meets the requirements to be notified.
+
+        If they meet the requirements they are notified.
+        """
+        if await _caches.claimants.get(message.channel.id) == message.author.id:
+            return  # Ignore messages sent by claimants
+
+        if not await _caches.help_dm.get(message.author.id):
+            return  # Ignore message if user is opted out of help dms
+
+        if (await self.bot.get_context(message)).command == self.close_command:
+            return  # Ignore messages that are closing the channel
+
+        session_participants = self._deserialise_session_participants(
+            await _caches.session_participants.get(message.channel.id) or ""
+        )
+
+        if message.author.id not in session_participants:
+            session_participants.add(message.author.id)
+
+            embed = discord.Embed(
+                title="Currently Helping",
+                description=f"You're currently helping in {message.channel.mention}",
+                color=constants.Colours.soft_green,
+                timestamp=message.created_at
+            )
+            embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
+
+            try:
+                await message.author.send(embed=embed)
+            except discord.Forbidden:
+                log.trace(
+                    f"Failed to send helpdm message to {message.author.id}. DMs Closed/Blocked. "
+                    "Removing user from helpdm."
+                )
+                bot_commands_channel = self.bot.get_channel(Channels.bot_commands)
+                await _caches.help_dm.delete(message.author.id)
+                await bot_commands_channel.send(
+                    f"{message.author.mention} {constants.Emojis.cross_mark} "
+                    "To receive updates on help channels you're active in, enable your DMs.",
+                    delete_after=RedirectOutput.delete_delay
+                )
+                return
+
+            await _caches.session_participants.set(
+                message.channel.id,
+                self._serialise_session_participants(session_participants)
+            )
+
+    @commands.command(name="helpdm")
+    async def helpdm_command(
+        self,
+        ctx: commands.Context,
+        state_bool: bool
+    ) -> None:
+        """
+        Allows user to toggle "Helping" dms.
+
+        If this is set to on the user will receive a dm for the channel they are participating in.
+
+        If this is set to off the user will not receive a dm for channel that they are participating in.
+        """
+        state_str = "ON" if state_bool else "OFF"
+
+        if state_bool == await _caches.help_dm.get(ctx.author.id, False):
+            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state_str}")
+            return
+
+        if state_bool:
+            await _caches.help_dm.set(ctx.author.id, True)
+        else:
+            await _caches.help_dm.delete(ctx.author.id)
+        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")

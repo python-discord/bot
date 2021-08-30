@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import logging
 import random
 import re
@@ -8,8 +7,6 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
-from discord import Message, MessageType, Reaction, User
-from discord.errors import HTTPException
 from discord.ext.commands import Context
 
 import bot
@@ -54,7 +51,7 @@ def reaction_check(
         log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
         scheduling.create_task(
             reaction.message.remove_reaction(reaction.emoji, user),
-            HTTPException,  # Suppress the HTTPException if adding the reaction fails
+            suppressed_exceptions=(discord.HTTPException,),
             name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
         )
         return False
@@ -69,7 +66,9 @@ async def wait_for_deletion(
     allow_mods: bool = True
 ) -> None:
     """
-    Wait for up to `timeout` seconds for a reaction by any of the specified `user_ids` to delete the message.
+    Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
+
+    If `timeout` expires then reactions are cleared to indicate the option to delete has expired.
 
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`.
@@ -95,9 +94,15 @@ async def wait_for_deletion(
         allow_mods=allow_mods,
     )
 
-    with contextlib.suppress(asyncio.TimeoutError):
-        await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
-        await message.delete()
+    try:
+        try:
+            await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
+        except asyncio.TimeoutError:
+            await message.clear_reactions()
+        else:
+            await message.delete()
+    except discord.NotFound:
+        log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
 
 
 async def send_attachments(
@@ -146,7 +151,7 @@ async def send_attachments(
                 large.append(attachment)
             else:
                 log.info(f"{failure_msg} because it's too large.")
-        except HTTPException as e:
+        except discord.HTTPException as e:
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
@@ -167,8 +172,8 @@ async def send_attachments(
 
 async def count_unique_users_reaction(
     message: discord.Message,
-    reaction_predicate: Callable[[Reaction], bool] = lambda _: True,
-    user_predicate: Callable[[User], bool] = lambda _: True,
+    reaction_predicate: Callable[[discord.Reaction], bool] = lambda _: True,
+    user_predicate: Callable[[discord.User], bool] = lambda _: True,
     count_bots: bool = True
 ) -> int:
     """
@@ -188,7 +193,7 @@ async def count_unique_users_reaction(
     return len(unique_users)
 
 
-async def pin_no_system_message(message: Message) -> bool:
+async def pin_no_system_message(message: discord.Message) -> bool:
     """Pin the given message, wait a couple of seconds and try to delete the system message."""
     await message.pin()
 
@@ -196,7 +201,7 @@ async def pin_no_system_message(message: Message) -> bool:
     await asyncio.sleep(2)
     # Search for the system message in the last 10 messages
     async for historical_message in message.channel.history(limit=10):
-        if historical_message.type == MessageType.pins_add:
+        if historical_message.type == discord.MessageType.pins_add:
             await historical_message.delete()
             return True
 

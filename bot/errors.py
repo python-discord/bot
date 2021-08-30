@@ -1,6 +1,8 @@
-from typing import Hashable, Union
+from __future__ import annotations
 
-from discord import Member, User
+from typing import Hashable, TYPE_CHECKING
+if TYPE_CHECKING:
+    from bot.converters import MemberOrUser
 
 
 class LockedResourceError(RuntimeError):
@@ -22,7 +24,7 @@ class LockedResourceError(RuntimeError):
         )
 
 
-class InvalidInfractedUser(Exception):
+class InvalidInfractedUserError(Exception):
     """
     Exception raised upon attempt of infracting an invalid user.
 
@@ -30,7 +32,8 @@ class InvalidInfractedUser(Exception):
         `user` -- User or Member which is invalid
     """
 
-    def __init__(self, user: Union[Member, User], reason: str = "User infracted is a bot."):
+    def __init__(self, user: MemberOrUser, reason: str = "User infracted is a bot."):
+
         self.user = user
         self.reason = reason
 
@@ -41,3 +44,17 @@ class BrandingMisconfiguration(RuntimeError):
     """Raised by the Branding cog when a misconfigured event is encountered."""
 
     pass
+
+
+class NonExistentRoleError(ValueError):
+    """
+    Raised by the Information Cog when encountering a Role that does not exist.
+
+    Attributes:
+        `role_id` -- the ID of the role that does not exist
+    """
+
+    def __init__(self, role_id: int):
+        super().__init__(f"Could not fetch data for role {role_id}")
+
+        self.role_id = role_id

@@ -9,12 +9,11 @@ from discord.ext.commands import BadArgument, Cog, Context, clean_content, comma
 from discord.utils import snowflake_time
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.pagination import LinePaginator
 from bot.utils import messages
-from bot.utils.checks import has_no_roles_check
 from bot.utils.time import time_since
 
 log = logging.getLogger(__name__)
@@ -40,6 +39,7 @@ If the implementation is hard to explain, it's a bad idea.
 If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 """
+LEADS_AND_COMMUNITY = (Roles.project_leads, Roles.domain_leads, Roles.partners, Roles.python_community)
 
 
 class Utils(Cog):
@@ -49,20 +49,22 @@ class Utils(Cog):
         self.bot = bot
 
     @command()
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_py), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
-            return await messages.send_denial(
+            await messages.send_denial(
                 ctx,
                 "**Non-Character Detected**\n"
                 "Only unicode characters can be processed, but a custom Discord emoji "
                 "was found. Please remove it and try again."
             )
+            return
 
         if len(characters) > 50:
-            return await messages.send_denial(ctx, f"Too many characters ({len(characters)}/50)")
+            await messages.send_denial(ctx, f"Too many characters ({len(characters)}/50)")
+            return
 
         def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"
@@ -156,12 +158,9 @@ class Utils(Cog):
         await ctx.send(embed=embed)
 
     @command(aliases=("snf", "snfl", "sf"))
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
         """Get Discord snowflake creation time."""
-        if len(snowflakes) > 1 and await has_no_roles_check(ctx, *STAFF_ROLES):
-            raise BadArgument("Cannot process more than one snowflake in one invocation.")
-
         if not snowflakes:
             raise BadArgument("At least one snowflake must be provided.")
 
@@ -174,7 +173,7 @@ class Utils(Cog):
         lines = []
         for snowflake in snowflakes:
             created_at = snowflake_time(snowflake)
-            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at, max_units=3)}).")
+            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at)}).")
 
         await LinePaginator.paginate(
             lines,
@@ -185,7 +184,7 @@ class Utils(Cog):
         )
 
     @command(aliases=("poll",))
-    @has_any_role(*MODERATION_ROLES, Roles.project_leads, Roles.domain_leads)
+    @has_any_role(*MODERATION_ROLES, *LEADS_AND_COMMUNITY)
     async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.

@@ -192,8 +192,8 @@ class Superstarify(InfractionScheduler, Cog):
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
 
-    async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
-        """Pardon a superstar infraction and return a log dict."""
+    async def _pardon_action(self, infraction: _utils.Infraction, notify: bool) -> t.Optional[t.Dict[str, str]]:
+        """Pardon a superstar infraction, optionally notify the user via DM, and return a log dict."""
         if infraction["type"] != "superstar":
             return
 
@@ -208,18 +208,19 @@ class Superstarify(InfractionScheduler, Cog):
             )
             return {}
 
-        # DM the user about the expiration.
-        notified = await _utils.notify_pardon(
-            user=user,
-            title="You are no longer superstarified",
-            content="You may now change your nickname on the server.",
-            icon_url=_utils.INFRACTION_ICONS["superstar"][1]
-        )
+        log_text = {"Member": format_user(user)}
 
-        return {
-            "Member": format_user(user),
-            "DM": "Sent" if notified else "**Failed**"
-        }
+        # DM the user about the expiration.
+        if notify:
+            notified = await _utils.notify_pardon(
+                user=user,
+                title="You are no longer superstarified",
+                content="You may now change your nickname on the server.",
+                icon_url=_utils.INFRACTION_ICONS["superstar"][1]
+            )
+            log_text["DM"] = "Sent" if notified else "**Failed**"
+
+        return log_text
 
     @staticmethod
     def get_nick(infraction_id: int, member_id: int) -> str:
