@@ -97,7 +97,7 @@ class Reviewer:
 
         if update_database:
             nomination = self._pool.cache.get(user_id)
-            await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
+            await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
 
     async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji]]:
         """Format a generic review of a user and return it with the reviewed emoji."""
