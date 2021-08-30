@@ -137,9 +137,9 @@ class TalentPool(Cog, name="Talentpool"):
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
         """
-        await self.list_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
+        await self.list_nominated_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
 
-    async def list_users(
+    async def list_nominated_users(
         self,
         ctx: Context,
         oldest_first: bool = False,
