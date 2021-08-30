@@ -47,10 +47,6 @@ class TalentPool(Cog, name="Talentpool"):
         """Return whether automatic posting of nomination reviews is enabled."""
         return await self.talentpool_settings.get(AUTOREVIEW_ENABLED_KEY, True)
 
-        # Stores talentpool users in cache
-        self.cache = defaultdict(dict)
-        self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
-
     async def refresh_cache(self) -> bool:
         """Updates TalentPool users cache."""
         try:
