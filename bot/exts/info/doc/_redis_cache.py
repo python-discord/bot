@@ -24,8 +24,7 @@ class DocRedisCache(RedisObject):
 
         All keys from a single page are stored together, expiring a week after the first set.
         """
-        url_key = remove_suffix(item.relative_url_path, ".html")
-        redis_key = f"{self.namespace}:{item.package}:{url_key}"
+        redis_key = f"{self.namespace}:{item_key(item)}"
         needs_expire = False
 
         with await self._get_pool_connection() as connection:
@@ -43,10 +42,8 @@ class DocRedisCache(RedisObject):
     @namespace_lock
     async def get(self, item: DocItem) -> Optional[str]:
         """Return the Markdown content of the symbol `item` if it exists."""
-        url_key = remove_suffix(item.relative_url_path, ".html")
-
         with await self._get_pool_connection() as connection:
-            return await connection.hget(f"{self.namespace}:{item.package}:{url_key}", item.symbol_id, encoding="utf8")
+            return await connection.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id, encoding="utf8")
 
     @namespace_lock
     async def delete(self, package: str) -> bool:
@@ -61,10 +58,6 @@ class DocRedisCache(RedisObject):
             return False
 
 
-def remove_suffix(string: str, suffix: str) -> str:
-    """Remove `suffix` from end of `string`."""
-    # TODO replace usages with str.removesuffix on 3.9
-    if string.endswith(suffix):
-        return string[:-len(suffix)]
-    else:
-        return string
+def item_key(item: DocItem) -> str:
+    """Get the redis redis key string from `item`."""
+    return f"{item.package}:{item.relative_url_path.removesuffix('.html')}"
