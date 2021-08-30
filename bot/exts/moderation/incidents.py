@@ -554,47 +554,6 @@ class Incidents(Cog):
                 await self.send_message_link_embeds(webhook_embed_list, message, self.incidents_webhook)
 
     @Cog.listener()
-    async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent) -> None:
-        """
-        Pass processed `payload` to `extract_message_links` and edit `msg_before` webhook msg.
-
-        Fetch the message found in payload, if not found i.e. the message got deleted then delete its
-        webhook message and return.
-
-        Deletes cache value (`message_link_embeds_cache`) of `msg_before` if it exists and removes the
-        webhook message for that particular link from the channel.
-
-        If the message edit (`msg_after`) is a incident then run it through `extract_message_links`
-        to get all the message link embeds (embeds which contain information about that particular
-        link), this message link embeds are then sent into the channel.
-
-        The edited message is also passed into `add_signals` if it is a incident message.
-        """
-        try:
-            channel = self.bot.get_channel(payload.channel_id)
-            msg_after = await channel.fetch_message(payload.message_id)
-        except discord.NotFound:  # Was deleted before we got the event
-            await self.delete_msg_link_embed(payload.message_id)
-            return
-
-        if is_incident(msg_after):
-            webhook_embed_list = await self.extract_message_links(msg_after)
-            webhook_msg_id = await self.message_link_embeds_cache.get(payload.message_id)
-
-            if not webhook_embed_list:
-                await self.delete_msg_link_embed(msg_after.id)
-                return
-
-            if webhook_msg_id:
-                await self.incidents_webhook.edit_message(
-                    message_id=webhook_msg_id,
-                    embeds=[embed for embed in webhook_embed_list if embed is not None],
-                )
-                return
-
-            await self.send_message_link_embeds(webhook_embed_list, msg_after, self.incidents_webhook)
-
-    @Cog.listener()
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent) -> None:
         """
         Delete message link embeds for `payload.message_id`.
