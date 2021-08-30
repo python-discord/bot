@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 class TalentPool(Cog, name="Talentpool"):
-    """Relays messages of helper candidates to a watch channel to observe them."""
+    """Used to nominate potential helper candidates."""
 
     # RedisCache[str, bool]
     # Can contain a single key, "autoreview_enabled", with the value a bool indicating if autoreview is enabled.
@@ -59,7 +59,7 @@ class TalentPool(Cog, name="Talentpool"):
                 params=self.api_default_params
             )
         except ResponseCodeError as err:
-            log.exception("Failed to fetch the watched users from the API", exc_info=err)
+            log.exception("Failed to fetch the currently nominated users from the API", exc_info=err)
             return False
 
         self.cache = defaultdict(dict)
@@ -120,7 +120,11 @@ class TalentPool(Cog, name="Talentpool"):
         else:
             await ctx.send("Autoreview is currently disabled")
 
-    @nomination_group.command(name='watched', aliases=('all', 'list'), root_aliases=("nominees",))
+    @nomination_group.command(
+        name="nominess",
+        aliases=("nominated", "all", "list", "watched"),
+        root_aliases=("nominees",)
+    )
     @has_any_role(*MODERATION_ROLES)
     async def list_command(
         self,
@@ -201,19 +205,23 @@ class TalentPool(Cog, name="Talentpool"):
         """
         await ctx.invoke(self.list_command, oldest_first=True, update_cache=update_cache)
 
-    @nomination_group.command(name='forcewatch', aliases=('fw', 'forceadd', 'fa'), root_aliases=("forcenominate",))
+    @nomination_group.command(
+        name="forcenominate",
+        aliases=("fw", "forceadd", "fa", "fn", "forcewatch"),
+        root_aliases=("forcenominate",)
+    )
     @has_any_role(*MODERATION_ROLES)
-    async def force_watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
+    async def force_nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
         """
         Adds the given `user` to the talent pool, from any channel.
 
         A `reason` for adding the user to the talent pool is optional.
         """
-        await self._watch_user(ctx, user, reason)
+        await self._nominate_user(ctx, user, reason)
 
-    @nomination_group.command(name='watch', aliases=('w', 'add', 'a'), root_aliases=("nominate",))
+    @nomination_group.command(name='nominate', aliases=("w", "add", "a", "watch"), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
-    async def watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
+    async def nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
         """
         Adds the given `user` to the talent pool.
 
@@ -224,18 +232,18 @@ class TalentPool(Cog, name="Talentpool"):
             if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
                 await ctx.send(
                     f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
-                    "Use `!tp forcewatch` to override this check."
+                    "Use `!tp forcenominate` to override this check."
                 )
             else:
                 await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")
             return
 
-        await self._watch_user(ctx, user, reason)
+        await self._nominate_user(ctx, user, reason)
 
-    async def _watch_user(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
+    async def _nominate_user(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """Adds the given user to the talent pool."""
         if user.bot:
-            await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
+            await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. Only humans can be nominated.")
             return
 
         if isinstance(user, Member) and any(role.id in STAFF_ROLES for role in user.roles):
@@ -325,7 +333,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_group.command(name='end', aliases=('unwatch',), root_aliases=("unnominate",))
     @has_any_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
+    async def end_nomination_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
 
@@ -335,7 +343,7 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(f":x: Maximum allowed characters for the end reason is {REASON_MAX_CHARS}.")
             return
 
-        if await self.unwatch(user.id, reason):
+        if await self.end_nomination(user.id, reason):
             await ctx.send(f":white_check_mark: Messages sent by {user.mention} will no longer be relayed")
         else:
             await ctx.send(":x: The specified user does not have an active nomination")
@@ -444,7 +452,7 @@ class TalentPool(Cog, name="Talentpool"):
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: Union[MemberOrUser]) -> None:
         """Remove `user` from the talent pool after they are banned."""
-        await self.unwatch(user.id, "User was banned.")
+        await self.end_nomination(user.id, "User was banned.")
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent) -> None:
@@ -466,7 +474,7 @@ class TalentPool(Cog, name="Talentpool"):
             log.info(f"Archiving nomination {message.id}")
             await self.reviewer.archive_vote(message, emoji == Emojis.incident_actioned)
 
-    async def unwatch(self, user_id: int, reason: str) -> bool:
+    async def end_nomination(self, user_id: int, reason: str) -> bool:
         """End the active nomination of a user with the given reason and return True on success."""
         active_nomination = await self.bot.api_client.get(
             'bot/nominations',
@@ -536,7 +544,7 @@ class TalentPool(Cog, name="Talentpool"):
                 {entries_string}
 
                 End date: {end_date}
-                Unwatch reason: {nomination_object["end_reason"]}
+                Unnominate reason: {nomination_object["end_reason"]}
                 ===============
                 """
             )
