@@ -11,6 +11,7 @@ from discord.ext.commands import Context
 from discord.utils import escape_markdown
 
 from bot import constants
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
 from bot.exts.moderation.infraction.infractions import Infractions
@@ -46,11 +47,18 @@ class ModManagement(commands.Cog):
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context, infr_id: int = None) -> None:
         """Infraction manipulation commands. If `infr_id` is passed then this command fetches that infraction."""
-        if not infr_id:
+        if infr_id is None:
             await ctx.send_help(ctx.command)
             return
 
-        infraction_list = await self.bot.api_client.get(f"bot/infractions/{infr_id}")
+        try:
+            infraction_list = [await self.bot.api_client.get(f"bot/infractions/{infr_id}/expanded")]
+        except ResponseCodeError as e:
+            if e.status == 404:
+                await ctx.send(f":x: No infraction with ID `{infr_id}` could be found.")
+                return
+            raise e
+
         embed = discord.Embed(
             title=f"Infraction #{infr_id}",
             colour=discord.Colour.orange()
