@@ -91,6 +91,9 @@ class Clean(Cog):
         if traverse > CleanMessages.message_limit:
             raise BadArgument(f"Cannot traverse more than {CleanMessages.message_limit} messages.")
 
+        if first_limit and channels and (channels == "*" or len(channels) > 1):
+            raise BadArgument("Message or time range specified across multiple channels.")
+
         if (isinstance(first_limit, Message) or isinstance(first_limit, Message)) and channels:
             raise BadArgument("Both a message limit and channels specified.")
 
@@ -424,6 +427,7 @@ class Clean(Cog):
         `users`: A series of user mentions, ID's, or names.
         `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
+        If a limit is provided, multiple channels cannot be provided.
         If only one of them is provided, acts as `clean until`. If both are provided, acts as `clean between`.
         `use_cache`: Whether to use the message cache.
         If not provided, will default to False unless an asterisk is used for the channels.
