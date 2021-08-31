@@ -45,7 +45,7 @@ class ModManagement(commands.Cog):
 
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context, infr_id: int = None) -> None:
-        """Infraction manipulation commands. If `infr_id` is passed then fetches that infraction."""
+        """Infraction manipulation commands. If `infr_id` is passed then this command fetches that infraction."""
         if infr_id:
             await self.search_id(infr_id)
         await ctx.send_help(ctx.command)
@@ -240,7 +240,7 @@ class ModManagement(commands.Cog):
 
     @infraction_search_group.command(name="id", aliases=("i", "infrid", "infr_id"))
     async def search_id(self, ctx: Context, infr_id: int) -> None:
-        """Search for infraction by the infraction id."""
+        """Search for an infraction by the infraction id."""
         infraction_list = await self.bot.api_client.get(f"bot/infractions/{infr_id}")
         embed = discord.Embed(
             title=f"Infraction #{infr_id}",
