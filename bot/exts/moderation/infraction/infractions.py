@@ -10,7 +10,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Duration, Expiry, MemberOrUser
+from bot.converters import Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -53,7 +53,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Permanent infractions
 
     @command()
-    async def warn(self, ctx: Context, user: MemberOrUser, *, reason: t.Optional[str] = None) -> None:
+    async def warn(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: t.Optional[str] = None) -> None:
         """Warn a user for the given reason."""
         if not isinstance(user, Member):
             await ctx.send(":x: The user doesn't appear to be on the server.")
@@ -66,7 +66,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user)
 
     @command()
-    async def kick(self, ctx: Context, user: MemberOrUser, *, reason: t.Optional[str] = None) -> None:
+    async def kick(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: t.Optional[str] = None) -> None:
         """Kick a user for the given reason."""
         if not isinstance(user, Member):
             await ctx.send(":x: The user doesn't appear to be on the server.")
@@ -78,7 +78,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def ban(
         self,
         ctx: Context,
-        user: MemberOrUser,
+        user: UnambiguousMemberOrUser,
         duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str] = None
@@ -94,7 +94,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def purgeban(
         self,
         ctx: Context,
-        user: MemberOrUser,
+        user: UnambiguousMemberOrUser,
         duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str] = None
@@ -110,7 +110,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def voiceban(
         self,
         ctx: Context,
-        user: MemberOrUser,
+        user: UnambiguousMemberOrUser,
         duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str]
@@ -128,7 +128,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command(aliases=["mute"])
     async def tempmute(
         self, ctx: Context,
-        user: MemberOrUser,
+        user: UnambiguousMemberOrUser,
         duration: t.Optional[Expiry] = None,
         *,
         reason: t.Optional[str] = None
@@ -162,7 +162,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def tempban(
         self,
         ctx: Context,
-        user: MemberOrUser,
+        user: UnambiguousMemberOrUser,
         duration: Expiry,
         *,
         reason: t.Optional[str] = None
@@ -188,7 +188,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def tempvoiceban(
             self,
             ctx: Context,
-            user: MemberOrUser,
+            user: UnambiguousMemberOrUser,
             duration: Expiry,
             *,
             reason: t.Optional[str]
@@ -214,7 +214,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Permanent shadow infractions
 
     @command(hidden=True)
-    async def note(self, ctx: Context, user: MemberOrUser, *, reason: t.Optional[str] = None) -> None:
+    async def note(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: t.Optional[str] = None) -> None:
         """Create a private note for a user with the given reason without notifying the user."""
         infraction = await _utils.post_infraction(ctx, user, "note", reason, hidden=True, active=False)
         if infraction is None:
@@ -223,7 +223,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_infraction(ctx, infraction, user)
 
     @command(hidden=True, aliases=['shadowban', 'sban'])
-    async def shadow_ban(self, ctx: Context, user: MemberOrUser, *, reason: t.Optional[str] = None) -> None:
+    async def shadow_ban(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: t.Optional[str] = None) -> None:
         """Permanently ban a user for the given reason without notifying the user."""
         await self.apply_ban(ctx, user, reason, hidden=True)
 
@@ -234,7 +234,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def shadow_tempban(
         self,
         ctx: Context,
-        user: MemberOrUser,
+        user: UnambiguousMemberOrUser,
         duration: Expiry,
         *,
         reason: t.Optional[str] = None
@@ -260,17 +260,17 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Remove infractions (un- commands)
 
     @command()
-    async def unmute(self, ctx: Context, user: MemberOrUser) -> None:
+    async def unmute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Prematurely end the active mute infraction for the user."""
         await self.pardon_infraction(ctx, "mute", user)
 
     @command()
-    async def unban(self, ctx: Context, user: MemberOrUser) -> None:
+    async def unban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user)
 
     @command(aliases=("uvban",))
-    async def unvoiceban(self, ctx: Context, user: MemberOrUser) -> None:
+    async def unvoiceban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Prematurely end the active voice ban infraction for the user."""
         await self.pardon_infraction(ctx, "voice_ban", user)
 
