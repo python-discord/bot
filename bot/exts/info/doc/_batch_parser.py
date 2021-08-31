@@ -107,7 +107,7 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
-            async with bot.instance.http_session.get(doc_item.url) as response:
+            async with bot.instance.http_session.get(doc_item.url, raise_for_status=True) as response:
                 soup = await bot.instance.loop.run_in_executor(
                     None,
                     BeautifulSoup,
