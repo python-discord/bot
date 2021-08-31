@@ -11,7 +11,7 @@ import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, UserConverter
+from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import DISCORD_EPOCH, escape_markdown, snowflake_time
 
 from bot import exts
@@ -495,22 +495,51 @@ class HushDurationConverter(Converter):
         return duration
 
 
-class UserMentionOrID(UserConverter):
-    """
-    Converts to a `discord.User`, but only if a mention or userID is provided.
+def _is_an_unambiguous_user_argument(argument: str) -> bool:
+    """Check if the provided argument is a user mention, user id, or username (name#discrim)."""
+    has_id_or_mention = bool(IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
-    Unlike the default `UserConverter`, it doesn't allow conversion from a name or name#descrim.
-    This is useful in cases where that lookup strategy would lead to ambiguity.
+    # Check to see if the author passed a username (a discriminator exists)
+    argument = argument.removeprefix('@')
+    has_username = len(argument) > 5 and argument[-5] == '#'
+
+    return has_id_or_mention or has_username
+
+
+AMBIGUOUS_ARGUMENT_MSG = ("`{argument}` is not a User mention, a User ID or a Username in the format"
+                          " `name#discriminator`.")
+
+
+class UnambiguousUser(UserConverter):
+    """
+    Converts to a `discord.User`, but only if a mention, userID or a username (name#discrim) is provided.
+
+    Unlike the default `UserConverter`, it doesn't allow conversion from a name.
+    This is useful in cases where that lookup strategy would lead to too much ambiguity.
     """
 
     async def convert(self, ctx: Context, argument: str) -> discord.User:
-        """Convert the `arg` to a `discord.User`."""
-        match = self._get_id_match(argument) or RE_USER_MENTION.match(argument)
-
-        if match is not None:
+        """Convert the `argument` to a `discord.User`."""
+        if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
         else:
-            raise BadArgument(f"`{argument}` is not a User mention or a User ID.")
+            raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
+
+
+class UnambiguousMember(MemberConverter):
+    """
+    Converts to a `discord.Member`, but only if a mention, userID or a username (name#discrim) is provided.
+
+    Unlike the default `MemberConverter`, it doesn't allow conversion from a name or nickname.
+    This is useful in cases where that lookup strategy would lead to too much ambiguity.
+    """
+
+    async def convert(self, ctx: Context, argument: str) -> discord.Member:
+        """Convert the `argument` to a `discord.Member`."""
+        if _is_an_unambiguous_user_argument(argument):
+            return await super().convert(ctx, argument)
+        else:
+            raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
 
 
 class Infraction(Converter):
@@ -557,8 +586,10 @@ if t.TYPE_CHECKING:
     OffTopicName = str  # noqa: F811
     ISODateTime = datetime  # noqa: F811
     HushDurationConverter = int  # noqa: F811
-    UserMentionOrID = discord.User  # noqa: F811
+    UnambiguousUser = discord.User  # noqa: F811
+    UnambiguousMember = discord.Member  # noqa: F811
     Infraction = t.Optional[dict]  # noqa: F811
 
 Expiry = t.Union[Duration, ISODateTime]
 MemberOrUser = t.Union[discord.Member, discord.User]
+UnambiguousMemberOrUser = t.Union[UnambiguousMember, UnambiguousUser]
