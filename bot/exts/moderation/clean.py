@@ -43,11 +43,11 @@ class CleanChannels(Converter):
 
 
 class Regex(Converter):
-    """A converter that takes a string in the form r'.+' and strips the 'r' prefix and the single quotes."""
+    """A converter that takes a string in the form `.+` and returns the contents of the inline code."""
 
     async def convert(self, ctx: Context, argument: str) -> str:
-        """Strips the 'r' prefix and the enclosing single quotes from the string."""
-        return re.match(r"r'(.+?)'", argument).group(1)
+        """Strips the backticks from the string."""
+        return re.fullmatch(r"`(.+?)`", argument).group(1)
 
 
 if TYPE_CHECKING:
@@ -417,7 +417,7 @@ class Clean(Cog):
             bots_only: Optional[bool] = False,
             regex: Optional[Regex] = None,
             *,
-            channels: Optional[CleanChannels] = None
+            channels: CleanChannels = None
     ) -> None:
         """
         Commands for cleaning messages in channels.
@@ -433,11 +433,11 @@ class Clean(Cog):
         If not provided, will default to False unless an asterisk is used for the channels.
         `bots_only`: Whether to delete only bots. If specified, users cannot be specified.
         `regex`: A regex pattern the message must contain to be deleted.
-        The pattern must be provided with an "r" prefix and enclosed in single quotes.
+        The pattern must be provided enclosed in backticks.
         If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
         `channels`: A series of channels to delete in, or an asterisk to delete from all channels.
         """
-        if not any([traverse, users, first_limit, second_limit, regex]):
+        if not any([traverse, users, first_limit, second_limit, regex, channels]):
             await ctx.send_help(ctx.command)
             return
 
@@ -461,7 +461,7 @@ class Clean(Cog):
         traverse: Optional[int] = 10,
         use_cache: Optional[bool] = True,
         *,
-        channels: Optional[CleanChannels] = None
+        channels: CleanChannels = None
     ) -> None:
         """Delete messages posted by the provided user, stop cleaning after traversing `traverse` messages."""
         await self._clean_messages(ctx, traverse, users=[user], channels=channels, use_cache=use_cache)
@@ -473,7 +473,7 @@ class Clean(Cog):
         traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
-        channels: Optional[CleanChannels] = None
+        channels: CleanChannels = None
     ) -> None:
         """Delete all messages, regardless of poster, stop cleaning after traversing `traverse` messages."""
         await self._clean_messages(ctx, traverse, channels=channels, use_cache=use_cache)
@@ -485,7 +485,7 @@ class Clean(Cog):
         traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
-        channels: Optional[CleanChannels] = None
+        channels: CleanChannels = None
     ) -> None:
         """Delete all messages posted by a bot, stop cleaning after traversing `traverse` messages."""
         await self._clean_messages(ctx, traverse, bots_only=True, channels=channels, use_cache=use_cache)
@@ -498,14 +498,14 @@ class Clean(Cog):
         traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
-        channels: Optional[CleanChannels] = None
+        channels: CleanChannels = None
     ) -> None:
         """
         Delete all messages that match a certain regex, stop cleaning after traversing `traverse` messages.
 
-        The pattern must be provided with an "r" prefix and enclosed in single quotes.
+        The pattern must be provided enclosed in backticks.
         If the pattern contains spaces, and still needs to be enclosed in double quotes on top of that.
-        For example: r'[0-9]+'
+        For example: `[0-9]`
         """
         await self._clean_messages(ctx, traverse, regex=regex, channels=channels, use_cache=use_cache)
 
@@ -514,7 +514,7 @@ class Clean(Cog):
             self,
             ctx: Context,
             until: CleanLimit,
-            channel: Optional[TextChannel] = None
+            channel: TextChannel = None
     ) -> None:
         """
         Delete all messages until a certain limit.
@@ -535,7 +535,7 @@ class Clean(Cog):
             ctx: Context,
             first_limit: CleanLimit,
             second_limit: CleanLimit,
-            channel: Optional[TextChannel] = None
+            channel: TextChannel = None
     ) -> None:
         """
         Delete all messages within range.
