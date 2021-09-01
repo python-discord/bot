@@ -328,7 +328,7 @@ class TalentPool(Cog, name="Talentpool"):
             max_size=1000
         )
 
-    @nomination_group.command(name='end', aliases=('unwatch',), root_aliases=("unnominate",))
+    @nomination_group.command(name="end", aliases=("unwatch", "unnominate"), root_aliases=("unnominate",))
     @has_any_role(*MODERATION_ROLES)
     async def end_nomination_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
