@@ -13,6 +13,7 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -45,7 +46,12 @@ class ModManagement(commands.Cog):
 
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
-        """Infraction manipulation commands. If `infraction` is passed then this command fetches that infraction."""
+        """
+        Infraction manipulation commands.
+
+        If `infraction` is passed then this command fetches that infraction. The `Infraction` converter
+        supports 'l', 'last' and 'recent' to get the most recent infraction made by `ctx.author`.
+        """
         if infraction is None:
             await ctx.send_help(ctx.command)
             return
@@ -346,8 +352,11 @@ class ModManagement(commands.Cog):
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send(f":x: Could not find a corresponding infraction for `{error.args[1]}`.")
+        elif isinstance(error, InvalidInfraction):
+            if error.infraction_arg.isdigit():
+                await ctx.send(f":x: Could not find an infraction with id `{error.infraction_arg}`.")
+            else:
+                await ctx.send(f":x: `{error.infraction_arg}` is not a valid integer infraction id.")
             error.handled = True
 
 

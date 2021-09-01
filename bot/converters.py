@@ -17,6 +17,7 @@ from discord.utils import DISCORD_EPOCH, escape_markdown, snowflake_time
 from bot import exts
 from bot.api import ResponseCodeError
 from bot.constants import URLs
+from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
@@ -572,7 +573,11 @@ class Infraction(Converter):
                 return await ctx.bot.api_client.get(f"bot/infractions/{arg}/expanded")
             except ResponseCodeError as e:
                 if e.status == 404:
-                    raise BadArgument(f"Failed to convert '{arg}' to an infraction.", arg)
+                    raise InvalidInfraction(
+                        converter=Infraction,
+                        original=e,
+                        infraction_arg=arg
+                    )
                 raise e
 
 
