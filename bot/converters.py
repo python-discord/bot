@@ -558,7 +558,7 @@ class Infraction(Converter):
                 "ordering": "-inserted_at"
             }
 
-            infractions = await ctx.bot.api_client.get("bot/infractions", params=params)
+            infractions = await ctx.bot.api_client.get("bot/infractions/expanded", params=params)
 
             if not infractions:
                 raise BadArgument(
@@ -568,7 +568,12 @@ class Infraction(Converter):
                 return infractions[0]
 
         else:
-            return await ctx.bot.api_client.get(f"bot/infractions/{arg}")
+            try:
+                return await ctx.bot.api_client.get(f"bot/infractions/{arg}/expanded")
+            except ResponseCodeError as e:
+                if e.status == 404:
+                    raise BadArgument(f"Failed to convert '{arg}' to an infraction.", arg)
+                raise e
 
 
 if t.TYPE_CHECKING:
