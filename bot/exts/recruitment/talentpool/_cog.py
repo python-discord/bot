@@ -493,6 +493,7 @@ class TalentPool(Cog, name="Talentpool"):
             json={'end_reason': reason, 'active': False}
         )
 
+        self.cache.pop(user_id)
         if await self.autoreview_enabled():
             self.reviewer.cancel(user_id)
 
