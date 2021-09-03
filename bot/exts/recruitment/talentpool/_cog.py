@@ -541,7 +541,7 @@ class TalentPool(Cog, name="Talentpool"):
                 {entries_string}
 
                 End date: {end_date}
-                Unnominate reason: {nomination_object["end_reason"]}
+                Unnomination reason: {nomination_object["end_reason"]}
                 ===============
                 """
             )
