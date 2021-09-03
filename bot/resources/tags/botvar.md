@@ -1,4 +1,4 @@
-Python allows you to set custom attributes to class instances, like your bot! By adding variables as attributes to your bot you can access them anywhere you access your bot. In the discord.py library, these custom attributes are commonly known as "bot variables" and can be a lifesaver if your bot is divided into many different files. An example on how to use custom attributes on your bot is shown below:
+Python allows you to set custom attributes to most objects, like your bot! By storing things as attributes of the bot object, you can access them anywhere you access your bot. In the discord.py library, these custom attributes are commonly known as "bot variables" and can be a lifesaver if your bot is divided into many different files. An example on how to use custom attributes on your bot is shown below:
 
 ```py
 bot = commands.Bot(command_prefix="!")
