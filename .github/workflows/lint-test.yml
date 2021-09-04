@@ -14,6 +14,17 @@ jobs:
   lint-test:
     runs-on: ubuntu-latest
     env:
+      # List of licenses that are compatible with the MIT License and
+      # can be used in our project
+      ALLOWED_LICENSE: Apache Software License;
+        BSD License;
+        GNU Library or Lesser General Public License (LGPL);
+        ISC License (ISCL);
+        MIT License;
+        Mozilla Public License 2.0 (MPL 2.0);
+        Public Domain;
+        Python Software Foundation License
+
       # Dummy values for required bot environment variables
       BOT_API_KEY: foo
       BOT_SENTRY_DSN: blah
@@ -69,6 +80,13 @@ jobs:
         run: |
           pip install poetry
           poetry install
+
+      # Check all the dependencies are compatible with the MIT license.
+      # If you added a new dependencies that is being rejected,
+      # please make sure it is compatible with the license for this project,
+      # and add it to the ALLOWED_LICENSE variable
+      - name: Check Dependencies License
+        run: pip-licenses --allow-only="$ALLOWED_LICENSE"
 
       # This step caches our pre-commit environment. To make sure we
       # do create a new environment when our pre-commit setup changes,
