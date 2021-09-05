@@ -9,7 +9,7 @@ from typing import Optional, Union
 from aioredis import RedisError
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Embed, Member, User
+from discord import Colour, Embed, Forbidden, Member, User
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -19,7 +19,9 @@ from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.messages import format_user
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import humanize_delta, parse_duration_string, relativedelta_to_timedelta
+from bot.utils.time import (
+    TimestampFormats, discord_timestamp, humanize_delta, parse_duration_string, relativedelta_to_timedelta
+)
 
 log = logging.getLogger(__name__)
 
@@ -116,10 +118,12 @@ class Defcon(Cog):
 
                 try:
                     await member.send(REJECTION_MESSAGE.format(user=member.mention))
-
                     message_sent = True
+                except Forbidden:
+                    log.debug(f"Cannot send DEFCON rejection DM to {member}: DMs disabled")
                 except Exception:
-                    log.exception(f"Unable to send rejection message to user: {member}")
+                    # Broadly catch exceptions because DM isn't critical, but it's imperative to kick them.
+                    log.exception(f"Error sending DEFCON rejection message to {member}")
 
                 await member.kick(reason="DEFCON active, user is too new")
                 self.bot.stats.incr("defcon.leaves")
@@ -150,7 +154,7 @@ class Defcon(Cog):
             colour=Colour.blurple(), title="DEFCON Status",
             description=f"""
                 **Threshold:** {humanize_delta(self.threshold) if self.threshold else "-"}
-                **Expires in:** {humanize_delta(relativedelta(self.expiry, datetime.utcnow())) if self.expiry else "-"}
+                **Expires:** {discord_timestamp(self.expiry, TimestampFormats.RELATIVE) if self.expiry else "-"}
                 **Verification level:** {ctx.guild.verification_level.name}
                 """
         )

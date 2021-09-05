@@ -150,6 +150,8 @@ class DocCog(commands.Cog):
                 self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url),
             )
         else:
+            if not base_url:
+                base_url = self.base_url_from_inventory_url(inventory_url)
             self.update_single(api_package_name, base_url, package)
 
     def ensure_unique_symbol_name(self, package_name: str, group_name: str, symbol_name: str) -> str:
@@ -341,13 +343,21 @@ class DocCog(commands.Cog):
             if doc_embed is None:
                 error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
                 await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
-                with suppress(discord.NotFound):
-                    await ctx.message.delete()
-                with suppress(discord.NotFound):
-                    await error_message.delete()
+
+                # Make sure that we won't cause a ghost-ping by deleting the message
+                if not (ctx.message.mentions or ctx.message.role_mentions):
+                    with suppress(discord.NotFound):
+                        await ctx.message.delete()
+                        await error_message.delete()
+
             else:
                 msg = await ctx.send(embed=doc_embed)
                 await wait_for_deletion(msg, (ctx.author.id,))
+
+    @staticmethod
+    def base_url_from_inventory_url(inventory_url: str) -> str:
+        """Get a base url from the url to an objects inventory by removing the last path segment."""
+        return inventory_url.removesuffix("/").rsplit("/", maxsplit=1)[0] + "/"
 
     @docs_group.command(name="setdoc", aliases=("s",))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -356,21 +366,21 @@ class DocCog(commands.Cog):
         self,
         ctx: commands.Context,
         package_name: PackageName,
-        base_url: ValidURL,
         inventory: Inventory,
+        base_url: ValidURL = "",
     ) -> None:
         """
         Adds a new documentation metadata object to the site's database.
 
         The database will update the object, should an existing item with the specified `package_name` already exist.
+        If the base url is not specified, a default created by removing the last segment of the inventory url is used.
 
         Example:
             !docs setdoc \
                     python \
-                    https://docs.python.org/3/ \
                     https://docs.python.org/3/objects.inv
         """
-        if not base_url.endswith("/"):
+        if base_url and not base_url.endswith("/"):
             raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
         body = {
@@ -385,6 +395,8 @@ class DocCog(commands.Cog):
             + "\n".join(f"{key}: {value}" for key, value in body.items())
         )
 
+        if not base_url:
+            base_url = self.base_url_from_inventory_url(inventory_url)
         self.update_single(package_name, base_url, inventory_dict)
         await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
 

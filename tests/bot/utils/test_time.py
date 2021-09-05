@@ -52,7 +52,7 @@ class TimeTests(unittest.TestCase):
 
     def test_format_infraction(self):
         """Testing format_infraction."""
-        self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '2019-12-12 00:01')
+        self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '<t:1576108860:f>')
 
     def test_format_infraction_with_duration_none_expiry(self):
         """format_infraction_with_duration should work for None expiry."""
@@ -72,10 +72,10 @@ class TimeTests(unittest.TestCase):
     def test_format_infraction_with_duration_custom_units(self):
         """format_infraction_with_duration should work for custom max_units."""
         test_cases = (
-            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 5, 5), 6,
-             '2019-12-12 00:01 (11 hours, 55 minutes and 55 seconds)'),
-            ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), 20,
-             '2019-11-23 20:09 (6 months, 28 days, 23 hours and 54 minutes)')
+            ('3000-12-12T00:01:00Z', datetime(3000, 12, 11, 12, 5, 5), 6,
+             '<t:32533488060:f> (11 hours, 55 minutes and 55 seconds)'),
+            ('3000-11-23T20:09:00Z', datetime(3000, 4, 25, 20, 15), 20,
+             '<t:32531918940:f> (6 months, 28 days, 23 hours and 54 minutes)')
         )
 
         for expiry, date_from, max_units, expected in test_cases:
@@ -85,16 +85,16 @@ class TimeTests(unittest.TestCase):
     def test_format_infraction_with_duration_normal_usage(self):
         """format_infraction_with_duration should work for normal usage, across various durations."""
         test_cases = (
-            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5), 2, '2019-12-12 00:01 (12 hours and 55 seconds)'),
-            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5), 1, '2019-12-12 00:01 (12 hours)'),
-            ('2019-12-12T00:00:00Z', datetime(2019, 12, 11, 23, 59), 2, '2019-12-12 00:00 (1 minute)'),
-            ('2019-11-23T20:09:00Z', datetime(2019, 11, 15, 20, 15), 2, '2019-11-23 20:09 (7 days and 23 hours)'),
-            ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), 2, '2019-11-23 20:09 (6 months and 28 days)'),
-            ('2019-11-23T20:58:00Z', datetime(2019, 11, 23, 20, 53), 2, '2019-11-23 20:58 (5 minutes)'),
-            ('2019-11-24T00:00:00Z', datetime(2019, 11, 23, 23, 59, 0), 2, '2019-11-24 00:00 (1 minute)'),
-            ('2019-11-23T23:59:00Z', datetime(2017, 7, 21, 23, 0), 2, '2019-11-23 23:59 (2 years and 4 months)'),
+            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5), 2, '<t:1576108860:f> (12 hours and 55 seconds)'),
+            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5), 1, '<t:1576108860:f> (12 hours)'),
+            ('2019-12-12T00:00:00Z', datetime(2019, 12, 11, 23, 59), 2, '<t:1576108800:f> (1 minute)'),
+            ('2019-11-23T20:09:00Z', datetime(2019, 11, 15, 20, 15), 2, '<t:1574539740:f> (7 days and 23 hours)'),
+            ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), 2, '<t:1574539740:f> (6 months and 28 days)'),
+            ('2019-11-23T20:58:00Z', datetime(2019, 11, 23, 20, 53), 2, '<t:1574542680:f> (5 minutes)'),
+            ('2019-11-24T00:00:00Z', datetime(2019, 11, 23, 23, 59, 0), 2, '<t:1574553600:f> (1 minute)'),
+            ('2019-11-23T23:59:00Z', datetime(2017, 7, 21, 23, 0), 2, '<t:1574553540:f> (2 years and 4 months)'),
             ('2019-11-23T23:59:00Z', datetime(2019, 11, 23, 23, 49, 5), 2,
-             '2019-11-23 23:59 (9 minutes and 55 seconds)'),
+             '<t:1574553540:f> (9 minutes and 55 seconds)'),
             (None, datetime(2019, 11, 23, 23, 49, 5), 2, None),
         )
 
@@ -104,45 +104,30 @@ class TimeTests(unittest.TestCase):
 
     def test_until_expiration_with_duration_none_expiry(self):
         """until_expiration should work for None expiry."""
-        test_cases = (
-            (None, None, None, None),
-
-            # To make sure that now and max_units are not touched
-            (None, 'Why hello there!', None, None),
-            (None, None, float('inf'), None),
-            (None, 'Why hello there!', float('inf'), None),
-        )
-
-        for expiry, now, max_units, expected in test_cases:
-            with self.subTest(expiry=expiry, now=now, max_units=max_units, expected=expected):
-                self.assertEqual(time.until_expiration(expiry, now, max_units), expected)
+        self.assertEqual(time.until_expiration(None), None)
 
     def test_until_expiration_with_duration_custom_units(self):
         """until_expiration should work for custom max_units."""
         test_cases = (
-            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 5, 5), 6, '11 hours, 55 minutes and 55 seconds'),
-            ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), 20, '6 months, 28 days, 23 hours and 54 minutes')
+            ('3000-12-12T00:01:00Z', '<t:32533488060:R>'),
+            ('3000-11-23T20:09:00Z', '<t:32531918940:R>')
         )
 
-        for expiry, now, max_units, expected in test_cases:
-            with self.subTest(expiry=expiry, now=now, max_units=max_units, expected=expected):
-                self.assertEqual(time.until_expiration(expiry, now, max_units), expected)
+        for expiry, expected in test_cases:
+            with self.subTest(expiry=expiry, expected=expected):
+                self.assertEqual(time.until_expiration(expiry,), expected)
 
     def test_until_expiration_normal_usage(self):
         """until_expiration should work for normal usage, across various durations."""
         test_cases = (
-            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5), 2, '12 hours and 55 seconds'),
-            ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5), 1, '12 hours'),
-            ('2019-12-12T00:00:00Z', datetime(2019, 12, 11, 23, 59), 2, '1 minute'),
-            ('2019-11-23T20:09:00Z', datetime(2019, 11, 15, 20, 15), 2, '7 days and 23 hours'),
-            ('2019-11-23T20:09:00Z', datetime(2019, 4, 25, 20, 15), 2, '6 months and 28 days'),
-            ('2019-11-23T20:58:00Z', datetime(2019, 11, 23, 20, 53), 2, '5 minutes'),
-            ('2019-11-24T00:00:00Z', datetime(2019, 11, 23, 23, 59, 0), 2, '1 minute'),
-            ('2019-11-23T23:59:00Z', datetime(2017, 7, 21, 23, 0), 2, '2 years and 4 months'),
-            ('2019-11-23T23:59:00Z', datetime(2019, 11, 23, 23, 49, 5), 2, '9 minutes and 55 seconds'),
-            (None, datetime(2019, 11, 23, 23, 49, 5), 2, None),
+            ('3000-12-12T00:01:00Z', '<t:32533488060:R>'),
+            ('3000-12-12T00:01:00Z', '<t:32533488060:R>'),
+            ('3000-12-12T00:00:00Z', '<t:32533488000:R>'),
+            ('3000-11-23T20:09:00Z', '<t:32531918940:R>'),
+            ('3000-11-23T20:09:00Z', '<t:32531918940:R>'),
+            (None, None),
         )
 
-        for expiry, now, max_units, expected in test_cases:
-            with self.subTest(expiry=expiry, now=now, max_units=max_units, expected=expected):
-                self.assertEqual(time.until_expiration(expiry, now, max_units), expected)
+        for expiry, expected in test_cases:
+            with self.subTest(expiry=expiry, expected=expected):
+                self.assertEqual(time.until_expiration(expiry), expected)

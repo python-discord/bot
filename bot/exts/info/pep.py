@@ -9,7 +9,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Keys
-from bot.utils.cache import AsyncCache
+from bot.utils.caching import AsyncCache
 
 log = logging.getLogger(__name__)
 

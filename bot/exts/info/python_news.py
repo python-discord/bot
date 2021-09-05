@@ -1,4 +1,5 @@
 import logging
+import re
 import typing as t
 from datetime import date, datetime
 
@@ -72,6 +73,11 @@ class PythonNews(Cog):
             if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
                 self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
 
+    @staticmethod
+    def escape_markdown(content: str) -> str:
+        """Escape the markdown underlines and spoilers."""
+        return re.sub(r"[_|]", lambda match: "\\" + match[0], content)
+
     async def post_pep_news(self) -> None:
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
         # Wait until everything is ready and http_session available
@@ -103,7 +109,7 @@ class PythonNews(Cog):
             # Build an embed and send a webhook
             embed = discord.Embed(
                 title=new["title"],
-                description=new["summary"],
+                description=self.escape_markdown(new["summary"]),
                 timestamp=new_datetime,
                 url=new["link"],
                 colour=constants.Colours.soft_green
@@ -167,13 +173,13 @@ class PythonNews(Cog):
                 ):
                     continue
 
-                content = email_information["content"]
+                content = self.escape_markdown(email_information["content"])
                 link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
 
                 # Build an embed and send a message to the webhook
                 embed = discord.Embed(
                     title=thread_information["subject"],
-                    description=content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
+                    description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
                     timestamp=new_date,
                     url=link,
                     colour=constants.Colours.soft_green

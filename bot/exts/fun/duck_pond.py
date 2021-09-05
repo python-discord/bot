@@ -3,11 +3,12 @@ import logging
 from typing import Union
 
 import discord
-from discord import Color, Embed, Member, Message, RawReactionActionEvent, TextChannel, User, errors
+from discord import Color, Embed, Message, RawReactionActionEvent, TextChannel, errors
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
+from bot.converters import MemberOrUser
 from bot.utils.checks import has_any_role
 from bot.utils.messages import count_unique_users_reaction, send_attachments
 from bot.utils.webhooks import send_webhook
@@ -36,7 +37,7 @@ class DuckPond(Cog):
             log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
     @staticmethod
-    def is_staff(member: Union[User, Member]) -> bool:
+    def is_staff(member: MemberOrUser) -> bool:
         """Check if a specific member or user is staff."""
         if hasattr(member, "roles"):
             for role in member.roles:
@@ -171,8 +172,14 @@ class DuckPond(Cog):
         if not self.is_helper_viewable(channel):
             return
 
-        message = await channel.fetch_message(payload.message_id)
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.NotFound:
+            return  # Message was deleted.
+
         member = discord.utils.get(message.guild.members, id=payload.user_id)
+        if not member:
+            return  # Member left or wasn't in the cache.
 
         # Was the message sent by a human staff member?
         if not self.is_staff(message.author) or message.author.bot:

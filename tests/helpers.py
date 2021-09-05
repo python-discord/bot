@@ -16,7 +16,6 @@ from bot.async_stats import AsyncStatsClient
 from bot.bot import Bot
 from tests._autospec import autospec  # noqa: F401 other modules import it via this module
 
-
 for logger in logging.Logger.manager.loggerDict.values():
     # Set all loggers to CRITICAL by default to prevent screen clutter during testing
 
@@ -320,7 +319,10 @@ channel_data = {
 }
 state = unittest.mock.MagicMock()
 guild = unittest.mock.MagicMock()
-channel_instance = discord.TextChannel(state=state, guild=guild, data=channel_data)
+text_channel_instance = discord.TextChannel(state=state, guild=guild, data=channel_data)
+
+channel_data["type"] = "VoiceChannel"
+voice_channel_instance = discord.VoiceChannel(state=state, guild=guild, data=channel_data)
 
 
 class MockTextChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
@@ -330,7 +332,24 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     Instances of this class will follow the specifications of `discord.TextChannel` instances. For
     more information, see the `MockGuild` docstring.
     """
-    spec_set = channel_instance
+    spec_set = text_channel_instance
+
+    def __init__(self, **kwargs) -> None:
+        default_kwargs = {'id': next(self.discord_id), 'name': 'channel', 'guild': MockGuild()}
+        super().__init__(**collections.ChainMap(kwargs, default_kwargs))
+
+        if 'mention' not in kwargs:
+            self.mention = f"#{self.name}"
+
+
+class MockVoiceChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
+    """
+    A MagicMock subclass to mock VoiceChannel objects.
+
+    Instances of this class will follow the specifications of `discord.VoiceChannel` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+    spec_set = voice_channel_instance
 
     def __init__(self, **kwargs) -> None:
         default_kwargs = {'id': next(self.discord_id), 'name': 'channel', 'guild': MockGuild()}
@@ -359,6 +378,27 @@ class MockDMChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     def __init__(self, **kwargs) -> None:
         default_kwargs = {'id': next(self.discord_id), 'recipient': MockUser(), "me": MockUser()}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
+
+
+# Create CategoryChannel instance to get a realistic MagicMock of `discord.CategoryChannel`
+category_channel_data = {
+    'id': 1,
+    'type': discord.ChannelType.category,
+    'name': 'category',
+    'position': 1,
+}
+
+state = unittest.mock.MagicMock()
+guild = unittest.mock.MagicMock()
+category_channel_instance = discord.CategoryChannel(
+    state=state, guild=guild, data=category_channel_data
+)
+
+
+class MockCategoryChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
+    def __init__(self, **kwargs) -> None:
+        default_kwargs = {'id': next(self.discord_id)}
+        super().__init__(**collections.ChainMap(default_kwargs, kwargs))
 
 
 # Create a Message instance to get a realistic MagicMock of `discord.Message`
@@ -403,6 +443,7 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         self.guild = kwargs.get('guild', MockGuild())
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
+        self.message = kwargs.get('message', MockMessage())
         self.invoked_from_error_handler = kwargs.get('invoked_from_error_handler', False)
 
 

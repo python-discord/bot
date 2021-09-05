@@ -400,6 +400,8 @@ class Categories(metaclass=YAMLGetter):
     modmail: int
     voice: int
 
+    # 2021 Summer Code Jam
+    summer_code_jam: int
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
@@ -439,6 +441,7 @@ class Channels(metaclass=YAMLGetter):
     discord_py: int
     esoteric: int
     voice_gate: int
+    code_jam_planning: int
 
     admins: int
     admin_spam: int
@@ -456,18 +459,19 @@ class Channels(metaclass=YAMLGetter):
     staff_announcements: int
 
     admins_voice: int
+    code_help_voice_0: int
     code_help_voice_1: int
-    code_help_voice_2: int
-    general_voice: int
+    general_voice_0: int
+    general_voice_1: int
     staff_voice: int
 
+    code_help_chat_0: int
     code_help_chat_1: int
-    code_help_chat_2: int
     staff_voice_chat: int
-    voice_chat: int
+    voice_chat_0: int
+    voice_chat_1: int
 
     big_brother_logs: int
-    talent_pool: int
 
 
 class Webhooks(metaclass=YAMLGetter):
@@ -478,7 +482,6 @@ class Webhooks(metaclass=YAMLGetter):
     dev_log: int
     duck_pond: int
     incidents_archive: int
-    talent_pool: int
 
 
 class Roles(metaclass=YAMLGetter):
@@ -497,8 +500,10 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     core_developers: int
+    code_jam_event_team: int
     devops: int
     domain_leads: int
+    events_lead: int
     helpers: int
     moderators: int
     mod_team: int
@@ -506,7 +511,6 @@ class Roles(metaclass=YAMLGetter):
     project_leads: int
 
     jammers: int
-    team_leaders: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -562,12 +566,15 @@ class Metabase(metaclass=YAMLGetter):
 
     username: Optional[str]
     password: Optional[str]
-    url: str
+    base_url: str
+    public_url: str
     max_session_age: int
 
 
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
+
+    cache_size: int
 
     clean_offending: bool
     ping_everyone: bool
@@ -681,7 +688,7 @@ class VideoPermission(metaclass=YAMLGetter):
 
 
 # Debug mode
-DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
+DEBUG_MODE: bool = _CONFIG_YAML["debug"] == "true"
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
@@ -690,6 +697,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 # Default role combinations
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
+STAFF_PARTNERS_COMMUNITY_ROLES = STAFF_ROLES + [Roles.partners, Roles.python_community]
 
 # Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels
