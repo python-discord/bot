@@ -296,30 +296,6 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
         self.cog.on_command_error.assert_awaited_once_with(self.ctx, err)
 
-    @patch("bot.exts.backend.error_handler.TagNameConverter")
-    async def test_try_get_tag_convert_success(self, tag_converter):
-        """Converting tag should successful."""
-        self.ctx.message = MagicMock(content="foo")
-        tag_converter.convert = AsyncMock(return_value="foo")
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-        tag_converter.convert.assert_awaited_once_with(self.ctx, "foo")
-        self.ctx.invoke.assert_awaited_once()
-
-        self.ctx.reset_mock()
-        self.ctx.message = MagicMock(content="foo bar")
-        tag_converter.convert = AsyncMock(return_value="foo bar")
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-        self.assertEqual(tag_converter.convert.call_count, 2)
-        self.ctx.invoke.assert_awaited_once()
-
-    @patch("bot.exts.backend.error_handler.TagNameConverter")
-    async def test_try_get_tag_convert_fail(self, tag_converter):
-        """Converting tag should raise `BadArgument`."""
-        self.ctx.reset_mock()
-        tag_converter.convert = AsyncMock(side_effect=errors.BadArgument())
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-        self.ctx.invoke.assert_not_awaited()
-
     async def test_try_get_tag_ctx_invoke(self):
         """Should call `ctx.invoke` with proper args/kwargs."""
         test_cases = (

@@ -12,7 +12,6 @@ from bot.converters import (
     ISODateTime,
     PackageName,
     TagContentConverter,
-    TagNameConverter,
 )
 
 
@@ -49,34 +48,6 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(tag_content=value, exception_message=exception_message):
                 with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await TagContentConverter.convert(self.context, value)
-
-    async def test_tag_name_converter_for_valid(self):
-        """TagNameConverter should return the correct values for valid tag names."""
-        test_values = (
-            ('tracebacks', 'tracebacks'),
-            ('Tracebacks', 'tracebacks'),
-            ('  Tracebacks  ', 'tracebacks'),
-        )
-
-        for name, expected_conversion in test_values:
-            with self.subTest(name=name, expected_conversion=expected_conversion):
-                conversion = await TagNameConverter.convert(self.context, name)
-                self.assertEqual(conversion, expected_conversion)
-
-    async def test_tag_name_converter_for_invalid(self):
-        """TagNameConverter should raise the correct exception for invalid tag names."""
-        test_values = (
-            ('👋', "Don't be ridiculous, you can't use that character!"),
-            ('', "Tag names should not be empty, or filled with whitespace."),
-            ('  ', "Tag names should not be empty, or filled with whitespace."),
-            ('42', "Tag names must contain at least one letter."),
-            ('x' * 128, "Are you insane? That's way too long!"),
-        )
-
-        for invalid_name, exception_message in test_values:
-            with self.subTest(invalid_name=invalid_name, exception_message=exception_message):
-                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
-                    await TagNameConverter.convert(self.context, invalid_name)
 
     async def test_package_name_for_valid(self):
         """PackageName returns valid package names unchanged."""

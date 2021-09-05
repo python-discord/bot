@@ -14,7 +14,6 @@ from discord.ext.commands import Cog, Context, group
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import TagNameConverter
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 
@@ -235,8 +234,8 @@ class Tags(Cog):
     async def tags_group(
             self,
             ctx: Context,
-            tag_name_or_group: TagNameConverter = None,
-            tag_name: TagNameConverter = None,
+            tag_name_or_group: str = None,
+            tag_name: str = None,
     ) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
         await self.get_command(ctx, tag_name_or_group=tag_name_or_group, tag_name=tag_name)
@@ -356,8 +355,8 @@ class Tags(Cog):
     @tags_group.command(name="get", aliases=("show", "g"))
     async def get_command(
             self, ctx: Context,
-            tag_name_or_group: TagNameConverter = None,
-            tag_name: TagNameConverter = None,
+            tag_name_or_group: str = None,
+            tag_name: str = None,
     ) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group

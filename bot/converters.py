@@ -236,41 +236,6 @@ class Snowflake(IDConverter):
         return snowflake
 
 
-class TagNameConverter(Converter):
-    """
-    Ensure that a proposed tag name is valid.
-
-    Valid tag names meet the following conditions:
-        * All ASCII characters
-        * Has at least one non-whitespace character
-        * Not solely numeric
-        * Shorter than 127 characters
-    """
-
-    @staticmethod
-    async def convert(ctx: Context, tag_name: str) -> str:
-        """Lowercase & strip whitespace from proposed tag_name & ensure it's valid."""
-        tag_name = tag_name.lower().strip()
-
-        # The tag name has at least one invalid character.
-        if ascii(tag_name)[1:-1] != tag_name:
-            raise BadArgument("Don't be ridiculous, you can't use that character!")
-
-        # The tag name is either empty, or consists of nothing but whitespace.
-        elif not tag_name:
-            raise BadArgument("Tag names should not be empty, or filled with whitespace.")
-
-        # The tag name is longer than 127 characters.
-        elif len(tag_name) > 127:
-            raise BadArgument("Are you insane? That's way too long!")
-
-        # The tag name is ascii but does not contain any letters.
-        elif not any(character.isalpha() for character in tag_name):
-            raise BadArgument("Tag names must contain at least one letter.")
-
-        return tag_name
-
-
 class TagContentConverter(Converter):
     """Ensure proposed tag content is not empty and contains at least one non-whitespace character."""
 
