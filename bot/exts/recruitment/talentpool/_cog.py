@@ -2,7 +2,7 @@ import logging
 import textwrap
 from collections import ChainMap, defaultdict
 from io import StringIO
-from typing import Union
+from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
@@ -15,7 +15,7 @@ from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAF
 from bot.converters import MemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
-from bot.utils import time
+from bot.utils import scheduling, time
 from bot.utils.time import get_time_delta
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
@@ -34,8 +34,11 @@ class TalentPool(Cog, name="Talentpool"):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
         self.reviewer = Reviewer(self.__class__.__name__, bot, self)
+        self.cache: Optional[defaultdict[dict]] = None
         self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
-        self.bot.loop.create_task(self.schedule_autoreviews())
+
+        scheduling.create_task(self.refresh_cache(), event_loop=self.bot.loop)
+        scheduling.create_task(self.schedule_autoreviews(), event_loop=self.bot.loop)
 
     async def schedule_autoreviews(self) -> None:
         """Reschedule reviews for active nominations if autoreview is enabled."""
