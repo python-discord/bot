@@ -162,21 +162,16 @@ class Tags(Cog):
 
     def get_fuzzy_matches(self, tag_identifier: TagIdentifier) -> list[tuple[TagIdentifier, Tag]]:
         """Get tags with identifiers similar to `tag_identifier`."""
-        if tag_identifier.group is None:
-            if len(tag_identifier.name) < 3:
-                return []
-            else:
-                return self._get_suggestions(tag_identifier)
-        else:
-            if len(tag_identifier.group) < 3:
-                suggestions = []
-            else:
-                # Try fuzzy matching with only a name first
-                suggestions = self._get_suggestions(TagIdentifier(None, tag_identifier.group))
+        suggestions = []
 
-            if len(tag_identifier.name) >= 3:
-                suggestions += self._get_suggestions(tag_identifier)
-            return suggestions
+        if tag_identifier.group is not None and len(tag_identifier.group) >= 3:
+            # Try fuzzy matching with only a name first
+            suggestions += self._get_suggestions(TagIdentifier(None, tag_identifier.group))
+
+        if len(tag_identifier.name) >= 3:
+            suggestions += self._get_suggestions(tag_identifier)
+
+        return suggestions
 
     def _get_tags_via_content(
             self,
