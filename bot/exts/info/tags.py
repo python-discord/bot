@@ -109,6 +109,9 @@ class Tag:
 def _fuzzy_search(search: str, target: str) -> float:
     """A simple scoring algorithm based on how many letters are found / total, with order in mind."""
     _search = REGEX_NON_ALPHABET.sub("", search.lower())
+    if not _search:
+        return 0
+
     _targets = iter(REGEX_NON_ALPHABET.split(target.lower()))
 
     current = 0
