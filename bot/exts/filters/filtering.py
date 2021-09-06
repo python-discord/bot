@@ -478,17 +478,12 @@ class Filtering(Cog):
         Second return value is a reason of URL blacklisting (can be None).
         """
         text = self.clean_input(text)
-        matches = URL_RE.findall(text)
-        if not matches:
-            return False, None
 
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
-
-        for url in domain_blacklist:
-            for match in matches:
-                if url.lower() in match.lower():
+        for match in URL_RE.finditer(text):
+            for url in domain_blacklist:
+                if url.lower() in match.group(1).lower():
                     return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
-
         return False, None
 
     @staticmethod
