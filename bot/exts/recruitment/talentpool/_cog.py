@@ -37,12 +37,14 @@ class TalentPool(Cog, name="Talentpool"):
         self.cache: Optional[defaultdict[dict]] = None
         self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
 
-        scheduling.create_task(self.refresh_cache(), event_loop=self.bot.loop)
+        self.initial_refresh_task = scheduling.create_task(self.refresh_cache(), event_loop=self.bot.loop)
         scheduling.create_task(self.schedule_autoreviews(), event_loop=self.bot.loop)
 
     async def schedule_autoreviews(self) -> None:
         """Reschedule reviews for active nominations if autoreview is enabled."""
         if await self.autoreview_enabled():
+            # Wait for a populated cache first
+            await self.initial_refresh_task
             await self.reviewer.reschedule_reviews()
         else:
             log.trace("Not scheduling reviews as autoreview is disabled.")
@@ -53,6 +55,8 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def refresh_cache(self) -> bool:
         """Updates TalentPool users cache."""
+        # Wait until logged in to ensure bot api client exists
+        await self.bot.wait_until_guild_available()
         try:
             data = await self.bot.api_client.get(
                 'bot/nominations',
