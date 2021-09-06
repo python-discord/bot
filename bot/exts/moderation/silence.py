@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, OrderedDict, Union
 
 from async_rediscache import RedisCache
-from discord import Guild, PermissionOverwrite, TextChannel, VoiceChannel
+from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from discord.utils import MISSING
@@ -181,6 +181,12 @@ class Silence(commands.Cog):
 
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
+
+        # Since threads don't have specific overrides, we cannot silence them individually.
+        # The parent channel has to be muted or the thread should be archived.
+        if isinstance(channel, Thread):
+            await ctx.send(":x: Threads cannot be silenced.")
+            return
 
         if not await self._set_silence_overwrites(channel, kick=kick):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
