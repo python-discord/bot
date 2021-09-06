@@ -26,7 +26,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.msg.guild.get_member.return_value.bot = False
         self.msg.guild.get_member.return_value.__str__.return_value = "Woody"
         self.msg.author.__str__ = MagicMock(return_value=self.msg.author.name)
-        self.msg.author.avatar_url_as.return_value = "picture-lemon.png"
+        self.msg.author.avatar.url = "picture-lemon.png"
 
     def test_extract_user_id_valid(self):
         """Should consider user IDs valid if they decode into an integer ID."""
@@ -375,7 +375,7 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
             colour=Colour(constants.Colours.soft_red),
             title="Token removed!",
             text=log_msg + "\n" + userid_log_message,
-            thumbnail=self.msg.author.avatar_url_as.return_value,
+            thumbnail=self.msg.author.avatar.url,
             channel_id=constants.Channels.mod_alerts,
             ping_everyone=True,
         )

@@ -313,7 +313,7 @@ class Information(Cog):
         for field_name, field_content in fields:
             embed.add_field(name=field_name, value=field_content, inline=False)
 
-        embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
+        embed.set_thumbnail(url=user.avatar.url)
         embed.colour = user.colour if user.colour != Colour.default() else Colour.blurple()
 
         return embed

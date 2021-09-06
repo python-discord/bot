@@ -103,7 +103,7 @@ class DeletionContext:
             colour=Colour(Colours.soft_red),
             title="Spam detected!",
             text=mod_alert_message,
-            thumbnail=last_message.author.avatar_url_as(static_format="png"),
+            thumbnail=last_message.author.avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=AntiSpamConfig.ping_everyone
         )
@@ -171,7 +171,9 @@ class AntiSpam(Cog):
         self.cache.append(message)
 
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=self.max_interval)
-        relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
+        relevant_messages = list(
+            takewhile(lambda msg: msg.created_at.replace(tzinfo=None) > earliest_relevant_at, self.cache)
+        )
 
         for rule_name in AntiSpamConfig.rules:
             rule_config = AntiSpamConfig.rules[rule_name]
@@ -180,7 +182,9 @@ class AntiSpam(Cog):
             # Create a list of messages that were sent in the interval that the rule cares about.
             latest_interesting_stamp = datetime.utcnow() - timedelta(seconds=rule_config['interval'])
             messages_for_rule = list(
-                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)
+                takewhile(
+                    lambda msg: msg.created_at.replace(tzinfo=None) > latest_interesting_stamp, relevant_messages
+                )
             )
 
             result = await rule_function(message, messages_for_rule, rule_config)

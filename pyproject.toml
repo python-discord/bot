@@ -7,6 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "3.9.*"
+"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/45d498c1b76deaf3b394d17ccf56112fa691d160.zip"}
 aio-pika = "~=6.1"
 aiodns = "~=2.0"
 aiohttp = "~=3.7"
@@ -17,7 +18,6 @@ beautifulsoup4 = "~=4.9"
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
 deepdiff = "~=4.0"
-"discord.py" = "~=1.7.3"
 emoji = "~=0.6"
 feedparser = "~=6.0.2"
 rapidfuzz = "~=1.4"

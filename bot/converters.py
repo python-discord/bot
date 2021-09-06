@@ -266,7 +266,7 @@ class Snowflake(IDConverter):
         snowflake = int(arg)
 
         try:
-            time = snowflake_time(snowflake)
+            time = snowflake_time(snowflake).replace(tzinfo=None)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
             raise BadArgument(f"{error}: {e}")

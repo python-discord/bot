@@ -32,7 +32,7 @@ class Latency(commands.Cog):
         """
         # datetime.datetime objects do not have the "milliseconds" attribute.
         # It must be converted to seconds before converting to milliseconds.
-        bot_ping = (datetime.utcnow() - ctx.message.created_at).total_seconds() * 1000
+        bot_ping = (datetime.utcnow() - ctx.message.created_at.replace(tzinfo=None)).total_seconds() * 1000
         if bot_ping <= 0:
             bot_ping = "Your clock is out of sync, could not calculate ping."
         else:

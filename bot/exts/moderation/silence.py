@@ -9,6 +9,7 @@ from async_rediscache import RedisCache
 from discord import Guild, PermissionOverwrite, TextChannel, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
+from discord.utils import MISSING
 
 from bot import constants
 from bot.bot import Bot
@@ -47,7 +48,16 @@ class SilenceNotifier(tasks.Loop):
     """Loop notifier for posting notices to `alert_channel` containing added channels."""
 
     def __init__(self, alert_channel: TextChannel):
-        super().__init__(self._notifier, seconds=1, minutes=0, hours=0, count=None, reconnect=True, loop=None)
+        super().__init__(
+            self._notifier,
+            seconds=1,
+            minutes=0,
+            hours=0,
+            count=None,
+            reconnect=True,
+            loop=None,
+            time=MISSING
+        )
         self._silenced_channels = {}
         self._alert_channel = alert_channel
 

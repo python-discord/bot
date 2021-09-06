@@ -107,7 +107,7 @@ class Clean(Cog):
         elif regex:
             predicate = predicate_regex          # Delete messages that match regex
         else:
-            predicate = None                     # Delete all messages
+            predicate = lambda *_: True          # Delete all messages
 
         # Default to using the invoking context's channel
         if not channels:
