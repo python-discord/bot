@@ -99,7 +99,7 @@ class Tag:
 
     def on_cooldown_in(self, channel: discord.TextChannel) -> bool:
         """Check whether the tag is on cooldown in `channel`."""
-        return channel in self._cooldowns and self._cooldowns[channel] > time.time()
+        return self._cooldowns.get(channel, float("-inf")) > time.time()
 
     def set_cooldown_for(self, channel: discord.TextChannel) -> None:
         """Set the tag to be on cooldown in `channel` for `constants.Cooldowns.tags` seconds."""
