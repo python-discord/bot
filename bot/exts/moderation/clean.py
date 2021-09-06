@@ -5,7 +5,7 @@ from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 from itertools import islice
-from typing import Any, Callable, DefaultDict, Iterable, List, Literal, Optional, TYPE_CHECKING, Tuple, Union
+from typing import Any, Callable, DefaultDict, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
 from discord import Colour, Embed, Message, NotFound, TextChannel, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
@@ -57,7 +57,7 @@ if TYPE_CHECKING:
 
 class Clean(Cog):
     """
-    A cog that allows messages to be deleted in bulk, while applying various filters.
+    A cog that allows messages to be deleted in bulk while applying various filters.
 
     You can delete messages sent by a specific user, messages sent by bots, all messages, or messages that match a
     specific regular expression.
@@ -94,7 +94,7 @@ class Clean(Cog):
         if first_limit and channels and (channels == "*" or len(channels) > 1):
             raise BadArgument("Message or time range specified across multiple channels.")
 
-        if (isinstance(first_limit, Message) or isinstance(first_limit, Message)) and channels:
+        if (isinstance(first_limit, Message) or isinstance(second_limit, Message)) and channels:
             raise BadArgument("Both a message limit and channels specified.")
 
         if isinstance(first_limit, Message) and isinstance(second_limit, Message):
@@ -141,8 +141,7 @@ class Clean(Cog):
                     content.append(field.value)
 
             # Get rid of empty attributes and turn it into a string
-            content = [attr for attr in content if attr]
-            content = "\n".join(content)
+            content = "\n".join(attr for attr in content if attr)
 
             # Now let's see if there's a regex match
             if not content:
@@ -173,15 +172,12 @@ class Clean(Cog):
             predicates.append(predicate_after)  # Delete messages older than specific message
 
         if not predicates:
-            predicate = lambda m: True  # Delete all messages  # noqa: E731
-        elif len(predicates) == 1:
-            predicate = predicates[0]
-        else:
-            predicate = lambda m: all(pred(m) for pred in predicates)  # noqa: E731
+            return lambda m: True
+        if len(predicates) == 1:
+            return predicates[0]
+        return lambda m: all(pred(m) for pred in predicates)
 
-        return predicate
-
-    def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> Tuple[DefaultDict, List[int]]:
+    def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> tuple[DefaultDict, list[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(list)
         message_ids = []
@@ -232,7 +228,7 @@ class Clean(Cog):
         two_weeks_old_snowflake = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
         return message.id < two_weeks_old_snowflake
 
-    async def _delete_messages_individually(self, messages: List[Message]) -> list[Message]:
+    async def _delete_messages_individually(self, messages: list[Message]) -> list[Message]:
         """Delete each message in the list unless cleaning is cancelled. Return the deleted messages."""
         deleted = []
         for message in messages:
@@ -289,7 +285,7 @@ class Clean(Cog):
 
         return deleted
 
-    async def _log_clean(self, messages: list[Message], channels: CleanChannels, ctx: Context) -> bool:
+    async def _modlog_cleaned_messages(self, messages: list[Message], channels: CleanChannels, ctx: Context) -> bool:
         """Log the deleted messages to the modlog. Return True if logging was successful."""
         if not messages:
             # Can't build an embed, nothing to clean!
@@ -347,7 +343,7 @@ class Clean(Cog):
 
         # Default to using the invoking context's channel or the channel of the message limit(s).
         if not channels:
-            # At this point second_limit is guaranteed to not exist, be a datetime, or a message in the same channel.
+            # Input was validated - if first_limit is a message, second_limit won't point at a different channel.
             if isinstance(first_limit, Message):
                 channels = [first_limit.channel]
             elif isinstance(second_limit, Message):
@@ -397,7 +393,7 @@ class Clean(Cog):
         deleted_messages = await self._delete_found(message_mappings)
         self.cleaning = False
 
-        logged = await self._log_clean(deleted_messages, channels, ctx)
+        logged = await self._modlog_cleaned_messages(deleted_messages, channels, ctx)
 
         if logged and is_mod_channel(ctx.channel):
             with suppress(NotFound):  # Can happen if the invoker deleted their own messages.
@@ -417,25 +413,25 @@ class Clean(Cog):
             bots_only: Optional[bool] = False,
             regex: Optional[Regex] = None,
             *,
-            channels: CleanChannels = None
+            channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
     ) -> None:
         """
         Commands for cleaning messages in channels.
 
         If arguments are provided, will act as a master command from which all subcommands can be derived.
-        `traverse`: The number of messages to look at in each channel.
-        `users`: A series of user mentions, ID's, or names.
-        `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
+        • `traverse`: The number of messages to look at in each channel.
+        • `users`: A series of user mentions, ID's, or names.
+        • `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
         If a limit is provided, multiple channels cannot be provided.
         If only one of them is provided, acts as `clean until`. If both are provided, acts as `clean between`.
-        `use_cache`: Whether to use the message cache.
+        • `use_cache`: Whether to use the message cache.
         If not provided, will default to False unless an asterisk is used for the channels.
-        `bots_only`: Whether to delete only bots. If specified, users cannot be specified.
-        `regex`: A regex pattern the message must contain to be deleted.
+        • `bots_only`: Whether to delete only bots. If specified, users cannot be specified.
+        • `regex`: A regex pattern the message must contain to be deleted.
         The pattern must be provided enclosed in backticks.
         If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
-        `channels`: A series of channels to delete in, or an asterisk to delete from all channels.
+        • `channels`: A series of channels to delete in, or an asterisk to delete from all channels.
         """
         if not any([traverse, users, first_limit, second_limit, regex, channels]):
             await ctx.send_help(ctx.command)
