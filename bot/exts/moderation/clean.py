@@ -144,10 +144,7 @@ class Clean(Cog):
             content = "\n".join(attr for attr in content if attr)
 
             # Now let's see if there's a regex match
-            if not content:
-                return False
-            else:
-                return bool(re.search(regex.lower(), content.lower()))
+            return bool(re.search(regex, content, re.IGNORECASE + re.DOTALL))
 
         def predicate_range(message: Message) -> bool:
             """Check if the message age is between the two limits."""
