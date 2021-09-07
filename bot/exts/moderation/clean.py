@@ -420,8 +420,8 @@ class Clean(Cog):
     async def clean_group(
             self,
             ctx: Context,
-            traverse: Optional[int] = None,
             users: Greedy[User] = None,
+            traverse: Optional[int] = None,
             first_limit: Optional[CleanLimit] = None,
             second_limit: Optional[CleanLimit] = None,
             use_cache: Optional[bool] = None,
@@ -434,8 +434,8 @@ class Clean(Cog):
         Commands for cleaning messages in channels.
 
         If arguments are provided, will act as a master command from which all subcommands can be derived.
-        • `traverse`: The number of messages to look at in each channel.
         • `users`: A series of user mentions, ID's, or names.
+        • `traverse`: The number of messages to look at in each channel.
         • `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
         If a limit is provided, multiple channels cannot be provided.
