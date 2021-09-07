@@ -291,18 +291,7 @@ class TalentPool(Cog, name="Talentpool"):
         if await self.autoreview_enabled() and user.id not in self.reviewer:
             self.reviewer.schedule_review(user.id)
 
-        history = await self.bot.api_client.get(
-            'bot/nominations',
-            params={
-                "user__id": str(user.id),
-                "active": "false",
-                "ordering": "-inserted_at"
-            }
-        )
-
         msg = f"✅ The nomination for {user.mention} has been added to the talent pool"
-        if history:
-            msg += f"\n\n({len(history)} previous nominations in total)"
 
         await ctx.send(msg)
 
