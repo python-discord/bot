@@ -457,7 +457,7 @@ class Clean(Cog):
                 traverse = CleanMessages.message_limit
             else:
                 traverse = DEFAULT_TRAVERSE
-        if not use_cache:
+        if use_cache is None:
             use_cache = channels == "*"
 
         await self._clean_messages(
