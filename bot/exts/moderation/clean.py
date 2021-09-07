@@ -270,32 +270,37 @@ class Clean(Cog):
         for channel, messages in message_mappings.items():
             to_delete = []
 
-            for current_index, message in enumerate(messages):
+            delete_old = False
+            for current_index, message in enumerate(messages):  # noqa: B007
                 if not self.cleaning:
                     # Means that the cleaning was canceled
                     return deleted
 
                 if self.is_older_than_14d(message):
-                    # further messages are too old to be deleted in bulk
-                    deleted_remaining = await self._delete_messages_individually(messages[current_index:])
-                    deleted.extend(deleted_remaining)
-                    if not self.cleaning:
-                        # Means that deletion was canceled while deleting the individual messages
-                        return deleted
+                    # Further messages are too old to be deleted in bulk
+                    delete_old = True
                     break
 
                 to_delete.append(message)
 
                 if len(to_delete) == 100:
-                    # we can only delete up to 100 messages in a bulk
+                    # Only up to 100 messages can be deleted in a bulk
                     await channel.delete_messages(to_delete)
                     deleted.extend(to_delete)
                     to_delete.clear()
 
+            if not self.cleaning:
+                return deleted
             if len(to_delete) > 0:
-                # deleting any leftover messages if there are any
+                # Deleting any leftover messages if there are any
                 await channel.delete_messages(to_delete)
                 deleted.extend(to_delete)
+
+            if not self.cleaning:
+                return deleted
+            if delete_old:
+                old_deleted = await self._delete_messages_individually(messages[current_index:])
+                deleted.extend(old_deleted)
 
         return deleted
 
