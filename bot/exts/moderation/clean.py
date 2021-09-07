@@ -7,10 +7,10 @@ from datetime import datetime
 from itertools import islice
 from typing import Any, Callable, DefaultDict, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
-from discord import Colour, Embed, Message, NotFound, TextChannel, User, errors
+from discord import Colour, Message, NotFound, TextChannel, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
-from discord.ext.commands.errors import BadArgument, MaxConcurrencyReached
+from discord.ext.commands.errors import BadArgument
 
 from bot.bot import Bot
 from bot.constants import (
@@ -23,6 +23,7 @@ from bot.utils.channel import is_mod_channel
 log = logging.getLogger(__name__)
 
 DEFAULT_TRAVERSE = 10
+MESSAGE_DELETE_DELAY = 5
 
 # Type alias for checks
 Predicate = Callable[[Message], bool]
@@ -110,6 +111,12 @@ class Clean(Cog):
             raise ValueError("Second limit specified without the first.")
 
     @staticmethod
+    async def _send_expiring_message(ctx: Context, content: str) -> None:
+        """Send `content` to the context channel. Automatically delete if it's not a mod channel."""
+        delete_after = None if is_mod_channel(ctx.channel) else MESSAGE_DELETE_DELAY
+        await ctx.send(content, delete_after=delete_after)
+
+    @staticmethod
     def _build_predicate(
         bots_only: bool = False,
         users: list[User] = None,
@@ -173,6 +180,16 @@ class Clean(Cog):
         if len(predicates) == 1:
             return predicates[0]
         return lambda m: all(pred(m) for pred in predicates)
+
+    async def _delete_invocation(self, ctx: Context) -> None:
+        """Delete the command invocation if it's not in a mod channel."""
+        if not is_mod_channel(ctx.channel):
+            self.mod_log.ignore(Event.message_delete, ctx.message.id)
+            try:
+                await ctx.message.delete()
+            except errors.NotFound:
+                # Invocation message has already been deleted
+                log.info("Tried to delete invocation message, but it was already deleted.")
 
     def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> tuple[DefaultDict, list[int]]:
         """Helper function for getting messages from the cache."""
@@ -286,8 +303,7 @@ class Clean(Cog):
         """Log the deleted messages to the modlog. Return True if logging was successful."""
         if not messages:
             # Can't build an embed, nothing to clean!
-            delete_after = None if is_mod_channel(ctx.channel) else 5
-            await ctx.send(":x: No matching messages could be found.", delete_after=delete_after)
+            await self._send_expiring_message(ctx, ":x: No matching messages could be found.")
             return False
 
         # Reverse the list to have reverse chronological order
@@ -335,7 +351,10 @@ class Clean(Cog):
 
         # Are we already performing a clean?
         if self.cleaning:
-            raise MaxConcurrencyReached("Please wait for the currently ongoing clean operation to complete.")
+            await self._send_expiring_message(
+                ctx, ":x: Please wait for the currently ongoing clean operation to complete."
+            )
+            return
         self.cleaning = True
 
         # Default to using the invoking context's channel or the channel of the message limit(s).
@@ -358,14 +377,8 @@ class Clean(Cog):
         # Needs to be called after standardizing the input.
         predicate = self._build_predicate(bots_only, users, regex, first_limit, second_limit)
 
-        if not is_mod_channel(ctx.channel):
-            # Delete the invocation first
-            self.mod_log.ignore(Event.message_delete, ctx.message.id)
-            try:
-                await ctx.message.delete()
-            except errors.NotFound:
-                # Invocation message has already been deleted
-                log.info("Tried to delete invocation message, but it was already deleted.")
+        # Delete the invocation first
+        await self._delete_invocation(ctx)
 
         if channels == "*" and use_cache:
             message_mappings, message_ids = self._get_messages_from_cache(traverse=traverse, to_delete=predicate)
@@ -550,16 +563,14 @@ class Clean(Cog):
     @clean_group.command(name="stop", aliases=["cancel", "abort"])
     async def clean_cancel(self, ctx: Context) -> None:
         """If there is an ongoing cleaning process, attempt to immediately cancel it."""
-        self.cleaning = False
+        if not self.cleaning:
+            message = ":question: There's no cleaning going on."
+        else:
+            self.cleaning = False
+            message = f"{Emojis.check_mark} Clean interrupted."
 
-        embed = Embed(
-            color=Colour.blurple(),
-            description="Clean interrupted."
-        )
-        delete_after = 10
-        if is_mod_channel(ctx.channel):
-            delete_after = None
-        await ctx.send(embed=embed, delete_after=delete_after)
+        await self._send_expiring_message(ctx, message)
+        await self._delete_invocation(ctx)
 
     # endregion
 
