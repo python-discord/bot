@@ -17,6 +17,7 @@ from discord.utils import DISCORD_EPOCH, escape_markdown, snowflake_time
 from bot import exts
 from bot.api import ResponseCodeError
 from bot.constants import URLs
+from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
@@ -558,7 +559,7 @@ class Infraction(Converter):
                 "ordering": "-inserted_at"
             }
 
-            infractions = await ctx.bot.api_client.get("bot/infractions", params=params)
+            infractions = await ctx.bot.api_client.get("bot/infractions/expanded", params=params)
 
             if not infractions:
                 raise BadArgument(
@@ -568,7 +569,16 @@ class Infraction(Converter):
                 return infractions[0]
 
         else:
-            return await ctx.bot.api_client.get(f"bot/infractions/{arg}")
+            try:
+                return await ctx.bot.api_client.get(f"bot/infractions/{arg}/expanded")
+            except ResponseCodeError as e:
+                if e.status == 404:
+                    raise InvalidInfraction(
+                        converter=Infraction,
+                        original=e,
+                        infraction_arg=arg
+                    )
+                raise e
 
 
 if t.TYPE_CHECKING:
