@@ -4,7 +4,7 @@ import socket
 import warnings
 from collections import defaultdict
 from contextlib import suppress
-from typing import Dict, List, Optional, NoReturn
+from typing import Dict, List, NoReturn, Optional
 
 import aiohttp
 import discord

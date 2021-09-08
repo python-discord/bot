@@ -1,7 +1,7 @@
 import datetime
 import re
 from enum import Enum
-from typing import Optional, Union, NoReturn
+from typing import NoReturn, Optional, Union
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
@@ -60,7 +60,10 @@ def _stringify_time_unit(value: int, unit: str) -> str:
         return f"{value} {unit}"
 
 
-def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> Union[str, NoReturn]:
+def discord_timestamp(
+    timestamp: ValidTimestamp,
+    format: TimestampFormats = TimestampFormats.DATE_TIME
+    ) -> Union[str, NoReturn]:
     """Create and format a Discord flavored markdown timestamp."""
     if format not in TimestampFormats:
         raise ValueError(f"Format can only be one of {', '.join(TimestampFormats.args)}, not {format}.")

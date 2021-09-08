@@ -1,4 +1,4 @@
-from typing import Optional, NoReturn
+from typing import NoReturn, Optional
 
 from discord.ext import commands
 
