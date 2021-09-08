@@ -4,7 +4,7 @@ import socket
 import warnings
 from collections import defaultdict
 from contextlib import suppress
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, NoReturn
 
 import aiohttp
 import discord
@@ -167,7 +167,7 @@ class Bot(commands.Bot):
         self._remove_root_aliases(command)
         return command
 
-    def clear(self) -> None:
+    def clear(self) -> NoReturn:
         """Not implemented! Re-instantiate the bot instead of attempting to re-use a closed one."""
         raise NotImplementedError("Re-using a Bot object after closing it is not supported.")
 

@@ -25,8 +25,6 @@ log = logging.getLogger(__name__)
 class EmptyPaginatorEmbedError(Exception):
     """Raised when attempting to paginate with empty contents."""
 
-    pass
-
 
 class LinePaginator(Paginator):
     """
@@ -199,12 +197,12 @@ class LinePaginator(Paginator):
         max_size: int = 500,
         scale_to_size: int = 4000,
         empty: bool = True,
-        restrict_to_user: User = None,
+        restrict_to_user: t.Optional[User] = None,
         timeout: int = 300,
-        footer_text: str = None,
-        url: str = None,
+        footer_text: t.Optional[str] = None,
+        url: t.Optional[str] = None,
         exception_on_empty_embed: bool = False,
-    ) -> t.Optional[discord.Message]:
+    ) -> t.Union[discord.Message, t.NoReturn, None]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.
 
@@ -227,8 +225,7 @@ class LinePaginator(Paginator):
                         scale_to_size=scale_to_size)
         current_page = 0
 
-        if not restrict_to_user:
-            restrict_to_user = ctx.author
+        restrict_to_user = restrict_to_user or ctx.author
 
         if not lines:
             if exception_on_empty_embed:

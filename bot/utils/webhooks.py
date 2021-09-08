@@ -16,7 +16,7 @@ async def send_webhook(
         avatar_url: Optional[str] = None,
         embed: Optional[Embed] = None,
         wait: Optional[bool] = False
-) -> discord.Message:
+) -> Optional[discord.Message]:
     """
     Send a message using the provided webhook.
 

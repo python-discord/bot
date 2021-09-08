@@ -17,7 +17,7 @@ class ResponseCodeError(ValueError):
         self,
         response: aiohttp.ClientResponse,
         response_json: Optional[dict] = None,
-        response_text: str = ""
+        response_text: Optional[str] = ""
     ):
         self.status = response.status
         self.response_json = response_json or {}

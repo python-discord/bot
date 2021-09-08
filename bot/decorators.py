@@ -73,7 +73,7 @@ def not_in_blacklist(
 
     The blacklist can be overridden through the roles specified in `override_roles`.
     """
-    def predicate(ctx: Context) -> bool:
+    def predicate(ctx: Context) -> t.Union[bool, t.NoReturn]:
         """Check if command was issued in a blacklisted context."""
         not_blacklisted = not in_whitelist_check(ctx, channels, categories, roles, fail_silently=True)
         overridden = in_whitelist_check(ctx, roles=override_roles, fail_silently=True)

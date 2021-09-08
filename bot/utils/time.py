@@ -1,7 +1,7 @@
 import datetime
 import re
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional, Union, NoReturn
 
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
@@ -60,7 +60,7 @@ def _stringify_time_unit(value: int, unit: str) -> str:
         return f"{value} {unit}"
 
 
-def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
+def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> Union[str, NoReturn]:
     """Create and format a Discord flavored markdown timestamp."""
     if format not in TimestampFormats:
         raise ValueError(f"Format can only be one of {', '.join(TimestampFormats.args)}, not {format}.")
@@ -220,12 +220,12 @@ def until_expiration(
     and return null if the expiry is in the paste
     """
     if not expiry:
-        return None
+        return
 
     now = datetime.datetime.utcnow()
     since = dateutil.parser.isoparse(expiry).replace(tzinfo=None, microsecond=0)
 
     if since < now:
-        return None
+        return
 
     return discord_timestamp(since, TimestampFormats.RELATIVE)

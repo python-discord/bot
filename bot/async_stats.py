@@ -1,5 +1,6 @@
 import asyncio
 import socket
+from typing import Optional
 
 from statsd.client.base import StatsClientBase
 
@@ -12,7 +13,7 @@ class AsyncStatsClient(StatsClientBase):
         loop: asyncio.AbstractEventLoop,
         host: str = 'localhost',
         port: int = 8125,
-        prefix: str = None
+        prefix: Optional[str] = None
     ):
         """Create a new client."""
         family, _, _, _, addr = socket.getaddrinfo(

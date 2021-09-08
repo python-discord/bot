@@ -22,7 +22,7 @@ class MessageCache:
     only as many elements as were inserted (meaning, without any pre-allocated placeholder values).
     """
 
-    def __init__(self, maxlen: int, *, newest_first: bool = False):
+    def __init__(self, maxlen: int, *, newest_first: bool = False) -> t.Optional[t.NoReturn]:
         if maxlen <= 0:
             raise ValueError("maxlen must be positive")
         self.maxlen = maxlen

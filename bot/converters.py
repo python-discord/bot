@@ -38,7 +38,7 @@ def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], s
     Unless preserve_case is True, the argument is converted to lowercase. All values are then
     expected to have already been given in lowercase too.
     """
-    def converter(arg: str) -> str:
+    def converter(arg: str) -> t.Union[str, t.NoReturn]:
         if not preserve_case:
             arg = arg.lower()
 
@@ -95,7 +95,7 @@ class ValidFilterListType(Converter):
     """
 
     @staticmethod
-    async def get_valid_types(bot: Bot) -> list:
+    async def get_valid_types(bot: Bot) -> t.Union[list, t.NoReturn]:
         """
         Try to get a list of valid filter list types.
 
@@ -108,7 +108,7 @@ class ValidFilterListType(Converter):
 
         return [enum for enum, classname in valid_types]
 
-    async def convert(self, ctx: Context, list_type: str) -> str:
+    async def convert(self, ctx: Context, list_type: str) -> t.Union[str, t.NoReturn]:
         """Checks whether the given string is a valid FilterList type."""
         valid_types = await self.get_valid_types(ctx.bot)
         list_type = list_type.upper()
@@ -141,7 +141,7 @@ class Extension(Converter):
     The * and ** values bypass this when used with the reload command.
     """
 
-    async def convert(self, ctx: Context, argument: str) -> str:
+    async def convert(self, ctx: Context, argument: str) -> t.Union[str, t.NoReturn]:
         """Fully qualify the name of an extension and ensure it exists."""
         # Special values to reload all extensions
         if argument == "*" or argument == "**":
@@ -253,7 +253,7 @@ class Snowflake(IDConverter):
     * Its parsed datetime is less than 1 day after the current time
     """
 
-    async def convert(self, ctx: Context, arg: str) -> int:
+    async def convert(self, ctx: Context, arg: str) -> t.Union[int, t.NoReturn]:
         """
         Ensure `arg` matches the ID pattern and its timestamp is in range.
 
@@ -292,7 +292,7 @@ class TagNameConverter(Converter):
     """
 
     @staticmethod
-    async def convert(ctx: Context, tag_name: str) -> str:
+    async def convert(ctx: Context, tag_name: str) -> t.Union[str, t.NoReturn]:
         """Lowercase & strip whitespace from proposed tag_name & ensure it's valid."""
         tag_name = tag_name.lower().strip()
 

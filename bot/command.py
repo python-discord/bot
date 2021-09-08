@@ -1,3 +1,5 @@
+from typing import Optional, NoReturn
+
 from discord.ext import commands
 
 
@@ -10,7 +12,7 @@ class Command(commands.Command):
     also named `root_aliases`.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> Optional[NoReturn]:
         super().__init__(*args, **kwargs)
         self.root_aliases = kwargs.get("root_aliases", [])
 
