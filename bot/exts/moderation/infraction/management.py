@@ -12,7 +12,8 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UserMentionOrID, allowed_strings
+from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
@@ -44,9 +45,22 @@ class ModManagement(commands.Cog):
     # region: Edit infraction commands
 
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
-    async def infraction_group(self, ctx: Context) -> None:
-        """Infraction manipulation commands."""
-        await ctx.send_help(ctx.command)
+    async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
+        """
+        Infraction manipulation commands.
+
+        If `infraction` is passed then this command fetches that infraction. The `Infraction` converter
+        supports 'l', 'last' and 'recent' to get the most recent infraction made by `ctx.author`.
+        """
+        if infraction is None:
+            await ctx.send_help(ctx.command)
+            return
+
+        embed = discord.Embed(
+            title=f"Infraction #{infraction['id']}",
+            colour=discord.Colour.orange()
+        )
+        await self.send_infraction_list(ctx, embed, [infraction])
 
     @infraction_group.command(name="append", aliases=("amend", "add", "a"))
     async def infraction_append(
@@ -201,7 +215,7 @@ class ModManagement(commands.Cog):
     # region: Search infractions
 
     @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: t.Union[UserMentionOrID, Snowflake, str]) -> None:
+    async def infraction_search_group(self, ctx: Context, query: t.Union[UnambiguousUser, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
             await self.search_user(ctx, discord.Object(query))
@@ -210,7 +224,7 @@ class ModManagement(commands.Cog):
         else:
             await self.search_user(ctx, query)
 
-    @infraction_search_group.command(name="user", aliases=("member", "id"))
+    @infraction_search_group.command(name="user", aliases=("member", "userid"))
     async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
@@ -331,12 +345,19 @@ class ModManagement(commands.Cog):
         return all(checks)
 
     # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
-        """Send a notification to the invoking context on a Union failure."""
+    async def cog_command_error(self, ctx: Context, error: commands.CommandError) -> None:
+        """Handles errors for commands within this cog."""
         if isinstance(error, commands.BadUnionArgument):
             if discord.User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
+
+        elif isinstance(error, InvalidInfraction):
+            if error.infraction_arg.isdigit():
+                await ctx.send(f":x: Could not find an infraction with id `{error.infraction_arg}`.")
+            else:
+                await ctx.send(f":x: `{error.infraction_arg}` is not a valid integer infraction id.")
+            error.handled = True
 
 
 def setup(bot: Bot) -> None:

@@ -72,7 +72,8 @@ class Information(Cog):
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
         if cog := self.bot.get_cog("Talentpool"):
-            talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
+            num_nominated = len(cog.cache) if cog.cache else "-"
+            talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
         if cog := self.bot.get_cog("Big Brother"):
@@ -460,11 +461,12 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
-    @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
-    async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
-        """Shows information about the raw API response."""
+    async def send_raw_content(self, ctx: Context, message: Message, json: bool = False) -> None:
+        """
+        Send information about the raw API response for a `discord.Message`.
+
+        If `json` is True, send the information in a copy-pasteable Python format.
+        """
         if ctx.author not in message.channel.members:
             await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
@@ -500,10 +502,17 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    @group(invoke_without_command=True)
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    async def raw(self, ctx: Context, message: Message) -> None:
+        """Shows information about the raw API response."""
+        await self.send_raw_content(ctx, message)
+
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
-        await ctx.invoke(self.raw, message=message, json=True)
+        await self.send_raw_content(ctx, message, json=True)
 
 
 def setup(bot: Bot) -> None:
