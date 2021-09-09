@@ -57,8 +57,6 @@ class Reviewer:
         """Reschedule all active nominations to be reviewed at the appropriate time."""
         log.trace("Rescheduling reviews")
         await self.bot.wait_until_guild_available()
-        # TODO Once the watch channel is removed, this can be done in a smarter way, e.g create a sync function.
-        await self._pool.refresh_cache()
 
         for user_id, user_data in self._pool.cache.items():
             if not user_data["reviewed"]:
