@@ -22,6 +22,14 @@ THREAD_URL = "https://mail.python.org/archives/list/{list}@python.org/thread/{id
 
 AVATAR_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
+# By first matching everything within a codeblock,
+# when matching markdown it won't be within a codeblock
+MARKDOWN_REGEX = re.compile(
+    r"(?P<codeblock>`.*?`)"  # matches everything within a codeblock
+    r"|(?P<markdown>(?<!\\)[_|])",  # matches unescaped `_` and `|`
+    re.DOTALL  # required to support multi-line codeblocks
+)
+
 log = logging.getLogger(__name__)
 
 
@@ -75,8 +83,11 @@ class PythonNews(Cog):
 
     @staticmethod
     def escape_markdown(content: str) -> str:
-        """Escape the markdown underlines and spoilers."""
-        return re.sub(r"[_|]", lambda match: "\\" + match[0], content)
+        """Escape the markdown underlines and spoilers that aren't in codeblocks."""
+        return MARKDOWN_REGEX.sub(
+            lambda match: match.group("codeblock") or "\\" + match.group("markdown"),
+            content
+        )
 
     async def post_pep_news(self) -> None:
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
