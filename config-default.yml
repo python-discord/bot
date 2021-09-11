@@ -157,9 +157,10 @@ guild:
         reddit:                     &REDDIT_CHANNEL     458224812528238616
 
         # Development
-        dev_contrib:        &DEV_CONTRIB    635950537262759947
-        dev_core:           &DEV_CORE       411200599653351425
-        dev_log:            &DEV_LOG        622895325144940554
+        dev_contrib:        &DEV_CONTRIB     635950537262759947
+        dev_core:           &DEV_CORE        411200599653351425
+        dev_voting:         &DEV_CORE_VOTING 839162966519447552
+        dev_log:            &DEV_LOG         622895325144940554
 
         # Discussion
         meta:                               429409067623251969
@@ -251,6 +252,7 @@ guild:
         - *MESSAGE_LOG
         - *MOD_LOG
         - *STAFF_VOICE
+        - *DEV_CORE_VOTING
 
     reminder_whitelist:
         - *BOT_CMD
