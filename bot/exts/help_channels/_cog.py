@@ -82,7 +82,7 @@ class HelpChannels(commands.Cog):
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
-        self.init_task = self.bot.loop.create_task(self.init_cog())
+        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""

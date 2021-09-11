@@ -17,6 +17,7 @@ from bot.constants import (
 )
 from bot.converters import Duration, UnambiguousUser
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
@@ -40,7 +41,7 @@ class Reminders(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        self.bot.loop.create_task(self.reschedule_reminders())
+        scheduling.create_task(self.reschedule_reminders(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
