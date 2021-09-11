@@ -44,16 +44,21 @@ class CleanChannels(Converter):
 
 
 class Regex(Converter):
-    """A converter that takes a string in the form `.+` and returns the contents of the inline code."""
+    """A converter that takes a string in the form `.+` and returns the contents of the inline code compiled."""
 
-    async def convert(self, ctx: Context, argument: str) -> str:
-        """Strips the backticks from the string."""
-        return re.fullmatch(r"`(.+?)`", argument).group(1)
+    async def convert(self, ctx: Context, argument: str) -> re.Pattern:
+        """Strips the backticks from the string and compiles it to a regex pattern."""
+        if not (match := re.fullmatch(r"`(.+?)`", argument)):
+            raise BadArgument("Regex pattern missing wrapping backticks")
+        try:
+            return re.compile(match.group(1), re.IGNORECASE + re.DOTALL)
+        except re.error as e:
+            raise BadArgument(f"Regex error: {e.msg}")
 
 
 if TYPE_CHECKING:
     CleanChannels = Union[Literal["*"], list[TextChannel]]  # noqa: F811
-    Regex = str  # noqa: F811
+    Regex = re.Pattern  # noqa: F811
 
 
 class Clean(Cog):
@@ -120,7 +125,7 @@ class Clean(Cog):
     def _build_predicate(
         bots_only: bool = False,
         users: list[User] = None,
-        regex: Optional[str] = None,
+        regex: Optional[re.Pattern] = None,
         first_limit: Optional[datetime] = None,
         second_limit: Optional[datetime] = None,
     ) -> Predicate:
@@ -151,7 +156,7 @@ class Clean(Cog):
             content = "\n".join(attr for attr in content if attr)
 
             # Now let's see if there's a regex match
-            return bool(re.search(regex, content, re.IGNORECASE + re.DOTALL))
+            return bool(regex.search(content))
 
         def predicate_range(message: Message) -> bool:
             """Check if the message age is between the two limits."""
@@ -346,7 +351,7 @@ class Clean(Cog):
         channels: CleanChannels,
         bots_only: bool = False,
         users: list[User] = None,
-        regex: Optional[str] = None,
+        regex: Optional[re.Pattern] = None,
         first_limit: Optional[CleanLimit] = None,
         second_limit: Optional[CleanLimit] = None,
         use_cache: Optional[bool] = True
