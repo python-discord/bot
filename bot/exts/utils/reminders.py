@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import random
 import textwrap
@@ -81,7 +80,7 @@ class Reminders(Cog):
                 f"Reminder {reminder['id']} invalid: "
                 f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
             )
-            asyncio.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
+            scheduling.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
 
         return is_valid, user, channel
 

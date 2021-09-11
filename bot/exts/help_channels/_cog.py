@@ -507,7 +507,7 @@ class HelpChannels(commands.Cog):
         """Wait for a dormant channel to become available in the queue and return it."""
         log.trace("Waiting for a dormant channel.")
 
-        task = asyncio.create_task(self.channel_queue.get())
+        task = scheduling.create_task(self.channel_queue.get())
         self.queue_tasks.append(task)
         channel = await task
 

@@ -458,4 +458,4 @@ class DocCog(commands.Cog):
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
         self.init_refresh_task.cancel()
-        asyncio.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
+        scheduling.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")

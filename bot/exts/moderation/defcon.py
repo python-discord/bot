@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import traceback
 from collections import namedtuple
@@ -206,7 +205,7 @@ class Defcon(Cog):
         new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {humanize_delta(self.threshold) if self.threshold else '-'})"
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
-        asyncio.create_task(self.channel.edit(topic=new_topic))
+        scheduling.create_task(self.channel.edit(topic=new_topic))
 
     @defcon_settings.atomic_transaction
     async def _update_threshold(self, author: User, threshold: relativedelta, expiry: Optional[Expiry] = None) -> None:
