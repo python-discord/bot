@@ -588,6 +588,10 @@ class Clean(Cog):
         """Only allow moderators to invoke the commands in this cog."""
         return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
+    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
+        """Safely end the cleaning operation on unexpected errors."""
+        self.cleaning = False
+
 
 def setup(bot: Bot) -> None:
     """Load the Clean cog."""
