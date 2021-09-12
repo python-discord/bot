@@ -119,7 +119,7 @@ class PythonNews(Cog):
 
             # Build an embed and send a webhook
             embed = discord.Embed(
-                title=new["title"],
+                title=self.escape_markdown(new["title"]),
                 description=self.escape_markdown(new["summary"]),
                 timestamp=new_datetime,
                 url=new["link"],
@@ -189,7 +189,7 @@ class PythonNews(Cog):
 
                 # Build an embed and send a message to the webhook
                 embed = discord.Embed(
-                    title=thread_information["subject"],
+                    title=self.escape_markdown(thread_information["subject"]),
                     description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
                     timestamp=new_date,
                     url=link,
