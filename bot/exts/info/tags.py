@@ -372,10 +372,9 @@ class Tags(Cog):
                 await LinePaginator.paginate(
                     self.list_all_tags(ctx.author), ctx, Embed(title="Current tags"), **self.PAGINATOR_DEFAULTS
                 )
-                return True
             else:
                 await ctx.send(embed=Embed(description="**There are no tags!**"))
-                return True
+            return True
 
         elif tag_name is None:
             if group_tags := self.list_tags_in_group(tag_name_or_group, ctx.author):
