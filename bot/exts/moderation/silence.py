@@ -238,7 +238,13 @@ class Silence(commands.Cog):
         if isinstance(channel, TextChannel):
             role = self._everyone_role
             overwrite = channel.overwrites_for(role)
-            prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
+            prev_overwrites = dict(
+                send_messages=overwrite.send_messages,
+                add_reactions=overwrite.add_reactions,
+                create_private_threads=overwrite.create_private_threads,
+                create_public_threads=overwrite.create_public_threads,
+                send_messages_in_threads=overwrite.send_messages_in_threads
+            )
 
         else:
             role = self._verified_voice_role
@@ -338,7 +344,15 @@ class Silence(commands.Cog):
         # Check if old overwrites were not stored
         if prev_overwrites is None:
             log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")
-            overwrite.update(send_messages=None, add_reactions=None, speak=None, connect=None)
+            overwrite.update(
+                send_messages=None,
+                add_reactions=None,
+                create_private_threads=None,
+                create_public_threads=None,
+                send_messages_in_threads=None,
+                speak=None,
+                connect=None
+            )
         else:
             overwrite.update(**json.loads(prev_overwrites))
 
