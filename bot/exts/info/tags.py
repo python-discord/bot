@@ -310,7 +310,7 @@ class Tags(Cog):
                 description=suggested_tags_text
             )
 
-    def list_all_tags(self, user: Member) -> list[str]:
+    def accessible_tags(self, user: Member) -> list[str]:
         """Return a formatted list of tags that are accessible by `user`; groups first, and alphabetically sorted."""
         def tag_sort_key(tag_item: tuple[TagIdentifier, Tag]) -> str:
             group, name = tag_item[0]
@@ -344,7 +344,7 @@ class Tags(Cog):
 
         return result_lines
 
-    def list_tags_in_group(self, group: str, user: discord.Member) -> list[str]:
+    def accessible_tags_in_group(self, group: str, user: discord.Member) -> list[str]:
         """Return a formatted list of tags in `group`, that are accessible by `user`."""
         return sorted(
             f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
@@ -370,14 +370,14 @@ class Tags(Cog):
         if tag_name_or_group is None and tag_name is None:
             if self.tags:
                 await LinePaginator.paginate(
-                    self.list_all_tags(ctx.author), ctx, Embed(title="Current tags"), **self.PAGINATOR_DEFAULTS
+                    self.accessible_tags(ctx.author), ctx, Embed(title="Current tags"), **self.PAGINATOR_DEFAULTS
                 )
             else:
                 await ctx.send(embed=Embed(description="**There are no tags!**"))
             return True
 
         elif tag_name is None:
-            if group_tags := self.list_tags_in_group(tag_name_or_group, ctx.author):
+            if group_tags := self.accessible_tags_in_group(tag_name_or_group, ctx.author):
                 await LinePaginator.paginate(
                     group_tags, ctx, Embed(title=f"Tags under *{tag_name_or_group}*"), **self.PAGINATOR_DEFAULTS
                 )
