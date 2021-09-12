@@ -9,7 +9,7 @@ from itertools import zip_longest
 import discord
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
-from discord import Colour
+from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown
@@ -519,17 +519,44 @@ class ModLog(Cog, name="ModLog"):
             channel_id=Channels.user_log
         )
 
+    @staticmethod
+    def is_message_blacklisted(message: Message) -> bool:
+        """Return true if the message is in a blacklisted thread or channel."""
+        # Ignore DMs or messages outside of the main guild
+        if not message.guild or message.guild.id != GuildConstant.id:
+            return True
+
+        # Ignore bots
+        if message.author.bot:
+            return True
+
+        # Look at the parent channel of a thread
+        if isinstance(message.channel, Thread):
+            return message.channel.parent.id in GuildConstant.modlog_blacklist
+
+        return message.channel.id in GuildConstant.modlog_blacklist
+
+    def is_raw_message_blacklisted(self, guild_id: t.Optional[int], channel_id: int) -> bool:
+        """Return true if the message constructed from raw parameter is in a blacklisted thread or channel."""
+        # Ignore DMs or messages outside of the main guild
+        if not guild_id or guild_id != GuildConstant.id:
+            return True
+
+        channel = self.bot.get_channel(channel_id)
+
+        # Look at the parent channel of a thread
+        if isinstance(channel, Thread):
+            return channel.parent.id in GuildConstant.modlog_blacklist
+
+        return channel.id in GuildConstant.modlog_blacklist
+
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         """Log message delete event to message change log."""
         channel = message.channel
         author = message.author
 
-        # Ignore DMs.
-        if not message.guild:
-            return
-
-        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.modlog_blacklist:
+        if self.is_message_blacklisted(message):
             return
 
         self._cached_deletes.append(message.id)
@@ -584,7 +611,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
         """Log raw message delete event to message change log."""
-        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.modlog_blacklist:
+        if self.is_raw_message_blacklisted(event.guild_id, event.channel_id):
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
@@ -625,12 +652,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
         """Log message edit event to message change log."""
-        if (
-            not msg_before.guild
-            or msg_before.guild.id != GuildConstant.id
-            or msg_before.channel.id in GuildConstant.modlog_blacklist
-            or msg_before.author.bot
-        ):
+        if self.is_message_blacklisted(msg_before):
             return
 
         self._cached_edits.append(msg_before.id)
@@ -707,12 +729,7 @@ class ModLog(Cog, name="ModLog"):
         except discord.NotFound:  # Was deleted before we got the event
             return
 
-        if (
-            not message.guild
-            or message.guild.id != GuildConstant.id
-            or message.channel.id in GuildConstant.modlog_blacklist
-            or message.author.bot
-        ):
+        if self.is_message_blacklisted(message):
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
