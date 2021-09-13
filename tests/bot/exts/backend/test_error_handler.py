@@ -360,18 +360,6 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
         self.cog.on_command_error.assert_awaited_once_with(self.ctx, err)
 
-    async def test_try_get_tag_ctx_invoke(self):
-        """Should call `ctx.invoke` with proper args/kwargs."""
-        test_cases = (
-            ("foo", ("foo", None)),
-            ("foo bar", ("foo", "bar")),
-        )
-        for message_content, args in test_cases:
-            self.ctx.reset_mock()
-            self.ctx.message = MagicMock(content=message_content)
-            self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-            self.ctx.invoke.assert_awaited_once_with(self.tag.get_command, *args)
-
     async def test_dont_call_suggestion_tag_sent(self):
         """Should never call command suggestion if tag is already sent."""
         self.ctx.message = MagicMock(content="foo")
