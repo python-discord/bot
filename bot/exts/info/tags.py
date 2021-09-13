@@ -233,15 +233,10 @@ class Tags(Cog):
                 **self.PAGINATOR_DEFAULTS,
             )
 
-    @group(name="tags", aliases=("tag", "t"), invoke_without_command=True)
-    async def tags_group(
-            self,
-            ctx: Context,
-            tag_name_or_group: str = None,
-            tag_name: str = None,
-    ) -> None:
+    @group(name="tags", aliases=("tag", "t"), invoke_without_command=True, usage="[tag_group] [tag_name]")
+    async def tags_group(self, ctx: Context, *, argument_string: Optional[str]) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
-        await self.get_command(ctx, tag_name_or_group=tag_name_or_group, tag_name=tag_name)
+        await self.get_command(ctx, argument_string=argument_string)
 
     @tags_group.group(name="search", invoke_without_command=True)
     async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
@@ -352,12 +347,8 @@ class Tags(Cog):
             if identifier.group == group and tag.accessible_by(user)
         )
 
-    @tags_group.command(name="get", aliases=("show", "g"))
-    async def get_command(
-            self, ctx: Context,
-            tag_name_or_group: str = None,
-            tag_name: str = None,
-    ) -> bool:
+    @tags_group.command(name="get", aliases=("show", "g"), usage="[tag_group] [tag_name]")
+    async def get_command(self, ctx: Context, *, argument_string: Optional[str]) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group
         Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name.
@@ -367,7 +358,7 @@ class Tags(Cog):
         Returns True if a message was sent, or if the tag is on cooldown.
         Returns False if no message was sent.
         """  # noqa: D205, D415
-        if tag_name_or_group is None and tag_name is None:
+        if not argument_string:
             if self.tags:
                 await LinePaginator.paginate(
                     self.accessible_tags(ctx.author), ctx, Embed(title="Available tags"), **self.PAGINATOR_DEFAULTS
@@ -376,19 +367,17 @@ class Tags(Cog):
                 await ctx.send(embed=Embed(description="**There are no tags!**"))
             return True
 
-        elif tag_name is None:
-            if group_tags := self.accessible_tags_in_group(tag_name_or_group, ctx.author):
+        identifier = TagIdentifier.from_string(argument_string)
+
+        if identifier.group is None:
+            # Try to find accessible tags from a group matching the identifier's name.
+            if group_tags := self.accessible_tags_in_group(identifier.name, ctx.author):
                 await LinePaginator.paginate(
-                    group_tags, ctx, Embed(title=f"Tags under *{tag_name_or_group}*"), **self.PAGINATOR_DEFAULTS
+                    group_tags, ctx, Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS
                 )
                 return True
-            else:
-                tag_name = tag_name_or_group
-                tag_group = None
-        else:
-            tag_group = tag_name_or_group
 
-        embed = await self.get_tag_embed(ctx, TagIdentifier(tag_group, tag_name))
+        embed = await self.get_tag_embed(ctx, identifier)
         if embed is None:
             return False
 
