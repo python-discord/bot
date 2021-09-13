@@ -10,7 +10,6 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.errors import InvalidInfractedUserError, LockedResourceError
-from bot.exts.info import tags
 from bot.utils.checks import ContextCheckFailure
 
 log = logging.getLogger(__name__)
@@ -174,15 +173,7 @@ class ErrorHandler(Cog):
             await self.on_command_error(ctx, tag_error)
             return
 
-        tag_identifier = tags.TagIdentifier.from_string(ctx.message.content)
-        if tag_identifier.group is not None:
-            tag_name = tag_identifier.name
-            tag_name_or_group = tag_identifier.group
-        else:
-            tag_name = None
-            tag_name_or_group = tag_identifier.name
-
-        if await ctx.invoke(tags_get_command, tag_name_or_group, tag_name):
+        if await ctx.invoke(tags_get_command, argument_string=ctx.message.content):
             return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
