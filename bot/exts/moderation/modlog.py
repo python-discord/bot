@@ -769,6 +769,64 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
+    async def on_thread_update(self, before: Thread, after: Thread) -> None:
+        """Log thread archiving, un-archiving and name edits."""
+        if before.name != after.name:
+            await self.send_log_message(
+                Icons.hash_blurple,
+                Colour.blurple(),
+                "Thread name edited",
+                (
+                    f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`): "
+                    f"`{before.name}` -> `{after.name}`"
+                )
+            )
+            return
+
+        if not before.archived and after.archived:
+            colour = Colour.red()
+            action = "archived"
+            icon = Icons.hash_red
+        elif before.archived and not after.archived:
+            colour = Colour.green()
+            action = "un-archived"
+            icon = Icons.hash_green
+        else:
+            return
+
+        await self.send_log_message(
+            icon,
+            colour,
+            f"Thread {action}",
+            f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`) {action}"
+        )
+
+    @Cog.listener()
+    async def on_thread_delete(self, thread: Thread) -> None:
+        """Log thread deletion."""
+        await self.send_log_message(
+            Icons.hash_red,
+            Colour.red(),
+            "Thread deleted",
+            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) deleted"
+        )
+
+    @Cog.listener()
+    async def on_thread_join(self, thread: Thread) -> None:
+        """Log thread creation."""
+        # If we are in the thread already we can most probably assume we already logged it?
+        # We don't really have a better way of doing this since the API doesn't make any difference between the two
+        if thread.me:
+            return
+
+        await self.send_log_message(
+            Icons.hash_green,
+            Colour.green(),
+            "Thread created",
+            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) created"
+        )
+
+    @Cog.listener()
     async def on_voice_state_update(
         self,
         member: discord.Member,
