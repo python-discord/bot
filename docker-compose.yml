@@ -23,6 +23,11 @@ services:
       POSTGRES_DB: pysite
       POSTGRES_PASSWORD: pysite
       POSTGRES_USER: pysite
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pysite"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
 
   redis:
     << : *logging
@@ -30,6 +35,21 @@ services:
     image: redis:5.0.9
     ports:
       - "127.0.0.1:6379:6379"
+
+  metricity:
+    << : *logging
+    restart: on-failure  # USE_METRICITY=false will stop the container, so this ensures it only restarts on error
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: ghcr.io/python-discord/metricity:latest
+    env_file:
+      - .env
+    environment:
+      DATABASE_URI: postgres://pysite:pysite@postgres/metricity
+      USE_METRICITY: ${USE_METRICITY-false}
+    volumes:
+      - .:/tmp/bot:ro
 
   snekbox:
     << : *logging
@@ -56,7 +76,7 @@ services:
       - "127.0.0.1:8000:8000"
     tty: true
     depends_on:
-      - postgres
+      - metricity
     environment:
       DATABASE_URL: postgres://pysite:pysite@postgres:5432/pysite
       METRICITY_DB_URL: postgres://pysite:pysite@postgres:5432/metricity
