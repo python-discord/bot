@@ -139,7 +139,7 @@ class PythonNews(Cog):
             self.bot.stats.incr("python_news.posted.pep")
 
             if msg.channel.is_news():
-                log.trace("Publishing PEP annnouncement because it was in a news channel")
+                log.trace("Publishing PEP announcement because it was in a news channel")
                 await msg.publish()
 
         # Apply new sent news to DB to avoid duplicate sending
