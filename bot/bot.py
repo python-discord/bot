@@ -260,15 +260,14 @@ class Bot(commands.Bot):
 
     async def on_guild_available(self, guild: discord.Guild) -> None:
         """
-        Set the internal guild available event when constants.Guild.id becomes available.
+        Set the internal guild available event when constants.Guild.id becomes available and all members are fetched.
 
-        If the cache appears to still be empty (no members, no channels, or no roles), the event
-        will not be set.
+        If the cache appears to still be empty (no channels, or no roles), the event will not be set.
         """
         if guild.id != constants.Guild.id:
             return
 
-        if not guild.roles or not guild.members or not guild.channels:
+        if not guild.roles or not guild.channels:
             msg = "Guild available event was dispatched but the cache appears to still be empty!"
             log.warning(msg)
 
@@ -281,6 +280,7 @@ class Bot(commands.Bot):
 
             return
 
+        await guild.chunk()
         self._guild_available.set()
 
     async def on_guild_unavailable(self, guild: discord.Guild) -> None:
