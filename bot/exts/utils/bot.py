@@ -26,7 +26,7 @@ class BotCog(Cog, name="Bot"):
         We want our bots to automatically join threads in order to answer commands using their prefixes.
         """
         if thread.me:
-            # Already in this thread, return early
+            # We have already joined this thread
             return
 
         with suppress(Forbidden):
