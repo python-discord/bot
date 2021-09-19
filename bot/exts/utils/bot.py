@@ -23,7 +23,6 @@ class BotCog(Cog, name="Bot"):
         Try to join newly created threads.
 
         Despite the event name being misleading, this is dispatched when new threads are created.
-        We want our bots to automatically join threads in order to answer commands using their prefixes.
         """
         if thread.me:
             # We have already joined this thread
