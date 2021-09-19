@@ -519,22 +519,13 @@ class ModLog(Cog, name="ModLog"):
             channel_id=Channels.user_log
         )
 
-    @staticmethod
-    def is_message_blacklisted(message: Message) -> bool:
+    def is_message_blacklisted(self, message: Message) -> bool:
         """Return true if the message is in a blacklisted thread or channel."""
-        # Ignore DMs or messages outside of the main guild
-        if not message.guild or message.guild.id != GuildConstant.id:
+        # Ignore bots or DMs
+        if message.author.bot or not message.guild:
             return True
 
-        # Ignore bots
-        if message.author.bot:
-            return True
-
-        # Look at the parent channel of a thread
-        if isinstance(message.channel, Thread):
-            return message.channel.parent.id in GuildConstant.modlog_blacklist
-
-        return message.channel.id in GuildConstant.modlog_blacklist
+        return self.is_raw_message_blacklisted(message.guild.id, message.channel.id)
 
     def is_raw_message_blacklisted(self, guild_id: t.Optional[int], channel_id: int) -> bool:
         """Return true if the message constructed from raw parameter is in a blacklisted thread or channel."""
