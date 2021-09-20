@@ -2,18 +2,18 @@
 
 Python provides the ability to run multiple tasks and coroutines simultaneously with the use of the `asyncio` library, which is included in the Python standard library.
 
-This works by running these coroutines in an event loop, where the context of which coroutine is being run is switches periodically to allow all of them to run, giving the appearance of running at the same time. This is different to using threads or processes in that all code is run in the main process and thread, although it is possible to run coroutines in threads.
+This works by running these coroutines in an event loop, where the context of the running coroutine switches periodically to allow all the coroutines to run, thus giving the appearance of running at the same time. This is different to using threads or processes in that all code runs in the main process and thread, although it is possible to run coroutines in threads.
 
 To call an async function we can either `await` it, or run it in an event loop which we get from `asyncio`.
 
-To create a coroutine that can be used with asyncio we need to define a function using the async keyword:
+To create a coroutine that can be used with asyncio we need to define a function using the `async` keyword:
 ```py
 async def main():
     await something_awaitable()
 ```
-Which means we can call `await something_awaitable()` directly from within the function. If this were a non-async function this would have raised an exception like: `SyntaxError: 'await' outside async function`
+Which means we can call `await something_awaitable()` directly from within the function. If this were a non-async function, this would have raised the exception `SyntaxError: 'await' outside async function`
 
-To run the top level async function from outside of the event loop we can get an event loop from `asyncio`, and then use that loop to run the function:
+To run the top level async function from outside the event loop, we can get the event loop from `asyncio` and then use it to run the function:
 ```py
 from asyncio import get_event_loop
 
