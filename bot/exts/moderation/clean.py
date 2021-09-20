@@ -5,7 +5,7 @@ from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 from itertools import islice
-from typing import Any, Callable, DefaultDict, Iterable, Literal, Optional, TYPE_CHECKING, Union
+from typing import Any, Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
 from discord import Colour, Message, NotFound, TextChannel, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
@@ -86,11 +86,11 @@ class Clean(Cog):
     @staticmethod
     def _validate_input(
             traverse: int,
-            channels: CleanChannels,
+            channels: Optional[CleanChannels],
             bots_only: bool,
-            users: list[User],
-            first_limit: CleanLimit,
-            second_limit: CleanLimit,
+            users: Optional[list[User]],
+            first_limit: Optional[CleanLimit],
+            second_limit: Optional[CleanLimit],
     ) -> None:
         """Raise errors if an argument value or a combination of values is invalid."""
         # Is this an acceptable amount of messages to traverse?
@@ -124,7 +124,7 @@ class Clean(Cog):
     @staticmethod
     def _build_predicate(
         bots_only: bool = False,
-        users: list[User] = None,
+        users: Optional[list[User]] = None,
         regex: Optional[re.Pattern] = None,
         first_limit: Optional[datetime] = None,
         second_limit: Optional[datetime] = None,
@@ -196,7 +196,7 @@ class Clean(Cog):
                 # Invocation message has already been deleted
                 log.info("Tried to delete invocation message, but it was already deleted.")
 
-    def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> tuple[DefaultDict, list[int]]:
+    def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> tuple[defaultdict[Any, list], list[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(list)
         message_ids = []
@@ -348,9 +348,9 @@ class Clean(Cog):
         self,
         ctx: Context,
         traverse: int,
-        channels: CleanChannels,
+        channels: Optional[CleanChannels],
         bots_only: bool = False,
-        users: list[User] = None,
+        users: Optional[list[User]] = None,
         regex: Optional[re.Pattern] = None,
         first_limit: Optional[CleanLimit] = None,
         second_limit: Optional[CleanLimit] = None,
@@ -423,24 +423,25 @@ class Clean(Cog):
 
     @group(invoke_without_command=True, name="clean", aliases=["clear", "purge"])
     async def clean_group(
-            self,
-            ctx: Context,
-            users: Greedy[User] = None,
-            traverse: Optional[int] = None,
-            first_limit: Optional[CleanLimit] = None,
-            second_limit: Optional[CleanLimit] = None,
-            use_cache: Optional[bool] = None,
-            bots_only: Optional[bool] = False,
-            regex: Optional[Regex] = None,
-            *,
-            channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
+        self,
+        ctx: Context,
+        users: Greedy[User] = None,
+        traverse: Optional[int] = None,
+        first_limit: Optional[CleanLimit] = None,
+        second_limit: Optional[CleanLimit] = None,
+        use_cache: Optional[bool] = None,
+        bots_only: Optional[bool] = False,
+        regex: Optional[Regex] = None,
+        *,
+        channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
     ) -> None:
         """
         Commands for cleaning messages in channels.
 
         If arguments are provided, will act as a master command from which all subcommands can be derived.
         • `users`: A series of user mentions, ID's, or names.
-        • `traverse`: The number of messages to look at in each channel.
+        • `traverse`: The number of messages to look at in each channel. If using the cache, will look at the first
+        `traverse` messages in the cache.
         • `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
         If a limit is provided, multiple channels cannot be provided.
@@ -474,7 +475,7 @@ class Clean(Cog):
         self,
         ctx: Context,
         user: User,
-        traverse: Optional[int] = 10,
+        traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
         channels: CleanChannels = None
@@ -527,10 +528,10 @@ class Clean(Cog):
 
     @clean_group.command(name="until")
     async def clean_until(
-            self,
-            ctx: Context,
-            until: CleanLimit,
-            channel: TextChannel = None
+        self,
+        ctx: Context,
+        until: CleanLimit,
+        channel: TextChannel = None
     ) -> None:
         """
         Delete all messages until a certain limit.
@@ -547,11 +548,11 @@ class Clean(Cog):
 
     @clean_group.command(name="between", aliases=["after-until", "from-to"])
     async def clean_between(
-            self,
-            ctx: Context,
-            first_limit: CleanLimit,
-            second_limit: CleanLimit,
-            channel: TextChannel = None
+        self,
+        ctx: Context,
+        first_limit: CleanLimit,
+        second_limit: CleanLimit,
+        channel: TextChannel = None
     ) -> None:
         """
         Delete all messages within range.
