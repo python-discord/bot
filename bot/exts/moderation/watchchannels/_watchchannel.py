@@ -19,6 +19,7 @@ from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, scheduling
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import get_time_delta
 
 log = logging.getLogger(__name__)
@@ -281,7 +282,7 @@ class WatchChannel(metaclass=CogABCMeta):
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
-        actor = guild.get_member(self.watched_users[user_id]['actor'])
+        actor = await get_or_fetch_member(guild, self.watched_users[user_id]['actor'])
         actor = actor.display_name if actor else self.watched_users[user_id]['actor']
 
         inserted_at = self.watched_users[user_id]['inserted_at']
@@ -355,7 +356,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         list_data["info"] = {}
         for user_id, user_data in watched_iter:
-            member = ctx.guild.get_member(user_id)
+            member = await get_or_fetch_member(ctx.guild, user_id)
             line = f"• `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"

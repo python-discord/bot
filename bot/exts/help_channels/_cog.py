@@ -14,7 +14,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
-from bot.utils import channel as channel_utils, lock, scheduling
+from bot.utils import channel as channel_utils, lock, members, scheduling
 
 log = logging.getLogger(__name__)
 
@@ -434,7 +434,7 @@ class HelpChannels(commands.Cog):
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
+        claimant = await members.get_or_fetch_member(self.bot.get_guild(constants.Guild.id), claimant_id)
         if claimant is None:
             log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
         else:
