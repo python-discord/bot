@@ -278,13 +278,13 @@ class HelpChannels(commands.Cog):
         log.trace("Getting the CategoryChannel objects for the help categories.")
 
         try:
-            self.available_category = await channel_utils.try_get_channel(
+            self.available_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_available
             )
-            self.in_use_category = await channel_utils.try_get_channel(
+            self.in_use_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_in_use
             )
-            self.dormant_category = await channel_utils.try_get_channel(
+            self.dormant_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_dormant
             )
         except discord.HTTPException:
