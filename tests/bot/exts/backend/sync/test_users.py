@@ -1,6 +1,8 @@
 import unittest
 from unittest import mock
 
+from discord.errors import NotFound
+
 from bot.exts.backend.sync._syncers import UserSyncer, _Diff
 from tests import helpers
 
@@ -134,6 +136,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             self.get_mock_member(fake_user()),
             None
         ]
+        guild.fetch_member.side_effect = NotFound(mock.Mock(status=404), "Not found")
 
         actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([], [{"id": 63, "in_guild": False}], None)
@@ -158,6 +161,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             self.get_mock_member(updated_user),
             None
         ]
+        guild.fetch_member.side_effect = NotFound(mock.Mock(status=404), "Not found")
 
         actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([new_user], [{"id": 55, "name": "updated"}, {"id": 63, "in_guild": False}], None)
@@ -177,6 +181,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             self.get_mock_member(fake_user()),
             None
         ]
+        guild.fetch_member.side_effect = NotFound(mock.Mock(status=404), "Not found")
 
         actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([], [], None)
