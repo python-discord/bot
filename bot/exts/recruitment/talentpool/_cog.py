@@ -7,12 +7,12 @@ from typing import Optional, Union
 import discord
 from async_rediscache import RedisCache
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
-from bot.converters import MemberOrUser
+from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import scheduling, time
@@ -75,7 +75,7 @@ class TalentPool(Cog, name="Talentpool"):
         return True
 
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*STAFF_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
@@ -342,18 +342,70 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(":x: The specified user does not have an active nomination")
 
     @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*STAFF_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
         await ctx.send_help(ctx.command)
 
     @nomination_edit_group.command(name='reason')
-    @has_any_role(*MODERATION_ROLES)
-    async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: MemberOrUser, *, reason: str) -> None:
-        """Edits the reason of a specific nominator in a specific active nomination."""
+    @has_any_role(*STAFF_ROLES)
+    async def edit_reason_command(
+        self,
+        ctx: Context,
+        nominee_or_nomination_id: Union[UnambiguousMemberOrUser, int],
+        nominator: Optional[UnambiguousMemberOrUser] = None,
+        *,
+        reason: str
+    ) -> None:
+        """
+        Edit the nomination reason of a specific nominator for a given nomination.
+
+        If nominee_or_nomination_id resolves to a member or user, edit the currently active nomination for that person.
+        Otherwise, if it's an int, look up that nomination ID to edit.
+
+        If no nominator is specified, assume the invoker is editing their own nomination reason.
+        Otherwise, edit the reason from that specific nominator.
+
+        Raise a permission error if a non-mod staff member invokes this command on a
+        specific nomination ID, or with an nominator other than themselves.
+        """
+        # If not specified, assume the invoker is editing their own nomination reason.
+        nominator = nominator or ctx.author
+
+        if nominator != ctx.author or isinstance(nominee_or_nomination_id, int):
+            # Invoker has specified another nominator, or a specific nomination id
+            if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+                raise BadArgument(
+                    "Only moderators can edit specific nomination IDs, "
+                    "or the reason of a nominator other than themselves."
+                )
+
+        await self._edit_nomination_reason(
+            ctx,
+            target=nominee_or_nomination_id,
+            actor=nominator,
+            reason=reason
+        )
+
+    async def _edit_nomination_reason(
+        self,
+        ctx: Context,
+        target: Union[int, Member],
+        actor: MemberOrUser,
+        reason: str,
+    ) -> None:
+        """Edits a nomination reason in the database after validating the input."""
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
+        if isinstance(target, Member):
+            if nomination := self.cache.get(target.id):
+                nomination_id = nomination["id"]
+            else:
+                await ctx.send("No active nomination found for that member.")
+                return
+        else:
+            nomination_id = target
 
         try:
             nomination = await self.bot.api_client.get(f"bot/nominations/{nomination_id}")
