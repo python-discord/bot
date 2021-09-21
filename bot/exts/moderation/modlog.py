@@ -789,7 +789,7 @@ class ModLog(Cog, name="ModLog"):
             icon,
             colour,
             f"Thread {action}",
-            f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`) {action}"
+            f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`) was {action}"
         )
 
     @Cog.listener()
