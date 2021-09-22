@@ -390,11 +390,12 @@ class TalentPool(Cog, name="Talentpool"):
     async def _edit_nomination_reason(
         self,
         ctx: Context,
+        *,
         target: Union[int, Member],
         actor: MemberOrUser,
         reason: str,
     ) -> None:
-        """Edits a nomination reason in the database after validating the input."""
+        """Edit a nomination reason in the database after validating the input."""
         if len(reason) > REASON_MAX_CHARS:
             await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
