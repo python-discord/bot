@@ -72,7 +72,8 @@ class Information(Cog):
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
         if cog := self.bot.get_cog("Talentpool"):
-            talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
+            num_nominated = len(cog.cache) if cog.cache else "-"
+            talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
         if cog := self.bot.get_cog("Big Brother"):

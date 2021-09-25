@@ -8,6 +8,10 @@ on:
     types:
       - completed
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     environment: production
@@ -38,6 +42,6 @@ jobs:
         uses: Azure/k8s-deploy@v1
         with:
           manifests: |
-              bot/deployment.yaml
+              namespaces/default/bot/deployment.yaml
           images: 'ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}'
           kubectl-version: 'latest'

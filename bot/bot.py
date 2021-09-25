@@ -109,7 +109,7 @@ class Bot(commands.Bot):
     def create(cls) -> "Bot":
         """Create and return an instance of a Bot."""
         loop = asyncio.get_event_loop()
-        allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
+        allowed_roles = list({discord.Object(id_) for id_ in constants.MODERATION_ROLES})
 
         intents = discord.Intents.all()
         intents.presences = False

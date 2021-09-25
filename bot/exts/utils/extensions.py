@@ -36,7 +36,7 @@ class Extensions(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @group(name="extensions", aliases=("ext", "exts", "c", "cogs"), invoke_without_command=True)
+    @group(name="extensions", aliases=("ext", "exts", "c", "cog", "cogs"), invoke_without_command=True)
     async def extensions_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list loaded extensions."""
         await ctx.send_help(ctx.command)
