@@ -11,6 +11,7 @@ from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES
 from bot.converters import OffTopicName
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 log = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ class OffTopicNames(Cog):
         self.bot = bot
         self.updater_task = None
 
-        self.bot.loop.create_task(self.init_offtopic_updater())
+        scheduling.create_task(self.init_offtopic_updater(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel any running updater tasks on cog unload."""
@@ -62,7 +63,7 @@ class OffTopicNames(Cog):
         await self.bot.wait_until_guild_available()
         if self.updater_task is None:
             coro = update_names(self.bot)
-            self.updater_task = self.bot.loop.create_task(coro)
+            self.updater_task = scheduling.create_task(coro, event_loop=self.bot.loop)
 
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)

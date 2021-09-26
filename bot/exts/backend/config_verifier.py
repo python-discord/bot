@@ -4,7 +4,7 @@ from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
-
+from bot.utils import scheduling
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class ConfigVerifier(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.channel_verify_task = self.bot.loop.create_task(self.verify_channels())
+        self.channel_verify_task = scheduling.create_task(self.verify_channels(), event_loop=self.bot.loop)
 
     async def verify_channels(self) -> None:
         """

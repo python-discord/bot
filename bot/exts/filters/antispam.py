@@ -129,7 +129,11 @@ class AntiSpam(Cog):
         self.max_interval = max_interval_config['interval']
         self.cache = MessageCache(AntiSpamConfig.cache_size, newest_first=True)
 
-        self.bot.loop.create_task(self.alert_on_validation_error(), name="AntiSpam.alert_on_validation_error")
+        scheduling.create_task(
+            self.alert_on_validation_error(),
+            name="AntiSpam.alert_on_validation_error",
+            event_loop=self.bot.loop,
+        )
 
     @property
     def mod_log(self) -> ModLog:
