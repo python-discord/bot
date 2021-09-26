@@ -254,7 +254,20 @@ class AntiSpam(Cog):
                 for message in messages:
                     channel_messages[message.channel].append(message)
                 for channel, messages in channel_messages.items():
-                    await channel.delete_messages(messages)
+                    try:
+                        await channel.delete_messages(messages)
+                    except NotFound:
+                        # In the rare case where we found messages matching the
+                        # spam filter across multiple channels, it is possible
+                        # that a single channel will only contain a single message
+                        # to delete. If that should be the case, discord.py will
+                        # use the "delete single message" endpoint instead of the
+                        # bulk delete endpoint, and the single message deletion
+                        # endpoint will complain if you give it that does not exist.
+                        # As this means that we have no other message to delete in
+                        # this channel (and message deletes work per-channel),
+                        # we can just log an exception and carry on with business.
+                        log.info(f"Tried to delete message `{messages[0].id}`, but message could not be found.")
 
             # Otherwise, the bulk delete endpoint will throw up.
             # Delete the message directly instead.
