@@ -24,9 +24,10 @@ class StaleInventoryNotifier:
     """Handle sending notifications about stale inventories through `DocItem`s to dev log."""
 
     def __init__(self):
-        self._init_task = bot.instance.loop.create_task(
+        self._init_task = scheduling.create_task(
             self._init_channel(),
-            name="StaleInventoryNotifier channel init"
+            name="StaleInventoryNotifier channel init",
+            event_loop=bot.instance.loop,
         )
         self._warned_urls = set()
 

@@ -15,7 +15,7 @@ from bot.constants import (
 )
 from bot.converters import Expiry
 from bot.pagination import LinePaginator
-from bot.utils.scheduling import Scheduler
+from bot.utils import scheduling
 from bot.utils.time import discord_timestamp, format_infraction_with_duration
 
 log = logging.getLogger(__name__)
@@ -30,8 +30,8 @@ class Stream(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
-        self.reload_task = self.bot.loop.create_task(self._reload_tasks_from_redis())
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
+        self.reload_task = scheduling.create_task(self._reload_tasks_from_redis(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel all scheduled tasks."""

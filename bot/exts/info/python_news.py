@@ -11,6 +11,7 @@ from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils import scheduling
 from bot.utils.webhooks import send_webhook
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
@@ -41,8 +42,8 @@ class PythonNews(Cog):
         self.webhook_names = {}
         self.webhook: t.Optional[discord.Webhook] = None
 
-        self.bot.loop.create_task(self.get_webhook_names())
-        self.bot.loop.create_task(self.get_webhook_and_channel())
+        scheduling.create_task(self.get_webhook_names(), event_loop=self.bot.loop)
+        scheduling.create_task(self.get_webhook_and_channel(), event_loop=self.bot.loop)
 
     async def start_tasks(self) -> None:
         """Start the tasks for fetching new PEPs and mailing list messages."""
