@@ -6,7 +6,7 @@ from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
-from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
+from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
@@ -395,7 +395,7 @@ class TalentPool(Cog, name="Talentpool"):
         self,
         ctx: Context,
         *,
-        target: Union[int, Member],
+        target: Union[int, Member, User],
         actor: MemberOrUser,
         reason: str,
     ) -> None:
@@ -403,14 +403,14 @@ class TalentPool(Cog, name="Talentpool"):
         if len(reason) > REASON_MAX_CHARS:
             await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
-        if isinstance(target, Member):
+        if isinstance(target, int):
+            nomination_id = target
+        else:
             if nomination := self.cache.get(target.id):
                 nomination_id = nomination["id"]
             else:
                 await ctx.send("No active nomination found for that member.")
                 return
-        else:
-            nomination_id = target
 
         try:
             nomination = await self.bot.api_client.get(f"bot/nominations/{nomination_id}")
