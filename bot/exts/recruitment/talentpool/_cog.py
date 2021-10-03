@@ -16,6 +16,7 @@ from bot.converters import MemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
 from bot.utils import scheduling, time
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import get_time_delta
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
@@ -175,7 +176,7 @@ class TalentPool(Cog, name="Talentpool"):
         lines = []
 
         for user_id, user_data in nominations:
-            member = ctx.guild.get_member(user_id)
+            member = await get_or_fetch_member(ctx.guild, user_id)
             line = f"• `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
@@ -314,7 +315,7 @@ class TalentPool(Cog, name="Talentpool"):
             title=f"Nominations for {user.display_name} `({user.id})`",
             color=Color.blue()
         )
-        lines = [self._nomination_to_string(nomination) for nomination in result]
+        lines = [await self._nomination_to_string(nomination) for nomination in result]
         await LinePaginator.paginate(
             lines,
             ctx=ctx,
@@ -495,13 +496,13 @@ class TalentPool(Cog, name="Talentpool"):
 
         return True
 
-    def _nomination_to_string(self, nomination_object: dict) -> str:
+    async def _nomination_to_string(self, nomination_object: dict) -> str:
         """Creates a string representation of a nomination."""
         guild = self.bot.get_guild(Guild.id)
         entries = []
         for site_entry in nomination_object["entries"]:
             actor_id = site_entry["actor"]
-            actor = guild.get_member(actor_id)
+            actor = await get_or_fetch_member(guild, actor_id)
 
             reason = site_entry["reason"] or "*None*"
             created = time.format_infraction(site_entry["inserted_at"])

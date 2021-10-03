@@ -19,6 +19,7 @@ from bot.pagination import LinePaginator
 from bot.utils import scheduling
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import TimestampFormats, discord_timestamp
@@ -136,11 +137,12 @@ class Reminders(Cog):
             await send_denial(ctx, f"You can't mention other {disallowed_mentions} in your reminder!")
             return False
 
-    def get_mentionables(self, mention_ids: t.List[int]) -> t.Iterator[Mentionable]:
+    async def get_mentionables(self, mention_ids: t.List[int]) -> t.Iterator[Mentionable]:
         """Converts Role and Member ids to their corresponding objects if possible."""
         guild = self.bot.get_guild(Guild.id)
         for mention_id in mention_ids:
-            if mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id)):
+            member = await get_or_fetch_member(guild, mention_id)
+            if mentionable := (member or guild.get_role(mention_id)):
                 yield mentionable
 
     def schedule_reminder(self, reminder: dict) -> None:
@@ -194,9 +196,9 @@ class Reminders(Cog):
         embed.description = f"Here's your reminder: {reminder['content']}"
 
         # Here the jump URL is in the format of base_url/guild_id/channel_id/message_id
-        additional_mentions = ' '.join(
-            mentionable.mention for mentionable in self.get_mentionables(reminder["mentions"])
-        )
+        additional_mentions = ' '.join([
+            mentionable.mention async for mentionable in self.get_mentionables(reminder["mentions"])
+        ])
 
         jump_url = reminder.get("jump_url")
         embed.description += f"\n[Jump back to when you created the reminder]({jump_url})"
@@ -337,10 +339,10 @@ class Reminders(Cog):
             remind_datetime = isoparse(remind_at).replace(tzinfo=None)
             time = discord_timestamp(remind_datetime, TimestampFormats.RELATIVE)
 
-            mentions = ", ".join(
+            mentions = ", ".join([
                 # Both Role and User objects have the `name` attribute
-                mention.name for mention in self.get_mentionables(mentions)
-            )
+                mention.name async for mention in self.get_mentionables(mentions)
+            ])
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
             text = textwrap.dedent(f"""

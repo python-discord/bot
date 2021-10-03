@@ -14,6 +14,7 @@ from bot.bot import Bot
 from bot.converters import Duration, Expiry
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 from bot.utils.time import format_infraction
 
@@ -198,7 +199,7 @@ class Superstarify(InfractionScheduler, Cog):
             return
 
         guild = self.bot.get_guild(constants.Guild.id)
-        user = guild.get_member(infraction["user"])
+        user = await get_or_fetch_member(guild, infraction["user"])
 
         # Don't bother sending a notification if the user left the guild.
         if not user:
