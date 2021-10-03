@@ -372,9 +372,13 @@ class TalentPool(Cog, name="Talentpool"):
         # If not specified, assume the invoker is editing their own nomination reason.
         nominator = nominator or ctx.author
 
-        if nominator != ctx.author or isinstance(nominee_or_nomination_id, int):
-            # Invoker has specified another nominator, or a specific nomination id
-            if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            if ctx.channel.id != Channels.nominations:
+                await ctx.send(f":x: Nomination edits must be run in the <#{Channels.nominations}> channel")
+                return
+
+            if nominator != ctx.author or isinstance(nominee_or_nomination_id, int):
+                # Invoker has specified another nominator, or a specific nomination id
                 raise BadArgument(
                     "Only moderators can edit specific nomination IDs, "
                     "or the reason of a nominator other than themselves."
