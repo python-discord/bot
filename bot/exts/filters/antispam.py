@@ -83,7 +83,11 @@ class DeletionContext:
         )
 
         # For multiple messages or those with excessive newlines, use the logs API
-        if len(self.messages) > 1 or 'newlines' in self.rules:
+        if any((
+            len(self.messages) > 1,
+            self.messages[0].attachments,
+            self.messages[0].count('\n') > 15
+        )):
             url = await modlog.upload_log(self.messages.values(), actor_id, self.attachments)
             mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
         else:
@@ -93,9 +97,11 @@ class DeletionContext:
             remaining_chars = 4080 - len(mod_alert_message)
 
             if len(content) > remaining_chars:
-                content = content[:remaining_chars] + "..."
+                url = await modlog.upload_log([message], actor_id, self.attachments)
+                log_site_msg = f"The full message can be found [here]({url})"
+                content = content[:remaining_chars - (3 + len(log_site_msg))] + "..."
 
-            mod_alert_message += f"{content}"
+            mod_alert_message += content
 
         *_, last_message = self.messages.values()
         await modlog.send_log_message(
