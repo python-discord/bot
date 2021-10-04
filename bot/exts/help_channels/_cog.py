@@ -14,7 +14,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
-from bot.utils import channel as channel_utils, lock, scheduling
+from bot.utils import channel as channel_utils, lock, members, scheduling
 
 log = logging.getLogger(__name__)
 
@@ -278,13 +278,13 @@ class HelpChannels(commands.Cog):
         log.trace("Getting the CategoryChannel objects for the help categories.")
 
         try:
-            self.available_category = await channel_utils.try_get_channel(
+            self.available_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_available
             )
-            self.in_use_category = await channel_utils.try_get_channel(
+            self.in_use_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_in_use
             )
-            self.dormant_category = await channel_utils.try_get_channel(
+            self.dormant_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_dormant
             )
         except discord.HTTPException:
@@ -434,7 +434,7 @@ class HelpChannels(commands.Cog):
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
+        claimant = await members.get_or_fetch_member(self.bot.get_guild(constants.Guild.id), claimant_id)
         if claimant is None:
             log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
         else:
