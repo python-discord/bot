@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from discord.ext import commands
 
-from bot import log
+from bot import log, typing
 from bot.command import Command
 
 if TYPE_CHECKING:
@@ -16,6 +16,8 @@ log.setup()
 # On Windows, the selector event loop is required for aiodns.
 if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+typing.patch_typing()
 
 # Monkey-patch discord.py decorators to use the Command subclass which supports root aliases.
 # Must be patched before any cogs are added.
