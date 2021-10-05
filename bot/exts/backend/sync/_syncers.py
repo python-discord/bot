@@ -9,6 +9,7 @@ from more_itertools import chunked
 
 import bot
 from bot.api import ResponseCodeError
+from bot.utils.members import get_or_fetch_member
 
 log = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ class UserSyncer(Syncer):
                 if db_user[db_field] != guild_value:
                     updated_fields[db_field] = guild_value
 
-            if guild_user := guild.get_member(db_user["id"]):
+            if guild_user := await get_or_fetch_member(guild, db_user["id"]):
                 seen_guild_users.add(guild_user.id)
 
                 maybe_update("name", guild_user.name)

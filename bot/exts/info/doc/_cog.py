@@ -17,6 +17,7 @@ from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
@@ -75,9 +76,10 @@ class DocCog(commands.Cog):
         self.refresh_event.set()
         self.symbol_get_event = SharedEvent()
 
-        self.init_refresh_task = self.bot.loop.create_task(
+        self.init_refresh_task = scheduling.create_task(
             self.init_refresh_inventory(),
-            name="Doc inventory init"
+            name="Doc inventory init",
+            event_loop=self.bot.loop,
         )
 
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
@@ -461,4 +463,4 @@ class DocCog(commands.Cog):
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
         self.init_refresh_task.cancel()
-        asyncio.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
+        scheduling.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")

@@ -129,7 +129,11 @@ class AntiSpam(Cog):
         self.max_interval = max_interval_config['interval']
         self.cache = MessageCache(AntiSpamConfig.cache_size, newest_first=True)
 
-        self.bot.loop.create_task(self.alert_on_validation_error(), name="AntiSpam.alert_on_validation_error")
+        scheduling.create_task(
+            self.alert_on_validation_error(),
+            name="AntiSpam.alert_on_validation_error",
+            event_loop=self.bot.loop,
+        )
 
     @property
     def mod_log(self) -> ModLog:
@@ -162,7 +166,7 @@ class AntiSpam(Cog):
             not message.guild
             or message.guild.id != GuildConfig.id
             or message.author.bot
-            or (hasattr(message.channel, "category") and message.channel.category.name == JAM_CATEGORY_NAME)
+            or (getattr(message.channel, "category", None) and message.channel.category.name == JAM_CATEGORY_NAME)
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
         ):
@@ -250,7 +254,20 @@ class AntiSpam(Cog):
                 for message in messages:
                     channel_messages[message.channel].append(message)
                 for channel, messages in channel_messages.items():
-                    await channel.delete_messages(messages)
+                    try:
+                        await channel.delete_messages(messages)
+                    except NotFound:
+                        # In the rare case where we found messages matching the
+                        # spam filter across multiple channels, it is possible
+                        # that a single channel will only contain a single message
+                        # to delete. If that should be the case, discord.py will
+                        # use the "delete single message" endpoint instead of the
+                        # bulk delete endpoint, and the single message deletion
+                        # endpoint will complain if you give it that does not exist.
+                        # As this means that we have no other message to delete in
+                        # this channel (and message deletes work per-channel),
+                        # we can just log an exception and carry on with business.
+                        log.info(f"Tried to delete message `{messages[0].id}`, but message could not be found.")
 
             # Otherwise, the bulk delete endpoint will throw up.
             # Delete the message directly instead.

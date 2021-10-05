@@ -3,6 +3,8 @@ import textwrap
 import unittest
 from unittest.mock import ANY, AsyncMock, MagicMock, Mock, patch
 
+from discord.errors import NotFound
+
 from bot.constants import Event
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
@@ -195,6 +197,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
     async def test_voice_unban_user_not_found(self):
         """Should include info to return dict when user was not found from guild."""
         self.guild.get_member.return_value = None
+        self.guild.fetch_member.side_effect = NotFound(Mock(status=404), "Not found")
         result = await self.cog.pardon_voice_ban(self.user.id, self.guild)
         self.assertEqual(result, {"Info": "User was not found in the guild."})
 
