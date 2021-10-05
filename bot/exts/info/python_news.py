@@ -11,6 +11,7 @@ from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
+from bot.utils import scheduling
 from bot.utils.webhooks import send_webhook
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
@@ -21,6 +22,14 @@ MAILMAN_PROFILE_URL = "https://mail.python.org/archives/users/{id}/"
 THREAD_URL = "https://mail.python.org/archives/list/{list}@python.org/thread/{id}/"
 
 AVATAR_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
+
+# By first matching everything within a codeblock,
+# when matching markdown it won't be within a codeblock
+MARKDOWN_REGEX = re.compile(
+    r"(?P<codeblock>`.*?`)"  # matches everything within a codeblock
+    r"|(?P<markdown>(?<!\\)[_|])",  # matches unescaped `_` and `|`
+    re.DOTALL  # required to support multi-line codeblocks
+)
 
 log = logging.getLogger(__name__)
 
@@ -33,8 +42,8 @@ class PythonNews(Cog):
         self.webhook_names = {}
         self.webhook: t.Optional[discord.Webhook] = None
 
-        self.bot.loop.create_task(self.get_webhook_names())
-        self.bot.loop.create_task(self.get_webhook_and_channel())
+        scheduling.create_task(self.get_webhook_names(), event_loop=self.bot.loop)
+        scheduling.create_task(self.get_webhook_and_channel(), event_loop=self.bot.loop)
 
     async def start_tasks(self) -> None:
         """Start the tasks for fetching new PEPs and mailing list messages."""
@@ -75,8 +84,11 @@ class PythonNews(Cog):
 
     @staticmethod
     def escape_markdown(content: str) -> str:
-        """Escape the markdown underlines and spoilers."""
-        return re.sub(r"[_|]", lambda match: "\\" + match[0], content)
+        """Escape the markdown underlines and spoilers that aren't in codeblocks."""
+        return MARKDOWN_REGEX.sub(
+            lambda match: match.group("codeblock") or "\\" + match.group("markdown"),
+            content
+        )
 
     async def post_pep_news(self) -> None:
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
@@ -108,7 +120,7 @@ class PythonNews(Cog):
 
             # Build an embed and send a webhook
             embed = discord.Embed(
-                title=new["title"],
+                title=self.escape_markdown(new["title"]),
                 description=self.escape_markdown(new["summary"]),
                 timestamp=new_datetime,
                 url=new["link"],
@@ -128,7 +140,7 @@ class PythonNews(Cog):
             self.bot.stats.incr("python_news.posted.pep")
 
             if msg.channel.is_news():
-                log.trace("Publishing PEP annnouncement because it was in a news channel")
+                log.trace("Publishing PEP announcement because it was in a news channel")
                 await msg.publish()
 
         # Apply new sent news to DB to avoid duplicate sending
@@ -178,7 +190,7 @@ class PythonNews(Cog):
 
                 # Build an embed and send a message to the webhook
                 embed = discord.Embed(
-                    title=thread_information["subject"],
+                    title=self.escape_markdown(thread_information["subject"]),
                     description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
                     timestamp=new_date,
                     url=link,

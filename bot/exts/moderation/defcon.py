@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import traceback
 from collections import namedtuple
@@ -17,6 +16,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
+from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import (
@@ -69,7 +69,7 @@ class Defcon(Cog):
 
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        self.bot.loop.create_task(self._sync_settings())
+        scheduling.create_task(self._sync_settings(), event_loop=self.bot.loop)
 
     @property
     def mod_log(self) -> ModLog:
@@ -205,7 +205,7 @@ class Defcon(Cog):
         new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {humanize_delta(self.threshold) if self.threshold else '-'})"
 
         self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
-        asyncio.create_task(self.channel.edit(topic=new_topic))
+        scheduling.create_task(self.channel.edit(topic=new_topic))
 
     @defcon_settings.atomic_transaction
     async def _update_threshold(self, author: User, threshold: relativedelta, expiry: Optional[Expiry] = None) -> None:

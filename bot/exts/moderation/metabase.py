@@ -14,7 +14,7 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Metabase as MetabaseConfig, Roles
 from bot.converters import allowed_strings
-from bot.utils import send_to_paste_service
+from bot.utils import scheduling, send_to_paste_service
 from bot.utils.channel import is_mod_channel
 from bot.utils.scheduling import Scheduler
 
@@ -40,7 +40,7 @@ class Metabase(Cog):
 
         self.exports: Dict[int, List[Dict]] = {}  # Saves the output of each question, so internal eval can access it
 
-        self.init_task = self.bot.loop.create_task(self.init_cog())
+        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Handle ClientResponseError errors locally to invalidate token if needed."""

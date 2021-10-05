@@ -17,6 +17,7 @@ from bot.bot import Bot
 from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, MODERATION_ROLES
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
+from bot.utils import scheduling
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +127,7 @@ class Branding(commands.Cog):
         self.bot = bot
         self.repository = BrandingRepository(bot)
 
-        self.bot.loop.create_task(self.maybe_start_daemon())  # Start depending on cache.
+        scheduling.create_task(self.maybe_start_daemon(), event_loop=self.bot.loop)  # Start depending on cache.
 
     # region: Internal logic & state management
 

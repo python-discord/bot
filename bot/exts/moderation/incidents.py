@@ -9,6 +9,7 @@ from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
+from bot.utils import scheduling
 from bot.utils.messages import sub_clyde
 
 log = logging.getLogger(__name__)
@@ -190,7 +191,7 @@ class Incidents(Cog):
         self.bot = bot
 
         self.event_lock = asyncio.Lock()
-        self.crawl_task = self.bot.loop.create_task(self.crawl_incidents())
+        self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
 
     async def crawl_incidents(self) -> None:
         """
@@ -275,7 +276,7 @@ class Incidents(Cog):
             return payload.message_id == incident.id
 
         coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
-        return self.bot.loop.create_task(coroutine)
+        return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """

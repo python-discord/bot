@@ -235,11 +235,16 @@ class Inventory(Converter):
     async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
-        if (inventory := await _inventory_parser.fetch_inventory(url)) is None:
-            raise BadArgument(
-                f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
-            )
-        return url, inventory
+        try:
+            inventory = await _inventory_parser.fetch_inventory(url)
+        except _inventory_parser.InvalidHeaderError:
+            raise BadArgument("Unable to parse inventory because of invalid header, check if URL is correct.")
+        else:
+            if inventory is None:
+                raise BadArgument(
+                    f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+                )
+            return url, inventory
 
 
 class Snowflake(IDConverter):
@@ -392,7 +397,8 @@ class Duration(DurationDelta):
 class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
-    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
+    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-<>"
+    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞"
 
     @classmethod
     def translate_name(cls, name: str, *, from_unicode: bool = True) -> str:
@@ -402,9 +408,9 @@ class OffTopicName(Converter):
         If `from_unicode` is True, the name is translated from a discord-safe format, back to normalized text.
         """
         if from_unicode:
-            table = str.maketrans(cls.ALLOWED_CHARACTERS, '𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-')
+            table = str.maketrans(cls.ALLOWED_CHARACTERS, cls.TRANSLATED_CHARACTERS)
         else:
-            table = str.maketrans('𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-', cls.ALLOWED_CHARACTERS)
+            table = str.maketrans(cls.TRANSLATED_CHARACTERS, cls.ALLOWED_CHARACTERS)
 
         return name.translate(table)
 
