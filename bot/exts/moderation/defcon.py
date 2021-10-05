@@ -188,8 +188,6 @@ class Defcon(Cog):
         permissions.update(
             send_messages=False,
             add_reactions=False,
-            create_private_threads=False,
-            create_public_threads=False,
             send_messages_in_threads=False,
             connect=False
         )
@@ -206,8 +204,6 @@ class Defcon(Cog):
         permissions.update(
             send_messages=True,
             add_reactions=True,
-            create_private_threads=None,
-            create_public_threads=None,
             send_messages_in_threads=True,
             connect=True
         )
