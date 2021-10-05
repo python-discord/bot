@@ -9,8 +9,6 @@ the custom configuration. Any settings left
 out in the custom user configuration will stay
 their default values from `config-default.yml`.
 """
-
-import logging
 import os
 from collections.abc import Mapping
 from enum import Enum
@@ -24,8 +22,6 @@ try:
     dotenv.load_dotenv()
 except ModuleNotFoundError:
     pass
-
-log = logging.getLogger(__name__)
 
 
 def _env_var_constructor(loader, node):
@@ -104,7 +100,7 @@ def _recursive_update(original, new):
 
 
 if Path("config.yml").exists():
-    log.info("Found `config.yml` file, loading constants from it.")
+    print("Found `config.yml` file, loading constants from it.")
     with open("config.yml", encoding="UTF-8") as f:
         user_config = yaml.safe_load(f)
     _recursive_update(_CONFIG_YAML, user_config)
@@ -123,11 +119,11 @@ def check_required_keys(keys):
                 if lookup is None:
                     raise KeyError(key)
         except KeyError:
-            log.critical(
+            raise (
                 f"A configuration for `{key_path}` is required, but was not found. "
                 "Please set it in `config.yml` or setup an environment variable and try again."
             )
-            raise
+
 
 
 try:
@@ -186,8 +182,8 @@ class YAMLGetter(type):
                 (cls.section, cls.subsection, name)
                 if cls.subsection is not None else (cls.section, name)
             )
-            # Only an INFO log since this can be caught through `hasattr` or `getattr`.
-            log.info(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            # Only an print since this can be caught through `hasattr` or `getattr`.
+            print(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
             raise AttributeError(repr(name)) from e
 
     def __getitem__(cls, name):

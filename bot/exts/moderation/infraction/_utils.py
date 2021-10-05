@@ -1,4 +1,3 @@
-import logging
 import typing as t
 from datetime import datetime
 
@@ -9,8 +8,9 @@ from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
 from bot.converters import MemberOrUser
 from bot.errors import InvalidInfractedUserError
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # apply icon, pardon icon
 INFRACTION_ICONS = {

@@ -1,10 +1,11 @@
-import logging
 from datetime import datetime, timedelta
 
 from discord import Forbidden, http
 from discord.ext import commands
 
-log = logging.getLogger(__name__)
+from bot.log import get_logger
+
+log = get_logger(__name__)
 
 
 class Command(commands.Command):

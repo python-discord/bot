@@ -1,13 +1,12 @@
-import logging
-
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import URLs
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 BASE_URL = f"{URLs.site_schema}{URLs.site}"
 

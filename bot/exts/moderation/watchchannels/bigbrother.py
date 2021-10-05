@@ -1,4 +1,3 @@
-import logging
 import textwrap
 from collections import ChainMap
 
@@ -9,8 +8,9 @@ from bot.constants import Channels, MODERATION_ROLES, Webhooks
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction._utils import post_infraction
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class BigBrother(WatchChannel, Cog, name="Big Brother"):

@@ -56,7 +56,7 @@ def setup() -> None:
     file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7, encoding="utf8")
     file_handler.setFormatter(log_format)
 
-    root_log = logging.getLogger()
+    root_log = get_logger()
     root_log.addHandler(file_handler)
 
     if "COLOREDLOGS_LEVEL_STYLES" not in os.environ:
@@ -73,13 +73,13 @@ def setup() -> None:
     coloredlogs.install(level=TRACE_LEVEL, logger=root_log, stream=sys.stdout)
 
     root_log.setLevel(logging.DEBUG if constants.DEBUG_MODE else logging.INFO)
-    logging.getLogger("discord").setLevel(logging.WARNING)
-    logging.getLogger("websockets").setLevel(logging.WARNING)
-    logging.getLogger("chardet").setLevel(logging.WARNING)
-    logging.getLogger("async_rediscache").setLevel(logging.WARNING)
+    get_logger("discord").setLevel(logging.WARNING)
+    get_logger("websockets").setLevel(logging.WARNING)
+    get_logger("chardet").setLevel(logging.WARNING)
+    get_logger("async_rediscache").setLevel(logging.WARNING)
 
     # Set back to the default of INFO even if asyncio's debug mode is enabled.
-    logging.getLogger("asyncio").setLevel(logging.INFO)
+    get_logger("asyncio").setLevel(logging.INFO)
 
     _set_trace_loggers()
 
@@ -116,13 +116,13 @@ def _set_trace_loggers() -> None:
     level_filter = constants.Bot.trace_loggers
     if level_filter:
         if level_filter.startswith("*"):
-            logging.getLogger().setLevel(TRACE_LEVEL)
+            get_logger().setLevel(TRACE_LEVEL)
 
         elif level_filter.startswith("!"):
-            logging.getLogger().setLevel(TRACE_LEVEL)
+            get_logger().setLevel(TRACE_LEVEL)
             for logger_name in level_filter.strip("!,").split(","):
-                logging.getLogger(logger_name).setLevel(logging.DEBUG)
+                get_logger(logger_name).setLevel(logging.DEBUG)
 
         else:
             for logger_name in level_filter.strip(",").split(","):
-                logging.getLogger(logger_name).setLevel(TRACE_LEVEL)
+                get_logger(logger_name).setLevel(TRACE_LEVEL)

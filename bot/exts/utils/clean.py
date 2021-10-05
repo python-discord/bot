@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 from typing import Iterable, Optional
@@ -12,8 +11,9 @@ from bot.constants import (
     Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 )
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Clean(Cog):

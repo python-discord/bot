@@ -1,12 +1,11 @@
-import logging
-
 from more_itertools import ilen
 
 import bot
 from bot import constants
 from bot.exts.help_channels import _caches, _channel
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def report_counts() -> None:
