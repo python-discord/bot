@@ -119,11 +119,10 @@ def check_required_keys(keys):
                 if lookup is None:
                     raise KeyError(key)
         except KeyError:
-            raise (
+            raise KeyError(
                 f"A configuration for `{key_path}` is required, but was not found. "
                 "Please set it in `config.yml` or setup an environment variable and try again."
             )
-
 
 
 try:
@@ -182,7 +181,6 @@ class YAMLGetter(type):
                 (cls.section, cls.subsection, name)
                 if cls.subsection is not None else (cls.section, name)
             )
-            # Only an print since this can be caught through `hasattr` or `getattr`.
             print(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
             raise AttributeError(repr(name)) from e
 
