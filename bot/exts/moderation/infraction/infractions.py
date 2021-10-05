@@ -344,7 +344,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Will also remove the banned user from the Big Brother watch list if applicable.
         """
-        if hasattr(user, 'top_role') and user.top_role >= ctx.me.top_role:
+        if isinstance(user, Member) and user.top_role >= ctx.me.top_role:
             await ctx.send(":x: I can't ban users above or equal to me in the role hierarchy.")
             return
 
@@ -527,7 +527,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
         if isinstance(error, commands.BadUnionArgument):
-            if discord.User in error.converters or discord.Member in error.converters:
+            if discord.User in error.converters or Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 
