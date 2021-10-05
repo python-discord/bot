@@ -279,7 +279,10 @@ def _get_mock_loop() -> unittest.mock.Mock:
     # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
     # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
     # to prevent "has not been awaited"-warnings.
-    loop.create_task.side_effect = lambda coroutine: coroutine.close()
+    def mock_create_task(coroutine, **kwargs):
+        coroutine.close()
+        return unittest.mock.Mock()
+    loop.create_task.side_effect = mock_create_task
 
     return loop
 

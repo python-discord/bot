@@ -11,6 +11,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import Emojis, Roles
 from bot.exts.events.code_jams import _channels
+from bot.utils.members import get_or_fetch_member
 from bot.utils.services import send_to_paste_service
 
 log = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class CodeJams(commands.Cog):
             reader = csv.DictReader(csv_file.splitlines())
 
             for row in reader:
-                member = ctx.guild.get_member(int(row["Team Member Discord ID"]))
+                member = await get_or_fetch_member(ctx.guild, int(row["Team Member Discord ID"]))
 
                 if member is None:
                     log.trace(f"Got an invalid member ID: {row['Team Member Discord ID']}")
@@ -69,8 +70,8 @@ class CodeJams(commands.Cog):
 
             team_leaders = await ctx.guild.create_role(name="Code Jam Team Leaders", colour=TEAM_LEADERS_COLOUR)
 
-            for team_name, members in teams.items():
-                await _channels.create_team_channel(ctx.guild, team_name, members, team_leaders)
+            for team_name, team_members in teams.items():
+                await _channels.create_team_channel(ctx.guild, team_name, team_members, team_leaders)
 
             await _channels.create_team_leader_channel(ctx.guild, team_leaders)
             await ctx.send(f"{Emojis.check_mark} Created Code Jam with {len(teams)} teams.")

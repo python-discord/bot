@@ -14,6 +14,7 @@ from bot.converters import Duration, Expiry, MemberOrUser, UnambiguousMemberOrUs
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
@@ -430,7 +431,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         notify: bool = True
     ) -> t.Dict[str, str]:
         """Remove a user's muted role, optionally DM them a notification, and return a log dict."""
-        user = guild.get_member(user_id)
+        user = await get_or_fetch_member(guild, user_id)
         log_text = {}
 
         if user:
@@ -478,7 +479,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         notify: bool = True
     ) -> t.Dict[str, str]:
         """Optionally DM the user a pardon notification and return a log dict."""
-        user = guild.get_member(user_id)
+        user = await get_or_fetch_member(guild, user_id)
         log_text = {}
 
         if user:

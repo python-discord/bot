@@ -15,7 +15,8 @@ from bot.constants import (
 )
 from bot.converters import Expiry
 from bot.pagination import LinePaginator
-from bot.utils.scheduling import Scheduler
+from bot.utils import scheduling
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import discord_timestamp, format_infraction_with_duration
 
 log = logging.getLogger(__name__)
@@ -30,8 +31,8 @@ class Stream(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
-        self.reload_task = self.bot.loop.create_task(self._reload_tasks_from_redis())
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
+        self.reload_task = scheduling.create_task(self._reload_tasks_from_redis(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel all scheduled tasks."""
@@ -47,23 +48,17 @@ class Stream(commands.Cog):
         """Reload outstanding tasks from redis on startup, delete the task if the member has since left the server."""
         await self.bot.wait_until_guild_available()
         items = await self.task_cache.items()
+        guild = self.bot.get_guild(Guild.id)
         for key, value in items:
-            member = self.bot.get_guild(Guild.id).get_member(key)
+            member = await get_or_fetch_member(guild, key)
 
             if not member:
-                # Member isn't found in the cache
-                try:
-                    member = await self.bot.get_guild(Guild.id).fetch_member(key)
-                except discord.errors.NotFound:
-                    log.debug(
-                        f"Member {key} left the guild before we could schedule "
-                        "the revoking of their streaming permissions."
-                    )
-                    await self.task_cache.delete(key)
-                    continue
-                except discord.HTTPException:
-                    log.exception(f"Exception while trying to retrieve member {key} from Discord.")
-                    continue
+                log.debug(
+                    "User with ID %d left the guild before their streaming permissions could be revoked.",
+                    key
+                )
+                await self.task_cache.delete(key)
+                continue
 
             revoke_time = Arrow.utcfromtimestamp(value)
             log.debug(f"Scheduling {member} ({member.id}) to have streaming permission revoked at {revoke_time}")

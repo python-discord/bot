@@ -16,6 +16,7 @@ from discord.ext.commands import Context
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import get_time_delta, time_since
@@ -57,10 +58,8 @@ class Reviewer:
         """Reschedule all active nominations to be reviewed at the appropriate time."""
         log.trace("Rescheduling reviews")
         await self.bot.wait_until_guild_available()
-        # TODO Once the watch channel is removed, this can be done in a smarter way, e.g create a sync function.
-        await self._pool.fetch_user_cache()
 
-        for user_id, user_data in self._pool.watched_users.items():
+        for user_id, user_data in self._pool.cache.items():
             if not user_data["reviewed"]:
                 self.schedule_review(user_id)
 
@@ -68,7 +67,7 @@ class Reviewer:
         """Schedules a single user for review."""
         log.trace(f"Scheduling review of user with ID {user_id}")
 
-        user_data = self._pool.watched_users.get(user_id)
+        user_data = self._pool.cache.get(user_id)
         inserted_at = isoparse(user_data['inserted_at']).replace(tzinfo=None)
         review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
 
@@ -96,24 +95,24 @@ class Reviewer:
                 await last_message.add_reaction(reaction)
 
         if update_database:
-            nomination = self._pool.watched_users.get(user_id)
-            await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
+            nomination = self._pool.cache.get(user_id)
+            await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
 
     async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji]]:
         """Format a generic review of a user and return it with the reviewed emoji."""
         log.trace(f"Formatting the review of {user_id}")
 
-        # Since `watched_users` is a defaultdict, we should take care
+        # Since `cache` is a defaultdict, we should take care
         # not to accidentally insert the IDs of users that have no
-        # active nominated by using the `watched_users.get(user_id)`
-        # instead of `watched_users[user_id]`.
-        nomination = self._pool.watched_users.get(user_id)
+        # active nominated by using the `cache.get(user_id)`
+        # instead of `cache[user_id]`.
+        nomination = self._pool.cache.get(user_id)
         if not nomination:
             log.trace(f"There doesn't appear to be an active nomination for {user_id}")
             return "", None
 
         guild = self.bot.get_guild(Guild.id)
-        member = guild.get_member(user_id)
+        member = await get_or_fetch_member(guild, user_id)
 
         if not member:
             return (
@@ -332,7 +331,7 @@ class Reviewer:
         """
         log.trace(f"Fetching the nomination history data for {member.id}'s review")
         history = await self.bot.api_client.get(
-            self._pool.api_endpoint,
+            "bot/nominations",
             params={
                 "user__id": str(member.id),
                 "active": "false",
@@ -390,18 +389,18 @@ class Reviewer:
         Returns True if the user was successfully marked as reviewed, False otherwise.
         """
         log.trace(f"Updating user {user_id} as reviewed")
-        await self._pool.fetch_user_cache()
-        if user_id not in self._pool.watched_users:
+        await self._pool.refresh_cache()
+        if user_id not in self._pool.cache:
             log.trace(f"Can't find a nominated user with id {user_id}")
             await ctx.send(f":x: Can't find a currently nominated user with id `{user_id}`")
             return False
 
-        nomination = self._pool.watched_users.get(user_id)
+        nomination = self._pool.cache.get(user_id)
         if nomination["reviewed"]:
             await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
             return False
 
-        await self.bot.api_client.patch(f"{self._pool.api_endpoint}/{nomination['id']}", json={"reviewed": True})
+        await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
         if user_id in self._review_scheduler:
             self._review_scheduler.cancel(user_id)
 

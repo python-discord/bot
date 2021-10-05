@@ -19,6 +19,7 @@ from bot.errors import NonExistentRoleError
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
 log = logging.getLogger(__name__)
@@ -46,13 +47,13 @@ class Information(Cog):
     @staticmethod
     def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
         """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
-        members = 0
+        member_count = 0
         for role_id in role_ids:
             if (role := guild.get_role(role_id)) is not None:
-                members += len(role.members)
+                member_count += len(role.members)
             else:
                 raise NonExistentRoleError(role_id)
-        return {name or role.name.title(): members}
+        return {name or role.name.title(): member_count}
 
     @staticmethod
     def get_member_counts(guild: Guild) -> dict[str, int]:
@@ -72,7 +73,8 @@ class Information(Cog):
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
         if cog := self.bot.get_cog("Talentpool"):
-            talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
+            num_nominated = len(cog.cache) if cog.cache else "-"
+            talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
         if cog := self.bot.get_cog("Big Brother"):
@@ -243,7 +245,7 @@ class Information(Cog):
 
     async def create_user_embed(self, ctx: Context, user: MemberOrUser) -> Embed:
         """Creates an embed containing information on the `user`."""
-        on_server = bool(ctx.guild.get_member(user.id))
+        on_server = bool(await get_or_fetch_member(ctx.guild, user.id))
 
         created = discord_timestamp(user.created_at, TimestampFormats.RELATIVE)
 

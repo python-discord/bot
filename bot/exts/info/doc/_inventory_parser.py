@@ -16,6 +16,10 @@ _V2_LINE_RE = re.compile(r'(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)')
 InventoryDict = DefaultDict[str, List[Tuple[str, str]]]
 
 
+class InvalidHeaderError(Exception):
+    """Raised when an inventory file has an invalid header."""
+
+
 class ZlibStreamReader:
     """Class used for decoding zlib data of a stream line by line."""
 
@@ -80,19 +84,25 @@ async def _fetch_inventory(url: str) -> InventoryDict:
         stream = response.content
 
         inventory_header = (await stream.readline()).decode().rstrip()
-        inventory_version = int(inventory_header[-1:])
-        await stream.readline()  # skip project name
-        await stream.readline()  # skip project version
+        try:
+            inventory_version = int(inventory_header[-1:])
+        except ValueError:
+            raise InvalidHeaderError("Unable to convert inventory version header.")
+
+        has_project_header = (await stream.readline()).startswith(b"# Project")
+        has_version_header = (await stream.readline()).startswith(b"# Version")
+        if not (has_project_header and has_version_header):
+            raise InvalidHeaderError("Inventory missing project or version header.")
 
         if inventory_version == 1:
             return await _load_v1(stream)
 
         elif inventory_version == 2:
             if b"zlib" not in await stream.readline():
-                raise ValueError(f"Invalid inventory file at url {url}.")
+                raise InvalidHeaderError("'zlib' not found in header of compressed inventory.")
             return await _load_v2(stream)
 
-        raise ValueError(f"Invalid inventory file at url {url}.")
+        raise InvalidHeaderError("Incompatible inventory version.")
 
 
 async def fetch_inventory(url: str) -> Optional[InventoryDict]:
@@ -115,6 +125,8 @@ async def fetch_inventory(url: str) -> Optional[InventoryDict]:
                 f"Failed to get inventory from {url}; "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
+        except InvalidHeaderError:
+            raise
         except Exception:
             log.exception(
                 f"An unexpected error has occurred during fetching of {url}; "

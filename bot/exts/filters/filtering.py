@@ -21,9 +21,9 @@ from bot.constants import (
 )
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
-from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -133,7 +133,7 @@ class Filtering(Cog):
             },
         }
 
-        self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
+        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -478,16 +478,12 @@ class Filtering(Cog):
         Second return value is a reason of URL blacklisting (can be None).
         """
         text = self.clean_input(text)
-        if not URL_RE.search(text):
-            return False, None
 
-        text = text.lower()
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
-
-        for url in domain_blacklist:
-            if url.lower() in text:
-                return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
-
+        for match in URL_RE.finditer(text):
+            for url in domain_blacklist:
+                if url.lower() in match.group(1).lower():
+                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod
