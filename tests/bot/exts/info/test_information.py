@@ -435,7 +435,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=0)
-        user.avatar.url = "avatar url"
+        user.display_avatar.url = "avatar url"
         embed = await self.cog.create_user_embed(ctx, user)
 
         self.assertEqual(embed.thumbnail.url, "avatar url")

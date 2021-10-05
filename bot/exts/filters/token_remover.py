@@ -108,7 +108,7 @@ class TokenRemover(Cog):
             colour=Colour(Colours.soft_red),
             title="Token removed!",
             text=log_message + "\n" + userid_message,
-            thumbnail=msg.author.avatar.url,
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=mention_everyone,
         )

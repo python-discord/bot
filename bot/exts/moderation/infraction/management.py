@@ -197,7 +197,7 @@ class ModManagement(commands.Cog):
 
         if user:
             user_text = messages.format_user(user)
-            thumbnail = user.avatar.url
+            thumbnail = user.display_avatar.url
         else:
             user_text = f"<@{user_id}>"
             thumbnail = None

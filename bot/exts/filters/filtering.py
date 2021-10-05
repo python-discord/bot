@@ -226,7 +226,7 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.avatar.url
+                thumbnail=member.display_avatar.url
             )
 
             # Update time when alert sent
@@ -386,7 +386,7 @@ class Filtering(Cog):
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
             text=message,
-            thumbnail=msg.author.avatar.url,
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,

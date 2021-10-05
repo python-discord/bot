@@ -103,7 +103,7 @@ class DeletionContext:
             colour=Colour(Colours.soft_red),
             title="Spam detected!",
             text=mod_alert_message,
-            thumbnail=last_message.author.avatar.url,
+            thumbnail=last_message.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=AntiSpamConfig.ping_everyone
         )

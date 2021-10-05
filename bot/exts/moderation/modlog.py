@@ -394,7 +394,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.user_ban, Colours.soft_red,
             "User banned", format_user(member),
-            thumbnail=member.avatar.url,
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
 
@@ -415,7 +415,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.sign_in, Colours.soft_green,
             "User joined", message,
-            thumbnail=member.avatar.url,
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
 
@@ -432,7 +432,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.sign_out, Colours.soft_red,
             "User left", format_user(member),
-            thumbnail=member.avatar.url,
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
 
@@ -449,7 +449,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
             "User unbanned", format_user(member),
-            thumbnail=member.avatar.url,
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.mod_log
         )
 
@@ -515,7 +515,7 @@ class ModLog(Cog, name="ModLog"):
             colour=Colour.blurple(),
             title="Member updated",
             text=message,
-            thumbnail=after.avatar.url,
+            thumbnail=after.display_avatar.url,
             channel_id=Channels.user_log
         )
 
@@ -886,7 +886,7 @@ class ModLog(Cog, name="ModLog"):
             colour=colour,
             title="Voice state updated",
             text=message,
-            thumbnail=member.avatar.url,
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.voice_log
         )
 
