@@ -12,7 +12,7 @@ def fake_user(**kwargs):
     kwargs.setdefault("id", 43)
     kwargs.setdefault("name", "bob the test man")
     kwargs.setdefault("discriminator", 1337)
-    kwargs.setdefault("roles", [666])
+    kwargs.setdefault("roles", [helpers.MockRole(id=666)])
     kwargs.setdefault("in_guild", True)
 
     return kwargs

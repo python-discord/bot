@@ -133,6 +133,10 @@ class Superstarify(InfractionScheduler, Cog):
         An optional reason can be provided, which would be added to a message stating their old nickname
         and linking to the nickname policy.
         """
+        if member.top_role >= ctx.me.top_role:
+            await ctx.send(":x: I can't starify users above or equal to me in the role hierarchy.")
+            return
+
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
 
