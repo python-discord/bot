@@ -46,6 +46,7 @@ RULE_FUNCTION_MAPPING = {
 @dataclass
 class DeletionContext:
     """Represents a Deletion Context for a single spam event."""
+
     members: frozenset[Member]
     triggered_in: TextChannel
     channels: set[TextChannel] = field(default_factory=set)
