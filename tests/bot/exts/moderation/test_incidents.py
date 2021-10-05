@@ -379,7 +379,7 @@ class TestArchive(TestIncidents):
         # Define our own `incident` to be archived
         incident = MockMessage(
             content="this is an incident",
-            author=MockUser(name="author_name", avatar=Mock(url="author_avatar")),
+            author=MockUser(name="author_name", display_avatar=Mock(url="author_avatar")),
             id=123,
         )
         built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
