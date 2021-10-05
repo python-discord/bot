@@ -82,28 +82,34 @@ class DeletionContext:
             f"**Rules:** {', '.join(rule for rule in self.rules)}\n"
         )
 
-        # For multiple messages or those with excessive newlines, use the logs API
-        if len(self.messages) > 1 or 'newlines' in self.rules:
+        messages_as_list = list(self.messages.values())
+        first_message = messages_as_list[0]
+        # For multiple messages and those with attachments or excessive newlines, use the logs API
+        if any((
+            len(messages_as_list) > 1,
+            len(first_message.attachments) > 0,
+            first_message.content.count('\n') > 15
+        )):
             url = await modlog.upload_log(self.messages.values(), actor_id, self.attachments)
             mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
         else:
             mod_alert_message += "Message:\n"
-            [message] = self.messages.values()
-            content = message.clean_content
+            content = first_message.clean_content
             remaining_chars = 4080 - len(mod_alert_message)
 
             if len(content) > remaining_chars:
-                content = content[:remaining_chars] + "..."
+                url = await modlog.upload_log([first_message], actor_id, self.attachments)
+                log_site_msg = f"The full message can be found [here]({url})"
+                content = content[:remaining_chars - (3 + len(log_site_msg))] + "..."
 
-            mod_alert_message += f"{content}"
+            mod_alert_message += content
 
-        *_, last_message = self.messages.values()
         await modlog.send_log_message(
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title="Spam detected!",
             text=mod_alert_message,
-            thumbnail=last_message.author.avatar_url_as(static_format="png"),
+            thumbnail=first_message.author.avatar_url_as(static_format="png"),
             channel_id=Channels.mod_alerts,
             ping_everyone=AntiSpamConfig.ping_everyone
         )
