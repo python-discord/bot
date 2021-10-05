@@ -85,7 +85,7 @@ class DeletionContext:
         # For multiple messages or those with excessive newlines, use the logs API
         if any((
             len(self.messages) > 1,
-            self.messages[0].attachments,
+            len(self.messages[0].attachments) > 0,
             self.messages[0].count('\n') > 15
         )):
             url = await modlog.upload_log(self.messages.values(), actor_id, self.attachments)
