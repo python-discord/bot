@@ -235,11 +235,16 @@ class Inventory(Converter):
     async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
-        if (inventory := await _inventory_parser.fetch_inventory(url)) is None:
-            raise BadArgument(
-                f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
-            )
-        return url, inventory
+        try:
+            inventory = await _inventory_parser.fetch_inventory(url)
+        except _inventory_parser.InvalidHeaderError:
+            raise BadArgument("Unable to parse inventory because of invalid header, check if URL is correct.")
+        else:
+            if inventory is None:
+                raise BadArgument(
+                    f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+                )
+            return url, inventory
 
 
 class Snowflake(IDConverter):
