@@ -149,19 +149,22 @@ class InfractionScheduler:
         else:
             expiry_msg = f" until {expiry}" if expiry else " permanently"
 
-        dm_result = constants.Emojis.failmail
-        dm_log_text = "\nDM: **Failed**"
+        dm_result = ""
+        dm_log_text = ""
         expiry_log_text = f"\nExpires: {expiry}" if expiry else ""
         log_title = "applied"
         log_content = None
         failed = False
 
-        # DM the user about the infraction if it's a ban/kick and not a shadow/hidden infraction.
+        # DM the user about the infraction if it's not a shadow/hidden infraction.
         # This needs to happen before we apply the infraction, as the bot cannot
         # send DMs to user that it doesn't share a guild with. If we were to
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
-        if not infraction["hidden"] and infr_type in ("ban", "kick"):
+        if not infraction["hidden"]:
+            dm_result = f"{constants.Emojis.failmail} "
+            dm_log_text = "\nDM: **Failed**"
+
             # Accordingly display whether the user was successfully notified via DM.
             if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
                 dm_result = ":incoming_envelope: "
@@ -223,13 +226,7 @@ class InfractionScheduler:
                 log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
             infr_message = ""
         else:
-            log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
-            if infr_type not in ("ban", "kick"):  # If we haven't already tried to send the DM
-                # Accordingly display whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
-                    dm_result = ":incoming_envelope: "
-                    dm_log_text = "\nDM: Sent"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -253,6 +250,7 @@ class InfractionScheduler:
             footer=f"ID {infraction['id']}"
         )
 
+        log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
         return not failed
 
     async def pardon_infraction(
