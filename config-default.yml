@@ -144,6 +144,8 @@ guild:
         logs:               &LOGS           468520609152892958
         moderators:         &MODS_CATEGORY  749736277464842262
         modmail:            &MODMAIL        714494672835444826
+        appeals:            &APPEALS        890331800025563216
+        appeals2:           &APPEALS2       895417395261341766
         voice:                              356013253765234688
         summer_code_jam:                    861692638540857384
 
@@ -238,6 +240,8 @@ guild:
         - *MODS_CATEGORY
         - *MODMAIL
         - *LOGS
+        - *APPEALS
+        - *APPEALS2
 
     moderation_channels:
         - *ADMINS
