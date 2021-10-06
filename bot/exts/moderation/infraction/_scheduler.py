@@ -149,8 +149,8 @@ class InfractionScheduler:
         else:
             expiry_msg = f" until {expiry}" if expiry else " permanently"
 
-        dm_result = constants.Emojis.failmail
-        dm_log_text = "\nDM: **Failed**"
+        dm_result = ""
+        dm_log_text = ""
         expiry_log_text = f"\nExpires: {expiry}" if expiry else ""
         log_title = "applied"
         log_content = None
@@ -166,6 +166,9 @@ class InfractionScheduler:
             if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
+            else:
+                dm_result = f"{constants.Emojis.failmail} "
+                dm_log_text = "\nDM: **Failed**"
 
         end_msg = ""
         if infraction["actor"] == self.bot.user.id:
@@ -225,11 +228,16 @@ class InfractionScheduler:
         else:
             log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
-            if infr_type not in ("ban", "kick"):  # If we haven't already tried to send the DM
+
+            # If we need to DM and haven't already tried to
+            if not infraction["hidden"] and infr_type not in ("ban", "kick"):
                 # Accordingly display whether the user was successfully notified via DM.
                 if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
+                else:
+                    dm_result = f"{constants.Emojis.failmail} "
+                    dm_log_text = "\nDM: **Failed**"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
