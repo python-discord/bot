@@ -141,10 +141,11 @@ class ModManagement(commands.Cog):
         log_text = ""
 
         if duration is not None and not infraction['active']:
-            if reason is None:
+            if (infr_type := infraction['type']) in ('note', 'warning'):
+                await ctx.send(f":x: Cannot edit the expiration of a {infr_type}.")
+            else:
                 await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
-                return
-            confirm_messages.append("expiry unchanged (infraction already expired)")
+            return
         elif isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
