@@ -13,7 +13,7 @@ async def main():
 ```
 Which means we can call `await something_awaitable()` directly from within the function. If this were a non-async function, it would raise the exception `SyntaxError: 'await' outside async function`
 
-To run the top level async function from outside the event loop we need to use `[asyncio.run()`](https://docs.python.org/3/library/asyncio-task.html#asyncio.run), like this:
+To run the top level async function from outside the event loop we need to use [`asyncio.run()`](https://docs.python.org/3/library/asyncio-task.html#asyncio.run), like this:
 ```py
 import asyncio
 
@@ -22,6 +22,6 @@ async def main():
 
 asyncio.run(main())
 ```
-Note that in the `asyncio.run()` where we appear to be calling `main()`, this does not execute the code in `main`, rather it returns a `coroutine` object which is then handled and run by the event loop via `asyncio.run`.
+Note that in the `asyncio.run()`, where we appear to be calling `main()`, this does not execute the code in `main`. Rather, it creates and returns a new `coroutine` object (i.e `mmain() is not main()`) which is then handled and run by the event loop via `asyncio.run()`.
 
 To learn more about asyncio and its use, see the [asyncio documentation](https://docs.python.org/3/library/asyncio.html).
