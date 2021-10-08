@@ -22,6 +22,6 @@ async def main():
 
 asyncio.run(main())
 ```
-Note that in the `asyncio.run()`, where we appear to be calling `main()`, this does not execute the code in `main`. Rather, it creates and returns a new `coroutine` object (i.e `mmain() is not main()`) which is then handled and run by the event loop via `asyncio.run()`.
+Note that in the `asyncio.run()`, where we appear to be calling `main()`, this does not execute the code in `main`. Rather, it creates and returns a new `coroutine` object (i.e `main() is not main()`) which is then handled and run by the event loop via `asyncio.run()`.
 
 To learn more about asyncio and its use, see the [asyncio documentation](https://docs.python.org/3/library/asyncio.html).
