@@ -186,9 +186,6 @@ class ErrorHandler(Cog):
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
 
-        # Return to not raise the exception
-        return
-
     async def send_command_suggestion(self, ctx: Context, command_name: str) -> None:
         """Sends user similar commands if any can be found."""
         # No similar tag found, or tag on cooldown -
@@ -233,37 +230,31 @@ class ErrorHandler(Cog):
         """
         if isinstance(e, errors.MissingRequiredArgument):
             embed = self._get_error_embed("Missing required argument", e.param.name)
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             embed = self._get_error_embed("Too many arguments", str(e))
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             embed = self._get_error_embed("Bad argument", str(e))
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
             embed = self._get_error_embed("Bad argument", f"{e}\n{e.errors[-1]}")
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
             await ctx.send(embed=embed)
             self.get_help_command(ctx).close()
             self.bot.stats.incr("errors.argument_parsing_error")
+            return
         else:
             embed = self._get_error_embed(
                 "Input error",
                 "Something about your input seems off. Check the arguments and try again."
             )
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.other_user_input_error")
+
+        await ctx.send(embed=embed)
+        await self.get_help_command(ctx)
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
@@ -297,8 +288,8 @@ class ErrorHandler(Cog):
     async def handle_api_error(ctx: Context, e: ResponseCodeError) -> None:
         """Send an error message in `ctx` for ResponseCodeError and log it."""
         if e.status == 404:
-            await ctx.send("There does not seem to be anything matching your query.")
             log.debug(f"API responded with 404 for command {ctx.command}")
+            await ctx.send("There does not seem to be anything matching your query.")
             ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
             content = await e.response.json()
@@ -306,12 +297,12 @@ class ErrorHandler(Cog):
             await ctx.send("According to the API, your request is malformed.")
             ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
-            await ctx.send("Sorry, there seems to be an internal issue with the API.")
             log.warning(f"API responded with {e.status} for command {ctx.command}")
+            await ctx.send("Sorry, there seems to be an internal issue with the API.")
             ctx.bot.stats.incr("errors.api_internal_server_error")
         else:
-            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
             log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
+            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
             ctx.bot.stats.incr(f"errors.api_error_{e.status}")
 
     @staticmethod
