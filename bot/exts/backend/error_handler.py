@@ -59,17 +59,23 @@ class ErrorHandler(Cog):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
 
+        debug_message = (
+            f"Command {command} invoked by {ctx.message.author} with error "
+            f"{e.__class__.__name__}: {e}"
+        )
+
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
             if await self.try_silence(ctx):
                 return
-            # Try to look for a tag with the command's name
-            await self.try_get_tag(ctx)
-            return  # Exit early to avoid logging.
+            await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
         elif isinstance(e, errors.UserInputError):
+            log.debug(debug_message)
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):
+            log.debug(debug_message)
             await self.handle_check_failure(ctx, e)
         elif isinstance(e, errors.CommandOnCooldown):
+            log.debug(debug_message)
             await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
@@ -80,22 +86,14 @@ class ErrorHandler(Cog):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
                 await self.handle_unexpected_error(ctx, e.original)
-            return  # Exit early to avoid logging.
         elif isinstance(e, errors.ConversionError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
-            return  # Exit early to avoid logging.
         elif not isinstance(e, errors.DisabledCommand):
             # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
-            return  # Exit early to avoid logging.
-
-        log.debug(
-            f"Command {command} invoked by {ctx.message.author} with error "
-            f"{e.__class__.__name__}: {e}"
-        )
 
     @staticmethod
     def get_help_command(ctx: Context) -> t.Coroutine:
