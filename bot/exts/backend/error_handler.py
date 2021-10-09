@@ -91,7 +91,9 @@ class ErrorHandler(Cog):
                 await self.handle_api_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
-        elif not isinstance(e, errors.DisabledCommand):
+        elif isinstance(e, errors.DisabledCommand):
+            log.debug(debug_message)
+        else:
             # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
 
