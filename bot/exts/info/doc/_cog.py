@@ -13,6 +13,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 
+from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
@@ -395,7 +396,14 @@ class DocCog(commands.Cog):
             "base_url": base_url,
             "inventory_url": inventory_url
         }
-        await self.bot.api_client.post("bot/documentation-links", json=body)
+        try:
+            await self.bot.api_client.post("bot/documentation-links", json=body)
+        except ResponseCodeError as err:
+            if err.status == 400 and "already exists" in err.response_json.get("package", [""])[0]:
+                log.info(f"Ignoring HTTP 400 as package {package_name} has already been added.")
+                await ctx.send(f"Package {package_name} has already been added.")
+                return
+            raise
 
         log.info(
             f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
