@@ -401,7 +401,7 @@ class DocCog(commands.Cog):
         except ResponseCodeError as err:
             if err.status == 400 and "already exists" in err.response_json.get("package", [""])[0]:
                 log.info(f"Ignoring HTTP 400 as package {package_name} has already been added.")
-                await ctx.send(f"Package {package_name} has already already added.")
+                await ctx.send(f"Package {package_name} has already been added.")
                 return
             raise
 
