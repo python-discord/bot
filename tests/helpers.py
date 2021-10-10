@@ -243,6 +243,7 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
         self.roles = [MockRole(name="@everyone", position=1, id=0)]
         if roles:
             self.roles.extend(roles)
+        self.top_role = max(self.roles)
 
         if 'mention' not in kwargs:
             self.mention = f"@{self.name}"
@@ -292,7 +293,10 @@ def _get_mock_loop() -> unittest.mock.Mock:
     # Since calling `create_task` on our MockBot does not actually schedule the coroutine object
     # as a task in the asyncio loop, this `side_effect` calls `close()` on the coroutine object
     # to prevent "has not been awaited"-warnings.
-    loop.create_task.side_effect = lambda coroutine: coroutine.close()
+    def mock_create_task(coroutine, **kwargs):
+        coroutine.close()
+        return unittest.mock.Mock()
+    loop.create_task.side_effect = mock_create_task
 
     return loop
 
@@ -458,6 +462,7 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.me = kwargs.get('me', MockMember())
         self.bot = kwargs.get('bot', MockBot())
         self.guild = kwargs.get('guild', MockGuild())
         self.author = kwargs.get('author', MockMember())

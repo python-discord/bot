@@ -14,6 +14,7 @@ from discord.utils import MISSING
 from bot import constants
 from bot.bot import Bot
 from bot.converters import HushDurationConverter
+from bot.utils import scheduling
 from bot.utils.lock import LockedResourceError, lock, lock_arg
 from bot.utils.scheduling import Scheduler
 
@@ -114,7 +115,7 @@ class Silence(commands.Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        self._init_task = self.bot.loop.create_task(self._async_init())
+        self._init_task = scheduling.create_task(self._async_init(), event_loop=self.bot.loop)
 
     async def _async_init(self) -> None:
         """Set instance attributes once the guild is available and reschedule unsilences."""

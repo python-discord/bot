@@ -29,7 +29,7 @@ class InfractionScheduler:
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
-        self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
+        scheduling.create_task(self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""

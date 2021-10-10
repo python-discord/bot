@@ -17,11 +17,12 @@ from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
-from ._inventory_parser import InventoryDict, fetch_inventory
+from ._inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 
 log = logging.getLogger(__name__)
 
@@ -75,9 +76,10 @@ class DocCog(commands.Cog):
         self.refresh_event.set()
         self.symbol_get_event = SharedEvent()
 
-        self.init_refresh_task = self.bot.loop.create_task(
+        self.init_refresh_task = scheduling.create_task(
             self.init_refresh_inventory(),
-            name="Doc inventory init"
+            name="Doc inventory init",
+            event_loop=self.bot.loop,
         )
 
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
@@ -135,7 +137,12 @@ class DocCog(commands.Cog):
         The first attempt is rescheduled to execute in `FETCH_RESCHEDULE_DELAY.first` minutes, the subsequent attempts
         in `FETCH_RESCHEDULE_DELAY.repeated` minutes.
         """
-        package = await fetch_inventory(inventory_url)
+        try:
+            package = await fetch_inventory(inventory_url)
+        except InvalidHeaderError as e:
+            # Do not reschedule if the header is invalid, as the request went through but the contents are invalid.
+            log.warning(f"Invalid inventory header at {inventory_url}. Reason: {e}")
+            return
 
         if not package:
             if api_package_name in self.inventory_scheduler:
@@ -456,4 +463,4 @@ class DocCog(commands.Cog):
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
         self.init_refresh_task.cancel()
-        asyncio.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
+        scheduling.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")

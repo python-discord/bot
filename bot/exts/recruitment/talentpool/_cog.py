@@ -2,20 +2,21 @@ import logging
 import textwrap
 from collections import ChainMap, defaultdict
 from io import StringIO
-from typing import Union
+from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
-from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
+from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
-from bot.converters import MemberOrUser
+from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.pagination import LinePaginator
-from bot.utils import time
+from bot.utils import scheduling, time
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import get_time_delta
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
@@ -34,12 +35,17 @@ class TalentPool(Cog, name="Talentpool"):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
         self.reviewer = Reviewer(self.__class__.__name__, bot, self)
+        self.cache: Optional[defaultdict[dict]] = None
         self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
-        self.bot.loop.create_task(self.schedule_autoreviews())
+
+        self.initial_refresh_task = scheduling.create_task(self.refresh_cache(), event_loop=self.bot.loop)
+        scheduling.create_task(self.schedule_autoreviews(), event_loop=self.bot.loop)
 
     async def schedule_autoreviews(self) -> None:
         """Reschedule reviews for active nominations if autoreview is enabled."""
         if await self.autoreview_enabled():
+            # Wait for a populated cache first
+            await self.initial_refresh_task
             await self.reviewer.reschedule_reviews()
         else:
             log.trace("Not scheduling reviews as autoreview is disabled.")
@@ -50,6 +56,8 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def refresh_cache(self) -> bool:
         """Updates TalentPool users cache."""
+        # Wait until logged in to ensure bot api client exists
+        await self.bot.wait_until_guild_available()
         try:
             data = await self.bot.api_client.get(
                 'bot/nominations',
@@ -68,7 +76,7 @@ class TalentPool(Cog, name="Talentpool"):
         return True
 
     @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*STAFF_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
         await ctx.send_help(ctx.command)
@@ -168,7 +176,7 @@ class TalentPool(Cog, name="Talentpool"):
         lines = []
 
         for user_id, user_data in nominations:
-            member = ctx.guild.get_member(user_id)
+            member = await get_or_fetch_member(ctx.guild, user_id)
             line = f"• `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
@@ -284,18 +292,7 @@ class TalentPool(Cog, name="Talentpool"):
         if await self.autoreview_enabled() and user.id not in self.reviewer:
             self.reviewer.schedule_review(user.id)
 
-        history = await self.bot.api_client.get(
-            'bot/nominations',
-            params={
-                "user__id": str(user.id),
-                "active": "false",
-                "ordering": "-inserted_at"
-            }
-        )
-
         msg = f"✅ The nomination for {user.mention} has been added to the talent pool"
-        if history:
-            msg += f"\n\n({len(history)} previous nominations in total)"
 
         await ctx.send(msg)
 
@@ -318,7 +315,7 @@ class TalentPool(Cog, name="Talentpool"):
             title=f"Nominations for {user.display_name} `({user.id})`",
             color=Color.blue()
         )
-        lines = [self._nomination_to_string(nomination) for nomination in result]
+        lines = [await self._nomination_to_string(nomination) for nomination in result]
         await LinePaginator.paginate(
             lines,
             ctx=ctx,
@@ -346,18 +343,75 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(":x: The specified user does not have an active nomination")
 
     @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*STAFF_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
         await ctx.send_help(ctx.command)
 
     @nomination_edit_group.command(name='reason')
-    @has_any_role(*MODERATION_ROLES)
-    async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: MemberOrUser, *, reason: str) -> None:
-        """Edits the reason of a specific nominator in a specific active nomination."""
+    @has_any_role(*STAFF_ROLES)
+    async def edit_reason_command(
+        self,
+        ctx: Context,
+        nominee_or_nomination_id: Union[UnambiguousMemberOrUser, int],
+        nominator: Optional[UnambiguousMemberOrUser] = None,
+        *,
+        reason: str
+    ) -> None:
+        """
+        Edit the nomination reason of a specific nominator for a given nomination.
+
+        If nominee_or_nomination_id resolves to a member or user, edit the currently active nomination for that person.
+        Otherwise, if it's an int, look up that nomination ID to edit.
+
+        If no nominator is specified, assume the invoker is editing their own nomination reason.
+        Otherwise, edit the reason from that specific nominator.
+
+        Raise a permission error if a non-mod staff member invokes this command on a
+        specific nomination ID, or with an nominator other than themselves.
+        """
+        # If not specified, assume the invoker is editing their own nomination reason.
+        nominator = nominator or ctx.author
+
+        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            if ctx.channel.id != Channels.nominations:
+                await ctx.send(f":x: Nomination edits must be run in the <#{Channels.nominations}> channel")
+                return
+
+            if nominator != ctx.author or isinstance(nominee_or_nomination_id, int):
+                # Invoker has specified another nominator, or a specific nomination id
+                raise BadArgument(
+                    "Only moderators can edit specific nomination IDs, "
+                    "or the reason of a nominator other than themselves."
+                )
+
+        await self._edit_nomination_reason(
+            ctx,
+            target=nominee_or_nomination_id,
+            actor=nominator,
+            reason=reason
+        )
+
+    async def _edit_nomination_reason(
+        self,
+        ctx: Context,
+        *,
+        target: Union[int, Member, User],
+        actor: MemberOrUser,
+        reason: str,
+    ) -> None:
+        """Edit a nomination reason in the database after validating the input."""
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
+        if isinstance(target, int):
+            nomination_id = target
+        else:
+            if nomination := self.cache.get(target.id):
+                nomination_id = nomination["id"]
+            else:
+                await ctx.send("No active nomination found for that member.")
+                return
 
         try:
             nomination = await self.bot.api_client.get(f"bot/nominations/{nomination_id}")
@@ -499,13 +553,13 @@ class TalentPool(Cog, name="Talentpool"):
 
         return True
 
-    def _nomination_to_string(self, nomination_object: dict) -> str:
+    async def _nomination_to_string(self, nomination_object: dict) -> str:
         """Creates a string representation of a nomination."""
         guild = self.bot.get_guild(Guild.id)
         entries = []
         for site_entry in nomination_object["entries"]:
             actor_id = site_entry["actor"]
-            actor = guild.get_member(actor_id)
+            actor = await get_or_fetch_member(guild, actor_id)
 
             reason = site_entry["reason"] or "*None*"
             created = time.format_infraction(site_entry["inserted_at"])
