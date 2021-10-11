@@ -19,6 +19,7 @@ from bot.exts.moderation.modlog import ModLog
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import humanize_delta, until_expiration
 
 log = logging.getLogger(__name__)
@@ -190,7 +191,7 @@ class ModManagement(commands.Cog):
 
         # Get information about the infraction's user
         user_id = new_infraction['user']
-        user = ctx.guild.get_member(user_id)
+        user = await get_or_fetch_member(ctx.guild, user_id)
 
         if user:
             user_text = messages.format_user(user)

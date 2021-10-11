@@ -14,6 +14,7 @@ from bot.converters import Duration, Expiry, MemberOrUser, UnambiguousMemberOrUs
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
 log = logging.getLogger(__name__)
@@ -314,6 +315,10 @@ class Infractions(InfractionScheduler, commands.Cog):
     @respect_role_hierarchy(member_arg=2)
     async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a kick infraction with kwargs passed to `post_infraction`."""
+        if user.top_role >= ctx.me.top_role:
+            await ctx.send(":x: I can't kick users above or equal to me in the role hierarchy.")
+            return
+
         infraction = await _utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
         if infraction is None:
             return
@@ -340,6 +345,10 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Will also remove the banned user from the Big Brother watch list if applicable.
         """
+        if isinstance(user, Member) and user.top_role >= ctx.me.top_role:
+            await ctx.send(":x: I can't ban users above or equal to me in the role hierarchy.")
+            return
+
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
         is_temporary = kwargs.get("expires_at") is not None
         active_infraction = await _utils.get_active_infraction(ctx, user, "ban", is_temporary)
@@ -422,7 +431,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         notify: bool = True
     ) -> t.Dict[str, str]:
         """Remove a user's muted role, optionally DM them a notification, and return a log dict."""
-        user = guild.get_member(user_id)
+        user = await get_or_fetch_member(guild, user_id)
         log_text = {}
 
         if user:
@@ -470,7 +479,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         notify: bool = True
     ) -> t.Dict[str, str]:
         """Optionally DM the user a pardon notification and return a log dict."""
-        user = guild.get_member(user_id)
+        user = await get_or_fetch_member(guild, user_id)
         log_text = {}
 
         if user:
@@ -519,7 +528,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
         if isinstance(error, commands.BadUnionArgument):
-            if discord.User in error.converters or discord.Member in error.converters:
+            if discord.User in error.converters or Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 

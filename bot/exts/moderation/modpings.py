@@ -9,6 +9,7 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
+from bot.utils import scheduling
 from bot.utils.scheduling import Scheduler
 
 log = logging.getLogger(__name__)
@@ -29,7 +30,11 @@ class ModPings(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="mod-pings-reschedule")
+        self.reschedule_task = scheduling.create_task(
+            self.reschedule_roles(),
+            name="mod-pings-reschedule",
+            event_loop=self.bot.loop,
+        )
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""

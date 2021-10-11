@@ -11,7 +11,7 @@ from bot.bot import Bot
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.info.codeblock._instructions import get_instructions
-from bot.utils import has_lines
+from bot.utils import has_lines, scheduling
 from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
 
@@ -114,7 +114,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
 
-        self.bot.loop.create_task(wait_for_deletion(bot_message, (message.author.id,)))
+        scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)), event_loop=self.bot.loop)
 
         # Increase amount of codeblock correction in stats
         self.bot.stats.incr("codeblock_corrections")
