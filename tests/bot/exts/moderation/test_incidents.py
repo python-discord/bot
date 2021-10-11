@@ -795,9 +795,16 @@ class TestMessageLinkEmbeds(TestIncidents):
     async def test_shorten_text(self):
         """Test all cases of text shortening by mocking messages."""
         tests = {
-            "thisisasingleword"*10: ('thisisasingleword'*10)[:50]+"...",
-            "\n".join("Lets make a new line test".split()): "Lets\nmake\na"+"...",
-            'Hello, World!' * 300: ('Hello, World!' * 300)[:300] + '...'
+            "thisisasingleword"*10: "thisisasinglewordthisisasinglewordthisisasinglewor...",
+
+            "\n".join("Lets make a new line test".split()): "Lets\nmake\na...",
+
+            'Hello, World!' * 300: (
+                "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"
+                "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"
+                "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"
+                "Hello, World!Hello, World!H..."
+            )
         }
 
         for content, expected_conversion in tests.items():
@@ -829,8 +836,10 @@ class TestMessageLinkEmbeds(TestIncidents):
 
         incident_msg = MockMessage(
             id=777,
-            content=f"I would like to report the following messages, "
-                    f"as they break our rules: \n{', '.join(msg_links)}"
+            content=(
+                f"I would like to report the following messages, "
+                f"as they break our rules: \n{', '.join(msg_links)}"
+            )
         )
 
         with patch(
