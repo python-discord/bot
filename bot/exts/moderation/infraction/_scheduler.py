@@ -161,7 +161,7 @@ class InfractionScheduler:
         # send DMs to user that it doesn't share a guild with. If we were to
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
-        if not infraction["hidden"]:
+        if not infraction["hidden"] and infr_type in {"ban", "kick"}:
             dm_result = f"{constants.Emojis.failmail} "
             dm_log_text = "\nDM: **Failed**"
 
@@ -229,7 +229,7 @@ class InfractionScheduler:
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
 
             # If we need to DM and haven't already tried to
-            if not infraction["hidden"] and infr_type not in ("ban", "kick"):
+            if not infraction["hidden"] and infr_type not in {"ban", "kick"}:
                 dm_result = f"{constants.Emojis.failmail} "
                 dm_log_text = "\nDM: **Failed**"
 
