@@ -87,11 +87,11 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             return
 
         if not await self.fetch_user_cache():
-            await ctx.send(f":x: Updating the user cache failed, can't watch user {user}")
+            await ctx.send(f":x: Updating the user cache failed, can't watch user {user.mention}")
             return
 
         if user.id in self.watched_users:
-            await ctx.send(f":x: {user} is already being watched.")
+            await ctx.send(f":x: {user.mention} is already being watched.")
             return
 
         # discord.User instances don't have a roles attribute
@@ -103,7 +103,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         if response is not None:
             self.watched_users[user.id] = response
-            msg = f":white_check_mark: Messages sent by {user} will now be relayed to Big Brother."
+            msg = f":white_check_mark: Messages sent by {user.mention} will now be relayed to Big Brother."
 
             history = await self.bot.api_client.get(
                 self.api_endpoint,
@@ -156,7 +156,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
                 log.debug(f"Perma-banned user {user} was unwatched.")
                 return
             log.trace("User is not banned.  Sending message to channel")
-            message = f":white_check_mark: Messages sent by {user} will no longer be relayed."
+            message = f":white_check_mark: Messages sent by {user.mention} will no longer be relayed."
 
         else:
             log.trace("No active watches found for user.")
