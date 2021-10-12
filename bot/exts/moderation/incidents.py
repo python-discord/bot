@@ -296,7 +296,7 @@ class Incidents(Cog):
         """Prepare `event_lock` and schedule `crawl_task` on start-up."""
         self.bot = bot
 
-        self.bot.loop.create_task(self.fetch_webhook())
+        scheduling.create_task(self.fetch_webhook(), event_loop=self.bot.loop)
 
         self.event_lock = asyncio.Lock()
         self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
@@ -554,7 +554,9 @@ class Incidents(Cog):
             return
 
         await add_signals(message)
-        if embed_list := await self.extract_message_links(message):
+
+        # Only use this feature if incidents webhook embed is found
+        if embed_list := await self.extract_message_links(message) and self.incidents_webhook:
             await self.send_message_link_embeds(embed_list, message, self.incidents_webhook)
 
     @Cog.listener()
