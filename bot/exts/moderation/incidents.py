@@ -26,8 +26,8 @@ CRAWL_SLEEP = 2
 
 DISCORD_MESSAGE_LINK_RE = re.compile(
     r"(https?:\/\/(?:(ptb|canary|www)\.)?discord(?:app)?\.com\/channels\/"
-    r"[0-9]{15,21}"
-    r"\/[0-9]{15,21}\/[0-9]{15,21})"
+    r"[0-9]{15,20}"
+    r"\/[0-9]{15,20}\/[0-9]{15,20})"
 )
 
 
