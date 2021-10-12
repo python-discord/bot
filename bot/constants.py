@@ -484,7 +484,12 @@ class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
+    # Self-assignable roles, see the Subscribe cog
+    advent_of_code: int
     announcements: int
+    lovefest: int
+    pyweek_announcements: int
+
     contributors: int
     help_cooldown: int
     muted: int

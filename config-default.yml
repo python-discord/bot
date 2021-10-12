@@ -264,7 +264,12 @@ guild:
         - *BLACK_FORMATTER
 
     roles:
+        # Self-assignable roles, see the Subscribe cog
+        advent_of_code:                         518565788744024082
         announcements:                          463658397560995840
+        lovefest:                               542431903886606399
+        pyweek_announcements:                   897568414044938310
+
         contributors:                           295488872404484098
         help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
