@@ -514,7 +514,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = INVITE_RE.findall(text)
+        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:
