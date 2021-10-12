@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import re
-import typing as t
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 import discord
 from async_rediscache import RedisCache
@@ -45,17 +45,17 @@ class Signal(Enum):
 
 
 # Reactions from non-mod roles will be removed
-ALLOWED_ROLES: t.Set[int] = set(Guild.moderation_roles)
+ALLOWED_ROLES: set[int] = set(Guild.moderation_roles)
 
 # Message must have all of these emoji to pass the `has_signals` check
-ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
+ALL_SIGNALS: set[str] = {signal.value for signal in Signal}
 
 # An embed coupled with an optional file to be dispatched
 # If the file is not None, the embed attempts to show it in its body
-FileEmbed = t.Tuple[discord.Embed, t.Optional[discord.File]]
+FileEmbed = tuple[discord.Embed, Optional[discord.File]]
 
 
-async def download_file(attachment: discord.Attachment) -> t.Optional[discord.File]:
+async def download_file(attachment: discord.Attachment) -> Optional[discord.File]:
     """
     Download & return `attachment` file.
 
@@ -129,7 +129,7 @@ def is_incident(message: discord.Message) -> bool:
     return all(conditions)
 
 
-def own_reactions(message: discord.Message) -> t.Set[str]:
+def own_reactions(message: discord.Message) -> set[str]:
     """Get the set of reactions placed on `message` by the bot itself."""
     return {str(reaction.emoji) for reaction in message.reactions if reaction.me}
 
@@ -161,7 +161,7 @@ def shorten_text(text: str) -> str:
     return text
 
 
-async def make_message_link_embed(ctx: Context, message_link: str) -> t.Optional[discord.Embed]:
+async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[discord.Embed]:
     """
     Create an embedded representation of the discord message link contained in the incident report.
 
@@ -412,7 +412,7 @@ class Incidents(Cog):
         Deletes cache value (`message_link_embeds_cache`) of `incident` if it exists. It then removes the
         webhook message for that particular link from the channel.
         """
-        members_roles: t.Set[int] = {role.id for role in member.roles}
+        members_roles: set[int] = {role.id for role in member.roles}
         if not members_roles & ALLOWED_ROLES:  # Intersection is truthy on at least 1 common element
             log.debug(f"Removing invalid reaction: user {member} is not permitted to send signals")
             try:
@@ -462,7 +462,7 @@ class Incidents(Cog):
         # Deletes the message link embeds found in cache from the channel and cache.
         await self.delete_msg_link_embed(incident.id)
 
-    async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
+    async def resolve_message(self, message_id: int) -> Optional[discord.Message]:
         """
         Get `discord.Message` for `message_id` from cache, or API.
 
@@ -477,7 +477,7 @@ class Incidents(Cog):
         """
         await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
         log.trace(f"Resolving message for: {message_id=}")
-        message: t.Optional[discord.Message] = self.bot._connection._get_message(message_id)
+        message: Optional[discord.Message] = self.bot._connection._get_message(message_id)
 
         if message is not None:
             log.trace("Message was found in cache")
@@ -566,7 +566,7 @@ class Incidents(Cog):
         """
         await self.delete_msg_link_embed(payload.message_id)
 
-    async def extract_message_links(self, message: discord.Message) -> t.Optional[t.List[discord.Embed]]:
+    async def extract_message_links(self, message: discord.Message) -> Optional[list[discord.Embed]]:
         """
         Check if there's any message links in the text content.
 
@@ -596,10 +596,10 @@ class Incidents(Cog):
 
     async def send_message_link_embeds(
             self,
-            webhook_embed_list: t.List,
+            webhook_embed_list: list,
             message: discord.Message,
             webhook: discord.Webhook,
-    ) -> t.Optional[int]:
+    ) -> Optional[int]:
         """
         Send message link embeds to #incidents channel.
 
