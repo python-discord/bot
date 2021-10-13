@@ -115,6 +115,7 @@ class Subscribe(commands.Cog):
                 continue
             self.assignable_roles.append(role)
 
+    @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe")
     @in_whitelist(channels=(constants.Channels.bot_commands,))
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
