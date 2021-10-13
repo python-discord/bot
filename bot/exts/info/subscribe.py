@@ -62,6 +62,10 @@ class SingleRoleButton(discord.ui.Button):
 
     async def callback(self, interaction: Interaction) -> None:
         """Update the member's role and change button text to reflect current text."""
+        if isinstance(interaction.user, discord.User):
+            log.trace("User %s is not a member", interaction.user)
+            await interaction.message.delete()
+            return
         await members.handle_role_change(
             interaction.user,
             interaction.user.remove_roles if self.assigned else interaction.user.add_roles,
