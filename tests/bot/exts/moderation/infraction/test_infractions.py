@@ -15,12 +15,13 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
     """Tests for ban and kick command reason truncation."""
 
     def setUp(self):
+        self.me = MockMember(id=7890, roles=[MockRole(id=7890, position=5)])
         self.bot = MockBot()
         self.cog = Infractions(self.bot)
-        self.user = MockMember(id=1234, top_role=MockRole(id=3577, position=10))
-        self.target = MockMember(id=1265, top_role=MockRole(id=9876, position=0))
+        self.user = MockMember(id=1234, roles=[MockRole(id=3577, position=10)])
+        self.target = MockMember(id=1265, roles=[MockRole(id=9876, position=1)])
         self.guild = MockGuild(id=4567)
-        self.ctx = MockContext(bot=self.bot, author=self.user, guild=self.guild)
+        self.ctx = MockContext(me=self.me, bot=self.bot, author=self.user, guild=self.guild)
 
     @patch("bot.exts.moderation.infraction._utils.get_active_infraction")
     @patch("bot.exts.moderation.infraction._utils.post_infraction")
@@ -66,8 +67,8 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.bot = MockBot()
-        self.mod = MockMember(top_role=10)
-        self.user = MockMember(top_role=1, roles=[MockRole(id=123456)])
+        self.mod = MockMember(roles=[MockRole(id=7890123, position=10)])
+        self.user = MockMember(roles=[MockRole(id=123456, position=1)])
         self.guild = MockGuild()
         self.ctx = MockContext(bot=self.bot, author=self.mod)
         self.cog = Infractions(self.bot)
