@@ -22,6 +22,7 @@ from bot.utils import scheduling
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
+
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 from ._inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 

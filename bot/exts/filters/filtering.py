@@ -15,10 +15,7 @@ from discord.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import (
-    Channels, Colours, Filter,
-    Guild, Icons, URLs
-)
+from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.utils import scheduling

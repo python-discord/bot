@@ -22,6 +22,7 @@ from bot.exts.info.doc import _inventory_parser
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
 from bot.utils.time import parse_duration_string
+
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
 

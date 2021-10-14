@@ -8,7 +8,6 @@ from async_rediscache import RedisCache
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
-
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf

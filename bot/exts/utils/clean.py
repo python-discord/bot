@@ -8,9 +8,7 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import (
-    Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
-)
+from bot.constants import Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.exts.moderation.modlog import ModLog
 
 log = logging.getLogger(__name__)

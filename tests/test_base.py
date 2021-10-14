@@ -2,7 +2,6 @@ import logging
 import unittest
 import unittest.mock
 
-
 from tests.base import LoggingTestsMixin, _CaptureLogHandler
 
 
