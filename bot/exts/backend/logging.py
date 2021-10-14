@@ -1,13 +1,12 @@
-import logging
-
 from discord import Embed
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels, DEBUG_MODE
+from bot.log import get_logger
 from bot.utils import scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Logging(Cog):

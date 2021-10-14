@@ -1,5 +1,4 @@
 import datetime
-import logging
 
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse
@@ -9,10 +8,11 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ModPings(Cog):

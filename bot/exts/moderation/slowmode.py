@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
@@ -8,9 +7,10 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, MODERATION_ROLES
 from bot.converters import DurationDelta
+from bot.log import get_logger
 from bot.utils import time
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 SLOWMODE_MAX_DELAY = 21600  # seconds
 

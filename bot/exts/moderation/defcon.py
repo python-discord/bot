@@ -1,4 +1,3 @@
-import logging
 import traceback
 from collections import namedtuple
 from datetime import datetime
@@ -16,6 +15,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.scheduling import Scheduler
@@ -23,7 +23,7 @@ from bot.utils.time import (
     TimestampFormats, discord_timestamp, humanize_delta, parse_duration_string, relativedelta_to_timedelta
 )
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!

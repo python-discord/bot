@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timedelta
 from email.parser import HeaderParser
 from io import StringIO
@@ -9,10 +8,11 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Keys
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.caching import AsyncCache
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"

@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import logging
 import types
 import typing as t
 from contextlib import suppress
@@ -10,11 +9,12 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
+from bot.log import get_logger
 from bot.utils import function, scheduling
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
 from bot.utils.function import command_wraps
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def in_whitelist(

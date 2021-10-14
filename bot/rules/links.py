@@ -3,7 +3,6 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 from discord import Member, Message
 
-
 LINK_RE = re.compile(r"(https?://[^\s]+)")
 
 

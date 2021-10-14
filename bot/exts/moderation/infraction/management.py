@@ -1,4 +1,3 @@
-import logging
 import textwrap
 import typing as t
 from datetime import datetime
@@ -16,13 +15,14 @@ from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, Unambigu
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import humanize_delta, until_expiration
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ModManagement(commands.Cog):

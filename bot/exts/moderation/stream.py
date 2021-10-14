@@ -1,4 +1,3 @@
-import logging
 from datetime import timedelta, timezone
 from operator import itemgetter
 
@@ -14,12 +13,13 @@ from bot.constants import (
     STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
 )
 from bot.converters import Expiry
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import scheduling
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import discord_timestamp, format_infraction_with_duration
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Stream(commands.Cog):
