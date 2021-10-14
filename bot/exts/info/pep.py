@@ -9,6 +9,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Keys
+from bot.utils import scheduling
 from bot.utils.caching import AsyncCache
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class PythonEnhancementProposals(Cog):
         self.peps: Dict[int, str] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
-        self.bot.loop.create_task(self.refresh_peps_urls())
+        scheduling.create_task(self.refresh_peps_urls(), event_loop=self.bot.loop)
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
