@@ -838,7 +838,8 @@ class ModLog(Cog, name="ModLog"):
         """Log member voice state changes to the voice log channel."""
         if (
             member.guild.id != GuildConstant.id
-            or (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
+            or (before.channel and self.is_channel_ignored(before.channel.id))
+            or (after.channel and self.is_channel_ignored(after.channel.id))
         ):
             return
 
