@@ -118,7 +118,7 @@ class Reminders(Cog):
         if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
-            return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
+            return all(isinstance(mention, (discord.User, discord.Member)) for mention in mentions), "roles"
         else:
             return True, ""
 
