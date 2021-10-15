@@ -111,7 +111,7 @@ class Defcon(Cog):
         if self.threshold:
             now = datetime.utcnow()
 
-            if now - member.created_at < relativedelta_to_timedelta(self.threshold):
+            if now - member.created_at.replace(tzinfo=None) < relativedelta_to_timedelta(self.threshold):
                 log.info(f"Rejecting user {member}: Account is too new")
 
                 message_sent = False
