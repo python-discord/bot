@@ -79,3 +79,4 @@ order_by_type = false
 case_sensitive = true
 combine_as_imports = true
 line_length = 120
+atomic = true
