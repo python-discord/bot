@@ -1,4 +1,3 @@
-import logging
 import traceback
 from collections import namedtuple
 from datetime import datetime
@@ -8,7 +7,7 @@ from typing import Optional, Union
 from aioredis import RedisError
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Embed, Forbidden, Member, User
+from discord import Colour, Embed, Forbidden, Member, TextChannel, User
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -16,6 +15,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.scheduling import Scheduler
@@ -23,7 +23,7 @@ from bot.utils.time import (
     TimestampFormats, discord_timestamp, humanize_delta, parse_duration_string, relativedelta_to_timedelta
 )
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 REJECTION_MESSAGE = """
 Hi, {user} - Thanks for your interest in our server!
@@ -176,7 +176,7 @@ class Defcon(Cog):
         """
         if isinstance(threshold, int):
             threshold = relativedelta(days=threshold)
-        await self._update_threshold(ctx.author, threshold=threshold, expiry=expiry)
+        await self._update_threshold(ctx.author, ctx.channel, threshold, expiry)
 
     @defcon_group.command()
     @has_any_role(Roles.admins)
@@ -208,7 +208,13 @@ class Defcon(Cog):
         scheduling.create_task(self.channel.edit(topic=new_topic))
 
     @defcon_settings.atomic_transaction
-    async def _update_threshold(self, author: User, threshold: relativedelta, expiry: Optional[Expiry] = None) -> None:
+    async def _update_threshold(
+        self,
+        author: User,
+        channel: TextChannel,
+        threshold: relativedelta,
+        expiry: Optional[Expiry] = None
+    ) -> None:
         """Update the new threshold in the cog, cache, defcon channel, and logs, and additionally schedule expiry."""
         self.threshold = threshold
         if threshold == relativedelta(days=0):  # If the threshold is 0, we don't need to schedule anything
@@ -248,9 +254,13 @@ class Defcon(Cog):
         else:
             channel_message = "removed"
 
-        await self.channel.send(
-            f"{action.value.emoji} DEFCON threshold {channel_message}{error}."
-        )
+        message = f"{action.value.emoji} DEFCON threshold {channel_message}{error}."
+        await self.channel.send(message)
+
+        # If invoked outside of #defcon send to `ctx.channel` too
+        if channel != self.channel:
+            await channel.send(message)
+
         await self._send_defcon_log(action, author)
         self._update_channel_topic()
 
@@ -258,7 +268,7 @@ class Defcon(Cog):
 
     async def _remove_threshold(self) -> None:
         """Resets the threshold back to 0."""
-        await self._update_threshold(self.bot.user, relativedelta(days=0))
+        await self._update_threshold(self.bot.user, self.channel, relativedelta(days=0))
 
     @staticmethod
     def _stringify_relativedelta(delta: relativedelta) -> str:

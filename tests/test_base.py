@@ -1,7 +1,7 @@
 import logging
-import unittest
 import unittest.mock
 
+from bot.log import get_logger
 from tests.base import LoggingTestsMixin, _CaptureLogHandler
 
 
@@ -14,7 +14,7 @@ class LoggingTestCaseTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.log = logging.getLogger(__name__)
+        cls.log = get_logger(__name__)
 
     def test_assert_not_logs_does_not_raise_with_no_logs(self):
         """Test if LoggingTestCase.assertNotLogs does not raise when no logs were emitted."""
@@ -55,15 +55,15 @@ class LoggingTestCaseTests(unittest.TestCase):
 
     def test_logging_test_case_works_with_logger_instance(self):
         """Test if the LoggingTestCase captures logging for provided logger."""
-        log = logging.getLogger("new_logger")
+        log = get_logger("new_logger")
         with self.assertRaises(AssertionError):
             with LoggingTestCase.assertNotLogs(self, logger=log):
                 log.info("Hello, this should raise an AssertionError")
 
     def test_logging_test_case_respects_alternative_logger(self):
         """Test if LoggingTestCase only checks the provided logger."""
-        log_one = logging.getLogger("log one")
-        log_two = logging.getLogger("log two")
+        log_one = get_logger("log one")
+        log_two = get_logger("log two")
         with LoggingTestCase.assertNotLogs(self, logger=log_one):
             log_two.info("Hello, this should not raise an AssertionError")
 

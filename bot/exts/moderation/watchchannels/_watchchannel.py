@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 import textwrap
 from abc import abstractmethod
@@ -17,12 +16,13 @@ from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, 
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
+from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, scheduling
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import get_time_delta
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 URL_RE = re.compile(r"(https?://[^\s]+)")
 
@@ -47,7 +47,7 @@ class WatchChannel(metaclass=CogABCMeta):
         webhook_id: int,
         api_endpoint: str,
         api_default_params: dict,
-        logger: logging.Logger,
+        logger: CustomLogger,
         *,
         disable_header: bool = False
     ) -> None:

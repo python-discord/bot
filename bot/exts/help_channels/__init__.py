@@ -1,10 +1,9 @@
-import logging
-
 from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels._channel import MAX_CHANNELS_PER_CATEGORY
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def validate_config() -> None:

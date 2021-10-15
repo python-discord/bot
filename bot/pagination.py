@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import typing as t
 from contextlib import suppress
 from functools import partial
@@ -9,6 +8,7 @@ from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
 from bot import constants
+from bot.log import get_logger
 from bot.utils import messages
 
 FIRST_EMOJI = "\u23EE"   # [:track_previous:]
@@ -19,7 +19,7 @@ DELETE_EMOJI = constants.Emojis.trashcan  # [:trashcan:]
 
 PAGINATION_EMOJI = (FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI)
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class EmptyPaginatorEmbedError(Exception):
