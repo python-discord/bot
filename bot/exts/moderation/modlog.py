@@ -1,7 +1,6 @@
 import asyncio
 import difflib
 import itertools
-import logging
 import typing as t
 from datetime import datetime
 from itertools import zip_longest
@@ -16,10 +15,11 @@ from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
+from bot.log import get_logger
 from bot.utils.messages import format_user
 from bot.utils.time import humanize_delta
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.VoiceChannel]
 

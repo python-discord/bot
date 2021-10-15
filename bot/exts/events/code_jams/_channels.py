@@ -1,11 +1,11 @@
-import logging
 import typing as t
 
 import discord
 
 from bot.constants import Categories, Channels, Roles
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 MAX_CHANNELS = 50
 CATEGORY_NAME = "Code Jam"

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -21,12 +20,12 @@ from bot.constants import (
 from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import lock, scheduling
 from bot.utils.message_cache import MessageCache
 from bot.utils.messages import format_user, send_attachments
 
-
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 RULE_FUNCTION_MAPPING = {
     'attachments': rules.apply_attachments,

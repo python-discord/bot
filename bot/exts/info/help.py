@@ -1,5 +1,4 @@
 import itertools
-import logging
 from collections import namedtuple
 from contextlib import suppress
 from typing import List, Union
@@ -12,10 +11,11 @@ from rapidfuzz.utils import default_process
 from bot import constants
 from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.decorators import redirect_output
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 COMMANDS_PER_PAGE = 8
 PREFIX = constants.Bot.prefix

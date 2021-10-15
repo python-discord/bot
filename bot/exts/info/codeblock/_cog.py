@@ -1,4 +1,3 @@
-import logging
 import time
 from typing import Optional
 
@@ -11,11 +10,12 @@ from bot.bot import Bot
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.info.codeblock._instructions import get_instructions
+from bot.log import get_logger
 from bot.utils import has_lines, scheduling
 from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class CodeBlockCog(Cog, name="Code Block"):

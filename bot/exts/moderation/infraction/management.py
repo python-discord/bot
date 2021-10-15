@@ -1,4 +1,3 @@
-import logging
 import textwrap
 import typing as t
 from datetime import datetime
@@ -16,13 +15,14 @@ from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, Unambigu
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import humanize_delta, until_expiration
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ModManagement(commands.Cog):
@@ -141,10 +141,11 @@ class ModManagement(commands.Cog):
         log_text = ""
 
         if duration is not None and not infraction['active']:
-            if reason is None:
+            if (infr_type := infraction['type']) in ('note', 'warning'):
+                await ctx.send(f":x: Cannot edit the expiration of a {infr_type}.")
+            else:
                 await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
-                return
-            confirm_messages.append("expiry unchanged (infraction already expired)")
+            return
         elif isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")

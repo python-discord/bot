@@ -1,5 +1,4 @@
 import json
-import logging
 import random
 import textwrap
 import typing as t
@@ -14,11 +13,12 @@ from bot.bot import Bot
 from bot.converters import Duration, Expiry
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 from bot.utils.time import format_infraction
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
 SUPERSTARIFY_DEFAULT_DURATION = "1h"
 
