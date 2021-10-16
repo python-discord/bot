@@ -38,10 +38,10 @@ flake8 = "~=3.8"
 flake8-annotations = "~=2.0"
 flake8-bugbear = "~=20.1"
 flake8-docstrings = "~=1.4"
-flake8-import-order = "~=0.18"
 flake8-string-format = "~=0.2"
 flake8-tidy-imports = "~=4.0"
 flake8-todo = "~=0.7"
+flake8-isort = "~=4.0"
 pep8-naming = "~=0.9"
 pre-commit = "~=2.1"
 taskipy = "~=1.7.0"
@@ -66,8 +66,17 @@ test = "pytest -n auto --cov-report= --cov --ff"
 retest = "pytest -n auto --cov-report= --cov --lf"
 html = "coverage html"
 report = "coverage report"
+isort = "isort ."
 
 [tool.coverage.run]
 branch = true
 source_pkgs = ["bot"]
 source = ["tests"]
+
+[tool.isort]
+multi_line_output = 6
+order_by_type = false
+case_sensitive = true
+combine_as_imports = true
+line_length = 120
+atomic = true

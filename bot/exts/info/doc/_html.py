@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, SoupStrainer, Tag
 
 from bot.log import get_logger
+
 from . import MAX_SIGNATURE_AMOUNT
 
 log = get_logger(__name__)

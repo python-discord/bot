@@ -11,15 +11,8 @@ import discord
 from bot.constants import Colours
 from bot.exts.moderation import incidents
 from tests.helpers import (
-    MockAsyncWebhook,
-    MockAttachment,
-    MockBot,
-    MockMember,
-    MockMessage,
-    MockReaction,
-    MockRole,
-    MockTextChannel,
-    MockUser,
+    MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
+    MockUser
 )
 
 

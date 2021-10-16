@@ -11,6 +11,7 @@ from bs4.element import NavigableString, Tag
 
 from bot.log import get_logger
 from bot.utils.helpers import find_nth_occurrence
+
 from . import MAX_SIGNATURE_AMOUNT
 from ._html import get_dd_description, get_general_description, get_signatures
 from ._markdown import DocMarkdownConverter
