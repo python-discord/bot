@@ -5,6 +5,7 @@ from urllib.parse import quote as quote_url
 import aiohttp
 
 from bot.log import get_logger
+
 from .constants import Keys, URLs
 
 log = get_logger(__name__)

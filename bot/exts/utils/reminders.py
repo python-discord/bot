@@ -9,10 +9,7 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import (
-    Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
-    Roles, STAFF_PARTNERS_COMMUNITY_ROLES
-)
+from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Duration, UnambiguousUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator

@@ -16,8 +16,7 @@ from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, 
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
-from bot.log import CustomLogger
-from bot.log import get_logger
+from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, scheduling
 from bot.utils.members import get_or_fetch_member
