@@ -525,19 +525,30 @@ class ModLog(Cog, name="ModLog"):
         if message.author.bot or not message.guild:
             return True
 
-        return self.is_raw_message_blacklisted(message.guild.id, message.channel.id)
+        return self.is_channel_ignored(message.channel.id)
 
-    def is_raw_message_blacklisted(self, guild_id: t.Optional[int], channel_id: int) -> bool:
-        """Return true if the message constructed from raw parameter is in a blacklisted thread or channel."""
-        # Ignore DMs or messages outside of the main guild
-        if not guild_id or guild_id != GuildConstant.id:
-            return True
+    def is_channel_ignored(self, channel_id: int) -> bool:
+        """
+        Return true if the channel, or parent channel in the case of threads, passed should be ignored by modlog.
 
+        Currently ignored channels are:
+        1. Channels not in the guild we care about (constants.Guild.id).
+        2. Channels that mods do not have view permissions to
+        3. Channels in constants.Guild.modlog_blacklist
+        """
         channel = self.bot.get_channel(channel_id)
 
-        # Look at the parent channel of a thread
+        # Ignore not found channels, DMs, and messages outside of the main guild.
+        if not channel or channel.guild and channel.guild.id != GuildConstant.id:
+            return True
+
+        # Look at the parent channel of a thread.
         if isinstance(channel, Thread):
-            return channel.parent.id in GuildConstant.modlog_blacklist
+            channel = channel.parent
+
+        # Mod team doesn't have view permission to the channel.
+        if not channel.permissions_for(channel.guild.get_role(Roles.mod_team)).view_channel:
+            return True
 
         return channel.id in GuildConstant.modlog_blacklist
 
@@ -602,7 +613,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
         """Log raw message delete event to message change log."""
-        if self.is_raw_message_blacklisted(event.guild_id, event.channel_id):
+        if self.is_channel_ignored(event.channel_id):
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
@@ -827,7 +838,8 @@ class ModLog(Cog, name="ModLog"):
         """Log member voice state changes to the voice log channel."""
         if (
             member.guild.id != GuildConstant.id
-            or (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
+            or (before.channel and self.is_channel_ignored(before.channel.id))
+            or (after.channel and self.is_channel_ignored(after.channel.id))
         ):
             return
 
