@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict
 
 from discord import Member, Role, User
@@ -9,9 +8,10 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.exts.backend.sync import _syncers
+from bot.log import get_logger
 from bot.utils import scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Sync(Cog):

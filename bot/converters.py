@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import re
 import typing as t
 from datetime import datetime
@@ -19,13 +18,15 @@ from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
+from bot.log import get_logger
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
 from bot.utils.time import parse_duration_string
+
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 DISCORD_EPOCH_DT = datetime.utcfromtimestamp(DISCORD_EPOCH / 1000)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
@@ -272,7 +273,7 @@ class Snowflake(IDConverter):
         snowflake = int(arg)
 
         try:
-            time = snowflake_time(snowflake)
+            time = snowflake_time(snowflake).replace(tzinfo=None)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
             raise BadArgument(f"{error}: {e}")

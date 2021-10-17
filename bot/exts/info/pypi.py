@@ -1,5 +1,4 @@
 import itertools
-import logging
 import random
 import re
 from contextlib import suppress
@@ -10,6 +9,7 @@ from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
+from bot.log import get_logger
 from bot.utils.messages import wait_for_deletion
 
 URL = "https://pypi.org/pypi/{package}/json"
@@ -20,7 +20,7 @@ PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 ILLEGAL_CHARACTERS = re.compile(r"[^-_.a-zA-Z0-9]+")
 INVALID_INPUT_DELETE_DELAY = RedirectOutput.delete_delay
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class PyPi(Cog):

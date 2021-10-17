@@ -7,6 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "3.9.*"
+"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/45d498c1b76deaf3b394d17ccf56112fa691d160.zip"}
 aio-pika = "~=6.1"
 aiodns = "~=2.0"
 aiohttp = "~=3.7"
@@ -17,7 +18,6 @@ beautifulsoup4 = "~=4.9"
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
 deepdiff = "~=4.0"
-"discord.py" = "~=1.7.3"
 emoji = "~=0.6"
 feedparser = "~=6.0.2"
 rapidfuzz = "~=1.4"
@@ -38,10 +38,10 @@ flake8 = "~=3.8"
 flake8-annotations = "~=2.0"
 flake8-bugbear = "~=20.1"
 flake8-docstrings = "~=1.4"
-flake8-import-order = "~=0.18"
 flake8-string-format = "~=0.2"
 flake8-tidy-imports = "~=4.0"
 flake8-todo = "~=0.7"
+flake8-isort = "~=4.0"
 pep8-naming = "~=0.9"
 pre-commit = "~=2.1"
 taskipy = "~=1.7.0"
@@ -66,8 +66,17 @@ test = "pytest -n auto --cov-report= --cov --ff"
 retest = "pytest -n auto --cov-report= --cov --lf"
 html = "coverage html"
 report = "coverage report"
+isort = "isort ."
 
 [tool.coverage.run]
 branch = true
 source_pkgs = ["bot"]
 source = ["tests"]
+
+[tool.isort]
+multi_line_output = 6
+order_by_type = false
+case_sensitive = true
+combine_as_imports = true
+line_length = 120
+atomic = true

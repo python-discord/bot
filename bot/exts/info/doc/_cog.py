@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import sys
 import textwrap
 from collections import defaultdict
@@ -17,15 +16,17 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import scheduling
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 from bot.utils.scheduling import Scheduler
+
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 from ._inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # symbols with a group contained here will get the group prefixed on duplicates
 FORCE_PREFIX_GROUPS = (

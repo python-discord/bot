@@ -1,5 +1,4 @@
 import colorsys
-import logging
 import pprint
 import textwrap
 from collections import defaultdict
@@ -16,13 +15,14 @@ from bot.bot import Bot
 from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Information(Cog):
@@ -315,7 +315,7 @@ class Information(Cog):
         for field_name, field_content in fields:
             embed.add_field(name=field_name, value=field_content, inline=False)
 
-        embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
+        embed.set_thumbnail(url=user.display_avatar.url)
         embed.colour = user.colour if user.colour != Colour.default() else Colour.blurple()
 
         return embed

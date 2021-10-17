@@ -248,15 +248,13 @@ guild:
         - *ADMIN_SPAM
         - *MODS
 
-    # Modlog cog ignores events which occur in these channels
+    # Modlog cog explicitly ignores events which occur in these channels.
+    # This is on top of implicitly ignoring events in channels that the mod team cannot view.
     modlog_blacklist:
-        - *ADMINS
-        - *ADMINS_VOICE
         - *ATTACH_LOG
         - *MESSAGE_LOG
         - *MOD_LOG
         - *STAFF_VOICE
-        - *DEV_CORE_VOTING
 
     reminder_whitelist:
         - *BOT_CMD

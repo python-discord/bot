@@ -8,8 +8,8 @@ from bot.constants import Roles
 from bot.exts.events import code_jams
 from bot.exts.events.code_jams import _channels, _cog
 from tests.helpers import (
-    MockAttachment, MockBot, MockCategoryChannel, MockContext,
-    MockGuild, MockMember, MockRole, MockTextChannel, autospec
+    MockAttachment, MockBot, MockCategoryChannel, MockContext, MockGuild, MockMember, MockRole, MockTextChannel,
+    autospec
 )
 
 TEST_CSV = b"""\

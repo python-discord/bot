@@ -1,12 +1,11 @@
-import logging
-
 import discord
 
 import bot
 from bot import constants
 from bot.constants import Categories
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def is_help_channel(channel: discord.TextChannel) -> bool:

@@ -1,4 +1,3 @@
-import logging
 import re
 import typing as t
 from datetime import date, datetime
@@ -11,6 +10,7 @@ from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.webhooks import send_webhook
 
@@ -31,7 +31,7 @@ MARKDOWN_REGEX = re.compile(
     re.DOTALL  # required to support multi-line codeblocks
 )
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class PythonNews(Cog):

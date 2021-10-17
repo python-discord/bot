@@ -1,7 +1,6 @@
 import unittest
 from unittest import mock
 
-
 from bot.api import ResponseCodeError
 from bot.exts.backend.sync._syncers import Syncer
 from tests import helpers

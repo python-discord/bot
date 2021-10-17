@@ -1,4 +1,3 @@
-import logging
 import textwrap
 from collections import ChainMap, defaultdict
 from io import StringIO
@@ -14,6 +13,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import scheduling, time
 from bot.utils.members import get_or_fetch_member
@@ -22,7 +22,7 @@ from bot.utils.time import get_time_delta
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class TalentPool(Cog, name="Talentpool"):

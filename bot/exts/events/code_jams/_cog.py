@@ -1,6 +1,5 @@
 import asyncio
 import csv
-import logging
 import typing as t
 from collections import defaultdict
 
@@ -11,10 +10,11 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import Emojis, Roles
 from bot.exts.events.code_jams import _channels
+from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
 from bot.utils.services import send_to_paste_service
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 TEAM_LEADERS_COLOUR = 0x11806a
 DELETION_REACTION = "\U0001f4a5"

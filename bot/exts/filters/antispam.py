@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -14,19 +13,17 @@ from discord.ext.commands import Cog
 from bot import rules
 from bot.bot import Bot
 from bot.constants import (
-    AntiSpam as AntiSpamConfig, Channels,
-    Colours, DEBUG_MODE, Event, Filter,
-    Guild as GuildConfig, Icons,
+    AntiSpam as AntiSpamConfig, Channels, Colours, DEBUG_MODE, Event, Filter, Guild as GuildConfig, Icons
 )
 from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import lock, scheduling
 from bot.utils.message_cache import MessageCache
 from bot.utils.messages import format_user, send_attachments
 
-
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 RULE_FUNCTION_MAPPING = {
     'attachments': rules.apply_attachments,
@@ -109,7 +106,7 @@ class DeletionContext:
             colour=Colour(Colours.soft_red),
             title="Spam detected!",
             text=mod_alert_message,
-            thumbnail=first_message.author.avatar_url_as(static_format="png"),
+            thumbnail=first_message.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=AntiSpamConfig.ping_everyone
         )
@@ -181,7 +178,9 @@ class AntiSpam(Cog):
         self.cache.append(message)
 
         earliest_relevant_at = datetime.utcnow() - timedelta(seconds=self.max_interval)
-        relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
+        relevant_messages = list(
+            takewhile(lambda msg: msg.created_at.replace(tzinfo=None) > earliest_relevant_at, self.cache)
+        )
 
         for rule_name in AntiSpamConfig.rules:
             rule_config = AntiSpamConfig.rules[rule_name]
@@ -190,7 +189,9 @@ class AntiSpam(Cog):
             # Create a list of messages that were sent in the interval that the rule cares about.
             latest_interesting_stamp = datetime.utcnow() - timedelta(seconds=rule_config['interval'])
             messages_for_rule = list(
-                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)
+                takewhile(
+                    lambda msg: msg.created_at.replace(tzinfo=None) > latest_interesting_stamp, relevant_messages
+                )
             )
 
             result = await rule_function(message, messages_for_rule, rule_config)

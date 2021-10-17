@@ -4,7 +4,7 @@ import logging
 import typing as t
 import unittest
 from unittest import mock
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import aiohttp
 import discord
@@ -14,15 +14,8 @@ from bot.constants import Colours
 from bot.exts.moderation import incidents
 from bot.utils.messages import format_user
 from tests.helpers import (
-    MockAsyncWebhook,
-    MockAttachment,
-    MockBot,
-    MockMember,
-    MockMessage,
-    MockReaction,
-    MockRole,
-    MockTextChannel,
-    MockUser,
+    MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
+    MockUser
 )
 
 
@@ -398,7 +391,7 @@ class TestArchive(TestIncidents):
         # Define our own `incident` to be archived
         incident = MockMessage(
             content="this is an incident",
-            author=MockUser(name="author_name", avatar_url="author_avatar"),
+            author=MockUser(name="author_name", display_avatar=Mock(url="author_avatar")),
             id=123,
         )
         built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this

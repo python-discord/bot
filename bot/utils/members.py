@@ -1,9 +1,10 @@
-import logging
 import typing as t
 
 import discord
 
-log = logging.getLogger(__name__)
+from bot.log import get_logger
+
+log = get_logger(__name__)
 
 
 async def get_or_fetch_member(guild: discord.Guild, member_id: int) -> t.Optional[discord.Member]:
