@@ -556,8 +556,9 @@ class Incidents(Cog):
         await add_signals(message)
 
         # Only use this feature if incidents webhook embed is found
-        if embed_list := await self.extract_message_links(message) and self.incidents_webhook:
-            await self.send_message_link_embeds(embed_list, message, self.incidents_webhook)
+        if self.incidents_webhook:
+            if embed_list := await self.extract_message_links(message):
+                await self.send_message_link_embeds(embed_list, message, self.incidents_webhook)
 
     @Cog.listener()
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent) -> None:
@@ -608,7 +609,7 @@ class Incidents(Cog):
         Using the `webhook` passed in as a parameter to send
         the embeds in the `webhook_embed_list` parameter.
 
-        After sending each embed it maps the `message.id
+        After sending each embed it maps the `message.id`
         to the `webhook_msg_ids` IDs in the async redis-cache.
         """
         try:
