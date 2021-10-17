@@ -1,6 +1,5 @@
 import contextlib
 import inspect
-import logging
 import pprint
 import re
 import textwrap
@@ -15,9 +14,10 @@ from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
 
 from bot.bot import Bot
 from bot.constants import DEBUG_MODE, Roles
+from bot.log import get_logger
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Internal(Cog):

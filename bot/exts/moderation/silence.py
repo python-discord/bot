@@ -1,23 +1,24 @@
 import json
-import logging
 import typing
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from typing import Optional, OrderedDict, Union
 
 from async_rediscache import RedisCache
-from discord import Guild, PermissionOverwrite, TextChannel, VoiceChannel
+from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
+from discord.utils import MISSING
 
 from bot import constants
 from bot.bot import Bot
 from bot.converters import HushDurationConverter
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.lock import LockedResourceError, lock, lock_arg
 from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 LOCK_NAMESPACE = "silence"
 
@@ -48,7 +49,16 @@ class SilenceNotifier(tasks.Loop):
     """Loop notifier for posting notices to `alert_channel` containing added channels."""
 
     def __init__(self, alert_channel: TextChannel):
-        super().__init__(self._notifier, seconds=1, minutes=0, hours=0, count=None, reconnect=True, loop=None)
+        super().__init__(
+            self._notifier,
+            seconds=1,
+            minutes=0,
+            hours=0,
+            count=None,
+            reconnect=True,
+            loop=None,
+            time=MISSING
+        )
         self._silenced_channels = {}
         self._alert_channel = alert_channel
 
@@ -173,6 +183,12 @@ class Silence(commands.Cog):
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
 
+        # Since threads don't have specific overrides, we cannot silence them individually.
+        # The parent channel has to be muted or the thread should be archived.
+        if isinstance(channel, Thread):
+            await ctx.send(":x: Threads cannot be silenced.")
+            return
+
         if not await self._set_silence_overwrites(channel, kick=kick):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
             await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel, alert_target=False)
@@ -223,7 +239,13 @@ class Silence(commands.Cog):
         if isinstance(channel, TextChannel):
             role = self._everyone_role
             overwrite = channel.overwrites_for(role)
-            prev_overwrites = dict(send_messages=overwrite.send_messages, add_reactions=overwrite.add_reactions)
+            prev_overwrites = dict(
+                send_messages=overwrite.send_messages,
+                add_reactions=overwrite.add_reactions,
+                create_private_threads=overwrite.create_private_threads,
+                create_public_threads=overwrite.create_public_threads,
+                send_messages_in_threads=overwrite.send_messages_in_threads
+            )
 
         else:
             role = self._verified_voice_role
@@ -323,7 +345,15 @@ class Silence(commands.Cog):
         # Check if old overwrites were not stored
         if prev_overwrites is None:
             log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")
-            overwrite.update(send_messages=None, add_reactions=None, speak=None, connect=None)
+            overwrite.update(
+                send_messages=None,
+                add_reactions=None,
+                create_private_threads=None,
+                create_public_threads=None,
+                send_messages_in_threads=None,
+                speak=None,
+                connect=None
+            )
         else:
             overwrite.update(**json.loads(prev_overwrites))
 

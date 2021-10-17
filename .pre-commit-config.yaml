@@ -13,6 +13,11 @@ repos:
     rev: v1.5.1
     hooks:
       - id: python-check-blanket-noqa
+  - repo: https://github.com/pycqa/isort
+    rev: 5.8.0
+    hooks:
+      - id: isort
+        name: isort (python)
   - repo: local
     hooks:
       - id: flake8

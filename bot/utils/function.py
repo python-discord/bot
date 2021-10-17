@@ -2,11 +2,12 @@
 
 import functools
 import inspect
-import logging
 import types
 import typing as t
 
-log = logging.getLogger(__name__)
+from bot.log import get_logger
+
+log = get_logger(__name__)
 
 Argument = t.Union[int, str]
 BoundArgs = t.OrderedDict[str, t.Any]

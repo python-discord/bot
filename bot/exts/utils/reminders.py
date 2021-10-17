@@ -1,4 +1,3 @@
-import logging
 import random
 import textwrap
 import typing as t
@@ -10,11 +9,9 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import (
-    Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
-    Roles, STAFF_PARTNERS_COMMUNITY_ROLES
-)
+from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Duration, UnambiguousUser
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import scheduling
 from bot.utils.checks import has_any_role_check, has_no_roles_check
@@ -24,7 +21,7 @@ from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import TimestampFormats, discord_timestamp
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
@@ -118,7 +115,7 @@ class Reminders(Cog):
         if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
-            return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
+            return all(isinstance(mention, (discord.User, discord.Member)) for mention in mentions), "roles"
         else:
             return True, ""
 

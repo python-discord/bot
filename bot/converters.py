@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import re
 import typing as t
 from datetime import datetime
@@ -19,13 +18,15 @@ from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
+from bot.log import get_logger
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
 from bot.utils.time import parse_duration_string
+
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 DISCORD_EPOCH_DT = datetime.utcfromtimestamp(DISCORD_EPOCH / 1000)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
@@ -70,10 +71,10 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
-        invite_code = INVITE_RE.search(server_invite)
+        invite_code = INVITE_RE.match(server_invite)
         if invite_code:
             response = await ctx.bot.http_session.get(
-                f"{URLs.discord_invite_api}/{invite_code[1]}"
+                f"{URLs.discord_invite_api}/{invite_code.group('invite')}"
             )
             if response.status != 404:
                 invite_data = await response.json()
@@ -272,7 +273,7 @@ class Snowflake(IDConverter):
         snowflake = int(arg)
 
         try:
-            time = snowflake_time(snowflake)
+            time = snowflake_time(snowflake).replace(tzinfo=None)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
             raise BadArgument(f"{error}: {e}")

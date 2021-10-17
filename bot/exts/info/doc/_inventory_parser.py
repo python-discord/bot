@@ -1,4 +1,3 @@
-import logging
 import re
 import zlib
 from collections import defaultdict
@@ -7,8 +6,9 @@ from typing import AsyncIterator, DefaultDict, List, Optional, Tuple
 import aiohttp
 
 import bot
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 _V2_LINE_RE = re.compile(r'(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)')

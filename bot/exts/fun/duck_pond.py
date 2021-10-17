@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from typing import Union
 
 import discord
@@ -9,12 +8,13 @@ from discord.ext.commands import Cog, Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.converters import MemberOrUser
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.checks import has_any_role
 from bot.utils.messages import count_unique_users_reaction, send_attachments
 from bot.utils.webhooks import send_webhook
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class DuckPond(Cog):
@@ -94,7 +94,7 @@ class DuckPond(Cog):
                 webhook=self.webhook,
                 content=message.clean_content,
                 username=message.author.display_name,
-                avatar_url=message.author.avatar_url
+                avatar_url=message.author.display_avatar.url
             )
 
         if message.attachments:
@@ -109,7 +109,7 @@ class DuckPond(Cog):
                     webhook=self.webhook,
                     embed=e,
                     username=message.author.display_name,
-                    avatar_url=message.author.avatar_url
+                    avatar_url=message.author.display_avatar.url
                 )
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")

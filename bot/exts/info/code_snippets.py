@@ -10,9 +10,10 @@ from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels
+from bot.log import get_logger
 from bot.utils.messages import wait_for_deletion
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 GITHUB_RE = re.compile(
     r'https://github\.com/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/blob/'

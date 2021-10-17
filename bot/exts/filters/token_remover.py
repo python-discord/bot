@@ -1,6 +1,5 @@
 import base64
 import binascii
-import logging
 import re
 import typing as t
 
@@ -11,10 +10,11 @@ from bot import utils
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Event, Icons
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 LOG_MESSAGE = (
     "Censored a seemingly valid token sent by {author} in {channel}, "
@@ -109,7 +109,7 @@ class TokenRemover(Cog):
             colour=Colour(Colours.soft_red),
             title="Token removed!",
             text=log_message + "\n" + userid_message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=mention_everyone,
         )

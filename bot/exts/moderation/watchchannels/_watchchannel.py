@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 import textwrap
 from abc import abstractmethod
@@ -17,12 +16,13 @@ from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, 
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
+from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, scheduling
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import get_time_delta
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 URL_RE = re.compile(r"(https?://[^\s]+)")
 
@@ -47,7 +47,7 @@ class WatchChannel(metaclass=CogABCMeta):
         webhook_id: int,
         api_endpoint: str,
         api_default_params: dict,
-        logger: logging.Logger,
+        logger: CustomLogger,
         *,
         disable_header: bool = False
     ) -> None:
@@ -250,7 +250,7 @@ class WatchChannel(metaclass=CogABCMeta):
             await self.webhook_send(
                 cleaned_content,
                 username=msg.author.display_name,
-                avatar_url=msg.author.avatar_url
+                avatar_url=msg.author.display_avatar.url
             )
 
         if msg.attachments:
@@ -264,7 +264,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 await self.webhook_send(
                     embed=e,
                     username=msg.author.display_name,
-                    avatar_url=msg.author.avatar_url
+                    avatar_url=msg.author.display_avatar.url
                 )
             except discord.HTTPException as exc:
                 self.log.exception(
@@ -301,7 +301,7 @@ class WatchChannel(metaclass=CogABCMeta):
         embed = Embed(description=f"{msg.author.mention} {message_jump}")
         embed.set_footer(text=textwrap.shorten(footer, width=256, placeholder="..."))
 
-        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
+        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.display_avatar.url)
 
     async def list_watched_users(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True

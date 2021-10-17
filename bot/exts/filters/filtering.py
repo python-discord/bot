@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
@@ -15,17 +14,15 @@ from discord.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import (
-    Channels, Colours, Filter,
-    Guild, Icons, URLs
-)
+from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Regular expressions
 CODE_BLOCK_RE = re.compile(
@@ -226,7 +223,7 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.avatar_url
+                thumbnail=member.display_avatar.url
             )
 
             # Update time when alert sent
@@ -386,7 +383,7 @@ class Filtering(Cog):
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
             text=message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,
@@ -510,7 +507,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = INVITE_RE.findall(text)
+        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:
