@@ -405,7 +405,7 @@ class ModLog(Cog, name="ModLog"):
             return
 
         now = datetime.utcnow()
-        difference = abs(relativedelta(now, member.created_at))
+        difference = abs(relativedelta(now, member.created_at.replace(tzinfo=None)))
 
         message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
 
