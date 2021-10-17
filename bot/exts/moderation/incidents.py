@@ -105,7 +105,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         else:
             embed.set_author(name="[Failed to relay attachment]", url=attachment.proxy_url)  # Embed links the file
     else:
-        file = None
+        file = discord.utils.MISSING
 
     return embed, file
 
