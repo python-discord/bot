@@ -1,6 +1,7 @@
+from contextlib import suppress
 from typing import Optional
 
-from discord import Embed, TextChannel
+from discord import Embed, Forbidden, TextChannel, Thread
 from discord.ext.commands import Cog, Context, command, group, has_any_role
 
 from bot.bot import Bot
@@ -15,6 +16,20 @@ class BotCog(Cog, name="Bot"):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @Cog.listener()
+    async def on_thread_join(self, thread: Thread) -> None:
+        """
+        Try to join newly created threads.
+
+        Despite the event name being misleading, this is dispatched when new threads are created.
+        """
+        if thread.me:
+            # We have already joined this thread
+            return
+
+        with suppress(Forbidden):
+            await thread.join()
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     async def botinfo_group(self, ctx: Context) -> None:

@@ -111,7 +111,7 @@ class Defcon(Cog):
         if self.threshold:
             now = datetime.utcnow()
 
-            if now - member.created_at < relativedelta_to_timedelta(self.threshold):
+            if now - member.created_at.replace(tzinfo=None) < relativedelta_to_timedelta(self.threshold):
                 log.info(f"Rejecting user {member}: Account is too new")
 
                 message_sent = False
@@ -137,7 +137,7 @@ class Defcon(Cog):
 
                 await self.mod_log.send_log_message(
                     Icons.defcon_denied, Colours.soft_red, "Entry denied",
-                    message, member.avatar_url_as(static_format="png")
+                    message, member.display_avatar.url
                 )
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
@@ -185,7 +185,12 @@ class Defcon(Cog):
         role = ctx.guild.default_role
         permissions = role.permissions
 
-        permissions.update(send_messages=False, add_reactions=False, connect=False)
+        permissions.update(
+            send_messages=False,
+            add_reactions=False,
+            send_messages_in_threads=False,
+            connect=False
+        )
         await role.edit(reason="DEFCON shutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
 
@@ -196,7 +201,12 @@ class Defcon(Cog):
         role = ctx.guild.default_role
         permissions = role.permissions
 
-        permissions.update(send_messages=True, add_reactions=True, connect=True)
+        permissions.update(
+            send_messages=True,
+            add_reactions=True,
+            send_messages_in_threads=True,
+            connect=True
+        )
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
 

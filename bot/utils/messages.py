@@ -121,7 +121,7 @@ async def send_attachments(
     """
     webhook_send_kwargs = {
         'username': message.author.display_name,
-        'avatar_url': message.author.avatar_url,
+        'avatar_url': message.author.display_avatar.url,
     }
     webhook_send_kwargs.update(kwargs)
     webhook_send_kwargs['username'] = sub_clyde(webhook_send_kwargs['username'])

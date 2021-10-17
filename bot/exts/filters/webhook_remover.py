@@ -63,7 +63,7 @@ class WebhookRemover(Cog):
             colour=Colour(Colours.soft_red),
             title="Discord webhook URL removed!",
             text=message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts
         )
 

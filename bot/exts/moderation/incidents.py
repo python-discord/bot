@@ -94,7 +94,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         timestamp=datetime.utcnow(),
         colour=colour,
     )
-    embed.set_footer(text=footer, icon_url=actioned_by.avatar_url)
+    embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 
     if incident.attachments:
         attachment = incident.attachments[0]  # User-sent messages can only contain one attachment
@@ -253,7 +253,7 @@ class Incidents(Cog):
             await webhook.send(
                 embed=embed,
                 username=sub_clyde(incident.author.name),
-                avatar_url=incident.author.avatar_url,
+                avatar_url=incident.author.display_avatar.url,
                 file=attachment_file,
             )
         except Exception:

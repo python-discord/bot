@@ -250,7 +250,7 @@ class WatchChannel(metaclass=CogABCMeta):
             await self.webhook_send(
                 cleaned_content,
                 username=msg.author.display_name,
-                avatar_url=msg.author.avatar_url
+                avatar_url=msg.author.display_avatar.url
             )
 
         if msg.attachments:
@@ -264,7 +264,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 await self.webhook_send(
                     embed=e,
                     username=msg.author.display_name,
-                    avatar_url=msg.author.avatar_url
+                    avatar_url=msg.author.display_avatar.url
                 )
             except discord.HTTPException as exc:
                 self.log.exception(
@@ -301,7 +301,7 @@ class WatchChannel(metaclass=CogABCMeta):
         embed = Embed(description=f"{msg.author.mention} {message_jump}")
         embed.set_footer(text=textwrap.shorten(footer, width=256, placeholder="..."))
 
-        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
+        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.display_avatar.url)
 
     async def list_watched_users(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True

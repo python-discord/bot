@@ -253,7 +253,7 @@ class InfractionScheduler:
             icon_url=icon,
             colour=Colours.soft_red,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.display_avatar.url,
             text=textwrap.dedent(f"""
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
@@ -347,7 +347,7 @@ class InfractionScheduler:
             icon_url=_utils.INFRACTION_ICONS[infr_type][1],
             colour=Colours.soft_green,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.display_avatar.url,
             text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
             footer=footer,
             content=log_content,
@@ -464,7 +464,7 @@ class InfractionScheduler:
             log_title = "expiration failed" if "Failure" in log_text else "expired"
 
             user = self.bot.get_user(user_id)
-            avatar = user.avatar_url_as(static_format="png") if user else None
+            avatar = user.display_avatar.url if user else None
 
             # Move reason to end so when reason is too long, this is not gonna cut out required items.
             log_text["Reason"] = log_text.pop("Reason")
