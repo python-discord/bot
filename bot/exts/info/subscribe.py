@@ -1,5 +1,3 @@
-import logging
-
 import arrow
 import discord
 from discord.ext import commands
@@ -8,6 +6,7 @@ from discord.interactions import Interaction
 from bot import constants
 from bot.bot import Bot
 from bot.decorators import in_whitelist
+from bot.log import get_logger
 from bot.utils import checks, members, scheduling
 
 # Tuple of tuples, where each inner tuple is a role id and a month number.
@@ -21,7 +20,7 @@ ASSIGNABLE_ROLES = (
 )
 ITEMS_PER_ROW = 3
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class RoleButtonView(discord.ui.View):
