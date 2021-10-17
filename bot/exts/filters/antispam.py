@@ -13,9 +13,7 @@ from discord.ext.commands import Cog
 from bot import rules
 from bot.bot import Bot
 from bot.constants import (
-    AntiSpam as AntiSpamConfig, Channels,
-    Colours, DEBUG_MODE, Event, Filter,
-    Guild as GuildConfig, Icons,
+    AntiSpam as AntiSpamConfig, Channels, Colours, DEBUG_MODE, Event, Filter, Guild as GuildConfig, Icons
 )
 from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME

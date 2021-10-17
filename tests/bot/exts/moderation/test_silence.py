@@ -12,14 +12,7 @@ from discord import PermissionOverwrite
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.moderation import silence
 from tests.helpers import (
-    MockBot,
-    MockContext,
-    MockGuild,
-    MockMember,
-    MockRole,
-    MockTextChannel,
-    MockVoiceChannel,
-    autospec
+    MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel, MockVoiceChannel, autospec
 )
 
 redis_session = None

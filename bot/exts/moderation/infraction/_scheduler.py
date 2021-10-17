@@ -81,12 +81,16 @@ class InfractionScheduler:
         apply_coro: t.Optional[t.Awaitable]
     ) -> None:
         """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
-        # Calculate the time remaining, in seconds, for the mute.
-        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
-        delta = (expiry - datetime.utcnow()).total_seconds()
+        if infraction["expires_at"] is not None:
+            # Calculate the time remaining, in seconds, for the mute.
+            expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
+            delta = (expiry - datetime.utcnow()).total_seconds()
+        else:
+            # If the infraction is permanent, it is not possible to get the time remaining.
+            delta = None
 
-        # Mark as inactive if less than a minute remains.
-        if delta < 60:
+        # Mark as inactive if the infraction is not permanent and less than a minute remains.
+        if delta is not None and delta < 60:
             log.info(
                 "Infraction will be deactivated instead of re-applied "
                 "because less than 1 minute remains."
