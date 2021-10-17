@@ -1,5 +1,4 @@
 import functools
-import logging
 import typing as t
 from enum import Enum
 
@@ -11,10 +10,11 @@ from bot import exts
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.converters import Extension
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.extensions import EXTENSIONS
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 UNLOAD_BLACKLIST = {f"{exts.__name__}.utils.extensions", f"{exts.__name__}.moderation.modlog"}
@@ -36,7 +36,7 @@ class Extensions(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @group(name="extensions", aliases=("ext", "exts", "c", "cogs"), invoke_without_command=True)
+    @group(name="extensions", aliases=("ext", "exts", "c", "cog", "cogs"), invoke_without_command=True)
     async def extensions_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list loaded extensions."""
         await ctx.send_help(ctx.command)

@@ -1,4 +1,3 @@
-import logging
 import re
 
 from discord import Colour, Message, NotFound
@@ -7,6 +6,7 @@ from discord.ext.commands import Cog
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Event, Icons
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils.messages import format_user
 
 WEBHOOK_URL_RE = re.compile(
@@ -21,7 +21,7 @@ ALERT_MESSAGE_TEMPLATE = (
     "mistake, please let us know."
 )
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class WebhookRemover(Cog):
@@ -63,7 +63,7 @@ class WebhookRemover(Cog):
             colour=Colour(Colours.soft_red),
             title="Discord webhook URL removed!",
             text=message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts
         )
 

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import socket
 import warnings
 from collections import defaultdict
@@ -14,8 +13,9 @@ from sentry_sdk import push_scope
 
 from bot import api, constants
 from bot.async_stats import AsyncStatsClient
+from bot.log import get_logger
 
-log = logging.getLogger('bot')
+log = get_logger('bot')
 LOCALHOST = "127.0.0.1"
 
 
@@ -109,7 +109,7 @@ class Bot(commands.Bot):
     def create(cls) -> "Bot":
         """Create and return an instance of a Bot."""
         loop = asyncio.get_event_loop()
-        allowed_roles = [discord.Object(id_) for id_ in constants.MODERATION_ROLES]
+        allowed_roles = list({discord.Object(id_) for id_ in constants.MODERATION_ROLES})
 
         intents = discord.Intents.all()
         intents.presences = False

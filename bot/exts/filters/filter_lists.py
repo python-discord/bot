@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from discord import Colour, Embed
@@ -8,9 +7,11 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
+from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class FilterLists(Cog):
@@ -27,7 +28,7 @@ class FilterLists(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.bot.loop.create_task(self._amend_docstrings())
+        scheduling.create_task(self._amend_docstrings(), event_loop=self.bot.loop)
 
     async def _amend_docstrings(self) -> None:
         """Add the valid FilterList types to the docstrings, so they'll appear in !help invocations."""
