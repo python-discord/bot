@@ -459,8 +459,9 @@ class Incidents(Cog):
         else:
             log.trace("Deletion was confirmed")
 
-        # Deletes the message link embeds found in cache from the channel and cache.
-        await self.delete_msg_link_embed(incident.id)
+        if self.incidents_webhook:
+            # Deletes the message link embeds found in cache from the channel and cache.
+            await self.delete_msg_link_embed(incident.id)
 
     async def resolve_message(self, message_id: int) -> Optional[discord.Message]:
         """
@@ -567,7 +568,8 @@ class Incidents(Cog):
 
         Search through the cache for message, if found delete it from cache and channel.
         """
-        await self.delete_msg_link_embed(payload.message_id)
+        if self.incidents_webhook:
+            await self.delete_msg_link_embed(payload.message_id)
 
     async def extract_message_links(self, message: discord.Message) -> Optional[list[discord.Embed]]:
         """
