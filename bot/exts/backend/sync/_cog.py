@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict
 
 from discord import Member, Role, User
@@ -9,8 +8,10 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.exts.backend.sync import _syncers
+from bot.log import get_logger
+from bot.utils import scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Sync(Cog):
@@ -18,7 +19,7 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.bot.loop.create_task(self.sync_guild())
+        scheduling.create_task(self.sync_guild(), event_loop=self.bot.loop)
 
     async def sync_guild(self) -> None:
         """Syncs the roles/users of the guild with the database."""

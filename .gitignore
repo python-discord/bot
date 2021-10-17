@@ -116,6 +116,7 @@ log.*
 # Custom user configuration
 config.yml
 docker-compose.override.yml
+metricity-config.toml
 
 # xmlrunner unittest XML reports
 TEST-**.xml

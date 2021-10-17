@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
@@ -15,17 +14,15 @@ from discord.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import (
-    Channels, Colours, Filter,
-    Guild, Icons, URLs
-)
+from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
-from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Regular expressions
 CODE_BLOCK_RE = re.compile(
@@ -64,7 +61,7 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -133,7 +130,7 @@ class Filtering(Cog):
             },
         }
 
-        self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
+        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -226,7 +223,7 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.avatar_url
+                thumbnail=member.display_avatar.url
             )
 
             # Update time when alert sent
@@ -386,7 +383,7 @@ class Filtering(Cog):
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
             text=message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,
@@ -478,16 +475,12 @@ class Filtering(Cog):
         Second return value is a reason of URL blacklisting (can be None).
         """
         text = self.clean_input(text)
-        if not URL_RE.search(text):
-            return False, None
 
-        text = text.lower()
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
-
-        for url in domain_blacklist:
-            if url.lower() in text:
-                return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
-
+        for match in URL_RE.finditer(text):
+            for url in domain_blacklist:
+                if url.lower() in match.group(1).lower():
+                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod

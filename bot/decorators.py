@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import logging
 import types
 import typing as t
 from contextlib import suppress
@@ -10,11 +9,12 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
-from bot.utils import function
+from bot.log import get_logger
+from bot.utils import function, scheduling
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
 from bot.utils.function import command_wraps
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def in_whitelist(
@@ -154,7 +154,7 @@ def redirect_output(
 
             if ping_user:
                 await ctx.send(f"Here's the output of your command, {ctx.author.mention}")
-            asyncio.create_task(func(self, ctx, *args, **kwargs))
+            scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
                 f"Hey, {ctx.author.mention}, you can find the output of your command here: "

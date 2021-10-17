@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 from typing import Iterable, Optional
@@ -8,12 +7,11 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import (
-    Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
-)
+from bot.constants import Channels, CleanMessages, Colours, Event, Icons, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Clean(Cog):
@@ -107,7 +105,7 @@ class Clean(Cog):
         elif regex:
             predicate = predicate_regex          # Delete messages that match regex
         else:
-            predicate = None                     # Delete all messages
+            predicate = lambda *_: True          # Delete all messages
 
         # Default to using the invoking context's channel
         if not channels:

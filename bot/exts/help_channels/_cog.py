@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import random
 import typing as t
 from datetime import timedelta
@@ -14,9 +13,10 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
-from bot.utils import channel as channel_utils, lock, scheduling
+from bot.log import get_logger
+from bot.utils import channel as channel_utils, lock, members, scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 NAMESPACE = "help"
 HELP_CHANNEL_TOPIC = """
@@ -82,7 +82,7 @@ class HelpChannels(commands.Cog):
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
-        self.init_task = self.bot.loop.create_task(self.init_cog())
+        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
@@ -278,13 +278,13 @@ class HelpChannels(commands.Cog):
         log.trace("Getting the CategoryChannel objects for the help categories.")
 
         try:
-            self.available_category = await channel_utils.try_get_channel(
+            self.available_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_available
             )
-            self.in_use_category = await channel_utils.try_get_channel(
+            self.in_use_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_in_use
             )
-            self.dormant_category = await channel_utils.try_get_channel(
+            self.dormant_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_dormant
             )
         except discord.HTTPException:
@@ -434,7 +434,7 @@ class HelpChannels(commands.Cog):
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = self.bot.get_guild(constants.Guild.id).get_member(claimant_id)
+        claimant = await members.get_or_fetch_member(self.bot.get_guild(constants.Guild.id), claimant_id)
         if claimant is None:
             log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
         else:
@@ -507,7 +507,7 @@ class HelpChannels(commands.Cog):
         """Wait for a dormant channel to become available in the queue and return it."""
         log.trace("Waiting for a dormant channel.")
 
-        task = asyncio.create_task(self.channel_queue.get())
+        task = scheduling.create_task(self.channel_queue.get())
         self.queue_tasks.append(task)
         channel = await task
 

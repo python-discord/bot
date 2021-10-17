@@ -1,4 +1,3 @@
-import logging
 import textwrap
 import typing as t
 
@@ -9,8 +8,9 @@ from arrow import Arrow
 import bot
 from bot import constants
 from bot.exts.help_channels import _caches
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 

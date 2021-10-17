@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import re
 import typing as t
 from datetime import datetime
@@ -19,13 +18,15 @@ from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
+from bot.log import get_logger
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
 from bot.utils.time import parse_duration_string
+
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 DISCORD_EPOCH_DT = datetime.utcfromtimestamp(DISCORD_EPOCH / 1000)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
@@ -235,11 +236,16 @@ class Inventory(Converter):
     async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
-        if (inventory := await _inventory_parser.fetch_inventory(url)) is None:
-            raise BadArgument(
-                f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
-            )
-        return url, inventory
+        try:
+            inventory = await _inventory_parser.fetch_inventory(url)
+        except _inventory_parser.InvalidHeaderError:
+            raise BadArgument("Unable to parse inventory because of invalid header, check if URL is correct.")
+        else:
+            if inventory is None:
+                raise BadArgument(
+                    f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+                )
+            return url, inventory
 
 
 class Snowflake(IDConverter):
@@ -267,7 +273,7 @@ class Snowflake(IDConverter):
         snowflake = int(arg)
 
         try:
-            time = snowflake_time(snowflake)
+            time = snowflake_time(snowflake).replace(tzinfo=None)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
             raise BadArgument(f"{error}: {e}")
@@ -392,7 +398,8 @@ class Duration(DurationDelta):
 class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
-    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
+    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-<>"
+    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞"
 
     @classmethod
     def translate_name(cls, name: str, *, from_unicode: bool = True) -> str:
@@ -402,9 +409,9 @@ class OffTopicName(Converter):
         If `from_unicode` is True, the name is translated from a discord-safe format, back to normalized text.
         """
         if from_unicode:
-            table = str.maketrans(cls.ALLOWED_CHARACTERS, '𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-')
+            table = str.maketrans(cls.ALLOWED_CHARACTERS, cls.TRANSLATED_CHARACTERS)
         else:
-            table = str.maketrans('𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-', cls.ALLOWED_CHARACTERS)
+            table = str.maketrans(cls.TRANSLATED_CHARACTERS, cls.ALLOWED_CHARACTERS)
 
         return name.translate(table)
 
