@@ -1,4 +1,3 @@
-import logging
 import re
 from functools import partial
 from typing import Callable, Container, Iterable, List, Union
@@ -6,9 +5,11 @@ from typing import Callable, Container, Iterable, List, Union
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, SoupStrainer, Tag
 
+from bot.log import get_logger
+
 from . import MAX_SIGNATURE_AMOUNT
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 _UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 _SEARCH_END_TAG_ATTRS = (

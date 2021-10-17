@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import random
 import re
 from functools import partial
@@ -11,9 +10,10 @@ from discord.ext.commands import Context
 
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.log import get_logger
 from bot.utils import scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def reaction_check(
@@ -121,7 +121,7 @@ async def send_attachments(
     """
     webhook_send_kwargs = {
         'username': message.author.display_name,
-        'avatar_url': message.author.avatar_url,
+        'avatar_url': message.author.display_avatar.url,
     }
     webhook_send_kwargs.update(kwargs)
     webhook_send_kwargs['username'] = sub_clyde(webhook_send_kwargs['username'])

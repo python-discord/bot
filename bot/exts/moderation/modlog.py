@@ -1,7 +1,6 @@
 import asyncio
 import difflib
 import itertools
-import logging
 import typing as t
 from datetime import datetime
 from itertools import zip_longest
@@ -9,17 +8,18 @@ from itertools import zip_longest
 import discord
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
-from discord import Colour
+from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
+from bot.log import get_logger
 from bot.utils.messages import format_user
 from bot.utils.time import humanize_delta
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.VoiceChannel]
 
@@ -394,7 +394,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.user_ban, Colours.soft_red,
             "User banned", format_user(member),
-            thumbnail=member.avatar_url_as(static_format="png"),
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
 
@@ -405,7 +405,7 @@ class ModLog(Cog, name="ModLog"):
             return
 
         now = datetime.utcnow()
-        difference = abs(relativedelta(now, member.created_at))
+        difference = abs(relativedelta(now, member.created_at.replace(tzinfo=None)))
 
         message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
 
@@ -415,7 +415,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.sign_in, Colours.soft_green,
             "User joined", message,
-            thumbnail=member.avatar_url_as(static_format="png"),
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
 
@@ -432,7 +432,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.sign_out, Colours.soft_red,
             "User left", format_user(member),
-            thumbnail=member.avatar_url_as(static_format="png"),
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
 
@@ -449,7 +449,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.user_unban, Colour.blurple(),
             "User unbanned", format_user(member),
-            thumbnail=member.avatar_url_as(static_format="png"),
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.mod_log
         )
 
@@ -515,9 +515,42 @@ class ModLog(Cog, name="ModLog"):
             colour=Colour.blurple(),
             title="Member updated",
             text=message,
-            thumbnail=after.avatar_url_as(static_format="png"),
+            thumbnail=after.display_avatar.url,
             channel_id=Channels.user_log
         )
+
+    def is_message_blacklisted(self, message: Message) -> bool:
+        """Return true if the message is in a blacklisted thread or channel."""
+        # Ignore bots or DMs
+        if message.author.bot or not message.guild:
+            return True
+
+        return self.is_channel_ignored(message.channel.id)
+
+    def is_channel_ignored(self, channel_id: int) -> bool:
+        """
+        Return true if the channel, or parent channel in the case of threads, passed should be ignored by modlog.
+
+        Currently ignored channels are:
+        1. Channels not in the guild we care about (constants.Guild.id).
+        2. Channels that mods do not have view permissions to
+        3. Channels in constants.Guild.modlog_blacklist
+        """
+        channel = self.bot.get_channel(channel_id)
+
+        # Ignore not found channels, DMs, and messages outside of the main guild.
+        if not channel or not hasattr(channel, "guild") or channel.guild.id != GuildConstant.id:
+            return True
+
+        # Look at the parent channel of a thread.
+        if isinstance(channel, Thread):
+            channel = channel.parent
+
+        # Mod team doesn't have view permission to the channel.
+        if not channel.permissions_for(channel.guild.get_role(Roles.mod_team)).view_channel:
+            return True
+
+        return channel.id in GuildConstant.modlog_blacklist
 
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
@@ -525,11 +558,7 @@ class ModLog(Cog, name="ModLog"):
         channel = message.channel
         author = message.author
 
-        # Ignore DMs.
-        if not message.guild:
-            return
-
-        if message.guild.id != GuildConstant.id or channel.id in GuildConstant.modlog_blacklist:
+        if self.is_message_blacklisted(message):
             return
 
         self._cached_deletes.append(message.id)
@@ -584,7 +613,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
         """Log raw message delete event to message change log."""
-        if event.guild_id != GuildConstant.id or event.channel_id in GuildConstant.modlog_blacklist:
+        if self.is_channel_ignored(event.channel_id):
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
@@ -625,12 +654,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
         """Log message edit event to message change log."""
-        if (
-            not msg_before.guild
-            or msg_before.guild.id != GuildConstant.id
-            or msg_before.channel.id in GuildConstant.modlog_blacklist
-            or msg_before.author.bot
-        ):
+        if self.is_message_blacklisted(msg_before):
             return
 
         self._cached_edits.append(msg_before.id)
@@ -707,12 +731,7 @@ class ModLog(Cog, name="ModLog"):
         except discord.NotFound:  # Was deleted before we got the event
             return
 
-        if (
-            not message.guild
-            or message.guild.id != GuildConstant.id
-            or message.channel.id in GuildConstant.modlog_blacklist
-            or message.author.bot
-        ):
+        if self.is_message_blacklisted(message):
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
@@ -752,6 +771,64 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
+    async def on_thread_update(self, before: Thread, after: Thread) -> None:
+        """Log thread archiving, un-archiving and name edits."""
+        if before.name != after.name:
+            await self.send_log_message(
+                Icons.hash_blurple,
+                Colour.blurple(),
+                "Thread name edited",
+                (
+                    f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`): "
+                    f"`{before.name}` -> `{after.name}`"
+                )
+            )
+            return
+
+        if not before.archived and after.archived:
+            colour = Colour.red()
+            action = "archived"
+            icon = Icons.hash_red
+        elif before.archived and not after.archived:
+            colour = Colour.green()
+            action = "un-archived"
+            icon = Icons.hash_green
+        else:
+            return
+
+        await self.send_log_message(
+            icon,
+            colour,
+            f"Thread {action}",
+            f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`) was {action}"
+        )
+
+    @Cog.listener()
+    async def on_thread_delete(self, thread: Thread) -> None:
+        """Log thread deletion."""
+        await self.send_log_message(
+            Icons.hash_red,
+            Colour.red(),
+            "Thread deleted",
+            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) deleted"
+        )
+
+    @Cog.listener()
+    async def on_thread_join(self, thread: Thread) -> None:
+        """Log thread creation."""
+        # If we are in the thread already we can most probably assume we already logged it?
+        # We don't really have a better way of doing this since the API doesn't make any difference between the two
+        if thread.me:
+            return
+
+        await self.send_log_message(
+            Icons.hash_green,
+            Colour.green(),
+            "Thread created",
+            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) created"
+        )
+
+    @Cog.listener()
     async def on_voice_state_update(
         self,
         member: discord.Member,
@@ -761,7 +838,8 @@ class ModLog(Cog, name="ModLog"):
         """Log member voice state changes to the voice log channel."""
         if (
             member.guild.id != GuildConstant.id
-            or (before.channel and before.channel.id in GuildConstant.modlog_blacklist)
+            or (before.channel and self.is_channel_ignored(before.channel.id))
+            or (after.channel and self.is_channel_ignored(after.channel.id))
         ):
             return
 
@@ -820,7 +898,7 @@ class ModLog(Cog, name="ModLog"):
             colour=colour,
             title="Voice state updated",
             text=message,
-            thumbnail=member.avatar_url_as(static_format="png"),
+            thumbnail=member.display_avatar.url,
             channel_id=Channels.voice_log
         )
 

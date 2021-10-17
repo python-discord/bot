@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import socket
 import warnings
 from collections import defaultdict
@@ -14,8 +13,9 @@ from sentry_sdk import push_scope
 
 from bot import api, constants
 from bot.async_stats import AsyncStatsClient
+from bot.log import get_logger
 
-log = logging.getLogger('bot')
+log = get_logger('bot')
 LOCALHOST = "127.0.0.1"
 
 

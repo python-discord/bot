@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import typing as t
 from datetime import datetime
 from enum import Enum
@@ -9,9 +8,11 @@ from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.messages import sub_clyde
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Amount of messages for `crawl_task` to process at most on start-up - limited to 50
 # as in practice, there should never be this many messages, and if there are,
@@ -93,7 +94,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         timestamp=datetime.utcnow(),
         colour=colour,
     )
-    embed.set_footer(text=footer, icon_url=actioned_by.avatar_url)
+    embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 
     if incident.attachments:
         attachment = incident.attachments[0]  # User-sent messages can only contain one attachment
@@ -190,7 +191,7 @@ class Incidents(Cog):
         self.bot = bot
 
         self.event_lock = asyncio.Lock()
-        self.crawl_task = self.bot.loop.create_task(self.crawl_incidents())
+        self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
 
     async def crawl_incidents(self) -> None:
         """
@@ -252,7 +253,7 @@ class Incidents(Cog):
             await webhook.send(
                 embed=embed,
                 username=sub_clyde(incident.author.name),
-                avatar_url=incident.author.avatar_url,
+                avatar_url=incident.author.display_avatar.url,
                 file=attachment_file,
             )
         except Exception:
@@ -275,7 +276,7 @@ class Incidents(Cog):
             return payload.message_id == incident.id
 
         coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
-        return self.bot.loop.create_task(coroutine)
+        return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """
