@@ -1,5 +1,4 @@
 import json
-import logging
 import typing as t
 from collections import deque
 from pathlib import Path
@@ -8,8 +7,9 @@ import discord
 
 from bot import constants
 from bot.exts.help_channels._channel import MAX_CHANNELS_PER_CATEGORY, get_category_channels
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def create_name_queue(*categories: discord.CategoryChannel) -> deque:

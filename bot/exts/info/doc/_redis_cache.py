@@ -4,6 +4,7 @@ import datetime
 from typing import Optional, TYPE_CHECKING
 
 from async_rediscache.types.base import RedisObject, namespace_lock
+
 if TYPE_CHECKING:
     from ._cog import DocItem
 

@@ -1,4 +1,3 @@
-import logging
 import typing as t
 
 import discord
@@ -7,9 +6,10 @@ from discord.ext.commands import Cog, Context, command, has_any_role
 from bot import constants
 from bot.bot import Bot
 from bot.decorators import in_whitelist
+from bot.log import get_logger
 from bot.utils.checks import InWhitelistCheckFailure
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Sent via DMs once user joins the guild
 ON_JOIN_MESSAGE = """

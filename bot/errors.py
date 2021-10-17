@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Hashable, TYPE_CHECKING
+from typing import Hashable, TYPE_CHECKING, Union
+
+from discord.ext.commands import ConversionError, Converter
+
 if TYPE_CHECKING:
     from bot.converters import MemberOrUser
 
@@ -38,6 +41,20 @@ class InvalidInfractedUserError(Exception):
         self.reason = reason
 
         super().__init__(reason)
+
+
+class InvalidInfraction(ConversionError):
+    """
+    Raised by the Infraction converter when trying to fetch an invalid infraction id.
+
+    Attributes:
+        `infraction_arg` -- the value that we attempted to convert into an Infraction
+    """
+
+    def __init__(self, converter: Converter, original: Exception, infraction_arg: Union[int, str]):
+
+        self.infraction_arg = infraction_arg
+        super().__init__(converter, original)
 
 
 class BrandingMisconfiguration(RuntimeError):

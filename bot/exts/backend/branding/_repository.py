@@ -1,4 +1,3 @@
-import logging
 import typing as t
 from datetime import date, datetime
 
@@ -7,6 +6,7 @@ import frontmatter
 from bot.bot import Bot
 from bot.constants import Keys
 from bot.errors import BrandingMisconfiguration
+from bot.log import get_logger
 
 # Base URL for requests into the branding repository.
 BRANDING_URL = "https://api.github.com/repos/python-discord/branding/contents"
@@ -25,7 +25,7 @@ ARBITRARY_YEAR = 2020
 # Format used to parse date strings after we inject `ARBITRARY_YEAR` at the end.
 DATE_FMT = "%B %d %Y"  # Ex: July 10 2020
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class RemoteObject:

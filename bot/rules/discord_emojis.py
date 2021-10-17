@@ -4,7 +4,6 @@ from typing import Dict, Iterable, List, Optional, Tuple
 from discord import Member, Message
 from emoji import demojize
 
-
 DISCORD_EMOJI_RE = re.compile(r"<:\w+:\d+>|:\w+:")
 CODE_BLOCK_RE = re.compile(r"```.*?```", flags=re.DOTALL)
 
