@@ -378,7 +378,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.guild_update, Colour.blurple(),
             "Guild updated", message,
-            thumbnail=after.icon_url_as(format="png")
+            thumbnail=after.icon.with_static_format("png")
         )
 
     @Cog.listener()
