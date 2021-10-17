@@ -142,21 +142,23 @@ def has_signals(message: discord.Message) -> bool:
 def shorten_text(text: str) -> str:
     """Truncate the text if there are over 3 lines or 300 characters, or if it is a single word."""
     original_length = len(text)
-    lines = text.split("\n")
+    # Truncate text to a maximum of 300 characters
+    if len(text) > 300:
+        text = text[:300]
+
     # Limit to a maximum of three lines
-    if len(lines) > 3:
-        text = "\n".join(line for line in lines[:3])
+    text = "\n".join(line for line in text.split("\n", maxsplit=3)[:3])
 
     # If it is a single word, then truncate it to 50 characters
-    if text.count(" ") < 1:
+    if text.find(" ") == -1:
         text = text[:50]
-    # Truncate text to a maximum of 300 characters
-    elif len(text) > 300:
-        text = text[:300]
+
+    # Remove extra whitespaces from the `text`
+    text = text.strip()
 
     # Add placeholder if the text was shortened
     if len(text) < original_length:
-        text += "..."
+        text = f"{text}..."
 
     return text
 
