@@ -140,7 +140,11 @@ def has_signals(message: discord.Message) -> bool:
 
 
 def shorten_text(text: str) -> str:
-    """Truncate the text if there are over 3 lines or 300 characters, or if it is a single word."""
+    """
+    Truncate the text if there are over 3 lines or 300 characters, or if it is a single word.
+
+    The maximum length of the string would be 303 characters across 3 lines at maximum.
+    """
     original_length = len(text)
     # Truncate text to a maximum of 300 characters
     if len(text) > 300:
@@ -301,7 +305,7 @@ class Incidents(Cog):
         self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
 
     async def fetch_webhook(self) -> None:
-        """Fetches the incidents webhook object, so we can post message link embeds to it."""
+        """Fetch the incidents webhook object, so we can post message link embeds to it."""
         await self.bot.wait_until_guild_available()
         self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
 
