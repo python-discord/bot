@@ -2,6 +2,7 @@ import asyncio
 import re
 from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
+from unicodedata import normalize
 
 import arrow
 import dateutil.parser
@@ -207,12 +208,19 @@ class Filtering(Cog):
 
     def get_name_matches(self, name: str) -> List[re.Match]:
         """Check bad words from passed string (name). Return list of matches."""
-        name = self.clean_input(name)
+        normalised_name = normalize("NFKC", name)
         matches = []
+
+        # Run filters against normalized and original version,
+        # in case we have filters for one but not the other.
+        names_to_check = (name, normalised_name)
+
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
-            if match := re.search(pattern, name, flags=re.IGNORECASE):
-                matches.append(match)
+            for name in names_to_check:
+                if match := re.search(pattern, name, flags=re.IGNORECASE):
+                    matches.append(match)
+                    break  # No need to see if other variations of this name match too.
         return matches
 
     async def check_send_alert(self, member: Member) -> bool:
