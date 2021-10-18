@@ -200,7 +200,7 @@ class Information(Cog):
             f"\nRoles: {num_roles}"
             f"\nMember status: {member_status}"
         )
-        embed.set_thumbnail(url=ctx.guild.icon_url)
+        embed.set_thumbnail(url=ctx.guild.icon.url)
 
         # Members
         total_members = f"{ctx.guild.member_count:,}"
