@@ -206,10 +206,9 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    def get_name_matches(self, name: str) -> List[re.Match]:
-        """Check bad words from passed string (name). Return list of matches."""
+    def get_name_match(self, name: str) -> Optional[re.Match]:
+        """Check bad words from passed string (name). Return the first match found."""
         normalised_name = normalize("NFKC", name)
-        matches = []
 
         # Run filters against normalized and original version,
         # in case we have filters for one but not the other.
@@ -219,9 +218,8 @@ class Filtering(Cog):
         for pattern in watchlist_patterns:
             for name in names_to_check:
                 if match := re.search(pattern, name, flags=re.IGNORECASE):
-                    matches.append(match)
-                    break  # No need to see if other variations of this name match too.
-        return matches
+                    return match
+        return None
 
     async def check_send_alert(self, member: Member) -> bool:
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
@@ -243,8 +241,8 @@ class Filtering(Cog):
                 return
 
             # Check whether the users display name contains any words in our blacklist
-            matches = self.get_name_matches(member.display_name)
-            if not matches:
+            match = self.get_name_match(member.display_name)
+            if not match:
                 return
 
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
@@ -252,7 +250,7 @@ class Filtering(Cog):
             log_string = (
                 f"**User:** {format_user(member)}\n"
                 f"**Display Name:** {escape_markdown(member.display_name)}\n"
-                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+                f"**Bad Match:** {match.group()}"
             )
 
             await self.mod_log.send_log_message(
