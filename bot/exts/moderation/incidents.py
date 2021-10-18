@@ -222,7 +222,8 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
             description=(
                 f"**Author:** {format_user(message.author)}\n"
                 f"**Channel:** {channel.mention} ({channel.category}/#{channel.name})\n"
-            )
+            ),
+            timestamp=message.created_at
         )
         embed.add_field(
             name="Content",
