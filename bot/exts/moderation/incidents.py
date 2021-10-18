@@ -308,9 +308,10 @@ class Incidents(Cog):
     async def fetch_webhook(self) -> None:
         """Fetch the incidents webhook object, so we can post message link embeds to it."""
         await self.bot.wait_until_guild_available()
-        self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
 
-        if not self.incidents_webhook:
+        try:
+            self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+        except discord.HTTPException:
             log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents}`.")
 
     async def crawl_incidents(self) -> None:
