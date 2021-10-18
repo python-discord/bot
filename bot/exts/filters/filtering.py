@@ -237,10 +237,14 @@ class Filtering(Cog):
         """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
         # Use lock to avoid race conditions
         async with self.name_lock:
+            # Check if we recently alerted about this user first,
+            # to avoid running all the filter tokens against their name again.
+            if not await self.check_send_alert(member):
+                return
+
             # Check whether the users display name contains any words in our blacklist
             matches = self.get_name_matches(member.display_name)
-
-            if not matches or not await self.check_send_alert(member):
+            if not matches:
                 return
 
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
