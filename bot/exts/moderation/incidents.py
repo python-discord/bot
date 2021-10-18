@@ -177,11 +177,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
     try:
         message: discord.Message = await MessageConverter().convert(ctx, message_link)
     except MessageNotFound:
-        try:
-            mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
-        except discord.NotFound:
-            log.exception(f"Mod-logs (<#{Channels.mod_log}> channel not found.")
-            return
+        mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
 
         last_100_logs: list[discord.Message] = await mod_logs_channel.history(limit=100).flatten()
 
