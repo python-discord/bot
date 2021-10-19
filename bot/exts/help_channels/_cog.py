@@ -126,9 +126,12 @@ class HelpChannels(commands.Cog):
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
         await self.move_to_in_use(message.channel)
 
-        # Handle odd edge case of `message.author` being a `discord.User` (see bot#1839)
-        if isinstance(message.author, discord.User):
-            log.warning("`message.author` is a `discord.User` so not handling role change or sending DM.")
+        # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
+        if not isinstance(message.author, discord.Member):
+            log.warning(
+                f"`message.author` ({message.author} / {message.author.id}) isn't a `discord.Member` so not handling "
+                "role change or sending DM."
+            )
         else:
             await self._handle_role_change(message.author, message.author.add_roles)
 
