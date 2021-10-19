@@ -43,8 +43,8 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 DAYS_BETWEEN_ALERTS = 3
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 AUTO_BAN_REASON = (
-    "Your account seem to be compromised (%s). "
-    "Please appeal this ban once you have regained control of your account."
+    "Your account seems to be compromised (%s). "
+    "You're welcome to appeal this ban once you have regained control of your account."
 )
 
 FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
