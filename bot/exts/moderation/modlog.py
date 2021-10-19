@@ -786,11 +786,11 @@ class ModLog(Cog, name="ModLog"):
             return
 
         if not before.archived and after.archived:
-            colour = Colour.red()
+            colour = Colour.soft_red()
             action = "archived"
             icon = Icons.hash_red
         elif before.archived and not after.archived:
-            colour = Colour.green()
+            colour = Colour.soft_green()
             action = "un-archived"
             icon = Icons.hash_green
         else:
@@ -808,7 +808,7 @@ class ModLog(Cog, name="ModLog"):
         """Log thread deletion."""
         await self.send_log_message(
             Icons.hash_red,
-            Colour.red(),
+            Colour.soft_red(),
             "Thread deleted",
             f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) deleted"
         )
@@ -823,7 +823,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.hash_green,
-            Colour.green(),
+            Colour.soft_green(),
             "Thread created",
             f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) created"
         )
