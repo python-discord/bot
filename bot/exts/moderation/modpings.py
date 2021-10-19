@@ -12,6 +12,7 @@ from bot.converters import Expiry
 from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.scheduling import Scheduler
+from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
@@ -83,7 +84,7 @@ class ModPings(Cog):
             start_timestamp, work_time = schedule.split("|")
             start = datetime.datetime.fromtimestamp(float(start_timestamp))
 
-            mod = self.bot.fetch_user(mod_id)
+            mod = await self.bot.fetch_user(mod_id)
             self._modpings_scheduler.schedule_at(
                 start,
                 mod_id,
@@ -114,7 +115,7 @@ class ModPings(Cog):
             log.trace(f"Skipping adding moderator role to mod with ID {mod.id} - found in pings off cache.")
         else:
             log.trace(f"Applying moderator role to mod with ID {mod.id}")
-            await mod.add_roles(self.moderators_role, reason="Moderator schedule time started!")
+            await mod.add_roles(self.moderators_role, reason="Moderator scheduled time started!")
 
         log.trace(f"Sleeping for {work_time} seconds, worktime for mod with ID {mod.id}")
         await asyncio.sleep(work_time)
@@ -216,7 +217,6 @@ class ModPings(Cog):
             # otherwise the scheduler would schedule it immediately
             start += datetime.timedelta(days=1)
 
-        start, end = start.replace(tzinfo=None), end.replace(tzinfo=None)
         work_time = (end - start).total_seconds()
 
         await self.modpings_schedule.set(ctx.author.id, f"{start.timestamp()}|{work_time}")
@@ -232,7 +232,8 @@ class ModPings(Cog):
 
         await ctx.send(
             f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from "
-            f"{start: %H:%M} to {end: %H:%M} UTC Timing!"
+            f"{discord_timestamp(start, TimestampFormats.TIME)} to "
+            f"{discord_timestamp(end, TimestampFormats.TIME)}!"
         )
 
     @schedule_modpings.command(name='delete', aliases=('del', 'd'))
