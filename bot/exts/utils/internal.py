@@ -5,10 +5,10 @@ import re
 import textwrap
 import traceback
 from collections import Counter
-from datetime import datetime
 from io import StringIO
 from typing import Any, Optional, Tuple
 
+import arrow
 import discord
 from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
 
@@ -29,7 +29,7 @@ class Internal(Cog):
         self.ln = 0
         self.stdout = StringIO()
 
-        self.socket_since = datetime.utcnow()
+        self.socket_since = arrow.utcnow()
         self.socket_event_total = 0
         self.socket_events = Counter()
 
@@ -237,7 +237,7 @@ async def func():  # (None,) -> Any
     @has_any_role(Roles.admins, Roles.owners, Roles.core_developers)
     async def socketstats(self, ctx: Context) -> None:
         """Fetch information on the socket events received from Discord."""
-        running_s = (datetime.utcnow() - self.socket_since).total_seconds()
+        running_s = (arrow.utcnow() - self.socket_since).total_seconds()
 
         per_s = self.socket_event_total / running_s
 

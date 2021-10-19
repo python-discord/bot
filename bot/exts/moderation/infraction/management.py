@@ -315,7 +315,7 @@ class ModManagement(commands.Cog):
             duration = "*Permanent*"
         else:
             date_from = datetime.fromtimestamp(float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)))
-            date_to = dateutil.parser.isoparse(expires_at).replace(tzinfo=None)
+            date_to = dateutil.parser.isoparse(expires_at)
             duration = humanize_delta(relativedelta(date_to, date_from))
 
         lines = textwrap.dedent(f"""
