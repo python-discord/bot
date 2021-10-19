@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
@@ -15,16 +14,15 @@ from discord.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import (
-    Channels, Colours, Filter,
-    Guild, Icons, URLs
-)
+from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
+from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
-from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Regular expressions
 CODE_BLOCK_RE = re.compile(
@@ -63,7 +61,7 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -103,19 +101,6 @@ class Filtering(Cog):
                 ),
                 "schedule_deletion": False
             },
-            "filter_everyone_ping": {
-                "enabled": Filter.filter_everyone_ping,
-                "function": self._has_everyone_ping,
-                "type": "filter",
-                "content_only": True,
-                "user_notification": Filter.notify_user_everyone_ping,
-                "notification_msg": (
-                    "Please don't try to ping `@everyone` or `@here`. "
-                    f"Your message has been removed. {staff_mistake_str}"
-                ),
-                "schedule_deletion": False,
-                "ping_everyone": False
-            },
             "watch_regex": {
                 "enabled": Filter.watch_regex,
                 "function": self._has_watch_regex_match,
@@ -129,10 +114,23 @@ class Filtering(Cog):
                 "type": "watchlist",
                 "content_only": False,
                 "schedule_deletion": False
-            }
+            },
+            "filter_everyone_ping": {
+                "enabled": Filter.filter_everyone_ping,
+                "function": self._has_everyone_ping,
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_everyone_ping,
+                "notification_msg": (
+                    "Please don't try to ping `@everyone` or `@here`. "
+                    f"Your message has been removed. {staff_mistake_str}"
+                ),
+                "schedule_deletion": False,
+                "ping_everyone": False
+            },
         }
 
-        self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
+        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -225,7 +223,7 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.avatar_url
+                thumbnail=member.display_avatar.url
             )
 
             # Update time when alert sent
@@ -279,6 +277,12 @@ class Filtering(Cog):
                         # If the edit delta is less than 0.001 seconds, then we're probably dealing
                         # with a double filter trigger.
                         if delta is not None and delta < 100:
+                            continue
+
+                    if filter_name in ("filter_invites", "filter_everyone_ping"):
+                        # Disable invites filter in codejam team channels
+                        category = getattr(msg.channel, "category", None)
+                        if category and category.name == JAM_CATEGORY_NAME:
                             continue
 
                     # Does the filter only need the message content or the full message?
@@ -379,7 +383,7 @@ class Filtering(Cog):
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
             text=message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,
@@ -471,16 +475,12 @@ class Filtering(Cog):
         Second return value is a reason of URL blacklisting (can be None).
         """
         text = self.clean_input(text)
-        if not URL_RE.search(text):
-            return False, None
 
-        text = text.lower()
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
-
-        for url in domain_blacklist:
-            if url.lower() in text:
-                return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
-
+        for match in URL_RE.finditer(text):
+            for url in domain_blacklist:
+                if url.lower() in match.group(1).lower():
+                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod
@@ -507,7 +507,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = INVITE_RE.findall(text)
+        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:

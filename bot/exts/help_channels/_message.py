@@ -1,4 +1,3 @@
-import logging
 import textwrap
 import typing as t
 
@@ -9,21 +8,21 @@ from arrow import Arrow
 import bot
 from bot import constants
 from bot.exts.help_channels import _caches
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 
 AVAILABLE_MSG = f"""
-**Send your question here to claim the channel**
-This channel will be dedicated to answering your question only. Others will try to answer and help you solve the issue.
+Send your question here to claim the channel.
 
-**Keep in mind:**
-• It's always ok to just ask your question. You don't need permission.
-• Explain what you expect to happen and what actually happens.
-• Include a code sample and error message, if you got any.
+**Remember to:**
+• **Ask** your Python question, not if you can ask or if there's an expert who can help.
+• **Show** a code sample as text (rather than a screenshot) and the error message, if you got one.
+• **Explain** what you expect to happen and what actually happens.
 
-For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
+For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
 
 AVAILABLE_TITLE = "Available help channel"
@@ -31,12 +30,12 @@ AVAILABLE_TITLE = "Available help channel"
 AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
 
 DORMANT_MSG = f"""
-This help channel has been marked as **dormant**, and has been moved into the **Help: Dormant** \
+This help channel has been marked as **dormant**, and has been moved into the **{{dormant}}** \
 category at the bottom of the channel list. It is no longer possible to send messages in this \
 channel until it becomes available again.
 
 If your question wasn't answered yet, you can claim a new help channel from the \
-**Help: Available** category by simply asking your question again. Consider rephrasing the \
+**{{available}}** category by simply asking your question again. Consider rephrasing the \
 question to maximize your chance of getting a good answer. If you're not sure how, have a look \
 through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
 """

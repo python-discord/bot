@@ -1,23 +1,15 @@
 import datetime
-import logging
 from typing import Callable, Container, Iterable, Optional, Union
 
 from discord.ext.commands import (
-    BucketType,
-    CheckFailure,
-    Cog,
-    Command,
-    CommandOnCooldown,
-    Context,
-    Cooldown,
-    CooldownMapping,
-    NoPrivateMessage,
-    has_any_role,
+    BucketType, CheckFailure, Cog, Command, CommandOnCooldown, Context, Cooldown, CooldownMapping, NoPrivateMessage,
+    has_any_role
 )
 
 from bot import constants
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ContextCheckFailure(CheckFailure):
@@ -134,7 +126,7 @@ def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketTy
     bypass = set(bypass_roles)
 
     # this handles the actual cooldown logic
-    buckets = CooldownMapping(Cooldown(rate, per, type))
+    buckets = CooldownMapping(Cooldown(rate, per), type)
 
     # will be called after the command has been parse but before it has been invoked, ensures that
     # the cooldown won't be updated if the user screws up their input to the command
@@ -149,7 +141,7 @@ def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketTy
         bucket = buckets.get_bucket(ctx.message)
         retry_after = bucket.update_rate_limit(current)
         if retry_after:
-            raise CommandOnCooldown(bucket, retry_after)
+            raise CommandOnCooldown(bucket, retry_after, type)
 
     def wrapper(command: Command) -> Command:
         # NOTE: this could be changed if a subclass of Command were to be used. I didn't see the need for it

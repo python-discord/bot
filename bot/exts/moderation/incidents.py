@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import typing as t
 from datetime import datetime
 from enum import Enum
@@ -9,9 +8,11 @@ from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.messages import sub_clyde
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Amount of messages for `crawl_task` to process at most on start-up - limited to 50
 # as in practice, there should never be this many messages, and if there are,
@@ -93,7 +94,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         timestamp=datetime.utcnow(),
         colour=colour,
     )
-    embed.set_footer(text=footer, icon_url=actioned_by.avatar_url)
+    embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 
     if incident.attachments:
         attachment = incident.attachments[0]  # User-sent messages can only contain one attachment
@@ -104,7 +105,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         else:
             embed.set_author(name="[Failed to relay attachment]", url=attachment.proxy_url)  # Embed links the file
     else:
-        file = None
+        file = discord.utils.MISSING
 
     return embed, file
 
@@ -143,7 +144,14 @@ async def add_signals(incident: discord.Message) -> None:
             log.trace(f"Skipping emoji as it's already been placed: {signal_emoji}")
         else:
             log.trace(f"Adding reaction: {signal_emoji}")
-            await incident.add_reaction(signal_emoji.value)
+            try:
+                await incident.add_reaction(signal_emoji.value)
+            except discord.NotFound as e:
+                if e.code != 10008:
+                    raise
+
+                log.trace(f"Couldn't react with signal because message {incident.id} was deleted; skipping incident")
+                return
 
 
 class Incidents(Cog):
@@ -183,7 +191,7 @@ class Incidents(Cog):
         self.bot = bot
 
         self.event_lock = asyncio.Lock()
-        self.crawl_task = self.bot.loop.create_task(self.crawl_incidents())
+        self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
 
     async def crawl_incidents(self) -> None:
         """
@@ -245,7 +253,7 @@ class Incidents(Cog):
             await webhook.send(
                 embed=embed,
                 username=sub_clyde(incident.author.name),
-                avatar_url=incident.author.avatar_url,
+                avatar_url=incident.author.display_avatar.url,
                 file=attachment_file,
             )
         except Exception:
@@ -268,7 +276,7 @@ class Incidents(Cog):
             return payload.message_id == incident.id
 
         coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
-        return self.bot.loop.create_task(coroutine)
+        return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """
@@ -288,14 +296,20 @@ class Incidents(Cog):
         members_roles: t.Set[int] = {role.id for role in member.roles}
         if not members_roles & ALLOWED_ROLES:  # Intersection is truthy on at least 1 common element
             log.debug(f"Removing invalid reaction: user {member} is not permitted to send signals")
-            await incident.remove_reaction(reaction, member)
+            try:
+                await incident.remove_reaction(reaction, member)
+            except discord.NotFound:
+                log.trace("Couldn't remove reaction because the reaction or its message was deleted")
             return
 
         try:
             signal = Signal(reaction)
         except ValueError:
             log.debug(f"Removing invalid reaction: emoji {reaction} is not a valid signal")
-            await incident.remove_reaction(reaction, member)
+            try:
+                await incident.remove_reaction(reaction, member)
+            except discord.NotFound:
+                log.trace("Couldn't remove reaction because the reaction or its message was deleted")
             return
 
         log.trace(f"Received signal: {signal}")
@@ -313,7 +327,10 @@ class Incidents(Cog):
         confirmation_task = self.make_confirmation_task(incident, timeout)
 
         log.trace("Deleting original message")
-        await incident.delete()
+        try:
+            await incident.delete()
+        except discord.NotFound:
+            log.trace("Couldn't delete message because it was already deleted")
 
         log.trace(f"Awaiting deletion confirmation: {timeout=} seconds")
         try:

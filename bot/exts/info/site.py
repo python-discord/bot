@@ -1,15 +1,14 @@
-import logging
-
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import URLs
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
-PAGES_URL = f"{URLs.site_schema}{URLs.site}/pages"
+BASE_URL = f"{URLs.site_schema}{URLs.site}"
 
 
 class Site(Cog):
@@ -43,7 +42,7 @@ class Site(Cog):
     @site_group.command(name="resources", root_aliases=("resources", "resource"))
     async def site_resources(self, ctx: Context) -> None:
         """Info about the site's Resources page."""
-        learning_url = f"{PAGES_URL}/resources"
+        learning_url = f"{BASE_URL}/resources"
 
         embed = Embed(title="Resources")
         embed.set_footer(text=f"{learning_url}")
@@ -59,7 +58,7 @@ class Site(Cog):
     @site_group.command(name="tools", root_aliases=("tools",))
     async def site_tools(self, ctx: Context) -> None:
         """Info about the site's Tools page."""
-        tools_url = f"{PAGES_URL}/resources/tools"
+        tools_url = f"{BASE_URL}/resources/tools"
 
         embed = Embed(title="Tools")
         embed.set_footer(text=f"{tools_url}")
@@ -74,7 +73,7 @@ class Site(Cog):
     @site_group.command(name="help")
     async def site_help(self, ctx: Context) -> None:
         """Info about the site's Getting Help page."""
-        url = f"{PAGES_URL}/resources/guides/asking-good-questions"
+        url = f"{BASE_URL}/pages/guides/pydis-guides/asking-good-questions/"
 
         embed = Embed(title="Asking Good Questions")
         embed.set_footer(text=url)
@@ -90,7 +89,7 @@ class Site(Cog):
     @site_group.command(name="faq", root_aliases=("faq",))
     async def site_faq(self, ctx: Context) -> None:
         """Info about the site's FAQ page."""
-        url = f"{PAGES_URL}/frequently-asked-questions"
+        url = f"{BASE_URL}/pages/frequently-asked-questions"
 
         embed = Embed(title="FAQ")
         embed.set_footer(text=url)
@@ -107,13 +106,13 @@ class Site(Cog):
     @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
     async def site_rules(self, ctx: Context, rules: Greedy[int]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title='Rules', color=Colour.blurple(), url=f'{PAGES_URL}/rules')
+        rules_embed = Embed(title='Rules', color=Colour.blurple(), url=f'{BASE_URL}/pages/rules')
 
         if not rules:
             # Rules were not submitted. Return the default description.
             rules_embed.description = (
                 "The rules and guidelines that apply to this community can be found on"
-                f" our [rules page]({PAGES_URL}/rules). We expect"
+                f" our [rules page]({BASE_URL}/pages/rules). We expect"
                 " all members of the community to have read and understood these."
             )
 

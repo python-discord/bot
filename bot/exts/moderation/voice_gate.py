@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from contextlib import suppress
 from datetime import datetime, timedelta
 
@@ -8,15 +7,15 @@ from async_rediscache import RedisCache
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
-
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils.checks import InWhitelistCheckFailure
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Flag written to the cog's RedisCache as a value when the Member's (key) notification
 # was already removed ~ this signals both that no further notifications should be sent,
@@ -118,7 +117,7 @@ class VoiceGate(Cog):
         await self.redis_cache.set(member.id, message.id)
         return True, message.channel
 
-    @command(aliases=('voiceverify',))
+    @command(aliases=("voiceverify", "voice-verify",))
     @has_no_roles(Roles.voice_verified)
     @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
     async def voice_verify(self, ctx: Context, *_) -> None:
@@ -166,7 +165,10 @@ class VoiceGate(Cog):
             return
 
         checks = {
-            "joined_at": ctx.author.joined_at > datetime.utcnow() - timedelta(days=GateConf.minimum_days_member),
+            "joined_at": (
+                ctx.author.joined_at.replace(tzinfo=None) > datetime.utcnow()
+                - timedelta(days=GateConf.minimum_days_member)
+            ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
             "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
@@ -252,6 +254,10 @@ class VoiceGate(Cog):
         # member.voice will return None if the user is not in a voice channel
         if member.voice is None:
             log.trace("User not in a voice channel. Ignore.")
+            return
+
+        if isinstance(after.channel, discord.StageChannel):
+            log.trace("User joined a stage channel. Ignore.")
             return
 
         # To avoid race conditions, checking if the user should receive a notification

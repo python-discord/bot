@@ -94,8 +94,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         test_case = namedtuple("test_case", ["get_return_value", "expected_output", "infraction_nr", "send_msg"])
         test_cases = [
             test_case([], None, None, True),
-            test_case([{"id": 123987}], {"id": 123987}, "123987", False),
-            test_case([{"id": 123987}], {"id": 123987}, "123987", True)
+            test_case([{"id": 123987, "type": "ban"}], {"id": 123987, "type": "ban"}, "123987", False),
+            test_case([{"id": 123987, "type": "ban"}], {"id": 123987, "type": "ban"}, "123987", True)
         ]
 
         for case in test_cases:
@@ -137,16 +137,16 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Ban",
-                        expires="2020-02-26 09:20 (23 hours and 59 minutes) UTC",
+                        expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="No reason provided."
-                    ),
+                    ) + utils.INFRACTION_APPEAL_SERVER_FOOTER,
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.token_removed
-                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
+                ),
                 "send_result": True
             },
             {
@@ -157,14 +157,14 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         type="Warning",
                         expires="N/A",
                         reason="Test reason."
-                    ),
+                    ) + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.token_removed
-                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
+                ),
                 "send_result": False
             },
             # Note that this test case asserts that the DM that *would* get sent to the user is formatted
@@ -177,14 +177,14 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         type="Note",
                         expires="N/A",
                         reason="No reason provided."
-                    ),
+                    ) + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
+                ),
                 "send_result": False
             },
             {
@@ -193,16 +193,16 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
-                        expires="2020-02-26 09:20 (23 hours and 59 minutes) UTC",
+                        expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="Test"
-                    ),
+                    ) + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
+                ),
                 "send_result": False
             },
             {
@@ -213,14 +213,14 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                         type="Mute",
                         expires="N/A",
                         reason="foo bar" * 4000
-                    )[:2045] + "...",
+                    )[:4093-utils.LONGEST_EXTRAS] + "..." + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
                     url=utils.RULES_URL
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
                     icon_url=Icons.defcon_denied
-                ).set_footer(text=utils.INFRACTION_APPEAL_MODMAIL_FOOTER),
+                ),
                 "send_result": True
             }
         ]

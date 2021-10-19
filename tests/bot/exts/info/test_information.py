@@ -84,7 +84,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(dummy_embed.fields[0].value, str(dummy_role.id))
         self.assertEqual(dummy_embed.fields[1].value, f"#{dummy_role.colour.value:0>6x}")
-        self.assertEqual(dummy_embed.fields[2].value, "0.63 0.48 218")
+        self.assertEqual(dummy_embed.fields[2].value, "0.65 0.64 242")
         self.assertEqual(dummy_embed.fields[3].value, "1")
         self.assertEqual(dummy_embed.fields[4].value, "10")
         self.assertEqual(dummy_embed.fields[5].value, "0")
@@ -262,7 +262,6 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
         await self._method_subtests(self.cog.user_nomination_counts, test_values, header)
 
 
-@unittest.mock.patch("bot.exts.info.information.time_since", new=unittest.mock.MagicMock(return_value="1 year ago"))
 @unittest.mock.patch("bot.exts.info.information.constants.MODERATION_CHANNELS", new=[50])
 class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the creation of the `!user` embed."""
@@ -347,7 +346,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -356,7 +355,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Verified: {"True"}
                 Roles: &Moderators
             """).strip(),
@@ -379,7 +378,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Created: {"1 year ago"}
+                Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
             """).strip(),
@@ -388,7 +387,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             textwrap.dedent(f"""
-                Joined: {"1 year ago"}
+                Joined: {"<t:1:R>"}
                 Roles: &Moderators
             """).strip(),
             embed.fields[1].value
@@ -436,10 +435,9 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=0)
-        user.avatar_url_as.return_value = "avatar url"
+        user.display_avatar.url = "avatar url"
         embed = await self.cog.create_user_embed(ctx, user)
 
-        user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
@@ -508,7 +506,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
     async def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
-        constants.STAFF_ROLES = [self.moderator_role.id]
+        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 
         await self.cog.user_info(self.cog, ctx)
@@ -520,7 +518,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_moderators_can_target_another_member(self, create_embed, constants):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
-        constants.STAFF_ROLES = [self.moderator_role.id]
+        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
 
         await self.cog.user_info(self.cog, ctx, self.target)

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 import textwrap
 from abc import abstractmethod
@@ -17,11 +16,13 @@ from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, 
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
+from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
-from bot.utils import CogABCMeta, messages
+from bot.utils import CogABCMeta, messages, scheduling
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import get_time_delta
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 URL_RE = re.compile(r"(https?://[^\s]+)")
 
@@ -46,7 +47,7 @@ class WatchChannel(metaclass=CogABCMeta):
         webhook_id: int,
         api_endpoint: str,
         api_default_params: dict,
-        logger: logging.Logger,
+        logger: CustomLogger,
         *,
         disable_header: bool = False
     ) -> None:
@@ -69,7 +70,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_history = MessageHistory()
         self.disable_header = disable_header
 
-        self._start = self.bot.loop.create_task(self.start_watchchannel())
+        self._start = scheduling.create_task(self.start_watchchannel(), event_loop=self.bot.loop)
 
     @property
     def modlog(self) -> ModLog:
@@ -169,7 +170,7 @@ class WatchChannel(metaclass=CogABCMeta):
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:
             if not self.consuming_messages:
-                self._consume_task = self.bot.loop.create_task(self.consume_messages())
+                self._consume_task = scheduling.create_task(self.consume_messages(), event_loop=self.bot.loop)
 
             self.log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
             self.message_queue[msg.author.id][msg.channel.id].append(msg)
@@ -199,7 +200,10 @@ class WatchChannel(metaclass=CogABCMeta):
 
         if self.message_queue:
             self.log.trace("Channel queue not empty: Continuing consuming queues")
-            self._consume_task = self.bot.loop.create_task(self.consume_messages(delay_consumption=False))
+            self._consume_task = scheduling.create_task(
+                self.consume_messages(delay_consumption=False),
+                event_loop=self.bot.loop,
+            )
         else:
             self.log.trace("Done consuming messages.")
 
@@ -246,7 +250,7 @@ class WatchChannel(metaclass=CogABCMeta):
             await self.webhook_send(
                 cleaned_content,
                 username=msg.author.display_name,
-                avatar_url=msg.author.avatar_url
+                avatar_url=msg.author.display_avatar.url
             )
 
         if msg.attachments:
@@ -260,7 +264,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 await self.webhook_send(
                     embed=e,
                     username=msg.author.display_name,
-                    avatar_url=msg.author.avatar_url
+                    avatar_url=msg.author.display_avatar.url
                 )
             except discord.HTTPException as exc:
                 self.log.exception(
@@ -278,7 +282,7 @@ class WatchChannel(metaclass=CogABCMeta):
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
-        actor = guild.get_member(self.watched_users[user_id]['actor'])
+        actor = await get_or_fetch_member(guild, self.watched_users[user_id]['actor'])
         actor = actor.display_name if actor else self.watched_users[user_id]['actor']
 
         inserted_at = self.watched_users[user_id]['inserted_at']
@@ -295,9 +299,9 @@ class WatchChannel(metaclass=CogABCMeta):
 
         footer = f"Added {time_delta} by {actor} | Reason: {reason}"
         embed = Embed(description=f"{msg.author.mention} {message_jump}")
-        embed.set_footer(text=textwrap.shorten(footer, width=128, placeholder="..."))
+        embed.set_footer(text=textwrap.shorten(footer, width=256, placeholder="..."))
 
-        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.avatar_url)
+        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.display_avatar.url)
 
     async def list_watched_users(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
@@ -352,7 +356,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         list_data["info"] = {}
         for user_id, user_data in watched_iter:
-            member = ctx.guild.get_member(user_id)
+            member = await get_or_fetch_member(ctx.guild, user_id)
             line = f"• `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"

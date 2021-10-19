@@ -1,4 +1,3 @@
-import logging
 import typing as t
 from datetime import datetime
 
@@ -7,9 +6,11 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
-from bot.errors import InvalidInfractedUser
+from bot.converters import MemberOrUser
+from bot.errors import InvalidInfractedUserError
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # apply icon, pardon icon
 INFRACTION_ICONS = {
@@ -24,19 +25,19 @@ INFRACTION_ICONS = {
 RULES_URL = "https://pythondiscord.com/pages/rules"
 
 # Type aliases
-UserObject = t.Union[discord.Member, discord.User]
-UserSnowflake = t.Union[UserObject, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 
-APPEAL_EMAIL = "appeals@pythondiscord.com"
+APPEAL_SERVER_INVITE = "https://discord.gg/WXrCJxWBnm"
 
 INFRACTION_TITLE = "Please review our rules"
-INFRACTION_APPEAL_EMAIL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
+INFRACTION_APPEAL_SERVER_FOOTER = f"\n\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
 INFRACTION_APPEAL_MODMAIL_FOOTER = (
-    'If you would like to discuss or appeal this infraction, '
-    'send a message to the ModMail bot'
+    '\n\nIf you would like to discuss or appeal this infraction, '
+    'send a message to the ModMail bot.'
 )
 INFRACTION_AUTHOR_NAME = "Infraction information"
+
+LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL_MODMAIL_FOOTER))
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Type:** {type}\n"
@@ -45,7 +46,7 @@ INFRACTION_DESCRIPTION_TEMPLATE = (
 )
 
 
-async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
+async def post_user(ctx: Context, user: MemberOrUser) -> t.Optional[dict]:
     """
     Create a new user in the database.
 
@@ -53,14 +54,11 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     """
     log.trace(f"Attempting to add user {user.id} to the database.")
 
-    if not isinstance(user, (discord.Member, discord.User)):
-        log.debug("The user being added to the DB is not a Member or User object.")
-
     payload = {
-        'discriminator': int(getattr(user, 'discriminator', 0)),
+        'discriminator': int(user.discriminator),
         'id': user.id,
         'in_guild': False,
-        'name': getattr(user, 'name', 'Name unknown'),
+        'name': user.name,
         'roles': []
     }
 
@@ -75,7 +73,7 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
 
 async def post_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: MemberOrUser,
         infr_type: str,
         reason: str,
         expires_at: datetime = None,
@@ -85,7 +83,7 @@ async def post_infraction(
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
         log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
-        raise InvalidInfractedUser(user)
+        raise InvalidInfractedUserError(user)
 
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
@@ -118,7 +116,7 @@ async def post_infraction(
 
 async def get_active_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: MemberOrUser,
         infr_type: str,
         send_msg: bool = True
 ) -> t.Optional[dict]:
@@ -143,17 +141,22 @@ async def get_active_infraction(
         # Checks to see if the moderator should be told there is an active infraction
         if send_msg:
             log.trace(f"{user} has active infractions of type {infr_type}.")
-            await ctx.send(
-                f":x: According to my records, this user already has a {infr_type} infraction. "
-                f"See infraction **#{active_infractions[0]['id']}**."
-            )
+            await send_active_infraction_message(ctx, active_infractions[0])
         return active_infractions[0]
     else:
         log.trace(f"{user} does not have active infractions of type {infr_type}.")
 
 
+async def send_active_infraction_message(ctx: Context, infraction: Infraction) -> None:
+    """Send a message stating that the given infraction is active."""
+    await ctx.send(
+        f":x: According to my records, this user already has a {infraction['type']} infraction. "
+        f"See infraction **#{infraction['id']}**."
+    )
+
+
 async def notify_infraction(
-        user: UserObject,
+        user: MemberOrUser,
         infr_type: str,
         expires_at: t.Optional[str] = None,
         reason: t.Optional[str] = None,
@@ -164,13 +167,15 @@ async def notify_infraction(
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=f"{expires_at} UTC" if expires_at else "N/A",
+        expires=expires_at or "N/A",
         reason=reason or "No reason provided."
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
-    if len(text) > 2048:
-        text = f"{text[:2045]}..."
+    if len(text) > 4096 - LONGEST_EXTRAS:
+        text = f"{text[:4093-LONGEST_EXTRAS]}..."
+
+    text += INFRACTION_APPEAL_SERVER_FOOTER if infr_type.lower() == 'ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
 
     embed = discord.Embed(
         description=text,
@@ -181,15 +186,11 @@ async def notify_infraction(
     embed.title = INFRACTION_TITLE
     embed.url = RULES_URL
 
-    embed.set_footer(
-        text=INFRACTION_APPEAL_EMAIL_FOOTER if infr_type == 'Ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
-    )
-
     return await send_private_embed(user, embed)
 
 
 async def notify_pardon(
-        user: UserObject,
+        user: MemberOrUser,
         title: str,
         content: str,
         icon_url: str = Icons.user_verified
@@ -207,7 +208,7 @@ async def notify_pardon(
     return await send_private_embed(user, embed)
 
 
-async def send_private_embed(user: UserObject, embed: discord.Embed) -> bool:
+async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
     """
     A helper method for sending an embed to a user's DMs.
 

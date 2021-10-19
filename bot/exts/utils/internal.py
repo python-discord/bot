@@ -1,6 +1,5 @@
 import contextlib
 import inspect
-import logging
 import pprint
 import re
 import textwrap
@@ -11,13 +10,14 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import discord
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
 
 from bot.bot import Bot
-from bot.constants import Roles
+from bot.constants import DEBUG_MODE, Roles
+from bot.log import get_logger
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Internal(Cog):
@@ -33,12 +33,14 @@ class Internal(Cog):
         self.socket_event_total = 0
         self.socket_events = Counter()
 
+        if DEBUG_MODE:
+            self.eval.add_check(is_owner().predicate)
+
     @Cog.listener()
-    async def on_socket_response(self, msg: dict) -> None:
+    async def on_socket_event_type(self, event_type: str) -> None:
         """When a websocket event is received, increase our counters."""
-        if event_type := msg.get("t"):
-            self.socket_event_total += 1
-            self.socket_events[event_type] += 1
+        self.socket_event_total += 1
+        self.socket_events[event_type] += 1
 
     def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
         """Format the eval output into a string & attempt to format it into an Embed."""

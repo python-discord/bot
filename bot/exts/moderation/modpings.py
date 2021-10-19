@@ -1,6 +1,5 @@
 import asyncio
 import datetime
-import logging
 
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse, parse
@@ -10,9 +9,11 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
-from bot.utils.scheduling import Scheduler, create_task
+from bot.log import get_logger
+from bot.utils import scheduling
+from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 MAXIMUM_WORK_LIMIT = 16
 
@@ -38,8 +39,15 @@ class ModPings(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="mod-pings-reschedule")
-        self.modpings_schedule_task = create_task(self.reschedule_modpings_schedule(), event_loop=self.bot.loop)
+        self.modpings_schedule_task = scheduling.create_task(
+            self.reschedule_modpings_schedule(),
+            event_loop=self.bot.loop
+        )
+        self.reschedule_task = scheduling.create_task(
+            self.reschedule_roles(),
+            name="mod-pings-reschedule",
+            event_loop=self.bot.loop,
+        )
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -54,7 +62,7 @@ class ModPings(Cog):
         log.trace("Applying the moderators role to the mod team where necessary.")
         for mod in mod_team.members:
             if mod in pings_on:  # Make sure that on-duty mods aren't in the cache.
-                if mod in pings_off:
+                if mod.id in pings_off:
                     await self.pings_off_mods.delete(mod.id)
                 continue
 
@@ -116,6 +124,7 @@ class ModPings(Cog):
         """Reapply the moderator's role to the given moderator."""
         log.trace(f"Re-applying role to mod with ID {mod.id}.")
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
+        await self.pings_off_mods.delete(mod.id)
 
     @group(name='modpings', aliases=('modping',), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
@@ -143,7 +152,6 @@ class ModPings(Cog):
 
         The duration cannot be longer than 30 days.
         """
-        duration: datetime.datetime
         delta = duration - datetime.datetime.utcnow()
         if delta > datetime.timedelta(days=30):
             await ctx.send(":x: Cannot remove the role for longer than 30 days.")

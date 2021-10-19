@@ -7,10 +7,10 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "3.9.*"
+"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/45d498c1b76deaf3b394d17ccf56112fa691d160.zip"}
 aio-pika = "~=6.1"
 aiodns = "~=2.0"
 aiohttp = "~=3.7"
-aioping = "~=0.3.1"
 aioredis = "~=1.3.1"
 arrow = "~=1.0.3"
 async-rediscache = { version = "~=0.1.2", extras = ["fakeredis"] }
@@ -18,10 +18,9 @@ beautifulsoup4 = "~=4.9"
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
 deepdiff = "~=4.0"
-"discord.py" = "~=1.6.0"
 emoji = "~=0.6"
 feedparser = "~=6.0.2"
-fuzzywuzzy = "~=0.17"
+rapidfuzz = "~=1.4"
 lxml = "~=4.4"
 markdownify = "==0.6.1"
 more_itertools = "~=8.2"
@@ -29,7 +28,7 @@ python-dateutil = "~=2.8"
 python-frontmatter = "~=1.0.0"
 pyyaml = "~=5.1"
 regex = "==2021.4.4"
-sentry-sdk = "~=0.19"
+sentry-sdk = "~=1.3"
 statsd = "~=3.3"
 
 [tool.poetry.dev-dependencies]
@@ -39,14 +38,18 @@ flake8 = "~=3.8"
 flake8-annotations = "~=2.0"
 flake8-bugbear = "~=20.1"
 flake8-docstrings = "~=1.4"
-flake8-import-order = "~=0.18"
 flake8-string-format = "~=0.2"
 flake8-tidy-imports = "~=4.0"
 flake8-todo = "~=0.7"
+flake8-isort = "~=4.0"
 pep8-naming = "~=0.9"
 pre-commit = "~=2.1"
 taskipy = "~=1.7.0"
+pip-licenses = "~=3.5.2"
 python-dotenv = "~=0.17.1"
+pytest = "~=6.2.4"
+pytest-cov = "~=2.12.1"
+pytest-xdist = { version = "~=2.3.0", extras = ["psutil"] }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -58,6 +61,22 @@ lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
 push = "docker push ghcr.io/python-discord/bot:latest"
-test = "coverage run -m unittest"
+test-nocov = "pytest -n auto"
+test = "pytest -n auto --cov-report= --cov --ff"
+retest = "pytest -n auto --cov-report= --cov --lf"
 html = "coverage html"
 report = "coverage report"
+isort = "isort ."
+
+[tool.coverage.run]
+branch = true
+source_pkgs = ["bot"]
+source = ["tests"]
+
+[tool.isort]
+multi_line_output = 6
+order_by_type = false
+case_sensitive = true
+combine_as_imports = true
+line_length = 120
+atomic = true

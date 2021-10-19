@@ -6,14 +6,7 @@ from unittest.mock import MagicMock, patch
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument
 
-from bot.converters import (
-    Duration,
-    HushDurationConverter,
-    ISODateTime,
-    PackageName,
-    TagContentConverter,
-    TagNameConverter,
-)
+from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName, TagNameConverter
 
 
 class ConverterTests(unittest.IsolatedAsyncioTestCase):
@@ -25,43 +18,6 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         cls.context.author = 'bob'
 
         cls.fixed_utc_now = datetime.datetime.fromisoformat('2019-01-01T00:00:00')
-
-    async def test_tag_content_converter_for_valid(self):
-        """TagContentConverter should return correct values for valid input."""
-        test_values = (
-            ('hello', 'hello'),
-            ('  h ello  ', 'h ello'),
-        )
-
-        for content, expected_conversion in test_values:
-            with self.subTest(content=content, expected_conversion=expected_conversion):
-                conversion = await TagContentConverter.convert(self.context, content)
-                self.assertEqual(conversion, expected_conversion)
-
-    async def test_tag_content_converter_for_invalid(self):
-        """TagContentConverter should raise the proper exception for invalid input."""
-        test_values = (
-            ('', "Tag contents should not be empty, or filled with whitespace."),
-            ('   ', "Tag contents should not be empty, or filled with whitespace."),
-        )
-
-        for value, exception_message in test_values:
-            with self.subTest(tag_content=value, exception_message=exception_message):
-                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
-                    await TagContentConverter.convert(self.context, value)
-
-    async def test_tag_name_converter_for_valid(self):
-        """TagNameConverter should return the correct values for valid tag names."""
-        test_values = (
-            ('tracebacks', 'tracebacks'),
-            ('Tracebacks', 'tracebacks'),
-            ('  Tracebacks  ', 'tracebacks'),
-        )
-
-        for name, expected_conversion in test_values:
-            with self.subTest(name=name, expected_conversion=expected_conversion):
-                conversion = await TagNameConverter.convert(self.context, name)
-                self.assertEqual(conversion, expected_conversion)
 
     async def test_tag_name_converter_for_invalid(self):
         """TagNameConverter should raise the correct exception for invalid tag names."""
@@ -291,7 +247,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
             ("10", 10),
             ("5m", 5),
             ("5M", 5),
-            ("forever", None),
+            ("forever", -1),
         )
         converter = HushDurationConverter()
         for minutes_string, expected_minutes in test_values:

@@ -1,13 +1,14 @@
-import logging
+from contextlib import suppress
 from typing import Optional
 
-from discord import Embed, TextChannel
+from discord import Embed, Forbidden, TextChannel, Thread
 from discord.ext.commands import Cog, Context, command, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Guild, MODERATION_ROLES, URLs
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class BotCog(Cog, name="Bot"):
@@ -15,6 +16,20 @@ class BotCog(Cog, name="Bot"):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    @Cog.listener()
+    async def on_thread_join(self, thread: Thread) -> None:
+        """
+        Try to join newly created threads.
+
+        Despite the event name being misleading, this is dispatched when new threads are created.
+        """
+        if thread.me:
+            # We have already joined this thread
+            return
+
+        with suppress(Forbidden):
+            await thread.join()
 
     @group(invoke_without_command=True, name="bot", hidden=True)
     async def botinfo_group(self, ctx: Context) -> None:
@@ -44,6 +59,8 @@ class BotCog(Cog, name="Bot"):
         """Repeat the given message in either a specified channel or the current channel."""
         if channel is None:
             await ctx.send(text)
+        elif not channel.permissions_for(ctx.author).send_messages:
+            await ctx.send("You don't have permission to speak in that channel.")
         else:
             await channel.send(text)
 
