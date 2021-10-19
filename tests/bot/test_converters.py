@@ -6,13 +6,7 @@ from unittest.mock import MagicMock, patch
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument
 
-from bot.converters import (
-    Duration,
-    HushDurationConverter,
-    ISODateTime,
-    PackageName,
-    TagNameConverter,
-)
+from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName, TagNameConverter
 
 
 class ConverterTests(unittest.IsolatedAsyncioTestCase):

@@ -1,12 +1,12 @@
-import logging
 from typing import Optional
 
 from aiohttp import ClientConnectorError
 
 import bot
 from bot.constants import URLs
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 

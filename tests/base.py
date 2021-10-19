@@ -6,6 +6,7 @@ from typing import Dict
 import discord
 from discord.ext import commands
 
+from bot.log import get_logger
 from tests import helpers
 
 
@@ -42,7 +43,7 @@ class LoggingTestsMixin:
         manager when we're testing under the assumption that no log records will be emitted.
         """
         if not isinstance(logger, logging.Logger):
-            logger = logging.getLogger(logger)
+            logger = get_logger(logger)
 
         if level:
             level = logging._nameToLevel.get(level, level)
@@ -102,4 +103,4 @@ class CommandTestCase(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(commands.MissingPermissions) as cm:
             await cmd.can_run(ctx)
 
-        self.assertCountEqual(permissions.keys(), cm.exception.missing_perms)
+        self.assertCountEqual(permissions.keys(), cm.exception.missing_permissions)

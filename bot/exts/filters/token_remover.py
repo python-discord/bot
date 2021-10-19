@@ -1,6 +1,5 @@
 import base64
 import binascii
-import logging
 import re
 import typing as t
 
@@ -11,9 +10,11 @@ from bot import utils
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Event, Icons
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 LOG_MESSAGE = (
     "Censored a seemingly valid token sent by {author} in {channel}, "
@@ -99,7 +100,7 @@ class TokenRemover(Cog):
         await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
 
         log_message = self.format_log_message(msg, found_token)
-        userid_message, mention_everyone = self.format_userid_log_message(msg, found_token)
+        userid_message, mention_everyone = await self.format_userid_log_message(msg, found_token)
         log.debug(log_message)
 
         # Send pretty mod log embed to mod-alerts
@@ -108,7 +109,7 @@ class TokenRemover(Cog):
             colour=Colour(Colours.soft_red),
             title="Token removed!",
             text=log_message + "\n" + userid_message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=mention_everyone,
         )
@@ -116,7 +117,7 @@ class TokenRemover(Cog):
         self.bot.stats.incr("tokens.removed_tokens")
 
     @classmethod
-    def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
+    async def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
         """
         Format the portion of the log message that includes details about the detected user ID.
 
@@ -128,7 +129,7 @@ class TokenRemover(Cog):
         Returns a tuple of (log_message, mention_everyone)
         """
         user_id = cls.extract_user_id(token.user_id)
-        user = msg.guild.get_member(user_id)
+        user = await get_or_fetch_member(msg.guild, user_id)
 
         if user:
             return KNOWN_USER_LOG_MESSAGE.format(

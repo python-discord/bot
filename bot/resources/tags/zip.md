@@ -3,7 +3,7 @@ The zip function allows you to iterate through multiple iterables simultaneously
 ```py
 letters = 'abc'
 numbers = [1, 2, 3]
-# zip(letters, numbers) --> [('a', 1), ('b', 2), ('c', 3)]
+# list(zip(letters, numbers)) --> [('a', 1), ('b', 2), ('c', 3)]
 for letter, number in zip(letters, numbers):
     print(letter, number)
 ```

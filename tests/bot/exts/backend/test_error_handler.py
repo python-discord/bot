@@ -107,7 +107,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         """Should send error with `ctx.send` when error is `CommandOnCooldown`."""
         self.ctx.reset_mock()
         cog = ErrorHandler(self.bot)
-        error = errors.CommandOnCooldown(10, 9)
+        error = errors.CommandOnCooldown(10, 9, type=None)
         self.assertIsNone(await cog.on_command_error(self.ctx, error))
         self.ctx.send.assert_awaited_once_with(error)
 
