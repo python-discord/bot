@@ -1,8 +1,8 @@
 import asyncio
 import re
+import unicodedata
 from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
-from unicodedata import normalize
 
 import arrow
 import dateutil.parser
@@ -208,11 +208,12 @@ class Filtering(Cog):
 
     def get_name_match(self, name: str) -> Optional[re.Match]:
         """Check bad words from passed string (name). Return the first match found."""
-        normalised_name = normalize("NFKC", name)
+        normalised_name = unicodedata.normalize("NFKC", name)
+        cleaned_normalised_name = "".join(c for c in normalised_name if not unicodedata.combining(c))
 
-        # Run filters against normalized and original version,
+        # Run filters against normalised, cleaned normalised and the original name,
         # in case we have filters for one but not the other.
-        names_to_check = (name, normalised_name)
+        names_to_check = (name, normalised_name, cleaned_normalised_name)
 
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
