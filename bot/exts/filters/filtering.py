@@ -42,6 +42,10 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 # Other constants.
 DAYS_BETWEEN_ALERTS = 3
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
+AUTO_BAN_REASON = (
+    "Your account seem to be compromised (%s). "
+    "Please appeal this ban once you have regained control of your account."
+)
 
 FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
 
@@ -346,6 +350,26 @@ class Filtering(Cog):
                         stats = self._add_stats(filter_name, match, msg.content)
                         await self._send_log(filter_name, _filter, msg, stats, reason)
 
+                        # If the filter reason contains `[autoban]`, we want to indeed ban
+                        if "[autoban]" in reason.lower():
+                            # We create a new context from that message and make sure the staffer is the bot
+                            # and the feeback message is sent in #mod-alert
+                            context = await self.bot.get_context(msg)
+                            context.author = self.bot.user
+                            context.channel = self.bot.get_channel(Channels.mod_alerts)
+
+                            # We need to convert the user to a member if we are inside a DM channel
+                            if msg.guild is None:
+                                user = self.bot.get_guild(Guild.id).get_member(msg.author.id)
+                            else:
+                                user = msg.author
+
+                            await context.invoke(
+                                self.bot.get_command("ban"),
+                                user,
+                                reason=AUTO_BAN_REASON % reason.lower().replace("[autoban]", "").strip()
+                            )
+
                         break  # We don't want multiple filters to trigger
 
     async def _send_log(
@@ -366,6 +390,10 @@ class Filtering(Cog):
             channel_str = f"in {msg.channel.mention}"
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
+
+        # If we are going to autoban, we don't want to ping
+        if "[autoban]" in reason:
+            ping_everyone = False
 
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
