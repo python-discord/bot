@@ -46,6 +46,7 @@ AUTO_BAN_REASON = (
     "Your account seems to be compromised (%s). "
     "You're welcome to appeal this ban once you have regained control of your account."
 )
+AUTO_BAN_DURATION = timedelta(days=4)
 
 FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
 
@@ -358,15 +359,10 @@ class Filtering(Cog):
                             context.author = self.bot.user
                             context.channel = self.bot.get_channel(Channels.mod_alerts)
 
-                            # We try to convert the user to a member if we are inside a DM channel
-                            if msg.guild is None:
-                                user = self.bot.get_guild(Guild.id).get_member(msg.author.id) or msg.author
-                            else:
-                                user = msg.author
-
                             await context.invoke(
-                                self.bot.get_command("ban"),
-                                user,
+                                self.bot.get_command("tempban"),
+                                msg.author,
+                                datetime.now() + AUTO_BAN_DURATION,
                                 reason=AUTO_BAN_REASON % reason.lower().replace("[autoban]", "").strip()
                             )
 
