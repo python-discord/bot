@@ -358,9 +358,9 @@ class Filtering(Cog):
                             context.author = self.bot.user
                             context.channel = self.bot.get_channel(Channels.mod_alerts)
 
-                            # We need to convert the user to a member if we are inside a DM channel
+                            # We try to convert the user to a member if we are inside a DM channel
                             if msg.guild is None:
-                                user = self.bot.get_guild(Guild.id).get_member(msg.author.id)
+                                user = self.bot.get_guild(Guild.id).get_member(msg.author.id) or msg.author
                             else:
                                 user = msg.author
 
