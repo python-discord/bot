@@ -209,11 +209,10 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
         log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
     else:
         channel = message.channel
-        helpers_role = message.guild.get_role(Roles.helpers)
-        if not channel.overwrites_for(helpers_role).read_messages:
+        if not channel.permissions_for(channel.guild.get_role(Roles.helpers)).view_channel:
             log.info(
                 f"Helpers don't have read permissions in #{channel.name},"
-                " not sending message link embed for {message_link}"
+                f" not sending message link embed for {message_link}"
             )
             return
 
