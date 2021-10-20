@@ -623,7 +623,7 @@ class Incidents(Cog):
             webhook_msg = await webhook.send(
                 embeds=[embed for embed in webhook_embed_list if embed],
                 username=sub_clyde(message.author.name),
-                avatar_url=message.author.avatar_url,
+                avatar_url=message.author.display_avatar.url,
                 wait=True,
             )
         except discord.DiscordException:
