@@ -587,7 +587,7 @@ class Incidents(Cog):
 
         If no links are found for the message, just log a trace statement.
         """
-        message_links = DISCORD_MESSAGE_LINK_RE.findall(str(message.content))
+        message_links = DISCORD_MESSAGE_LINK_RE.findall(message.content)
         if not message_links:
             log.trace(
                 f"No message links detected on incident message with id {message.id}."
