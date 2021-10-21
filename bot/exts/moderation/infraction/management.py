@@ -203,7 +203,7 @@ class ModManagement(commands.Cog):
 
         await self.mod_log.send_log_message(
             icon_url=constants.Icons.pencil,
-            colour=discord.Colour.blurple(),
+            colour=discord.Colour.og_blurple(),
             title="Infraction edited",
             thumbnail=thumbnail,
             text=textwrap.dedent(f"""

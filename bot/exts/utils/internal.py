@@ -243,7 +243,7 @@ async def func():  # (None,) -> Any
         stats_embed = discord.Embed(
             title="WebSocket statistics",
             description=f"Receiving {per_s:0.2f} events per second.",
-            color=discord.Color.blurple()
+            color=discord.Color.og_blurple()
         )
 
         for event_type, count in self.socket_events.most_common(25):

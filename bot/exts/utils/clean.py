@@ -263,7 +263,7 @@ class Clean(Cog):
         self.cleaning = False
 
         embed = Embed(
-            color=Colour.blurple(),
+            color=Colour.og_blurple(),
             description="Clean interrupted."
         )
         await ctx.send(embed=embed, delete_after=10)

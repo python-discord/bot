@@ -183,7 +183,7 @@ class Reminders(Cog):
                 name="Sorry, your reminder should have arrived earlier!"
             )
         else:
-            embed.colour = discord.Colour.blurple()
+            embed.colour = discord.Colour.og_blurple()
             embed.set_author(
                 icon_url=Icons.remind_blurple,
                 name="It has arrived!"
@@ -350,7 +350,7 @@ class Reminders(Cog):
             lines.append(text)
 
         embed = discord.Embed()
-        embed.colour = discord.Colour.blurple()
+        embed.colour = discord.Colour.og_blurple()
         embed.title = f"Reminders for {ctx.author}"
 
         # Remind the user that they have no reminders :^)
@@ -360,7 +360,7 @@ class Reminders(Cog):
             return
 
         # Construct the embed and paginate it.
-        embed.colour = discord.Colour.blurple()
+        embed.colour = discord.Colour.og_blurple()
 
         await LinePaginator.paginate(
             lines,
