@@ -1,4 +1,5 @@
 import itertools
+import re
 from collections import namedtuple
 from contextlib import suppress
 from typing import List, Union
@@ -179,7 +180,10 @@ class CustomHelpCommand(HelpCommand):
         except CommandError:
             command_details += NOT_ALLOWED_TO_RUN_MESSAGE
 
-        command_details += f"*{command.help or 'No details provided.'}*\n"
+        # Remove line breaks from docstrings, if not used to separate paragraphs.
+        # Allow overriding this behaviour via putting \u2003 at the start of a line.
+        formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help)
+        command_details += f"*{formatted_doc or 'No details provided.'}*\n"
         embed.description = command_details
 
         return embed

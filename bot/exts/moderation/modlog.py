@@ -378,7 +378,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.guild_update, Colour.blurple(),
             "Guild updated", message,
-            thumbnail=after.icon_url_as(format="png")
+            thumbnail=after.icon.with_static_format("png")
         )
 
     @Cog.listener()
@@ -539,7 +539,7 @@ class ModLog(Cog, name="ModLog"):
         channel = self.bot.get_channel(channel_id)
 
         # Ignore not found channels, DMs, and messages outside of the main guild.
-        if not channel or channel.guild and channel.guild.id != GuildConstant.id:
+        if not channel or not hasattr(channel, "guild") or channel.guild.id != GuildConstant.id:
             return True
 
         # Look at the parent channel of a thread.
@@ -786,11 +786,11 @@ class ModLog(Cog, name="ModLog"):
             return
 
         if not before.archived and after.archived:
-            colour = Colour.red()
+            colour = Colours.soft_red
             action = "archived"
             icon = Icons.hash_red
         elif before.archived and not after.archived:
-            colour = Colour.green()
+            colour = Colours.soft_green
             action = "un-archived"
             icon = Icons.hash_green
         else:
@@ -808,7 +808,7 @@ class ModLog(Cog, name="ModLog"):
         """Log thread deletion."""
         await self.send_log_message(
             Icons.hash_red,
-            Colour.red(),
+            Colours.soft_red,
             "Thread deleted",
             f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) deleted"
         )
@@ -823,7 +823,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.hash_green,
-            Colour.green(),
+            Colours.soft_green,
             "Thread created",
             f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) created"
         )
