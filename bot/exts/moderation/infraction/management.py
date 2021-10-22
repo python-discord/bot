@@ -1,9 +1,9 @@
 import textwrap
 import typing as t
+from datetime import datetime, timezone
 
 import dateutil.parser
 import discord
-from arrow import Arrow
 from dateutil.relativedelta import relativedelta
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -314,7 +314,10 @@ class ModManagement(commands.Cog):
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = Arrow.fromtimestamp(float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)))
+            date_from = datetime.fromtimestamp(
+                float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
+                timezone.utc
+            )
             date_to = dateutil.parser.isoparse(expires_at)
             duration = humanize_delta(relativedelta(date_to, date_from))
 
