@@ -800,7 +800,10 @@ class ModLog(Cog, name="ModLog"):
             icon,
             colour,
             f"Thread {action}",
-            f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`) was {action}"
+            (
+                f"Thread {after.mention} ({after.name}, `{after.id}`) from {after.parent.mention} "
+                f"(`{after.parent.id}`) was {action}"
+            )
         )
 
     @Cog.listener()
@@ -810,7 +813,10 @@ class ModLog(Cog, name="ModLog"):
             Icons.hash_red,
             Colours.soft_red,
             "Thread deleted",
-            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) deleted"
+            (
+                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
+                f"(`{thread.parent.id}`) deleted"
+            )
         )
 
     @Cog.listener()
@@ -825,7 +831,10 @@ class ModLog(Cog, name="ModLog"):
             Icons.hash_green,
             Colours.soft_green,
             "Thread created",
-            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) created"
+            (
+                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
+                f"(`{thread.parent.id}`) created"
+            )
         )
 
     @Cog.listener()
