@@ -786,11 +786,11 @@ class ModLog(Cog, name="ModLog"):
             return
 
         if not before.archived and after.archived:
-            colour = Colour.red()
+            colour = Colours.soft_red
             action = "archived"
             icon = Icons.hash_red
         elif before.archived and not after.archived:
-            colour = Colour.green()
+            colour = Colours.soft_green
             action = "un-archived"
             icon = Icons.hash_green
         else:
@@ -800,7 +800,10 @@ class ModLog(Cog, name="ModLog"):
             icon,
             colour,
             f"Thread {action}",
-            f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`) was {action}"
+            (
+                f"Thread {after.mention} ({after.name}, `{after.id}`) from {after.parent.mention} "
+                f"(`{after.parent.id}`) was {action}"
+            )
         )
 
     @Cog.listener()
@@ -808,9 +811,12 @@ class ModLog(Cog, name="ModLog"):
         """Log thread deletion."""
         await self.send_log_message(
             Icons.hash_red,
-            Colour.red(),
+            Colours.soft_red,
             "Thread deleted",
-            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) deleted"
+            (
+                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
+                f"(`{thread.parent.id}`) deleted"
+            )
         )
 
     @Cog.listener()
@@ -823,9 +829,12 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.hash_green,
-            Colour.green(),
+            Colours.soft_green,
             "Thread created",
-            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) created"
+            (
+                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
+                f"(`{thread.parent.id}`) created"
+            )
         )
 
     @Cog.listener()

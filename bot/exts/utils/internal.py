@@ -37,11 +37,10 @@ class Internal(Cog):
             self.eval.add_check(is_owner().predicate)
 
     @Cog.listener()
-    async def on_socket_response(self, msg: dict) -> None:
+    async def on_socket_event_type(self, event_type: str) -> None:
         """When a websocket event is received, increase our counters."""
-        if event_type := msg.get("t"):
-            self.socket_event_total += 1
-            self.socket_events[event_type] += 1
+        self.socket_event_total += 1
+        self.socket_events[event_type] += 1
 
     def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
         """Format the eval output into a string & attempt to format it into an Embed."""
