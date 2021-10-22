@@ -1,6 +1,7 @@
 import difflib
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+import arrow
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.utils import sleep_until
@@ -22,9 +23,9 @@ async def update_names(bot: Bot) -> None:
     while True:
         # Since we truncate the compute timedelta to seconds, we add one second to ensure
         # we go past midnight in the `seconds_to_sleep` set below.
-        today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
+        today_at_midnight = arrow.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
         next_midnight = today_at_midnight + timedelta(days=1)
-        await sleep_until(next_midnight)
+        await sleep_until(next_midnight.datetime)
 
         try:
             channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
