@@ -443,7 +443,8 @@ class ISODateTime(Converter):
         The converter is flexible in the formats it accepts, as it uses the `isoparse` method of
         `dateutil.parser`. In general, it accepts datetime strings that start with a date,
         optionally followed by a time. Specifying a timezone offset in the datetime string is
-        supported, but the `datetime` object will be converted to UTC.
+        supported, but the `datetime` object will be converted to UTC. If no timezone is specified, the datetime will
+        be assumed to be in UTC already. In all cases, the returned object will have the UTC timezone.
 
         See: https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse
 
