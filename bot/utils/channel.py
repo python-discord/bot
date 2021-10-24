@@ -1,12 +1,11 @@
-import logging
-
 import discord
 
 import bot
 from bot import constants
 from bot.constants import Categories
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def is_help_channel(channel: discord.TextChannel) -> bool:
@@ -53,7 +52,7 @@ def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     return getattr(channel, "category_id", None) == category_id
 
 
-async def try_get_channel(channel_id: int) -> discord.abc.GuildChannel:
+async def get_or_fetch_channel(channel_id: int) -> discord.abc.GuildChannel:
     """Attempt to get or fetch a channel and return it."""
     log.trace(f"Getting the channel {channel_id}.")
 

@@ -1,6 +1,6 @@
 import datetime
-import logging
 
+import arrow
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse
 from discord import Embed, Member
@@ -9,9 +9,11 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ModPings(Cog):
@@ -29,7 +31,11 @@ class ModPings(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.reschedule_task = self.bot.loop.create_task(self.reschedule_roles(), name="mod-pings-reschedule")
+        self.reschedule_task = scheduling.create_task(
+            self.reschedule_roles(),
+            name="mod-pings-reschedule",
+            event_loop=self.bot.loop,
+        )
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -52,7 +58,7 @@ class ModPings(Cog):
             if mod.id not in pings_off:
                 await self.reapply_role(mod)
             else:
-                expiry = isoparse(pings_off[mod.id]).replace(tzinfo=None)
+                expiry = isoparse(pings_off[mod.id])
                 self._role_scheduler.schedule_at(expiry, mod.id, self.reapply_role(mod))
 
     async def reapply_role(self, mod: Member) -> None:
@@ -87,7 +93,7 @@ class ModPings(Cog):
 
         The duration cannot be longer than 30 days.
         """
-        delta = duration - datetime.datetime.utcnow()
+        delta = duration - arrow.utcnow()
         if delta > datetime.timedelta(days=30):
             await ctx.send(":x: Cannot remove the role for longer than 30 days.")
             return

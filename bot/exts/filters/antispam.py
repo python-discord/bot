@@ -1,32 +1,30 @@
 import asyncio
-import logging
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import timedelta
 from itertools import takewhile
 from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
+import arrow
 from discord import Colour, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Cog
 
 from bot import rules
 from bot.bot import Bot
 from bot.constants import (
-    AntiSpam as AntiSpamConfig, Channels,
-    Colours, DEBUG_MODE, Event, Filter,
-    Guild as GuildConfig, Icons,
+    AntiSpam as AntiSpamConfig, Channels, Colours, DEBUG_MODE, Event, Filter, Guild as GuildConfig, Icons
 )
 from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import lock, scheduling
 from bot.utils.message_cache import MessageCache
 from bot.utils.messages import format_user, send_attachments
 
-
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 RULE_FUNCTION_MAPPING = {
     'attachments': rules.apply_attachments,
@@ -82,28 +80,34 @@ class DeletionContext:
             f"**Rules:** {', '.join(rule for rule in self.rules)}\n"
         )
 
-        # For multiple messages or those with excessive newlines, use the logs API
-        if len(self.messages) > 1 or 'newlines' in self.rules:
+        messages_as_list = list(self.messages.values())
+        first_message = messages_as_list[0]
+        # For multiple messages and those with attachments or excessive newlines, use the logs API
+        if any((
+            len(messages_as_list) > 1,
+            len(first_message.attachments) > 0,
+            first_message.content.count('\n') > 15
+        )):
             url = await modlog.upload_log(self.messages.values(), actor_id, self.attachments)
             mod_alert_message += f"A complete log of the offending messages can be found [here]({url})"
         else:
             mod_alert_message += "Message:\n"
-            [message] = self.messages.values()
-            content = message.clean_content
+            content = first_message.clean_content
             remaining_chars = 4080 - len(mod_alert_message)
 
             if len(content) > remaining_chars:
-                content = content[:remaining_chars] + "..."
+                url = await modlog.upload_log([first_message], actor_id, self.attachments)
+                log_site_msg = f"The full message can be found [here]({url})"
+                content = content[:remaining_chars - (3 + len(log_site_msg))] + "..."
 
-            mod_alert_message += f"{content}"
+            mod_alert_message += content
 
-        *_, last_message = self.messages.values()
         await modlog.send_log_message(
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title="Spam detected!",
             text=mod_alert_message,
-            thumbnail=last_message.author.avatar_url_as(static_format="png"),
+            thumbnail=first_message.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=AntiSpamConfig.ping_everyone
         )
@@ -129,7 +133,11 @@ class AntiSpam(Cog):
         self.max_interval = max_interval_config['interval']
         self.cache = MessageCache(AntiSpamConfig.cache_size, newest_first=True)
 
-        self.bot.loop.create_task(self.alert_on_validation_error(), name="AntiSpam.alert_on_validation_error")
+        scheduling.create_task(
+            self.alert_on_validation_error(),
+            name="AntiSpam.alert_on_validation_error",
+            event_loop=self.bot.loop,
+        )
 
     @property
     def mod_log(self) -> ModLog:
@@ -162,7 +170,7 @@ class AntiSpam(Cog):
             not message.guild
             or message.guild.id != GuildConfig.id
             or message.author.bot
-            or (hasattr(message.channel, "category") and message.channel.category.name == JAM_CATEGORY_NAME)
+            or (getattr(message.channel, "category", None) and message.channel.category.name == JAM_CATEGORY_NAME)
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
         ):
@@ -170,7 +178,7 @@ class AntiSpam(Cog):
 
         self.cache.append(message)
 
-        earliest_relevant_at = datetime.utcnow() - timedelta(seconds=self.max_interval)
+        earliest_relevant_at = arrow.utcnow() - timedelta(seconds=self.max_interval)
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
         for rule_name in AntiSpamConfig.rules:
@@ -178,7 +186,7 @@ class AntiSpam(Cog):
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
-            latest_interesting_stamp = datetime.utcnow() - timedelta(seconds=rule_config['interval'])
+            latest_interesting_stamp = arrow.utcnow() - timedelta(seconds=rule_config['interval'])
             messages_for_rule = list(
                 takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)
             )

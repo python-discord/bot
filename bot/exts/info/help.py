@@ -1,5 +1,5 @@
 import itertools
-import logging
+import re
 from collections import namedtuple
 from contextlib import suppress
 from typing import List, Union
@@ -12,10 +12,11 @@ from rapidfuzz.utils import default_process
 from bot import constants
 from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.decorators import redirect_output
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 COMMANDS_PER_PAGE = 8
 PREFIX = constants.Bot.prefix
@@ -179,7 +180,10 @@ class CustomHelpCommand(HelpCommand):
         except CommandError:
             command_details += NOT_ALLOWED_TO_RUN_MESSAGE
 
-        command_details += f"*{command.help or 'No details provided.'}*\n"
+        # Remove line breaks from docstrings, if not used to separate paragraphs.
+        # Allow overriding this behaviour via putting \u2003 at the start of a line.
+        formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help)
+        command_details += f"*{formatted_doc or 'No details provided.'}*\n"
         embed.description = command_details
 
         return embed

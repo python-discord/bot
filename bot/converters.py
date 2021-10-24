@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import logging
 import re
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 from ssl import CertificateError
 
 import dateutil.parser
@@ -12,22 +11,24 @@ import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
-from discord.utils import DISCORD_EPOCH, escape_markdown, snowflake_time
+from discord.utils import escape_markdown, snowflake_time
 
 from bot import exts
 from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
+from bot.log import get_logger
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
 from bot.utils.time import parse_duration_string
+
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
-DISCORD_EPOCH_DT = datetime.utcfromtimestamp(DISCORD_EPOCH / 1000)
+DISCORD_EPOCH_DT = snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
 
@@ -70,10 +71,10 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
-        invite_code = INVITE_RE.search(server_invite)
+        invite_code = INVITE_RE.match(server_invite)
         if invite_code:
             response = await ctx.bot.http_session.get(
-                f"{URLs.discord_invite_api}/{invite_code[1]}"
+                f"{URLs.discord_invite_api}/{invite_code.group('invite')}"
             )
             if response.status != 404:
                 invite_data = await response.json()
@@ -235,11 +236,16 @@ class Inventory(Converter):
     async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
-        if (inventory := await _inventory_parser.fetch_inventory(url)) is None:
-            raise BadArgument(
-                f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
-            )
-        return url, inventory
+        try:
+            inventory = await _inventory_parser.fetch_inventory(url)
+        except _inventory_parser.InvalidHeaderError:
+            raise BadArgument("Unable to parse inventory because of invalid header, check if URL is correct.")
+        else:
+            if inventory is None:
+                raise BadArgument(
+                    f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+                )
+            return url, inventory
 
 
 class Snowflake(IDConverter):
@@ -274,7 +280,7 @@ class Snowflake(IDConverter):
 
         if time < DISCORD_EPOCH_DT:
             raise BadArgument(f"{error}: timestamp is before the Discord epoch.")
-        elif (datetime.utcnow() - time).days < -1:
+        elif (datetime.now(timezone.utc) - time).days < -1:
             raise BadArgument(f"{error}: timestamp is too far into the future.")
 
         return snowflake
@@ -381,7 +387,7 @@ class Duration(DurationDelta):
         The converter supports the same symbols for each unit of time as its parent class.
         """
         delta = await super().convert(ctx, duration)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         try:
             return now + delta
@@ -392,7 +398,8 @@ class Duration(DurationDelta):
 class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
-    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-"
+    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-<>"
+    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞"
 
     @classmethod
     def translate_name(cls, name: str, *, from_unicode: bool = True) -> str:
@@ -402,9 +409,9 @@ class OffTopicName(Converter):
         If `from_unicode` is True, the name is translated from a discord-safe format, back to normalized text.
         """
         if from_unicode:
-            table = str.maketrans(cls.ALLOWED_CHARACTERS, '𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-')
+            table = str.maketrans(cls.ALLOWED_CHARACTERS, cls.TRANSLATED_CHARACTERS)
         else:
-            table = str.maketrans('𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-', cls.ALLOWED_CHARACTERS)
+            table = str.maketrans(cls.TRANSLATED_CHARACTERS, cls.ALLOWED_CHARACTERS)
 
         return name.translate(table)
 
@@ -436,8 +443,8 @@ class ISODateTime(Converter):
         The converter is flexible in the formats it accepts, as it uses the `isoparse` method of
         `dateutil.parser`. In general, it accepts datetime strings that start with a date,
         optionally followed by a time. Specifying a timezone offset in the datetime string is
-        supported, but the `datetime` object will be converted to UTC and will be returned without
-        `tzinfo` as a timezone-unaware `datetime` object.
+        supported, but the `datetime` object will be converted to UTC. If no timezone is specified, the datetime will
+        be assumed to be in UTC already. In all cases, the returned object will have the UTC timezone.
 
         See: https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse
 
@@ -463,7 +470,8 @@ class ISODateTime(Converter):
 
         if dt.tzinfo:
             dt = dt.astimezone(dateutil.tz.UTC)
-            dt = dt.replace(tzinfo=None)
+        else:  # Without a timezone, assume it represents UTC.
+            dt = dt.replace(tzinfo=dateutil.tz.UTC)
 
         return dt
 

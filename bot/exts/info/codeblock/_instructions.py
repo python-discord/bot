@@ -1,11 +1,11 @@
 """This module generates and formats instructional messages about fixing Markdown code blocks."""
 
-import logging
 from typing import Optional
 
 from bot.exts.info.codeblock import _parsing
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 _EXAMPLE_PY = "{lang}\nprint('Hello, world!')"  # Make sure to escape any Markdown symbols here.
 _EXAMPLE_CODE_BLOCKS = (

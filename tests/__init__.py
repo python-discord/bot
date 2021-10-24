@@ -1,5 +1,6 @@
 import logging
 
+from bot.log import get_logger
 
-log = logging.getLogger()
+log = get_logger()
 log.setLevel(logging.CRITICAL)

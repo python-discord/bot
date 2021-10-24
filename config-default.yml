@@ -144,6 +144,8 @@ guild:
         logs:               &LOGS           468520609152892958
         moderators:         &MODS_CATEGORY  749736277464842262
         modmail:            &MODMAIL        714494672835444826
+        appeals:            &APPEALS        890331800025563216
+        appeals2:           &APPEALS2       895417395261341766
         voice:                              356013253765234688
         summer_code_jam:                    861692638540857384
 
@@ -238,21 +240,21 @@ guild:
         - *MODS_CATEGORY
         - *MODMAIL
         - *LOGS
+        - *APPEALS
+        - *APPEALS2
 
     moderation_channels:
         - *ADMINS
         - *ADMIN_SPAM
         - *MODS
 
-    # Modlog cog ignores events which occur in these channels
+    # Modlog cog explicitly ignores events which occur in these channels.
+    # This is on top of implicitly ignoring events in channels that the mod team cannot view.
     modlog_blacklist:
-        - *ADMINS
-        - *ADMINS_VOICE
         - *ATTACH_LOG
         - *MESSAGE_LOG
         - *MOD_LOG
         - *STAFF_VOICE
-        - *DEV_CORE_VOTING
 
     reminder_whitelist:
         - *BOT_CMD
@@ -362,14 +364,14 @@ urls:
     connect_max_retries:       3
     connect_cooldown:          5
     site:        &DOMAIN       "pythondiscord.com"
-    site_api:    &API          "pydis-api.default.svc.cluster.local"
+    site_api:    &API          "site.default.svc.cluster.local/api"
     site_api_schema:           "http://"
     site_paste:  &PASTE  !JOIN ["paste.", *DOMAIN]
     site_schema: &SCHEMA       "https://"
-    site_staff:  &STAFF  !JOIN ["staff.", *DOMAIN]
+    site_staff:  &STAFF  !JOIN [*SCHEMA, *DOMAIN, "/staff"]
 
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
-    site_logs_view:                     !JOIN [*SCHEMA, *STAFF, "/bot/logs"]
+    site_logs_view:                     !JOIN [*STAFF, "/bot/logs"]
 
     # Snekbox
     snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"

@@ -1,9 +1,7 @@
-import asyncio
-import logging
 import random
 import textwrap
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 from operator import itemgetter
 
 import discord
@@ -11,19 +9,19 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import (
-    Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
-    Roles, STAFF_PARTNERS_COMMUNITY_ROLES
-)
+from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Duration, UnambiguousUser
+from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import TimestampFormats, discord_timestamp
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
@@ -40,7 +38,7 @@ class Reminders(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        self.bot.loop.create_task(self.reschedule_reminders())
+        scheduling.create_task(self.reschedule_reminders(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -54,14 +52,14 @@ class Reminders(Cog):
             params={'active': 'true'}
         )
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         for reminder in response:
             is_valid, *_ = self.ensure_valid_reminder(reminder)
             if not is_valid:
                 continue
 
-            remind_at = isoparse(reminder['expiration']).replace(tzinfo=None)
+            remind_at = isoparse(reminder['expiration'])
 
             # If the reminder is already overdue ...
             if remind_at < now:
@@ -80,7 +78,7 @@ class Reminders(Cog):
                 f"Reminder {reminder['id']} invalid: "
                 f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
             )
-            asyncio.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
+            scheduling.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
 
         return is_valid, user, channel
 
@@ -117,7 +115,7 @@ class Reminders(Cog):
         if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
-            return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
+            return all(isinstance(mention, (discord.User, discord.Member)) for mention in mentions), "roles"
         else:
             return True, ""
 
@@ -136,16 +134,17 @@ class Reminders(Cog):
             await send_denial(ctx, f"You can't mention other {disallowed_mentions} in your reminder!")
             return False
 
-    def get_mentionables(self, mention_ids: t.List[int]) -> t.Iterator[Mentionable]:
+    async def get_mentionables(self, mention_ids: t.List[int]) -> t.Iterator[Mentionable]:
         """Converts Role and Member ids to their corresponding objects if possible."""
         guild = self.bot.get_guild(Guild.id)
         for mention_id in mention_ids:
-            if mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id)):
+            member = await get_or_fetch_member(guild, mention_id)
+            if mentionable := (member or guild.get_role(mention_id)):
                 yield mentionable
 
     def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
-        reminder_datetime = isoparse(reminder['expiration']).replace(tzinfo=None)
+        reminder_datetime = isoparse(reminder['expiration'])
         self.scheduler.schedule_at(reminder_datetime, reminder["id"], self.send_reminder(reminder))
 
     async def _edit_reminder(self, reminder_id: int, payload: dict) -> dict:
@@ -194,9 +193,9 @@ class Reminders(Cog):
         embed.description = f"Here's your reminder: {reminder['content']}"
 
         # Here the jump URL is in the format of base_url/guild_id/channel_id/message_id
-        additional_mentions = ' '.join(
-            mentionable.mention for mentionable in self.get_mentionables(reminder["mentions"])
-        )
+        additional_mentions = ' '.join([
+            mentionable.mention async for mentionable in self.get_mentionables(reminder["mentions"])
+        ])
 
         jump_url = reminder.get("jump_url")
         embed.description += f"\n[Jump back to when you created the reminder]({jump_url})"
@@ -334,13 +333,13 @@ class Reminders(Cog):
 
         for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
-            remind_datetime = isoparse(remind_at).replace(tzinfo=None)
+            remind_datetime = isoparse(remind_at)
             time = discord_timestamp(remind_datetime, TimestampFormats.RELATIVE)
 
-            mentions = ", ".join(
+            mentions = ", ".join([
                 # Both Role and User objects have the `name` attribute
-                mention.name for mention in self.get_mentionables(mentions)
-            )
+                mention.name async for mention in self.get_mentionables(mentions)
+            ])
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
             text = textwrap.dedent(f"""

@@ -1,10 +1,9 @@
-import logging
 import textwrap
 import typing as t
 from abc import abstractmethod
-from datetime import datetime
 from gettext import ngettext
 
+import arrow
 import dateutil.parser
 import discord
 from discord.ext.commands import Context
@@ -16,10 +15,11 @@ from bot.constants import Colours
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import messages, scheduling, time
 from bot.utils.channel import is_mod_channel
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class InfractionScheduler:
@@ -29,7 +29,7 @@ class InfractionScheduler:
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
-        self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
+        scheduling.create_task(self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -67,7 +67,7 @@ class InfractionScheduler:
         # We make sure to fire this
         if to_schedule:
             next_reschedule_point = max(
-                dateutil.parser.isoparse(infr["expires_at"]).replace(tzinfo=None) for infr in to_schedule
+                dateutil.parser.isoparse(infr["expires_at"]) for infr in to_schedule
             )
             log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
 
@@ -81,12 +81,16 @@ class InfractionScheduler:
         apply_coro: t.Optional[t.Awaitable]
     ) -> None:
         """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
-        # Calculate the time remaining, in seconds, for the mute.
-        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
-        delta = (expiry - datetime.utcnow()).total_seconds()
+        if infraction["expires_at"] is not None:
+            # Calculate the time remaining, in seconds, for the mute.
+            expiry = dateutil.parser.isoparse(infraction["expires_at"])
+            delta = (expiry - arrow.utcnow()).total_seconds()
+        else:
+            # If the infraction is permanent, it is not possible to get the time remaining.
+            delta = None
 
-        # Mark as inactive if less than a minute remains.
-        if delta < 60:
+        # Mark as inactive if the infraction is not permanent and less than a minute remains.
+        if delta is not None and delta < 60:
             log.info(
                 "Infraction will be deactivated instead of re-applied "
                 "because less than 1 minute remains."
@@ -161,11 +165,11 @@ class InfractionScheduler:
         # send DMs to user that it doesn't share a guild with. If we were to
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
-        if not infraction["hidden"]:
+        if not infraction["hidden"] and infr_type in {"ban", "kick"}:
             dm_result = f"{constants.Emojis.failmail} "
             dm_log_text = "\nDM: **Failed**"
 
-            # Accordingly display whether the user was successfully notified via DM.
+            # Accordingly update whether the user was successfully notified via DM.
             if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
@@ -228,6 +232,16 @@ class InfractionScheduler:
         else:
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
 
+            # If we need to DM and haven't already tried to
+            if not infraction["hidden"] and infr_type not in {"ban", "kick"}:
+                dm_result = f"{constants.Emojis.failmail} "
+                dm_log_text = "\nDM: **Failed**"
+
+                # Accordingly update whether the user was successfully notified via DM.
+                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
+
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.")
@@ -239,7 +253,7 @@ class InfractionScheduler:
             icon_url=icon,
             colour=Colours.soft_red,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.display_avatar.url,
             text=textwrap.dedent(f"""
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
@@ -333,7 +347,7 @@ class InfractionScheduler:
             icon_url=_utils.INFRACTION_ICONS[infr_type][1],
             colour=Colours.soft_green,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.display_avatar.url,
             text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
             footer=footer,
             content=log_content,
@@ -368,7 +382,7 @@ class InfractionScheduler:
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
-        expiry = dateutil.parser.isoparse(expiry).replace(tzinfo=None) if expiry else None
+        expiry = dateutil.parser.isoparse(expiry) if expiry else None
         created = time.format_infraction_with_duration(inserted_at, expiry)
 
         log_content = None
@@ -450,7 +464,7 @@ class InfractionScheduler:
             log_title = "expiration failed" if "Failure" in log_text else "expired"
 
             user = self.bot.get_user(user_id)
-            avatar = user.avatar_url_as(static_format="png") if user else None
+            avatar = user.display_avatar.url if user else None
 
             # Move reason to end so when reason is too long, this is not gonna cut out required items.
             log_text["Reason"] = log_text.pop("Reason")
@@ -489,5 +503,5 @@ class InfractionScheduler:
         At the time of expiration, the infraction is marked as inactive on the website and the
         expiration task is cancelled.
         """
-        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
+        expiry = dateutil.parser.isoparse(infraction["expires_at"])
         self.scheduler.schedule_at(expiry, infraction["id"], self.deactivate_infraction(infraction))

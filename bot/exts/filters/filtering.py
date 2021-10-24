@@ -1,10 +1,10 @@
 import asyncio
-import logging
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
-import dateutil
+import arrow
+import dateutil.parser
 import discord.errors
 import regex
 from async_rediscache import RedisCache
@@ -15,17 +15,15 @@ from discord.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import (
-    Channels, Colours, Filter,
-    Guild, Icons, URLs
-)
+from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
-from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Regular expressions
 CODE_BLOCK_RE = re.compile(
@@ -64,7 +62,7 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -133,7 +131,7 @@ class Filtering(Cog):
             },
         }
 
-        self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
+        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -195,8 +193,8 @@ class Filtering(Cog):
     async def check_send_alert(self, member: Member) -> bool:
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
         if last_alert := await self.name_alerts.get(member.id):
-            last_alert = datetime.utcfromtimestamp(last_alert)
-            if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+            last_alert = arrow.get(last_alert)
+            if arrow.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
                 log.trace(f"Last alert was too recent for {member}'s nickname.")
                 return False
 
@@ -226,11 +224,11 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.avatar_url
+                thumbnail=member.display_avatar.url
             )
 
             # Update time when alert sent
-            await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
+            await self.name_alerts.set(member.id, arrow.utcnow().timestamp())
 
     async def filter_eval(self, result: str, msg: Message) -> bool:
         """
@@ -386,7 +384,7 @@ class Filtering(Cog):
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
             text=message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,
@@ -510,7 +508,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = INVITE_RE.findall(text)
+        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:
@@ -606,7 +604,7 @@ class Filtering(Cog):
 
     def schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
-        delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+        delete_at = dateutil.parser.isoparse(msg['delete_date'])
         self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
     async def reschedule_offensive_msg_deletion(self) -> None:
@@ -614,17 +612,17 @@ class Filtering(Cog):
         await self.bot.wait_until_ready()
         response = await self.bot.api_client.get('bot/offensive-messages',)
 
-        now = datetime.utcnow()
+        now = arrow.utcnow()
 
         for msg in response:
-            delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+            delete_at = dateutil.parser.isoparse(msg['delete_date'])
 
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
             else:
                 self.schedule_msg_delete(msg)
 
-    async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
+    async def delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
         """Delete an offensive message, and then delete it from the db."""
         try:
             channel = self.bot.get_channel(msg['channel_id'])

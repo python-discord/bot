@@ -1,7 +1,6 @@
-import logging
 import textwrap
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dateutil.parser
 import discord
@@ -16,12 +15,14 @@ from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, Unambigu
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import humanize_delta, until_expiration
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ModManagement(commands.Cog):
@@ -140,10 +141,11 @@ class ModManagement(commands.Cog):
         log_text = ""
 
         if duration is not None and not infraction['active']:
-            if reason is None:
+            if (infr_type := infraction['type']) in ('note', 'warning'):
+                await ctx.send(f":x: Cannot edit the expiration of a {infr_type}.")
+            else:
                 await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
-                return
-            confirm_messages.append("expiry unchanged (infraction already expired)")
+            return
         elif isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
@@ -190,11 +192,11 @@ class ModManagement(commands.Cog):
 
         # Get information about the infraction's user
         user_id = new_infraction['user']
-        user = ctx.guild.get_member(user_id)
+        user = await get_or_fetch_member(ctx.guild, user_id)
 
         if user:
             user_text = messages.format_user(user)
-            thumbnail = user.avatar_url_as(static_format="png")
+            thumbnail = user.display_avatar.url
         else:
             user_text = f"<@{user_id}>"
             thumbnail = None
@@ -312,8 +314,11 @@ class ModManagement(commands.Cog):
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = datetime.fromtimestamp(float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)))
-            date_to = dateutil.parser.isoparse(expires_at).replace(tzinfo=None)
+            date_from = datetime.fromtimestamp(
+                float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
+                timezone.utc
+            )
+            date_to = dateutil.parser.isoparse(expires_at)
             duration = humanize_delta(relativedelta(date_to, date_from))
 
         lines = textwrap.dedent(f"""
