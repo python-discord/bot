@@ -364,7 +364,7 @@ class Filtering(Cog):
                         await self._send_log(filter_name, _filter, msg, stats, reason)
 
                         # If the filter reason contains `[autoban]`, we want to indeed ban
-                        if "[autoban]" in reason.lower():
+                        if reason and "[autoban]" in reason.lower():
                             # We create a new context from that message and make sure the staffer is the bot
                             # and the feedback message is sent in #mod-alert
                             context = await self.bot.get_context(msg)
@@ -400,7 +400,7 @@ class Filtering(Cog):
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
         # If we are going to autoban, we don't want to ping
-        if "[autoban]" in reason:
+        if reason and "[autoban]" in reason:
             ping_everyone = False
 
         eval_msg = "using !eval " if is_eval else ""
