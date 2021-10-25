@@ -13,9 +13,7 @@ from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument
 
 from bot.bot import Bot
-from bot.constants import (
-    Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
-)
+from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
 from bot.converters import Age, ISODateTime
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.channel import is_mod_channel
@@ -439,20 +437,21 @@ class Clean(Cog):
         Commands for cleaning messages in channels.
 
         If arguments are provided, will act as a master command from which all subcommands can be derived.
-        • `users`: A series of user mentions, ID's, or names.
-        • `traverse`: The number of messages to look at in each channel. If using the cache, will look at the first
-        `traverse` messages in the cache.
-        • `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
+
+        \u2003• `users`: A series of user mentions, ID's, or names.
+        \u2003• `traverse`: The number of messages to look at in each channel. If using the cache, will look at the
+        first `traverse` messages in the cache.
+        \u2003• `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
         If a limit is provided, multiple channels cannot be provided.
         If only one of them is provided, acts as `clean until`. If both are provided, acts as `clean between`.
-        • `use_cache`: Whether to use the message cache.
+        \u2003• `use_cache`: Whether to use the message cache.
         If not provided, will default to False unless an asterisk is used for the channels.
-        • `bots_only`: Whether to delete only bots. If specified, users cannot be specified.
-        • `regex`: A regex pattern the message must contain to be deleted.
+        \u2003• `bots_only`: Whether to delete only bots. If specified, users cannot be specified.
+        \u2003• `regex`: A regex pattern the message must contain to be deleted.
         The pattern must be provided enclosed in backticks.
         If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
-        • `channels`: A series of channels to delete in, or an asterisk to delete from all channels.
+        \u2003• `channels`: A series of channels to delete in, or an asterisk to delete from all channels.
         """
         if not any([traverse, users, first_limit, second_limit, regex, channels]):
             await ctx.send_help(ctx.command)
@@ -521,7 +520,7 @@ class Clean(Cog):
         Delete all messages that match a certain regex, stop cleaning after traversing `traverse` messages.
 
         The pattern must be provided enclosed in backticks.
-        If the pattern contains spaces, and still needs to be enclosed in double quotes on top of that.
+        If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
         For example: `[0-9]`
         """
         await self._clean_messages(ctx, traverse, regex=regex, channels=channels, use_cache=use_cache)
