@@ -175,13 +175,7 @@ class InfractionScheduler:
                 dm_log_text = "\nDM: Sent"
 
         end_msg = ""
-        if infraction["actor"] == self.bot.user.id:
-            log.trace(
-                f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
-            )
-            if reason:
-                end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
-        elif is_mod_channel(ctx.channel):
+        if is_mod_channel(ctx.channel):
             log.trace(f"Fetching total infraction count for {user}.")
 
             infractions = await self.bot.api_client.get(
@@ -190,6 +184,12 @@ class InfractionScheduler:
             )
             total = len(infractions)
             end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
+        elif infraction["actor"] == self.bot.user.id:
+            log.trace(
+                f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
+            )
+            if reason:
+                end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
 
         purge = infraction.get("purge", "")
 

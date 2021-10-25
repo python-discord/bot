@@ -354,7 +354,7 @@ class Filtering(Cog):
                         # If the filter reason contains `[autoban]`, we want to indeed ban
                         if "[autoban]" in reason.lower():
                             # We create a new context from that message and make sure the staffer is the bot
-                            # and the feeback message is sent in #mod-alert
+                            # and the feedback message is sent in #mod-alert
                             context = await self.bot.get_context(msg)
                             context.author = self.bot.user
                             context.channel = self.bot.get_channel(Channels.mod_alerts)
