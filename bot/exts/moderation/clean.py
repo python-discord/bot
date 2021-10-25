@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import re
 import time
@@ -46,7 +47,8 @@ class Regex(Converter):
 
     async def convert(self, ctx: Context, argument: str) -> re.Pattern:
         """Strips the backticks from the string and compiles it to a regex pattern."""
-        if not (match := re.fullmatch(r"`(.+?)`", argument)):
+        match = re.fullmatch(r"`(.+?)`", argument)
+        if not match:
             raise BadArgument("Regex pattern missing wrapping backticks")
         try:
             return re.compile(match.group(1), re.IGNORECASE + re.DOTALL)
@@ -252,12 +254,8 @@ class Clean(Cog):
             # Ensure that deletion was not canceled
             if not self.cleaning:
                 return deleted
-            try:
+            with contextlib.suppress(NotFound):  # Message doesn't exist or was already deleted
                 await message.delete()
-            except NotFound:
-                # Message doesn't exist or was already deleted
-                continue
-            else:
                 deleted.append(message)
         return deleted
 
