@@ -21,12 +21,14 @@ from bot.utils.channel import is_mod_channel
 
 log = logging.getLogger(__name__)
 
+# Default number of messages to look at in each channel.
 DEFAULT_TRAVERSE = 10
+# Number of seconds before command invocations and responses are deleted in non-moderation channels.
 MESSAGE_DELETE_DELAY = 5
 
-# Type alias for checks
+# Type alias for checks for whether a message should be deleted.
 Predicate = Callable[[Message], bool]
-
+# Type alias for message lookup ranges.
 CleanLimit = Union[Message, Age, ISODateTime]
 
 
@@ -56,7 +58,7 @@ class Regex(Converter):
             raise BadArgument(f"Regex error: {e.msg}")
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # Used to allow method resolution in IDEs like in converters.py.
     CleanChannels = Union[Literal["*"], list[TextChannel]]  # noqa: F811
     Regex = re.Pattern  # noqa: F811
 
