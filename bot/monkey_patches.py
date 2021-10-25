@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+import arrow
 from discord import Forbidden, http
 from discord.ext import commands
 
@@ -38,13 +39,13 @@ def patch_typing() -> None:
 
     async def honeybadger_type(self, channel_id: int) -> None:  # noqa: ANN001
         nonlocal last_403
-        if last_403 and (datetime.utcnow() - last_403) < timedelta(minutes=5):
+        if last_403 and (arrow.utcnow() - last_403) < timedelta(minutes=5):
             log.warning("Not sending typing event, we got a 403 less than 5 minutes ago.")
             return
         try:
             await original(self, channel_id)
         except Forbidden:
-            last_403 = datetime.utcnow()
+            last_403 = arrow.utcnow()
             log.warning("Got a 403 from typing event!")
             pass
 

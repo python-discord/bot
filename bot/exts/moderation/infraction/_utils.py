@@ -27,15 +27,17 @@ RULES_URL = "https://pythondiscord.com/pages/rules"
 # Type aliases
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 
-APPEAL_EMAIL = "appeals@pythondiscord.com"
+APPEAL_SERVER_INVITE = "https://discord.gg/WXrCJxWBnm"
 
 INFRACTION_TITLE = "Please review our rules"
-INFRACTION_APPEAL_EMAIL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
+INFRACTION_APPEAL_SERVER_FOOTER = f"\n\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
 INFRACTION_APPEAL_MODMAIL_FOOTER = (
-    'If you would like to discuss or appeal this infraction, '
-    'send a message to the ModMail bot'
+    '\n\nIf you would like to discuss or appeal this infraction, '
+    'send a message to the ModMail bot.'
 )
 INFRACTION_AUTHOR_NAME = "Infraction information"
+
+LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL_MODMAIL_FOOTER))
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Type:** {type}\n"
@@ -170,8 +172,10 @@ async def notify_infraction(
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
-    if len(text) > 4096:
-        text = f"{text[:4093]}..."
+    if len(text) > 4096 - LONGEST_EXTRAS:
+        text = f"{text[:4093-LONGEST_EXTRAS]}..."
+
+    text += INFRACTION_APPEAL_SERVER_FOOTER if infr_type.lower() == 'ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
 
     embed = discord.Embed(
         description=text,
@@ -181,10 +185,6 @@ async def notify_infraction(
     embed.set_author(name=INFRACTION_AUTHOR_NAME, icon_url=icon_url, url=RULES_URL)
     embed.title = INFRACTION_TITLE
     embed.url = RULES_URL
-
-    embed.set_footer(
-        text=INFRACTION_APPEAL_EMAIL_FOOTER if infr_type == 'Ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
-    )
 
     return await send_private_embed(user, embed)
 

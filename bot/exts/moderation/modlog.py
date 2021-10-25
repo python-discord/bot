@@ -2,7 +2,7 @@ import asyncio
 import difflib
 import itertools
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 from itertools import zip_longest
 
 import discord
@@ -58,7 +58,7 @@ class ModLog(Cog, name="ModLog"):
             'bot/deleted-messages',
             json={
                 'actor': actor_id,
-                'creation': datetime.utcnow().isoformat(),
+                'creation': datetime.now(timezone.utc).isoformat(),
                 'deletedmessage_set': [
                     {
                         'id': message.id,
@@ -378,7 +378,7 @@ class ModLog(Cog, name="ModLog"):
         await self.send_log_message(
             Icons.guild_update, Colour.blurple(),
             "Guild updated", message,
-            thumbnail=after.icon_url_as(format="png")
+            thumbnail=after.icon.with_static_format("png")
         )
 
     @Cog.listener()
@@ -404,8 +404,8 @@ class ModLog(Cog, name="ModLog"):
         if member.guild.id != GuildConstant.id:
             return
 
-        now = datetime.utcnow()
-        difference = abs(relativedelta(now, member.created_at.replace(tzinfo=None)))
+        now = datetime.now(timezone.utc)
+        difference = abs(relativedelta(now, member.created_at))
 
         message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
 
@@ -539,7 +539,7 @@ class ModLog(Cog, name="ModLog"):
         channel = self.bot.get_channel(channel_id)
 
         # Ignore not found channels, DMs, and messages outside of the main guild.
-        if not channel or channel.guild and channel.guild.id != GuildConstant.id:
+        if not channel or not hasattr(channel, "guild") or channel.guild.id != GuildConstant.id:
             return True
 
         # Look at the parent channel of a thread.
@@ -786,11 +786,11 @@ class ModLog(Cog, name="ModLog"):
             return
 
         if not before.archived and after.archived:
-            colour = Colour.red()
+            colour = Colours.soft_red
             action = "archived"
             icon = Icons.hash_red
         elif before.archived and not after.archived:
-            colour = Colour.green()
+            colour = Colours.soft_green
             action = "un-archived"
             icon = Icons.hash_green
         else:
@@ -800,7 +800,10 @@ class ModLog(Cog, name="ModLog"):
             icon,
             colour,
             f"Thread {action}",
-            f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`) was {action}"
+            (
+                f"Thread {after.mention} ({after.name}, `{after.id}`) from {after.parent.mention} "
+                f"(`{after.parent.id}`) was {action}"
+            )
         )
 
     @Cog.listener()
@@ -808,9 +811,12 @@ class ModLog(Cog, name="ModLog"):
         """Log thread deletion."""
         await self.send_log_message(
             Icons.hash_red,
-            Colour.red(),
+            Colours.soft_red,
             "Thread deleted",
-            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) deleted"
+            (
+                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
+                f"(`{thread.parent.id}`) deleted"
+            )
         )
 
     @Cog.listener()
@@ -823,9 +829,12 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.hash_green,
-            Colour.green(),
+            Colours.soft_green,
             "Thread created",
-            f"Thread {thread.mention} (`{thread.id}`) from {thread.parent.mention} (`{thread.parent.id}`) created"
+            (
+                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
+                f"(`{thread.parent.id}`) created"
+            )
         )
 
     @Cog.listener()

@@ -8,6 +8,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
+import arrow
 from dateutil.parser import isoparse
 from discord import Embed, Emoji, Member, Message, NoMoreItems, PartialMessage, TextChannel
 from discord.ext.commands import Context
@@ -68,11 +69,11 @@ class Reviewer:
         log.trace(f"Scheduling review of user with ID {user_id}")
 
         user_data = self._pool.cache.get(user_id)
-        inserted_at = isoparse(user_data['inserted_at']).replace(tzinfo=None)
+        inserted_at = isoparse(user_data['inserted_at'])
         review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
 
         # If it's over a day overdue, it's probably an old nomination and shouldn't be automatically reviewed.
-        if datetime.utcnow() - review_at < timedelta(days=1):
+        if arrow.utcnow() - review_at < timedelta(days=1):
             self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
@@ -347,7 +348,7 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time_since(isoparse(history[0]['ended_at']).replace(tzinfo=None))
+        end_time = time_since(isoparse(history[0]['ended_at']))
 
         review = (
             f"They were nominated **{nomination_times}** before"
