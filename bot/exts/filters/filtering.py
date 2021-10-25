@@ -364,10 +364,11 @@ class Filtering(Cog):
                         stats = self._add_stats(filter_name, match, msg.content)
                         await self._send_log(filter_name, _filter, msg, stats, reason)
 
-                        # If the filter reason contains `[autoban]`, we want to indeed ban
+                        # If the filter reason contains `[autoban]`, we want to auto-ban the user
                         if reason and "[autoban]" in reason.lower():
-                            # We create a new context from that message and make sure the staffer is the bot
-                            # and the feedback message is sent in #mod-alert
+                            # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
+                            # This sends the ban confirmation directly under watchlist trigger embed, to inform
+                            # mods that the user was auto-banned for the message.
                             context = await self.bot.get_context(msg)
                             context.author = self.bot.get_guild(Guild.id).get_member(self.bot.user.id)
                             context.channel = self.bot.get_channel(Channels.mod_alerts)
