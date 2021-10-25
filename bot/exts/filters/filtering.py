@@ -57,7 +57,7 @@ AUTO_BAN_REASON = (
     "for heightened security.\n\n"
 
     "Once you have changed your password, feel free to follow the instructions at the bottom of "
-    "this message to appeal your ban."""
+    "this message to appeal your ban."
 )
 AUTO_BAN_DURATION = timedelta(days=4)
 
