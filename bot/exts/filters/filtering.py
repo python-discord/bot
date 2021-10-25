@@ -1,6 +1,6 @@
 import asyncio
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
@@ -375,8 +375,8 @@ class Filtering(Cog):
                             await context.invoke(
                                 self.bot.get_command("tempban"),
                                 msg.author,
-                                datetime.now() + AUTO_BAN_DURATION,
-                                reason=AUTO_BAN_REASON.strip()
+                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                reason=AUTO_BAN_REASON
                             )
 
                         break  # We don't want multiple filters to trigger
