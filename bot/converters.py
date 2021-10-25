@@ -405,7 +405,7 @@ class Age(DurationDelta):
         The converter supports the same symbols for each unit of time as its parent class.
         """
         delta = await super().convert(ctx, duration)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         try:
             return now - delta
