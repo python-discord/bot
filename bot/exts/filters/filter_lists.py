@@ -101,9 +101,9 @@ class FilterLists(Cog):
                 )
             raise
 
-        # If it is an autoban trigger we send a warning in #mod-tools
+        # If it is an autoban trigger we send a warning in #mod-meta
         if comment and "[autoban]" in comment:
-            await self.bot.get_channel(Channels.mod_tools).send(
+            await self.bot.get_channel(Channels.mod_meta).send(
                 f":warning: heads-up! The new filter `{content}` (`{comment}`) will automatically ban users."
             )
 

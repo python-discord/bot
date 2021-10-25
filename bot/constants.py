@@ -444,7 +444,7 @@ class Channels(metaclass=YAMLGetter):
     incidents: int
     incidents_archive: int
     mod_alerts: int
-    mod_tools: int
+    mod_meta: int
     nominations: int
     nomination_voting: int
     organisation: int
