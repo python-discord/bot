@@ -42,9 +42,21 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 # Other constants.
 DAYS_BETWEEN_ALERTS = 3
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
+
+# Autoban
+LINK_PASSWORD = "https://support.discord.com/hc/en-us/articles/218410947-I-forgot-my-Password-Where-can-I-set-a-new-one"
+LINK_2FA = "https://support.discord.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication"
 AUTO_BAN_REASON = (
-    "Your account seems to be compromised (%s). "
-    "You're welcome to appeal this ban once you have regained control of your account."
+    "Your account has been used to send links to a phishing website. You have been automatically banned. "
+    "If you are not aware of sending them, that means your account has been compromised.\n\n"
+
+    f"Here is a guide from Discord on [how to change your password]({LINK_PASSWORD}).\n\n"
+
+    f"We also highly recommend that you [enable 2 factor authentication on your account]({LINK_2FA}), "
+    "for heightened security.\n\n"
+
+    "Once you have changed your password, feel free to follow the instructions at the bottom of "
+    "this message to appeal your ban."""
 )
 AUTO_BAN_DURATION = timedelta(days=4)
 
@@ -363,7 +375,7 @@ class Filtering(Cog):
                                 self.bot.get_command("tempban"),
                                 msg.author,
                                 datetime.now() + AUTO_BAN_DURATION,
-                                reason=AUTO_BAN_REASON % reason.lower().replace("[autoban]", "").strip()
+                                reason=AUTO_BAN_REASON.strip()
                             )
 
                         break  # We don't want multiple filters to trigger
