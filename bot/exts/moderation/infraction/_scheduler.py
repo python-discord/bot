@@ -1,9 +1,9 @@
 import textwrap
 import typing as t
 from abc import abstractmethod
-from datetime import datetime
 from gettext import ngettext
 
+import arrow
 import dateutil.parser
 import discord
 from discord.ext.commands import Context
@@ -67,7 +67,7 @@ class InfractionScheduler:
         # We make sure to fire this
         if to_schedule:
             next_reschedule_point = max(
-                dateutil.parser.isoparse(infr["expires_at"]).replace(tzinfo=None) for infr in to_schedule
+                dateutil.parser.isoparse(infr["expires_at"]) for infr in to_schedule
             )
             log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
 
@@ -83,8 +83,8 @@ class InfractionScheduler:
         """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
         if infraction["expires_at"] is not None:
             # Calculate the time remaining, in seconds, for the mute.
-            expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
-            delta = (expiry - datetime.utcnow()).total_seconds()
+            expiry = dateutil.parser.isoparse(infraction["expires_at"])
+            delta = (expiry - arrow.utcnow()).total_seconds()
         else:
             # If the infraction is permanent, it is not possible to get the time remaining.
             delta = None
@@ -382,7 +382,7 @@ class InfractionScheduler:
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
-        expiry = dateutil.parser.isoparse(expiry).replace(tzinfo=None) if expiry else None
+        expiry = dateutil.parser.isoparse(expiry) if expiry else None
         created = time.format_infraction_with_duration(inserted_at, expiry)
 
         log_content = None
@@ -503,5 +503,5 @@ class InfractionScheduler:
         At the time of expiration, the infraction is marked as inactive on the website and the
         expiration task is cancelled.
         """
-        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
+        expiry = dateutil.parser.isoparse(infraction["expires_at"])
         self.scheduler.schedule_at(expiry, infraction["id"], self.deactivate_infraction(infraction))

@@ -125,14 +125,21 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
         await self.move_to_in_use(message.channel)
-        await self._handle_role_change(message.author, message.author.add_roles)
+
+        # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
+        if not isinstance(message.author, discord.Member):
+            log.warning(
+                f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM."
+            )
+        else:
+            await self._handle_role_change(message.author, message.author.add_roles)
+
+            try:
+                await _message.dm_on_open(message)
+            except Exception as e:
+                log.warning("Error occurred while sending DM:", exc_info=e)
 
         await _message.pin(message)
-
-        try:
-            await _message.dm_on_open(message)
-        except Exception as e:
-            log.warning("Error occurred while sending DM:", exc_info=e)
 
         # Add user with channel for dormant check.
         await _caches.claimants.set(message.channel.id, message.author.id)

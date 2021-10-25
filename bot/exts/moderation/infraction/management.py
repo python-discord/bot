@@ -1,6 +1,6 @@
 import textwrap
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dateutil.parser
 import discord
@@ -314,8 +314,11 @@ class ModManagement(commands.Cog):
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = datetime.fromtimestamp(float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)))
-            date_to = dateutil.parser.isoparse(expires_at).replace(tzinfo=None)
+            date_from = datetime.fromtimestamp(
+                float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
+                timezone.utc
+            )
+            date_to = dateutil.parser.isoparse(expires_at)
             duration = humanize_delta(relativedelta(date_to, date_from))
 
         lines = textwrap.dedent(f"""
