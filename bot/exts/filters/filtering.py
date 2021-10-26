@@ -369,8 +369,10 @@ class Filtering(Cog):
                             # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
                             # This sends the ban confirmation directly under watchlist trigger embed, to inform
                             # mods that the user was auto-banned for the message.
+                            guild = self.bot.get_guild(Guild.id)
                             context = await self.bot.get_context(msg)
-                            context.author = self.bot.get_guild(Guild.id).get_member(self.bot.user.id)
+                            context.guild = guild
+                            context.author = guild.get_member(self.bot.user.id)
                             context.channel = self.bot.get_channel(Channels.mod_alerts)
                             context.command = self.bot.get_command("tempban")
 
