@@ -69,6 +69,68 @@ class Patreon(commands.Cog):
             )
         )
 
+    async def send_current_supporters(self, channel: discord.TextChannel) -> None:
+        """Send the current list of patreon supporters, sorted by tier level."""
+        await self.bot.wait_until_guild_available()
+
+        guild: discord.Guild = self.bot.get_guild(constants.Guild.id)
+
+        tier_1_patrons: set[discord.Member] = set(guild.get_role(constants.Roles.patreon_tier_1).members)
+        tier_2_patrons: set[discord.Member] = set(guild.get_role(constants.Roles.patreon_tier_2).members)
+        tier_3_patrons: set[discord.Member] = set(guild.get_role(constants.Roles.patreon_tier_3).members)
+
+        tier_1_patrons = tier_1_patrons - tier_2_patrons - tier_3_patrons
+        tier_2_patrons = tier_2_patrons - tier_3_patrons
+
+        tier_1_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_1_patrons}
+        tier_2_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_2_patrons}
+        tier_3_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_3_patrons}
+
+        embed_list: list[discord.Embed] = []
+
+        embed: discord.Embed = discord.Embed(
+            title="Patreon Supporters",
+            description=(
+                "Here is a full list of this months Python Discord patrons!\n\nWe use the money from Patreon to offer "
+                "excellent prizes for all of our events. Stuff like t-shirts, stickers, microcontrollers that support "
+                "CircuitPython, or maybe even a mechanical keyboard.\n\nYou can read more about how Patreon supports "
+                "us, or even support us yourself, on our Patreon page [here](https://www.patreon.com/python_discord)!"
+            )
+        )
+
+        embed_list.append(embed)
+
+        if tier_1_patrons:
+            embed: discord.Embed = discord.Embed(
+                title="Tier 1 patrons",
+                description="\n".join(tier_1_patrons),
+                colour=guild.get_role(constants.Roles.patreon_tier_1).colour
+            )
+            embed_list.append(embed)
+
+        if tier_2_patrons:
+            embed: discord.Embed = discord.Embed(
+                title="Tier 2 patrons",
+                description="\n".join(tier_2_patrons),
+                colour=guild.get_role(constants.Roles.patreon_tier_2).colour
+            )
+            embed_list.append(embed)
+
+        if tier_3_patrons:
+            embed: discord.Embed = discord.Embed(
+                title="Tier 3 patrons",
+                description="\n".join(tier_3_patrons),
+                colour=guild.get_role(constants.Roles.patreon_tier_3).colour
+            )
+            embed_list.append(embed)
+
+        await channel.send(embeds=embed_list)
+
+    @commands.command("patrons")
+    async def current_supporters_command(self, ctx: commands.context) -> None:
+        """A command to activate self.send_current_supporters()."""
+        await self.send_current_supporters(ctx.channel)
+
 
 def setup(bot: Bot) -> None:
     """Load the patreon cog."""
