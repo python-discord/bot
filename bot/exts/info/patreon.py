@@ -127,7 +127,7 @@ class Patreon(commands.Cog):
         await channel.send(embeds=embed_list)
 
     @commands.command("patrons")
-    async def current_supporters_command(self, ctx: commands.context) -> None:
+    async def current_supporters_command(self, ctx: commands.Context) -> None:
         """A command to activate `self.send_current_supporters()`."""
         await self.send_current_supporters(ctx.channel)
 
@@ -142,7 +142,7 @@ class Patreon(commands.Cog):
             )
 
     @commands.command("patreon")
-    async def patreon_info(self, ctx: commands.context) -> None:
+    async def patreon_info(self, ctx: commands.Context) -> None:
         """A command to send patreon info."""
         await ctx.channel.send(embeds=[discord.Embed(
             title="Patreon",
