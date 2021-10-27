@@ -59,7 +59,7 @@ class Patreon(commands.Cog):
 
         message = (
             f":tada: {after.mention} just became a **tier {new_patreon_tier}** patron!\n"
-            f"[Support us on Patreon](https://pydis.com/patreon)"
+            "[Support us on Patreon](https://pydis.com/patreon)"
         )
 
         await sending_channel.send(
