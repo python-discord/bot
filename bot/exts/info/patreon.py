@@ -144,7 +144,7 @@ class Patreon(commands.Cog):
     @commands.command("patreon")
     async def patreon_info(self, ctx: commands.Context) -> None:
         """A command to send patreon info."""
-        await ctx.channel.send(embeds=[discord.Embed(
+        await ctx.send(embed=discord.Embed(
             title="Patreon",
             description=(
                 "We use the money from Patreon to offer excellent prizes for all of our events. Stuff like t-shirts, "
@@ -152,7 +152,7 @@ class Patreon(commands.Cog):
                 " read more about how Patreon supports us, or even support us yourself, on our Patreon page "
                 "[here](https://www.patreon.com/python_discord)!"
             )
-        )])
+        ))
 
 
 def setup(bot: Bot) -> None:
