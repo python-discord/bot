@@ -75,12 +75,12 @@ class Patreon(commands.Cog):
 
         guild = self.bot.get_guild(constants.Guild.id)
 
-        tier_1_patrons = set(guild.get_role(constants.Roles.patreon_tier_1).members)
-        tier_2_patrons = set(guild.get_role(constants.Roles.patreon_tier_2).members)
+        tier_1_or_above_patrons = set(guild.get_role(constants.Roles.patreon_tier_1).members)
+        tier_2_or_above_patrons = set(guild.get_role(constants.Roles.patreon_tier_2).members)
         tier_3_patrons = set(guild.get_role(constants.Roles.patreon_tier_3).members)
 
-        tier_1_patrons = tier_1_patrons - tier_2_patrons - tier_3_patrons
-        tier_2_patrons = tier_2_patrons - tier_3_patrons
+        tier_1_patrons = tier_1_or_above_patrons - tier_2_or_above_patrons - tier_3_patrons
+        tier_2_patrons = tier_2_or_above_patrons - tier_3_patrons
 
         tier_1_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_1_patrons}
         tier_2_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_2_patrons}
@@ -88,7 +88,7 @@ class Patreon(commands.Cog):
 
         embed_list = []
 
-        embed = discord.Embed(
+        embed_patron_info = discord.Embed(
             title="Patreon Supporters",
             description=(
                 "Here is a full list of this months Python Discord patrons!\n\nWe use the money from Patreon to offer "
@@ -98,31 +98,31 @@ class Patreon(commands.Cog):
             )
         )
 
-        embed_list.append(embed)
+        embed_list.append(embed_patron_info)
 
         if tier_1_patrons:
-            embed = discord.Embed(
+            embed_tier_1 = discord.Embed(
                 title="Tier 1 patrons",
                 description="\n".join(tier_1_patrons),
                 colour=guild.get_role(constants.Roles.patreon_tier_1).colour
             )
-            embed_list.append(embed)
+            embed_list.append(embed_tier_1)
 
         if tier_2_patrons:
-            embed = discord.Embed(
+            embed_tier_2 = discord.Embed(
                 title="Tier 2 patrons",
                 description="\n".join(tier_2_patrons),
                 colour=guild.get_role(constants.Roles.patreon_tier_2).colour
             )
-            embed_list.append(embed)
+            embed_list.append(embed_tier_2)
 
         if tier_3_patrons:
-            embed = discord.Embed(
+            embed_tier_3 = discord.Embed(
                 title="Tier 3 patrons",
                 description="\n".join(tier_3_patrons),
                 colour=guild.get_role(constants.Roles.patreon_tier_3).colour
             )
-            embed_list.append(embed)
+            embed_list.append(embed_tier_3)
 
         await channel.send(embeds=embed_list)
 
