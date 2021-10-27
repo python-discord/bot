@@ -6,6 +6,7 @@ from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, 
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
+from bot.constants import Channels
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -99,6 +100,12 @@ class FilterLists(Cog):
                     "and we do not permit any duplicates."
                 )
             raise
+
+        # If it is an autoban trigger we send a warning in #mod-meta
+        if comment and "[autoban]" in comment:
+            await self.bot.get_channel(Channels.mod_meta).send(
+                f":warning: Heads-up! The new filter `{content}` (`{comment}`) will automatically ban users."
+            )
 
         # Insert the item into the cache
         self.bot.insert_item_into_filter_list_cache(item)

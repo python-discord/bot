@@ -207,6 +207,7 @@ guild:
         incidents_archive:                  720668923636351037
         mod_alerts:                         473092532147060736
         mods:               &MODS           305126844661760000
+        mod_meta:                           775412552795947058
         nominations:                        822920136150745168
         nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
