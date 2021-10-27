@@ -144,6 +144,19 @@ class Patreon(commands.Cog):
                 discord.utils.get(self.bot.get_all_channels(), id=constants.Channels.meta)
             )
 
+    @commands.command("patreon")
+    async def patreon_info(self, ctx: commands.context) -> None:
+        """A command to send patreon info."""
+        await ctx.channel.send(embeds=[discord.Embed(
+            title="Patreon",
+            description=(
+                "We use the money from Patreon to offer excellent prizes for all of our events. Stuff like t-shirts, "
+                "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\nYou can"
+                " read more about how Patreon supports us, or even support us yourself, on our Patreon page "
+                "[here](https://www.patreon.com/python_discord)!"
+            )
+        )])
+
 
 def setup(bot: Bot) -> None:
     """Load the patreon cog."""
