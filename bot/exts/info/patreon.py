@@ -16,7 +16,7 @@ class Patreon(commands.Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-        self.current_supporters_monthly.start()
+        self.current_monthly_supporters.start()
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
@@ -132,7 +132,7 @@ class Patreon(commands.Cog):
         await self.send_current_supporters(ctx.channel)
 
     @tasks.loop(time=datetime.time(hour=17))
-    async def current_supporters_monthly(self) -> None:
+    async def current_monthly_supporters(self) -> None:
         """A loop running every day to see if it's the first of the month, if so call self.send_current_supporters()."""
         date = datetime.date.today().day
 
