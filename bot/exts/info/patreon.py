@@ -128,12 +128,12 @@ class Patreon(commands.Cog):
 
     @commands.command("patrons")
     async def current_supporters_command(self, ctx: commands.context) -> None:
-        """A command to activate self.send_current_supporters()."""
+        """A command to activate `self.send_current_supporters()`."""
         await self.send_current_supporters(ctx.channel)
 
     @tasks.loop(time=datetime.time(hour=17))
     async def current_monthly_supporters(self) -> None:
-        """A loop running every day to see if it's the first of the month, if so call self.send_current_supporters()."""
+        """A loop running daily to see if it's the first of the month. If so call `self.send_current_supporters()`."""
         date = datetime.date.today().day
 
         if date == 1:
