@@ -1,7 +1,8 @@
+import datetime
 import logging
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from bot import constants
 from bot.bot import Bot
@@ -12,8 +13,10 @@ log = logging.getLogger(__name__)
 class Patreon(commands.Cog):
     """Cog that shows patreon supporters."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         self.bot: Bot = bot
+
+        self.current_supporters_monthly.start()
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
@@ -130,6 +133,16 @@ class Patreon(commands.Cog):
     async def current_supporters_command(self, ctx: commands.context) -> None:
         """A command to activate self.send_current_supporters()."""
         await self.send_current_supporters(ctx.channel)
+
+    @tasks.loop(time=datetime.time(hour=17))
+    async def current_supporters_monthly(self) -> None:
+        """A loop running every day to see if it's the first of the month, if so call self.send_current_supporters()."""
+        date: datetime.date = datetime.date.today().day
+
+        if date == 1:
+            await self.send_current_supporters(
+                discord.utils.get(self.bot.get_all_channels(), id=constants.Channels.meta)
+            )
 
 
 def setup(bot: Bot) -> None:
