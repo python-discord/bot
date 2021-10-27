@@ -14,7 +14,7 @@ class Patreon(commands.Cog):
     """Cog that shows patreon supporters."""
 
     def __init__(self, bot: Bot) -> None:
-        self.bot: Bot = bot
+        self.bot = bot
 
         self.current_supporters_monthly.start()
 
@@ -24,19 +24,19 @@ class Patreon(commands.Cog):
         # Ensure the caches are up to date
         await self.bot.wait_until_guild_available()
 
-        guild: discord.Guild = await self.bot.fetch_guild(constants.Guild.id)
+        guild = await self.bot.fetch_guild(constants.Guild.id)
 
         await guild.fetch_channels()
         await guild.fetch_roles()
 
-        patreon_tier_1_role: discord.Role = guild.get_role(constants.Roles.patreon_tier_1)
-        patreon_tier_2_role: discord.Role = guild.get_role(constants.Roles.patreon_tier_2)
-        patreon_tier_3_role: discord.Role = guild.get_role(constants.Roles.patreon_tier_3)
+        patreon_tier_1_role = guild.get_role(constants.Roles.patreon_tier_1)
+        patreon_tier_2_role = guild.get_role(constants.Roles.patreon_tier_2)
+        patreon_tier_3_role = guild.get_role(constants.Roles.patreon_tier_3)
 
         sending_channel = discord.utils.get(self.bot.get_all_channels(), id=constants.Channels.meta)
 
-        current_patreon_tier: int = 0
-        new_patreon_tier: int = 0
+        current_patreon_tier = 0
+        new_patreon_tier = 0
 
         # Both of these go from top to bottom to give the user their highest patreon role if they have multiple
 
@@ -76,11 +76,11 @@ class Patreon(commands.Cog):
         """Send the current list of patreon supporters, sorted by tier level."""
         await self.bot.wait_until_guild_available()
 
-        guild: discord.Guild = self.bot.get_guild(constants.Guild.id)
+        guild = self.bot.get_guild(constants.Guild.id)
 
-        tier_1_patrons: set[discord.Member] = set(guild.get_role(constants.Roles.patreon_tier_1).members)
-        tier_2_patrons: set[discord.Member] = set(guild.get_role(constants.Roles.patreon_tier_2).members)
-        tier_3_patrons: set[discord.Member] = set(guild.get_role(constants.Roles.patreon_tier_3).members)
+        tier_1_patrons = set(guild.get_role(constants.Roles.patreon_tier_1).members)
+        tier_2_patrons = set(guild.get_role(constants.Roles.patreon_tier_2).members)
+        tier_3_patrons = set(guild.get_role(constants.Roles.patreon_tier_3).members)
 
         tier_1_patrons = tier_1_patrons - tier_2_patrons - tier_3_patrons
         tier_2_patrons = tier_2_patrons - tier_3_patrons
@@ -89,9 +89,9 @@ class Patreon(commands.Cog):
         tier_2_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_2_patrons}
         tier_3_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_3_patrons}
 
-        embed_list: list[discord.Embed] = []
+        embed_list = []
 
-        embed: discord.Embed = discord.Embed(
+        embed = discord.Embed(
             title="Patreon Supporters",
             description=(
                 "Here is a full list of this months Python Discord patrons!\n\nWe use the money from Patreon to offer "
@@ -104,7 +104,7 @@ class Patreon(commands.Cog):
         embed_list.append(embed)
 
         if tier_1_patrons:
-            embed: discord.Embed = discord.Embed(
+            embed = discord.Embed(
                 title="Tier 1 patrons",
                 description="\n".join(tier_1_patrons),
                 colour=guild.get_role(constants.Roles.patreon_tier_1).colour
@@ -112,7 +112,7 @@ class Patreon(commands.Cog):
             embed_list.append(embed)
 
         if tier_2_patrons:
-            embed: discord.Embed = discord.Embed(
+            embed = discord.Embed(
                 title="Tier 2 patrons",
                 description="\n".join(tier_2_patrons),
                 colour=guild.get_role(constants.Roles.patreon_tier_2).colour
@@ -120,7 +120,7 @@ class Patreon(commands.Cog):
             embed_list.append(embed)
 
         if tier_3_patrons:
-            embed: discord.Embed = discord.Embed(
+            embed = discord.Embed(
                 title="Tier 3 patrons",
                 description="\n".join(tier_3_patrons),
                 colour=guild.get_role(constants.Roles.patreon_tier_3).colour
@@ -137,7 +137,7 @@ class Patreon(commands.Cog):
     @tasks.loop(time=datetime.time(hour=17))
     async def current_supporters_monthly(self) -> None:
         """A loop running every day to see if it's the first of the month, if so call self.send_current_supporters()."""
-        date: datetime.date = datetime.date.today().day
+        date = datetime.date.today().day
 
         if date == 1:
             await self.send_current_supporters(
