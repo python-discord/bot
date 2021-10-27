@@ -4,7 +4,7 @@ import logging
 import discord
 from discord.ext import commands, tasks
 
-from bot import constants
+from bot import constants, utils
 from bot.bot import Bot
 
 log = logging.getLogger(__name__)
@@ -26,14 +26,11 @@ class Patreon(commands.Cog):
 
         guild = await self.bot.fetch_guild(constants.Guild.id)
 
-        await guild.fetch_channels()
-        await guild.fetch_roles()
-
         patreon_tier_1_role = guild.get_role(constants.Roles.patreon_tier_1)
         patreon_tier_2_role = guild.get_role(constants.Roles.patreon_tier_2)
         patreon_tier_3_role = guild.get_role(constants.Roles.patreon_tier_3)
 
-        sending_channel = discord.utils.get(self.bot.get_all_channels(), id=constants.Channels.meta)
+        sending_channel = utils.channel.get_or_fetch_channel(constants.Channels.meta)
 
         current_patreon_tier = 0
         new_patreon_tier = 0
@@ -141,7 +138,7 @@ class Patreon(commands.Cog):
 
         if date == 1:
             await self.send_current_supporters(
-                discord.utils.get(self.bot.get_all_channels(), id=constants.Channels.meta)
+                utils.channels.get_or_fetch_channel(constants.Channels.meta)
             )
 
     @commands.command("patreon")
