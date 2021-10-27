@@ -156,5 +156,5 @@ class Patreon(commands.Cog):
 
 
 def setup(bot: Bot) -> None:
-    """Load the patreon cog."""
+    """Load the Patreon cog."""
     bot.add_cog(Patreon(bot))
