@@ -94,7 +94,7 @@ class Patreon(commands.Cog):
                 "Here is a full list of this months Python Discord patrons!\n\nWe use the money from Patreon to offer "
                 "excellent prizes for all of our events. Stuff like t-shirts, stickers, microcontrollers that support "
                 "CircuitPython, or maybe even a mechanical keyboard.\n\nYou can read more about how Patreon supports "
-                "us, or even support us yourself, on our Patreon page [here](https://www.patreon.com/python_discord)!"
+                "us, or even support us yourself, on our Patreon page [here](https://pydis.com/patreon)!"
             )
         )
 
@@ -150,7 +150,7 @@ class Patreon(commands.Cog):
                 "We use the money from Patreon to offer excellent prizes for all of our events. Stuff like t-shirts, "
                 "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\nYou can"
                 " read more about how Patreon supports us, or even support us yourself, on our Patreon page "
-                "[here](https://www.patreon.com/python_discord)!"
+                "[here](https://pydis.com/patreon)!"
             )
         ))
 
