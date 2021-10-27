@@ -44,6 +44,23 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 DAYS_BETWEEN_ALERTS = 3
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
+# Autoban
+LINK_PASSWORD = "https://support.discord.com/hc/en-us/articles/218410947-I-forgot-my-Password-Where-can-I-set-a-new-one"
+LINK_2FA = "https://support.discord.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication"
+AUTO_BAN_REASON = (
+    "Your account has been used to send links to a phishing website. You have been automatically banned. "
+    "If you are not aware of sending them, that means your account has been compromised.\n\n"
+
+    f"Here is a guide from Discord on [how to change your password]({LINK_PASSWORD}).\n\n"
+
+    f"We also highly recommend that you [enable 2 factor authentication on your account]({LINK_2FA}), "
+    "for heightened security.\n\n"
+
+    "Once you have changed your password, feel free to follow the instructions at the bottom of "
+    "this message to appeal your ban."
+)
+AUTO_BAN_DURATION = timedelta(days=4)
+
 FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
 
 
@@ -347,6 +364,24 @@ class Filtering(Cog):
                         stats = self._add_stats(filter_name, match, msg.content)
                         await self._send_log(filter_name, _filter, msg, stats, reason)
 
+                        # If the filter reason contains `[autoban]`, we want to auto-ban the user
+                        if reason and "[autoban]" in reason.lower():
+                            # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
+                            # This sends the ban confirmation directly under watchlist trigger embed, to inform
+                            # mods that the user was auto-banned for the message.
+                            context = await self.bot.get_context(msg)
+                            context.guild = self.bot.get_guild(Guild.id)
+                            context.author = context.guild.get_member(self.bot.user.id)
+                            context.channel = self.bot.get_channel(Channels.mod_alerts)
+                            context.command = self.bot.get_command("tempban")
+
+                            await context.invoke(
+                                context.command,
+                                msg.author,
+                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                reason=AUTO_BAN_REASON
+                            )
+
                         break  # We don't want multiple filters to trigger
 
     async def _send_log(
@@ -367,6 +402,10 @@ class Filtering(Cog):
             channel_str = f"in {msg.channel.mention}"
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
+
+        # If we are going to autoban, we don't want to ping
+        if reason and "[autoban]" in reason:
+            ping_everyone = False
 
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
