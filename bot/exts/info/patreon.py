@@ -92,7 +92,7 @@ class Patreon(commands.Cog):
             title="Patreon Supporters",
             description=(
                 "Here is a full list of this months Python Discord patrons!\n\nWe use the money from Patreon to offer "
-                "excellent prizes for all of our events. Stuff like t-shirts, stickers, microcontrollers that support "
+                "excellent prizes for all of our events. Prizes like t-shirts, stickers, microcontrollers that support "
                 "CircuitPython, or maybe even a mechanical keyboard.\n\nYou can read more about how Patreon supports "
                 "us, or even support us yourself, on our Patreon page [here](https://pydis.com/patreon)!"
             )
@@ -147,7 +147,7 @@ class Patreon(commands.Cog):
         await ctx.send(embed=discord.Embed(
             title="Patreon",
             description=(
-                "We use the money from Patreon to offer excellent prizes for all of our events. Stuff like t-shirts, "
+                "We use the money from Patreon to offer excellent prizes for all of our events. Prizes like t-shirts, "
                 "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\nYou can"
                 " read more about how Patreon supports us, or even support us yourself, on our Patreon page "
                 "[here](https://pydis.com/patreon)!"
