@@ -376,6 +376,12 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
 
+        # Unpin any previously stuck pins
+        log.trace(f"Looking for pins stuck in #{channel} ({channel.id}).")
+        for message in await channel.pins():
+            await _message.pin_wrapper(message.id, channel, pin=False)
+            log.debug(f"Removed a stuck pin from #{channel} ({channel.id}). ID: {message.id}")
+
         await _channel.move_to_bottom(
             channel=channel,
             category_id=constants.Categories.help_available,
