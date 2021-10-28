@@ -128,7 +128,7 @@ class Patreon(commands.Cog):
 
     @commands.command("patrons")
     async def current_supporters_command(self, ctx: commands.Context) -> None:
-        """A command to activate `self.send_current_supporters()`."""
+        """Sends the current list of patreon supporters, sorted by tier level."""
         await self.send_current_supporters(ctx.channel)
 
     @tasks.loop(time=datetime.time(hour=17))
@@ -143,7 +143,7 @@ class Patreon(commands.Cog):
 
     @commands.command("patreon")
     async def patreon_info(self, ctx: commands.Context) -> None:
-        """A command to send patreon info."""
+        """Sends patreon info."""
         await ctx.send(embed=discord.Embed(
             title="Patreon",
             description=(
