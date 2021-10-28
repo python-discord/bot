@@ -30,8 +30,6 @@ class Patreon(commands.Cog):
         patreon_tier_2_role = guild.get_role(constants.Roles.patreon_tier_2)
         patreon_tier_3_role = guild.get_role(constants.Roles.patreon_tier_3)
 
-        sending_channel = utils.channel.get_or_fetch_channel(constants.Channels.meta)
-
         current_patreon_tier = 0
         new_patreon_tier = 0
 
@@ -61,6 +59,8 @@ class Patreon(commands.Cog):
             f":tada: {after.mention} just became a **tier {new_patreon_tier}** patron!\n"
             "[Support us on Patreon](https://pydis.com/patreon)"
         )
+
+        sending_channel = utils.channel.get_or_fetch_channel(constants.Channels.meta)
 
         await sending_channel.send(
             embed=discord.Embed(
