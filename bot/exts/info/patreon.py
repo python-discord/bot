@@ -24,7 +24,7 @@ class Patreon(commands.Cog):
         # Ensure the caches are up to date
         await self.bot.wait_until_guild_available()
 
-        guild = await self.bot.fetch_guild(constants.Guild.id)
+        guild = after.guild
 
         patreon_tier_1_role = guild.get_role(constants.Roles.patreon_tier_1)
         patreon_tier_2_role = guild.get_role(constants.Roles.patreon_tier_2)
