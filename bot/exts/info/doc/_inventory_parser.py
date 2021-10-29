@@ -36,7 +36,7 @@ class ZlibStreamReader:
 
         yield decompressor.flush()
 
-    async def __aiter__(self) -> AsyncIterator[str]:
+     def __aiter__(self) -> AsyncIterator[str]:
         """Yield lines of decompressed text."""
         buf = b''
         async for chunk in self._read_compressed_chunks():
