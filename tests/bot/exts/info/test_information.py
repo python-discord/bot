@@ -84,7 +84,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(dummy_embed.fields[0].value, str(dummy_role.id))
         self.assertEqual(dummy_embed.fields[1].value, f"#{dummy_role.colour.value:0>6x}")
-        self.assertEqual(dummy_embed.fields[2].value, "0.65 0.64 242")
+        self.assertEqual(dummy_embed.fields[2].value, "0.63 0.48 218")
         self.assertEqual(dummy_embed.fields[3].value, "1")
         self.assertEqual(dummy_embed.fields[4].value, "10")
         self.assertEqual(dummy_embed.fields[5].value, "0")
