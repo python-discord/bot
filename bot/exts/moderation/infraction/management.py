@@ -263,6 +263,44 @@ class ModManagement(commands.Cog):
         await self.send_infraction_list(ctx, embed, infraction_list)
 
     # endregion
+    # region: Search infractions by given user
+    @infraction_group.command(name="by", aliases=("b",))
+    async def search_by_user(
+        self,
+        ctx: Context,
+        user: t.Union[discord.Member, t.Literal["m", "me"]],
+        oldest_first: bool = False
+    ) -> None:
+        """
+        Search for infractions made by `user`.
+
+        Use "m" or "me" as the `user` to get infractions by author.
+
+        Use "1" for `oldest_first` to send oldest infractions first.
+        """
+        if isinstance(user, discord.Member):
+            moderator_id = user.id
+            moderator_name_discrim = str(user)
+        else:
+            moderator_id = ctx.author.id
+            moderator_name_discrim = str(ctx.author)
+
+        infraction_list = await self.bot.api_client.get(
+            'bot/infractions/expanded',
+            params={
+                'actor__id': str(moderator_id),
+                'ordering': f'{["-", ""][oldest_first]}inserted_at'  # `'inserted_at'` makes api return oldest first
+            }
+        )
+
+        embed = discord.Embed(
+            title=f"Infractions by `{moderator_name_discrim}` (`{moderator_id}`)",
+            colour=discord.Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    # endregion
     # region: Utility functions
 
     async def send_infraction_list(
