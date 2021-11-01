@@ -6,7 +6,7 @@ import textwrap
 from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Dict, NamedTuple, Optional, Tuple, Union
+from typing import Dict, Literal, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
 import discord
@@ -16,7 +16,7 @@ from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
-from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
+from bot.converters import Inventory, PackageName, ValidURL
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
@@ -452,7 +452,7 @@ class DocCog(commands.Cog):
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: Union[PackageName, allowed_strings("*")]  # noqa: F722
+        package_name: Union[PackageName, Literal["*"]]
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
