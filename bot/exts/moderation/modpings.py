@@ -2,7 +2,7 @@ import asyncio
 import datetime
 
 from async_rediscache import RedisCache
-from dateutil.parser import isoparse, parse
+from dateutil.parser import isoparse, parse as dateutil_parse
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -200,7 +200,7 @@ class ModPings(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def schedule_modpings(self, ctx: Context, start: str, end: str) -> None:
         """Schedule modpings role to be added at <start> and removed at <end> everyday at UTC time!"""
-        start, end = parse(start), parse(end)
+        start, end = dateutil_parse(start), dateutil_parse(end)
 
         if end < start:
             end += datetime.timedelta(days=1)
