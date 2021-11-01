@@ -294,7 +294,7 @@ class Branding(commands.Cog):
 
         else:
             content = "Python Discord is entering a new event!" if is_notification else None
-            embed = discord.Embed(description=description[:4096], colour=discord.Colour.blurple())
+            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
             embed.set_footer(text=duration[:4096])
 
         await channel.send(content=content, embed=embed)
@@ -573,7 +573,7 @@ class Branding(commands.Cog):
             await ctx.send(embed=resp)
             return
 
-        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.blurple())
+        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.og_blurple())
 
         # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
         first_25 = list(available_events.items())[:25]

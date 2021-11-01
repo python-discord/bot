@@ -50,7 +50,7 @@ class Action(Enum):
     SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Emojis.defcon_unshutdown, Colours.soft_green, "")
     SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Emojis.defcon_shutdown, Colours.soft_red, "")
     DURATION_UPDATE = ActionInfo(
-        Icons.defcon_update, Emojis.defcon_update, Colour.blurple(), "**Threshold:** {threshold}\n\n"
+        Icons.defcon_update, Emojis.defcon_update, Colour.og_blurple(), "**Threshold:** {threshold}\n\n"
     )
 
 
@@ -152,7 +152,7 @@ class Defcon(Cog):
     async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
-            colour=Colour.blurple(), title="DEFCON Status",
+            colour=Colour.og_blurple(), title="DEFCON Status",
             description=f"""
                 **Threshold:** {humanize_delta(self.threshold) if self.threshold else "-"}
                 **Expires:** {discord_timestamp(self.expiry, TimestampFormats.RELATIVE) if self.expiry else "-"}
