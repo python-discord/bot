@@ -395,6 +395,24 @@ class Duration(DurationDelta):
             raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
 
 
+class Age(DurationDelta):
+    """Convert duration strings into UTC datetime.datetime objects."""
+
+    async def convert(self, ctx: Context, duration: str) -> datetime:
+        """
+        Converts a `duration` string to a datetime object that's `duration` in the past.
+
+        The converter supports the same symbols for each unit of time as its parent class.
+        """
+        delta = await super().convert(ctx, duration)
+        now = datetime.now(timezone.utc)
+
+        try:
+            return now - delta
+        except (ValueError, OverflowError):
+            raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
+
+
 class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
@@ -601,6 +619,7 @@ if t.TYPE_CHECKING:
     SourceConverter = SourceType  # noqa: F811
     DurationDelta = relativedelta  # noqa: F811
     Duration = datetime  # noqa: F811
+    Age = datetime  # noqa: F811
     OffTopicName = str  # noqa: F811
     ISODateTime = datetime  # noqa: F811
     HushDurationConverter = int  # noqa: F811

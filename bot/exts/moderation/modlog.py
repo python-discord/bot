@@ -251,7 +251,7 @@ class ModLog(Cog, name="ModLog"):
             message = f"**#{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.hash_blurple, Colour.blurple(),
+            Icons.hash_blurple, Colour.og_blurple(),
             "Channel updated", message
         )
 
@@ -326,7 +326,7 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.crown_blurple, Colour.blurple(),
+            Icons.crown_blurple, Colour.og_blurple(),
             "Role updated", message
         )
 
@@ -376,7 +376,7 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.guild_update, Colour.blurple(),
+            Icons.guild_update, Colour.og_blurple(),
             "Guild updated", message,
             thumbnail=after.icon.with_static_format("png")
         )
@@ -447,7 +447,7 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.user_unban, Colour.blurple(),
+            Icons.user_unban, Colour.og_blurple(),
             "User unbanned", format_user(member),
             thumbnail=member.display_avatar.url,
             channel_id=Channels.mod_log
@@ -512,7 +512,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             icon_url=Icons.user_update,
-            colour=Colour.blurple(),
+            colour=Colour.og_blurple(),
             title="Member updated",
             text=message,
             thumbnail=after.display_avatar.url,
@@ -718,7 +718,7 @@ class ModLog(Cog, name="ModLog"):
             footer = None
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited", response,
+            Icons.message_edit, Colour.og_blurple(), "Message edited", response,
             channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
         )
 
@@ -761,12 +761,12 @@ class ModLog(Cog, name="ModLog"):
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
+            Icons.message_edit, Colour.og_blurple(), "Message edited (Before)",
             before_response, channel_id=Channels.message_log
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (After)",
+            Icons.message_edit, Colour.og_blurple(), "Message edited (After)",
             after_response, channel_id=Channels.message_log
         )
 
@@ -776,7 +776,7 @@ class ModLog(Cog, name="ModLog"):
         if before.name != after.name:
             await self.send_log_message(
                 Icons.hash_blurple,
-                Colour.blurple(),
+                Colour.og_blurple(),
                 "Thread name edited",
                 (
                     f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`): "
@@ -870,7 +870,7 @@ class ModLog(Cog, name="ModLog"):
         diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
 
         icon = Icons.voice_state_blue
-        colour = Colour.blurple()
+        colour = Colour.og_blurple()
         changes = []
 
         for attr, values in diff_values.items():
