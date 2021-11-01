@@ -11,7 +11,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
@@ -68,7 +68,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],   # noqa: F821
         *,
         reason: str = None
     ) -> None:
@@ -107,7 +107,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],   # noqa: F821
         *,
         reason: str = None
     ) -> None:

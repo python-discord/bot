@@ -32,25 +32,6 @@ DISCORD_EPOCH_DT = snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
 
-def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], str]:
-    """
-    Return a converter which only allows arguments equal to one of the given values.
-
-    Unless preserve_case is True, the argument is converted to lowercase. All values are then
-    expected to have already been given in lowercase too.
-    """
-    def converter(arg: str) -> str:
-        if not preserve_case:
-            arg = arg.lower()
-
-        if arg not in values:
-            raise BadArgument(f"Only the following values are allowed:\n```{', '.join(values)}```")
-        else:
-            return arg
-
-    return converter
-
-
 class ValidDiscordServerInvite(Converter):
     """
     A converter that validates whether a given string is a valid Discord server invite.
