@@ -15,7 +15,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Guild
+from bot.constants import Channels, Colours, DEFAULT_THREAD_ARCHIVE_TIME, Emojis, Guild, Roles
 from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
@@ -94,6 +94,12 @@ class Reviewer:
         if reviewed_emoji:
             for reaction in (reviewed_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
                 await last_message.add_reaction(reaction)
+
+        thread = await last_message.create_thread(
+            name=f"Nomination - {nominee}",
+            auto_archive_duration=DEFAULT_THREAD_ARCHIVE_TIME
+        )
+        await thread.send(fr"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
         if update_database:
             nomination = self._pool.cache.get(user_id)
@@ -209,6 +215,13 @@ class Reviewer:
                 description="[...] " + part if number != 0 else part,
                 colour=colour
             ))
+
+        # Thread channel IDs are the same as the message ID of the parent message.
+        nomination_thread = message.guild.get_thread(message.id)
+        if not nomination_thread:
+            log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
+            return
+        await nomination_thread.edit(archived=True)
 
         for message_ in messages:
             await message_.delete()
