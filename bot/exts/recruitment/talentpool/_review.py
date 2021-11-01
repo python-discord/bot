@@ -78,14 +78,14 @@ class Reviewer:
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
-        review, reviewed_emoji = await self.make_review(user_id)
+        review, reviewed_emoji, nominee = await self.make_review(user_id)
         if not review:
             return
 
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.nomination_voting)
 
-        log.trace(f"Posting the review of {user_id}")
+        log.trace(f"Posting the review of {nominee} ({nominee.id})")
         messages = await self._bulk_send(channel, review)
 
         await pin_no_system_message(messages[0])
@@ -113,14 +113,14 @@ class Reviewer:
             return "", None
 
         guild = self.bot.get_guild(Guild.id)
-        member = await get_or_fetch_member(guild, user_id)
+        nominee = await get_or_fetch_member(guild, user_id)
 
-        if not member:
+        if not nominee:
             return (
                 f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
-            ), None
+            ), None, None
 
-        opening = f"{member.mention} ({member}) for Helper!"
+        opening = f"{nominee.mention} ({nominee}) for Helper!"
 
         current_nominations = "\n\n".join(
             f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}"
@@ -128,7 +128,7 @@ class Reviewer:
         )
         current_nominations = f"**Nominated by:**\n{current_nominations}"
 
-        review_body = await self._construct_review_body(member)
+        review_body = await self._construct_review_body(nominee)
 
         reviewed_emoji = self._random_ducky(guild)
         vote_request = (
@@ -138,7 +138,7 @@ class Reviewer:
         )
 
         review = "\n\n".join((opening, current_nominations, review_body, vote_request))
-        return review, reviewed_emoji
+        return review, reviewed_emoji, nominee
 
     async def archive_vote(self, message: PartialMessage, passed: bool) -> None:
         """Archive this vote to #nomination-archive."""
