@@ -2,11 +2,12 @@ import asyncio
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import timedelta
 from itertools import takewhile
 from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
+import arrow
 from discord import Colour, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Cog
 
@@ -177,21 +178,17 @@ class AntiSpam(Cog):
 
         self.cache.append(message)
 
-        earliest_relevant_at = datetime.utcnow() - timedelta(seconds=self.max_interval)
-        relevant_messages = list(
-            takewhile(lambda msg: msg.created_at.replace(tzinfo=None) > earliest_relevant_at, self.cache)
-        )
+        earliest_relevant_at = arrow.utcnow() - timedelta(seconds=self.max_interval)
+        relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
         for rule_name in AntiSpamConfig.rules:
             rule_config = AntiSpamConfig.rules[rule_name]
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
-            latest_interesting_stamp = datetime.utcnow() - timedelta(seconds=rule_config['interval'])
+            latest_interesting_stamp = arrow.utcnow() - timedelta(seconds=rule_config['interval'])
             messages_for_rule = list(
-                takewhile(
-                    lambda msg: msg.created_at.replace(tzinfo=None) > latest_interesting_stamp, relevant_messages
-                )
+                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)
             )
 
             result = await rule_function(message, messages_for_rule, rule_config)

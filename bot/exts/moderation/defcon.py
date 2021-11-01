@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Union
 
+import arrow
 from aioredis import RedisError
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
@@ -109,9 +110,9 @@ class Defcon(Cog):
     async def on_member_join(self, member: Member) -> None:
         """Check newly joining users to see if they meet the account age threshold."""
         if self.threshold:
-            now = datetime.utcnow()
+            now = arrow.utcnow()
 
-            if now - member.created_at.replace(tzinfo=None) < relativedelta_to_timedelta(self.threshold):
+            if now - member.created_at < relativedelta_to_timedelta(self.threshold):
                 log.info(f"Rejecting user {member}: Account is too new")
 
                 message_sent = False
@@ -254,7 +255,8 @@ class Defcon(Cog):
 
         expiry_message = ""
         if expiry:
-            expiry_message = f" for the next {humanize_delta(relativedelta(expiry, datetime.utcnow()), max_units=2)}"
+            activity_duration = relativedelta(expiry, arrow.utcnow().datetime)
+            expiry_message = f" for the next {humanize_delta(activity_duration, max_units=2)}"
 
         if self.threshold:
             channel_message = (

@@ -1,7 +1,8 @@
 import asyncio
 from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+import arrow
 import discord
 from async_rediscache import RedisCache
 from discord import Colour, Member, VoiceState
@@ -166,8 +167,7 @@ class VoiceGate(Cog):
 
         checks = {
             "joined_at": (
-                ctx.author.joined_at.replace(tzinfo=None) > datetime.utcnow()
-                - timedelta(days=GateConf.minimum_days_member)
+                ctx.author.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
             ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
