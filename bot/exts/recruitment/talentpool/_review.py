@@ -36,9 +36,8 @@ MAX_MESSAGE_SIZE = 2000
 MAX_EMBED_SIZE = 4000
 
 # Regex for finding the first message of a nomination, and extracting the nominee.
-# Historic nominations will have 2 role mentions at the start, new ones won't, optionally match for this.
 NOMINATION_MESSAGE_REGEX = re.compile(
-    r"(?:<@&\d+> <@&\d+>\n)*?<@!?(\d+?)> \(.+#\d{4}\) for Helper!\n\n\*\*Nominated by:\*\*",
+    r"<@!?(\d+)> \(.+#\d{4}\) for Helper!\n\n",
     re.MULTILINE
 )
 
