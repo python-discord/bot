@@ -243,8 +243,9 @@ class ModManagement(commands.Cog):
             else:
                 user_str = str(user.id)
 
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions for {user_str} ({len(infraction_list)} total)",
+            title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
@@ -256,45 +257,44 @@ class ModManagement(commands.Cog):
             'bot/infractions/expanded',
             params={'search': reason}
         )
+
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions matching `{reason}` ({len(infraction_list)} total)",
+            title=f"Infractions matching `{reason}` ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
     # endregion
-    # region: Search infractions by given user
+    # region: Search for infractions by given actor
     @infraction_group.command(name="by", aliases=("b",))
-    async def search_by_user(
+    async def search_by_actor(
         self,
         ctx: Context,
-        user: t.Union[discord.Member, t.Literal["m", "me"]],
+        actor: t.Union[discord.Member, t.Literal["m", "me"]],
         oldest_first: bool = False
     ) -> None:
         """
-        Search for infractions made by `user`.
+        Search for infractions made by `actor`.
 
-        Use "m" or "me" as the `user` to get infractions by author.
+        Use "m" or "me" as the `actor` to get infractions by author.
 
         Use "1" for `oldest_first` to send oldest infractions first.
         """
-        if isinstance(user, discord.Member):
-            moderator_id = user.id
-            moderator_name_discrim = str(user)
-        else:
-            moderator_id = ctx.author.id
-            moderator_name_discrim = str(ctx.author)
+        if isinstance(actor, str):
+            actor = ctx.author
 
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={
-                'actor__id': str(moderator_id),
-                'ordering': f'{["-", ""][oldest_first]}inserted_at'  # `'inserted_at'` makes api return oldest first
+                'actor__id': str(actor.id),
+                'ordering': f'{"-"[oldest_first:]}inserted_at'  # `'inserted_at'` makes api return oldest first
             }
         )
 
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions by `{moderator_name_discrim}` (`{moderator_id}`)",
+            title=f"Infractions by `{actor}` ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
 
@@ -302,6 +302,18 @@ class ModManagement(commands.Cog):
 
     # endregion
     # region: Utility functions
+
+    @staticmethod
+    def format_infraction_count(infraction_count: int) -> str:
+        """
+        Returns a string-formatted infraction count.
+
+        API limits returned infractions to a maximum of 100, so if `infraction_count`
+        is 100 then we return `"100+"`. Otherwise, return `str(infraction_count)`.
+        """
+        if infraction_count == 100:
+            return "100+"
+        return str(infraction_count)
 
     async def send_infraction_list(
         self,
