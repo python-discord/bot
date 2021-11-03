@@ -29,7 +29,7 @@ class Site(Cog):
 
         embed = Embed(title="Python Discord website")
         embed.set_footer(text=url)
-        embed.colour = Colour.blurple()
+        embed.colour = Colour.og_blurple()
         embed.description = (
             f"[Our official website]({url}) is an open-source community project "
             "created with Python and Django. It contains information about the server "
@@ -46,7 +46,7 @@ class Site(Cog):
 
         embed = Embed(title="Resources")
         embed.set_footer(text=f"{learning_url}")
-        embed.colour = Colour.blurple()
+        embed.colour = Colour.og_blurple()
         embed.description = (
             f"The [Resources page]({learning_url}) on our website contains a "
             "list of hand-selected learning resources that we regularly recommend "
@@ -62,7 +62,7 @@ class Site(Cog):
 
         embed = Embed(title="Tools")
         embed.set_footer(text=f"{tools_url}")
-        embed.colour = Colour.blurple()
+        embed.colour = Colour.og_blurple()
         embed.description = (
             f"The [Tools page]({tools_url}) on our website contains a "
             f"couple of the most popular tools for programming in Python."
@@ -77,7 +77,7 @@ class Site(Cog):
 
         embed = Embed(title="Asking Good Questions")
         embed.set_footer(text=url)
-        embed.colour = Colour.blurple()
+        embed.colour = Colour.og_blurple()
         embed.description = (
             "Asking the right question about something that's new to you can sometimes be tricky. "
             f"To help with this, we've created a [guide to asking good questions]({url}) on our website. "
@@ -93,7 +93,7 @@ class Site(Cog):
 
         embed = Embed(title="FAQ")
         embed.set_footer(text=url)
-        embed.colour = Colour.blurple()
+        embed.colour = Colour.og_blurple()
         embed.description = (
             "As the largest Python community on Discord, we get hundreds of questions every day. "
             "Many of these questions have been asked before. We've compiled a list of the most "
@@ -106,7 +106,7 @@ class Site(Cog):
     @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
     async def site_rules(self, ctx: Context, rules: Greedy[int]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title='Rules', color=Colour.blurple(), url=f'{BASE_URL}/pages/rules')
+        rules_embed = Embed(title='Rules', color=Colour.og_blurple(), url=f'{BASE_URL}/pages/rules')
 
         if not rules:
             # Rules were not submitted. Return the default description.
