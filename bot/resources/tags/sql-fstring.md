@@ -12,5 +12,5 @@ db.execute(query, params)
 Note: Different database libraries support different placeholder styles, e.g. `%s` and `$1`. Consult your library's documentation for details.
 
 **See Also**
-• [Extended Example with SQLite](https://docs.python.org/3/library/sqlite3.html) (search for "Instead, use the DB_API's parameter substitution)
+• [Extended Example with SQLite](https://docs.python.org/3/library/sqlite3.html) (search for "Instead, use the DB_API's parameter substitution")
 • [PEP-249](https://www.python.org/dev/peps/pep-0249) - A specification of how database libraries in Python should work
