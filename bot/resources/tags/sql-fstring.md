@@ -1,11 +1,11 @@
 **SQL & f-strings**
-Don't use f-strings (`f""`) or other forms of "string interpolation" (`%`, `+`, `.format`) to inject data into a SQL query. It is an endless source of bugs and syntax errors. Also, in user-facing applications, it represents a major security risk via SQL injection.
+Don't use f-strings (`f""`) or other forms of "string interpolation" (`%`, `+`, `.format`) to inject data into a SQL query. It is an endless source of bugs and syntax errors. Additionally, in user-facing applications, it presents a major security risk via SQL injection.
 
 Your database library should support "query parameters". A query parameter is a placeholder that you put in the SQL query. When the query is executed, you provide data to the database library, and the library inserts the data into the query for you, **safely**.
 
 For example, the sqlite3 package supports using `?` as a placeholder:
 ```py
-query = "SELECT * FROM stocks WHERE symbol = ?"
+query = "SELECT * FROM stocks WHERE symbol = ?;"
 params = ("RHAT",)
 db.execute(query, params)
 ```
