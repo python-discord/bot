@@ -284,11 +284,16 @@ class ModManagement(commands.Cog):
         if isinstance(actor, str):
             actor = ctx.author
 
+        if oldest_first:
+            ordering = 'inserted_at'  # oldest infractions first
+        else:
+            ordering = '-inserted_at'  # newest infractions first
+
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={
                 'actor__id': str(actor.id),
-                'ordering': f'{"-"[oldest_first:]}inserted_at'  # `'inserted_at'` makes api return oldest first
+                'ordering': ordering
             }
         )
 
