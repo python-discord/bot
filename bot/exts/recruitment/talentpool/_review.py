@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 
 import arrow
 from dateutil.parser import isoparse
-from discord import Embed, Emoji, Member, Message, NoMoreItems, PartialMessage, TextChannel
+from discord import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
@@ -220,10 +220,13 @@ class Reviewer:
         if not nomination_thread:
             log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
             return
-        await nomination_thread.edit(archived=True)
 
         for message_ in messages:
-            await message_.delete()
+            with contextlib.suppress(NotFound):
+                await message_.delete()
+
+        with contextlib.suppress(NotFound):
+            await nomination_thread.edit(archived=True)
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""
