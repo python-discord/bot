@@ -191,6 +191,10 @@ class Filtering(Cog):
 
         If there have been multiple edits, calculate the time delta from the previous edit.
         """
+        # We only care about changes to the message contents/attachments, not pin status or embeds etc.
+        if before.content == after.content and before.attachments == after.attachments:
+            return
+
         if not before.edited_at:
             delta = relativedelta(after.edited_at, before.created_at).microseconds
         else:
