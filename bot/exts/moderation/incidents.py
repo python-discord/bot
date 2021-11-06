@@ -220,7 +220,9 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
             colour=discord.Colour.gold(),
             description=(
                 f"**Author:** {format_user(message.author)}\n"
-                f"**Channel:** {channel.mention} ({channel.category}/#{channel.name})\n"
+                f"**Channel:** {channel.mention} ({channel.category}"
+                f"{f'/#{channel.parent.name} - ' if isinstance(channel, discord.Thread) else '/#'}"
+                f"{channel.name})\n"
             ),
             timestamp=message.created_at
         )
