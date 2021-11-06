@@ -224,11 +224,13 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
             ),
             timestamp=message.created_at
         )
-        embed.add_field(
-            name="Content",
-            value=shorten_text(message.content)
-        )
         embed.set_footer(text=f"Message ID: {message.id}")
+
+        if message.content:
+            embed.add_field(
+                name="Content",
+                value=shorten_text(message.content)
+            )
 
     return embed
 
