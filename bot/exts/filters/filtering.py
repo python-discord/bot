@@ -504,10 +504,6 @@ class Filtering(Cog):
 
         text = self.clean_input(text)
 
-        # Make sure it's not a URL
-        if URL_RE.search(text):
-            return False, None
-
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
             match = re.search(pattern, text, flags=re.IGNORECASE)
