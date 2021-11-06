@@ -231,6 +231,8 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
                 name="Content",
                 value=shorten_text(message.content)
             )
+        if message.attachments:
+            embed.set_image(url=message.attachments[0].url)
 
     return embed
 
