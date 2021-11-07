@@ -568,3 +568,12 @@ class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
     """
     spec_set = webhook_instance
     additional_spec_asyncs = ("send", "edit", "delete", "execute")
+
+
+class MockRedisCache(unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock RedisCache.
+    """
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.to_dict = unittest.mock.AsyncMock()
