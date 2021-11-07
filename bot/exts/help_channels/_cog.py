@@ -7,7 +7,7 @@ from operator import attrgetter
 import arrow
 import discord
 import discord.abc
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from bot import constants
 from bot.bot import Bot
@@ -84,10 +84,13 @@ class HelpChannels(commands.Cog):
         self.queue_tasks: t.List[asyncio.Task] = []
         self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
 
+        self.sync_cooldown_roles.start()
+
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
         log.trace("Cog unload: cancelling the init_cog task")
         self.init_task.cancel()
+        self.sync_cooldown_roles.cancel()
 
         log.trace("Cog unload: cancelling the channel queue tasks")
         for task in self.queue_tasks:
@@ -642,3 +645,19 @@ class HelpChannels(commands.Cog):
         else:
             await _caches.help_dm.delete(ctx.author.id)
         await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")
+
+    @tasks.loop(hours=1)
+    async def sync_cooldown_roles(self) -> None:
+        """Synchronize cooldown roles with channel claimants."""
+        claimants = (await _caches.claimants.to_dict()).values()
+        help_cooldown = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.help_cooldown)
+
+        nonclaimants_with_role = [member for member in help_cooldown.members if member.id not in claimants]
+        for member in nonclaimants_with_role:
+            log.debug(f"Found non-claimant {member.id} with Help Cooldown role, removing role...")
+            await self._handle_role_change(member, member.remove_roles)
+
+    @sync_cooldown_roles.before_loop
+    async def before_sync_cooldown_roles(self) -> None:
+        """Do not start syncing cooldown roles until bot is ready."""
+        await self.bot.wait_until_ready()
