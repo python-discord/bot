@@ -7,7 +7,7 @@ from operator import attrgetter
 import arrow
 import discord
 import discord.abc
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from bot import constants
 from bot.bot import Bot
@@ -88,6 +88,7 @@ class HelpChannels(commands.Cog):
         """Cancel the init task and scheduled tasks when the cog unloads."""
         log.trace("Cog unload: cancelling the init_cog task")
         self.init_task.cancel()
+        self.check_channel_consistency.cancel()
 
         log.trace("Cog unload: cancelling the channel queue tasks")
         for task in self.queue_tasks:
@@ -330,6 +331,7 @@ class HelpChannels(commands.Cog):
         await self.init_available()
         _stats.report_counts()
 
+        self.check_channel_consistency.start()
         log.info("Cog is ready!")
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
@@ -642,3 +644,16 @@ class HelpChannels(commands.Cog):
         else:
             await _caches.help_dm.delete(ctx.author.id)
         await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")
+
+    @tasks.loop(hours=1)
+    async def check_channel_consistency(self) -> None:
+        """
+        Check number of available help channels periodically.
+
+        If number of available help channels is incorrect, reload cog.
+        """
+        log.trace("Checking channel consistency")
+        available_help_channels = set(_channel.get_category_channels(self.available_category))
+        if len(available_help_channels) != 3:
+            log.trace("Unexpected number of available help channels, reloading cog...")
+            self.bot.reload_extension("bot.exts.help_channels")
