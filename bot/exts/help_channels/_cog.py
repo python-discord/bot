@@ -654,6 +654,6 @@ class HelpChannels(commands.Cog):
         """
         log.trace("Checking channel consistency")
         available_help_channels = set(_channel.get_category_channels(self.available_category))
-        if len(available_help_channels) != 3:
+        if len(available_help_channels) != constants.HelpChannels.max_available:
             log.trace("Unexpected number of available help channels, reloading cog...")
             self.bot.reload_extension("bot.exts.help_channels")
