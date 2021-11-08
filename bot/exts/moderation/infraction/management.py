@@ -267,6 +267,7 @@ class ModManagement(commands.Cog):
 
     # endregion
     # region: Search for infractions by given actor
+
     @infraction_group.command(name="by", aliases=("b",))
     async def search_by_actor(
         self,
