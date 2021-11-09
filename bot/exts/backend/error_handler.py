@@ -1,5 +1,4 @@
 import difflib
-import logging
 import typing as t
 
 from discord import Embed
@@ -10,9 +9,10 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.errors import InvalidInfractedUserError, LockedResourceError
+from bot.log import get_logger
 from bot.utils.checks import ContextCheckFailure
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ErrorHandler(Cog):

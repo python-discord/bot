@@ -1,14 +1,13 @@
-import logging
-
 import discord
 from discord.ext.commands import Cog, Context, command, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES
+from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
 from bot.utils.services import send_to_paste_service
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class DMRelay(Cog):

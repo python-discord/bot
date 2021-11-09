@@ -3,6 +3,8 @@ import socket
 
 from statsd.client.base import StatsClientBase
 
+from bot.utils import scheduling
+
 
 class AsyncStatsClient(StatsClientBase):
     """An async transport method for statsd communication."""
@@ -32,7 +34,7 @@ class AsyncStatsClient(StatsClientBase):
 
     def _send(self, data: str) -> None:
         """Start an async task to send data to statsd."""
-        self._loop.create_task(self._async_send(data))
+        scheduling.create_task(self._async_send(data), event_loop=self._loop)
 
     async def _async_send(self, data: str) -> None:
         """Send data to the statsd server using the async transport."""

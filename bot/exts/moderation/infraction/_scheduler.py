@@ -1,4 +1,3 @@
-import logging
 import textwrap
 import typing as t
 from abc import abstractmethod
@@ -16,10 +15,11 @@ from bot.constants import Colours
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import messages, scheduling, time
 from bot.utils.channel import is_mod_channel
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class InfractionScheduler:
@@ -29,7 +29,7 @@ class InfractionScheduler:
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
-        self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
+        scheduling.create_task(self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -161,11 +161,11 @@ class InfractionScheduler:
         # send DMs to user that it doesn't share a guild with. If we were to
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
-        if not infraction["hidden"]:
+        if not infraction["hidden"] and infr_type in {"ban", "kick"}:
             dm_result = f"{constants.Emojis.failmail} "
             dm_log_text = "\nDM: **Failed**"
 
-            # Accordingly display whether the user was successfully notified via DM.
+            # Accordingly update whether the user was successfully notified via DM.
             if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
@@ -227,6 +227,16 @@ class InfractionScheduler:
             infr_message = ""
         else:
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
+
+            # If we need to DM and haven't already tried to
+            if not infraction["hidden"] and infr_type not in {"ban", "kick"}:
+                dm_result = f"{constants.Emojis.failmail} "
+                dm_log_text = "\nDM: **Failed**"
+
+                # Accordingly update whether the user was successfully notified via DM.
+                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")

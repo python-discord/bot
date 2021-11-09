@@ -1,23 +1,15 @@
 import datetime
-import logging
 from typing import Callable, Container, Iterable, Optional, Union
 
 from discord.ext.commands import (
-    BucketType,
-    CheckFailure,
-    Cog,
-    Command,
-    CommandOnCooldown,
-    Context,
-    Cooldown,
-    CooldownMapping,
-    NoPrivateMessage,
-    has_any_role,
+    BucketType, CheckFailure, Cog, Command, CommandOnCooldown, Context, Cooldown, CooldownMapping, NoPrivateMessage,
+    has_any_role
 )
 
 from bot import constants
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ContextCheckFailure(CheckFailure):

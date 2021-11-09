@@ -1,5 +1,4 @@
 import json
-import logging
 import typing
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
@@ -13,10 +12,12 @@ from discord.ext.commands import Context
 from bot import constants
 from bot.bot import Bot
 from bot.converters import HushDurationConverter
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.lock import LockedResourceError, lock, lock_arg
 from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 LOCK_NAMESPACE = "silence"
 
@@ -104,7 +105,7 @@ class Silence(commands.Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        self._init_task = self.bot.loop.create_task(self._async_init())
+        self._init_task = scheduling.create_task(self._async_init(), event_loop=self.bot.loop)
 
     async def _async_init(self) -> None:
         """Set instance attributes once the guild is available and reschedule unsilences."""

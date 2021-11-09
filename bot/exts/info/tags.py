@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import enum
-import logging
 import re
 import time
 from pathlib import Path
@@ -14,10 +13,11 @@ from discord.ext.commands import Cog, Context, group
 
 from bot import constants
 from bot.bot import Bot
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 TEST_CHANNELS = (
     constants.Channels.bot_commands,

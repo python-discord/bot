@@ -81,12 +81,14 @@ jobs:
           pip install poetry
           poetry install
 
-      # Check all the dependencies are compatible with the MIT license.
+      # Check all of our non-dev dependencies are compatible with the MIT license.
       # If you added a new dependencies that is being rejected,
       # please make sure it is compatible with the license for this project,
       # and add it to the ALLOWED_LICENSE variable
       - name: Check Dependencies License
-        run: pip-licenses --allow-only="$ALLOWED_LICENSE"
+        run: |
+          pip-licenses --allow-only="$ALLOWED_LICENSE" \
+            --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
 
       # This step caches our pre-commit environment. To make sure we
       # do create a new environment when our pre-commit setup changes,
@@ -120,13 +122,6 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: pytest -n auto --cov --disable-warnings -q
-
-      # This step will publish the coverage reports coveralls.io and
-      # print a "job" link in the output of the GitHub Action
-      - name: Publish coverage report to coveralls.io
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's

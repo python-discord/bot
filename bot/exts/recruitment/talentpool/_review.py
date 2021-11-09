@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import logging
 import random
 import re
 import textwrap
@@ -16,6 +15,8 @@ from discord.ext.commands import Context
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild
+from bot.log import get_logger
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import get_time_delta, time_since
@@ -23,7 +24,7 @@ from bot.utils.time import get_time_delta, time_since
 if typing.TYPE_CHECKING:
     from bot.exts.recruitment.talentpool._cog import TalentPool
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Maximum amount of days before an automatic review is posted.
 MAX_DAYS_IN_POOL = 30
@@ -57,8 +58,6 @@ class Reviewer:
         """Reschedule all active nominations to be reviewed at the appropriate time."""
         log.trace("Rescheduling reviews")
         await self.bot.wait_until_guild_available()
-        # TODO Once the watch channel is removed, this can be done in a smarter way, e.g create a sync function.
-        await self._pool.refresh_cache()
 
         for user_id, user_data in self._pool.cache.items():
             if not user_data["reviewed"]:
@@ -113,7 +112,7 @@ class Reviewer:
             return "", None
 
         guild = self.bot.get_guild(Guild.id)
-        member = guild.get_member(user_id)
+        member = await get_or_fetch_member(guild, user_id)
 
         if not member:
             return (

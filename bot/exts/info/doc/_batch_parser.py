@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import collections
-import logging
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
@@ -13,20 +12,23 @@ from bs4 import BeautifulSoup
 
 import bot
 from bot.constants import Channels
+from bot.log import get_logger
 from bot.utils import scheduling
+
 from . import _cog, doc_cache
 from ._parsing import get_symbol_markdown
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class StaleInventoryNotifier:
     """Handle sending notifications about stale inventories through `DocItem`s to dev log."""
 
     def __init__(self):
-        self._init_task = bot.instance.loop.create_task(
+        self._init_task = scheduling.create_task(
             self._init_channel(),
-            name="StaleInventoryNotifier channel init"
+            name="StaleInventoryNotifier channel init",
+            event_loop=bot.instance.loop,
         )
         self._warned_urls = set()
 
