@@ -613,7 +613,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
         """Log raw message delete event to message change log."""
-        if self.is_message_blacklisted(event.channel_id):
+        if self.is_channel_ignored(event.channel_id):
             return
 
         await asyncio.sleep(1)  # Wait here in case the normal event was fired
