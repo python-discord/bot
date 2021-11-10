@@ -1,9 +1,10 @@
 import asyncio
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
-import dateutil
+import arrow
+import dateutil.parser
 import discord.errors
 import regex
 from async_rediscache import RedisCache
@@ -42,6 +43,23 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 # Other constants.
 DAYS_BETWEEN_ALERTS = 3
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
+
+# Autoban
+LINK_PASSWORD = "https://support.discord.com/hc/en-us/articles/218410947-I-forgot-my-Password-Where-can-I-set-a-new-one"
+LINK_2FA = "https://support.discord.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication"
+AUTO_BAN_REASON = (
+    "Your account has been used to send links to a phishing website. You have been automatically banned. "
+    "If you are not aware of sending them, that means your account has been compromised.\n\n"
+
+    f"Here is a guide from Discord on [how to change your password]({LINK_PASSWORD}).\n\n"
+
+    f"We also highly recommend that you [enable 2 factor authentication on your account]({LINK_2FA}), "
+    "for heightened security.\n\n"
+
+    "Once you have changed your password, feel free to follow the instructions at the bottom of "
+    "this message to appeal your ban."
+)
+AUTO_BAN_DURATION = timedelta(days=4)
 
 FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
 
@@ -171,8 +189,16 @@ class Filtering(Cog):
         """
         Invoke message filter for message edits.
 
-        If there have been multiple edits, calculate the time delta from the previous edit.
+        Also calculates the time delta from the previous edit or when message was sent if there's no prior edits.
         """
+        # We only care about changes to the message contents/attachments and embed additions, not pin status etc.
+        if all((
+            before.content == after.content,  # content hasn't changed
+            before.attachments == after.attachments,  # attachments haven't changed
+            len(before.embeds) >= len(after.embeds)  # embeds haven't been added
+        )):
+            return
+
         if not before.edited_at:
             delta = relativedelta(after.edited_at, before.created_at).microseconds
         else:
@@ -192,8 +218,8 @@ class Filtering(Cog):
     async def check_send_alert(self, member: Member) -> bool:
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
         if last_alert := await self.name_alerts.get(member.id):
-            last_alert = datetime.utcfromtimestamp(last_alert)
-            if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+            last_alert = arrow.get(last_alert)
+            if arrow.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
                 log.trace(f"Last alert was too recent for {member}'s nickname.")
                 return False
 
@@ -227,7 +253,7 @@ class Filtering(Cog):
             )
 
             # Update time when alert sent
-            await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
+            await self.name_alerts.set(member.id, arrow.utcnow().timestamp())
 
     async def filter_eval(self, result: str, msg: Message) -> bool:
         """
@@ -323,7 +349,7 @@ class Filtering(Cog):
                                 await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
                         # If the message is classed as offensive, we store it in the site db and
-                        # it will be deleted it after one week.
+                        # it will be deleted after one week.
                         if _filter["schedule_deletion"] and not is_private:
                             delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
                             data = {
@@ -346,6 +372,24 @@ class Filtering(Cog):
                         stats = self._add_stats(filter_name, match, msg.content)
                         await self._send_log(filter_name, _filter, msg, stats, reason)
 
+                        # If the filter reason contains `[autoban]`, we want to auto-ban the user
+                        if reason and "[autoban]" in reason.lower():
+                            # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
+                            # This sends the ban confirmation directly under watchlist trigger embed, to inform
+                            # mods that the user was auto-banned for the message.
+                            context = await self.bot.get_context(msg)
+                            context.guild = self.bot.get_guild(Guild.id)
+                            context.author = context.guild.get_member(self.bot.user.id)
+                            context.channel = self.bot.get_channel(Channels.mod_alerts)
+                            context.command = self.bot.get_command("tempban")
+
+                            await context.invoke(
+                                context.command,
+                                msg.author,
+                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                reason=AUTO_BAN_REASON
+                            )
+
                         break  # We don't want multiple filters to trigger
 
     async def _send_log(
@@ -366,6 +410,10 @@ class Filtering(Cog):
             channel_str = f"in {msg.channel.mention}"
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
+
+        # If we are going to autoban, we don't want to ping
+        if reason and "[autoban]" in reason:
+            ping_everyone = False
 
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
@@ -455,10 +503,6 @@ class Filtering(Cog):
             text = self._expand_spoilers(text)
 
         text = self.clean_input(text)
-
-        # Make sure it's not a URL
-        if URL_RE.search(text):
-            return False, None
 
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
@@ -603,7 +647,7 @@ class Filtering(Cog):
 
     def schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
-        delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+        delete_at = dateutil.parser.isoparse(msg['delete_date'])
         self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
     async def reschedule_offensive_msg_deletion(self) -> None:
@@ -611,17 +655,17 @@ class Filtering(Cog):
         await self.bot.wait_until_ready()
         response = await self.bot.api_client.get('bot/offensive-messages',)
 
-        now = datetime.utcnow()
+        now = arrow.utcnow()
 
         for msg in response:
-            delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+            delete_at = dateutil.parser.isoparse(msg['delete_date'])
 
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
             else:
                 self.schedule_msg_delete(msg)
 
-    async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
+    async def delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
         """Delete an offensive message, and then delete it from the db."""
         try:
             channel = self.bot.get_channel(msg['channel_id'])
