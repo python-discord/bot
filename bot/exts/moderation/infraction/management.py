@@ -300,7 +300,7 @@ class ModManagement(commands.Cog):
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions by `{actor}` ({formatted_infraction_count} total)",
+            title=f"Infractions by {actor} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
 
