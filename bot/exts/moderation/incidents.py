@@ -151,7 +151,7 @@ def shorten_text(text: str) -> str:
         text = text[:300]
 
     # Limit to a maximum of three lines
-    text = "\n".join(line for line in text.split("\n", maxsplit=3)[:3])
+    text = "\n".join(text.split("\n", maxsplit=3)[:3])
 
     # If it is a single word, then truncate it to 50 characters
     if text.find(" ") == -1:
@@ -186,6 +186,9 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
         last_100_logs: list[discord.Message] = await mod_logs_channel.history(limit=100).flatten()
 
         for log_entry in last_100_logs:
+            if not log_entry.embeds:
+                continue
+
             log_embed: discord.Embed = log_entry.embeds[0]
             if (
                     log_embed.author.name == "Message deleted"
