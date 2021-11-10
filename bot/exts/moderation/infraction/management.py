@@ -272,7 +272,7 @@ class ModManagement(commands.Cog):
     async def search_by_actor(
         self,
         ctx: Context,
-        actor: t.Union[discord.Member, t.Literal["m", "me"]],
+        actor: t.Union[t.Literal["m", "me"], UnambiguousUser],
         oldest_first: bool = False
     ) -> None:
         """
