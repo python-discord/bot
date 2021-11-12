@@ -128,9 +128,7 @@ class HelpChannels(commands.Cog):
 
         # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
         if not isinstance(message.author, discord.Member):
-            log.warning(
-                f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM."
-            )
+            log.debug(f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM.")
         else:
             await self._handle_role_change(message.author, message.author.add_roles)
 
