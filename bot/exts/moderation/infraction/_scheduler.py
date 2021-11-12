@@ -238,7 +238,9 @@ class InfractionScheduler:
                 dm_log_text = "\nDM: **Failed**"
 
                 # Accordingly update whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+                if await _utils.notify_infraction(
+                        ctx.bot, user, infraction["id"], infr_type.replace("_", " ").title(), expiry, user_reason, icon
+                ):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
 
