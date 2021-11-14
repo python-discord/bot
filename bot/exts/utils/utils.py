@@ -96,7 +96,7 @@ class Utils(Cog):
         If a string is provided, the line which matches best will be produced.
         """
         embed = Embed(
-            colour=Colour.blurple(),
+            colour=Colour.og_blurple(),
             title="The Zen of Python",
             description=ZEN_OF_PYTHON
         )

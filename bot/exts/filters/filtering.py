@@ -189,8 +189,16 @@ class Filtering(Cog):
         """
         Invoke message filter for message edits.
 
-        If there have been multiple edits, calculate the time delta from the previous edit.
+        Also calculates the time delta from the previous edit or when message was sent if there's no prior edits.
         """
+        # We only care about changes to the message contents/attachments and embed additions, not pin status etc.
+        if all((
+            before.content == after.content,  # content hasn't changed
+            before.attachments == after.attachments,  # attachments haven't changed
+            len(before.embeds) >= len(after.embeds)  # embeds haven't been added
+        )):
+            return
+
         if not before.edited_at:
             delta = relativedelta(after.edited_at, before.created_at).microseconds
         else:
@@ -341,7 +349,7 @@ class Filtering(Cog):
                                 await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
                         # If the message is classed as offensive, we store it in the site db and
-                        # it will be deleted it after one week.
+                        # it will be deleted after one week.
                         if _filter["schedule_deletion"] and not is_private:
                             delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
                             data = {
@@ -495,10 +503,6 @@ class Filtering(Cog):
             text = self._expand_spoilers(text)
 
         text = self.clean_input(text)
-
-        # Make sure it's not a URL
-        if URL_RE.search(text):
-            return False, None
 
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:

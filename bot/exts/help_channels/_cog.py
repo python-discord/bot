@@ -128,9 +128,7 @@ class HelpChannels(commands.Cog):
 
         # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
         if not isinstance(message.author, discord.Member):
-            log.warning(
-                f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM."
-            )
+            log.debug(f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM.")
         else:
             await self._handle_role_change(message.author, message.author.add_roles)
 
@@ -375,6 +373,12 @@ class HelpChannels(commands.Cog):
         await _message.send_available_message(channel)
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
+
+        # Unpin any previously stuck pins
+        log.trace(f"Looking for pins stuck in #{channel} ({channel.id}).")
+        for message in await channel.pins():
+            await _message.pin_wrapper(message.id, channel, pin=False)
+            log.debug(f"Removed a stuck pin from #{channel} ({channel.id}). ID: {message.id}")
 
         await _channel.move_to_bottom(
             channel=channel,
