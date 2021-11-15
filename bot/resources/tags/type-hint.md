@@ -1,16 +1,19 @@
 **Type Hints**
 
-A typehint indicates what type something should be. For example,
+A type hint indicates what type something is expected to be. For example,
 ```python
 def add(a: int, b: int) -> int:
-    sum: int = a + b
-    return sum
+    return a + b
 ```
-In this case, `a` and `b` are expected to be ints, and the function returns an int. We also declare an intermediate variable `sum`, which we indicate to be an int.
+In this case, we have a function,`add`, with parameters `a` and `b`. The type hints indicate that the parameters and return type are all integers.
 
 It's important to note these are just hints and have no runtime effect. For example,
 ```python
-#uh oh
+# Uh oh
 add("hello ", "world")
 ```
-This code will run without error, even though it doesn't follow the function's type hints.
+This code won't error even though it doesn't follow the function's type hints. It will just concatenate the two strings.
+
+Third party tools like [mypy](http://mypy-lang.org/) can enforce your type hints. Mypy would error in the second example.
+
+For more info about type hints, check out [PEP 484](https://www.python.org/dev/peps/pep-0484/).
