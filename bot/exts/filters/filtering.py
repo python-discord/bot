@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import re
 import unicodedata
 from datetime import timedelta
@@ -16,13 +17,14 @@ from discord import Colour, HTTPException, Member, Message, NotFound, TextChanne
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
+from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import scheduling
+from bot.utils import scheduling, services
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
@@ -314,6 +316,71 @@ class Filtering(Cog):
 
         return filter_triggered
 
+    async def _process_autoban(self, reason: str, message: discord.Message) -> None:
+        """Check if a filter triggers an autoban, and process it if so."""
+        # If the filter reason contains `[autoban]`, we want to auto-ban the user
+        if reason and "[autoban]" in reason.lower():
+            # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
+            # This sends the ban confirmation directly under watchlist trigger embed, to inform
+            # mods that the user was auto-banned for the message.
+            context = await self.bot.get_context(message)
+            context.guild = self.bot.get_guild(Guild.id)
+            context.author = context.guild.get_member(self.bot.user.id)
+            context.channel = self.bot.get_channel(Channels.mod_alerts)
+            context.command = self.bot.get_command("tempban")
+
+            await context.invoke(
+                context.command,
+                message.author,
+                arrow.utcnow() + AUTO_BAN_DURATION,
+                reason=AUTO_BAN_REASON
+            )
+
+    async def _process_redirect(self, url: str, message: discord.Message, stats: Stats) -> None:
+        """Unfurl redirect, run the URL filters on it, and check if further punishment is required."""
+        log.trace(f"Processing redirects for {message.id} by {message.author}.")
+        filter_data = "filter_redirects", self.filters["filter_redirects"]
+        result = await services.unfurl_url(url, max_continues=0, use_cache=True)
+        reason = None
+
+        if result is None:
+            log.debug("Failed to unfurl a redirect.")
+            message_override = ". URL could not be unfurled for an unknown reason."
+            ping = True
+
+        elif result.error is None:
+            has_urls = await self._has_urls(result.destination)
+            if has_urls[0]:
+                log.debug("Unfurled redirect, and destination was blacklisted.")
+                message_override = (
+                    ", and tripped a domain filter.\n\n"
+                    f"Destination: `{result.destination}`\n"
+                    f"Redirects: {result.depth}\n\n"
+                    "Tripped "
+                )
+                if has_urls[1] is not None:
+                    reason = has_urls[1]
+                    await self._process_autoban(reason, message)
+                ping = True
+
+            else:
+                log.debug("Unfurled redirect, but destination was not blacklisted.")
+                message_override = ". URL unfurled, but destination was not blacklisted. Tripped "
+                ping = False
+        else:
+            log.debug("Failed to unfurl a redirect.")
+            message_override = (
+                f".\nFailed to unfurl this URL after {result.depth} attempts due to the following error:\n"
+                f"{result.error}\n\n"
+                f"You can try to manually unfurl with `{constants.Bot.prefix}unfurl {url}`.\n"
+                " Tripped "
+            )
+            ping = True
+
+        await self._send_log(
+            filter_data[0], filter_data[1], message, stats, reason, ping=ping, message_override=message_override
+        )
+
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
         """Filter the input message to see if it violates any of our rules, and then respond accordingly."""
         # Should we filter this message?
@@ -375,6 +442,11 @@ class Filtering(Cog):
                         # it will be deleted after one week.
                         if _filter["schedule_deletion"] and not is_private:
                             delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
+
+                            if filter_name == "filter_redirects":
+                                # Redirects delete the message immediately
+                                delete_date = (datetime.datetime.utcnow() + timedelta(seconds=10)).isoformat()
+
                             data = {
                                 'id': msg.id,
                                 'channel_id': msg.channel.id,
@@ -393,25 +465,13 @@ class Filtering(Cog):
                                 log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         stats = self._add_stats(filter_name, match, msg.content)
-                        await self._send_log(filter_name, _filter, msg, stats, reason)
-
-                        # If the filter reason contains `[autoban]`, we want to auto-ban the user
-                        if reason and "[autoban]" in reason.lower():
-                            # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
-                            # This sends the ban confirmation directly under watchlist trigger embed, to inform
-                            # mods that the user was auto-banned for the message.
-                            context = await self.bot.get_context(msg)
-                            context.guild = self.bot.get_guild(Guild.id)
-                            context.author = context.guild.get_member(self.bot.user.id)
-                            context.channel = self.bot.get_channel(Channels.mod_alerts)
-                            context.command = self.bot.get_command("tempban")
-
-                            await context.invoke(
-                                context.command,
-                                msg.author,
-                                arrow.utcnow() + AUTO_BAN_DURATION,
-                                reason=AUTO_BAN_REASON
-                            )
+                        if filter_name == "filter_redirects":
+                            # The redirect filter processes the content further and sends it's own log message
+                            task_id = str(msg.id) + "redirect"
+                            self.scheduler.schedule(task_id, self._process_redirect(reason, msg, stats))
+                        else:
+                            await self._send_log(filter_name, _filter, msg, stats, reason)
+                            await self._process_autoban(reason, msg)
 
                         break  # We don't want multiple filters to trigger
 
@@ -423,6 +483,8 @@ class Filtering(Cog):
         stats: Stats,
         reason: Optional[str] = None,
         *,
+        ping: Optional[bool] = None,
+        message_override: str = "",
         is_eval: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
@@ -432,7 +494,10 @@ class Filtering(Cog):
         else:
             channel_str = f"in {msg.channel.mention}"
             # Allow specific filters to override ping_everyone
-            ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
+            if ping is None:
+                ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
+            else:
+                ping_everyone = ping
 
         # If we are going to autoban, we don't want to ping
         if reason and "[autoban]" in reason:
@@ -441,7 +506,7 @@ class Filtering(Cog):
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
         message = (
-            f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)} "
+            f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)}{message_override} "
             f"{channel_str} {eval_msg}with [the following message]({msg.jump_url}):\n\n"
             f"{stats.message_content}"
         )
