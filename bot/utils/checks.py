@@ -1,4 +1,3 @@
-import datetime
 from typing import Callable, Container, Iterable, Optional, Union
 
 from discord.ext.commands import (
@@ -137,7 +136,7 @@ def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketTy
             return
 
         # cooldown logic, taken from discord.py internals
-        current = ctx.message.created_at.replace(tzinfo=datetime.timezone.utc).timestamp()
+        current = ctx.message.created_at.timestamp()
         bucket = buckets.get_bucket(ctx.message)
         retry_after = bucket.update_rate_limit(current)
         if retry_after:

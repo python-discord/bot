@@ -112,7 +112,7 @@ class Information(Cog):
         # Build an embed
         embed = Embed(
             title=f"Role information (Total {len(roles)} role{'s' * (len(role_list) > 1)})",
-            colour=Colour.blurple()
+            colour=Colour.og_blurple()
         )
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
@@ -170,7 +170,7 @@ class Information(Cog):
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context) -> None:
         """Returns an embed full of server information."""
-        embed = Embed(colour=Colour.blurple(), title="Server Information")
+        embed = Embed(colour=Colour.og_blurple(), title="Server Information")
 
         created = discord_timestamp(ctx.guild.created_at, TimestampFormats.RELATIVE)
         region = ctx.guild.region
@@ -178,7 +178,10 @@ class Information(Cog):
 
         # Server Features are only useful in certain channels
         if ctx.channel.id in (
-            *constants.MODERATION_CHANNELS, constants.Channels.dev_core, constants.Channels.dev_contrib
+            *constants.MODERATION_CHANNELS,
+            constants.Channels.dev_core,
+            constants.Channels.dev_contrib,
+            constants.Channels.bot_commands
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
@@ -316,7 +319,7 @@ class Information(Cog):
             embed.add_field(name=field_name, value=field_content, inline=False)
 
         embed.set_thumbnail(url=user.display_avatar.url)
-        embed.colour = user.colour if user.colour != Colour.default() else Colour.blurple()
+        embed.colour = user.colour if user.colour != Colour.default() else Colour.og_blurple()
 
         return embed
 

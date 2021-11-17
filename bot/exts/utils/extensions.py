@@ -113,7 +113,7 @@ class Extensions(commands.Cog):
         Grey indicates that the extension is unloaded.
         Green indicates that the extension is currently loaded.
         """
-        embed = Embed(colour=Colour.blurple())
+        embed = Embed(colour=Colour.og_blurple())
         embed.set_author(
             name="Extensions List",
             url=URLs.github_bot_repo,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 from ssl import CertificateError
 
 import dateutil.parser
@@ -11,7 +11,7 @@ import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
-from discord.utils import DISCORD_EPOCH, escape_markdown, snowflake_time
+from discord.utils import escape_markdown, snowflake_time
 
 from bot import exts
 from bot.api import ResponseCodeError
@@ -28,7 +28,7 @@ if t.TYPE_CHECKING:
 
 log = get_logger(__name__)
 
-DISCORD_EPOCH_DT = datetime.utcfromtimestamp(DISCORD_EPOCH / 1000)
+DISCORD_EPOCH_DT = snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
 
@@ -273,14 +273,14 @@ class Snowflake(IDConverter):
         snowflake = int(arg)
 
         try:
-            time = snowflake_time(snowflake).replace(tzinfo=None)
+            time = snowflake_time(snowflake)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
             raise BadArgument(f"{error}: {e}")
 
         if time < DISCORD_EPOCH_DT:
             raise BadArgument(f"{error}: timestamp is before the Discord epoch.")
-        elif (datetime.utcnow() - time).days < -1:
+        elif (datetime.now(timezone.utc) - time).days < -1:
             raise BadArgument(f"{error}: timestamp is too far into the future.")
 
         return snowflake
@@ -387,10 +387,28 @@ class Duration(DurationDelta):
         The converter supports the same symbols for each unit of time as its parent class.
         """
         delta = await super().convert(ctx, duration)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         try:
             return now + delta
+        except (ValueError, OverflowError):
+            raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
+
+
+class Age(DurationDelta):
+    """Convert duration strings into UTC datetime.datetime objects."""
+
+    async def convert(self, ctx: Context, duration: str) -> datetime:
+        """
+        Converts a `duration` string to a datetime object that's `duration` in the past.
+
+        The converter supports the same symbols for each unit of time as its parent class.
+        """
+        delta = await super().convert(ctx, duration)
+        now = datetime.now(timezone.utc)
+
+        try:
+            return now - delta
         except (ValueError, OverflowError):
             raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
 
@@ -443,8 +461,8 @@ class ISODateTime(Converter):
         The converter is flexible in the formats it accepts, as it uses the `isoparse` method of
         `dateutil.parser`. In general, it accepts datetime strings that start with a date,
         optionally followed by a time. Specifying a timezone offset in the datetime string is
-        supported, but the `datetime` object will be converted to UTC and will be returned without
-        `tzinfo` as a timezone-unaware `datetime` object.
+        supported, but the `datetime` object will be converted to UTC. If no timezone is specified, the datetime will
+        be assumed to be in UTC already. In all cases, the returned object will have the UTC timezone.
 
         See: https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse
 
@@ -470,7 +488,8 @@ class ISODateTime(Converter):
 
         if dt.tzinfo:
             dt = dt.astimezone(dateutil.tz.UTC)
-            dt = dt.replace(tzinfo=None)
+        else:  # Without a timezone, assume it represents UTC.
+            dt = dt.replace(tzinfo=dateutil.tz.UTC)
 
         return dt
 
@@ -600,6 +619,7 @@ if t.TYPE_CHECKING:
     SourceConverter = SourceType  # noqa: F811
     DurationDelta = relativedelta  # noqa: F811
     Duration = datetime  # noqa: F811
+    Age = datetime  # noqa: F811
     OffTopicName = str  # noqa: F811
     ISODateTime = datetime  # noqa: F811
     HushDurationConverter = int  # noqa: F811
