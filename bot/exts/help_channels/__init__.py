@@ -13,7 +13,9 @@ def validate_config() -> None:
     available = constants.HelpChannels.max_available
 
     if total == 0 or available == 0:
-        raise ValueError("max_total_channels and max_available and must be greater than 0.")
+        raise ValueError(
+            "max_total_channels and max_available and must be greater than 0."
+        )
 
     if total < available:
         raise ValueError(
@@ -32,6 +34,7 @@ def setup(bot: Bot) -> None:
     """Load the HelpChannels cog."""
     # Defer import to reduce side effects from importing the help_channels package.
     from bot.exts.help_channels._cog import HelpChannels
+
     try:
         validate_config()
     except ValueError as e:

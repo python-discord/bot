@@ -4,13 +4,13 @@ from discord import Embed
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES, URLs
+from bot.constants import STAFF_PARTNERS_COMMUNITY_ROLES, Channels, URLs
 from bot.decorators import in_whitelist
 
 DESCRIPTIONS = (
     "Command processing time",
     "Python Discord website status",
-    "Discord API latency"
+    "Discord API latency",
 )
 ROUND_LATENCY = 3
 
@@ -22,7 +22,9 @@ class Latency(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(
+        channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES
+    )
     async def ping(self, ctx: commands.Context) -> None:
         """
         Gets different measures of latency within the bot.
@@ -38,13 +40,17 @@ class Latency(commands.Cog):
             bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
-            async with self.bot.http_session.get(f"{URLs.site_api_schema}{URLs.site_api}/healthcheck") as request:
+            async with self.bot.http_session.get(
+                f"{URLs.site_api_schema}{URLs.site_api}/healthcheck"
+            ) as request:
                 request.raise_for_status()
                 site_status = "Healthy"
 
         except client_exceptions.ClientResponseError as e:
             """The site returned an unexpected response."""
-            site_status = f"The site returned an error in the response: ({e.status}) {e}"
+            site_status = (
+                f"The site returned an error in the response: ({e.status}) {e}"
+            )
         except client_exceptions.ClientConnectionError:
             """Something went wrong with the connection."""
             site_status = "Could not establish connection with the site."

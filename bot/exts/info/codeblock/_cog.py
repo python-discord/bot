@@ -56,7 +56,9 @@ class CodeBlockCog(Cog, name="Code Block"):
         self.bot = bot
 
         # Stores allowed channels plus epoch times since the last instructional messages sent.
-        self.channel_cooldowns = dict.fromkeys(constants.CodeBlock.cooldown_channels, 0.0)
+        self.channel_cooldowns = dict.fromkeys(
+            constants.CodeBlock.cooldown_channels, 0.0
+        )
 
         # Maps users' messages to the messages the bot sent with instructions.
         self.codeblock_message_ids = {}
@@ -66,7 +68,9 @@ class CodeBlockCog(Cog, name="Code Block"):
         """Return an embed which displays code block formatting `instructions`."""
         return discord.Embed(description=instructions)
 
-    async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> Optional[Message]:
+    async def get_sent_instructions(
+        self, payload: RawMessageUpdateEvent
+    ) -> Optional[Message]:
         """
         Return the bot's sent instructions message associated with a user's message `payload`.
 
@@ -77,7 +81,9 @@ class CodeBlockCog(Cog, name="Code Block"):
         channel = self.bot.get_channel(payload.channel_id)
 
         try:
-            return await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
+            return await channel.fetch_message(
+                self.codeblock_message_ids[payload.message_id]
+            )
         except discord.NotFound:
             log.debug("Could not find instructions message; it was probably deleted.")
             return None
@@ -102,19 +108,28 @@ class CodeBlockCog(Cog, name="Code Block"):
             or channel.id in constants.CodeBlock.channel_whitelist
         )
 
-    async def send_instructions(self, message: discord.Message, instructions: str) -> None:
+    async def send_instructions(
+        self, message: discord.Message, instructions: str
+    ) -> None:
         """
         Send an embed with `instructions` on fixing an incorrect code block in a `message`.
 
         The embed will be deleted automatically after 5 minutes.
         """
-        log.info(f"Sending code block formatting instructions for message {message.id}.")
+        log.info(
+            f"Sending code block formatting instructions for message {message.id}."
+        )
 
         embed = self.create_embed(instructions)
-        bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
+        bot_message = await message.channel.send(
+            f"Hey {message.author.mention}!", embed=embed
+        )
         self.codeblock_message_ids[message.id] = bot_message.id
 
-        scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)), event_loop=self.bot.loop)
+        scheduling.create_task(
+            wait_for_deletion(bot_message, (message.author.id,)),
+            event_loop=self.bot.loop,
+        )
 
         # Increase amount of codeblock correction in stats
         self.bot.stats.incr("codeblock_corrections")
@@ -142,12 +157,16 @@ class CodeBlockCog(Cog, name="Code Block"):
     async def on_message(self, msg: Message) -> None:
         """Detect incorrect Markdown code blocks in `msg` and send instructions to fix them."""
         if not self.should_parse(msg):
-            log.trace(f"Skipping code block detection of {msg.id}: message doesn't qualify.")
+            log.trace(
+                f"Skipping code block detection of {msg.id}: message doesn't qualify."
+            )
             return
 
         # When debugging, ignore cooldowns.
         if self.is_on_cooldown(msg.channel) and not constants.DEBUG_MODE:
-            log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
+            log.trace(
+                f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown."
+            )
             return
 
         instructions = get_instructions(msg.content)
@@ -162,11 +181,18 @@ class CodeBlockCog(Cog, name="Code Block"):
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
         """Delete the instructional message if an edited message had its code blocks fixed."""
         if payload.message_id not in self.codeblock_message_ids:
-            log.trace(f"Ignoring message edit {payload.message_id}: message isn't being tracked.")
+            log.trace(
+                f"Ignoring message edit {payload.message_id}: message isn't being tracked."
+            )
             return
 
-        if payload.data.get("content") is None or payload.data.get("channel_id") is None:
-            log.trace(f"Ignoring message edit {payload.message_id}: missing content or channel ID.")
+        if (
+            payload.data.get("content") is None
+            or payload.data.get("channel_id") is None
+        ):
+            log.trace(
+                f"Ignoring message edit {payload.message_id}: missing content or channel ID."
+            )
             return
 
         # Parse the message to see if the code blocks have been fixed.
@@ -179,11 +205,15 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         try:
             if not instructions:
-                log.info("User's incorrect code block was fixed. Removing instructions message.")
+                log.info(
+                    "User's incorrect code block was fixed. Removing instructions message."
+                )
                 await bot_message.delete()
                 del self.codeblock_message_ids[payload.message_id]
             else:
-                log.info("Message edited but still has invalid code blocks; editing instructions.")
+                log.info(
+                    "Message edited but still has invalid code blocks; editing instructions."
+                )
                 await bot_message.edit(embed=self.create_embed(instructions))
         except discord.NotFound:
             log.debug("Could not find instructions message; it was probably deleted.")

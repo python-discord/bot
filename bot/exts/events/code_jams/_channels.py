@@ -30,30 +30,31 @@ async def _create_category(guild: discord.Guild) -> discord.CategoryChannel:
 
     category_overwrites = {
         guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        guild.me: discord.PermissionOverwrite(read_messages=True)
+        guild.me: discord.PermissionOverwrite(read_messages=True),
     }
 
     category = await guild.create_category_channel(
-        CATEGORY_NAME,
-        overwrites=category_overwrites,
-        reason="It's code jam time!"
+        CATEGORY_NAME, overwrites=category_overwrites, reason="It's code jam time!"
     )
 
     await _send_status_update(
-        guild, f"Created a new category with the ID {category.id} for this Code Jam's team channels."
+        guild,
+        f"Created a new category with the ID {category.id} for this Code Jam's team channels.",
     )
 
     return category
 
 
 def _get_overwrites(
-        members: list[tuple[discord.Member, bool]],
-        guild: discord.Guild,
+    members: list[tuple[discord.Member, bool]],
+    guild: discord.Guild,
 ) -> dict[t.Union[discord.Member, discord.Role], discord.PermissionOverwrite]:
     """Get code jam team channels permission overwrites."""
     team_channel_overwrites = {
         guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        guild.get_role(Roles.code_jam_event_team): discord.PermissionOverwrite(read_messages=True)
+        guild.get_role(Roles.code_jam_event_team): discord.PermissionOverwrite(
+            read_messages=True
+        ),
     }
 
     for member, _ in members:
@@ -65,10 +66,10 @@ def _get_overwrites(
 
 
 async def create_team_channel(
-        guild: discord.Guild,
-        team_name: str,
-        members: list[tuple[discord.Member, bool]],
-        team_leaders: discord.Role
+    guild: discord.Guild,
+    team_name: str,
+    members: list[tuple[discord.Member, bool]],
+    team_leaders: discord.Role,
 ) -> None:
     """Create the team's text channel."""
     await _add_team_leader_roles(members, team_leaders)
@@ -84,7 +85,9 @@ async def create_team_channel(
     )
 
 
-async def create_team_leader_channel(guild: discord.Guild, team_leaders: discord.Role) -> None:
+async def create_team_leader_channel(
+    guild: discord.Guild, team_leaders: discord.Role
+) -> None:
     """Create the Team Leader Chat channel for the Code Jam team leaders."""
     category: discord.CategoryChannel = guild.get_channel(Categories.summer_code_jam)
 
@@ -92,11 +95,13 @@ async def create_team_leader_channel(guild: discord.Guild, team_leaders: discord
         name="team-leaders-chat",
         overwrites={
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            team_leaders: discord.PermissionOverwrite(read_messages=True)
-        }
+            team_leaders: discord.PermissionOverwrite(read_messages=True),
+        },
     )
 
-    await _send_status_update(guild, f"Created {team_leaders_chat.mention} in the {category} category.")
+    await _send_status_update(
+        guild, f"Created {team_leaders_chat.mention} in the {category} category."
+    )
 
 
 async def _send_status_update(guild: discord.Guild, message: str) -> None:
@@ -106,7 +111,9 @@ async def _send_status_update(guild: discord.Guild, message: str) -> None:
     await channel.send(f"<@&{Roles.events_lead}>\n\n{message}")
 
 
-async def _add_team_leader_roles(members: list[tuple[discord.Member, bool]], team_leaders: discord.Role) -> None:
+async def _add_team_leader_roles(
+    members: list[tuple[discord.Member, bool]], team_leaders: discord.Role
+) -> None:
     """Assign the team leader role to the team leaders."""
     for member, is_leader in members:
         if is_leader:

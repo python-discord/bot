@@ -22,7 +22,9 @@ class LoggingTestCaseTests(unittest.TestCase):
             with LoggingTestCase.assertNotLogs(self, level=logging.DEBUG):
                 pass
         except AssertionError:  # pragma: no cover
-            self.fail("`self.assertNotLogs` raised an AssertionError when it should not!")
+            self.fail(
+                "`self.assertNotLogs` raised an AssertionError when it should not!"
+            )
 
     def test_assert_not_logs_raises_correct_assertion_error_when_logs_are_emitted(self):
         """Test if LoggingTestCase.assertNotLogs raises AssertionError when logs were emitted."""

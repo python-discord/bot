@@ -11,8 +11,12 @@ class Security(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.bot.check(self.check_not_bot)  # Global commands check - no bots can run any commands at all
-        self.bot.check(self.check_on_guild)  # Global commands check - commands can't be run in a DM
+        self.bot.check(
+            self.check_not_bot
+        )  # Global commands check - no bots can run any commands at all
+        self.bot.check(
+            self.check_on_guild
+        )  # Global commands check - commands can't be run in a DM
 
     def check_not_bot(self, ctx: Context) -> bool:
         """Check if the context is a bot user."""

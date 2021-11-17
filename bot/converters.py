@@ -10,7 +10,15 @@ import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
+from discord.ext.commands import (
+    BadArgument,
+    Bot,
+    Context,
+    Converter,
+    IDConverter,
+    MemberConverter,
+    UserConverter,
+)
 from discord.utils import escape_markdown, snowflake_time
 
 from bot import exts
@@ -39,12 +47,15 @@ def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], s
     Unless preserve_case is True, the argument is converted to lowercase. All values are then
     expected to have already been given in lowercase too.
     """
+
     def converter(arg: str) -> str:
         if not preserve_case:
             arg = arg.lower()
 
         if arg not in values:
-            raise BadArgument(f"Only the following values are allowed:\n```{', '.join(values)}```")
+            raise BadArgument(
+                f"Only the following values are allowed:\n```{', '.join(values)}```"
+            )
         else:
             return arg
 
@@ -103,9 +114,11 @@ class ValidFilterListType(Converter):
         Raise a BadArgument if the API can't respond.
         """
         try:
-            valid_types = await bot.api_client.get('bot/filter-lists/get-types')
+            valid_types = await bot.api_client.get("bot/filter-lists/get-types")
         except ResponseCodeError:
-            raise BadArgument("Cannot validate list_type: Unable to fetch valid types from API.")
+            raise BadArgument(
+                "Cannot validate list_type: Unable to fetch valid types from API."
+            )
 
         return [enum for enum, classname in valid_types]
 
@@ -127,7 +140,9 @@ class ValidFilterListType(Converter):
                 list_type = list_type[:-1]
 
             else:
-                valid_types_list = '\n'.join([f"• {type_.lower()}" for type_ in valid_types])
+                valid_types_list = "\n".join(
+                    [f"• {type_.lower()}" for type_ in valid_types]
+                )
                 raise BadArgument(
                     f"You have provided an invalid list type!\n\n"
                     f"Please provide one of the following: \n{valid_types_list}"
@@ -186,7 +201,9 @@ class PackageName(Converter):
     async def convert(cls, ctx: Context, argument: str) -> str:
         """Checks whether the given string is a valid package name."""
         if cls.PACKAGE_NAME_RE.search(argument):
-            raise BadArgument("The provided package name is not valid; please only use the _, 0-9, and a-z characters.")
+            raise BadArgument(
+                "The provided package name is not valid; please only use the _, 0-9, and a-z characters."
+            )
         return argument
 
 
@@ -210,7 +227,7 @@ class ValidURL(Converter):
                         f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200"
                     )
         except CertificateError:
-            if url.startswith('https'):
+            if url.startswith("https"):
                 raise BadArgument(
                     f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
                 )
@@ -233,13 +250,17 @@ class Inventory(Converter):
     """
 
     @staticmethod
-    async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
+    async def convert(
+        ctx: Context, url: str
+    ) -> t.Tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
         try:
             inventory = await _inventory_parser.fetch_inventory(url)
         except _inventory_parser.InvalidHeaderError:
-            raise BadArgument("Unable to parse inventory because of invalid header, check if URL is correct.")
+            raise BadArgument(
+                "Unable to parse inventory because of invalid header, check if URL is correct."
+            )
         else:
             if inventory is None:
                 raise BadArgument(
@@ -308,7 +329,9 @@ class TagNameConverter(Converter):
 
         # The tag name is either empty, or consists of nothing but whitespace.
         elif not tag_name:
-            raise BadArgument("Tag names should not be empty, or filled with whitespace.")
+            raise BadArgument(
+                "Tag names should not be empty, or filled with whitespace."
+            )
 
         # The tag name is longer than 127 characters.
         elif len(tag_name) > 127:
@@ -392,7 +415,9 @@ class Duration(DurationDelta):
         try:
             return now + delta
         except (ValueError, OverflowError):
-            raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
+            raise BadArgument(
+                f"`{duration}` results in a datetime outside the supported range."
+            )
 
 
 class Age(DurationDelta):
@@ -410,7 +435,9 @@ class Age(DurationDelta):
         try:
             return now - delta
         except (ValueError, OverflowError):
-            raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
+            raise BadArgument(
+                f"`{duration}` results in a datetime outside the supported range."
+            )
 
 
 class OffTopicName(Converter):
@@ -484,7 +511,9 @@ class ISODateTime(Converter):
         try:
             dt = dateutil.parser.isoparse(datetime_string)
         except ValueError:
-            raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
+            raise BadArgument(
+                f"`{datetime_string}` is not a valid ISO-8601 datetime string"
+            )
 
         if dt.tzinfo:
             dt = dt.astimezone(dateutil.tz.UTC)
@@ -524,17 +553,21 @@ class HushDurationConverter(Converter):
 
 def _is_an_unambiguous_user_argument(argument: str) -> bool:
     """Check if the provided argument is a user mention, user id, or username (name#discrim)."""
-    has_id_or_mention = bool(IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
+    has_id_or_mention = bool(
+        IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument)
+    )
 
     # Check to see if the author passed a username (a discriminator exists)
-    argument = argument.removeprefix('@')
-    has_username = len(argument) > 5 and argument[-5] == '#'
+    argument = argument.removeprefix("@")
+    has_username = len(argument) > 5 and argument[-5] == "#"
 
     return has_id_or_mention or has_username
 
 
-AMBIGUOUS_ARGUMENT_MSG = ("`{argument}` is not a User mention, a User ID or a Username in the format"
-                          " `name#discriminator`.")
+AMBIGUOUS_ARGUMENT_MSG = (
+    "`{argument}` is not a User mention, a User ID or a Username in the format"
+    " `name#discriminator`."
+)
 
 
 class UnambiguousUser(UserConverter):
@@ -580,12 +613,11 @@ class Infraction(Converter):
     async def convert(self, ctx: Context, arg: str) -> t.Optional[dict]:
         """Attempts to convert `arg` into an infraction `dict`."""
         if arg in ("l", "last", "recent"):
-            params = {
-                "actor__id": ctx.author.id,
-                "ordering": "-inserted_at"
-            }
+            params = {"actor__id": ctx.author.id, "ordering": "-inserted_at"}
 
-            infractions = await ctx.bot.api_client.get("bot/infractions/expanded", params=params)
+            infractions = await ctx.bot.api_client.get(
+                "bot/infractions/expanded", params=params
+            )
 
             if not infractions:
                 raise BadArgument(
@@ -600,9 +632,7 @@ class Infraction(Converter):
             except ResponseCodeError as e:
                 if e.status == 404:
                     raise InvalidInfraction(
-                        converter=Infraction,
-                        original=e,
-                        infraction_arg=arg
+                        converter=Infraction, original=e, infraction_arg=arg
                     )
                 raise e
 

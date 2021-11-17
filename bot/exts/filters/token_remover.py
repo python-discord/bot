@@ -94,13 +94,19 @@ class TokenRemover(Cog):
         try:
             await msg.delete()
         except NotFound:
-            log.debug(f"Failed to remove token in message {msg.id}: message already deleted.")
+            log.debug(
+                f"Failed to remove token in message {msg.id}: message already deleted."
+            )
             return
 
-        await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
+        await msg.channel.send(
+            DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention)
+        )
 
         log_message = self.format_log_message(msg, found_token)
-        userid_message, mention_everyone = await self.format_userid_log_message(msg, found_token)
+        userid_message, mention_everyone = await self.format_userid_log_message(
+            msg, found_token
+        )
         log.debug(log_message)
 
         # Send pretty mod log embed to mod-alerts
@@ -117,7 +123,9 @@ class TokenRemover(Cog):
         self.bot.stats.incr("tokens.removed_tokens")
 
     @classmethod
-    async def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
+    async def format_userid_log_message(
+        cls, msg: Message, token: Token
+    ) -> t.Tuple[str, bool]:
         """
         Format the portion of the log message that includes details about the detected user ID.
 
@@ -132,11 +140,14 @@ class TokenRemover(Cog):
         user = await get_or_fetch_member(msg.guild, user_id)
 
         if user:
-            return KNOWN_USER_LOG_MESSAGE.format(
-                user_id=user_id,
-                user_name=str(user),
-                kind="BOT" if user.bot else "USER",
-            ), True
+            return (
+                KNOWN_USER_LOG_MESSAGE.format(
+                    user_id=user_id,
+                    user_name=str(user),
+                    kind="BOT" if user.bot else "USER",
+                ),
+                True,
+            )
         else:
             return UNKNOWN_USER_LOG_MESSAGE.format(user_id=user_id), False
 
@@ -148,7 +159,7 @@ class TokenRemover(Cog):
             channel=msg.channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,
-            hmac='x' * (len(token.hmac) - 3) + token.hmac[-3:],
+            hmac="x" * (len(token.hmac) - 3) + token.hmac[-3:],
         )
 
     @classmethod
@@ -176,7 +187,7 @@ class TokenRemover(Cog):
 
         try:
             decoded_bytes = base64.urlsafe_b64decode(b64_content)
-            string = decoded_bytes.decode('utf-8')
+            string = decoded_bytes.decode("utf-8")
             if not (string.isascii() and string.isdigit()):
                 # This case triggers if there are fancy unicode digits in the base64 encoding,
                 # that means it's not a valid user id.
@@ -207,7 +218,9 @@ class TokenRemover(Cog):
         if timestamp + TOKEN_EPOCH >= DISCORD_EPOCH:
             return True
         else:
-            log.debug(f"Invalid token timestamp '{b64_content}': smaller than Discord epoch")
+            log.debug(
+                f"Invalid token timestamp '{b64_content}': smaller than Discord epoch"
+            )
             return False
 
     @staticmethod

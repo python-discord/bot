@@ -29,7 +29,7 @@ class DiscordEmojisRuleTests(RuleTest):
             [
                 make_msg("alice", 1, unicode_emoji),
                 make_msg("bob", 2, unicode_emoji),
-                make_msg("alice", 1, unicode_emoji)
+                make_msg("alice", 1, unicode_emoji),
             ],
         )
 
@@ -57,11 +57,11 @@ class DiscordEmojisRuleTests(RuleTest):
                 [
                     make_msg("alice", 2, unicode_emoji),
                     make_msg("bob", 2, unicode_emoji),
-                    make_msg("alice", 2, unicode_emoji)
+                    make_msg("alice", 2, unicode_emoji),
                 ],
                 ("alice",),
-                4
-            )
+                4,
+            ),
         )
 
         await self.run_disallowed(cases)

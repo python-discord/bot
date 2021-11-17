@@ -48,7 +48,9 @@ class Scheduler:
         assert inspect.getcoroutinestate(coroutine) == "CORO_CREATED", msg
 
         if task_id in self._scheduled_tasks:
-            self._log.debug(f"Did not schedule task #{task_id}; task was already scheduled.")
+            self._log.debug(
+                f"Did not schedule task #{task_id}; task was already scheduled."
+            )
             coroutine.close()
             return
 
@@ -58,7 +60,9 @@ class Scheduler:
         self._scheduled_tasks[task_id] = task
         self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
-    def schedule_at(self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    def schedule_at(
+        self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine
+    ) -> None:
         """
         Schedule `coroutine` to be executed at the given `time`.
 
@@ -77,7 +81,9 @@ class Scheduler:
 
         self.schedule(task_id, coroutine)
 
-    def schedule_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    def schedule_later(
+        self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine
+    ) -> None:
         """
         Schedule `coroutine` to be executed after the given `delay` number of seconds.
 
@@ -106,10 +112,14 @@ class Scheduler:
         for task_id in self._scheduled_tasks.copy():
             self.cancel(task_id)
 
-    async def _await_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    async def _await_later(
+        self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine
+    ) -> None:
         """Await `coroutine` after the given `delay` number of seconds."""
         try:
-            self._log.trace(f"Waiting {delay} seconds before awaiting coroutine for #{task_id}.")
+            self._log.trace(
+                f"Waiting {delay} seconds before awaiting coroutine for #{task_id}."
+            )
             await asyncio.sleep(delay)
 
             # Use asyncio.shield to prevent the coroutine from cancelling itself.
@@ -134,7 +144,9 @@ class Scheduler:
         If `done_task` and the task associated with `task_id` are different, then the latter
         will not be deleted. In this case, a new task was likely rescheduled with the same ID.
         """
-        self._log.trace(f"Performing done callback for task #{task_id} {id(done_task)}.")
+        self._log.trace(
+            f"Performing done callback for task #{task_id} {id(done_task)}."
+        )
 
         scheduled_task = self._scheduled_tasks.get(task_id)
 
@@ -159,7 +171,9 @@ class Scheduler:
             exception = done_task.exception()
             # Log the exception if one exists.
             if exception:
-                self._log.error(f"Error in task #{task_id} {id(done_task)}!", exc_info=exception)
+                self._log.error(
+                    f"Error in task #{task_id} {id(done_task)}!", exc_info=exception
+                )
 
 
 def create_task(
@@ -178,15 +192,21 @@ def create_task(
         task = event_loop.create_task(coro, **kwargs)
     else:
         task = asyncio.create_task(coro, **kwargs)
-    task.add_done_callback(partial(_log_task_exception, suppressed_exceptions=suppressed_exceptions))
+    task.add_done_callback(
+        partial(_log_task_exception, suppressed_exceptions=suppressed_exceptions)
+    )
     return task
 
 
-def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.Type[Exception]]) -> None:
+def _log_task_exception(
+    task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.Type[Exception]]
+) -> None:
     """Retrieve and log the exception raised in `task` if one exists."""
     with contextlib.suppress(asyncio.CancelledError):
         exception = task.exception()
         # Log the exception if one exists.
         if exception and not isinstance(exception, suppressed_exceptions):
             log = get_logger(__name__)
-            log.error(f"Error in task {task.get_name()} {id(task)}!", exc_info=exception)
+            log.error(
+                f"Error in task {task.get_name()} {id(task)}!", exc_info=exception
+            )

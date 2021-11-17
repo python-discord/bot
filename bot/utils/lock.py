@@ -72,6 +72,7 @@ def lock(
 
     If decorating a command, this decorator must go before (below) the `command` decorator.
     """
+
     def decorator(func: types.FunctionType) -> types.FunctionType:
         name = func.__name__
 
@@ -92,7 +93,9 @@ def lock(
             else:
                 id_ = resource_id
 
-            log.trace(f"{name}: getting the lock object for resource {namespace!r}:{id_!r}")
+            log.trace(
+                f"{name}: getting the lock object for resource {namespace!r}:{id_!r}"
+            )
 
             # Get the lock for the ID. Create a lock if one doesn't exist yet.
             locks = __lock_dicts[namespace]
@@ -103,15 +106,20 @@ def lock(
             #   2. `asyncio.Lock.acquire()` does not internally await anything if the lock is free
             #   3. awaits only yield execution to the event loop at actual I/O boundaries
             if wait or not lock_.locked():
-                log.debug(f"{name}: acquiring lock for resource {namespace!r}:{id_!r}...")
+                log.debug(
+                    f"{name}: acquiring lock for resource {namespace!r}:{id_!r}..."
+                )
                 async with lock_:
                     return await func(*args, **kwargs)
             else:
-                log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
+                log.info(
+                    f"{name}: aborted because resource {namespace!r}:{id_!r} is locked"
+                )
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
 
         return wrapper
+
     return decorator
 
 

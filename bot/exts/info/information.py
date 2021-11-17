@@ -6,7 +6,15 @@ from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
+from discord.ext.commands import (
+    BucketType,
+    Cog,
+    Context,
+    Paginator,
+    command,
+    group,
+    has_any_role,
+)
 from discord.utils import escape_markdown
 
 from bot import constants
@@ -18,7 +26,11 @@ from bot.errors import NonExistentRoleError
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
-from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
+from bot.utils.checks import (
+    cooldown_with_role_bypass,
+    has_no_roles_check,
+    in_whitelist_check,
+)
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
@@ -45,7 +57,9 @@ class Information(Cog):
         return channel_counter
 
     @staticmethod
-    def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
+    def join_role_stats(
+        role_ids: list[int], guild: Guild, name: Optional[str] = None
+    ) -> dict[str, int]:
         """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
         member_count = 0
         for role_id in role_ids:
@@ -58,14 +72,23 @@ class Information(Cog):
     @staticmethod
     def get_member_counts(guild: Guild) -> dict[str, int]:
         """Return the total number of members for certain roles in `guild`."""
-        role_ids = [constants.Roles.helpers, constants.Roles.mod_team, constants.Roles.admins,
-                    constants.Roles.owners, constants.Roles.contributors]
+        role_ids = [
+            constants.Roles.helpers,
+            constants.Roles.mod_team,
+            constants.Roles.admins,
+            constants.Roles.owners,
+            constants.Roles.contributors,
+        ]
 
         role_stats = {}
         for role_id in role_ids:
             role_stats.update(Information.join_role_stats([role_id], guild))
         role_stats.update(
-            Information.join_role_stats([constants.Roles.project_leads, constants.Roles.domain_leads], guild, "Leads")
+            Information.join_role_stats(
+                [constants.Roles.project_leads, constants.Roles.domain_leads],
+                guild,
+                "Leads",
+            )
         )
         return role_stats
 
@@ -89,13 +112,15 @@ class Information(Cog):
 
         python_general = self.bot.get_channel(constants.Channels.python_general)
 
-        return textwrap.dedent(f"""
+        return textwrap.dedent(
+            f"""
             {talentpool_info}\
             {bb_info}\
             {defcon_info}\
             {verification}\
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
-        """)
+        """
+        )
 
     @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="roles")
@@ -112,7 +137,7 @@ class Information(Cog):
         # Build an embed
         embed = Embed(
             title=f"Role information (Total {len(roles)} role{'s' * (len(role_list) > 1)})",
-            colour=Colour.og_blurple()
+            colour=Colour.og_blurple(),
         )
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
@@ -136,8 +161,7 @@ class Information(Cog):
                 continue
 
             match = rapidfuzz.process.extractOne(
-                role_name, all_roles, score_cutoff=80,
-                scorer=rapidfuzz.fuzz.ratio
+                role_name, all_roles, score_cutoff=80, scorer=rapidfuzz.fuzz.ratio
             )
 
             if not match:
@@ -149,7 +173,9 @@ class Information(Cog):
             parsed_roles.add(role)
 
         if failed_roles:
-            await ctx.send(f":x: Could not retrieve the following roles: {', '.join(failed_roles)}")
+            await ctx.send(
+                f":x: Could not retrieve the following roles: {', '.join(failed_roles)}"
+            )
 
         for role in parsed_roles:
             h, s, v = colorsys.rgb_to_hsv(*role.colour.to_rgb())
@@ -159,11 +185,17 @@ class Information(Cog):
                 colour=role.colour,
             )
             embed.add_field(name="ID", value=role.id, inline=True)
-            embed.add_field(name="Colour (RGB)", value=f"#{role.colour.value:0>6x}", inline=True)
-            embed.add_field(name="Colour (HSV)", value=f"{h:.2f} {s:.2f} {v}", inline=True)
+            embed.add_field(
+                name="Colour (RGB)", value=f"#{role.colour.value:0>6x}", inline=True
+            )
+            embed.add_field(
+                name="Colour (HSV)", value=f"{h:.2f} {s:.2f} {v}", inline=True
+            )
             embed.add_field(name="Member count", value=len(role.members), inline=True)
             embed.add_field(name="Position", value=role.position)
-            embed.add_field(name="Permission code", value=role.permissions.value, inline=True)
+            embed.add_field(
+                name="Permission code", value=role.permissions.value, inline=True
+            )
 
             await ctx.send(embed=embed)
 
@@ -178,7 +210,9 @@ class Information(Cog):
 
         # Server Features are only useful in certain channels
         if ctx.channel.id in (
-            *constants.MODERATION_CHANNELS, constants.Channels.dev_core, constants.Channels.dev_contrib
+            *constants.MODERATION_CHANNELS,
+            constants.Channels.dev_core,
+            constants.Channels.dev_contrib,
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
@@ -205,25 +239,32 @@ class Information(Cog):
         # Members
         total_members = f"{ctx.guild.member_count:,}"
         member_counts = self.get_member_counts(ctx.guild)
-        member_info = "\n".join(f"{role}: {count}" for role, count in member_counts.items())
+        member_info = "\n".join(
+            f"{role}: {count}" for role, count in member_counts.items()
+        )
         embed.add_field(name=f"Members: {total_members}", value=member_info)
 
         # Channels
         total_channels = len(ctx.guild.channels)
         channel_counts = self.get_channel_type_counts(ctx.guild)
         channel_info = "\n".join(
-            f"{channel.title()}: {count}" for channel, count in sorted(channel_counts.items())
+            f"{channel.title()}: {count}"
+            for channel, count in sorted(channel_counts.items())
         )
         embed.add_field(name=f"Channels: {total_channels}", value=channel_info)
 
         # Additional info if ran in moderation channels
         if is_mod_channel(ctx.channel):
-            embed.add_field(name="Moderation:", value=self.get_extended_server_info(ctx))
+            embed.add_field(
+                name="Moderation:", value=self.get_extended_server_info(ctx)
+            )
 
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None) -> None:
+    async def user_info(
+        self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None
+    ) -> None:
         """Returns info about a user."""
         if isinstance(user_or_message, Message):
             user = user_or_message.author
@@ -234,7 +275,9 @@ class Information(Cog):
             user = ctx.author
 
         # Do a role check if this is being executed on someone other than the caller
-        elif user != ctx.author and await has_no_roles_check(ctx, *constants.MODERATION_ROLES):
+        elif user != ctx.author and await has_no_roles_check(
+            ctx, *constants.MODERATION_ROLES
+        ):
             await ctx.send("You may not use this command on users other than yourself.")
             return
 
@@ -274,11 +317,17 @@ class Information(Cog):
             # The 0 is for excluding the default @everyone role,
             # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
             roles = ", ".join(role.mention for role in user.roles[:0:-1])
-            membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
+            membership = {
+                "Joined": joined,
+                "Verified": not user.pending,
+                "Roles": roles or None,
+            }
             if not is_mod_channel(ctx.channel):
                 membership.pop("Verified")
 
-            membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
+            membership = textwrap.dedent(
+                "\n".join([f"{key}: {value}" for key, value in membership.items()])
+            )
         else:
             roles = None
             membership = "The user is not a member of the server"
@@ -286,16 +335,15 @@ class Information(Cog):
         fields = [
             (
                 "User information",
-                textwrap.dedent(f"""
+                textwrap.dedent(
+                    f"""
                     Created: {created}
                     Profile: {user.mention}
                     ID: {user.id}
-                """).strip()
+                """
+                ).strip(),
             ),
-            (
-                "Member information",
-                membership
-            ),
+            ("Member information", membership),
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
@@ -307,37 +355,34 @@ class Information(Cog):
             fields.append(await self.basic_user_infraction_counts(user))
 
         # Let's build the embed now
-        embed = Embed(
-            title=name,
-            description=" ".join(badges)
-        )
+        embed = Embed(title=name, description=" ".join(badges))
 
         for field_name, field_content in fields:
             embed.add_field(name=field_name, value=field_content, inline=False)
 
         embed.set_thumbnail(url=user.display_avatar.url)
-        embed.colour = user.colour if user.colour != Colour.default() else Colour.og_blurple()
+        embed.colour = (
+            user.colour if user.colour != Colour.default() else Colour.og_blurple()
+        )
 
         return embed
 
     async def basic_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'hidden': 'False',
-                'user__id': str(user.id)
-            }
+            "bot/infractions", params={"hidden": "False", "user__id": str(user.id)}
         )
 
         total_infractions = len(infractions)
-        active_infractions = sum(infraction['active'] for infraction in infractions)
+        active_infractions = sum(infraction["active"] for infraction in infractions)
 
         infraction_output = f"Total: {total_infractions}\nActive: {active_infractions}"
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(
+        self, user: MemberOrUser
+    ) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -345,10 +390,7 @@ class Information(Cog):
         in the output as well.
         """
         infractions = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'user__id': str(user.id)
-            }
+            "bot/infractions", params={"user__id": str(user.id)}
         )
 
         infraction_output = []
@@ -360,7 +402,7 @@ class Information(Cog):
             infraction_counter = defaultdict(int)
             for infraction in infractions:
                 infraction_type = infraction["type"]
-                infraction_active = 'active' if infraction["active"] else 'inactive'
+                infraction_active = "active" if infraction["active"] else "inactive"
 
                 infraction_types.add(infraction_type)
                 infraction_counter[f"{infraction_active} {infraction_type}"] += 1
@@ -368,7 +410,9 @@ class Information(Cog):
             # Format the output of the infraction counts
             for infraction_type in sorted(infraction_types):
                 active_count = infraction_counter[f"active {infraction_type}"]
-                total_count = active_count + infraction_counter[f"inactive {infraction_type}"]
+                total_count = (
+                    active_count + infraction_counter[f"inactive {infraction_type}"]
+                )
 
                 line = f"{infraction_type.capitalize()}s: {total_count}"
                 if active_count:
@@ -381,10 +425,7 @@ class Information(Cog):
     async def user_nomination_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
-            'bot/nominations',
-            params={
-                'user__id': str(user.id)
-            }
+            "bot/nominations", params={"user__id": str(user.id)}
         )
 
         output = []
@@ -393,17 +434,25 @@ class Information(Cog):
             output.append("No nominations")
         else:
             count = len(nominations)
-            is_currently_nominated = any(nomination["active"] for nomination in nominations)
+            is_currently_nominated = any(
+                nomination["active"] for nomination in nominations
+            )
             nomination_noun = "nomination" if count == 1 else "nominations"
 
             if is_currently_nominated:
-                output.append(f"This user is **currently** nominated\n({count} {nomination_noun} in total)")
+                output.append(
+                    f"This user is **currently** nominated\n({count} {nomination_noun} in total)"
+                )
             else:
-                output.append(f"This user has {count} historical {nomination_noun}, but is currently not nominated.")
+                output.append(
+                    f"This user has {count} historical {nomination_noun}, but is currently not nominated."
+                )
 
         return "Nominations", "\n".join(output)
 
-    async def user_messages(self, user: MemberOrUser) -> Tuple[Union[bool, str], Tuple[str, str]]:
+    async def user_messages(
+        self, user: MemberOrUser
+    ) -> Tuple[Union[bool, str], Tuple[str, str]]:
         """
         Gets the amount of messages for `member`.
 
@@ -413,7 +462,9 @@ class Information(Cog):
         activity_output = []
 
         try:
-            user_activity = await self.bot.api_client.get(f"bot/users/{user.id}/metricity_data")
+            user_activity = await self.bot.api_client.get(
+                f"bot/users/{user.id}/metricity_data"
+            )
         except ResponseCodeError as e:
             if e.status == 404:
                 activity_output = "No activity"
@@ -422,12 +473,17 @@ class Information(Cog):
             activity_output.append(user_activity["activity_blocks"] or "No activity")
 
             activity_output = "\n".join(
-                f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
+                f"{name}: {metric}"
+                for name, metric in zip(
+                    ["Messages", "Activity blocks"], activity_output
+                )
             )
 
         return ("Activity", activity_output)
 
-    def format_fields(self, mapping: Mapping[str, Any], field_width: Optional[int] = None) -> str:
+    def format_fields(
+        self, mapping: Mapping[str, Any], field_width: Optional[int] = None
+    ) -> str:
         """Format a mapping to be readable to a human."""
         # sorting is technically superfluous but nice if you want to look for a specific field
         fields = sorted(mapping.items(), key=lambda item: item[0])
@@ -435,41 +491,45 @@ class Information(Cog):
         if field_width is None:
             field_width = len(max(mapping.keys(), key=len))
 
-        out = ''
+        out = ""
 
         for key, val in fields:
             if isinstance(val, dict):
                 # if we have dicts inside dicts we want to apply the same treatment to the inner dictionaries
                 inner_width = int(field_width * 1.6)
-                val = '\n' + self.format_fields(val, field_width=inner_width)
+                val = "\n" + self.format_fields(val, field_width=inner_width)
 
             elif isinstance(val, str):
                 # split up text since it might be long
                 text = textwrap.fill(val, width=100, replace_whitespace=False)
 
                 # indent it, I guess you could do this with `wrap` and `join` but this is nicer
-                val = textwrap.indent(text, ' ' * (field_width + len(': ')))
+                val = textwrap.indent(text, " " * (field_width + len(": ")))
 
                 # the first line is already indented so we `str.lstrip` it
                 val = val.lstrip()
 
-            if key == 'color':
+            if key == "color":
                 # makes the base 10 representation of a hex number readable to humans
                 val = hex(val)
 
-            out += '{0:>{width}}: {1}\n'.format(key, val, width=field_width)
+            out += "{0:>{width}}: {1}\n".format(key, val, width=field_width)
 
         # remove trailing whitespace
         return out.rstrip()
 
-    async def send_raw_content(self, ctx: Context, message: Message, json: bool = False) -> None:
+    async def send_raw_content(
+        self, ctx: Context, message: Message, json: bool = False
+    ) -> None:
         """
         Send information about the raw API response for a `discord.Message`.
 
         If `json` is True, send the information in a copy-pasteable Python format.
         """
         if ctx.author not in message.channel.members:
-            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
+            await ctx.send(
+                ":x: You do not have permissions to see the channel this message is in."
+            )
             return
 
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
@@ -479,17 +539,17 @@ class Information(Cog):
         paginator = Paginator()
 
         def add_content(title: str, content: str) -> None:
-            paginator.add_line(f'== {title} ==\n')
+            paginator.add_line(f"== {title} ==\n")
             # Replace backticks as it breaks out of code blocks.
             # An invisible character seemed to be the most reasonable solution. We hope it's not close to 2000.
-            paginator.add_line(content.replace('`', '`\u200b'))
+            paginator.add_line(content.replace("`", "`\u200b"))
             paginator.close_page()
 
         if message.content:
-            add_content('Raw message', message.content)
+            add_content("Raw message", message.content)
 
         transformer = pprint.pformat if json else self.format_fields
-        for field_name in ('embeds', 'attachments'):
+        for field_name in ("embeds", "attachments"):
             data = raw_data[field_name]
 
             if not data:
@@ -497,15 +557,23 @@ class Information(Cog):
 
             total = len(data)
             for current, item in enumerate(data, start=1):
-                title = f'Raw {field_name} ({current}/{total})'
+                title = f"Raw {field_name} ({current}/{total})"
                 add_content(title, transformer(item))
 
         for page in paginator.pages:
             await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    @cooldown_with_role_bypass(
+        2,
+        60 * 3,
+        BucketType.member,
+        bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES,
+    )
     @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(
+        channels=(constants.Channels.bot_commands,),
+        roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES,
+    )
     async def raw(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response."""
         await self.send_raw_content(ctx, message)

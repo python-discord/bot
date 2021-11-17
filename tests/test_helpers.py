@@ -65,21 +65,22 @@ class DiscordMocksTests(unittest.TestCase):
         self.assertIsInstance(member, discord.Member)
 
         self.assertEqual(member.name, "member")
-        self.assertListEqual(member.roles, [helpers.MockRole(name="@everyone", position=1, id=0)])
+        self.assertListEqual(
+            member.roles, [helpers.MockRole(name="@everyone", position=1, id=0)]
+        )
         self.assertEqual(member.mention, "@member")
 
     def test_mock_member_alternative_arguments(self):
         """Test if MockMember initializes with the arguments provided."""
         core_developer = helpers.MockRole(name="Core Developer", position=2)
-        member = helpers.MockMember(
-            name="Mark",
-            id=12345,
-            roles=[core_developer]
-        )
+        member = helpers.MockMember(name="Mark", id=12345, roles=[core_developer])
 
         self.assertEqual(member.name, "Mark")
         self.assertEqual(member.id, 12345)
-        self.assertListEqual(member.roles, [helpers.MockRole(name="@everyone", position=1, id=0), core_developer])
+        self.assertListEqual(
+            member.roles,
+            [helpers.MockRole(name="@everyone", position=1, id=0), core_developer],
+        )
         self.assertEqual(member.mention, "@Mark")
 
     def test_mock_member_accepts_dynamic_arguments(self):
@@ -99,7 +100,9 @@ class DiscordMocksTests(unittest.TestCase):
         # The `spec` argument makes sure `isistance` checks with `discord.Guild` pass
         self.assertIsInstance(guild, discord.Guild)
 
-        self.assertListEqual(guild.roles, [helpers.MockRole(name="@everyone", position=1, id=0)])
+        self.assertListEqual(
+            guild.roles, [helpers.MockRole(name="@everyone", position=1, id=0)]
+        )
         self.assertListEqual(guild.members, [])
 
     def test_mock_guild_alternative_arguments(self):
@@ -110,7 +113,10 @@ class DiscordMocksTests(unittest.TestCase):
             members=[helpers.MockMember(id=54321)],
         )
 
-        self.assertListEqual(guild.roles, [helpers.MockRole(name="@everyone", position=1, id=0), core_developer])
+        self.assertListEqual(
+            guild.roles,
+            [helpers.MockRole(name="@everyone", position=1, id=0), core_developer],
+        )
         self.assertListEqual(guild.members, [helpers.MockMember(id=54321)])
 
     def test_mock_guild_accepts_dynamic_arguments(self):
@@ -144,13 +150,13 @@ class DiscordMocksTests(unittest.TestCase):
     def test_mocks_allows_access_to_attributes_part_of_spec(self):
         """Accessing attributes that are valid for the objects they mock should succeed."""
         mocks = (
-            (helpers.MockGuild(), 'name'),
-            (helpers.MockRole(), 'hoist'),
-            (helpers.MockMember(), 'display_name'),
-            (helpers.MockBot(), 'user'),
-            (helpers.MockContext(), 'invoked_with'),
-            (helpers.MockTextChannel(), 'last_message'),
-            (helpers.MockMessage(), 'mention_everyone'),
+            (helpers.MockGuild(), "name"),
+            (helpers.MockRole(), "hoist"),
+            (helpers.MockMember(), "display_name"),
+            (helpers.MockBot(), "user"),
+            (helpers.MockContext(), "invoked_with"),
+            (helpers.MockTextChannel(), "last_message"),
+            (helpers.MockMessage(), "mention_everyone"),
         )
 
         for mock, valid_attribute in mocks:
@@ -161,8 +167,8 @@ class DiscordMocksTests(unittest.TestCase):
                     msg = f"accessing valid attribute `{valid_attribute}` raised an AttributeError"
                     self.fail(msg)
 
-    @unittest.mock.patch(f'{__name__}.DiscordMocksTests.subTest')
-    @unittest.mock.patch(f'{__name__}.getattr')
+    @unittest.mock.patch(f"{__name__}.DiscordMocksTests.subTest")
+    @unittest.mock.patch(f"{__name__}.getattr")
     def test_mock_allows_access_to_attributes_test(self, mock_getattr, mock_subtest):
         """The valid attribute test should raise an AssertionError after an AttributeError."""
         mock_getattr.side_effect = AttributeError
@@ -203,6 +209,7 @@ class DiscordMocksTests(unittest.TestCase):
 
     def test_create_test_on_mock_bot_closes_passed_coroutine(self):
         """`bot.loop.create_task` should close the passed coroutine object to prevent warnings."""
+
         async def dementati():
             """Dummy coroutine for testing purposes."""
 
@@ -210,7 +217,9 @@ class DiscordMocksTests(unittest.TestCase):
 
         bot = helpers.MockBot()
         bot.loop.create_task(coroutine_object)
-        with self.assertRaises(RuntimeError, msg="cannot reuse already awaited coroutine"):
+        with self.assertRaises(
+            RuntimeError, msg="cannot reuse already awaited coroutine"
+        ):
             asyncio.run(coroutine_object)
 
     def test_user_mock_uses_explicitly_passed_mention_attribute(self):
@@ -228,6 +237,7 @@ class MockObjectTests(unittest.TestCase):
 
     def test_colour_mixin(self):
         """Test if the ColourMixin adds aliasing of color -> colour for child classes."""
+
         class MockHemlock(unittest.mock.MagicMock, helpers.ColourMixin):
             pass
 
@@ -238,6 +248,7 @@ class MockObjectTests(unittest.TestCase):
 
     def test_hashable_mixin_hash_returns_id(self):
         """Test if the HashableMixing uses the id attribute for hashing."""
+
         class MockScragly(unittest.mock.Mock, helpers.HashableMixin):
             pass
 
@@ -247,6 +258,7 @@ class MockObjectTests(unittest.TestCase):
 
     def test_hashable_mixin_uses_id_for_equality_comparison(self):
         """Test if the HashableMixing uses the id attribute for hashing."""
+
         class MockScragly(helpers.HashableMixin):
             pass
 
@@ -262,6 +274,7 @@ class MockObjectTests(unittest.TestCase):
 
     def test_hashable_mixin_uses_id_for_nonequality_comparison(self):
         """Test if the HashableMixing uses the id attribute for hashing."""
+
         class MockScragly(helpers.HashableMixin):
             pass
 
@@ -314,6 +327,7 @@ class MockObjectTests(unittest.TestCase):
 
     def test_custom_mock_mixin_accepts_mock_seal(self):
         """The `CustomMockMixin` should support `unittest.mock.seal`."""
+
         class MyMock(helpers.CustomMockMixin, unittest.mock.MagicMock):
 
             child_mock_type = unittest.mock.MagicMock
@@ -333,9 +347,9 @@ class MockObjectTests(unittest.TestCase):
             (helpers.MockBot, "owner_id"),
             (helpers.MockContext, "command_failed"),
             (helpers.MockMessage, "mention_everyone"),
-            (helpers.MockEmoji, 'managed'),
-            (helpers.MockPartialEmoji, 'url'),
-            (helpers.MockReaction, 'me'),
+            (helpers.MockEmoji, "managed"),
+            (helpers.MockPartialEmoji, "url"),
+            (helpers.MockReaction, "me"),
         )
 
         for mock_type, valid_attribute in test_values:
@@ -347,6 +361,7 @@ class MockObjectTests(unittest.TestCase):
 
     def test_custom_mock_mixin_mocks_async_magic_methods_with_async_mock(self):
         """The CustomMockMixin should mock async magic methods with an AsyncMock."""
+
         class MyMock(helpers.CustomMockMixin, unittest.mock.MagicMock):
             pass
 

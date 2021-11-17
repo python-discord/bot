@@ -59,10 +59,7 @@ class AttachmentRuleTests(RuleTest):
         return tuple(
             msg
             for msg in case.recent_messages
-            if (
-                msg.author == last_message.author
-                and len(msg.attachments) > 0
-            )
+            if (msg.author == last_message.author and len(msg.attachments) > 0)
         )
 
     def get_report(self, case: DisallowedCase) -> str:

@@ -15,7 +15,7 @@ from bot import api, constants
 from bot.async_stats import AsyncStatsClient
 from bot.log import get_logger
 
-log = get_logger('bot')
+log = get_logger("bot")
 LOCALHOST = "127.0.0.1"
 
 
@@ -60,10 +60,14 @@ class Bot(commands.Bot):
         self.stats = AsyncStatsClient(self.loop, LOCALHOST)
         self._connect_statsd(statsd_url)
 
-    def _connect_statsd(self, statsd_url: str, retry_after: int = 2, attempt: int = 1) -> None:
+    def _connect_statsd(
+        self, statsd_url: str, retry_after: int = 2, attempt: int = 1
+    ) -> None:
         """Callback used to retry a connection to statsd if it should fail."""
         if attempt >= 8:
-            log.error("Reached 8 attempts trying to reconnect AsyncStatsClient. Aborting")
+            log.error(
+                "Reached 8 attempts trying to reconnect AsyncStatsClient. Aborting"
+            )
             return
 
         try:
@@ -76,7 +80,7 @@ class Bot(commands.Bot):
                 self._connect_statsd,
                 statsd_url,
                 retry_after * 2,
-                attempt + 1
+                attempt + 1,
             )
 
         # All tasks that need to block closing until finished
@@ -84,7 +88,7 @@ class Bot(commands.Bot):
 
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
-        full_cache = await self.api_client.get('bot/filter-lists')
+        full_cache = await self.api_client.get("bot/filter-lists")
 
         for item in full_cache:
             self.insert_item_into_filter_list_cache(item)
@@ -95,7 +99,9 @@ class Bot(commands.Bot):
         attempts = 0
         while True:
             try:
-                log.info(f"Attempting site connection: {attempts + 1}/{constants.URLs.connect_max_retries}")
+                log.info(
+                    f"Attempting site connection: {attempts + 1}/{constants.URLs.connect_max_retries}"
+                )
                 await self.api_client.get("healthcheck")
                 break
 
@@ -109,7 +115,9 @@ class Bot(commands.Bot):
     def create(cls) -> "Bot":
         """Create and return an instance of a Bot."""
         loop = asyncio.get_event_loop()
-        allowed_roles = list({discord.Object(id_) for id_ in constants.MODERATION_ROLES})
+        allowed_roles = list(
+            {discord.Object(id_) for id_ in constants.MODERATION_ROLES}
+        )
 
         intents = discord.Intents.all()
         intents.presences = False
@@ -126,7 +134,9 @@ class Bot(commands.Bot):
             activity=discord.Game(name=f"Commands: {constants.Bot.prefix}help"),
             case_insensitive=True,
             max_messages=10_000,
-            allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
+            allowed_mentions=discord.AllowedMentions(
+                everyone=False, roles=allowed_roles
+            ),
             intents=intents,
         )
 
@@ -169,7 +179,9 @@ class Bot(commands.Bot):
 
     def clear(self) -> None:
         """Not implemented! Re-instantiate the bot instead of attempting to re-use a closed one."""
-        raise NotImplementedError("Re-using a Bot object after closing it is not supported.")
+        raise NotImplementedError(
+            "Re-using a Bot object after closing it is not supported."
+        )
 
     async def close(self) -> None:
         """Close the Discord connection and the aiohttp session, connector, statsd client, and resolver."""
@@ -275,7 +287,9 @@ class Bot(commands.Bot):
             try:
                 webhook = await self.fetch_webhook(constants.Webhooks.dev_log)
             except discord.HTTPException as e:
-                log.error(f"Failed to fetch webhook to send empty cache warning: status {e.status}")
+                log.error(
+                    f"Failed to fetch webhook to send empty cache warning: status {e.status}"
+                )
             else:
                 await webhook.send(f"<@&{constants.Roles.admin}> {msg}")
 

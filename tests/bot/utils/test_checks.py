@@ -84,11 +84,15 @@ class ChecksTests(unittest.IsolatedAsyncioTestCase):
 
     def test_in_whitelist_check_fail_silently(self):
         """`in_whitelist_check` test no exception raised if `fail_silently` is `True`"""
-        self.assertFalse(checks.in_whitelist_check(self.ctx, roles=[2, 6], fail_silently=True))
+        self.assertFalse(
+            checks.in_whitelist_check(self.ctx, roles=[2, 6], fail_silently=True)
+        )
 
     def test_in_whitelist_check_complex(self):
         """`in_whitelist_check` test with multiple parameters"""
         self.ctx.author.roles = (MagicMock(id=1), MagicMock(id=2))
         self.ctx.channel.category_id = 3
         self.ctx.channel.id = 5
-        self.assertTrue(checks.in_whitelist_check(self.ctx, channels=[1], categories=[8], roles=[2]))
+        self.assertTrue(
+            checks.in_whitelist_check(self.ctx, channels=[1], categories=[8], roles=[2])
+        )

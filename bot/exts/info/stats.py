@@ -12,7 +12,7 @@ CHANNEL_NAME_OVERRIDES = {
     Channels.off_topic_0: "off_topic_0",
     Channels.off_topic_1: "off_topic_1",
     Channels.off_topic_2: "off_topic_2",
-    Channels.staff_lounge: "staff_lounge"
+    Channels.staff_lounge: "staff_lounge",
 }
 
 ALLOWED_CHARS = string.ascii_letters + string.digits + "_"
@@ -41,12 +41,14 @@ class Stats(Cog):
                 # of them for interesting statistics to be drawn out of this.
                 return
 
-        reformatted_name = message.channel.name.replace('-', '_')
+        reformatted_name = message.channel.name.replace("-", "_")
 
         if CHANNEL_NAME_OVERRIDES.get(message.channel.id):
             reformatted_name = CHANNEL_NAME_OVERRIDES.get(message.channel.id)
 
-        reformatted_name = "".join(char for char in reformatted_name if char in ALLOWED_CHARS)
+        reformatted_name = "".join(
+            char for char in reformatted_name if char in ALLOWED_CHARS
+        )
 
         stat_name = f"channels.{reformatted_name}"
         self.bot.stats.incr(stat_name)

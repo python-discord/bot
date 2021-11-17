@@ -14,7 +14,8 @@ from bot.bot import Bot
 from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.log import get_logger
-from bot.utils import channel as channel_utils, lock, members, scheduling
+from bot.utils import channel as channel_utils
+from bot.utils import lock, members, scheduling
 
 log = get_logger(__name__)
 
@@ -82,7 +83,9 @@ class HelpChannels(commands.Cog):
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
-        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
+        self.init_task = scheduling.create_task(
+            self.init_cog(), event_loop=self.bot.loop
+        )
 
     def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
@@ -95,27 +98,39 @@ class HelpChannels(commands.Cog):
 
         self.scheduler.cancel_all()
 
-    async def _handle_role_change(self, member: discord.Member, coro: t.Callable[..., t.Coroutine]) -> None:
+    async def _handle_role_change(
+        self, member: discord.Member, coro: t.Callable[..., t.Coroutine]
+    ) -> None:
         """
         Change `member`'s cooldown role via awaiting `coro` and handle errors.
 
         `coro` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
         """
         try:
-            await coro(self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.help_cooldown))
+            await coro(
+                self.bot.get_guild(constants.Guild.id).get_role(
+                    constants.Roles.help_cooldown
+                )
+            )
         except discord.NotFound:
-            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
+            log.debug(
+                f"Failed to change role for {member} ({member.id}): member not found"
+            )
         except discord.Forbidden:
             log.debug(
                 f"Forbidden to change role for {member} ({member.id}); "
                 f"possibly due to role hierarchy"
             )
         except discord.HTTPException as e:
-            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
+            log.error(
+                f"Failed to change role for {member} ({member.id}): {e.status} {e.code}"
+            )
 
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
-    @lock.lock_arg(f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True)
+    @lock.lock_arg(
+        f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True
+    )
     async def claim_channel(self, message: discord.Message) -> None:
         """
         Claim the channel in which the question `message` was sent.
@@ -128,7 +143,9 @@ class HelpChannels(commands.Cog):
 
         # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
         if not isinstance(message.author, discord.Member):
-            log.debug(f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM.")
+            log.debug(
+                f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM."
+            )
         else:
             await self._handle_role_change(message.author, message.author.add_roles)
 
@@ -156,7 +173,9 @@ class HelpChannels(commands.Cog):
         self.available_help_channels.remove(message.channel)
 
         # Not awaited because it may indefinitely hold the lock while waiting for a channel.
-        scheduling.create_task(self.move_to_available(), name=f"help_claim_{message.id}")
+        scheduling.create_task(
+            self.move_to_available(), name=f"help_claim_{message.id}"
+        )
 
     def create_channel_queue(self) -> asyncio.Queue:
         """
@@ -193,21 +212,29 @@ class HelpChannels(commands.Cog):
             return None
 
         log.debug(f"Creating a new dormant channel named {name}.")
-        return await self.dormant_category.create_text_channel(name, topic=HELP_CHANNEL_TOPIC)
+        return await self.dormant_category.create_text_channel(
+            name, topic=HELP_CHANNEL_TOPIC
+        )
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is in use and the user is the claimant or has a whitelisted role."""
         if ctx.channel.category != self.in_use_category:
-            log.debug(f"{ctx.author} invoked command 'close' outside an in-use help channel")
+            log.debug(
+                f"{ctx.author} invoked command 'close' outside an in-use help channel"
+            )
             return False
 
         if await _caches.claimants.get(ctx.channel.id) == ctx.author.id:
-            log.trace(f"{ctx.author} is the help channel claimant, passing the check for dormant.")
+            log.trace(
+                f"{ctx.author} is the help channel claimant, passing the check for dormant."
+            )
             self.bot.stats.incr("help.dormant_invoke.claimant")
             return True
 
         log.trace(f"{ctx.author} is not the help channel claimant, checking roles.")
-        has_role = await commands.has_any_role(*constants.HelpChannels.cmd_whitelist).predicate(ctx)
+        has_role = await commands.has_any_role(
+            *constants.HelpChannels.cmd_whitelist
+        ).predicate(ctx)
 
         if has_role:
             self.bot.stats.incr("help.dormant_invoke.staff")
@@ -224,7 +251,9 @@ class HelpChannels(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await self.unclaim_channel(ctx.channel, closed_on=_channel.ClosingReason.COMMAND)
+            await self.unclaim_channel(
+                ctx.channel, closed_on=_channel.ClosingReason.COMMAND
+            )
 
     async def get_available_candidate(self) -> discord.TextChannel:
         """
@@ -241,9 +270,15 @@ class HelpChannels(commands.Cog):
             channel = await self.create_dormant()
 
             if not channel:
-                log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
-                notify_channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
-                last_notification = await _message.notify(notify_channel, self.last_notification)
+                log.info(
+                    "Couldn't create a candidate channel; waiting to get one from the queue."
+                )
+                notify_channel = self.bot.get_channel(
+                    constants.HelpChannels.notify_channel
+                )
+                last_notification = await _message.notify(
+                    notify_channel, self.last_notification
+                )
                 if last_notification:
                     self.last_notification = last_notification
                     self.bot.stats.incr("help.out_of_channel_alerts")
@@ -268,11 +303,17 @@ class HelpChannels(commands.Cog):
         # If for some reason we have more than `max_available` channels available,
         # we should move the superfluous ones over to dormant.
         elif missing < 0:
-            log.trace(f"Moving {abs(missing)} superfluous available channels over to the Dormant category.")
-            for channel in channels[:abs(missing)]:
-                await self.unclaim_channel(channel, closed_on=_channel.ClosingReason.CLEANUP)
+            log.trace(
+                f"Moving {abs(missing)} superfluous available channels over to the Dormant category."
+            )
+            for channel in channels[: abs(missing)]:
+                await self.unclaim_channel(
+                    channel, closed_on=_channel.ClosingReason.CLEANUP
+                )
 
-        self.available_help_channels = set(_channel.get_category_channels(self.available_category))
+        self.available_help_channels = set(
+            _channel.get_category_channels(self.available_category)
+        )
 
         # Getting channels that need to be included in the dynamic message.
         await self.update_available_help_channels()
@@ -330,7 +371,9 @@ class HelpChannels(commands.Cog):
 
         log.info("Cog is ready!")
 
-    async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
+    async def move_idle_channel(
+        self, channel: discord.TextChannel, has_task: bool = True
+    ) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
 
@@ -339,7 +382,9 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        closing_time, closed_on = await _channel.get_closing_time(channel, self.init_task.done())
+        closing_time, closed_on = await _channel.get_closing_time(
+            channel, self.init_task.done()
+        )
 
         # Closing time is in the past.
         # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
@@ -361,7 +406,9 @@ class HelpChannels(commands.Cog):
                 f"scheduling it to be moved after {delay} seconds."
             )
 
-            self.scheduler.schedule_later(delay, channel.id, self.move_idle_channel(channel))
+            self.scheduler.schedule_later(
+                delay, channel.id, self.move_idle_channel(channel)
+            )
 
     async def move_to_available(self) -> None:
         """Make a channel available."""
@@ -378,7 +425,9 @@ class HelpChannels(commands.Cog):
         log.trace(f"Looking for pins stuck in #{channel} ({channel.id}).")
         for message in await channel.pins():
             await _message.pin_wrapper(message.id, channel, pin=False)
-            log.debug(f"Removed a stuck pin from #{channel} ({channel.id}). ID: {message.id}")
+            log.debug(
+                f"Removed a stuck pin from #{channel} ({channel.id}). ID: {message.id}"
+            )
 
         await _channel.move_to_bottom(
             channel=channel,
@@ -414,7 +463,9 @@ class HelpChannels(commands.Cog):
         _stats.report_counts()
 
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "channel")
-    async def unclaim_channel(self, channel: discord.TextChannel, *, closed_on: _channel.ClosingReason) -> None:
+    async def unclaim_channel(
+        self, channel: discord.TextChannel, *, closed_on: _channel.ClosingReason
+    ) -> None:
         """
         Unclaim an in-use help `channel` to make it dormant.
 
@@ -439,15 +490,19 @@ class HelpChannels(commands.Cog):
         self,
         channel: discord.TextChannel,
         claimant_id: int,
-        closed_on: _channel.ClosingReason
+        closed_on: _channel.ClosingReason,
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = await members.get_or_fetch_member(self.bot.get_guild(constants.Guild.id), claimant_id)
+        claimant = await members.get_or_fetch_member(
+            self.bot.get_guild(constants.Guild.id), claimant_id
+        )
         if claimant is None:
-            log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+            log.info(
+                f"{claimant_id} left the guild during their help session; the cooldown role won't be removed"
+            )
         else:
             await self._handle_role_change(claimant, claimant.remove_roles)
 
@@ -471,8 +526,12 @@ class HelpChannels(commands.Cog):
 
         timeout = constants.HelpChannels.idle_minutes_claimant * 60
 
-        log.trace(f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec.")
-        self.scheduler.schedule_later(timeout, channel.id, self.move_idle_channel(channel))
+        log.trace(
+            f"Scheduling #{channel} ({channel.id}) to become dormant in {timeout} sec."
+        )
+        self.scheduler.schedule_later(
+            timeout, channel.id, self.move_idle_channel(channel)
+        )
         _stats.report_counts()
 
     @commands.Cog.listener()
@@ -483,11 +542,15 @@ class HelpChannels(commands.Cog):
 
         await self.init_task
 
-        if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
+        if channel_utils.is_in_category(
+            message.channel, constants.Categories.help_available
+        ):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
 
-        elif channel_utils.is_in_category(message.channel, constants.Categories.help_in_use):
+        elif channel_utils.is_in_category(
+            message.channel, constants.Categories.help_in_use
+        ):
             await self.notify_session_participants(message)
             await _message.update_message_caches(message)
 
@@ -500,19 +563,25 @@ class HelpChannels(commands.Cog):
         """
         await self.init_task
 
-        if not channel_utils.is_in_category(msg.channel, constants.Categories.help_in_use):
+        if not channel_utils.is_in_category(
+            msg.channel, constants.Categories.help_in_use
+        ):
             return
 
         if not await _message.is_empty(msg.channel):
             return
 
-        log.info(f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task.")
+        log.info(
+            f"Claimant of #{msg.channel} ({msg.author}) deleted message, channel is empty now. Rescheduling task."
+        )
 
         # Cancel existing dormant task before scheduling new.
         self.scheduler.cancel(msg.channel.id)
 
         delay = constants.HelpChannels.deleted_idle_minutes * 60
-        self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
+        self.scheduler.schedule_later(
+            delay, msg.channel.id, self.move_idle_channel(msg.channel)
+        )
 
     async def wait_for_dormant_channel(self) -> discord.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
@@ -522,7 +591,9 @@ class HelpChannels(commands.Cog):
         self.queue_tasks.append(task)
         channel = await task
 
-        log.trace(f"Channel #{channel} ({channel.id}) finally retrieved from the queue.")
+        log.trace(
+            f"Channel #{channel} ({channel.id}) finally retrieved from the queue."
+        )
         self.queue_tasks.remove(task)
 
         return channel
@@ -531,15 +602,23 @@ class HelpChannels(commands.Cog):
         """Updates the dynamic message within #how-to-get-help for available help channels."""
         available_channels = AVAILABLE_HELP_CHANNELS.format(
             available=", ".join(
-                c.mention for c in sorted(self.available_help_channels, key=attrgetter("position"))
-            ) or None
+                c.mention
+                for c in sorted(
+                    self.available_help_channels, key=attrgetter("position")
+                )
+            )
+            or None
         )
 
         if self.dynamic_message is not None:
             try:
-                log.trace("Help channels have changed, dynamic message has been edited.")
+                log.trace(
+                    "Help channels have changed, dynamic message has been edited."
+                )
                 await self.bot.http.edit_message(
-                    constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels
+                    constants.Channels.how_to_get_help,
+                    self.dynamic_message,
+                    content=available_channels,
                 )
             except discord.NotFound:
                 pass
@@ -556,7 +635,7 @@ class HelpChannels(commands.Cog):
     @staticmethod
     def _serialise_session_participants(participants: set[int]) -> str:
         """Convert a set to a comma separated string."""
-        return ','.join(str(p) for p in participants)
+        return ",".join(str(p) for p in participants)
 
     @staticmethod
     def _deserialise_session_participants(s: str) -> set[int]:
@@ -591,9 +670,11 @@ class HelpChannels(commands.Cog):
                 title="Currently Helping",
                 description=f"You're currently helping in {message.channel.mention}",
                 color=constants.Colours.soft_green,
-                timestamp=message.created_at
+                timestamp=message.created_at,
             )
-            embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
+            embed.add_field(
+                name="Conversation", value=f"[Jump to message]({message.jump_url})"
+            )
 
             try:
                 await message.author.send(embed=embed)
@@ -607,21 +688,17 @@ class HelpChannels(commands.Cog):
                 await bot_commands_channel.send(
                     f"{message.author.mention} {constants.Emojis.cross_mark} "
                     "To receive updates on help channels you're active in, enable your DMs.",
-                    delete_after=RedirectOutput.delete_delay
+                    delete_after=RedirectOutput.delete_delay,
                 )
                 return
 
             await _caches.session_participants.set(
                 message.channel.id,
-                self._serialise_session_participants(session_participants)
+                self._serialise_session_participants(session_participants),
             )
 
     @commands.command(name="helpdm")
-    async def helpdm_command(
-        self,
-        ctx: commands.Context,
-        state_bool: bool
-    ) -> None:
+    async def helpdm_command(self, ctx: commands.Context, state_bool: bool) -> None:
         """
         Allows user to toggle "Helping" dms.
 
@@ -632,11 +709,15 @@ class HelpChannels(commands.Cog):
         state_str = "ON" if state_bool else "OFF"
 
         if state_bool == await _caches.help_dm.get(ctx.author.id, False):
-            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state_str}")
+            await ctx.send(
+                f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state_str}"
+            )
             return
 
         if state_bool:
             await _caches.help_dm.set(ctx.author.id, True)
         else:
             await _caches.help_dm.delete(ctx.author.id)
-        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")
+        await ctx.send(
+            f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!"
+        )

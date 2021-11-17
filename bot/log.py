@@ -3,7 +3,7 @@ import os
 import sys
 from logging import Logger, handlers
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 import coloredlogs
 import sentry_sdk
@@ -53,7 +53,9 @@ def setup() -> None:
 
     log_file = Path("logs", "bot.log")
     log_file.parent.mkdir(exist_ok=True)
-    file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7, encoding="utf8")
+    file_handler = handlers.RotatingFileHandler(
+        log_file, maxBytes=5242880, backupCount=7, encoding="utf8"
+    )
     file_handler.setFormatter(log_format)
 
     root_log = get_logger()
@@ -64,7 +66,7 @@ def setup() -> None:
             **coloredlogs.DEFAULT_LEVEL_STYLES,
             "trace": {"color": 246},
             "critical": {"background": "red"},
-            "debug": coloredlogs.DEFAULT_LEVEL_STYLES["info"]
+            "debug": coloredlogs.DEFAULT_LEVEL_STYLES["info"],
         }
 
     if "COLOREDLOGS_LOG_FORMAT" not in os.environ:
@@ -87,8 +89,7 @@ def setup() -> None:
 def setup_sentry() -> None:
     """Set up the Sentry logging integrations."""
     sentry_logging = LoggingIntegration(
-        level=logging.DEBUG,
-        event_level=logging.WARNING
+        level=logging.DEBUG, event_level=logging.WARNING
     )
 
     sentry_sdk.init(
@@ -97,7 +98,7 @@ def setup_sentry() -> None:
             sentry_logging,
             RedisIntegration(),
         ],
-        release=f"bot@{constants.GIT_SHA}"
+        release=f"bot@{constants.GIT_SHA}",
     )
 
 

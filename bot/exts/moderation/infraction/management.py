@@ -11,7 +11,14 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.converters import (
+    Expiry,
+    Infraction,
+    MemberOrUser,
+    Snowflake,
+    UnambiguousUser,
+    allowed_strings,
+)
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
@@ -45,8 +52,14 @@ class ModManagement(commands.Cog):
 
     # region: Edit infraction commands
 
-    @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
-    async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
+    @commands.group(
+        name="infraction",
+        aliases=("infr", "infractions", "inf", "i"),
+        invoke_without_command=True,
+    )
+    async def infraction_group(
+        self, ctx: Context, infraction: Infraction = None
+    ) -> None:
         """
         Infraction manipulation commands.
 
@@ -58,8 +71,7 @@ class ModManagement(commands.Cog):
             return
 
         embed = discord.Embed(
-            title=f"Infraction #{infraction['id']}",
-            colour=discord.Colour.orange()
+            title=f"Infraction #{infraction['id']}", colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, [infraction])
 
@@ -68,9 +80,11 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[
+            Expiry, allowed_strings("p", "permanent"), None  # noqa: F821
+        ],
         *,
-        reason: str = None
+        reason: str = None,
     ) -> None:
         """
         Append text and/or edit the duration of an infraction.
@@ -102,14 +116,16 @@ class ModManagement(commands.Cog):
 
         await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
-    @infraction_group.command(name='edit', aliases=('e',))
+    @infraction_group.command(name="edit", aliases=("e",))
     async def infraction_edit(
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[
+            Expiry, allowed_strings("p", "permanent"), None  # noqa: F821
+        ],
         *,
-        reason: str = None
+        reason: str = None,
     ) -> None:
         """
         Edit the duration and/or the reason of an infraction.
@@ -132,7 +148,9 @@ class ModManagement(commands.Cog):
         """
         if duration is None and reason is None:
             # Unlike UserInputError, the error handler will show a specified message for BadArgument
-            raise commands.BadArgument("Neither a new expiry nor a new reason was specified.")
+            raise commands.BadArgument(
+                "Neither a new expiry nor a new reason was specified."
+            )
 
         infraction_id = infraction["id"]
 
@@ -140,24 +158,26 @@ class ModManagement(commands.Cog):
         confirm_messages = []
         log_text = ""
 
-        if duration is not None and not infraction['active']:
-            if (infr_type := infraction['type']) in ('note', 'warning'):
+        if duration is not None and not infraction["active"]:
+            if (infr_type := infraction["type"]) in ("note", "warning"):
                 await ctx.send(f":x: Cannot edit the expiration of a {infr_type}.")
             else:
-                await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
+                await ctx.send(
+                    ":x: Cannot edit the expiration of an expired infraction."
+                )
             return
         elif isinstance(duration, str):
-            request_data['expires_at'] = None
+            request_data["expires_at"] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
-            request_data['expires_at'] = duration.isoformat()
-            expiry = time.format_infraction_with_duration(request_data['expires_at'])
+            request_data["expires_at"] = duration.isoformat()
+            expiry = time.format_infraction_with_duration(request_data["expires_at"])
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
 
         if reason:
-            request_data['reason'] = reason
+            request_data["reason"] = reason
             confirm_messages.append("set a new reason")
             log_text += f"""
                 Previous reason: {infraction['reason']}
@@ -168,18 +188,18 @@ class ModManagement(commands.Cog):
 
         # Update the infraction
         new_infraction = await self.bot.api_client.patch(
-            f'bot/infractions/{infraction_id}',
+            f"bot/infractions/{infraction_id}",
             json=request_data,
         )
 
         # Re-schedule infraction if the expiration has been updated
-        if 'expires_at' in request_data:
+        if "expires_at" in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
-            if infraction['expires_at']:
-                self.infractions_cog.scheduler.cancel(new_infraction['id'])
+            if infraction["expires_at"]:
+                self.infractions_cog.scheduler.cancel(new_infraction["id"])
 
             # If the infraction was not marked as permanent, schedule a new expiration task
-            if request_data['expires_at']:
+            if request_data["expires_at"]:
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
@@ -187,11 +207,11 @@ class ModManagement(commands.Cog):
                 New expiry: {until_expiration(new_infraction['expires_at']) or "Permanent"}
             """.rstrip()
 
-        changes = ' & '.join(confirm_messages)
+        changes = " & ".join(confirm_messages)
         await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
 
         # Get information about the infraction's user
-        user_id = new_infraction['user']
+        user_id = new_infraction["user"]
         user = await get_or_fetch_member(ctx.guild, user_id)
 
         if user:
@@ -206,18 +226,22 @@ class ModManagement(commands.Cog):
             colour=discord.Colour.og_blurple(),
             title="Infraction edited",
             thumbnail=thumbnail,
-            text=textwrap.dedent(f"""
+            text=textwrap.dedent(
+                f"""
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
                 Edited by: {ctx.message.author.mention}{log_text}
-            """)
+            """
+            ),
         )
 
     # endregion
     # region: Search infractions
 
-    @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: t.Union[UnambiguousUser, Snowflake, str]) -> None:
+    @infraction_group.group(name="search", aliases=("s",), invoke_without_command=True)
+    async def infraction_search_group(
+        self, ctx: Context, query: t.Union[UnambiguousUser, Snowflake, str]
+    ) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
             await self.search_user(ctx, discord.Object(query))
@@ -227,11 +251,12 @@ class ModManagement(commands.Cog):
             await self.search_user(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "userid"))
-    async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]) -> None:
+    async def search_user(
+        self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]
+    ) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
-            'bot/infractions/expanded',
-            params={'user__id': str(user.id)}
+            "bot/infractions/expanded", params={"user__id": str(user.id)}
         )
 
         if isinstance(user, (discord.Member, discord.User)):
@@ -239,14 +264,16 @@ class ModManagement(commands.Cog):
         else:
             if infraction_list:
                 user = infraction_list[0]["user"]
-                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+                user_str = (
+                    escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+                )
             else:
                 user_str = str(user.id)
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
             title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
-            colour=discord.Colour.orange()
+            colour=discord.Colour.orange(),
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
@@ -254,14 +281,13 @@ class ModManagement(commands.Cog):
     async def search_reason(self, ctx: Context, reason: str) -> None:
         """Search for infractions by their reason. Use Re2 for matching."""
         infraction_list = await self.bot.api_client.get(
-            'bot/infractions/expanded',
-            params={'search': reason}
+            "bot/infractions/expanded", params={"search": reason}
         )
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
             title=f"Infractions matching `{reason}` ({formatted_infraction_count} total)",
-            colour=discord.Colour.orange()
+            colour=discord.Colour.orange(),
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
@@ -273,7 +299,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         actor: t.Union[t.Literal["m", "me"], UnambiguousUser],
-        oldest_first: bool = False
+        oldest_first: bool = False,
     ) -> None:
         """
         Search for infractions made by `actor`.
@@ -286,22 +312,19 @@ class ModManagement(commands.Cog):
             actor = ctx.author
 
         if oldest_first:
-            ordering = 'inserted_at'  # oldest infractions first
+            ordering = "inserted_at"  # oldest infractions first
         else:
-            ordering = '-inserted_at'  # newest infractions first
+            ordering = "-inserted_at"  # newest infractions first
 
         infraction_list = await self.bot.api_client.get(
-            'bot/infractions/expanded',
-            params={
-                'actor__id': str(actor.id),
-                'ordering': ordering
-            }
+            "bot/infractions/expanded",
+            params={"actor__id": str(actor.id), "ordering": ordering},
         )
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
             title=f"Infractions by {actor} ({formatted_infraction_count} total)",
-            colour=discord.Colour.orange()
+            colour=discord.Colour.orange(),
         )
 
         await self.send_infraction_list(ctx, embed, infraction_list)
@@ -325,7 +348,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         embed: discord.Embed,
-        infractions: t.Iterable[t.Dict[str, t.Any]]
+        infractions: t.Iterable[t.Dict[str, t.Any]],
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
@@ -333,17 +356,11 @@ class ModManagement(commands.Cog):
             return
 
         lines = tuple(
-            self.infraction_to_string(infraction)
-            for infraction in infractions
+            self.infraction_to_string(infraction) for infraction in infractions
         )
 
         await LinePaginator.paginate(
-            lines,
-            ctx=ctx,
-            embed=embed,
-            empty=True,
-            max_lines=3,
-            max_size=1000
+            lines, ctx=ctx, embed=embed, empty=True, max_lines=3, max_size=1000
         )
 
     def infraction_to_string(self, infraction: t.Dict[str, t.Any]) -> str:
@@ -359,7 +376,7 @@ class ModManagement(commands.Cog):
             user_str = messages.format_user(user_obj)
         else:
             # Use the user data retrieved from the DB.
-            name = escape_markdown(user['name'])
+            name = escape_markdown(user["name"])
             user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
         if active:
@@ -372,12 +389,13 @@ class ModManagement(commands.Cog):
         else:
             date_from = datetime.fromtimestamp(
                 float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
-                timezone.utc
+                timezone.utc,
             )
             date_to = dateutil.parser.isoparse(expires_at)
             duration = humanize_delta(relativedelta(date_to, date_from))
 
-        lines = textwrap.dedent(f"""
+        lines = textwrap.dedent(
+            f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {user_str}
@@ -390,7 +408,8 @@ class ModManagement(commands.Cog):
             ID: `{infraction["id"]}`
             Reason: {infraction["reason"] or "*None*"}
             {"**===============**" if active else "==============="}
-        """)
+        """
+        )
 
         return lines.strip()
 
@@ -401,12 +420,14 @@ class ModManagement(commands.Cog):
         """Only allow moderators inside moderator channels to invoke the commands in this cog."""
         checks = [
             await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx),
-            is_mod_channel(ctx.channel)
+            is_mod_channel(ctx.channel),
         ]
         return all(checks)
 
     # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: Context, error: commands.CommandError) -> None:
+    async def cog_command_error(
+        self, ctx: Context, error: commands.CommandError
+    ) -> None:
         """Handles errors for commands within this cog."""
         if isinstance(error, commands.BadUnionArgument):
             if discord.User in error.converters:
@@ -415,9 +436,13 @@ class ModManagement(commands.Cog):
 
         elif isinstance(error, InvalidInfraction):
             if error.infraction_arg.isdigit():
-                await ctx.send(f":x: Could not find an infraction with id `{error.infraction_arg}`.")
+                await ctx.send(
+                    f":x: Could not find an infraction with id `{error.infraction_arg}`."
+                )
             else:
-                await ctx.send(f":x: `{error.infraction_arg}` is not a valid integer infraction id.")
+                await ctx.send(
+                    f":x: `{error.infraction_arg}` is not a valid integer infraction id."
+                )
             error.handled = True
 
 

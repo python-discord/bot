@@ -43,11 +43,12 @@ class PythonEnhancementProposals(Cog):
         self.last_refreshed_peps = datetime.now()
 
         async with self.bot.http_session.get(
-            PEPS_LISTING_API_URL,
-            headers=GITHUB_API_HEADERS
+            PEPS_LISTING_API_URL, headers=GITHUB_API_HEADERS
         ) as resp:
             if resp.status != 200:
-                log.warning(f"Fetching PEP URLs from GitHub API failed with code {resp.status}")
+                log.warning(
+                    f"Fetching PEP URLs from GitHub API failed with code {resp.status}"
+                )
                 return
 
             listing = await resp.json()
@@ -67,7 +68,7 @@ class PythonEnhancementProposals(Cog):
         """Get information embed about PEP 0."""
         pep_embed = Embed(
             title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            url="https://www.python.org/dev/peps/"
+            url="https://www.python.org/dev/peps/",
         )
         pep_embed.set_thumbnail(url=ICON_URL)
         pep_embed.add_field(name="Status", value="Active")
@@ -90,7 +91,7 @@ class PythonEnhancementProposals(Cog):
             return Embed(
                 title="PEP not found",
                 description=f"PEP {pep_nr} does not exist.",
-                colour=Colour.red()
+                colour=Colour.red(),
             )
 
         return None
@@ -131,13 +132,16 @@ class PythonEnhancementProposals(Cog):
             log.trace(
                 f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
             )
-            return Embed(
-                title="Unexpected error",
-                description="Unexpected HTTP error during PEP search. Please let us know.",
-                colour=Colour.red()
-            ), False
+            return (
+                Embed(
+                    title="Unexpected error",
+                    description="Unexpected HTTP error during PEP search. Please let us know.",
+                    colour=Colour.red(),
+                ),
+                False,
+            )
 
-    @command(name='pep', aliases=('get_pep', 'p'))
+    @command(name="pep", aliases=("get_pep", "p"))
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
         # Trigger typing in chat to show users that bot is responding
@@ -154,7 +158,9 @@ class PythonEnhancementProposals(Cog):
 
         await ctx.send(embed=pep_embed)
         if success:
-            log.trace(f"PEP {pep_number} getting and sending finished successfully. Increasing stat.")
+            log.trace(
+                f"PEP {pep_number} getting and sending finished successfully. Increasing stat."
+            )
             self.bot.stats.incr(f"pep_fetches.{pep_number}")
         else:
             log.trace(f"Getting PEP {pep_number} failed. Error embed sent.")

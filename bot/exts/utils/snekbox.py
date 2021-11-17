@@ -21,19 +21,19 @@ log = get_logger(__name__)
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
-    r"(?P<delim>(?P<block>```)|``?)"        # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
-    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"    # if we're in a block, match optional language (only letters plus newline)
-    r"(?:[ \t]*\n)*"                        # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all code inside the markup
-    r"\s*"                                  # any more whitespace before the end of the code markup
-    r"(?P=delim)",                          # match the exact same delimiter from the start again
-    re.DOTALL | re.IGNORECASE               # "." also matches newlines, case insensitive
+    r"(?P<delim>(?P<block>```)|``?)"  # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
+    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"  # if we're in a block, match optional language (only letters plus newline)
+    r"(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"  # extract all code inside the markup
+    r"\s*"  # any more whitespace before the end of the code markup
+    r"(?P=delim)",  # match the exact same delimiter from the start again
+    re.DOTALL | re.IGNORECASE,  # "." also matches newlines, case insensitive
 )
 RAW_CODE_REGEX = re.compile(
-    r"^(?:[ \t]*\n)*"                       # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"                        # extract all the rest as code
-    r"\s*$",                                # any trailing whitespace until the end of the string
-    re.DOTALL                               # "." also matches newlines
+    r"^(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
+    r"(?P<code>.*?)"  # extract all the rest as code
+    r"\s*$",  # any trailing whitespace until the end of the string
+    re.DOTALL,  # "." also matches newlines
 )
 
 MAX_PASTE_LEN = 10000
@@ -41,11 +41,18 @@ MAX_PASTE_LEN = 10000
 # `!eval` command whitelists and blacklists.
 NO_EVAL_CHANNELS = (Channels.python_general,)
 NO_EVAL_CATEGORIES = ()
-EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
+EVAL_ROLES = (
+    Roles.helpers,
+    Roles.moderators,
+    Roles.admins,
+    Roles.owners,
+    Roles.python_community,
+    Roles.partners,
+)
 
 SIGKILL = 9
 
-REEVAL_EMOJI = '\U0001f501'  # :repeat:
+REEVAL_EMOJI = "\U0001f501"  # :repeat:
 REEVAL_TIMEOUT = 30
 
 
@@ -60,7 +67,9 @@ class Snekbox(Cog):
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = URLs.snekbox_eval_api
         data = {"input": code}
-        async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
+        async with self.bot.http_session.post(
+            url, json=data, raise_for_status=True
+        ) as resp:
             return await resp.json()
 
     async def upload_output(self, output: str) -> Optional[str]:
@@ -85,13 +94,15 @@ class Snekbox(Cog):
             blocks = [block for block in match if block.group("block")]
 
             if len(blocks) > 1:
-                code = '\n'.join(block.group("code") for block in blocks)
+                code = "\n".join(block.group("code") for block in blocks)
                 info = "several code blocks"
             else:
                 match = match[0] if len(blocks) == 0 else blocks[0]
                 code, block, lang, delim = match.group("code", "block", "lang", "delim")
                 if block:
-                    info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
+                    info = (
+                        f"'{lang}' highlighted" if lang else "plain"
+                    ) + " code block"
                 else:
                     info = f"{delim}-enclosed inline code"
         else:
@@ -158,13 +169,18 @@ class Snekbox(Cog):
 
         if ESCAPE_REGEX.findall(output):
             paste_link = await self.upload_output(original_output)
-            return "Code block escape attempt detected; will not output result", paste_link
+            return (
+                "Code block escape attempt detected; will not output result",
+                paste_link,
+            )
 
         truncated = False
         lines = output.count("\n")
 
         if lines > 0:
-            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split('\n'), 1)]
+            output = [
+                f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), 1)
+            ]
             output = output[:11]  # Limiting to only 11 lines
             output = "\n".join(output)
 
@@ -216,10 +232,14 @@ class Snekbox(Cog):
             if filter_cog:
                 filter_triggered = await filter_cog.filter_eval(msg, ctx.message)
             if filter_triggered:
-                response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
+                response = await ctx.send(
+                    "Attempt to circumvent filter detected. Moderator team has been alerted."
+                )
             else:
                 response = await ctx.send(msg)
-            scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
+            scheduling.create_task(
+                wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop
+            )
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response
@@ -236,15 +256,13 @@ class Snekbox(Cog):
         with contextlib.suppress(NotFound):
             try:
                 _, new_message = await self.bot.wait_for(
-                    'message_edit',
+                    "message_edit",
                     check=_predicate_eval_message_edit,
-                    timeout=REEVAL_TIMEOUT
+                    timeout=REEVAL_TIMEOUT,
                 )
                 await ctx.message.add_reaction(REEVAL_EMOJI)
                 await self.bot.wait_for(
-                    'reaction_add',
-                    check=_predicate_emoji_reaction,
-                    timeout=10
+                    "reaction_add", check=_predicate_emoji_reaction, timeout=10
                 )
 
                 code = await self.get_code(new_message)
@@ -285,7 +303,7 @@ class Snekbox(Cog):
         bypass_roles=EVAL_ROLES,
         categories=NO_EVAL_CATEGORIES,
         channels=NO_EVAL_CHANNELS,
-        ping_user=False
+        ping_user=False,
     )
     async def eval_command(self, ctx: Context, *, code: str = None) -> None:
         """
@@ -337,14 +355,20 @@ class Snekbox(Cog):
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
 
-def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
+def predicate_eval_message_edit(
+    ctx: Context, old_msg: Message, new_msg: Message
+) -> bool:
     """Return True if the edited message is the context message and the content was indeed modified."""
     return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
 
 
 def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
     """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
-    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
+    return (
+        reaction.message.id == ctx.message.id
+        and user.id == ctx.author.id
+        and str(reaction) == REEVAL_EMOJI
+    )
 
 
 def setup(bot: Bot) -> None:

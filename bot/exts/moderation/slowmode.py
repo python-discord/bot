@@ -5,7 +5,7 @@ from discord import TextChannel
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, MODERATION_ROLES
+from bot.constants import MODERATION_ROLES, Channels, Emojis
 from bot.converters import DurationDelta
 from bot.log import get_logger
 from bot.utils import time
@@ -27,12 +27,12 @@ class Slowmode(Cog):
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    @group(name='slowmode', aliases=['sm'], invoke_without_command=True)
+    @group(name="slowmode", aliases=["sm"], invoke_without_command=True)
     async def slowmode_group(self, ctx: Context) -> None:
         """Get or set the slowmode delay for the text channel this was invoked in or a given text channel."""
         await ctx.send_help(ctx.command)
 
-    @slowmode_group.command(name='get', aliases=['g'])
+    @slowmode_group.command(name="get", aliases=["g"])
     async def get_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
         """Get the slowmode delay for a text channel."""
         # Use the channel this command was invoked in if one was not given
@@ -42,10 +42,14 @@ class Slowmode(Cog):
         delay = relativedelta(seconds=channel.slowmode_delay)
         humanized_delay = time.humanize_delta(delay)
 
-        await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
+        await ctx.send(
+            f"The slowmode delay for {channel.mention} is {humanized_delay}."
+        )
 
-    @slowmode_group.command(name='set', aliases=['s'])
-    async def set_slowmode(self, ctx: Context, channel: Optional[TextChannel], delay: DurationDelta) -> None:
+    @slowmode_group.command(name="set", aliases=["s"])
+    async def set_slowmode(
+        self, ctx: Context, channel: Optional[TextChannel], delay: DurationDelta
+    ) -> None:
         """Set the slowmode delay for a text channel."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
@@ -59,29 +63,36 @@ class Slowmode(Cog):
 
         # Ensure the delay is within discord's limits
         if slowmode_delay <= SLOWMODE_MAX_DELAY:
-            log.info(f'{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.')
+            log.info(
+                f"{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}."
+            )
 
             await channel.edit(slowmode_delay=slowmode_delay)
             if channel.id in COMMONLY_SLOWMODED_CHANNELS:
-                log.info(f'Recording slowmode change in stats for {channel.name}.')
-                self.bot.stats.gauge(f"slowmode.{COMMONLY_SLOWMODED_CHANNELS[channel.id]}", slowmode_delay)
+                log.info(f"Recording slowmode change in stats for {channel.name}.")
+                self.bot.stats.gauge(
+                    f"slowmode.{COMMONLY_SLOWMODED_CHANNELS[channel.id]}",
+                    slowmode_delay,
+                )
 
             await ctx.send(
-                f'{Emojis.check_mark} The slowmode delay for {channel.mention} is now {humanized_delay}.'
+                f"{Emojis.check_mark} The slowmode delay for {channel.mention} is now {humanized_delay}."
             )
 
         else:
             log.info(
-                f'{ctx.author} tried to set the slowmode delay of #{channel} to {humanized_delay}, '
-                'which is not between 0 and 6 hours.'
+                f"{ctx.author} tried to set the slowmode delay of #{channel} to {humanized_delay}, "
+                "which is not between 0 and 6 hours."
             )
 
             await ctx.send(
-                f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.'
+                f"{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours."
             )
 
-    @slowmode_group.command(name='reset', aliases=['r'])
-    async def reset_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
+    @slowmode_group.command(name="reset", aliases=["r"])
+    async def reset_slowmode(
+        self, ctx: Context, channel: Optional[TextChannel]
+    ) -> None:
         """Reset the slowmode delay for a text channel to 0 seconds."""
         await self.set_slowmode(ctx, channel, relativedelta(seconds=0))
 

@@ -8,17 +8,15 @@ async def apply(
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
     """Detects total message char count exceeding the limit sent by a single user."""
     relevant_messages = tuple(
-        msg
-        for msg in recent_messages
-        if msg.author == last_message.author
+        msg for msg in recent_messages if msg.author == last_message.author
     )
 
     total_recent_chars = sum(len(msg.content) for msg in relevant_messages)
 
-    if total_recent_chars > config['max']:
+    if total_recent_chars > config["max"]:
         return (
             f"sent {total_recent_chars} characters in {config['interval']}s",
             (last_message.author,),
-            relevant_messages
+            relevant_messages,
         )
     return None

@@ -21,9 +21,7 @@ class ModLogTests(unittest.IsolatedAsyncioTestCase):
             icon_url="foo",
             colour=discord.Colour.blue(),
             title="bar",
-            text="foo bar" * 3000
+            text="foo bar" * 3000,
         )
         embed = self.channel.send.call_args[1]["embed"]
-        self.assertEqual(
-            embed.description, ("foo bar" * 3000)[:4093] + "..."
-        )
+        self.assertEqual(embed.description, ("foo bar" * 3000)[:4093] + "...")

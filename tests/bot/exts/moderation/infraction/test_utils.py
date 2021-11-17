@@ -34,8 +34,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "id": self.user.id,
                     "in_guild": False,
                     "name": "Test user",
-                    "roles": []
-                }
+                    "roles": [],
+                },
             },
             {
                 "user": self.member,
@@ -46,8 +46,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "id": self.member.id,
                     "in_guild": False,
                     "name": "Name unknown",
-                    "roles": []
-                }
+                    "roles": [],
+                },
             },
             {
                 "user": not_user,
@@ -58,9 +58,9 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                     "id": not_user.id,
                     "in_guild": False,
                     "name": not_user.name,
-                    "roles": []
-                }
-            }
+                    "roles": [],
+                },
+            },
         ]
 
         for case in test_cases:
@@ -69,7 +69,12 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             raise_error = case["raise_error"]
             payload = case["payload"]
 
-            with self.subTest(user=user, post_result=post_result, raise_error=raise_error, payload=payload):
+            with self.subTest(
+                user=user,
+                post_result=post_result,
+                raise_error=raise_error,
+                payload=payload,
+            ):
                 self.bot.api_client.post.reset_mock(side_effect=True)
                 self.ctx.bot.api_client.post.return_value = post_result
 
@@ -80,10 +85,14 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 if raise_error:
                     self.assertIsNone(result)
                     self.ctx.send.assert_awaited_once()
-                    self.assertIn(str(raise_error.status), self.ctx.send.call_args[0][0])
+                    self.assertIn(
+                        str(raise_error.status), self.ctx.send.call_args[0][0]
+                    )
                 else:
                     self.assertEqual(result, post_result)
-                    self.bot.api_client.post.assert_awaited_once_with("bot/users", json=payload)
+                    self.bot.api_client.post.assert_awaited_once_with(
+                        "bot/users", json=payload
+                    )
 
     async def test_get_active_infraction(self):
         """
@@ -91,29 +100,48 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
         A message should be sent to the context indicating a user already has an infraction, if that's the case.
         """
-        test_case = namedtuple("test_case", ["get_return_value", "expected_output", "infraction_nr", "send_msg"])
+        test_case = namedtuple(
+            "test_case",
+            ["get_return_value", "expected_output", "infraction_nr", "send_msg"],
+        )
         test_cases = [
             test_case([], None, None, True),
-            test_case([{"id": 123987, "type": "ban"}], {"id": 123987, "type": "ban"}, "123987", False),
-            test_case([{"id": 123987, "type": "ban"}], {"id": 123987, "type": "ban"}, "123987", True)
+            test_case(
+                [{"id": 123987, "type": "ban"}],
+                {"id": 123987, "type": "ban"},
+                "123987",
+                False,
+            ),
+            test_case(
+                [{"id": 123987, "type": "ban"}],
+                {"id": 123987, "type": "ban"},
+                "123987",
+                True,
+            ),
         ]
 
         for case in test_cases:
-            with self.subTest(return_value=case.get_return_value, expected=case.expected_output):
+            with self.subTest(
+                return_value=case.get_return_value, expected=case.expected_output
+            ):
                 self.bot.api_client.get.reset_mock()
                 self.ctx.send.reset_mock()
 
                 params = {
                     "active": "true",
                     "type": "ban",
-                    "user__id": str(self.member.id)
+                    "user__id": str(self.member.id),
                 }
 
                 self.bot.api_client.get.return_value = case.get_return_value
 
-                result = await utils.get_active_infraction(self.ctx, self.member, "ban", send_msg=case.send_msg)
+                result = await utils.get_active_infraction(
+                    self.ctx, self.member, "ban", send_msg=case.send_msg
+                )
                 self.assertEqual(result, case.expected_output)
-                self.bot.api_client.get.assert_awaited_once_with("bot/infractions", params=params)
+                self.bot.api_client.get.assert_awaited_once_with(
+                    "bot/infractions", params=params
+                )
 
                 if case.send_msg and case.get_return_value:
                     self.ctx.send.assert_awaited_once()
@@ -132,40 +160,44 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         """
         test_cases = [
             {
-                "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
+                "args": (
+                    self.user,
+                    "ban",
+                    "2020-02-26 09:20 (23 hours and 59 minutes)",
+                ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Ban",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
-                        reason="No reason provided."
-                    ) + utils.INFRACTION_APPEAL_SERVER_FOOTER,
+                        reason="No reason provided.",
+                    )
+                    + utils.INFRACTION_APPEAL_SERVER_FOOTER,
                     colour=Colours.soft_red,
-                    url=utils.RULES_URL
+                    url=utils.RULES_URL,
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
-                    icon_url=Icons.token_removed
+                    icon_url=Icons.token_removed,
                 ),
-                "send_result": True
+                "send_result": True,
             },
             {
                 "args": (self.user, "warning", None, "Test reason."),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
-                        type="Warning",
-                        expires="N/A",
-                        reason="Test reason."
-                    ) + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
+                        type="Warning", expires="N/A", reason="Test reason."
+                    )
+                    + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
-                    url=utils.RULES_URL
+                    url=utils.RULES_URL,
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
-                    icon_url=Icons.token_removed
+                    icon_url=Icons.token_removed,
                 ),
-                "send_result": False
+                "send_result": False,
             },
             # Note that this test case asserts that the DM that *would* get sent to the user is formatted
             # correctly, even though that message is deliberately never sent.
@@ -174,59 +206,75 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
-                        type="Note",
-                        expires="N/A",
-                        reason="No reason provided."
-                    ) + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
+                        type="Note", expires="N/A", reason="No reason provided."
+                    )
+                    + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
-                    url=utils.RULES_URL
+                    url=utils.RULES_URL,
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
-                    icon_url=Icons.defcon_denied
+                    icon_url=Icons.defcon_denied,
                 ),
-                "send_result": False
+                "send_result": False,
             },
             {
-                "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
+                "args": (
+                    self.user,
+                    "mute",
+                    "2020-02-26 09:20 (23 hours and 59 minutes)",
+                    "Test",
+                    Icons.defcon_denied,
+                ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
                         type="Mute",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
-                        reason="Test"
-                    ) + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
+                        reason="Test",
+                    )
+                    + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
-                    url=utils.RULES_URL
+                    url=utils.RULES_URL,
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
-                    icon_url=Icons.defcon_denied
+                    icon_url=Icons.defcon_denied,
                 ),
-                "send_result": False
+                "send_result": False,
             },
             {
-                "args": (self.user, "mute", None, "foo bar" * 4000, Icons.defcon_denied),
+                "args": (
+                    self.user,
+                    "mute",
+                    None,
+                    "foo bar" * 4000,
+                    Icons.defcon_denied,
+                ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
-                        type="Mute",
-                        expires="N/A",
-                        reason="foo bar" * 4000
-                    )[:4093-utils.LONGEST_EXTRAS] + "..." + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
+                        type="Mute", expires="N/A", reason="foo bar" * 4000
+                    )[: 4093 - utils.LONGEST_EXTRAS]
+                    + "..."
+                    + utils.INFRACTION_APPEAL_MODMAIL_FOOTER,
                     colour=Colours.soft_red,
-                    url=utils.RULES_URL
+                    url=utils.RULES_URL,
                 ).set_author(
                     name=utils.INFRACTION_AUTHOR_NAME,
                     url=utils.RULES_URL,
-                    icon_url=Icons.defcon_denied
+                    icon_url=Icons.defcon_denied,
                 ),
-                "send_result": True
-            }
+                "send_result": True,
+            },
         ]
 
         for case in test_cases:
-            with self.subTest(args=case["args"], expected=case["expected_output"], send=case["send_result"]):
+            with self.subTest(
+                args=case["args"],
+                expected=case["expected_output"],
+                send=case["send_result"],
+            ):
                 send_private_embed_mock.reset_mock()
 
                 send_private_embed_mock.return_value = case["send_result"]
@@ -245,18 +293,20 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         """Should send an embed of a certain format as a DM and return `True` if DM successful."""
         test_case = namedtuple("test_case", ["args", "icon", "send_result"])
         test_cases = [
-            test_case((self.user, "Test title", "Example content"), Icons.user_verified, True),
-            test_case((self.user, "Test title", "Example content", Icons.user_update), Icons.user_update, False)
+            test_case(
+                (self.user, "Test title", "Example content"), Icons.user_verified, True
+            ),
+            test_case(
+                (self.user, "Test title", "Example content", Icons.user_update),
+                Icons.user_update,
+                False,
+            ),
         ]
 
         for case in test_cases:
             expected = Embed(
-                description="Example content",
-                colour=Colours.soft_green
-            ).set_author(
-                name="Test title",
-                icon_url=case.icon
-            )
+                description="Example content", colour=Colours.soft_green
+            ).set_author(name="Test title", icon_url=case.icon)
 
             with self.subTest(args=case.args, expected=expected):
                 send_private_embed_mock.reset_mock()
@@ -280,11 +330,13 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             test_case(True, None),
             test_case(False, HTTPException(AsyncMock(), AsyncMock())),
             test_case(False, Forbidden(AsyncMock(), AsyncMock())),
-            test_case(False, NotFound(AsyncMock(), AsyncMock()))
+            test_case(False, NotFound(AsyncMock(), AsyncMock())),
         ]
 
         for case in test_cases:
-            with self.subTest(expected=case.expected_output, raised=case.raised_exception):
+            with self.subTest(
+                expected=case.expected_output, raised=case.raised_exception
+            ):
                 self.user.send.reset_mock(side_effect=True)
                 self.user.send.side_effect = case.raised_exception
 
@@ -313,18 +365,24 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "type": "ban",
             "user": self.member.id,
             "active": False,
-            "expires_at": now.isoformat()
+            "expires_at": now.isoformat(),
         }
 
         self.ctx.bot.api_client.post.return_value = "foo"
-        actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
+        actual = await utils.post_infraction(
+            self.ctx, self.member, "ban", "Test reason", now, True, False
+        )
 
         self.assertEqual(actual, "foo")
-        self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+        self.ctx.bot.api_client.post.assert_awaited_once_with(
+            "bot/infractions", json=payload
+        )
 
     async def test_unknown_error_post_infraction(self):
         """Should send an error message to chat when a non-400 error occurs."""
-        self.ctx.bot.api_client.post.side_effect = ResponseCodeError(AsyncMock(), AsyncMock())
+        self.ctx.bot.api_client.post.side_effect = ResponseCodeError(
+            AsyncMock(), AsyncMock()
+        )
         self.ctx.bot.api_client.post.side_effect.status = 500
 
         actual = await utils.post_infraction(self.ctx, self.user, "ban", "Test reason")
@@ -335,7 +393,9 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.moderation.infraction._utils.post_user", return_value=None)
     async def test_user_not_found_none_post_infraction(self, post_user_mock):
         """Should abort and return `None` when a new user fails to be posted."""
-        self.bot.api_client.post.side_effect = ResponseCodeError(MagicMock(status=400), {"user": "foo"})
+        self.bot.api_client.post.side_effect = ResponseCodeError(
+            MagicMock(status=400), {"user": "foo"}
+        )
 
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertIsNone(actual)
@@ -350,12 +410,17 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "reason": "Test reason",
             "type": "mute",
             "user": self.user.id,
-            "active": True
+            "active": True,
         }
 
-        self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
+        self.bot.api_client.post.side_effect = [
+            ResponseCodeError(MagicMock(status=400), {"user": "foo"}),
+            "foo",
+        ]
 
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertEqual(actual, "foo")
-        self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
+        self.bot.api_client.post.assert_has_awaits(
+            [call("bot/infractions", json=payload)] * 2
+        )
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)

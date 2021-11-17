@@ -11,7 +11,8 @@ from async_rediscache import RedisCache
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Metabase as MetabaseConfig, Roles
+from bot.constants import Metabase as MetabaseConfig
+from bot.constants import Roles
 from bot.converters import allowed_strings
 from bot.log import get_logger
 from bot.utils import scheduling, send_to_paste_service
@@ -20,9 +21,7 @@ from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 
-BASE_HEADERS = {
-    "Content-Type": "application/json"
-}
+BASE_HEADERS = {"Content-Type": "application/json"}
 
 
 class Metabase(Cog):
@@ -35,12 +34,18 @@ class Metabase(Cog):
         self._session_scheduler = Scheduler(self.__class__.__name__)
 
         self.session_token: Optional[str] = None  # session_info["session_token"]: str
-        self.session_expiry: Optional[float] = None  # session_info["session_expiry"]: UtcPosixTimestamp
+        self.session_expiry: Optional[
+            float
+        ] = None  # session_info["session_expiry"]: UtcPosixTimestamp
         self.headers = BASE_HEADERS
 
-        self.exports: Dict[int, List[Dict]] = {}  # Saves the output of each question, so internal eval can access it
+        self.exports: Dict[
+            int, List[Dict]
+        ] = {}  # Saves the output of each question, so internal eval can access it
 
-        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
+        self.init_task = scheduling.create_task(
+            self.init_cog(), event_loop=self.bot.loop
+        )
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Handle ClientResponseError errors locally to invalidate token if needed."""
@@ -50,15 +55,21 @@ class Metabase(Cog):
         if error.original.status == 403:
             # User doesn't have access to the given question
             log.warning(f"Failed to auth with Metabase for {error.original.url}.")
-            await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
+            await ctx.send(
+                f":x: {ctx.author.mention} Failed to auth with Metabase for that question."
+            )
         elif error.original.status == 404:
-            await ctx.send(f":x: {ctx.author.mention} That question could not be found.")
+            await ctx.send(
+                f":x: {ctx.author.mention} That question could not be found."
+            )
         else:
             # User credentials are invalid, or the refresh failed.
             # Delete the expiry time, to force a refresh on next startup.
             await self.session_info.delete("session_expiry")
             log.exception("Session token is invalid or refresh failed.")
-            await ctx.send(f":x: {ctx.author.mention} Session token is invalid or refresh failed.")
+            await ctx.send(
+                f":x: {ctx.author.mention} Session token is invalid or refresh failed."
+            )
         error.handled = True
 
     async def init_cog(self) -> None:
@@ -82,9 +93,11 @@ class Metabase(Cog):
         """Refresh metabase session token."""
         data = {
             "username": MetabaseConfig.username,
-            "password": MetabaseConfig.password
+            "password": MetabaseConfig.password,
         }
-        async with self.bot.http_session.post(f"{MetabaseConfig.base_url}/api/session", json=data) as resp:
+        async with self.bot.http_session.post(
+            f"{MetabaseConfig.base_url}/api/session", json=data
+        ) as resp:
             json_data = await resp.json()
             self.session_token = json_data.get("id")
 
@@ -92,7 +105,9 @@ class Metabase(Cog):
         log.info("Successfully updated metabase session.")
 
         # When the creds are going to expire
-        refresh_time = arrow.utcnow() + timedelta(minutes=MetabaseConfig.max_session_age)
+        refresh_time = arrow.utcnow() + timedelta(
+            minutes=MetabaseConfig.max_session_age
+        )
 
         # Cache the session info, since login in heavily ratelimitted
         await self.session_info.set("session_token", self.session_token)
@@ -110,7 +125,7 @@ class Metabase(Cog):
         self,
         ctx: Context,
         question_id: int,
-        extension: allowed_strings("csv", "json") = "csv"
+        extension: allowed_strings("csv", "json") = "csv",
     ) -> None:
         """
         Extract data from a metabase question.
@@ -132,7 +147,9 @@ class Metabase(Cog):
 
         url = f"{MetabaseConfig.base_url}/api/card/{question_id}/query/{extension}"
 
-        async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
+        async with self.bot.http_session.post(
+            url, headers=self.headers, raise_for_status=True
+        ) as resp:
             if extension == "csv":
                 out = await resp.text(encoding="utf-8")
                 # Save the output for use with int e
@@ -165,17 +182,23 @@ class Metabase(Cog):
 
         url = f"{MetabaseConfig.base_url}/api/card/{question_id}/public_link"
 
-        async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
+        async with self.bot.http_session.post(
+            url, headers=self.headers, raise_for_status=True
+        ) as resp:
             response_json = await resp.json(encoding="utf-8")
-            sharing_url = f"{MetabaseConfig.public_url}/public/question/{response_json['uuid']}"
-            await ctx.send(f":+1: {ctx.author.mention} Here's your sharing link: {sharing_url}")
+            sharing_url = (
+                f"{MetabaseConfig.public_url}/public/question/{response_json['uuid']}"
+            )
+            await ctx.send(
+                f":+1: {ctx.author.mention} Here's your sharing link: {sharing_url}"
+            )
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow admins inside moderator channels to invoke the commands in this cog."""
         checks = [
             await has_any_role(Roles.admins).predicate(ctx),
-            is_mod_channel(ctx.channel)
+            is_mod_channel(ctx.channel),
         ]
         return all(checks)
 

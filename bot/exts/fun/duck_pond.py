@@ -55,7 +55,10 @@ class DuckPond(Cog):
         # return True for channels that they have permissions to view.
         helper_overwrites = channel.overwrites_for(helper_role)
         default_overwrites = channel.overwrites_for(guild.default_role)
-        return default_overwrites.view_channel is None or helper_overwrites.view_channel is True
+        return (
+            default_overwrites.view_channel is None
+            or helper_overwrites.view_channel is True
+        )
 
     async def has_green_checkmark(self, message: Message) -> bool:
         """Check if the message has a green checkmark reaction."""
@@ -81,10 +84,7 @@ class DuckPond(Cog):
         Only counts ducks added by staff members.
         """
         return await count_unique_users_reaction(
-            message,
-            lambda r: self._is_duck_emoji(r.emoji),
-            self.is_staff,
-            False
+            message, lambda r: self._is_duck_emoji(r.emoji), self.is_staff, False
         )
 
     async def relay_message(self, message: Message) -> None:
@@ -94,7 +94,7 @@ class DuckPond(Cog):
                 webhook=self.webhook,
                 content=message.clean_content,
                 username=message.author.display_name,
-                avatar_url=message.author.display_avatar.url
+                avatar_url=message.author.display_avatar.url,
             )
 
         if message.attachments:
@@ -103,13 +103,13 @@ class DuckPond(Cog):
             except (errors.Forbidden, errors.NotFound):
                 e = Embed(
                     description=":x: **This message contained an attachment, but it could not be retrieved**",
-                    color=Color.red()
+                    color=Color.red(),
                 )
                 await send_webhook(
                     webhook=self.webhook,
                     embed=e,
                     username=message.author.display_name,
-                    avatar_url=message.author.display_avatar.url
+                    avatar_url=message.author.display_avatar.url,
                 )
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
@@ -194,7 +194,10 @@ class DuckPond(Cog):
         duck_count = await self.count_ducks(message)
 
         # If we've got more than the required amount of ducks, send the message to the duck_pond.
-        if duck_count >= constants.DuckPond.threshold and message.id not in self.ducked_messages:
+        if (
+            duck_count >= constants.DuckPond.threshold
+            and message.id not in self.ducked_messages
+        ):
             self.ducked_messages.append(message.id)
             await self.locked_relay(message)
 

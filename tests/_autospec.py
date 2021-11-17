@@ -38,7 +38,9 @@ unittest.mock._patch.copy = _copy
 unittest.mock._patch.decoration_helper = _decoration_helper
 
 
-def autospec(target, *attributes: str, pass_mocks: bool = True, **patch_kwargs) -> Callable:
+def autospec(
+    target, *attributes: str, pass_mocks: bool = True, **patch_kwargs
+) -> Callable:
     """
     Patch multiple `attributes` of a `target` with autospecced mocks and `spec_set` as True.
 
@@ -61,4 +63,5 @@ def autospec(target, *attributes: str, pass_mocks: bool = True, **patch_kwargs) 
                 patcher.dont_pass = True
             func = patcher(func)
         return func
+
     return decorator

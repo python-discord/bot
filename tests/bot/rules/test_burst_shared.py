@@ -27,9 +27,7 @@ class BurstSharedRuleTests(RuleTest):
 
         There really isn't more to test here than a single case.
         """
-        cases = (
-            [make_msg("spongebob"), make_msg("patrick")],
-        )
+        cases = ([make_msg("spongebob"), make_msg("patrick")],)
 
         await self.run_allowed(cases)
 

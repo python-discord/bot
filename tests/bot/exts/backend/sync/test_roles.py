@@ -54,7 +54,10 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         """Only updated roles should be added to the 'updated' set of the diff."""
         updated_role = fake_role(id=41, name="new")
 
-        self.bot.api_client.get.return_value = [fake_role(id=41, name="old"), fake_role()]
+        self.bot.api_client.get.return_value = [
+            fake_role(id=41, name="old"),
+            fake_role(),
+        ]
         guild = self.get_guild(updated_role, fake_role())
 
         actual_diff = await RoleSyncer._get_diff(guild)

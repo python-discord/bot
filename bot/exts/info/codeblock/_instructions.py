@@ -7,7 +7,9 @@ from bot.log import get_logger
 
 log = get_logger(__name__)
 
-_EXAMPLE_PY = "{lang}\nprint('Hello, world!')"  # Make sure to escape any Markdown symbols here.
+_EXAMPLE_PY = (
+    "{lang}\nprint('Hello, world!')"  # Make sure to escape any Markdown symbols here.
+)
 _EXAMPLE_CODE_BLOCKS = (
     "\\`\\`\\`{content}\n\\`\\`\\`\n\n"
     "**This will result in the following:**\n"
@@ -43,7 +45,9 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> Optional[str]:
         f"The correct symbols would be {valid_ticks}, not `{code_block.tick * 3}`."
     )
 
-    log.trace("Check if the bad ticks code block also has issues with the language specifier.")
+    log.trace(
+        "Check if the bad ticks code block also has issues with the language specifier."
+    )
     addition_msg = _get_bad_lang_message(code_block.content)
     if not addition_msg and not code_block.language:
         addition_msg = _get_no_lang_message(code_block.content)
@@ -61,7 +65,9 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> Optional[str]:
     else:
         log.trace("No issues with the language specifier found.")
         example_blocks = _get_example(code_block.language)
-        instructions += f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
+        instructions += (
+            f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
+        )
 
     return instructions
 
@@ -80,7 +86,9 @@ def _get_no_ticks_message(content: str) -> Optional[str]:
             f"**To do this, use the following method:**\n{example_blocks}"
         )
     else:
-        log.trace("Aborting missing code block instructions: content is not Python code.")
+        log.trace(
+            "Aborting missing code block instructions: content is not Python code."
+        )
 
 
 def _get_bad_lang_message(content: str) -> Optional[str]:
@@ -94,7 +102,9 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
 
     info = _parsing.parse_bad_language(content)
     if not info:
-        log.trace("Aborting bad language instructions: language specified isn't Python.")
+        log.trace(
+            "Aborting bad language instructions: language specified isn't Python."
+        )
         return
 
     lines = []
@@ -102,7 +112,9 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
 
     if info.has_leading_spaces:
         log.trace("Language specifier was preceded by a space.")
-        lines.append(f"Make sure there are no spaces between the back ticks and `{language}`.")
+        lines.append(
+            f"Make sure there are no spaces between the back ticks and `{language}`."
+        )
 
     if not info.has_terminal_newline:
         log.trace("Language specifier was not followed by a newline.")
@@ -121,7 +133,9 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
             f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
         )
     else:
-        log.trace("Nothing wrong with the language specifier; no instructions to return.")
+        log.trace(
+            "Nothing wrong with the language specifier; no instructions to return."
+        )
 
 
 def _get_no_lang_message(content: str) -> Optional[str]:
@@ -164,7 +178,9 @@ def get_instructions(content: str) -> Optional[str]:
         instructions = _get_no_ticks_message(content)
     else:
         log.trace("Searching results for a code block with invalid ticks.")
-        block = next((block for block in blocks if block.tick != _parsing.BACKTICK), None)
+        block = next(
+            (block for block in blocks if block.tick != _parsing.BACKTICK), None
+        )
 
         if block:
             log.trace("A code block exists but has invalid ticks.")
@@ -179,6 +195,8 @@ def get_instructions(content: str) -> Optional[str]:
                 instructions = _get_no_lang_message(block.content)
 
     if instructions:
-        instructions += "\nYou can **edit your original message** to correct your code block."
+        instructions += (
+            "\nYou can **edit your original message** to correct your code block."
+        )
 
     return instructions

@@ -11,8 +11,15 @@ import discord
 from bot.constants import Colours
 from bot.exts.moderation import incidents
 from tests.helpers import (
-    MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
-    MockUser
+    MockAsyncWebhook,
+    MockAttachment,
+    MockBot,
+    MockMember,
+    MockMessage,
+    MockReaction,
+    MockRole,
+    MockTextChannel,
+    MockUser,
 )
 
 
@@ -83,7 +90,9 @@ class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
 
     async def test_download_file_fail(self):
         """If `to_file` fails on a non-404 error, function logs the exception & returns None."""
-        arbitrary_error = discord.HTTPException(MagicMock(aiohttp.ClientResponse), "Arbitrary API error")
+        arbitrary_error = discord.HTTPException(
+            MagicMock(aiohttp.ClientResponse), "Arbitrary API error"
+        )
         attachment = MockAttachment(to_file=AsyncMock(side_effect=arbitrary_error))
 
         with self.assertLogs(logger=incidents.log, level=logging.ERROR):
@@ -97,14 +106,18 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
 
     async def test_make_embed_actioned(self):
         """Embed is coloured green and footer contains 'Actioned' when `outcome=Signal.ACTIONED`."""
-        embed, file = await incidents.make_embed(MockMessage(), incidents.Signal.ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(
+            MockMessage(), incidents.Signal.ACTIONED, MockMember()
+        )
 
         self.assertEqual(embed.colour.value, Colours.soft_green)
         self.assertIn("Actioned", embed.footer.text)
 
     async def test_make_embed_not_actioned(self):
         """Embed is coloured red and footer contains 'Rejected' when `outcome=Signal.NOT_ACTIONED`."""
-        embed, file = await incidents.make_embed(MockMessage(), incidents.Signal.NOT_ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(
+            MockMessage(), incidents.Signal.NOT_ACTIONED, MockMember()
+        )
 
         self.assertEqual(embed.colour.value, Colours.soft_red)
         self.assertIn("Rejected", embed.footer.text)
@@ -112,7 +125,9 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
     async def test_make_embed_content(self):
         """Incident content appears as embed description."""
         incident = MockMessage(content="this is an incident")
-        embed, file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(
+            incident, incidents.Signal.ACTIONED, MockMember()
+        )
 
         self.assertEqual(incident.content, embed.description)
 
@@ -123,8 +138,12 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
         incident = MockMessage(content="this is an incident", attachments=[attachment])
 
         # Patch `download_file` to return our `file`
-        with patch("bot.exts.moderation.incidents.download_file", AsyncMock(return_value=file)):
-            embed, returned_file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+        with patch(
+            "bot.exts.moderation.incidents.download_file", AsyncMock(return_value=file)
+        ):
+            embed, returned_file = await incidents.make_embed(
+                incident, incidents.Signal.ACTIONED, MockMember()
+            )
 
         self.assertIs(file, returned_file)
         self.assertEqual("attachment://bigbadjoe.jpg", embed.image.url)
@@ -135,14 +154,20 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
         incident = MockMessage(content="this is an incident", attachments=[attachment])
 
         # Patch `download_file` to return None as if the download failed
-        with patch("bot.exts.moderation.incidents.download_file", AsyncMock(return_value=None)):
-            embed, returned_file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+        with patch(
+            "bot.exts.moderation.incidents.download_file", AsyncMock(return_value=None)
+        ):
+            embed, returned_file = await incidents.make_embed(
+                incident, incidents.Signal.ACTIONED, MockMember()
+            )
 
         self.assertIsNone(returned_file)
 
         # The author name field is simply expected to have something in it, we do not assert the message
         self.assertGreater(len(embed.author.name), 0)
-        self.assertEqual(embed.author.url, "discord.com/bigbadjoe.jpg")  # However, it should link the exact url
+        self.assertEqual(
+            embed.author.url, "discord.com/bigbadjoe.jpg"
+        )  # However, it should link the exact url
 
 
 @patch("bot.constants.Channels.incidents", 123)
@@ -260,7 +285,10 @@ class TestAddSignals(unittest.IsolatedAsyncioTestCase):
         await incidents.add_signals(self.incident)
         self.incident.add_reaction.assert_has_calls([call("B")])
 
-    @patch("bot.exts.moderation.incidents.own_reactions", MagicMock(return_value={"A", "B"}))
+    @patch(
+        "bot.exts.moderation.incidents.own_reactions",
+        MagicMock(return_value={"A", "B"}),
+    )
     async def test_add_signals_present(self):
         """No emoji are added when all are present."""
         await incidents.add_signals(self.incident)
@@ -286,7 +314,9 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
         self.cog_instance = incidents.Incidents(MockBot())
 
 
-@patch("asyncio.sleep", AsyncMock())  # Prevent the coro from sleeping to speed up the test
+@patch(
+    "asyncio.sleep", AsyncMock()
+)  # Prevent the coro from sleeping to speed up the test
 class TestCrawlIncidents(TestIncidents):
     """
     Tests for the `Incidents.crawl_incidents` coroutine.
@@ -307,7 +337,9 @@ class TestCrawlIncidents(TestIncidents):
         super().setUp()  # First ensure we get `cog_instance` from parent
 
         incidents_history = MagicMock(return_value=MockAsyncIterable([MockMessage()]))
-        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(history=incidents_history))
+        self.cog_instance.bot.get_channel = MagicMock(
+            return_value=MockTextChannel(history=incidents_history)
+        )
 
     async def test_crawl_incidents_waits_until_cache_ready(self):
         """
@@ -320,7 +352,9 @@ class TestCrawlIncidents(TestIncidents):
         self.cog_instance.bot.wait_until_guild_available.assert_awaited()
 
     @patch("bot.exts.moderation.incidents.add_signals", AsyncMock())
-    @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=False))  # Message doesn't qualify
+    @patch(
+        "bot.exts.moderation.incidents.is_incident", MagicMock(return_value=False)
+    )  # Message doesn't qualify
     @patch("bot.exts.moderation.incidents.has_signals", MagicMock(return_value=False))
     async def test_crawl_incidents_noop_if_is_not_incident(self):
         """Signals are not added for a non-incident message."""
@@ -328,16 +362,24 @@ class TestCrawlIncidents(TestIncidents):
         incidents.add_signals.assert_not_awaited()
 
     @patch("bot.exts.moderation.incidents.add_signals", AsyncMock())
-    @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True))  # Message qualifies
-    @patch("bot.exts.moderation.incidents.has_signals", MagicMock(return_value=True))  # But already has signals
+    @patch(
+        "bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True)
+    )  # Message qualifies
+    @patch(
+        "bot.exts.moderation.incidents.has_signals", MagicMock(return_value=True)
+    )  # But already has signals
     async def test_crawl_incidents_noop_if_message_already_has_signals(self):
         """Signals are not added for messages which already have them."""
         await self.cog_instance.crawl_incidents()
         incidents.add_signals.assert_not_awaited()
 
     @patch("bot.exts.moderation.incidents.add_signals", AsyncMock())
-    @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True))  # Message qualifies
-    @patch("bot.exts.moderation.incidents.has_signals", MagicMock(return_value=False))  # And doesn't have signals
+    @patch(
+        "bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True)
+    )  # Message qualifies
+    @patch(
+        "bot.exts.moderation.incidents.has_signals", MagicMock(return_value=False)
+    )  # And doesn't have signals
     async def test_crawl_incidents_add_signals_called(self):
         """Message has signals added as it does not have them yet and qualifies as an incident."""
         await self.cog_instance.crawl_incidents()
@@ -356,7 +398,9 @@ class TestArchive(TestIncidents):
         """
         self.cog_instance.bot.fetch_webhook = AsyncMock(side_effect=mock_404)
         self.assertFalse(
-            await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock(), actioned_by=MockMember())
+            await self.cog_instance.archive(
+                incident=MockMessage(), outcome=MagicMock(), actioned_by=MockMember()
+            )
         )
 
     async def test_archive_relays_incident(self):
@@ -367,18 +411,29 @@ class TestArchive(TestIncidents):
         and that the `archive` method returns True.
         """
         webhook = MockAsyncWebhook()
-        self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)  # Patch in our webhook
+        self.cog_instance.bot.fetch_webhook = AsyncMock(
+            return_value=webhook
+        )  # Patch in our webhook
 
         # Define our own `incident` to be archived
         incident = MockMessage(
             content="this is an incident",
-            author=MockUser(name="author_name", display_avatar=Mock(url="author_avatar")),
+            author=MockUser(
+                name="author_name", display_avatar=Mock(url="author_avatar")
+            ),
             id=123,
         )
-        built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
+        built_embed = MagicMock(
+            discord.Embed, id=123
+        )  # We patch `make_embed` to return this
 
-        with patch("bot.exts.moderation.incidents.make_embed", AsyncMock(return_value=(built_embed, None))):
-            archive_return = await self.cog_instance.archive(incident, MagicMock(value="A"), MockMember())
+        with patch(
+            "bot.exts.moderation.incidents.make_embed",
+            AsyncMock(return_value=(built_embed, None)),
+        ):
+            archive_return = await self.cog_instance.archive(
+                incident, MagicMock(value="A"), MockMember()
+            )
 
         # Now we check that the webhook was given the correct args, and that `archive` returned True
         webhook.send.assert_called_once_with(
@@ -404,7 +459,9 @@ class TestArchive(TestIncidents):
         self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)
 
         message_from_clyde = MockMessage(author=MockUser(name="clyde the great"))
-        await self.cog_instance.archive(message_from_clyde, MagicMock(incidents.Signal), MockMember())
+        await self.cog_instance.archive(
+            message_from_clyde, MagicMock(incidents.Signal), MockMember()
+        )
 
         self.assertNotIn("clyde", webhook.send.call_args.kwargs["username"])
 
@@ -445,7 +502,9 @@ class TestMakeConfirmationTask(TestIncidents):
 
 
 @patch("bot.exts.moderation.incidents.ALLOWED_ROLES", {1, 2})
-@patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", AsyncMock())  # Generic awaitable
+@patch(
+    "bot.exts.moderation.incidents.Incidents.make_confirmation_task", AsyncMock()
+)  # Generic awaitable
 class TestProcessEvent(TestIncidents):
     """Tests for the `Incidents.process_event` coroutine."""
 
@@ -472,7 +531,9 @@ class TestProcessEvent(TestIncidents):
 
     async def test_process_event_no_archive_on_investigating(self):
         """Message is not archived on `Signal.INVESTIGATING`."""
-        with patch("bot.exts.moderation.incidents.Incidents.archive", AsyncMock()) as mocked_archive:
+        with patch(
+            "bot.exts.moderation.incidents.Incidents.archive", AsyncMock()
+        ) as mocked_archive:
             await self.cog_instance.process_event(
                 reaction=incidents.Signal.INVESTIGATING.value,
                 incident=MockMessage(),
@@ -490,11 +551,14 @@ class TestProcessEvent(TestIncidents):
         """
         incident = MockMessage()
 
-        with patch("bot.exts.moderation.incidents.Incidents.archive", AsyncMock(return_value=False)):
+        with patch(
+            "bot.exts.moderation.incidents.Incidents.archive",
+            AsyncMock(return_value=False),
+        ):
             await self.cog_instance.process_event(
                 reaction=incidents.Signal.ACTIONED.value,
                 incident=incident,
-                member=MockMember(roles=[MockRole(id=1)])
+                member=MockMember(roles=[MockRole(id=1)]),
             )
 
         incident.delete.assert_not_called()
@@ -503,11 +567,13 @@ class TestProcessEvent(TestIncidents):
         """Task given by `Incidents.make_confirmation_task` is awaited before method exits."""
         mock_task = AsyncMock()
 
-        with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
+        with patch(
+            "bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task
+        ):
             await self.cog_instance.process_event(
                 reaction=incidents.Signal.ACTIONED.value,
                 incident=MockMessage(),
-                member=MockMember(roles=[MockRole(id=1)])
+                member=MockMember(roles=[MockRole(id=1)]),
             )
 
         mock_task.assert_awaited()
@@ -523,14 +589,19 @@ class TestProcessEvent(TestIncidents):
         mock_task = AsyncMock(side_effect=asyncio.TimeoutError())
 
         try:
-            with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
+            with patch(
+                "bot.exts.moderation.incidents.Incidents.make_confirmation_task",
+                mock_task,
+            ):
                 await self.cog_instance.process_event(
                     reaction=incidents.Signal.ACTIONED.value,
                     incident=MockMessage(),
-                    member=MockMember(roles=[MockRole(id=1)])
+                    member=MockMember(roles=[MockRole(id=1)]),
                 )
         except asyncio.TimeoutError:
-            self.fail("TimeoutError was not handled gracefully, and propagated out of `process_event`!")
+            self.fail(
+                "TimeoutError was not handled gracefully, and propagated out of `process_event`!"
+            )
 
 
 class TestResolveMessage(TestIncidents):
@@ -549,7 +620,9 @@ class TestResolveMessage(TestIncidents):
         internally is considered d.py's responsibility, not ours.
         """
         cached_message = MockMessage(id=123)
-        self.cog_instance.bot._connection._get_message = MagicMock(return_value=cached_message)
+        self.cog_instance.bot._connection._get_message = MagicMock(
+            return_value=cached_message
+        )
 
         return_value = await self.cog_instance.resolve_message(123)
 
@@ -563,12 +636,16 @@ class TestResolveMessage(TestIncidents):
         This is desired behaviour for messages which exist, but were sent before the bot's
         current session.
         """
-        self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
+        self.cog_instance.bot._connection._get_message = MagicMock(
+            return_value=None
+        )  # Cache returns None
 
         # API returns our message
         uncached_message = MockMessage()
         fetch_message = AsyncMock(return_value=uncached_message)
-        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(fetch_message=fetch_message))
+        self.cog_instance.bot.get_channel = MagicMock(
+            return_value=MockTextChannel(fetch_message=fetch_message)
+        )
 
         retrieved_message = await self.cog_instance.resolve_message(123)
         self.assertIs(retrieved_message, uncached_message)
@@ -581,10 +658,14 @@ class TestResolveMessage(TestIncidents):
         to the archive and delete the original. Once event B acquires the `event_lock`,
         it will not find the message in the cache, and will ask the API.
         """
-        self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
+        self.cog_instance.bot._connection._get_message = MagicMock(
+            return_value=None
+        )  # Cache returns None
 
         fetch_message = AsyncMock(side_effect=mock_404)
-        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(fetch_message=fetch_message))
+        self.cog_instance.bot.get_channel = MagicMock(
+            return_value=MockTextChannel(fetch_message=fetch_message)
+        )
 
         self.assertIsNone(await self.cog_instance.resolve_message(123))
 
@@ -595,14 +676,18 @@ class TestResolveMessage(TestIncidents):
         In contrast with a 404, this should make an error-level log. We assert that at least
         one such log was made - we do not make any assertions about the log's message.
         """
-        self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
+        self.cog_instance.bot._connection._get_message = MagicMock(
+            return_value=None
+        )  # Cache returns None
 
         arbitrary_error = discord.HTTPException(
             response=MagicMock(aiohttp.ClientResponse),
             message="Arbitrary error",
         )
         fetch_message = AsyncMock(side_effect=arbitrary_error)
-        self.cog_instance.bot.get_channel = MagicMock(return_value=MockTextChannel(fetch_message=fetch_message))
+        self.cog_instance.bot.get_channel = MagicMock(
+            return_value=MockTextChannel(fetch_message=fetch_message)
+        )
 
         with self.assertLogs(logger=incidents.log, level=logging.ERROR):
             self.assertIsNone(await self.cog_instance.resolve_message(123))
@@ -705,7 +790,9 @@ class TestOnRawReactionAdd(TestIncidents):
         self.cog_instance.process_event = AsyncMock()
         self.cog_instance.resolve_message = AsyncMock(return_value=MockMessage())
 
-        with patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=False)):
+        with patch(
+            "bot.exts.moderation.incidents.is_incident", MagicMock(return_value=False)
+        ):
             await self.cog_instance.on_raw_reaction_add(self.payload)
 
         self.cog_instance.process_event.assert_not_called()
@@ -726,7 +813,9 @@ class TestOnRawReactionAdd(TestIncidents):
         self.cog_instance.process_event = AsyncMock()
         self.cog_instance.resolve_message = AsyncMock(return_value=incident)
 
-        with patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True)):
+        with patch(
+            "bot.exts.moderation.incidents.is_incident", MagicMock(return_value=True)
+        ):
             await self.cog_instance.on_raw_reaction_add(self.payload)
 
         self.cog_instance.process_event.assert_called_with(
@@ -749,7 +838,9 @@ class TestOnMessage(TestIncidents):
         """Messages qualifying as incidents are passed to `add_signals`."""
         incident = MockMessage()
 
-        with patch("bot.exts.moderation.incidents.add_signals", AsyncMock()) as mock_add_signals:
+        with patch(
+            "bot.exts.moderation.incidents.add_signals", AsyncMock()
+        ) as mock_add_signals:
             await self.cog_instance.on_message(incident)
 
         mock_add_signals.assert_called_once_with(incident)
@@ -757,7 +848,9 @@ class TestOnMessage(TestIncidents):
     @patch("bot.exts.moderation.incidents.is_incident", MagicMock(return_value=False))
     async def test_on_message_non_incident(self):
         """Messages not qualifying as incidents are ignored."""
-        with patch("bot.exts.moderation.incidents.add_signals", AsyncMock()) as mock_add_signals:
+        with patch(
+            "bot.exts.moderation.incidents.add_signals", AsyncMock()
+        ) as mock_add_signals:
             await self.cog_instance.on_message(MockMessage())
 
         mock_add_signals.assert_not_called()

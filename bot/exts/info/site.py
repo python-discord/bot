@@ -103,10 +103,14 @@ class Site(Cog):
 
         await ctx.send(embed=embed)
 
-    @site_group.command(name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule"))
+    @site_group.command(
+        name="rules", aliases=("r", "rule"), root_aliases=("rules", "rule")
+    )
     async def site_rules(self, ctx: Context, rules: Greedy[int]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title='Rules', color=Colour.og_blurple(), url=f'{BASE_URL}/pages/rules')
+        rules_embed = Embed(
+            title="Rules", color=Colour.og_blurple(), url=f"{BASE_URL}/pages/rules"
+        )
 
         if not rules:
             # Rules were not submitted. Return the default description.
@@ -119,11 +123,15 @@ class Site(Cog):
             await ctx.send(embed=rules_embed)
             return
 
-        full_rules = await self.bot.api_client.get('rules', params={'link_format': 'md'})
+        full_rules = await self.bot.api_client.get(
+            "rules", params={"link_format": "md"}
+        )
 
         # Remove duplicates and sort the rule indices
         rules = sorted(set(rules))
-        invalid = ', '.join(str(index) for index in rules if index < 1 or index > len(full_rules))
+        invalid = ", ".join(
+            str(index) for index in rules if index < 1 or index > len(full_rules)
+        )
 
         if invalid:
             await ctx.send(f":x: Invalid rule indices: {invalid}")

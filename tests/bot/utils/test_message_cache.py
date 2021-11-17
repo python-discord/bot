@@ -166,9 +166,21 @@ class TestMessageCache(unittest.TestCase):
         sizes = (5, 10, 55, 101)
 
         slices = (
-            slice(None), slice(2, None), slice(None, 2), slice(None, None, 2), slice(None, None, 3), slice(-1, 2),
-            slice(-1, 3000), slice(-3, -1), slice(-10, 3), slice(-10, 4, 2), slice(None, None, -1), slice(None, 3, -2),
-            slice(None, None, -3), slice(-1, -10, -2), slice(-3, -7, -1)
+            slice(None),
+            slice(2, None),
+            slice(None, 2),
+            slice(None, None, 2),
+            slice(None, None, 3),
+            slice(-1, 2),
+            slice(-1, 3000),
+            slice(-3, -1),
+            slice(-10, 3),
+            slice(-10, 4, 2),
+            slice(None, None, -1),
+            slice(None, 3, -2),
+            slice(None, None, -3),
+            slice(-1, -10, -2),
+            slice(-3, -7, -1),
         )
 
         for size in sizes:
@@ -187,9 +199,21 @@ class TestMessageCache(unittest.TestCase):
         sizes = (5, 10, 55, 101)
 
         slices = (
-            slice(None), slice(2, None), slice(None, 2), slice(None, None, 2), slice(None, None, 3), slice(-1, 2),
-            slice(-1, 3000), slice(-3, -1), slice(-10, 3), slice(-10, 4, 2), slice(None, None, -1), slice(None, 3, -2),
-            slice(None, None, -3), slice(-1, -10, -2), slice(-3, -7, -1)
+            slice(None),
+            slice(2, None),
+            slice(None, 2),
+            slice(None, None, 2),
+            slice(None, None, 3),
+            slice(-1, 2),
+            slice(-1, 3000),
+            slice(-3, -1),
+            slice(-10, 3),
+            slice(-10, 4, 2),
+            slice(None, None, -1),
+            slice(None, 3, -2),
+            slice(None, None, -3),
+            slice(-1, -10, -2),
+            slice(-3, -7, -1),
         )
 
         for size in sizes:
@@ -198,7 +222,7 @@ class TestMessageCache(unittest.TestCase):
 
             for msg in messages:
                 cache.append(msg)
-            messages = messages[size // 2:]
+            messages = messages[size // 2 :]
 
             for slice_ in slices:
                 with self.subTest(current_loop=(size, slice_)):

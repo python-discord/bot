@@ -27,7 +27,10 @@ def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
         log.trace(f"Channel #{channel} is a configured mod channel")
         return True
 
-    elif any(is_in_category(channel, category) for category in constants.MODERATION_CATEGORIES):
+    elif any(
+        is_in_category(channel, category)
+        for category in constants.MODERATION_CATEGORIES
+    ):
         log.trace(f"Channel #{channel} is in a configured mod category")
         return True
 

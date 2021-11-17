@@ -13,9 +13,7 @@ async def apply(
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
     """Detects total Discord emojis exceeding the limit sent by a single user."""
     relevant_messages = tuple(
-        msg
-        for msg in recent_messages
-        if msg.author == last_message.author
+        msg for msg in recent_messages if msg.author == last_message.author
     )
 
     # Get rid of code blocks in the message before searching for emojis.
@@ -25,10 +23,10 @@ async def apply(
         for msg in relevant_messages
     )
 
-    if total_emojis > config['max']:
+    if total_emojis > config["max"]:
         return (
             f"sent {total_emojis} emojis in {config['interval']}s",
             (last_message.author,),
-            relevant_messages
+            relevant_messages,
         )
     return None

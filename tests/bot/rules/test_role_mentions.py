@@ -46,9 +46,7 @@ class RoleMentionsRuleTests(RuleTest):
     def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
         last_message = case.recent_messages[0]
         return tuple(
-            msg
-            for msg in case.recent_messages
-            if msg.author == last_message.author
+            msg for msg in case.recent_messages if msg.author == last_message.author
         )
 
     def get_report(self, case: DisallowedCase) -> str:

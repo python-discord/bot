@@ -4,7 +4,7 @@ from collections import ChainMap
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Webhooks
+from bot.constants import MODERATION_ROLES, Channels, Webhooks
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction._utils import post_infraction
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
@@ -21,18 +21,22 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             bot,
             destination=Channels.big_brother_logs,
             webhook_id=Webhooks.big_brother,
-            api_endpoint='bot/infractions',
-            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at'},
-            logger=log
+            api_endpoint="bot/infractions",
+            api_default_params={
+                "active": "true",
+                "type": "watch",
+                "ordering": "-inserted_at",
+            },
+            logger=log,
         )
 
-    @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
+    @group(name="bigbrother", aliases=("bb",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def bigbrother_group(self, ctx: Context) -> None:
         """Monitors users by relaying their messages to the Big Brother watch channel."""
         await ctx.send_help(ctx.command)
 
-    @bigbrother_group.command(name='watched', aliases=('all', 'list'))
+    @bigbrother_group.command(name="watched", aliases=("all", "list"))
     @has_any_role(*MODERATION_ROLES)
     async def watched_command(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
@@ -45,9 +49,11 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
         """
-        await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
+        await self.list_watched_users(
+            ctx, oldest_first=oldest_first, update_cache=update_cache
+        )
 
-    @bigbrother_group.command(name='oldest')
+    @bigbrother_group.command(name="oldest")
     @has_any_role(*MODERATION_ROLES)
     async def oldest_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
@@ -56,11 +62,15 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         The optional kwarg `update_cache` can be used to update the user
         cache using the API before listing the users.
         """
-        await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
+        await ctx.invoke(
+            self.watched_command, oldest_first=True, update_cache=update_cache
+        )
 
-    @bigbrother_group.command(name='watch', aliases=('w',), root_aliases=('watch',))
+    @bigbrother_group.command(name="watch", aliases=("w",), root_aliases=("watch",))
     @has_any_role(*MODERATION_ROLES)
-    async def watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
+    async def watch_command(
+        self, ctx: Context, user: MemberOrUser, *, reason: str
+    ) -> None:
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
 
@@ -69,9 +79,13 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         """
         await self.apply_watch(ctx, user, reason)
 
-    @bigbrother_group.command(name='unwatch', aliases=('uw',), root_aliases=('unwatch',))
+    @bigbrother_group.command(
+        name="unwatch", aliases=("uw",), root_aliases=("unwatch",)
+    )
     @has_any_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
+    async def unwatch_command(
+        self, ctx: Context, user: MemberOrUser, *, reason: str
+    ) -> None:
         """Stop relaying messages by the given `user`."""
         await self.apply_unwatch(ctx, user, reason)
 
@@ -83,11 +97,15 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         The message will include `user`'s previous watch infraction history, if it exists.
         """
         if user.bot:
-            await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans.")
+            await ctx.send(
+                f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I only watch humans."
+            )
             return
 
         if not await self.fetch_user_cache():
-            await ctx.send(f":x: Updating the user cache failed, can't watch user {user.mention}")
+            await ctx.send(
+                f":x: Updating the user cache failed, can't watch user {user.mention}"
+            )
             return
 
         if user.id in self.watched_users:
@@ -95,11 +113,17 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             return
 
         # discord.User instances don't have a roles attribute
-        if hasattr(user, "roles") and any(role.id in MODERATION_ROLES for role in user.roles):
-            await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I must be kind to my masters.")
+        if hasattr(user, "roles") and any(
+            role.id in MODERATION_ROLES for role in user.roles
+        ):
+            await ctx.send(
+                f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I must be kind to my masters."
+            )
             return
 
-        response = await post_infraction(ctx, user, 'watch', reason, hidden=True, active=True)
+        response = await post_infraction(
+            ctx, user, "watch", reason, hidden=True, active=True
+        )
 
         if response is not None:
             self.watched_users[user.id] = response
@@ -110,14 +134,16 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
                 params={
                     "user__id": str(user.id),
                     "active": "false",
-                    'type': 'watch',
-                    'ordering': '-inserted_at'
-                }
+                    "type": "watch",
+                    "ordering": "-inserted_at",
+                },
             )
 
             if len(history) > 1:
                 total = f"({len(history) // 2} previous infractions in total)"
-                end_reason = textwrap.shorten(history[0]["reason"], width=500, placeholder="...")
+                end_reason = textwrap.shorten(
+                    history[0]["reason"], width=500, placeholder="..."
+                )
                 start_reason = f"Watched: {textwrap.shorten(history[1]['reason'], width=500, placeholder='...')}"
                 msg += f"\n\nUser's previous watch reasons {total}:```{start_reason}\n\n{end_reason}```"
         else:
@@ -125,7 +151,9 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         await ctx.send(msg)
 
-    async def apply_unwatch(self, ctx: Context, user: MemberOrUser, reason: str, send_message: bool = True) -> None:
+    async def apply_unwatch(
+        self, ctx: Context, user: MemberOrUser, reason: str, send_message: bool = True
+    ) -> None:
         """
         Remove `user` from watched users and mark their infraction as inactive with `reason`.
 
@@ -137,22 +165,25 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             params=ChainMap(
                 {"user__id": str(user.id)},
                 self.api_default_params,
-            )
+            ),
         )
         if active_watches:
             log.trace("Active watches for user found.  Attempting to remove.")
             [infraction] = active_watches
 
             await self.bot.api_client.patch(
-                f"{self.api_endpoint}/{infraction['id']}",
-                json={'active': False}
+                f"{self.api_endpoint}/{infraction['id']}", json={"active": False}
             )
 
-            await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
+            await post_infraction(
+                ctx, user, "watch", f"Unwatched: {reason}", hidden=True, active=False
+            )
 
             self._remove_user(user.id)
 
-            if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
+            if (
+                not send_message
+            ):  # Prevents a message being sent to the channel if part of a permanent ban
                 log.debug(f"Perma-banned user {user} was unwatched.")
                 return
             log.trace("User is not banned.  Sending message to channel")
@@ -160,7 +191,9 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         else:
             log.trace("No active watches found for user.")
-            if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
+            if (
+                not send_message
+            ):  # Prevents a message being sent to the channel if part of a permanent ban
                 log.debug(f"{user} was not on the watch list; no removal necessary.")
                 return
             log.trace("User is not perma banned. Send the error message.")

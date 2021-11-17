@@ -69,7 +69,9 @@ async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.M
     try:
         return await channel.history(limit=1).next()  # noqa: B305
     except discord.NoMoreItems:
-        log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
+        log.debug(
+            f"No last message available; #{channel} ({channel.id}) has no messages."
+        )
         return None
 
 
@@ -124,7 +126,9 @@ async def dm_on_open(message: discord.Message) -> None:
         )
 
 
-async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arrow]) -> t.Optional[Arrow]:
+async def notify(
+    channel: discord.TextChannel, last_notification: t.Optional[Arrow]
+) -> t.Optional[Arrow]:
     """
     Send a message in `channel` notifying about a lack of available help channels.
 
@@ -150,20 +154,28 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arr
         should_send = True
 
     if not should_send:
-        log.trace("Notification not sent because it's too recent since the previous one.")
+        log.trace(
+            "Notification not sent because it's too recent since the previous one."
+        )
         return
 
     try:
         log.trace("Sending notification message.")
 
-        mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
-        allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_roles]
+        mentions = " ".join(
+            f"<@&{role}>" for role in constants.HelpChannels.notify_roles
+        )
+        allowed_roles = [
+            discord.Object(id_) for id_ in constants.HelpChannels.notify_roles
+        ]
 
         message = await channel.send(
             f"{mentions} A new available help channel is needed but there "
             f"are no more dormant ones. Consider freeing up some in-use channels manually by "
             f"using the `{constants.Bot.prefix}dormant` command within the channels.",
-            allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
+            allowed_mentions=discord.AllowedMentions(
+                everyone=False, roles=allowed_roles
+            ),
         )
 
         return Arrow.fromdatetime(message.created_at)
@@ -195,7 +207,9 @@ async def send_available_message(channel: discord.TextChannel) -> None:
         log.trace(f"Found dormant message {msg.id} in {channel_info}; editing it.")
         await msg.edit(embed=embed)
     else:
-        log.trace(f"Dormant message not found in {channel_info}; sending a new message.")
+        log.trace(
+            f"Dormant message not found in {channel_info}; sending a new message."
+        )
         await channel.send(embed=embed)
 
 
@@ -217,7 +231,10 @@ def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> 
     if bot_msg_desc is discord.Embed.Empty:
         log.trace("Last message was a bot embed but it was empty.")
         return False
-    return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
+    return (
+        message.author == bot.instance.user
+        and bot_msg_desc.strip() == description.strip()
+    )
 
 
 async def pin_wrapper(msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:

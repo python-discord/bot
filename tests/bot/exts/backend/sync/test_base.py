@@ -18,7 +18,9 @@ class SyncerSyncTests(unittest.IsolatedAsyncioTestCase):
     """Tests for main function orchestrating the sync."""
 
     def setUp(self):
-        patcher = mock.patch("bot.instance", new=helpers.MockBot(user=helpers.MockMember(bot=True)))
+        patcher = mock.patch(
+            "bot.instance", new=helpers.MockBot(user=helpers.MockMember(bot=True))
+        )
         self.bot = patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -39,7 +41,9 @@ class SyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         )
 
         for message, side_effect, should_edit in subtests:
-            with self.subTest(message=message, side_effect=side_effect, should_edit=should_edit):
+            with self.subTest(
+                message=message, side_effect=side_effect, should_edit=should_edit
+            ):
                 TestSyncer._sync.side_effect = side_effect
                 ctx = helpers.MockContext()
                 ctx.send.return_value = message

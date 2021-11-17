@@ -37,7 +37,9 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             del member["in_guild"]
 
             mock_member = helpers.MockMember(**member)
-            mock_member.roles = [helpers.MockRole(id=role_id) for role_id in member["roles"]]
+            mock_member.roles = [
+                helpers.MockRole(id=role_id) for role_id in member["roles"]
+            ]
 
             guild.members.append(mock_member)
 
@@ -48,7 +50,9 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
         member = member.copy()
         del member["in_guild"]
         mock_member = helpers.MockMember(**member)
-        mock_member.roles = [helpers.MockRole(id=role_id) for role_id in member["roles"]]
+        mock_member.roles = [
+            helpers.MockRole(id=role_id) for role_id in member["roles"]
+        ]
         return mock_member
 
     async def test_empty_diff_for_no_users(self):
@@ -57,7 +61,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             "count": 3,
             "next_page_no": None,
             "previous_page_no": None,
-            "results": []
+            "results": [],
         }
         guild = self.get_guild()
 
@@ -72,7 +76,7 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             "count": 3,
             "next_page_no": None,
             "previous_page_no": None,
-            "results": [fake_user()]
+            "results": [fake_user()],
         }
         guild = self.get_guild(fake_user())
 
@@ -90,12 +94,12 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             "count": 3,
             "next_page_no": None,
             "previous_page_no": None,
-            "results": [fake_user(id=99, name="old"), fake_user()]
+            "results": [fake_user(id=99, name="old"), fake_user()],
         }
         guild = self.get_guild(updated_user, fake_user())
         guild.get_member.side_effect = [
             self.get_mock_member(updated_user),
-            self.get_mock_member(fake_user())
+            self.get_mock_member(fake_user()),
         ]
 
         actual_diff = await UserSyncer._get_diff(guild)
@@ -111,12 +115,12 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             "count": 3,
             "next_page_no": None,
             "previous_page_no": None,
-            "results": [fake_user()]
+            "results": [fake_user()],
         }
         guild = self.get_guild(fake_user(), new_user)
         guild.get_member.side_effect = [
             self.get_mock_member(fake_user()),
-            self.get_mock_member(new_user)
+            self.get_mock_member(new_user),
         ]
         actual_diff = await UserSyncer._get_diff(guild)
         expected_diff = ([new_user], [], None)
@@ -129,13 +133,10 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             "count": 3,
             "next_page_no": None,
             "previous_page_no": None,
-            "results": [fake_user(), fake_user(id=63)]
+            "results": [fake_user(), fake_user(id=63)],
         }
         guild = self.get_guild(fake_user())
-        guild.get_member.side_effect = [
-            self.get_mock_member(fake_user()),
-            None
-        ]
+        guild.get_member.side_effect = [self.get_mock_member(fake_user()), None]
         guild.fetch_member.side_effect = NotFound(mock.Mock(status=404), "Not found")
 
         actual_diff = await UserSyncer._get_diff(guild)
@@ -153,18 +154,22 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             "count": 3,
             "next_page_no": None,
             "previous_page_no": None,
-            "results": [fake_user(), fake_user(id=55), fake_user(id=63)]
+            "results": [fake_user(), fake_user(id=55), fake_user(id=63)],
         }
         guild = self.get_guild(fake_user(), new_user, updated_user)
         guild.get_member.side_effect = [
             self.get_mock_member(fake_user()),
             self.get_mock_member(updated_user),
-            None
+            None,
         ]
         guild.fetch_member.side_effect = NotFound(mock.Mock(status=404), "Not found")
 
         actual_diff = await UserSyncer._get_diff(guild)
-        expected_diff = ([new_user], [{"id": 55, "name": "updated"}, {"id": 63, "in_guild": False}], None)
+        expected_diff = (
+            [new_user],
+            [{"id": 55, "name": "updated"}, {"id": 63, "in_guild": False}],
+            None,
+        )
 
         self.assertEqual(actual_diff, expected_diff)
 
@@ -174,13 +179,10 @@ class UserSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
             "count": 3,
             "next_page_no": None,
             "previous_page_no": None,
-            "results": [fake_user(), fake_user(id=63, in_guild=False)]
+            "results": [fake_user(), fake_user(id=63, in_guild=False)],
         }
         guild = self.get_guild(fake_user())
-        guild.get_member.side_effect = [
-            self.get_mock_member(fake_user()),
-            None
-        ]
+        guild.get_member.side_effect = [self.get_mock_member(fake_user()), None]
         guild.fetch_member.side_effect = NotFound(mock.Mock(status=404), "Not found")
 
         actual_diff = await UserSyncer._get_diff(guild)
@@ -202,15 +204,21 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(chunk_patcher.stop)
 
         self.chunk_count = 2
-        self.users = [fake_user(id=i) for i in range(self.chunk_size * self.chunk_count)]
+        self.users = [
+            fake_user(id=i) for i in range(self.chunk_size * self.chunk_count)
+        ]
 
     async def test_sync_created_users(self):
         """Only POST requests should be made with the correct payload."""
         diff = _Diff(self.users, [], None)
         await UserSyncer._sync(diff)
 
-        self.bot.api_client.post.assert_any_call("bot/users", json=diff.created[:self.chunk_size])
-        self.bot.api_client.post.assert_any_call("bot/users", json=diff.created[self.chunk_size:])
+        self.bot.api_client.post.assert_any_call(
+            "bot/users", json=diff.created[: self.chunk_size]
+        )
+        self.bot.api_client.post.assert_any_call(
+            "bot/users", json=diff.created[self.chunk_size :]
+        )
         self.assertEqual(self.bot.api_client.post.call_count, self.chunk_count)
 
         self.bot.api_client.put.assert_not_called()
@@ -221,8 +229,12 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         diff = _Diff([], self.users, None)
         await UserSyncer._sync(diff)
 
-        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=diff.updated[:self.chunk_size])
-        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=diff.updated[self.chunk_size:])
+        self.bot.api_client.patch.assert_any_call(
+            "bot/users/bulk_patch", json=diff.updated[: self.chunk_size]
+        )
+        self.bot.api_client.patch.assert_any_call(
+            "bot/users/bulk_patch", json=diff.updated[self.chunk_size :]
+        )
         self.assertEqual(self.bot.api_client.patch.call_count, self.chunk_count)
 
         self.bot.api_client.post.assert_not_called()

@@ -12,7 +12,9 @@ from discord.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
+from bot.constants import BigBrother as BigBrotherConfig
+from bot.constants import Guild as GuildConfig
+from bot.constants import Icons
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
@@ -49,14 +51,16 @@ class WatchChannel(metaclass=CogABCMeta):
         api_default_params: dict,
         logger: CustomLogger,
         *,
-        disable_header: bool = False
+        disable_header: bool = False,
     ) -> None:
         self.bot = bot
 
         self.destination = destination  # E.g., Channels.big_brother_logs
         self.webhook_id = webhook_id  # E.g.,  Webhooks.big_brother
         self.api_endpoint = api_endpoint  # E.g., 'bot/infractions'
-        self.api_default_params = api_default_params  # E.g., {'active': 'true', 'type': 'watch'}
+        self.api_default_params = (
+            api_default_params  # E.g., {'active': 'true', 'type': 'watch'}
+        )
         self.log = logger  # Logger of the child cog for a correct name in the logs
 
         self._consume_task = None
@@ -70,7 +74,9 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_history = MessageHistory()
         self.disable_header = disable_header
 
-        self._start = scheduling.create_task(self.start_watchchannel(), event_loop=self.bot.loop)
+        self._start = scheduling.create_task(
+            self.start_watchchannel(), event_loop=self.bot.loop
+        )
 
     @property
     def modlog(self) -> ModLog:
@@ -87,8 +93,7 @@ class WatchChannel(metaclass=CogABCMeta):
             exc = self._consume_task.exception()
             if exc:
                 self.log.exception(
-                    "The message queue consume task has failed with:",
-                    exc_info=exc
+                    "The message queue consume task has failed with:", exc_info=exc
                 )
             return False
 
@@ -101,7 +106,9 @@ class WatchChannel(metaclass=CogABCMeta):
         try:
             self.channel = await self.bot.fetch_channel(self.destination)
         except HTTPException:
-            self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
+            self.log.exception(
+                f"Failed to retrieve the text channel with id `{self.destination}`"
+            )
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
@@ -127,7 +134,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 text=message,
                 ping_everyone=True,
                 icon_url=Icons.token_removed,
-                colour=Color.red()
+                colour=Color.red(),
             )
 
             self.bot.remove_cog(self.__class__.__name__)
@@ -142,7 +149,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 ),
                 ping_everyone=True,
                 icon_url=Icons.token_removed,
-                colour=Color.red()
+                colour=Color.red(),
             )
 
     async def fetch_user_cache(self) -> bool:
@@ -152,15 +159,19 @@ class WatchChannel(metaclass=CogABCMeta):
         This function returns `True` if the update succeeded.
         """
         try:
-            data = await self.bot.api_client.get(self.api_endpoint, params=self.api_default_params)
+            data = await self.bot.api_client.get(
+                self.api_endpoint, params=self.api_default_params
+            )
         except ResponseCodeError as err:
-            self.log.exception("Failed to fetch the watched users from the API", exc_info=err)
+            self.log.exception(
+                "Failed to fetch the watched users from the API", exc_info=err
+            )
             return False
 
         self.watched_users = defaultdict(dict)
 
         for entry in data:
-            user_id = entry.pop('user')
+            user_id = entry.pop("user")
             self.watched_users[user_id] = entry
 
         return True
@@ -170,15 +181,21 @@ class WatchChannel(metaclass=CogABCMeta):
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:
             if not self.consuming_messages:
-                self._consume_task = scheduling.create_task(self.consume_messages(), event_loop=self.bot.loop)
+                self._consume_task = scheduling.create_task(
+                    self.consume_messages(), event_loop=self.bot.loop
+                )
 
-            self.log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
+            self.log.trace(
+                f"Received message: {msg.content} ({len(msg.attachments)} attachments)"
+            )
             self.message_queue[msg.author.id][msg.channel.id].append(msg)
 
     async def consume_messages(self, delay_consumption: bool = True) -> None:
         """Consumes the message queues to log watched users' messages."""
         if delay_consumption:
-            self.log.trace(f"Sleeping {BigBrotherConfig.log_delay} seconds before consuming message queue")
+            self.log.trace(
+                f"Sleeping {BigBrotherConfig.log_delay} seconds before consuming message queue"
+            )
             await asyncio.sleep(BigBrotherConfig.log_delay)
 
         self.log.trace("Started consuming the message queue")
@@ -193,7 +210,9 @@ class WatchChannel(metaclass=CogABCMeta):
                 while channel_queue:
                     msg = channel_queue.popleft()
 
-                    self.log.trace(f"Consuming message {msg.id} ({len(msg.attachments)} attachments)")
+                    self.log.trace(
+                        f"Consuming message {msg.id} ({len(msg.attachments)} attachments)"
+                    )
                     await self.relay_message(msg)
 
         self.consumption_queue.clear()
@@ -217,12 +236,11 @@ class WatchChannel(metaclass=CogABCMeta):
         """Sends a message to the webhook with the specified kwargs."""
         username = messages.sub_clyde(username)
         try:
-            await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
-        except discord.HTTPException as exc:
-            self.log.exception(
-                "Failed to send a message to the webhook",
-                exc_info=exc
+            await self.webhook.send(
+                content=content, username=username, avatar_url=avatar_url, embed=embed
             )
+        except discord.HTTPException as exc:
+            self.log.exception("Failed to send a message to the webhook", exc_info=exc)
 
     async def relay_message(self, msg: Message) -> None:
         """Relays the message to the relevant watch channel."""
@@ -233,15 +251,23 @@ class WatchChannel(metaclass=CogABCMeta):
             or msg.channel.id != self.message_history.last_channel
             or self.message_history.message_count >= limit
         ):
-            self.message_history = MessageHistory(last_author=msg.author.id, last_channel=msg.channel.id)
+            self.message_history = MessageHistory(
+                last_author=msg.author.id, last_channel=msg.channel.id
+            )
 
             await self.send_header(msg)
 
-        if TokenRemover.find_token_in_message(msg) or WEBHOOK_URL_RE.search(msg.content):
-            cleaned_content = "Content is censored because it contains a bot or webhook token."
+        if TokenRemover.find_token_in_message(msg) or WEBHOOK_URL_RE.search(
+            msg.content
+        ):
+            cleaned_content = (
+                "Content is censored because it contains a bot or webhook token."
+            )
         elif cleaned_content := msg.clean_content:
             # Put all non-media URLs in a code block to prevent embeds
-            media_urls = {embed.url for embed in msg.embeds if embed.type in ("image", "video")}
+            media_urls = {
+                embed.url for embed in msg.embeds if embed.type in ("image", "video")
+            }
             for url in URL_RE.findall(cleaned_content):
                 if url not in media_urls:
                     cleaned_content = cleaned_content.replace(url, f"`{url}`")
@@ -250,7 +276,7 @@ class WatchChannel(metaclass=CogABCMeta):
             await self.webhook_send(
                 cleaned_content,
                 username=msg.author.display_name,
-                avatar_url=msg.author.display_avatar.url
+                avatar_url=msg.author.display_avatar.url,
             )
 
         if msg.attachments:
@@ -259,17 +285,16 @@ class WatchChannel(metaclass=CogABCMeta):
             except (errors.Forbidden, errors.NotFound):
                 e = Embed(
                     description=":x: **This message contained an attachment, but it could not be retrieved**",
-                    color=Color.red()
+                    color=Color.red(),
                 )
                 await self.webhook_send(
                     embed=e,
                     username=msg.author.display_name,
-                    avatar_url=msg.author.display_avatar.url
+                    avatar_url=msg.author.display_avatar.url,
                 )
             except discord.HTTPException as exc:
                 self.log.exception(
-                    "Failed to send an attachment to the webhook",
-                    exc_info=exc
+                    "Failed to send an attachment to the webhook", exc_info=exc
                 )
 
         self.message_history.message_count += 1
@@ -282,13 +307,13 @@ class WatchChannel(metaclass=CogABCMeta):
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
-        actor = await get_or_fetch_member(guild, self.watched_users[user_id]['actor'])
-        actor = actor.display_name if actor else self.watched_users[user_id]['actor']
+        actor = await get_or_fetch_member(guild, self.watched_users[user_id]["actor"])
+        actor = actor.display_name if actor else self.watched_users[user_id]["actor"]
 
-        inserted_at = self.watched_users[user_id]['inserted_at']
+        inserted_at = self.watched_users[user_id]["inserted_at"]
         time_delta = get_time_delta(inserted_at)
 
-        reason = self.watched_users[user_id]['reason']
+        reason = self.watched_users[user_id]["reason"]
 
         if isinstance(msg.channel, DMChannel):
             # If a watched user DMs the bot there won't be a channel name or jump URL
@@ -300,7 +325,11 @@ class WatchChannel(metaclass=CogABCMeta):
         footer = f"Added {time_delta} by {actor} | Reason: {reason}"
         embed = Embed(description=f"{msg.author.mention} {message_jump}\n\n{footer}")
 
-        await self.webhook_send(embed=embed, username=msg.author.display_name, avatar_url=msg.author.display_avatar.url)
+        await self.webhook_send(
+            embed=embed,
+            username=msg.author.display_name,
+            avatar_url=msg.author.display_avatar.url,
+        )
 
     async def list_watched_users(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
@@ -313,17 +342,18 @@ class WatchChannel(metaclass=CogABCMeta):
         The optional kwarg `update_cache` specifies whether the cache should
         be refreshed by polling the API.
         """
-        watched_data = await self.prepare_watched_users_data(ctx, oldest_first, update_cache)
+        watched_data = await self.prepare_watched_users_data(
+            ctx, oldest_first, update_cache
+        )
 
         if update_cache and not watched_data["updated"]:
-            await ctx.send(f":x: Failed to update {self.__class__.__name__} user cache, serving from cache")
+            await ctx.send(
+                f":x: Failed to update {self.__class__.__name__} user cache, serving from cache"
+            )
 
         lines = watched_data["info"].values() or ("There's nothing here yet.",)
 
-        embed = Embed(
-            title=watched_data["title"],
-            color=Color.blue()
-        )
+        embed = Embed(title=watched_data["title"], color=Color.blue())
         await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
     async def prepare_watched_users_data(
@@ -359,13 +389,15 @@ class WatchChannel(metaclass=CogABCMeta):
             line = f"• `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
-            inserted_at = user_data['inserted_at']
+            inserted_at = user_data["inserted_at"]
             line += f", added {get_time_delta(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"
             list_data["info"][user_id] = line
 
-        list_data["title"] = f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})"
+        list_data[
+            "title"
+        ] = f"{self.__class__.__name__} watched users ({'updated' if update_cache else 'cached'})"
 
         return list_data
 
@@ -379,6 +411,7 @@ class WatchChannel(metaclass=CogABCMeta):
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace("Unloading the cog")
         if self._consume_task and not self._consume_task.done():
+
             def done_callback(task: asyncio.Task) -> None:
                 """Send exception when consuming task have been cancelled."""
                 try:

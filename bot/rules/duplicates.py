@@ -19,10 +19,10 @@ async def apply(
 
     total_duplicated = len(relevant_messages)
 
-    if total_duplicated > config['max']:
+    if total_duplicated > config["max"]:
         return (
             f"sent {total_duplicated} duplicated messages in {config['interval']}s",
             (last_message.author,),
-            relevant_messages
+            relevant_messages,
         )
     return None

@@ -30,14 +30,10 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
         self.bot = helpers.MockBot()
 
         role_syncer_patcher = mock.patch(
-            "bot.exts.backend.sync._syncers.RoleSyncer",
-            autospec=Syncer,
-            spec_set=True
+            "bot.exts.backend.sync._syncers.RoleSyncer", autospec=Syncer, spec_set=True
         )
         user_syncer_patcher = mock.patch(
-            "bot.exts.backend.sync._syncers.UserSyncer",
-            autospec=Syncer,
-            spec_set=True
+            "bot.exts.backend.sync._syncers.UserSyncer", autospec=Syncer, spec_set=True
         )
 
         self.RoleSyncer = role_syncer_patcher.start()
@@ -131,7 +127,9 @@ class SyncCogListenerTests(SyncCogTestCase):
         super().setUp()
         self.cog.patch_user = mock.AsyncMock(spec_set=self.cog.patch_user)
 
-        self.guild_id_patcher = mock.patch("bot.exts.backend.sync._cog.constants.Guild.id", 5)
+        self.guild_id_patcher = mock.patch(
+            "bot.exts.backend.sync._cog.constants.Guild.id", 5
+        )
         self.guild_id = self.guild_id_patcher.start()
 
         self.guild = helpers.MockGuild(id=self.guild_id)
@@ -208,8 +206,7 @@ class SyncCogListenerTests(SyncCogTestCase):
 
                     if should_put:
                         self.bot.api_client.put.assert_called_once_with(
-                            f"bot/roles/{after_role.id}",
-                            json=after_role_data
+                            f"bot/roles/{after_role.id}", json=after_role_data
                         )
                     else:
                         self.bot.api_client.put.assert_not_called()
@@ -227,10 +224,7 @@ class SyncCogListenerTests(SyncCogTestCase):
         member = helpers.MockMember(guild=self.guild)
         await self.cog.on_member_remove(member)
 
-        self.cog.patch_user.assert_called_once_with(
-            member.id,
-            json={"in_guild": False}
-        )
+        self.cog.patch_user.assert_called_once_with(member.id, json={"in_guild": False})
 
     async def test_sync_cog_on_member_remove_ignores_guilds(self):
         """Events from other guilds should be ignored."""
@@ -243,7 +237,11 @@ class SyncCogListenerTests(SyncCogTestCase):
         self.assertTrue(self.cog.on_member_update.__cog_listener__)
 
         # Roles are intentionally unsorted.
-        before_roles = [helpers.MockRole(id=12), helpers.MockRole(id=30), helpers.MockRole(id=20)]
+        before_roles = [
+            helpers.MockRole(id=12),
+            helpers.MockRole(id=30),
+            helpers.MockRole(id=20),
+        ]
         before_member = helpers.MockMember(roles=before_roles, guild=self.guild)
         after_member = helpers.MockMember(roles=before_roles[1:], guild=self.guild)
 
@@ -266,8 +264,12 @@ class SyncCogListenerTests(SyncCogTestCase):
             with self.subTest(attribute=attribute):
                 self.cog.patch_user.reset_mock()
 
-                before_member = helpers.MockMember(**{attribute: old_value}, guild=self.guild)
-                after_member = helpers.MockMember(**{attribute: new_value}, guild=self.guild)
+                before_member = helpers.MockMember(
+                    **{attribute: old_value}, guild=self.guild
+                )
+                after_member = helpers.MockMember(
+                    **{attribute: new_value}, guild=self.guild
+                )
 
                 await self.cog.on_member_update(before_member, after_member)
 
@@ -340,7 +342,7 @@ class SyncCogListenerTests(SyncCogTestCase):
             "id": member.id,
             "in_guild": True,
             "name": member.name,
-            "roles": sorted(role.id for role in member.roles)
+            "roles": sorted(role.id for role in member.roles),
         }
 
         self.bot.api_client.put.reset_mock(side_effect=True)
@@ -352,8 +354,7 @@ class SyncCogListenerTests(SyncCogTestCase):
             raise
         finally:
             self.bot.api_client.put.assert_called_once_with(
-                f"bot/users/{member.id}",
-                json=data
+                f"bot/users/{member.id}", json=data
             )
 
         return data
@@ -366,7 +367,9 @@ class SyncCogListenerTests(SyncCogTestCase):
                 data = await self.on_member_join_helper(side_effect)
 
                 if side_effect:
-                    self.bot.api_client.post.assert_called_once_with("bot/users", json=data)
+                    self.bot.api_client.post.assert_called_once_with(
+                        "bot/users", json=data
+                    )
                 else:
                     self.bot.api_client.post.assert_not_called()
 

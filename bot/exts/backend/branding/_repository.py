@@ -93,7 +93,9 @@ class BrandingRepository:
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    async def fetch_directory(self, path: str, types: t.Container[str] = ("file", "dir")) -> t.Dict[str, RemoteObject]:
+    async def fetch_directory(
+        self, path: str, types: t.Container[str] = ("file", "dir")
+    ) -> t.Dict[str, RemoteObject]:
         """
         Fetch directory found at `path` in the branding repository.
 
@@ -104,14 +106,22 @@ class BrandingRepository:
         full_url = f"{BRANDING_URL}/{path}"
         log.debug(f"Fetching directory from branding repository: '{full_url}'.")
 
-        async with self.bot.http_session.get(full_url, params=PARAMS, headers=HEADERS) as response:
+        async with self.bot.http_session.get(
+            full_url, params=PARAMS, headers=HEADERS
+        ) as response:
             if response.status != 200:
-                raise RuntimeError(f"Failed to fetch directory due to status: {response.status}")
+                raise RuntimeError(
+                    f"Failed to fetch directory due to status: {response.status}"
+                )
 
             log.debug("Fetch successful, reading JSON response.")
             json_directory = await response.json()
 
-        return {file["name"]: RemoteObject(file) for file in json_directory if file["type"] in types}
+        return {
+            file["name"]: RemoteObject(file)
+            for file in json_directory
+            if file["type"] in types
+        }
 
     async def fetch_file(self, download_url: str) -> bytes:
         """
@@ -121,9 +131,13 @@ class BrandingRepository:
         """
         log.debug(f"Fetching file from branding repository: '{download_url}'.")
 
-        async with self.bot.http_session.get(download_url, params=PARAMS, headers=HEADERS) as response:
+        async with self.bot.http_session.get(
+            download_url, params=PARAMS, headers=HEADERS
+        ) as response:
             if response.status != 200:
-                raise RuntimeError(f"Failed to fetch file due to status: {response.status}")
+                raise RuntimeError(
+                    f"Failed to fetch file due to status: {response.status}"
+                )
 
             log.debug("Fetch successful, reading payload.")
             return await response.read()
@@ -140,20 +154,36 @@ class BrandingRepository:
             raise BrandingMisconfiguration("No description found in 'meta.md'!")
 
         if attrs.get("fallback", False):
-            return MetaFile(is_fallback=True, start_date=None, end_date=None, description=description)
+            return MetaFile(
+                is_fallback=True,
+                start_date=None,
+                end_date=None,
+                description=description,
+            )
 
         start_date_raw = attrs.get("start_date")
         end_date_raw = attrs.get("end_date")
 
         if None in (start_date_raw, end_date_raw):
-            raise BrandingMisconfiguration("Non-fallback event doesn't have start and end dates defined!")
+            raise BrandingMisconfiguration(
+                "Non-fallback event doesn't have start and end dates defined!"
+            )
 
         # We extend the configured month & day with an arbitrary leap year, allowing a datetime object to exist.
         # This may raise errors if misconfigured. We let the caller handle such cases.
-        start_date = datetime.strptime(f"{start_date_raw} {ARBITRARY_YEAR}", DATE_FMT).date()
-        end_date = datetime.strptime(f"{end_date_raw} {ARBITRARY_YEAR}", DATE_FMT).date()
+        start_date = datetime.strptime(
+            f"{start_date_raw} {ARBITRARY_YEAR}", DATE_FMT
+        ).date()
+        end_date = datetime.strptime(
+            f"{end_date_raw} {ARBITRARY_YEAR}", DATE_FMT
+        ).date()
 
-        return MetaFile(is_fallback=False, start_date=start_date, end_date=end_date, description=description)
+        return MetaFile(
+            is_fallback=False,
+            start_date=start_date,
+            end_date=end_date,
+            description=description,
+        )
 
     async def construct_event(self, directory: RemoteObject) -> Event:
         """
@@ -166,9 +196,13 @@ class BrandingRepository:
         missing_assets = {"meta.md", "banner.png", "server_icons"} - contents.keys()
 
         if missing_assets:
-            raise BrandingMisconfiguration(f"Directory is missing following assets: {missing_assets}")
+            raise BrandingMisconfiguration(
+                f"Directory is missing following assets: {missing_assets}"
+            )
 
-        server_icons = await self.fetch_directory(contents["server_icons"].path, types=("file",))
+        server_icons = await self.fetch_directory(
+            contents["server_icons"].path, types=("file",)
+        )
 
         if len(server_icons) == 0:
             raise BrandingMisconfiguration("Found no server icons!")
@@ -177,7 +211,12 @@ class BrandingRepository:
 
         meta_file = self.parse_meta_file(meta_bytes)
 
-        return Event(directory.path, meta_file, contents["banner.png"], list(server_icons.values()))
+        return Event(
+            directory.path,
+            meta_file,
+            contents["banner.png"],
+            list(server_icons.values()),
+        )
 
     async def get_events(self) -> t.List[Event]:
         """
@@ -188,7 +227,9 @@ class BrandingRepository:
         log.debug("Discovering events in branding repository.")
 
         try:
-            event_directories = await self.fetch_directory("events", types=("dir",))  # Skip files.
+            event_directories = await self.fetch_directory(
+                "events", types=("dir",)
+            )  # Skip files.
         except Exception:
             log.exception("Failed to fetch 'events' directory.")
             return []
@@ -196,11 +237,15 @@ class BrandingRepository:
         instances: t.List[Event] = []
 
         for event_directory in event_directories.values():
-            log.trace(f"Attempting to construct event from directory: '{event_directory.path}'.")
+            log.trace(
+                f"Attempting to construct event from directory: '{event_directory.path}'."
+            )
             try:
                 instance = await self.construct_event(event_directory)
             except Exception as exc:
-                log.warning(f"Could not construct event '{event_directory.path}'.", exc_info=exc)
+                log.warning(
+                    f"Could not construct event '{event_directory.path}'.", exc_info=exc
+                )
             else:
                 instances.append(instance)
 
@@ -227,7 +272,9 @@ class BrandingRepository:
 
         for event in available_events:
             meta = event.meta
-            if not meta.is_fallback and (meta.start_date <= lookup_now <= meta.end_date):
+            if not meta.is_fallback and (
+                meta.start_date <= lookup_now <= meta.end_date
+            ):
                 return event, available_events
 
         log.trace("No active event found. Looking for fallback event.")

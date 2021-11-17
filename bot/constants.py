@@ -19,6 +19,7 @@ import yaml
 
 try:
     import dotenv
+
     dotenv.load_dotenv()
 except ModuleNotFoundError:
     pass
@@ -40,7 +41,7 @@ def _env_var_constructor(loader, node):
     default = None
 
     # Check if the node is a plain string value
-    if node.id == 'scalar':
+    if node.id == "scalar":
         value = loader.construct_scalar(node)
         key = str(value)
     else:
@@ -114,7 +115,7 @@ def check_required_keys(keys):
     for key_path in keys:
         lookup = _CONFIG_YAML
         try:
-            for key in key_path.split('.'):
+            for key in key_path.split("."):
                 lookup = lookup[key]
                 if lookup is None:
                     raise KeyError(key)
@@ -126,7 +127,7 @@ def check_required_keys(keys):
 
 
 try:
-    required_keys = _CONFIG_YAML['config']['required_keys']
+    required_keys = _CONFIG_YAML["config"]["required_keys"]
 except KeyError:
     pass
 else:
@@ -177,11 +178,14 @@ class YAMLGetter(type):
                 return _CONFIG_YAML[cls.section][cls.subsection][name]
             return _CONFIG_YAML[cls.section][name]
         except KeyError as e:
-            dotted_path = '.'.join(
+            dotted_path = ".".join(
                 (cls.section, cls.subsection, name)
-                if cls.subsection is not None else (cls.section, name)
+                if cls.subsection is not None
+                else (cls.section, name)
             )
-            print(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            print(
+                f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found."
+            )
             raise AttributeError(repr(name)) from e
 
     def __getitem__(cls, name):
@@ -320,10 +324,10 @@ class Icons(metaclass=YAMLGetter):
     crown_green: str
     crown_red: str
 
-    defcon_denied: str    # noqa: E704
+    defcon_denied: str  # noqa: E704
     defcon_shutdown: str  # noqa: E704
-    defcon_unshutdown: str   # noqa: E704
-    defcon_update: str   # noqa: E704
+    defcon_unshutdown: str  # noqa: E704
+    defcon_update: str  # noqa: E704
 
     filtering: str
 
@@ -396,6 +400,7 @@ class Categories(metaclass=YAMLGetter):
 
     # 2021 Summer Code Jam
     summer_code_jam: int
+
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
@@ -567,7 +572,7 @@ class Metabase(metaclass=YAMLGetter):
 
 
 class AntiSpam(metaclass=YAMLGetter):
-    section = 'anti_spam'
+    section = "anti_spam"
 
     cache_size: int
 
@@ -579,14 +584,14 @@ class AntiSpam(metaclass=YAMLGetter):
 
 
 class BigBrother(metaclass=YAMLGetter):
-    section = 'big_brother'
+    section = "big_brother"
 
     header_message_limit: int
     log_delay: int
 
 
 class CodeBlock(metaclass=YAMLGetter):
-    section = 'code_block'
+    section = "code_block"
 
     channel_whitelist: List[int]
     cooldown_channels: List[int]
@@ -595,7 +600,7 @@ class CodeBlock(metaclass=YAMLGetter):
 
 
 class Free(metaclass=YAMLGetter):
-    section = 'free'
+    section = "free"
 
     activity_timeout: int
     cooldown_per: float
@@ -603,7 +608,7 @@ class Free(metaclass=YAMLGetter):
 
 
 class HelpChannels(metaclass=YAMLGetter):
-    section = 'help_channels'
+    section = "help_channels"
 
     enable: bool
     cmd_whitelist: List[int]
@@ -620,14 +625,14 @@ class HelpChannels(metaclass=YAMLGetter):
 
 
 class RedirectOutput(metaclass=YAMLGetter):
-    section = 'redirect_output'
+    section = "redirect_output"
 
     delete_delay: int
     delete_invocation: bool
 
 
 class PythonNews(metaclass=YAMLGetter):
-    section = 'python_news'
+    section = "python_news"
 
     channel: int
     webhook: int

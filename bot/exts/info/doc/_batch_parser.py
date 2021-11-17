@@ -50,7 +50,7 @@ class StaleInventoryNotifier:
                 await self._init_task
                 embed = discord.Embed(
                     description=f"Doc item `{doc_item.symbol_id=}` present in loaded documentation inventories "
-                                f"not found on [site]({doc_item.url}), inventories may need to be refreshed."
+                    f"not found on [site]({doc_item.url}), inventories may need to be refreshed."
                 )
                 await self._dev_log.send(embed=embed)
 
@@ -92,7 +92,9 @@ class BatchParser:
     def __init__(self):
         self._queue: Deque[QueueItem] = collections.deque()
         self._page_doc_items: Dict[str, List[_cog.DocItem]] = defaultdict(list)
-        self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
+        self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = defaultdict(
+            ParseResultFuture
+        )
         self._parse_task = None
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
@@ -109,7 +111,9 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
-            async with bot.instance.http_session.get(doc_item.url, raise_for_status=True) as response:
+            async with bot.instance.http_session.get(
+                doc_item.url, raise_for_status=True
+            ) as response:
                 soup = await bot.instance.loop.run_in_executor(
                     None,
                     BeautifulSoup,
@@ -117,11 +121,15 @@ class BatchParser:
                     "lxml",
                 )
 
-            self._queue.extendleft(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
+            self._queue.extendleft(
+                QueueItem(item, soup) for item in self._page_doc_items[doc_item.url]
+            )
             log.debug(f"Added items from {doc_item.url} to the parse queue.")
 
             if self._parse_task is None:
-                self._parse_task = scheduling.create_task(self._parse_queue(), name="Queue parse")
+                self._parse_task = scheduling.create_task(
+                    self._parse_queue(), name="Queue parse"
+                )
         else:
             self._item_futures[doc_item].user_requested = True
         with suppress(ValueError):
@@ -147,13 +155,16 @@ class BatchParser:
                     continue
 
                 try:
-                    markdown = await bot.instance.loop.run_in_executor(None, get_symbol_markdown, soup, item)
+                    markdown = await bot.instance.loop.run_in_executor(
+                        None, get_symbol_markdown, soup, item
+                    )
                     if markdown is not None:
                         await doc_cache.set(item, markdown)
                     else:
                         # Don't wait for this coro as the parsing doesn't depend on anything it does.
                         scheduling.create_task(
-                            self.stale_inventory_notifier.send_warning(item), name="Stale inventory warning"
+                            self.stale_inventory_notifier.send_warning(item),
+                            name="Stale inventory warning",
                         )
                 except Exception:
                     log.exception(f"Unexpected error when handling {item}")

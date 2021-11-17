@@ -29,7 +29,9 @@ class ClosingReason(Enum):
     CLEANUP = "auto.cleanup"
 
 
-def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
+def get_category_channels(
+    category: discord.CategoryChannel,
+) -> t.Iterable[discord.TextChannel]:
     """Yield the text channels of the `category` in an unsorted manner."""
     log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
 
@@ -39,7 +41,9 @@ def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[disco
             yield channel
 
 
-async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[Arrow, ClosingReason]:
+async def get_closing_time(
+    channel: discord.TextChannel, init_done: bool
+) -> t.Tuple[Arrow, ClosingReason]:
     """
     Return the time at which the given help `channel` should be closed along with the reason.
 
@@ -70,11 +74,15 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
     if is_empty or not init_done or claimant_time is None:
         msg = await _message.get_last_message(channel)
         if not msg:
-            log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages, closing now.")
+            log.debug(
+                f"No idle time available; #{channel} ({channel.id}) has no messages, closing now."
+            )
             return Arrow.min, ClosingReason.DELETED
 
         # Use the greatest offset to avoid the possibility of prematurely closing the channel.
-        time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
+        time = Arrow.fromdatetime(msg.created_at) + timedelta(
+            minutes=idle_minutes_claimant
+        )
         reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSSAGE
         return time, reason
 
@@ -100,7 +108,9 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
         closing_time = others_time
         reason = ClosingReason.OTHER_TIMEOUT
 
-    log.trace(f"#{channel} ({channel.id}) should be closed at {closing_time} due to {reason}.")
+    log.trace(
+        f"#{channel} ({channel.id}) should be closed at {closing_time} due to {reason}."
+    )
     return closing_time, reason
 
 
@@ -116,10 +126,14 @@ async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
 
 def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
     """Check if a channel should be excluded from the help channel system."""
-    return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
+    return (
+        not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
+    )
 
 
-async def move_to_bottom(channel: discord.TextChannel, category_id: int, **options) -> None:
+async def move_to_bottom(
+    channel: discord.TextChannel, category_id: int, **options
+) -> None:
     """
     Move the `channel` to the bottom position of `category` and edit channel attributes.
 

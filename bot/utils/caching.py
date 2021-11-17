@@ -33,7 +33,9 @@ class AsyncCache:
 
                     self._cache[key] = await function(*args)
                 return self._cache[key]
+
             return wrapper
+
         return decorator
 
     def clear(self) -> None:

@@ -15,10 +15,7 @@ from bot.utils.messages import wait_for_deletion
 
 log = get_logger(__name__)
 
-TEST_CHANNELS = (
-    constants.Channels.bot_commands,
-    constants.Channels.helpers
-)
+TEST_CHANNELS = (constants.Channels.bot_commands, constants.Channels.helpers)
 
 REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
 FOOTER_TEXT = f"To show a tag, type {constants.Bot.prefix}tags <tagname>."
@@ -47,7 +44,7 @@ class Tags(Cog):
                         "description": file.read_text(encoding="utf8"),
                     },
                     "restricted_to": None,
-                    "location": f"/bot/{file}"
+                    "location": f"/bot/{file}",
                 }
 
                 # Convert to a list to allow negative indexing.
@@ -63,13 +60,15 @@ class Tags(Cog):
     @staticmethod
     def check_accessibility(user: Member, tag: dict) -> bool:
         """Check if user can access a tag."""
-        return not tag["restricted_to"] or tag["restricted_to"].lower() in [role.name.lower() for role in user.roles]
+        return not tag["restricted_to"] or tag["restricted_to"].lower() in [
+            role.name.lower() for role in user.roles
+        ]
 
     @staticmethod
     def _fuzzy_search(search: str, target: str) -> float:
         """A simple scoring algorithm based on how many letters are found / total, with order in mind."""
         current, index = 0, 0
-        _search = REGEX_NON_ALPHABET.sub('', search.lower())
+        _search = REGEX_NON_ALPHABET.sub("", search.lower())
         _targets = iter(REGEX_NON_ALPHABET.split(target.lower()))
         _target = next(_targets)
         try:
@@ -82,10 +81,12 @@ class Tags(Cog):
             pass
         return current / len(_search) * 100
 
-    def _get_suggestions(self, tag_name: str, thresholds: Optional[List[int]] = None) -> List[str]:
+    def _get_suggestions(
+        self, tag_name: str, thresholds: Optional[List[int]] = None
+    ) -> List[str]:
         """Return a list of suggested tags."""
         scores: Dict[str, int] = {
-            tag_title: Tags._fuzzy_search(tag_name, tag['title'])
+            tag_title: Tags._fuzzy_search(tag_name, tag["title"])
             for tag_title, tag in self._cache.items()
         }
 
@@ -109,14 +110,16 @@ class Tags(Cog):
             return self._get_suggestions(tag_name)
         return found
 
-    def _get_tags_via_content(self, check: Callable[[Iterable], bool], keywords: str, user: Member) -> list:
+    def _get_tags_via_content(
+        self, check: Callable[[Iterable], bool], keywords: str, user: Member
+    ) -> list:
         """
         Search for tags via contents.
 
         `predicate` will be the built-in any, all, or a custom callable. Must return a bool.
         """
         keywords_processed: List[str] = []
-        for keyword in keywords.split(','):
+        for keyword in keywords.split(","):
             keyword_sanitized = keyword.strip().casefold()
             if not keyword_sanitized:
                 # this happens when there are leading / trailing / consecutive comma.
@@ -130,23 +133,30 @@ class Tags(Cog):
 
         matching_tags = []
         for tag in self._cache.values():
-            matches = (query in tag['embed']['description'].casefold() for query in keywords_processed)
+            matches = (
+                query in tag["embed"]["description"].casefold()
+                for query in keywords_processed
+            )
             if self.check_accessibility(user, tag) and check(matches):
                 matching_tags.append(tag)
 
         return matching_tags
 
-    async def _send_matching_tags(self, ctx: Context, keywords: str, matching_tags: list) -> None:
+    async def _send_matching_tags(
+        self, ctx: Context, keywords: str, matching_tags: list
+    ) -> None:
         """Send the result of matching tags to user."""
         if not matching_tags:
             pass
         elif len(matching_tags) == 1:
-            await ctx.send(embed=Embed().from_dict(matching_tags[0]['embed']))
+            await ctx.send(embed=Embed().from_dict(matching_tags[0]["embed"]))
         else:
-            is_plural = keywords.strip().count(' ') > 0 or keywords.strip().count(',') > 0
+            is_plural = (
+                keywords.strip().count(" ") > 0 or keywords.strip().count(",") > 0
+            )
             embed = Embed(
                 title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
-                description='\n'.join(tag['title'] for tag in matching_tags[:10])
+                description="\n".join(tag["title"] for tag in matching_tags[:10]),
             )
             await LinePaginator.paginate(
                 sorted(f"**»**   {tag['title']}" for tag in matching_tags),
@@ -154,15 +164,17 @@ class Tags(Cog):
                 embed,
                 footer_text=FOOTER_TEXT,
                 empty=False,
-                max_lines=15
+                max_lines=15,
             )
 
-    @group(name='tags', aliases=('tag', 't'), invoke_without_command=True)
-    async def tags_group(self, ctx: Context, *, tag_name: TagNameConverter = None) -> None:
+    @group(name="tags", aliases=("tag", "t"), invoke_without_command=True)
+    async def tags_group(
+        self, ctx: Context, *, tag_name: TagNameConverter = None
+    ) -> None:
         """Show all known tags, a single tag, or run a subcommand."""
         await self.get_command(ctx, tag_name=tag_name)
 
-    @tags_group.group(name='search', invoke_without_command=True)
+    @tags_group.group(name="search", invoke_without_command=True)
     async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
         """
         Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
@@ -172,14 +184,16 @@ class Tags(Cog):
         matching_tags = self._get_tags_via_content(all, keywords, ctx.author)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
-    @search_tag_content.command(name='any')
-    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = 'any') -> None:
+    @search_tag_content.command(name="any")
+    async def search_tag_content_any_keyword(
+        self, ctx: Context, *, keywords: Optional[str] = "any"
+    ) -> None:
         """
         Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
 
         Search for tags that has ANY of the keywords.
         """
-        matching_tags = self._get_tags_via_content(any, keywords or 'any', ctx.author)
+        matching_tags = self._get_tags_via_content(any, keywords or "any", ctx.author)
         await self._send_matching_tags(ctx, keywords, matching_tags)
 
     async def display_tag(self, ctx: Context, tag_name: str = None) -> bool:
@@ -191,6 +205,7 @@ class Tags(Cog):
         Tags are on cooldowns on a per-tag, per-channel basis. If a tag is on cooldown, display
         nothing and return True.
         """
+
         def _command_on_cooldown(tag_name: str) -> bool:
             """
             Check if the command is currently on cooldown, on a per-tag, per-channel basis.
@@ -202,7 +217,8 @@ class Tags(Cog):
             cooldown_conditions = (
                 tag_name
                 and tag_name in self.tag_cooldowns
-                and (now - self.tag_cooldowns[tag_name]["time"]) < constants.Cooldowns.tags
+                and (now - self.tag_cooldowns[tag_name]["time"])
+                < constants.Cooldowns.tags
                 and self.tag_cooldowns[tag_name]["channel"] == ctx.channel.id
             )
 
@@ -233,13 +249,13 @@ class Tags(Cog):
                 if ctx.channel.id not in TEST_CHANNELS:
                     self.tag_cooldowns[tag_name] = {
                         "time": time.time(),
-                        "channel": ctx.channel.id
+                        "channel": ctx.channel.id,
                     }
 
                 self.bot.stats.incr(f"tags.usages.{tag['title'].replace('-', '_')}")
 
                 await wait_for_deletion(
-                    await ctx.send(embed=Embed.from_dict(tag['embed'])),
+                    await ctx.send(embed=Embed.from_dict(tag["embed"])),
                     [ctx.author.id],
                 )
                 return True
@@ -247,8 +263,8 @@ class Tags(Cog):
                 await wait_for_deletion(
                     await ctx.send(
                         embed=Embed(
-                            title='Did you mean ...',
-                            description='\n'.join(tag['title'] for tag in founds[:10])
+                            title="Did you mean ...",
+                            description="\n".join(tag["title"] for tag in founds[:10]),
                         )
                     ),
                     [ctx.author.id],
@@ -258,30 +274,35 @@ class Tags(Cog):
         else:
             tags = self._cache.values()
             if not tags:
-                await ctx.send(embed=Embed(
-                    description="**There are no tags in the database!**",
-                    colour=Colour.red()
-                ))
+                await ctx.send(
+                    embed=Embed(
+                        description="**There are no tags in the database!**",
+                        colour=Colour.red(),
+                    )
+                )
                 return True
             else:
                 embed: Embed = Embed(title="**Current tags**")
                 await LinePaginator.paginate(
                     sorted(
-                        f"**»**   {tag['title']}" for tag in tags
+                        f"**»**   {tag['title']}"
+                        for tag in tags
                         if self.check_accessibility(ctx.author, tag)
                     ),
                     ctx,
                     embed,
                     footer_text=FOOTER_TEXT,
                     empty=False,
-                    max_lines=15
+                    max_lines=15,
                 )
                 return True
 
         return False
 
-    @tags_group.command(name='get', aliases=('show', 'g'))
-    async def get_command(self, ctx: Context, *, tag_name: TagNameConverter = None) -> bool:
+    @tags_group.command(name="get", aliases=("show", "g"))
+    async def get_command(
+        self, ctx: Context, *, tag_name: TagNameConverter = None
+    ) -> bool:
         """
         Get a specified tag, or a list of all tags if no tag is specified.
 

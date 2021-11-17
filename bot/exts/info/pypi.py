@@ -8,7 +8,7 @@ from discord.ext.commands import Cog, Context, command
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
+from bot.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
 from bot.log import get_logger
 from bot.utils.messages import wait_for_deletion
 
@@ -41,11 +41,16 @@ class PyPi(Cog):
             embed.description = f"Illegal character(s) passed into command: '{escape_markdown(characters.group(0))}'"
 
         else:
-            async with self.bot.http_session.get(URL.format(package=package)) as response:
+            async with self.bot.http_session.get(
+                URL.format(package=package)
+            ) as response:
                 if response.status == 404:
                     embed.description = "Package could not be found."
 
-                elif response.status == 200 and response.content_type == "application/json":
+                elif (
+                    response.status == 200
+                    and response.content_type == "application/json"
+                ):
                     response_json = await response.json()
                     info = response_json["info"]
 
@@ -65,12 +70,16 @@ class PyPi(Cog):
                     error = False
 
                 else:
-                    embed.description = "There was an error when fetching your PyPi package."
+                    embed.description = (
+                        "There was an error when fetching your PyPi package."
+                    )
                     log.trace(f"Error when fetching PyPi package: {response.status}.")
 
         if error:
             error_message = await ctx.send(embed=embed)
-            await wait_for_deletion(error_message, (ctx.author.id,), timeout=INVALID_INPUT_DELETE_DELAY)
+            await wait_for_deletion(
+                error_message, (ctx.author.id,), timeout=INVALID_INPUT_DELETE_DELAY
+            )
 
             # Make sure that we won't cause a ghost-ping by deleting the message
             if not (ctx.message.mentions or ctx.message.role_mentions):

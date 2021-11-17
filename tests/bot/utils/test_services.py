@@ -17,13 +17,13 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.utils.services.URLs.paste_service", "https://paste_service.com/{key}")
     async def test_url_and_sent_contents(self):
         """Correct url was used and post was called with expected data."""
-        response = MagicMock(
-            json=AsyncMock(return_value={"key": ""})
-        )
+        response = MagicMock(json=AsyncMock(return_value={"key": ""}))
         self.bot.http_session.post.return_value.__aenter__.return_value = response
         self.bot.http_session.post.reset_mock()
         await send_to_paste_service("Content")
-        self.bot.http_session.post.assert_called_once_with("https://paste_service.com/documents", data="Content")
+        self.bot.http_session.post.assert_called_once_with(
+            "https://paste_service.com/documents", data="Content"
+        )
 
     @patch("bot.utils.services.URLs.paste_service", "https://paste_service.com/{key}")
     async def test_paste_returns_correct_url_on_success(self):
@@ -34,36 +34,40 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
             (f"https://paste_service.com/{key}.py", "py"),
             (f"https://paste_service.com/{key}?noredirect", ""),
         )
-        response = MagicMock(
-            json=AsyncMock(return_value={"key": key})
-        )
+        response = MagicMock(json=AsyncMock(return_value={"key": key}))
         self.bot.http_session.post.return_value.__aenter__.return_value = response
 
         for expected_output, extension in test_cases:
             with self.subTest(msg=f"Send contents with extension {repr(extension)}"):
                 self.assertEqual(
                     await send_to_paste_service("", extension=extension),
-                    expected_output
+                    expected_output,
                 )
 
     async def test_request_repeated_on_json_errors(self):
         """Json with error message and invalid json are handled as errors and requests repeated."""
         test_cases = ({"message": "error"}, {"unexpected_key": None}, {})
-        self.bot.http_session.post.return_value.__aenter__.return_value = response = MagicMock()
+        self.bot.http_session.post.return_value.__aenter__.return_value = (
+            response
+        ) = MagicMock()
         self.bot.http_session.post.reset_mock()
 
         for error_json in test_cases:
             with self.subTest(error_json=error_json):
                 response.json = AsyncMock(return_value=error_json)
                 result = await send_to_paste_service("")
-                self.assertEqual(self.bot.http_session.post.call_count, FAILED_REQUEST_ATTEMPTS)
+                self.assertEqual(
+                    self.bot.http_session.post.call_count, FAILED_REQUEST_ATTEMPTS
+                )
                 self.assertIsNone(result)
 
             self.bot.http_session.post.reset_mock()
 
     async def test_request_repeated_on_connection_errors(self):
         """Requests are repeated in the case of connection errors."""
-        self.bot.http_session.post = MagicMock(side_effect=ClientConnectorError(Mock(), Mock()))
+        self.bot.http_session.post = MagicMock(
+            side_effect=ClientConnectorError(Mock(), Mock())
+        )
         result = await send_to_paste_service("")
         self.assertEqual(self.bot.http_session.post.call_count, FAILED_REQUEST_ATTEMPTS)
         self.assertIsNone(result)

@@ -45,11 +45,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         active_superstarifies = await self.bot.api_client.get(
             "bot/infractions",
-            params={
-                "active": "true",
-                "type": "superstar",
-                "user__id": str(before.id)
-            }
+            params={"active": "true", "type": "superstar", "user__id": str(before.id)},
         )
 
         if not active_superstarifies:
@@ -67,7 +63,7 @@ class Superstarify(InfractionScheduler, Cog):
         )
         await after.edit(
             nick=forced_nick,
-            reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
+            reason=f"Superstarified member tried to escape the prison: {infraction['id']}",
         )
 
         notified = await _utils.notify_infraction(
@@ -79,7 +75,7 @@ class Superstarify(InfractionScheduler, Cog):
                 f"from **{before.display_name}** to **{after.display_name}**, but as you "
                 "are currently in superstar-prison, you do not have permission to do so."
             ),
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0]
+            icon_url=_utils.INFRACTION_ICONS["superstar"][0],
         )
 
         if not notified:
@@ -90,30 +86,28 @@ class Superstarify(InfractionScheduler, Cog):
         """Reapply active superstar infractions for returning members."""
         active_superstarifies = await self.bot.api_client.get(
             "bot/infractions",
-            params={
-                "active": "true",
-                "type": "superstar",
-                "user__id": member.id
-            }
+            params={"active": "true", "type": "superstar", "user__id": member.id},
         )
 
         if active_superstarifies:
             infraction = active_superstarifies[0]
             action = member.edit(
                 nick=self.get_nick(infraction["id"], member.id),
-                reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
+                reason=f"Superstarified member tried to escape the prison: {infraction['id']}",
             )
 
             await self.reapply_infraction(infraction, action)
 
-    @command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
+    @command(
+        name="superstarify", aliases=("force_nick", "star", "starify", "superstar")
+    )
     async def superstarify(
         self,
         ctx: Context,
         member: Member,
         duration: t.Optional[Expiry],
         *,
-        reason: str = '',
+        reason: str = "",
     ) -> None:
         """
         Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
@@ -134,19 +128,25 @@ class Superstarify(InfractionScheduler, Cog):
         and linking to the nickname policy.
         """
         if member.top_role >= ctx.me.top_role:
-            await ctx.send(":x: I can't starify users above or equal to me in the role hierarchy.")
+            await ctx.send(
+                ":x: I can't starify users above or equal to me in the role hierarchy."
+            )
             return
 
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
 
         # Set to default duration if none was provided.
-        duration = duration or await Duration().convert(ctx, SUPERSTARIFY_DEFAULT_DURATION)
+        duration = duration or await Duration().convert(
+            ctx, SUPERSTARIFY_DEFAULT_DURATION
+        )
 
         # Post the infraction to the API
         old_nick = member.display_name
-        infraction_reason = f'Old nickname: {old_nick}. {reason}'
-        infraction = await _utils.post_infraction(ctx, member, "superstar", infraction_reason, duration, active=True)
+        infraction_reason = f"Old nickname: {old_nick}. {reason}"
+        infraction = await _utils.post_infraction(
+            ctx, member, "superstar", infraction_reason, duration, active=True
+        )
         id_ = infraction["id"]
 
         forced_nick = self.get_nick(id_, member.id)
@@ -161,10 +161,12 @@ class Superstarify(InfractionScheduler, Cog):
         old_nick = escape_markdown(old_nick)
         forced_nick = escape_markdown(forced_nick)
 
-        nickname_info = textwrap.dedent(f"""
+        nickname_info = textwrap.dedent(
+            f"""
             Old nickname: `{old_nick}`
             New nickname: `{forced_nick}`
-        """).strip()
+        """
+        ).strip()
 
         user_message = (
             f"Your previous nickname, **{old_nick}**, "
@@ -177,9 +179,14 @@ class Superstarify(InfractionScheduler, Cog):
         ).format
 
         successful = await self.apply_infraction(
-            ctx, infraction, member, action(),
-            user_reason=user_message(reason=f'**Additional details:** {reason}\n\n' if reason else ''),
-            additional_info=nickname_info
+            ctx,
+            infraction,
+            member,
+            action(),
+            user_reason=user_message(
+                reason=f"**Additional details:** {reason}\n\n" if reason else ""
+            ),
+            additional_info=nickname_info,
         )
 
         # Send an embed with to the invoking context if superstar was successful.
@@ -188,16 +195,21 @@ class Superstarify(InfractionScheduler, Cog):
             embed = Embed(
                 title="Superstarified!",
                 colour=constants.Colours.soft_orange,
-                description=user_message(reason='')
+                description=user_message(reason=""),
             )
             await ctx.send(embed=embed)
 
-    @command(name="unsuperstarify", aliases=("release_nick", "unstar", "unstarify", "unsuperstar"))
+    @command(
+        name="unsuperstarify",
+        aliases=("release_nick", "unstar", "unstarify", "unsuperstar"),
+    )
     async def unsuperstarify(self, ctx: Context, member: Member) -> None:
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
 
-    async def _pardon_action(self, infraction: _utils.Infraction, notify: bool) -> t.Optional[t.Dict[str, str]]:
+    async def _pardon_action(
+        self, infraction: _utils.Infraction, notify: bool
+    ) -> t.Optional[t.Dict[str, str]]:
         """Pardon a superstar infraction, optionally notify the user via DM, and return a log dict."""
         if infraction["type"] != "superstar":
             return
@@ -221,7 +233,7 @@ class Superstarify(InfractionScheduler, Cog):
                 user=user,
                 title="You are no longer superstarified",
                 content="You may now change your nickname on the server.",
-                icon_url=_utils.INFRACTION_ICONS["superstar"][1]
+                icon_url=_utils.INFRACTION_ICONS["superstar"][1],
             )
             log_text["DM"] = "Sent" if notified else "**Failed**"
 

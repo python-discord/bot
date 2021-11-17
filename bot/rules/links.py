@@ -11,9 +11,7 @@ async def apply(
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
     """Detects total links exceeding the limit sent by a single user."""
     relevant_messages = tuple(
-        msg
-        for msg in recent_messages
-        if msg.author == last_message.author
+        msg for msg in recent_messages if msg.author == last_message.author
     )
     total_links = 0
     messages_with_links = 0
@@ -27,10 +25,10 @@ async def apply(
     # Only apply the filter if we found more than one message with
     # links to prevent wrongfully firing the rule on users posting
     # e.g. an installation log of pip packages from GitHub.
-    if total_links > config['max'] and messages_with_links > 1:
+    if total_links > config["max"] and messages_with_links > 1:
         return (
             f"sent {total_links} links in {config['interval']}s",
             (last_message.author,),
-            relevant_messages
+            relevant_messages,
         )
     return None

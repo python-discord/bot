@@ -2,12 +2,19 @@ import difflib
 import typing as t
 
 from discord import Embed
-from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
+from discord.ext.commands import (
+    ChannelNotFound,
+    Cog,
+    Context,
+    TextChannelConverter,
+    VoiceChannelConverter,
+    errors,
+)
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Colours, Icons, MODERATION_ROLES
+from bot.constants import MODERATION_ROLES, Colours, Icons
 from bot.converters import TagNameConverter
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.log import get_logger
@@ -24,11 +31,7 @@ class ErrorHandler(Cog):
 
     def _get_error_embed(self, title: str, body: str) -> Embed:
         """Return an embed that contains the exception."""
-        return Embed(
-            title=title,
-            colour=Colours.soft_red,
-            description=body
-        )
+        return Embed(title=title, colour=Colours.soft_red, description=body)
 
     @Cog.listener()
     async def on_command_error(self, ctx: Context, e: errors.CommandError) -> None:
@@ -56,7 +59,9 @@ class ErrorHandler(Cog):
         command = ctx.command
 
         if hasattr(e, "handled"):
-            log.trace(f"Command {command} had its error already handled locally; ignoring.")
+            log.trace(
+                f"Command {command} had its error already handled locally; ignoring."
+            )
             return
 
         debug_message = (
@@ -64,7 +69,9 @@ class ErrorHandler(Cog):
             f"{e.__class__.__name__}: {e}"
         )
 
-        if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
+        if isinstance(e, errors.CommandNotFound) and not getattr(
+            ctx, "invoked_from_error_handler", False
+        ):
             if await self.try_silence(ctx):
                 return
             await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
@@ -81,7 +88,9 @@ class ErrorHandler(Cog):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
-                await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
+                await ctx.send(
+                    f"{e.original} Please wait for it to finish and try again later."
+                )
             elif isinstance(e.original, InvalidInfractedUserError):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
@@ -121,10 +130,14 @@ class ErrorHandler(Cog):
 
         try:
             if not await silence_command.can_run(ctx):
-                log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
+                log.debug(
+                    "Cancelling attempt to invoke silence/unsilence due to failed checks."
+                )
                 return False
         except errors.CommandError:
-            log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
+            log.debug(
+                "Cancelling attempt to invoke silence/unsilence due to failed checks."
+            )
             return False
 
         # Parse optional args
@@ -146,7 +159,12 @@ class ErrorHandler(Cog):
             kick = args[2].lower() == "true"
 
         if command.startswith("shh"):
-            await ctx.invoke(silence_command, duration_or_channel=channel, duration=duration, kick=kick)
+            await ctx.invoke(
+                silence_command,
+                duration_or_channel=channel,
+                duration=duration,
+                kick=kick,
+            )
             return True
         elif command.startswith("unshh"):
             await ctx.invoke(self.bot.get_command("unsilence"), channel=channel)
@@ -196,7 +214,9 @@ class ErrorHandler(Cog):
         for cmd in self.bot.walk_commands():
             if not cmd.hidden:
                 raw_commands += (cmd.name, *cmd.aliases)
-        if similar_command_data := difflib.get_close_matches(command_name, raw_commands, 1):
+        if similar_command_data := difflib.get_close_matches(
+            command_name, raw_commands, 1
+        ):
             similar_command_name = similar_command_data[0]
             similar_command = self.bot.get_command(similar_command_name)
 
@@ -216,10 +236,14 @@ class ErrorHandler(Cog):
             misspelled_content = ctx.message.content
             e = Embed()
             e.set_author(name="Did you mean:", icon_url=Icons.questionmark)
-            e.description = f"{misspelled_content.replace(command_name, similar_command_name, 1)}"
+            e.description = (
+                f"{misspelled_content.replace(command_name, similar_command_name, 1)}"
+            )
             await ctx.send(embed=e, delete_after=10.0)
 
-    async def handle_user_input_error(self, ctx: Context, e: errors.UserInputError) -> None:
+    async def handle_user_input_error(
+        self, ctx: Context, e: errors.UserInputError
+    ) -> None:
         """
         Send an error message in `ctx` for UserInputError, sometimes invoking the help command too.
 
@@ -251,7 +275,7 @@ class ErrorHandler(Cog):
         else:
             embed = self._get_error_embed(
                 "Input error",
-                "Something about your input seems off. Check the arguments and try again."
+                "Something about your input seems off. Check the arguments and try again.",
             )
             self.bot.stats.incr("errors.other_user_input_error")
 
@@ -274,7 +298,7 @@ class ErrorHandler(Cog):
         bot_missing_errors = (
             errors.BotMissingPermissions,
             errors.BotMissingRole,
-            errors.BotMissingAnyRole
+            errors.BotMissingAnyRole,
         )
 
         if isinstance(e, bot_missing_errors):
@@ -303,8 +327,12 @@ class ErrorHandler(Cog):
             await ctx.send("Sorry, there seems to be an internal issue with the API.")
             ctx.bot.stats.incr("errors.api_internal_server_error")
         else:
-            log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
-            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
+            log.warning(
+                f"Unexpected API response for command {ctx.command}: {e.status}"
+            )
+            await ctx.send(
+                f"Got an unexpected status code from the API (`{e.status}`)."
+            )
             ctx.bot.stats.incr(f"errors.api_error_{e.status}")
 
     @staticmethod
@@ -318,10 +346,7 @@ class ErrorHandler(Cog):
         ctx.bot.stats.incr("errors.unexpected")
 
         with push_scope() as scope:
-            scope.user = {
-                "id": ctx.author.id,
-                "username": str(ctx.author)
-            }
+            scope.user = {"id": ctx.author.id, "username": str(ctx.author)}
 
             scope.set_tag("command", ctx.command.qualified_name)
             scope.set_tag("message_id", ctx.message.id)
@@ -332,10 +357,13 @@ class ErrorHandler(Cog):
             if ctx.guild is not None:
                 scope.set_extra(
                     "jump_to",
-                    f"https://discordapp.com/channels/{ctx.guild.id}/{ctx.channel.id}/{ctx.message.id}"
+                    f"https://discordapp.com/channels/{ctx.guild.id}/{ctx.channel.id}/{ctx.message.id}",
                 )
 
-            log.error(f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}", exc_info=e)
+            log.error(
+                f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}",
+                exc_info=e,
+            )
 
 
 def setup(bot: Bot) -> None:

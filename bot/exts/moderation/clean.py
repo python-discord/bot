@@ -6,7 +6,7 @@ from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 from itertools import islice
-from typing import Any, Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, Optional, Union
 
 from discord import Colour, Message, NotFound, TextChannel, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
@@ -14,7 +14,15 @@ from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument
 
 from bot.bot import Bot
-from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
+from bot.constants import (
+    MODERATION_ROLES,
+    Channels,
+    CleanMessages,
+    Colours,
+    Emojis,
+    Event,
+    Icons,
+)
 from bot.converters import Age, ISODateTime
 from bot.exts.moderation.modlog import ModLog
 from bot.utils.channel import is_mod_channel
@@ -37,11 +45,16 @@ class CleanChannels(Converter):
 
     _channel_converter = TextChannelConverter()
 
-    async def convert(self, ctx: Context, argument: str) -> Union[Literal["*"], list[TextChannel]]:
+    async def convert(
+        self, ctx: Context, argument: str
+    ) -> Union[Literal["*"], list[TextChannel]]:
         """Converts a string to a list of channels to clean, or the literal `*` for all channels."""
         if argument == "*":
             return "*"
-        return [await self._channel_converter.convert(ctx, channel) for channel in argument.split()]
+        return [
+            await self._channel_converter.convert(ctx, channel)
+            for channel in argument.split()
+        ]
 
 
 class Regex(Converter):
@@ -87,19 +100,23 @@ class Clean(Cog):
 
     @staticmethod
     def _validate_input(
-            traverse: int,
-            channels: Optional[CleanChannels],
-            bots_only: bool,
-            users: Optional[list[User]],
-            first_limit: Optional[CleanLimit],
-            second_limit: Optional[CleanLimit],
+        traverse: int,
+        channels: Optional[CleanChannels],
+        bots_only: bool,
+        users: Optional[list[User]],
+        first_limit: Optional[CleanLimit],
+        second_limit: Optional[CleanLimit],
     ) -> None:
         """Raise errors if an argument value or a combination of values is invalid."""
         # Is this an acceptable amount of messages to traverse?
         if traverse > CleanMessages.message_limit:
-            raise BadArgument(f"Cannot traverse more than {CleanMessages.message_limit} messages.")
+            raise BadArgument(
+                f"Cannot traverse more than {CleanMessages.message_limit} messages."
+            )
 
-        if (isinstance(first_limit, Message) or isinstance(second_limit, Message)) and channels:
+        if (
+            isinstance(first_limit, Message) or isinstance(second_limit, Message)
+        ) and channels:
             raise BadArgument("Both a message limit and channels specified.")
 
         if isinstance(first_limit, Message) and isinstance(second_limit, Message):
@@ -129,6 +146,7 @@ class Clean(Cog):
         second_limit: Optional[datetime] = None,
     ) -> Predicate:
         """Return the predicate that decides whether to delete a given message."""
+
         def predicate_bots_only(message: Message) -> bool:
             """Return True if the message was sent by a bot."""
             return message.author.bot
@@ -170,14 +188,20 @@ class Clean(Cog):
         if bots_only:
             predicates.append(predicate_bots_only)  # Delete messages from bots
         if users:
-            predicates.append(predicate_specific_users)  # Delete messages from specific user
+            predicates.append(
+                predicate_specific_users
+            )  # Delete messages from specific user
         if regex:
             predicates.append(predicate_regex)  # Delete messages that match regex
         # Add up to one of the following:
         if second_limit:
-            predicates.append(predicate_range)  # Delete messages in the specified age range
+            predicates.append(
+                predicate_range
+            )  # Delete messages in the specified age range
         elif first_limit:
-            predicates.append(predicate_after)  # Delete messages older than specific message
+            predicates.append(
+                predicate_after
+            )  # Delete messages older than specific message
 
         if not predicates:
             return lambda m: True
@@ -193,9 +217,13 @@ class Clean(Cog):
                 await ctx.message.delete()
             except errors.NotFound:
                 # Invocation message has already been deleted
-                log.info("Tried to delete invocation message, but it was already deleted.")
+                log.info(
+                    "Tried to delete invocation message, but it was already deleted."
+                )
 
-    def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> tuple[defaultdict[Any, list], list[int]]:
+    def _get_messages_from_cache(
+        self, traverse: int, to_delete: Predicate
+    ) -> tuple[defaultdict[Any, list], list[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(list)
         message_ids = []
@@ -216,13 +244,15 @@ class Clean(Cog):
         channels: Iterable[TextChannel],
         to_delete: Predicate,
         before: Optional[datetime] = None,
-        after: Optional[datetime] = None
+        after: Optional[datetime] = None,
     ) -> tuple[defaultdict[Any, list], list]:
         message_mappings = defaultdict(list)
         message_ids = []
 
         for channel in channels:
-            async for message in channel.history(limit=traverse, before=before, after=after):
+            async for message in channel.history(
+                limit=traverse, before=before, after=after
+            ):
 
                 if not self.cleaning:
                     # Cleaning was canceled, return empty containers.
@@ -243,22 +273,30 @@ class Clean(Cog):
         Comparison on message age could possibly be less accurate which in turn would resort in problems
         with message deletion if said messages are very close to the 14d mark.
         """
-        two_weeks_old_snowflake = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
+        two_weeks_old_snowflake = (
+            int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
+        )
         return message.id < two_weeks_old_snowflake
 
-    async def _delete_messages_individually(self, messages: list[Message]) -> list[Message]:
+    async def _delete_messages_individually(
+        self, messages: list[Message]
+    ) -> list[Message]:
         """Delete each message in the list unless cleaning is cancelled. Return the deleted messages."""
         deleted = []
         for message in messages:
             # Ensure that deletion was not canceled
             if not self.cleaning:
                 return deleted
-            with contextlib.suppress(NotFound):  # Message doesn't exist or was already deleted
+            with contextlib.suppress(
+                NotFound
+            ):  # Message doesn't exist or was already deleted
                 await message.delete()
                 deleted.append(message)
         return deleted
 
-    async def _delete_found(self, message_mappings: dict[TextChannel, list[Message]]) -> list[Message]:
+    async def _delete_found(
+        self, message_mappings: dict[TextChannel, list[Message]]
+    ) -> list[Message]:
         """
         Delete the detected messages.
 
@@ -299,16 +337,22 @@ class Clean(Cog):
             if not self.cleaning:
                 return deleted
             if delete_old:
-                old_deleted = await self._delete_messages_individually(messages[current_index:])
+                old_deleted = await self._delete_messages_individually(
+                    messages[current_index:]
+                )
                 deleted.extend(old_deleted)
 
         return deleted
 
-    async def _modlog_cleaned_messages(self, messages: list[Message], channels: CleanChannels, ctx: Context) -> bool:
+    async def _modlog_cleaned_messages(
+        self, messages: list[Message], channels: CleanChannels, ctx: Context
+    ) -> bool:
         """Log the deleted messages to the modlog. Return True if logging was successful."""
         if not messages:
             # Can't build an embed, nothing to clean!
-            await self._send_expiring_message(ctx, ":x: No matching messages could be found.")
+            await self._send_expiring_message(
+                ctx, ":x: No matching messages could be found."
+            )
             return False
 
         # Reverse the list to have reverse chronological order
@@ -349,15 +393,18 @@ class Clean(Cog):
         regex: Optional[re.Pattern] = None,
         first_limit: Optional[CleanLimit] = None,
         second_limit: Optional[CleanLimit] = None,
-        use_cache: Optional[bool] = True
+        use_cache: Optional[bool] = True,
     ) -> None:
         """A helper function that does the actual message cleaning."""
-        self._validate_input(traverse, channels, bots_only, users, first_limit, second_limit)
+        self._validate_input(
+            traverse, channels, bots_only, users, first_limit, second_limit
+        )
 
         # Are we already performing a clean?
         if self.cleaning:
             await self._send_expiring_message(
-                ctx, ":x: Please wait for the currently ongoing clean operation to complete."
+                ctx,
+                ":x: Please wait for the currently ongoing clean operation to complete.",
             )
             return
         self.cleaning = True
@@ -380,23 +427,31 @@ class Clean(Cog):
             first_limit, second_limit = sorted([first_limit, second_limit])
 
         # Needs to be called after standardizing the input.
-        predicate = self._build_predicate(bots_only, users, regex, first_limit, second_limit)
+        predicate = self._build_predicate(
+            bots_only, users, regex, first_limit, second_limit
+        )
 
         # Delete the invocation first
         await self._delete_invocation(ctx)
 
         if channels == "*" and use_cache:
-            message_mappings, message_ids = self._get_messages_from_cache(traverse=traverse, to_delete=predicate)
+            message_mappings, message_ids = self._get_messages_from_cache(
+                traverse=traverse, to_delete=predicate
+            )
         else:
             deletion_channels = channels
             if channels == "*":
-                deletion_channels = [channel for channel in ctx.guild.channels if isinstance(channel, TextChannel)]
+                deletion_channels = [
+                    channel
+                    for channel in ctx.guild.channels
+                    if isinstance(channel, TextChannel)
+                ]
             message_mappings, message_ids = await self._get_messages_from_channels(
                 traverse=traverse,
                 channels=deletion_channels,
                 to_delete=predicate,
                 before=second_limit,
-                after=first_limit  # Remember first is the earlier datetime.
+                after=first_limit,  # Remember first is the earlier datetime.
             )
 
         if not self.cleaning:
@@ -411,7 +466,9 @@ class Clean(Cog):
         logged = await self._modlog_cleaned_messages(deleted_messages, channels, ctx)
 
         if logged and is_mod_channel(ctx.channel):
-            with suppress(NotFound):  # Can happen if the invoker deleted their own messages.
+            with suppress(
+                NotFound
+            ):  # Can happen if the invoker deleted their own messages.
                 await ctx.message.add_reaction(Emojis.check_mark)
 
     # region: Commands
@@ -428,7 +485,7 @@ class Clean(Cog):
         bots_only: Optional[bool] = False,
         regex: Optional[Regex] = None,
         *,
-        channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
+        channels: CleanChannels = None,  # "Optional" with discord.py silently ignores incorrect input.
     ) -> None:
         """
         Commands for cleaning messages in channels.
@@ -463,7 +520,15 @@ class Clean(Cog):
             use_cache = channels == "*"
 
         await self._clean_messages(
-            ctx, traverse, channels, bots_only, users, regex, first_limit, second_limit, use_cache
+            ctx,
+            traverse,
+            channels,
+            bots_only,
+            users,
+            regex,
+            first_limit,
+            second_limit,
+            use_cache,
         )
 
     @clean_group.command(name="user", aliases=["users"])
@@ -474,10 +539,12 @@ class Clean(Cog):
         traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
-        channels: CleanChannels = None
+        channels: CleanChannels = None,
     ) -> None:
         """Delete messages posted by the provided user, stop cleaning after traversing `traverse` messages."""
-        await self._clean_messages(ctx, traverse, users=[user], channels=channels, use_cache=use_cache)
+        await self._clean_messages(
+            ctx, traverse, users=[user], channels=channels, use_cache=use_cache
+        )
 
     @clean_group.command(name="all", aliases=["everything"])
     async def clean_all(
@@ -486,10 +553,12 @@ class Clean(Cog):
         traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
-        channels: CleanChannels = None
+        channels: CleanChannels = None,
     ) -> None:
         """Delete all messages, regardless of poster, stop cleaning after traversing `traverse` messages."""
-        await self._clean_messages(ctx, traverse, channels=channels, use_cache=use_cache)
+        await self._clean_messages(
+            ctx, traverse, channels=channels, use_cache=use_cache
+        )
 
     @clean_group.command(name="bots", aliases=["bot"])
     async def clean_bots(
@@ -498,10 +567,12 @@ class Clean(Cog):
         traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
-        channels: CleanChannels = None
+        channels: CleanChannels = None,
     ) -> None:
         """Delete all messages posted by a bot, stop cleaning after traversing `traverse` messages."""
-        await self._clean_messages(ctx, traverse, bots_only=True, channels=channels, use_cache=use_cache)
+        await self._clean_messages(
+            ctx, traverse, bots_only=True, channels=channels, use_cache=use_cache
+        )
 
     @clean_group.command(name="regex", aliases=["word", "expression", "pattern"])
     async def clean_regex(
@@ -511,7 +582,7 @@ class Clean(Cog):
         traverse: Optional[int] = DEFAULT_TRAVERSE,
         use_cache: Optional[bool] = True,
         *,
-        channels: CleanChannels = None
+        channels: CleanChannels = None,
     ) -> None:
         """
         Delete all messages that match a certain regex, stop cleaning after traversing `traverse` messages.
@@ -520,14 +591,13 @@ class Clean(Cog):
         If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
         For example: `[0-9]`
         """
-        await self._clean_messages(ctx, traverse, regex=regex, channels=channels, use_cache=use_cache)
+        await self._clean_messages(
+            ctx, traverse, regex=regex, channels=channels, use_cache=use_cache
+        )
 
     @clean_group.command(name="until")
     async def clean_until(
-        self,
-        ctx: Context,
-        until: CleanLimit,
-        channel: TextChannel = None
+        self, ctx: Context, until: CleanLimit, channel: TextChannel = None
     ) -> None:
         """
         Delete all messages until a certain limit.
@@ -548,7 +618,7 @@ class Clean(Cog):
         ctx: Context,
         first_limit: CleanLimit,
         second_limit: CleanLimit,
-        channel: TextChannel = None
+        channel: TextChannel = None,
     ) -> None:
         """
         Delete all messages within range.

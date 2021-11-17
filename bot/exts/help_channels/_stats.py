@@ -18,10 +18,14 @@ def report_counts() -> None:
             total = ilen(_channel.get_category_channels(category))
             bot.instance.stats.gauge(f"help.total.{name}", total)
         else:
-            log.warning(f"Couldn't find category {name!r} to track channel count stats.")
+            log.warning(
+                f"Couldn't find category {name!r} to track channel count stats."
+            )
 
 
-async def report_complete_session(channel_id: int, closed_on: _channel.ClosingReason) -> None:
+async def report_complete_session(
+    channel_id: int, closed_on: _channel.ClosingReason
+) -> None:
     """
     Report stats for a completed help session channel `channel_id`.
 
@@ -33,7 +37,9 @@ async def report_complete_session(channel_id: int, closed_on: _channel.ClosingRe
     if in_use_time:
         bot.instance.stats.timing("help.in_use_time", in_use_time)
 
-    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel_id)
+    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(
+        channel_id
+    )
     if non_claimant_last_message_time is None:
         bot.instance.stats.incr("help.sessions.unanswered")
     else:

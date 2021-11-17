@@ -32,25 +32,19 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         """Should try first (un)silence channel, when fail, try to get tag."""
         error = errors.CommandNotFound()
         test_cases = (
-            {
-                "try_silence_return": True,
-                "called_try_get_tag": False
-            },
-            {
-                "try_silence_return": False,
-                "called_try_get_tag": False
-            },
-            {
-                "try_silence_return": False,
-                "called_try_get_tag": True
-            }
+            {"try_silence_return": True, "called_try_get_tag": False},
+            {"try_silence_return": False, "called_try_get_tag": False},
+            {"try_silence_return": False, "called_try_get_tag": True},
         )
         cog = ErrorHandler(self.bot)
         cog.try_silence = AsyncMock()
         cog.try_get_tag = AsyncMock()
 
         for case in test_cases:
-            with self.subTest(try_silence_return=case["try_silence_return"], try_get_tag=case["called_try_get_tag"]):
+            with self.subTest(
+                try_silence_return=case["try_silence_return"],
+                try_get_tag=case["called_try_get_tag"],
+            ):
                 self.ctx.reset_mock()
                 cog.try_silence.reset_mock(return_value=True)
                 cog.try_get_tag.reset_mock()
@@ -118,25 +112,38 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         cog.handle_unexpected_error = AsyncMock()
         test_cases = (
             {
-                "args": (self.ctx, errors.CommandInvokeError(ResponseCodeError(AsyncMock()))),
-                "expect_mock_call": cog.handle_api_error
+                "args": (
+                    self.ctx,
+                    errors.CommandInvokeError(ResponseCodeError(AsyncMock())),
+                ),
+                "expect_mock_call": cog.handle_api_error,
             },
             {
                 "args": (self.ctx, errors.CommandInvokeError(TypeError)),
-                "expect_mock_call": cog.handle_unexpected_error
+                "expect_mock_call": cog.handle_unexpected_error,
             },
             {
-                "args": (self.ctx, errors.CommandInvokeError(LockedResourceError("abc", "test"))),
-                "expect_mock_call": "send"
+                "args": (
+                    self.ctx,
+                    errors.CommandInvokeError(LockedResourceError("abc", "test")),
+                ),
+                "expect_mock_call": "send",
             },
             {
-                "args": (self.ctx, errors.CommandInvokeError(InvalidInfractedUserError(self.ctx.author))),
-                "expect_mock_call": "send"
-            }
+                "args": (
+                    self.ctx,
+                    errors.CommandInvokeError(
+                        InvalidInfractedUserError(self.ctx.author)
+                    ),
+                ),
+                "expect_mock_call": "send",
+            },
         )
 
         for case in test_cases:
-            with self.subTest(args=case["args"], expect_mock_call=case["expect_mock_call"]):
+            with self.subTest(
+                args=case["args"], expect_mock_call=case["expect_mock_call"]
+            ):
                 self.ctx.send.reset_mock()
                 self.assertIsNone(await cog.on_command_error(*case["args"]))
                 if case["expect_mock_call"] == "send":
@@ -153,19 +160,23 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         cog.handle_unexpected_error = AsyncMock()
         cases = (
             {
-                "error": errors.ConversionError(AsyncMock(), ResponseCodeError(AsyncMock())),
-                "mock_function_to_call": cog.handle_api_error
+                "error": errors.ConversionError(
+                    AsyncMock(), ResponseCodeError(AsyncMock())
+                ),
+                "mock_function_to_call": cog.handle_api_error,
             },
             {
                 "error": errors.ConversionError(AsyncMock(), TypeError),
-                "mock_function_to_call": cog.handle_unexpected_error
-            }
+                "mock_function_to_call": cog.handle_unexpected_error,
+            },
         )
 
         for case in cases:
             with self.subTest(**case):
                 self.assertIsNone(await cog.on_command_error(self.ctx, case["error"]))
-                case["mock_function_to_call"].assert_awaited_once_with(self.ctx, case["error"].original)
+                case["mock_function_to_call"].assert_awaited_once_with(
+                    self.ctx, case["error"].original
+                )
 
     async def test_error_handler_two_other_errors(self):
         """Should call `handle_unexpected_error` if error is `MaxConcurrencyReached` or `ExtensionError`."""
@@ -173,7 +184,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         cog.handle_unexpected_error = AsyncMock()
         errs = (
             errors.MaxConcurrencyReached(1, MagicMock()),
-            errors.ExtensionError(name="foo")
+            errors.ExtensionError(name="foo"),
         )
 
         for err in errs:
@@ -223,7 +234,9 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_try_silence_no_permissions_to_run_command_error(self):
         """Should return `False` because `CommandError` raised (no permissions)."""
         self.ctx.invoked_with = "foo"
-        self.bot.get_command.return_value.can_run = AsyncMock(side_effect=errors.CommandError())
+        self.bot.get_command.return_value.can_run = AsyncMock(
+            side_effect=errors.CommandError()
+        )
         self.assertFalse(await self.cog.try_silence(self.ctx))
 
     async def test_try_silence_silence_duration(self):
@@ -239,8 +252,8 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.invoke.assert_awaited_once_with(
                     self.bot.get_command.return_value,
                     duration_or_channel=None,
-                    duration=min(case.count("h")*2, 15),
-                    kick=False
+                    duration=min(case.count("h") * 2, 15),
+                    kick=False,
                 )
 
     async def test_try_silence_silence_arguments(self):
@@ -248,9 +261,12 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_command.return_value.can_run = AsyncMock(return_value=True)
 
         test_cases = (
-            (MockTextChannel(), None),  # None represents the case when no argument is passed
+            (
+                MockTextChannel(),
+                None,
+            ),  # None represents the case when no argument is passed
             (MockTextChannel(), False),
-            (MockTextChannel(), True)
+            (MockTextChannel(), True),
         )
 
         for channel, kick in test_cases:
@@ -258,7 +274,9 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.reset_mock()
                 self.ctx.invoked_with = "shh"
 
-                self.ctx.message.content = f"!shh {channel.name} {kick if kick is not None else ''}"
+                self.ctx.message.content = (
+                    f"!shh {channel.name} {kick if kick is not None else ''}"
+                )
                 self.ctx.guild.text_channels = [channel]
 
                 self.assertTrue(await self.cog.try_silence(self.ctx))
@@ -266,7 +284,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                     self.bot.get_command.return_value,
                     duration_or_channel=channel,
                     duration=4,
-                    kick=(kick if kick is not None else False)
+                    kick=(kick if kick is not None else False),
                 )
 
     async def test_try_silence_silence_message(self):
@@ -280,7 +298,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
             self.bot.get_command.return_value,
             duration_or_channel=None,
             duration=4,
-            kick=False
+            kick=False,
         )
 
     async def test_try_silence_unsilence(self):
@@ -290,12 +308,15 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
             ("unshh", None),
             ("unshhhhh", None),
             ("unshhhhhhhhh", None),
-            ("unshh", MockTextChannel())
+            ("unshh", MockTextChannel()),
         )
 
         for invoke, channel in test_cases:
             with self.subTest(message=invoke, channel=channel):
-                self.bot.get_command.side_effect = (self.silence.silence, self.silence.unsilence)
+                self.bot.get_command.side_effect = (
+                    self.silence.silence,
+                    self.silence.unsilence,
+                )
                 self.ctx.reset_mock()
 
                 self.ctx.invoked_with = invoke
@@ -305,12 +326,17 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
                     self.ctx.guild.text_channels = [channel]
 
                 self.assertTrue(await self.cog.try_silence(self.ctx))
-                self.ctx.invoke.assert_awaited_once_with(self.silence.unsilence, channel=channel)
+                self.ctx.invoke.assert_awaited_once_with(
+                    self.silence.unsilence, channel=channel
+                )
 
     async def test_try_silence_unsilence_message(self):
         """If the words after the command could not be converted to a channel, None should be passed as channel."""
         self.silence.silence.can_run = AsyncMock(return_value=True)
-        self.bot.get_command.side_effect = (self.silence.silence, self.silence.unsilence)
+        self.bot.get_command.side_effect = (
+            self.silence.silence,
+            self.silence.unsilence,
+        )
 
         self.ctx.invoked_with = "unshh"
         self.ctx.message.content = "!unshh not_a_channel"
@@ -431,34 +457,24 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         test_cases = (
             {
                 "error": errors.MissingRequiredArgument(MagicMock()),
-                "call_prepared": True
+                "call_prepared": True,
             },
-            {
-                "error": errors.TooManyArguments(),
-                "call_prepared": True
-            },
-            {
-                "error": errors.BadArgument(),
-                "call_prepared": True
-            },
+            {"error": errors.TooManyArguments(), "call_prepared": True},
+            {"error": errors.BadArgument(), "call_prepared": True},
             {
                 "error": errors.BadUnionArgument(MagicMock(), MagicMock(), MagicMock()),
-                "call_prepared": True
+                "call_prepared": True,
             },
-            {
-                "error": errors.ArgumentParsingError(),
-                "call_prepared": False
-            },
-            {
-                "error": errors.UserInputError(),
-                "call_prepared": True
-            }
+            {"error": errors.ArgumentParsingError(), "call_prepared": False},
+            {"error": errors.UserInputError(), "call_prepared": True},
         )
 
         for case in test_cases:
             with self.subTest(error=case["error"], call_prepared=case["call_prepared"]):
                 self.ctx.reset_mock()
-                self.assertIsNone(await self.cog.handle_user_input_error(self.ctx, case["error"]))
+                self.assertIsNone(
+                    await self.cog.handle_user_input_error(self.ctx, case["error"])
+                )
                 self.ctx.send.assert_awaited_once()
                 if case["call_prepared"]:
                     self.ctx.send_help.assert_awaited_once()
@@ -468,30 +484,12 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     async def test_handle_check_failure_errors(self):
         """Should await `ctx.send` when error is check failure."""
         test_cases = (
-            {
-                "error": errors.BotMissingPermissions(MagicMock()),
-                "call_ctx_send": True
-            },
-            {
-                "error": errors.BotMissingRole(MagicMock()),
-                "call_ctx_send": True
-            },
-            {
-                "error": errors.BotMissingAnyRole(MagicMock()),
-                "call_ctx_send": True
-            },
-            {
-                "error": errors.NoPrivateMessage(),
-                "call_ctx_send": True
-            },
-            {
-                "error": InWhitelistCheckFailure(1234),
-                "call_ctx_send": True
-            },
-            {
-                "error": ResponseCodeError(MagicMock()),
-                "call_ctx_send": False
-            }
+            {"error": errors.BotMissingPermissions(MagicMock()), "call_ctx_send": True},
+            {"error": errors.BotMissingRole(MagicMock()), "call_ctx_send": True},
+            {"error": errors.BotMissingAnyRole(MagicMock()), "call_ctx_send": True},
+            {"error": errors.NoPrivateMessage(), "call_ctx_send": True},
+            {"error": InWhitelistCheckFailure(1234), "call_ctx_send": True},
+            {"error": ResponseCodeError(MagicMock()), "call_ctx_send": False},
         )
 
         for case in test_cases:
@@ -507,22 +505,13 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     async def test_handle_api_error(self, log_mock):
         """Should `ctx.send` on HTTP error codes, `log.debug|warning` depends on code."""
         test_cases = (
-            {
-                "error": ResponseCodeError(AsyncMock(status=400)),
-                "log_level": "debug"
-            },
-            {
-                "error": ResponseCodeError(AsyncMock(status=404)),
-                "log_level": "debug"
-            },
-            {
-                "error": ResponseCodeError(AsyncMock(status=550)),
-                "log_level": "warning"
-            },
+            {"error": ResponseCodeError(AsyncMock(status=400)), "log_level": "debug"},
+            {"error": ResponseCodeError(AsyncMock(status=404)), "log_level": "debug"},
+            {"error": ResponseCodeError(AsyncMock(status=550)), "log_level": "warning"},
             {
                 "error": ResponseCodeError(AsyncMock(status=1000)),
-                "log_level": "warning"
-            }
+                "log_level": "warning",
+            },
         )
 
         for case in test_cases:
@@ -558,9 +547,7 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                     call("message_id", self.ctx.message.id),
                     call("channel_id", self.ctx.channel.id),
                 ]
-                set_extra_calls = [
-                    call("full_message", self.ctx.message.content)
-                ]
+                set_extra_calls = [call("full_message", self.ctx.message.content)]
                 if case:
                     url = (
                         f"https://discordapp.com/channels/"

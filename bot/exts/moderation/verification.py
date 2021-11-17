@@ -54,7 +54,9 @@ async def safe_dm(coro: t.Coroutine) -> None:
     try:
         await coro
     except discord.HTTPException as discord_exc:
-        log.trace(f"DM dispatch failed on status {discord_exc.status} with code: {discord_exc.code}")
+        log.trace(
+            f"DM dispatch failed on status {discord_exc.status} with code: {discord_exc.code}"
+        )
         if discord_exc.code != 50_007:  # If any reason other than disabled DMs
             raise
 
@@ -95,7 +97,9 @@ class Verification(Cog):
             log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+    async def on_member_update(
+        self, before: discord.Member, after: discord.Member
+    ) -> None:
         """Check if we need to send a verification DM to a gated user."""
         if before.pending is True and after.pending is False:
             try:
@@ -110,9 +114,11 @@ class Verification(Cog):
     # endregion
     # region: subscribe commands
 
-    @command(name='subscribe')
+    @command(name="subscribe")
     @in_whitelist(channels=(constants.Channels.bot_commands,))
-    async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+    async def subscribe_command(
+        self, ctx: Context, *_
+    ) -> None:  # We don't actually care about the args
         """Subscribe to announcement notifications by assigning yourself the role."""
         has_role = False
 
@@ -125,8 +131,13 @@ class Verification(Cog):
             await ctx.send(f"{ctx.author.mention} You're already subscribed!")
             return
 
-        log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
-        await ctx.author.add_roles(discord.Object(constants.Roles.announcements), reason="Subscribed to announcements")
+        log.debug(
+            f"{ctx.author} called !subscribe. Assigning the 'Announcements' role."
+        )
+        await ctx.author.add_roles(
+            discord.Object(constants.Roles.announcements),
+            reason="Subscribed to announcements",
+        )
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
 
@@ -134,9 +145,11 @@ class Verification(Cog):
             f"{ctx.author.mention} Subscribed to <#{constants.Channels.announcements}> notifications.",
         )
 
-    @command(name='unsubscribe')
+    @command(name="unsubscribe")
     @in_whitelist(channels=(constants.Channels.bot_commands,))
-    async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
+    async def unsubscribe_command(
+        self, ctx: Context, *_
+    ) -> None:  # We don't actually care about the args
         """Unsubscribe from announcement notifications by removing the role from yourself."""
         has_role = False
 
@@ -149,9 +162,12 @@ class Verification(Cog):
             await ctx.send(f"{ctx.author.mention} You're already unsubscribed!")
             return
 
-        log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
+        log.debug(
+            f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role."
+        )
         await ctx.author.remove_roles(
-            discord.Object(constants.Roles.announcements), reason="Unsubscribed from announcements"
+            discord.Object(constants.Roles.announcements),
+            reason="Unsubscribed from announcements",
         )
 
         log.trace(f"Deleting the message posted by {ctx.author}.")
@@ -169,23 +185,29 @@ class Verification(Cog):
         if isinstance(error, InWhitelistCheckFailure):
             error.handled = True
 
-    @command(name='verify')
+    @command(name="verify")
     @has_any_role(*constants.MODERATION_ROLES)
-    async def perform_manual_verification(self, ctx: Context, user: discord.Member) -> None:
+    async def perform_manual_verification(
+        self, ctx: Context, user: discord.Member
+    ) -> None:
         """Command for moderators to verify any user."""
-        log.trace(f'verify command called by {ctx.author} for {user.id}.')
+        log.trace(f"verify command called by {ctx.author} for {user.id}.")
 
         if not user.pending:
-            log.trace(f'{user.id} is already verified, aborting.')
-            await ctx.send(f'{constants.Emojis.cross_mark} {user.mention} is already verified.')
+            log.trace(f"{user.id} is already verified, aborting.")
+            await ctx.send(
+                f"{constants.Emojis.cross_mark} {user.mention} is already verified."
+            )
             return
 
         # Adding a role automatically verifies the user, so we add and remove the Announcements role.
-        temporary_role = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.announcements)
+        temporary_role = self.bot.get_guild(constants.Guild.id).get_role(
+            constants.Roles.announcements
+        )
         await user.add_roles(temporary_role)
         await user.remove_roles(temporary_role)
-        log.trace(f'{user.id} manually verified.')
-        await ctx.send(f'{constants.Emojis.check_mark} {user.mention} is now verified.')
+        log.trace(f"{user.id} manually verified.")
+        await ctx.send(f"{constants.Emojis.check_mark} {user.mention} is now verified.")
 
     # endregion
 

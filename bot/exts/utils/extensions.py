@@ -8,7 +8,7 @@ from discord.ext.commands import Context, group
 
 from bot import exts
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
+from bot.constants import MODERATION_ROLES, Emojis, Roles, URLs
 from bot.converters import Extension
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -17,7 +17,10 @@ from bot.utils.extensions import EXTENSIONS
 log = get_logger(__name__)
 
 
-UNLOAD_BLACKLIST = {f"{exts.__name__}.utils.extensions", f"{exts.__name__}.moderation.modlog"}
+UNLOAD_BLACKLIST = {
+    f"{exts.__name__}.utils.extensions",
+    f"{exts.__name__}.moderation.modlog",
+}
 BASE_PATH_LEN = len(exts.__name__.split("."))
 
 
@@ -36,7 +39,11 @@ class Extensions(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @group(name="extensions", aliases=("ext", "exts", "c", "cog", "cogs"), invoke_without_command=True)
+    @group(
+        name="extensions",
+        aliases=("ext", "exts", "c", "cog", "cogs"),
+        invoke_without_command=True,
+    )
     async def extensions_group(self, ctx: Context) -> None:
         """Load, unload, reload, and list loaded extensions."""
         await ctx.send_help(ctx.command)
@@ -115,9 +122,7 @@ class Extensions(commands.Cog):
         """
         embed = Embed(colour=Colour.og_blurple())
         embed.set_author(
-            name="Extensions List",
-            url=URLs.github_bot_repo,
-            icon_url=URLs.bot_avatar
+            name="Extensions List", url=URLs.github_bot_repo, icon_url=URLs.bot_avatar
         )
 
         lines = []
@@ -129,7 +134,9 @@ class Extensions(commands.Cog):
             extensions = "\n".join(sorted(extensions))
             lines.append(f"**{category}**\n{extensions}\n")
 
-        log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
+        log.debug(
+            f"{ctx.author} requested a list of all cogs. Returning a paginated list."
+        )
         await LinePaginator.paginate(lines, ctx, embed, scale_to_size=700, empty=False)
 
     def group_extension_statuses(self) -> t.Mapping[str, str]:
@@ -212,7 +219,9 @@ class Extensions(commands.Cog):
     # This cannot be static (must have a __func__ attribute).
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators and core developers to invoke the commands in this cog."""
-        return await commands.has_any_role(*MODERATION_ROLES, Roles.core_developers).predicate(ctx)
+        return await commands.has_any_role(
+            *MODERATION_ROLES, Roles.core_developers
+        ).predicate(ctx)
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:

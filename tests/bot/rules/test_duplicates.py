@@ -21,8 +21,16 @@ class DuplicatesRuleTests(RuleTest):
         """Cases which do not violate the rule."""
         cases = (
             [make_msg("alice", "A"), make_msg("alice", "A")],
-            [make_msg("alice", "A"), make_msg("alice", "B"), make_msg("alice", "C")],  # Non-duplicate
-            [make_msg("alice", "A"), make_msg("bob", "A"), make_msg("alice", "A")],  # Different author
+            [
+                make_msg("alice", "A"),
+                make_msg("alice", "B"),
+                make_msg("alice", "C"),
+            ],  # Non-duplicate
+            [
+                make_msg("alice", "A"),
+                make_msg("bob", "A"),
+                make_msg("alice", "A"),
+            ],  # Different author
         )
 
         await self.run_allowed(cases)
@@ -31,17 +39,31 @@ class DuplicatesRuleTests(RuleTest):
         """Cases with too many duplicate messages from the same author."""
         cases = (
             DisallowedCase(
-                [make_msg("alice", "A"), make_msg("alice", "A"), make_msg("alice", "A")],
+                [
+                    make_msg("alice", "A"),
+                    make_msg("alice", "A"),
+                    make_msg("alice", "A"),
+                ],
                 ("alice",),
                 3,
             ),
             DisallowedCase(
-                [make_msg("bob", "A"), make_msg("alice", "A"), make_msg("bob", "A"), make_msg("bob", "A")],
+                [
+                    make_msg("bob", "A"),
+                    make_msg("alice", "A"),
+                    make_msg("bob", "A"),
+                    make_msg("bob", "A"),
+                ],
                 ("bob",),
                 3,  # 4 duplicate messages, but only 3 from bob
             ),
             DisallowedCase(
-                [make_msg("bob", "A"), make_msg("bob", "B"), make_msg("bob", "A"), make_msg("bob", "A")],
+                [
+                    make_msg("bob", "A"),
+                    make_msg("bob", "B"),
+                    make_msg("bob", "A"),
+                    make_msg("bob", "A"),
+                ],
                 ("bob",),
                 3,  # 4 message from bob, but only 3 duplicates
             ),

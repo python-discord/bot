@@ -30,19 +30,21 @@ Infraction = t.Dict[str, t.Union[str, int, bool]]
 APPEAL_SERVER_INVITE = "https://discord.gg/WXrCJxWBnm"
 
 INFRACTION_TITLE = "Please review our rules"
-INFRACTION_APPEAL_SERVER_FOOTER = f"\n\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
+INFRACTION_APPEAL_SERVER_FOOTER = (
+    f"\n\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
+)
 INFRACTION_APPEAL_MODMAIL_FOOTER = (
-    '\n\nIf you would like to discuss or appeal this infraction, '
-    'send a message to the ModMail bot.'
+    "\n\nIf you would like to discuss or appeal this infraction, "
+    "send a message to the ModMail bot."
 )
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
-LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL_MODMAIL_FOOTER))
+LONGEST_EXTRAS = max(
+    len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL_MODMAIL_FOOTER)
+)
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
-    "**Type:** {type}\n"
-    "**Expires:** {expires}\n"
-    "**Reason:** {reason}\n"
+    "**Type:** {type}\n" "**Expires:** {expires}\n" "**Reason:** {reason}\n"
 )
 
 
@@ -55,34 +57,38 @@ async def post_user(ctx: Context, user: MemberOrUser) -> t.Optional[dict]:
     log.trace(f"Attempting to add user {user.id} to the database.")
 
     payload = {
-        'discriminator': int(user.discriminator),
-        'id': user.id,
-        'in_guild': False,
-        'name': user.name,
-        'roles': []
+        "discriminator": int(user.discriminator),
+        "id": user.id,
+        "in_guild": False,
+        "name": user.name,
+        "roles": [],
     }
 
     try:
-        response = await ctx.bot.api_client.post('bot/users', json=payload)
+        response = await ctx.bot.api_client.post("bot/users", json=payload)
         log.info(f"User {user.id} added to the DB.")
         return response
     except ResponseCodeError as e:
         log.error(f"Failed to add user {user.id} to the DB. {e}")
-        await ctx.send(f":x: The attempt to add the user to the DB failed: status {e.status}")
+        await ctx.send(
+            f":x: The attempt to add the user to the DB failed: status {e.status}"
+        )
 
 
 async def post_infraction(
-        ctx: Context,
-        user: MemberOrUser,
-        infr_type: str,
-        reason: str,
-        expires_at: datetime = None,
-        hidden: bool = False,
-        active: bool = True
+    ctx: Context,
+    user: MemberOrUser,
+    infr_type: str,
+    reason: str,
+    expires_at: datetime = None,
+    hidden: bool = False,
+    active: bool = True,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
-        log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
+        log.trace(
+            f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot."
+        )
         raise InvalidInfractedUserError(user)
 
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
@@ -93,32 +99,33 @@ async def post_infraction(
         "reason": reason,
         "type": infr_type,
         "user": user.id,
-        "active": active
+        "active": active,
     }
     if expires_at:
-        payload['expires_at'] = expires_at.isoformat()
+        payload["expires_at"] = expires_at.isoformat()
 
     # Try to apply the infraction. If it fails because the user doesn't exist, try to add it.
     for should_post_user in (True, False):
         try:
-            response = await ctx.bot.api_client.post('bot/infractions', json=payload)
+            response = await ctx.bot.api_client.post("bot/infractions", json=payload)
             return response
         except ResponseCodeError as e:
-            if e.status == 400 and 'user' in e.response_json:
+            if e.status == 400 and "user" in e.response_json:
                 # Only one attempt to add the user to the database, not two:
                 if not should_post_user or await post_user(ctx, user) is None:
                     return
             else:
-                log.exception(f"Unexpected error while adding an infraction for {user}:")
-                await ctx.send(f":x: There was an error adding the infraction: status {e.status}.")
+                log.exception(
+                    f"Unexpected error while adding an infraction for {user}:"
+                )
+                await ctx.send(
+                    f":x: There was an error adding the infraction: status {e.status}."
+                )
                 return
 
 
 async def get_active_infraction(
-        ctx: Context,
-        user: MemberOrUser,
-        infr_type: str,
-        send_msg: bool = True
+    ctx: Context, user: MemberOrUser, infr_type: str, send_msg: bool = True
 ) -> t.Optional[dict]:
     """
     Retrieves an active infraction of the given type for the user.
@@ -130,12 +137,8 @@ async def get_active_infraction(
     log.trace(f"Checking if {user} has active infractions of type {infr_type}.")
 
     active_infractions = await ctx.bot.api_client.get(
-        'bot/infractions',
-        params={
-            'active': 'true',
-            'type': infr_type,
-            'user__id': str(user.id)
-        }
+        "bot/infractions",
+        params={"active": "true", "type": infr_type, "user__id": str(user.id)},
     )
     if active_infractions:
         # Checks to see if the moderator should be told there is an active infraction
@@ -156,11 +159,11 @@ async def send_active_infraction_message(ctx: Context, infraction: Infraction) -
 
 
 async def notify_infraction(
-        user: MemberOrUser,
-        infr_type: str,
-        expires_at: t.Optional[str] = None,
-        reason: t.Optional[str] = None,
-        icon_url: str = Icons.token_removed
+    user: MemberOrUser,
+    infr_type: str,
+    expires_at: t.Optional[str] = None,
+    reason: t.Optional[str] = None,
+    icon_url: str = Icons.token_removed,
 ) -> bool:
     """DM a user about their new infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
@@ -168,19 +171,20 @@ async def notify_infraction(
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
         expires=expires_at or "N/A",
-        reason=reason or "No reason provided."
+        reason=reason or "No reason provided.",
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
     if len(text) > 4096 - LONGEST_EXTRAS:
         text = f"{text[:4093-LONGEST_EXTRAS]}..."
 
-    text += INFRACTION_APPEAL_SERVER_FOOTER if infr_type.lower() == 'ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
-
-    embed = discord.Embed(
-        description=text,
-        colour=Colours.soft_red
+    text += (
+        INFRACTION_APPEAL_SERVER_FOOTER
+        if infr_type.lower() == "ban"
+        else INFRACTION_APPEAL_MODMAIL_FOOTER
     )
+
+    embed = discord.Embed(description=text, colour=Colours.soft_red)
 
     embed.set_author(name=INFRACTION_AUTHOR_NAME, icon_url=icon_url, url=RULES_URL)
     embed.title = INFRACTION_TITLE
@@ -190,18 +194,12 @@ async def notify_infraction(
 
 
 async def notify_pardon(
-        user: MemberOrUser,
-        title: str,
-        content: str,
-        icon_url: str = Icons.user_verified
+    user: MemberOrUser, title: str, content: str, icon_url: str = Icons.user_verified
 ) -> bool:
     """DM a user about their pardoned infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their pardoned infraction.")
 
-    embed = discord.Embed(
-        description=content,
-        colour=Colours.soft_green
-    )
+    embed = discord.Embed(description=content, colour=Colours.soft_green)
 
     embed.set_author(name=title, icon_url=icon_url)
 

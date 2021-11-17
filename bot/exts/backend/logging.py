@@ -2,7 +2,7 @@ from discord import Embed
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
-from bot.constants import Channels, DEBUG_MODE
+from bot.constants import DEBUG_MODE, Channels
 from bot.log import get_logger
 from bot.utils import scheduling
 
@@ -29,7 +29,7 @@ class Logging(Cog):
             icon_url=(
                 "https://raw.githubusercontent.com/"
                 "python-discord/branding/main/logos/logo_circle/logo_circle_large.png"
-            )
+            ),
         )
 
         if not DEBUG_MODE:

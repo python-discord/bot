@@ -145,16 +145,14 @@ class MessageCache:
             # inserted, therefore any empty cells should be ignored. There can only be Nones at the tail.
             if step > 0:
                 if (
-                    (self._start < self._end and not self._start < stop <= self._end)
-                    or (self._start > self._end and self._end < stop <= self._start)
-                ):
+                    self._start < self._end and not self._start < stop <= self._end
+                ) or (self._start > self._end and self._end < stop <= self._start):
                     stop = self._end
             else:
                 lower_boundary = (self._start - 1) % self.maxlen
                 if (
-                    (self._start < self._end and not self._start - 1 <= stop < self._end)
-                    or (self._start > self._end and self._end < stop < lower_boundary)
-                ):
+                    self._start < self._end and not self._start - 1 <= stop < self._end
+                ) or (self._start > self._end and self._end < stop < lower_boundary):
                     stop = lower_boundary
 
             if (start < stop and step > 0) or (start > stop and step < 0):
@@ -165,20 +163,25 @@ class MessageCache:
                 return self._messages[start::step] + self._messages[offset:stop:step]
             else:
                 offset = ceil((start + 1) / -step) * -step - start - 1
-                return self._messages[start::step] + self._messages[self.maxlen - 1 - offset:stop:step]
+                return (
+                    self._messages[start::step]
+                    + self._messages[self.maxlen - 1 - offset : stop : step]
+                )
 
         else:
-            raise TypeError(f"cache indices must be integers or slices, not {type(item)}")
+            raise TypeError(
+                f"cache indices must be integers or slices, not {type(item)}"
+            )
 
     def __iter__(self) -> t.Iterator[Message]:
         if self._is_empty():
             return
 
         if self._start < self._end:
-            yield from self._messages[self._start:self._end]
+            yield from self._messages[self._start : self._end]
         else:
-            yield from self._messages[self._start:]
-            yield from self._messages[:self._end]
+            yield from self._messages[self._start :]
+            yield from self._messages[: self._end]
 
     def __len__(self):
         """Get the number of non-empty cells in the cache."""

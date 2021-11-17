@@ -21,6 +21,8 @@ monkey_patches.patch_typing()
 # Monkey-patch discord.py decorators to use the Command subclass which supports root aliases.
 # Must be patched before any cogs are added.
 commands.command = partial(commands.command, cls=monkey_patches.Command)
-commands.GroupMixin.command = partialmethod(commands.GroupMixin.command, cls=monkey_patches.Command)
+commands.GroupMixin.command = partialmethod(
+    commands.GroupMixin.command, cls=monkey_patches.Command
+)
 
 instance: "Bot" = None  # Global Bot instance.

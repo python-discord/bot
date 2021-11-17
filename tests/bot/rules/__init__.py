@@ -7,6 +7,7 @@ from tests.helpers import MockMessage
 
 class DisallowedCase(NamedTuple):
     """Encapsulation for test cases expected to fail."""
+
     recent_messages: List[MockMessage]
     culprits: Iterable[str]
     n_violations: int

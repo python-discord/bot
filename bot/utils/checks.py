@@ -1,8 +1,16 @@
 from typing import Callable, Container, Iterable, Optional, Union
 
 from discord.ext.commands import (
-    BucketType, CheckFailure, Cog, Command, CommandOnCooldown, Context, Cooldown, CooldownMapping, NoPrivateMessage,
-    has_any_role
+    BucketType,
+    CheckFailure,
+    Cog,
+    Command,
+    CommandOnCooldown,
+    Context,
+    Cooldown,
+    CooldownMapping,
+    NoPrivateMessage,
+    has_any_role,
 )
 
 from bot import constants
@@ -18,7 +26,9 @@ class ContextCheckFailure(CheckFailure):
         self.redirect_channel = redirect_channel
 
         if redirect_channel:
-            redirect_message = f" here. Please use the <#{redirect_channel}> channel instead"
+            redirect_message = (
+                f" here. Please use the <#{redirect_channel}> channel instead"
+            )
         else:
             redirect_message = ""
 
@@ -64,21 +74,33 @@ def in_whitelist_check(
         channels = tuple(channels) + (redirect,)
 
     if channels and ctx.channel.id in channels:
-        log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted channel.")
+        log.trace(
+            f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted channel."
+        )
         return True
 
     # Only check the category id if we have a category whitelist and the channel has a `category_id`
-    if categories and hasattr(ctx.channel, "category_id") and ctx.channel.category_id in categories:
-        log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted category.")
+    if (
+        categories
+        and hasattr(ctx.channel, "category_id")
+        and ctx.channel.category_id in categories
+    ):
+        log.trace(
+            f"{ctx.author} may use the `{ctx.command.name}` command as they are in a whitelisted category."
+        )
         return True
 
     # Only check the roles whitelist if we have one and ensure the author's roles attribute returns
     # an iterable to prevent breakage in DM channels (for if we ever decide to enable commands there).
     if roles and any(r.id in roles for r in getattr(ctx.author, "roles", ())):
-        log.trace(f"{ctx.author} may use the `{ctx.command.name}` command as they have a whitelisted role.")
+        log.trace(
+            f"{ctx.author} may use the `{ctx.command.name}` command as they have a whitelisted role."
+        )
         return True
 
-    log.trace(f"{ctx.author} may not use the `{ctx.command.name}` command within this context.")
+    log.trace(
+        f"{ctx.author} may not use the `{ctx.command.name}` command within this context."
+    )
 
     # Some commands are secret, and should produce no feedback at all.
     if not fail_silently:
@@ -114,8 +136,13 @@ async def has_no_roles_check(ctx: Context, *roles: Union[str, int]) -> bool:
         return True
 
 
-def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketType.default, *,
-                              bypass_roles: Iterable[int]) -> Callable:
+def cooldown_with_role_bypass(
+    rate: int,
+    per: float,
+    type: BucketType = BucketType.default,
+    *,
+    bypass_roles: Iterable[int],
+) -> Callable:
     """
     Applies a cooldown to a command, but allows members with certain roles to be ignored.
 
@@ -148,8 +175,10 @@ def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketTy
         #
         # if the `before_invoke` detail is ever a problem then I can quickly just swap over.
         if not isinstance(command, Command):
-            raise TypeError('Decorator `cooldown_with_role_bypass` must be applied after the command decorator. '
-                            'This means it has to be above the command decorator in the code.')
+            raise TypeError(
+                "Decorator `cooldown_with_role_bypass` must be applied after the command decorator. "
+                "This means it has to be above the command decorator in the code."
+            )
 
         command._before_invoke = predicate
 

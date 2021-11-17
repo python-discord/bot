@@ -68,7 +68,9 @@ def _find_elements_until_tag(
     use_container_filter = not callable(end_tag_filter)
     elements = []
 
-    for element in func(start_element, name=Strainer(include_strings=include_strings), limit=limit):
+    for element in func(
+        start_element, name=Strainer(include_strings=include_strings), limit=limit
+    ):
         if isinstance(element, Tag):
             if use_container_filter:
                 if element.name in end_tag_filter:
@@ -80,14 +82,23 @@ def _find_elements_until_tag(
     return elements
 
 
-_find_next_children_until_tag = partial(_find_elements_until_tag, func=partial(BeautifulSoup.find_all, recursive=False))
-_find_recursive_children_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_all)
-_find_next_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_next_siblings)
-_find_previous_siblings_until_tag = partial(_find_elements_until_tag, func=BeautifulSoup.find_previous_siblings)
+_find_next_children_until_tag = partial(
+    _find_elements_until_tag, func=partial(BeautifulSoup.find_all, recursive=False)
+)
+_find_recursive_children_until_tag = partial(
+    _find_elements_until_tag, func=BeautifulSoup.find_all
+)
+_find_next_siblings_until_tag = partial(
+    _find_elements_until_tag, func=BeautifulSoup.find_next_siblings
+)
+_find_previous_siblings_until_tag = partial(
+    _find_elements_until_tag, func=BeautifulSoup.find_previous_siblings
+)
 
 
 def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
     """Create callable that returns True when the passed in tag's class is in `class_names` or when it's a table."""
+
     def match_tag(tag: Tag) -> bool:
         for attr in class_names:
             if attr in tag.get("class", ()):
@@ -104,16 +115,22 @@ def get_general_description(start_element: Tag) -> List[Union[Tag, NavigableStri
     A headerlink tag is attempted to be found to skip repeating the symbol information in the description.
     If it's found it's used as the tag to start the search from instead of the `start_element`.
     """
-    child_tags = _find_recursive_children_until_tag(start_element, _class_filter_factory(["section"]), limit=100)
+    child_tags = _find_recursive_children_until_tag(
+        start_element, _class_filter_factory(["section"]), limit=100
+    )
     header = next(filter(_class_filter_factory(["headerlink"]), child_tags), None)
     start_tag = header.parent if header is not None else start_element
-    return _find_next_siblings_until_tag(start_tag, _class_filter_factory(_SEARCH_END_TAG_ATTRS), include_strings=True)
+    return _find_next_siblings_until_tag(
+        start_tag, _class_filter_factory(_SEARCH_END_TAG_ATTRS), include_strings=True
+    )
 
 
 def get_dd_description(symbol: PageElement) -> List[Union[Tag, NavigableString]]:
     """Get the contents of the next dd tag, up to a dt or a dl tag."""
     description_tag = symbol.find_next("dd")
-    return _find_next_children_until_tag(description_tag, ("dt", "dl"), include_strings=True)
+    return _find_next_children_until_tag(
+        description_tag, ("dt", "dl"), include_strings=True
+    )
 
 
 def get_signatures(start_signature: PageElement) -> List[str]:
@@ -125,9 +142,9 @@ def get_signatures(start_signature: PageElement) -> List[str]:
     """
     signatures = []
     for element in (
-            *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
-            start_signature,
-            *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
+        *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
+        start_signature,
+        *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
     )[-MAX_SIGNATURE_AMOUNT:]:
         signature = _UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
 

@@ -33,9 +33,18 @@ class TotalNewlinesRuleTests(RuleTest):
         """Cases which do not violate the rule."""
         cases = (
             [make_msg("alice", [])],  # Single message with no newlines
-            [make_msg("alice", [1, 2]), make_msg("alice", [1, 1])],  # 5 newlines in 2 messages
-            [make_msg("alice", [2, 2, 1]), make_msg("bob", [2, 3])],  # 5 newlines from each author
-            [make_msg("bob", [1]), make_msg("alice", [5])],  # Alice breaks the rule, but only bob is relevant
+            [
+                make_msg("alice", [1, 2]),
+                make_msg("alice", [1, 1]),
+            ],  # 5 newlines in 2 messages
+            [
+                make_msg("alice", [2, 2, 1]),
+                make_msg("bob", [2, 3]),
+            ],  # 5 newlines from each author
+            [
+                make_msg("bob", [1]),
+                make_msg("alice", [5]),
+            ],  # Alice breaks the rule, but only bob is relevant
         )
 
         await self.run_allowed(cases)
@@ -49,7 +58,11 @@ class TotalNewlinesRuleTests(RuleTest):
                 6,
             ),
             DisallowedCase(  # Here we test that only alice's newlines count in the sum
-                [make_msg("alice", [2, 2]), make_msg("bob", [3]), make_msg("alice", [3])],
+                [
+                    make_msg("alice", [2, 2]),
+                    make_msg("bob", [3]),
+                    make_msg("alice", [3]),
+                ],
                 ("alice",),
                 7,
             ),

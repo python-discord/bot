@@ -118,9 +118,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
     def test_mod_log_property(self):
         """The `mod_log` property should ask the bot to return the `ModLog` cog."""
-        self.bot.get_cog.return_value = 'lemon'
+        self.bot.get_cog.return_value = "lemon"
         self.assertEqual(self.cog.mod_log, self.bot.get_cog.return_value)
-        self.bot.get_cog.assert_called_once_with('ModLog')
+        self.bot.get_cog.assert_called_once_with("ModLog")
 
     async def test_on_message_edit_uses_on_message(self):
         """The edit listener should delegate handling of the message to the normal listener."""
@@ -142,7 +142,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         take_action.assert_awaited_once_with(cog, self.msg, found_token)
 
     @autospec(TokenRemover, "find_token_in_message", "take_action")
-    async def test_on_message_skips_missing_token(self, find_token_in_message, take_action):
+    async def test_on_message_skips_missing_token(
+        self, find_token_in_message, take_action
+    ):
         """Shouldn't take action if a valid token isn't found when a message is sent."""
         cog = TokenRemover(self.bot)
         find_token_in_message.return_value = False
@@ -173,7 +175,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
+    @autospec(
+        TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac"
+    )
     @autospec("bot.exts.filters.token_remover", "Token")
     @autospec("bot.exts.filters.token_remover", "TOKEN_RE")
     def test_find_token_valid_match(
@@ -196,7 +200,10 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         token_re.finditer.return_value = matches
         token_cls.side_effect = tokens
-        extract_user_id.side_effect = (None, True)  # The 1st match will be invalid, 2nd one valid.
+        extract_user_id.side_effect = (
+            None,
+            True,
+        )  # The 1st match will be invalid, 2nd one valid.
         is_valid_timestamp.return_value = True
         is_maybe_valid_hmac.return_value = True
 
@@ -205,7 +212,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tokens[1], return_value)
         token_re.finditer.assert_called_once_with(self.msg.content)
 
-    @autospec(TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac")
+    @autospec(
+        TokenRemover, "extract_user_id", "is_valid_timestamp", "is_maybe_valid_hmac"
+    )
     @autospec("bot.exts.filters.token_remover", "Token")
     @autospec("bot.exts.filters.token_remover", "TOKEN_RE")
     def test_find_token_invalid_matches(
@@ -217,8 +226,12 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         is_maybe_valid_hmac,
     ):
         """None should be returned if no matches have valid user IDs, HMACs, and timestamps."""
-        token_re.finditer.return_value = [mock.create_autospec(Match, spec_set=True, instance=True)]
-        token_cls.return_value = mock.create_autospec(Token, spec_set=True, instance=True)
+        token_re.finditer.return_value = [
+            mock.create_autospec(Match, spec_set=True, instance=True)
+        ]
+        token_cls.return_value = mock.create_autospec(
+            Token, spec_set=True, instance=True
+        )
         extract_user_id.return_value = None
         is_valid_timestamp.return_value = False
         is_maybe_valid_hmac.return_value = False
@@ -280,7 +293,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec("bot.exts.filters.token_remover", "LOG_MESSAGE")
     def test_format_log_message(self, log_message):
         """Should correctly format the log message with info from the message and token."""
-        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        token = Token(
+            "NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4"
+        )
         log_message.format.return_value = "Howdy"
 
         return_value = TokenRemover.format_log_message(self.msg, token)
@@ -295,23 +310,36 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         )
 
     @autospec("bot.exts.filters.token_remover", "UNKNOWN_USER_LOG_MESSAGE")
-    async def test_format_userid_log_message_unknown(self, unknown_user_log_message,):
+    async def test_format_userid_log_message_unknown(
+        self,
+        unknown_user_log_message,
+    ):
         """Should correctly format the user ID portion when the actual user it belongs to is unknown."""
-        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        token = Token(
+            "NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4"
+        )
         unknown_user_log_message.format.return_value = " Partner"
         msg = MockMessage(id=555, content="hello world")
         msg.guild.get_member.return_value = None
-        msg.guild.fetch_member.side_effect = NotFound(mock.Mock(status=404), "Not found")
+        msg.guild.fetch_member.side_effect = NotFound(
+            mock.Mock(status=404), "Not found"
+        )
 
         return_value = await TokenRemover.format_userid_log_message(msg, token)
 
-        self.assertEqual(return_value, (unknown_user_log_message.format.return_value, False))
-        unknown_user_log_message.format.assert_called_once_with(user_id=472265943062413332)
+        self.assertEqual(
+            return_value, (unknown_user_log_message.format.return_value, False)
+        )
+        unknown_user_log_message.format.assert_called_once_with(
+            user_id=472265943062413332
+        )
 
     @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
     async def test_format_userid_log_message_bot(self, known_user_log_message):
         """Should correctly format the user ID portion when the ID belongs to a known bot."""
-        token = Token("NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        token = Token(
+            "NDcyMjY1OTQzMDYyNDEzMzMy", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4"
+        )
         known_user_log_message.format.return_value = " Partner"
         msg = MockMessage(id=555, content="hello world")
         msg.guild.get_member.return_value.__str__.return_value = "Sam"
@@ -319,7 +347,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         return_value = await TokenRemover.format_userid_log_message(msg, token)
 
-        self.assertEqual(return_value, (known_user_log_message.format.return_value, True))
+        self.assertEqual(
+            return_value, (known_user_log_message.format.return_value, True)
+        )
 
         known_user_log_message.format.assert_called_once_with(
             user_id=472265943062413332,
@@ -330,7 +360,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @autospec("bot.exts.filters.token_remover", "KNOWN_USER_LOG_MESSAGE")
     async def test_format_log_message_user_token_user(self, user_token_message):
         """Should correctly format the user ID portion when the ID belongs to a known user."""
-        token = Token("NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4")
+        token = Token(
+            "NDY3MjIzMjMwNjUwNzc3NjQx", "XsySD_", "s45jqDV_Iisn-symw0yDRrk_jf4"
+        )
         user_token_message.format.return_value = "Partner"
 
         return_value = await TokenRemover.format_userid_log_message(self.msg, token)
@@ -345,7 +377,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     @mock.patch.object(TokenRemover, "mod_log", new_callable=mock.PropertyMock)
     @autospec("bot.exts.filters.token_remover", "log")
     @autospec(TokenRemover, "format_log_message", "format_userid_log_message")
-    async def test_take_action(self, format_log_message, format_userid_log_message, logger, mod_log_property):
+    async def test_take_action(
+        self, format_log_message, format_userid_log_message, logger, mod_log_property
+    ):
         """Should delete the message and send a mod log."""
         cog = TokenRemover(self.bot)
         mod_log = mock.create_autospec(ModLog, spec_set=True, instance=True)
@@ -362,7 +396,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
 
         self.msg.delete.assert_called_once_with()
         self.msg.channel.send.assert_called_once_with(
-            token_remover.DELETION_MESSAGE_TEMPLATE.format(mention=self.msg.author.mention)
+            token_remover.DELETION_MESSAGE_TEMPLATE.format(
+                mention=self.msg.author.mention
+            )
         )
 
         format_log_message.assert_called_once_with(self.msg, token)
@@ -370,7 +406,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         logger.debug.assert_called_with(log_msg)
         self.bot.stats.incr.assert_called_once_with("tokens.removed_tokens")
 
-        mod_log.ignore.assert_called_once_with(constants.Event.message_delete, self.msg.id)
+        mod_log.ignore.assert_called_once_with(
+            constants.Event.message_delete, self.msg.id
+        )
         mod_log.send_log_message.assert_called_once_with(
             icon_url=constants.Icons.token_removed,
             colour=Colour(constants.Colours.soft_red),
@@ -385,7 +423,9 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
     async def test_take_action_delete_failure(self, mod_log_property):
         """Shouldn't send any messages if the token message can't be deleted."""
         cog = TokenRemover(self.bot)
-        mod_log_property.return_value = mock.create_autospec(ModLog, spec_set=True, instance=True)
+        mod_log_property.return_value = mock.create_autospec(
+            ModLog, spec_set=True, instance=True
+        )
         self.msg.delete.side_effect = NotFound(MagicMock(), MagicMock())
 
         token = mock.create_autospec(Token, spec_set=True, instance=True)

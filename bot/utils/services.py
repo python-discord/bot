@@ -20,11 +20,15 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
     When an error occurs, `None` is returned, otherwise the generated URL with the suffix.
     """
     extension = extension and f".{extension}"
-    log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
+    log.debug(
+        f"Sending contents of size {len(contents.encode())} bytes to paste service."
+    )
     paste_url = URLs.paste_service.format(key="documents")
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
-            async with bot.instance.http_session.post(paste_url, data=contents) as response:
+            async with bot.instance.http_session.post(
+                paste_url, data=contents
+            ) as response:
                 response_json = await response.json()
         except ClientConnectorError:
             log.warning(
@@ -46,11 +50,13 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
             )
             continue
         elif "key" in response_json:
-            log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
+            log.info(
+                f"Successfully uploaded contents to paste service behind key {response_json['key']}."
+            )
 
-            paste_link = URLs.paste_service.format(key=response_json['key']) + extension
+            paste_link = URLs.paste_service.format(key=response_json["key"]) + extension
 
-            if extension == '.py':
+            if extension == ".py":
                 return paste_link
 
             return paste_link + "?noredirect"

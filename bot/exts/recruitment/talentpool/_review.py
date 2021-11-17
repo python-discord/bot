@@ -10,7 +10,15 @@ from typing import List, Optional, Union
 
 import arrow
 from dateutil.parser import isoparse
-from discord import Embed, Emoji, Member, Message, NoMoreItems, PartialMessage, TextChannel
+from discord import (
+    Embed,
+    Emoji,
+    Member,
+    Message,
+    NoMoreItems,
+    PartialMessage,
+    TextChannel,
+)
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
@@ -39,14 +47,14 @@ MAX_EMBED_SIZE = 4000
 # Historic nominations will have 2 role mentions at the start, new ones won't, optionally match for this.
 NOMINATION_MESSAGE_REGEX = re.compile(
     r"(?:<@&\d+> <@&\d+>\n)*?<@!?(\d+?)> \(.+#\d{4}\) for Helper!\n\n\*\*Nominated by:\*\*",
-    re.MULTILINE
+    re.MULTILINE,
 )
 
 
 class Reviewer:
     """Schedules, formats, and publishes reviews of helper nominees."""
 
-    def __init__(self, name: str, bot: Bot, pool: 'TalentPool'):
+    def __init__(self, name: str, bot: Bot, pool: "TalentPool"):
         self.bot = bot
         self._pool = pool
         self._review_scheduler = Scheduler(name)
@@ -69,12 +77,14 @@ class Reviewer:
         log.trace(f"Scheduling review of user with ID {user_id}")
 
         user_data = self._pool.cache.get(user_id)
-        inserted_at = isoparse(user_data['inserted_at'])
+        inserted_at = isoparse(user_data["inserted_at"])
         review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
 
         # If it's over a day overdue, it's probably an old nomination and shouldn't be automatically reviewed.
         if arrow.utcnow() - review_at < timedelta(days=1):
-            self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
+            self._review_scheduler.schedule_at(
+                review_at, user_id, self.post_review(user_id, update_database=True)
+            )
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
@@ -92,12 +102,18 @@ class Reviewer:
 
         last_message = messages[-1]
         if reviewed_emoji:
-            for reaction in (reviewed_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
+            for reaction in (
+                reviewed_emoji,
+                "\N{THUMBS UP SIGN}",
+                "\N{THUMBS DOWN SIGN}",
+            ):
                 await last_message.add_reaction(reaction)
 
         if update_database:
             nomination = self._pool.cache.get(user_id)
-            await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
+            await self.bot.api_client.patch(
+                f"bot/nominations/{nomination['id']}", json={"reviewed": True}
+            )
 
     async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji]]:
         """Format a generic review of a user and return it with the reviewed emoji."""
@@ -124,7 +140,7 @@ class Reviewer:
 
         current_nominations = "\n\n".join(
             f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}"
-            for entry in nomination['entries'][::-1]
+            for entry in nomination["entries"][::-1]
         )
         current_nominations = f"**Nominated by:**\n{current_nominations}"
 
@@ -148,13 +164,17 @@ class Reviewer:
         messages = [message]
         if not NOMINATION_MESSAGE_REGEX.search(message.content):
             with contextlib.suppress(NoMoreItems):
-                async for new_message in message.channel.history(before=message.created_at):
+                async for new_message in message.channel.history(
+                    before=message.created_at
+                ):
                     messages.append(new_message)
 
                     if NOMINATION_MESSAGE_REGEX.search(new_message.content):
                         break
 
-        log.debug(f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}")
+        log.debug(
+            f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}"
+        )
 
         parts = []
         for message_ in messages[::-1]:
@@ -169,23 +189,25 @@ class Reviewer:
         reviewed = await count_unique_users_reaction(
             messages[0],
             lambda r: "ducky" in str(r) or str(r) == "\N{EYES}",
-            count_bots=False
+            count_bots=False,
         )
         upvotes = await count_unique_users_reaction(
-            messages[0],
-            lambda r: str(r) == "\N{THUMBS UP SIGN}",
-            count_bots=False
+            messages[0], lambda r: str(r) == "\N{THUMBS UP SIGN}", count_bots=False
         )
         downvotes = await count_unique_users_reaction(
-            messages[0],
-            lambda r: str(r) == "\N{THUMBS DOWN SIGN}",
-            count_bots=False
+            messages[0], lambda r: str(r) == "\N{THUMBS DOWN SIGN}", count_bots=False
         )
 
         # Remove the first and last paragraphs
-        stripped_content = content.split("\n\n", maxsplit=1)[1].rsplit("\n\n", maxsplit=1)[0]
+        stripped_content = content.split("\n\n", maxsplit=1)[1].rsplit(
+            "\n\n", maxsplit=1
+        )[0]
 
-        result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
+        result = (
+            f"**Passed** {Emojis.incident_actioned}"
+            if passed
+            else f"**Rejected** {Emojis.incident_unactioned}"
+        )
         colour = Colours.soft_green if passed else Colours.soft_red
         timestamp = datetime.utcnow().strftime("%Y/%m/%d")
 
@@ -202,13 +224,20 @@ class Reviewer:
 
         channel = self.bot.get_channel(Channels.nomination_archive)
         for number, part in enumerate(
-                textwrap.wrap(embed_content, width=MAX_EMBED_SIZE, replace_whitespace=False, placeholder="")
+            textwrap.wrap(
+                embed_content,
+                width=MAX_EMBED_SIZE,
+                replace_whitespace=False,
+                placeholder="",
+            )
         ):
-            await channel.send(embed=Embed(
-                title=embed_title if number == 0 else None,
-                description="[...] " + part if number != 0 else part,
-                colour=colour
-            ))
+            await channel.send(
+                embed=Embed(
+                    title=embed_title if number == 0 else None,
+                    description="[...] " + part if number != 0 else part,
+                    colour=colour,
+                )
+            )
 
         for message_ in messages:
             await message_.delete()
@@ -233,14 +262,20 @@ class Reviewer:
         """
         log.trace(f"Fetching the metricity data for {member.id}'s review")
         try:
-            user_activity = await self.bot.api_client.get(f"bot/users/{member.id}/metricity_review_data")
+            user_activity = await self.bot.api_client.get(
+                f"bot/users/{member.id}/metricity_review_data"
+            )
         except ResponseCodeError as e:
             if e.status == 404:
-                log.trace(f"The user {member.id} seems to have no activity logged in Metricity.")
+                log.trace(
+                    f"The user {member.id} seems to have no activity logged in Metricity."
+                )
                 messages = "no"
                 channels = ""
             else:
-                log.trace(f"An unexpected error occured while fetching information of user {member.id}.")
+                log.trace(
+                    f"An unexpected error occured while fetching information of user {member.id}."
+                )
                 raise
         else:
             log.trace(f"Activity found for {member.id}, formatting review.")
@@ -251,7 +286,8 @@ class Reviewer:
 
             if len(user_activity["top_channel_activity"]) > 1:
                 channels += ", " + ", ".join(
-                    f"{count} in {channel}" for channel, count in user_activity["top_channel_activity"][1: -1]
+                    f"{count} in {channel}"
+                    for channel, count in user_activity["top_channel_activity"][1:-1]
                 )
                 last_channel = user_activity["top_channel_activity"][-1]
                 channels += f", and {last_channel[1]} in {last_channel[0]}"
@@ -272,11 +308,13 @@ class Reviewer:
         """
         log.trace(f"Fetching the infraction data for {member.id}'s review")
         infraction_list = await self.bot.api_client.get(
-            'bot/infractions/expanded',
-            params={'user__id': str(member.id), 'ordering': '-inserted_at'}
+            "bot/infractions/expanded",
+            params={"user__id": str(member.id), "ordering": "-inserted_at"},
         )
 
-        log.trace(f"{len(infraction_list)} infractions found for {member.id}, formatting review.")
+        log.trace(
+            f"{len(infraction_list)} infractions found for {member.id}, formatting review."
+        )
         if not infraction_list:
             return "They have no infractions."
 
@@ -293,7 +331,9 @@ class Reviewer:
                 for infr_type, count in infr_stats[:-1]
             )
             last_infr, last_count = infr_stats[-1]
-            infractions += f", and {last_count} {self._format_infr_name(last_infr, last_count)}"
+            infractions += (
+                f", and {last_count} {self._format_infr_name(last_infr, last_count)}"
+            )
 
         infractions = f"**{infractions}**"
 
@@ -304,7 +344,7 @@ class Reviewer:
             infractions += ", with the last infraction issued "
 
         # Infractions were ordered by time since insertion descending.
-        infractions += get_time_delta(infraction_list[0]['inserted_at'])
+        infractions += get_time_delta(infraction_list[0]["inserted_at"])
 
         return f"They have {infractions}."
 
@@ -318,7 +358,7 @@ class Reviewer:
         """
         formatted = infr_type.replace("_", " ")
         if count > 1:
-            if infr_type.endswith(('ch', 'sh')):
+            if infr_type.endswith(("ch", "sh")):
                 formatted += "e"
             formatted += "s"
 
@@ -336,11 +376,13 @@ class Reviewer:
             params={
                 "user__id": str(member.id),
                 "active": "false",
-                "ordering": "-inserted_at"
-            }
+                "ordering": "-inserted_at",
+            },
         )
 
-        log.trace(f"{len(history)} previous nominations found for {member.id}, formatting review.")
+        log.trace(
+            f"{len(history)} previous nominations found for {member.id}, formatting review."
+        )
         if not history:
             return
 
@@ -348,7 +390,7 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time_since(isoparse(history[0]['ended_at']))
+        end_time = time_since(isoparse(history[0]["ended_at"]))
 
         review = (
             f"They were nominated **{nomination_times}** before"
@@ -374,7 +416,9 @@ class Reviewer:
         Returns the resulting message objects.
         """
         messages = textwrap.wrap(text, width=MAX_MESSAGE_SIZE, replace_whitespace=False)
-        log.trace(f"The provided string will be sent to the channel {channel.id} as {len(messages)} messages.")
+        log.trace(
+            f"The provided string will be sent to the channel {channel.id} as {len(messages)} messages."
+        )
 
         results = []
         for message in messages:
@@ -393,15 +437,21 @@ class Reviewer:
         await self._pool.refresh_cache()
         if user_id not in self._pool.cache:
             log.trace(f"Can't find a nominated user with id {user_id}")
-            await ctx.send(f":x: Can't find a currently nominated user with id `{user_id}`")
+            await ctx.send(
+                f":x: Can't find a currently nominated user with id `{user_id}`"
+            )
             return False
 
         nomination = self._pool.cache.get(user_id)
         if nomination["reviewed"]:
-            await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
+            await ctx.send(
+                ":x: This nomination was already reviewed, but here's a cookie :cookie:"
+            )
             return False
 
-        await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
+        await self.bot.api_client.patch(
+            f"bot/nominations/{nomination['id']}", json={"reviewed": True}
+        )
         if user_id in self._review_scheduler:
             self._review_scheduler.cancel(user_id)
 

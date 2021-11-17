@@ -35,7 +35,9 @@ class SecurityCogTests(unittest.TestCase):
         """When invoked outside of a guild, `check_on_guild` should cause an error."""
         self.ctx.guild = None
 
-        with self.assertRaises(NoPrivateMessage, msg="This command cannot be used in private messages."):
+        with self.assertRaises(
+            NoPrivateMessage, msg="This command cannot be used in private messages."
+        ):
             self.cog.check_on_guild(self.ctx)
 
     def test_check_on_guild_returns_true_inside_of_guild(self):

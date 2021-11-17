@@ -4,11 +4,23 @@ import unicodedata
 from typing import Tuple, Union
 
 from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from discord.ext.commands import (
+    BadArgument,
+    Cog,
+    Context,
+    clean_content,
+    command,
+    has_any_role,
+)
 from discord.utils import snowflake_time
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import (
+    MODERATION_ROLES,
+    STAFF_PARTNERS_COMMUNITY_ROLES,
+    Channels,
+    Roles,
+)
 from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.log import get_logger
@@ -39,7 +51,12 @@ If the implementation is hard to explain, it's a bad idea.
 If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 """
-LEADS_AND_COMMUNITY = (Roles.project_leads, Roles.domain_leads, Roles.partners, Roles.python_community)
+LEADS_AND_COMMUNITY = (
+    Roles.project_leads,
+    Roles.domain_leads,
+    Roles.partners,
+    Roles.python_community,
+)
 
 
 class Utils(Cog):
@@ -49,7 +66,10 @@ class Utils(Cog):
         self.bot = bot
 
     @command()
-    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_py), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(
+        channels=(Channels.bot_commands, Channels.discord_py),
+        roles=STAFF_PARTNERS_COMMUNITY_ROLES,
+    )
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
@@ -58,12 +78,14 @@ class Utils(Cog):
                 ctx,
                 "**Non-Character Detected**\n"
                 "Only unicode characters can be processed, but a custom Discord emoji "
-                "was found. Please remove it and try again."
+                "was found. Please remove it and try again.",
             )
             return
 
         if len(characters) > 50:
-            await messages.send_denial(ctx, f"Too many characters ({len(characters)}/50)")
+            await messages.send_denial(
+                ctx, f"Too many characters ({len(characters)}/50)"
+            )
             return
 
         def get_info(char: str) -> Tuple[str, str]:
@@ -82,12 +104,18 @@ class Utils(Cog):
 
         if len(characters) > 1:
             # Maximum length possible is 502 out of 1024, so there's no need to truncate.
-            embed.add_field(name='Full Raw Text', value=f"`{''.join(raw_list)}`", inline=False)
+            embed.add_field(
+                name="Full Raw Text", value=f"`{''.join(raw_list)}`", inline=False
+            )
 
-        await LinePaginator.paginate(char_list, ctx, embed, max_lines=10, max_size=2000, empty=False)
+        await LinePaginator.paginate(
+            char_list, ctx, embed, max_lines=10, max_size=2000, empty=False
+        )
 
     @command()
-    async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
+    async def zen(
+        self, ctx: Context, *, search_value: Union[int, str, None] = None
+    ) -> None:
         """
         Show the Zen of Python.
 
@@ -98,7 +126,7 @@ class Utils(Cog):
         embed = Embed(
             colour=Colour.og_blurple(),
             title="The Zen of Python",
-            description=ZEN_OF_PYTHON
+            description=ZEN_OF_PYTHON,
         )
 
         if search_value is None:
@@ -113,7 +141,9 @@ class Utils(Cog):
             upper_bound = len(zen_lines) - 1
             lower_bound = -1 * len(zen_lines)
             if not (lower_bound <= search_value <= upper_bound):
-                raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
+                raise BadArgument(
+                    f"Please provide an index between {lower_bound} and {upper_bound}."
+                )
 
             embed.title += f" (line {search_value % len(zen_lines)}):"
             embed.description = zen_lines[search_value]
@@ -151,14 +181,18 @@ class Utils(Cog):
                 match_index = index
 
         if not best_match:
-            raise BadArgument("I didn't get a match! Please try again with a different search term.")
+            raise BadArgument(
+                "I didn't get a match! Please try again with a different search term."
+            )
 
         embed.title += f" (line {match_index}):"
         embed.description = best_match
         await ctx.send(embed=embed)
 
     @command(aliases=("snf", "snfl", "sf"))
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(
+        channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES
+    )
     async def snowflake(self, ctx: Context, *snowflakes: Snowflake) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
@@ -167,25 +201,28 @@ class Utils(Cog):
         embed = Embed(colour=Colour.blue())
         embed.set_author(
             name=f"Snowflake{'s'[:len(snowflakes)^1]}",  # Deals with pluralisation
-            icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true"
+            icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
 
         lines = []
         for snowflake in snowflakes:
             created_at = snowflake_time(snowflake)
-            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at)}).")
+            lines.append(
+                f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at)})."
+            )
 
         await LinePaginator.paginate(
-            lines,
-            ctx=ctx,
-            embed=embed,
-            max_lines=5,
-            max_size=1000
+            lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000
         )
 
     @command(aliases=("poll",))
     @has_any_role(*MODERATION_ROLES, *LEADS_AND_COMMUNITY)
-    async def vote(self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str) -> None:
+    async def vote(
+        self,
+        ctx: Context,
+        title: clean_content(fix_channel_mentions=True),
+        *options: str,
+    ) -> None:
         """
         Build a quick voting poll with matching reactions with the provided options.
 
@@ -200,7 +237,10 @@ class Utils(Cog):
             raise BadArgument("I can only handle 20 options!")
 
         codepoint_start = 127462  # represents "regional_indicator_a" unicode value
-        options = {chr(i): f"{chr(i)} - {v}" for i, v in enumerate(options, start=codepoint_start)}
+        options = {
+            chr(i): f"{chr(i)} - {v}"
+            for i, v in enumerate(options, start=codepoint_start)
+        }
         embed = Embed(title=title, description="\n".join(options.values()))
         message = await ctx.send(embed=embed)
         for reaction in options:

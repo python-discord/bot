@@ -9,10 +9,10 @@ async def apply(
     """Detects repeated messages sent by multiple users."""
     total_recent = len(recent_messages)
 
-    if total_recent > config['max']:
+    if total_recent > config["max"]:
         return (
             f"sent {total_recent} messages in {config['interval']}s",
             set(msg.author for msg in recent_messages),
-            recent_messages
+            recent_messages,
         )
     return None

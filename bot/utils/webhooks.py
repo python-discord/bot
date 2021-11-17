@@ -10,12 +10,12 @@ log = get_logger(__name__)
 
 
 async def send_webhook(
-        webhook: discord.Webhook,
-        content: Optional[str] = None,
-        username: Optional[str] = None,
-        avatar_url: Optional[str] = None,
-        embed: Optional[Embed] = None,
-        wait: Optional[bool] = False
+    webhook: discord.Webhook,
+    content: Optional[str] = None,
+    username: Optional[str] = None,
+    avatar_url: Optional[str] = None,
+    embed: Optional[Embed] = None,
+    wait: Optional[bool] = False,
 ) -> discord.Message:
     """
     Send a message using the provided webhook.

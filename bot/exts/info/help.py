@@ -5,12 +5,21 @@ from contextlib import suppress
 from typing import List, Union
 
 from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
+from discord.ext.commands import (
+    Bot,
+    Cog,
+    Command,
+    CommandError,
+    Context,
+    DisabledCommand,
+    Group,
+    HelpCommand,
+)
 from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
 
 from bot import constants
-from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import STAFF_PARTNERS_COMMUNITY_ROLES, Channels
 from bot.decorators import redirect_output
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -55,7 +64,10 @@ class CustomHelpCommand(HelpCommand):
     def __init__(self):
         super().__init__(command_attrs={"help": "Shows help for bot commands"})
 
-    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @redirect_output(
+        destination_channel=Channels.bot_commands,
+        bypass_roles=STAFF_PARTNERS_COMMUNITY_ROLES,
+    )
     async def command_callback(self, ctx: Context, *, command: str = None) -> None:
         """Attempts to match the provided query with a valid command or cog."""
         # the only reason we need to tamper with this is because d.py does not support "categories",
@@ -111,13 +123,19 @@ class CustomHelpCommand(HelpCommand):
                 choices.update(command.aliases)
             else:
                 # otherwise we need to add the parent name in
-                choices.update(f"{command.full_parent_name} {alias}" for alias in command.aliases)
+                choices.update(
+                    f"{command.full_parent_name} {alias}" for alias in command.aliases
+                )
 
         # all cog names
         choices.update(self.context.bot.cogs)
 
         # all category names
-        choices.update(cog.category for cog in self.context.bot.cogs.values() if hasattr(cog, "category"))
+        choices.update(
+            cog.category
+            for cog in self.context.bot.cogs.values()
+            if hasattr(cog, "category")
+        )
         return choices
 
     async def command_not_found(self, string: str) -> "HelpQueryNotFound":
@@ -127,10 +145,20 @@ class CustomHelpCommand(HelpCommand):
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
         choices = list(await self.get_all_help_choices())
-        result = process.extract(default_process(string), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
-        return HelpQueryNotFound(f'Query "{string}" not found.', {choice[0]: choice[1] for choice in result})
+        result = process.extract(
+            default_process(string),
+            choices,
+            scorer=fuzz.ratio,
+            score_cutoff=60,
+            processor=None,
+        )
+        return HelpQueryNotFound(
+            f'Query "{string}" not found.', {choice[0]: choice[1] for choice in result}
+        )
 
-    async def subcommand_not_found(self, command: Command, string: str) -> "HelpQueryNotFound":
+    async def subcommand_not_found(
+        self, command: Command, string: str
+    ) -> "HelpQueryNotFound":
         """
         Redirects the error to `command_not_found`.
 
@@ -163,7 +191,10 @@ class CustomHelpCommand(HelpCommand):
         command_details = f"**```{PREFIX}{name} {command.signature}```**\n"
 
         # show command aliases
-        aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
+        aliases = [
+            f"`{alias}`" if not parent else f"`{parent} {alias}`"
+            for alias in command.aliases
+        ]
         aliases += [f"`{alias}`" for alias in getattr(command, "root_aliases", ())]
         aliases = ", ".join(sorted(aliases))
         if aliases:
@@ -195,7 +226,9 @@ class CustomHelpCommand(HelpCommand):
         await wait_for_deletion(message, (self.context.author.id,))
 
     @staticmethod
-    def get_commands_brief_details(commands_: List[Command], return_as_list: bool = False) -> Union[List[str], str]:
+    def get_commands_brief_details(
+        commands_: List[Command], return_as_list: bool = False
+    ) -> Union[List[str], str]:
         """
         Formats the prefix, command name and signature, and short doc for an iterable of commands.
 
@@ -279,7 +312,9 @@ class CustomHelpCommand(HelpCommand):
 
         filtered_commands = await self.filter_commands(all_commands, sort=True)
 
-        command_detail_lines = self.get_commands_brief_details(filtered_commands, return_as_list=True)
+        command_detail_lines = self.get_commands_brief_details(
+            filtered_commands, return_as_list=True
+        )
         description = f"**{category.name}**\n*{category.description}*"
 
         if command_detail_lines:
@@ -301,24 +336,34 @@ class CustomHelpCommand(HelpCommand):
         embed = Embed()
         embed.set_author(name="Command Help", icon_url=constants.Icons.questionmark)
 
-        filter_commands = await self.filter_commands(bot.commands, sort=True, key=self._category_key)
+        filter_commands = await self.filter_commands(
+            bot.commands, sort=True, key=self._category_key
+        )
 
         cog_or_category_pages = []
 
-        for cog_or_category, _commands in itertools.groupby(filter_commands, key=self._category_key):
+        for cog_or_category, _commands in itertools.groupby(
+            filter_commands, key=self._category_key
+        ):
             sorted_commands = sorted(_commands, key=lambda c: c.name)
 
             if len(sorted_commands) == 0:
                 continue
 
-            command_detail_lines = self.get_commands_brief_details(sorted_commands, return_as_list=True)
+            command_detail_lines = self.get_commands_brief_details(
+                sorted_commands, return_as_list=True
+            )
 
             # Split cogs or categories which have too many commands to fit in one page.
             # The length of commands is included for later use when aggregating into pages for the paginator.
             for index in range(0, len(sorted_commands), COMMANDS_PER_PAGE):
-                truncated_lines = command_detail_lines[index:index + COMMANDS_PER_PAGE]
+                truncated_lines = command_detail_lines[
+                    index : index + COMMANDS_PER_PAGE
+                ]
                 joined_lines = "".join(truncated_lines)
-                cog_or_category_pages.append((f"**{cog_or_category}**{joined_lines}", len(truncated_lines)))
+                cog_or_category_pages.append(
+                    (f"**{cog_or_category}**{joined_lines}", len(truncated_lines))
+                )
 
         pages = []
         counter = 0
@@ -338,7 +383,9 @@ class CustomHelpCommand(HelpCommand):
             # add any remaining command help that didn't get added in the last iteration above.
             pages.append(page)
 
-        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2000)
+        await LinePaginator.paginate(
+            pages, self.context, embed=embed, max_lines=1, max_size=2000
+        )
 
 
 class Help(Cog):

@@ -13,9 +13,15 @@ from async_rediscache import RedisCache
 from discord.ext import commands, tasks
 
 from bot.bot import Bot
-from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, MODERATION_ROLES
+from bot.constants import MODERATION_ROLES
+from bot.constants import Branding as BrandingConfig
+from bot.constants import Channels, Colours, Guild
 from bot.decorators import mock_in_debug
-from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
+from bot.exts.backend.branding._repository import (
+    BrandingRepository,
+    Event,
+    RemoteObject,
+)
 from bot.log import get_logger
 from bot.utils import scheduling
 
@@ -51,7 +57,9 @@ def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
     For both `title` and `description`, empty string are valid values ~ fields will be empty.
     """
     colour = Colours.soft_green if success else Colours.soft_red
-    return discord.Embed(title=title[:256], description=description[:4096], colour=colour)
+    return discord.Embed(
+        title=title[:256], description=description[:4096], colour=colour
+    )
 
 
 def extract_event_duration(event: Event) -> str:
@@ -127,11 +135,15 @@ class Branding(commands.Cog):
         self.bot = bot
         self.repository = BrandingRepository(bot)
 
-        scheduling.create_task(self.maybe_start_daemon(), event_loop=self.bot.loop)  # Start depending on cache.
+        scheduling.create_task(
+            self.maybe_start_daemon(), event_loop=self.bot.loop
+        )  # Start depending on cache.
 
     # region: Internal logic & state management
 
-    @mock_in_debug(return_value=True)  # Mocked in development environment to prevent API spam.
+    @mock_in_debug(
+        return_value=True
+    )  # Mocked in development environment to prevent API spam.
     async def apply_asset(self, asset_type: AssetType, download_url: str) -> bool:
         """
         Download asset from `download_url` and apply it to PyDis as `asset_type`.
@@ -196,24 +208,38 @@ class Branding(commands.Cog):
         state = await self.cache_icons.to_dict()
         log.trace(f"Total icons in rotation: {len(state)}.")
 
-        if not state:  # This would only happen if rotation not initiated, but we can handle gracefully.
-            log.warning("Attempted icon rotation with an empty icon cache. This indicates wrong logic.")
+        if (
+            not state
+        ):  # This would only happen if rotation not initiated, but we can handle gracefully.
+            log.warning(
+                "Attempted icon rotation with an empty icon cache. This indicates wrong logic."
+            )
             return False
 
         if len(state) == 1 and 1 in state.values():
-            log.debug("Aborting icon rotation: only 1 icon is available and has already been applied.")
+            log.debug(
+                "Aborting icon rotation: only 1 icon is available and has already been applied."
+            )
             return False
 
         current_iteration = min(state.values())  # Choose iteration to draw from.
-        options = [download_url for download_url, times_used in state.items() if times_used == current_iteration]
+        options = [
+            download_url
+            for download_url, times_used in state.items()
+            if times_used == current_iteration
+        ]
 
-        log.trace(f"Choosing from {len(options)} icons in iteration {current_iteration}.")
+        log.trace(
+            f"Choosing from {len(options)} icons in iteration {current_iteration}."
+        )
         next_icon = random.choice(options)
 
         success = await self.apply_asset(AssetType.ICON, next_icon)
 
         if success:
-            await self.cache_icons.increment(next_icon)  # Push the icon into the next iteration.
+            await self.cache_icons.increment(
+                next_icon
+            )  # Push the icon into the next iteration.
 
             timestamp = Arrow.utcnow().timestamp()
             await self.cache_information.set("last_rotation_timestamp", timestamp)
@@ -230,7 +256,9 @@ class Branding(commands.Cog):
         """
         log.debug("Checking whether it's time for icons to rotate.")
 
-        last_rotation_timestamp = await self.cache_information.get("last_rotation_timestamp")
+        last_rotation_timestamp = await self.cache_information.get(
+            "last_rotation_timestamp"
+        )
 
         if last_rotation_timestamp is None:  # Maiden case ~ never rotated.
             await self.rotate_icons()
@@ -244,7 +272,9 @@ class Branding(commands.Cog):
         if difference.days >= BrandingConfig.cycle_frequency:
             await self.rotate_icons()
 
-    async def initiate_icon_rotation(self, available_icons: t.List[RemoteObject]) -> None:
+    async def initiate_icon_rotation(
+        self, available_icons: t.List[RemoteObject]
+    ) -> None:
         """
         Set up a new icon rotation.
 
@@ -274,13 +304,17 @@ class Branding(commands.Cog):
         We read event information from `cache_information`. The caller is therefore responsible for making
         sure that the cache is up-to-date before calling this function.
         """
-        log.debug(f"Sending event information event to channel: {channel_id} ({is_notification=}).")
+        log.debug(
+            f"Sending event information event to channel: {channel_id} ({is_notification=})."
+        )
 
         await self.bot.wait_until_guild_available()
         channel: t.Optional[discord.TextChannel] = self.bot.get_channel(channel_id)
 
         if channel is None:
-            log.warning(f"Cannot send event information: channel {channel_id} not found!")
+            log.warning(
+                f"Cannot send event information: channel {channel_id} not found!"
+            )
             return
 
         log.trace(f"Destination channel: #{channel.name}.")
@@ -290,11 +324,17 @@ class Branding(commands.Cog):
 
         if None in (description, duration):
             content = None
-            embed = make_embed("No event in cache", "Is the daemon enabled?", success=False)
+            embed = make_embed(
+                "No event in cache", "Is the daemon enabled?", success=False
+            )
 
         else:
-            content = "Python Discord is entering a new event!" if is_notification else None
-            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
+            content = (
+                "Python Discord is entering a new event!" if is_notification else None
+            )
+            embed = discord.Embed(
+                description=description[:4096], colour=discord.Colour.og_blurple()
+            )
             embed.set_footer(text=duration[:4096])
 
         await channel.send(content=content, embed=embed)
@@ -315,7 +355,9 @@ class Branding(commands.Cog):
         """
         log.info(f"Entering event: '{event.path}'.")
 
-        banner_success = await self.apply_banner(event.banner)  # Only one asset ~ apply directly.
+        banner_success = await self.apply_banner(
+            event.banner
+        )  # Only one asset ~ apply directly.
 
         await self.initiate_icon_rotation(event.icons)  # Prepare a new rotation.
         icon_success = await self.rotate_icons()  # Apply an icon from the new rotation.
@@ -333,7 +375,9 @@ class Branding(commands.Cog):
         if event_changed and not event.meta.is_fallback:
             await self.send_info_embed(Channels.change_log, is_notification=True)
         else:
-            log.trace("Omitting #changelog notification. Event has not changed, or new event is fallback.")
+            log.trace(
+                "Omitting #changelog notification. Event has not changed, or new event is fallback."
+            )
 
         return banner_success, icon_success
 
@@ -377,11 +421,15 @@ class Branding(commands.Cog):
 
         log.trace(f"Writing {len(chronological_events)} events (fallback omitted).")
 
-        with contextlib.suppress(ValueError):  # Cache raises when updated with an empty dict.
-            await self.cache_events.update({
-                extract_event_name(event): extract_event_duration(event)
-                for event in chronological_events
-            })
+        with contextlib.suppress(
+            ValueError
+        ):  # Cache raises when updated with an empty dict.
+            await self.cache_events.update(
+                {
+                    extract_event_name(event): extract_event_duration(event)
+                    for event in chronological_events
+                }
+            )
 
     async def populate_cache_event_description(self, event: Event) -> None:
         """
@@ -395,7 +443,9 @@ class Branding(commands.Cog):
         log.debug("Caching event description & duration.")
 
         await self.cache_information.set("event_description", event.meta.description)
-        await self.cache_information.set("event_duration", extract_event_duration(event))
+        await self.cache_information.set(
+            "event_duration", extract_event_duration(event)
+        )
 
     # endregion
     # region: Daemon
@@ -408,7 +458,9 @@ class Branding(commands.Cog):
         """
         log.debug("Checking whether daemon should start.")
 
-        should_begin: t.Optional[bool] = await self.cache_information.get("daemon_active")  # None if never set!
+        should_begin: t.Optional[bool] = await self.cache_information.get(
+            "daemon_active"
+        )  # None if never set!
 
         if should_begin:
             self.daemon_loop.start()
@@ -441,7 +493,9 @@ class Branding(commands.Cog):
         await self.populate_cache_events(available_events)
 
         if new_event is None:
-            log.warning("Daemon main: failed to get current event from branding repository, will do nothing.")
+            log.warning(
+                "Daemon main: failed to get current event from branding repository, will do nothing."
+            )
             return
 
         if new_event.path != await self.cache_information.get("event_path"):
@@ -449,7 +503,9 @@ class Branding(commands.Cog):
             await self.enter_event(new_event)
             return
 
-        await self.populate_cache_event_description(new_event)  # Cache fresh frontend info in case of change.
+        await self.populate_cache_event_description(
+            new_event
+        )  # Cache fresh frontend info in case of change.
 
         log.trace("Daemon main: event has not changed, checking for change in assets.")
 
@@ -457,7 +513,9 @@ class Branding(commands.Cog):
             log.debug("Daemon main: detected banner change.")
             await self.apply_banner(new_event.banner)
 
-        if compound_hash(new_event.icons) != await self.cache_information.get("icons_hash"):
+        if compound_hash(new_event.icons) != await self.cache_information.get(
+            "icons_hash"
+        ):
             log.debug("Daemon main: detected icon change.")
             await self.initiate_icon_rotation(new_event.icons)
             await self.rotate_icons()
@@ -499,7 +557,9 @@ class Branding(commands.Cog):
         midnight = tomorrow.replace(hour=0, minute=1, second=0, microsecond=0)
 
         sleep_secs = (midnight - now).total_seconds()
-        log.trace(f"Daemon before: sleeping {sleep_secs} seconds before next-up midnight: {midnight}.")
+        log.trace(
+            f"Daemon before: sleeping {sleep_secs} seconds before next-up midnight: {midnight}."
+        )
 
         await asyncio.sleep(sleep_secs)
 
@@ -535,10 +595,16 @@ class Branding(commands.Cog):
         )
 
         if failed_assets:
-            resp = make_embed("Synchronisation unsuccessful", f"Failed to apply: {failed_assets}.", success=False)
+            resp = make_embed(
+                "Synchronisation unsuccessful",
+                f"Failed to apply: {failed_assets}.",
+                success=False,
+            )
             resp.set_footer(text="Check log for details.")
         else:
-            resp = make_embed("Synchronisation successful", "Assets have been applied.", success=True)
+            resp = make_embed(
+                "Synchronisation successful", "Assets have been applied.", success=True
+            )
 
         await ctx.send(embed=resp)
 
@@ -566,20 +632,32 @@ class Branding(commands.Cog):
             return
 
         available_events = await self.cache_events.to_dict()
-        log.trace(f"Found {len(available_events)} cached events available for calendar view.")
+        log.trace(
+            f"Found {len(available_events)} cached events available for calendar view."
+        )
 
         if not available_events:
-            resp = make_embed("No events found!", "Cache may be empty, try `branding calendar refresh`.", success=False)
+            resp = make_embed(
+                "No events found!",
+                "Cache may be empty, try `branding calendar refresh`.",
+                success=False,
+            )
             await ctx.send(embed=resp)
             return
 
-        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.og_blurple())
+        embed = discord.Embed(
+            title="Current event calendar", colour=discord.Colour.og_blurple()
+        )
 
         # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
         first_25 = list(available_events.items())[:25]
 
-        if len(first_25) != len(available_events):  # Alert core devs that a paginating solution is now necessary.
-            log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25.")
+        if len(first_25) != len(
+            available_events
+        ):  # Alert core devs that a paginating solution is now necessary.
+            log.warning(
+                f"There are {len(available_events)} events, but the calendar view can only display 25."
+            )
 
         for name, duration in first_25:
             embed.add_field(name=name[:256], value=duration[:1024])
@@ -624,7 +702,11 @@ class Branding(commands.Cog):
             resp = make_embed("Daemon is already enabled!", "", success=False)
         else:
             self.daemon_loop.start()
-            resp = make_embed("Daemon enabled!", "It will now automatically awaken on start-up.", success=True)
+            resp = make_embed(
+                "Daemon enabled!",
+                "It will now automatically awaken on start-up.",
+                success=True,
+            )
 
         await ctx.send(embed=resp)
 
@@ -635,7 +717,9 @@ class Branding(commands.Cog):
 
         if self.daemon_loop.is_running():
             self.daemon_loop.cancel()
-            resp = make_embed("Daemon disabled!", "It will not awaken on start-up.", success=True)
+            resp = make_embed(
+                "Daemon disabled!", "It will not awaken on start-up.", success=True
+            )
         else:
             resp = make_embed("Daemon is already disabled!", "", success=False)
 
@@ -645,9 +729,17 @@ class Branding(commands.Cog):
     async def branding_daemon_status_cmd(self, ctx: commands.Context) -> None:
         """Check whether the daemon is currently enabled."""
         if self.daemon_loop.is_running():
-            resp = make_embed("Daemon is enabled", "Use `branding daemon disable` to stop.", success=True)
+            resp = make_embed(
+                "Daemon is enabled",
+                "Use `branding daemon disable` to stop.",
+                success=True,
+            )
         else:
-            resp = make_embed("Daemon is disabled", "Use `branding daemon enable` to start.", success=False)
+            resp = make_embed(
+                "Daemon is disabled",
+                "Use `branding daemon enable` to start.",
+                success=False,
+            )
 
         await ctx.send(embed=resp)
 

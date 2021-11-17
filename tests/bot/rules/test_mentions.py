@@ -5,11 +5,13 @@ from tests.bot.rules import DisallowedCase, RuleTest
 from tests.helpers import MockMember, MockMessage
 
 
-def make_msg(author: str, total_user_mentions: int, total_bot_mentions: int = 0) -> MockMessage:
+def make_msg(
+    author: str, total_user_mentions: int, total_bot_mentions: int = 0
+) -> MockMessage:
     """Makes a message with `total_mentions` mentions."""
     user_mentions = [MockMember() for _ in range(total_user_mentions)]
     bot_mentions = [MockMember(bot=True) for _ in range(total_bot_mentions)]
-    return MockMessage(author=author, mentions=user_mentions+bot_mentions)
+    return MockMessage(author=author, mentions=user_mentions + bot_mentions)
 
 
 class TestMentions(RuleTest):
@@ -66,7 +68,7 @@ class TestMentions(RuleTest):
             [make_msg("bob", 0, 3)],
             [make_msg("bob", 2, 1)],
             [make_msg("bob", 1, 2), make_msg("bob", 1, 2)],
-            [make_msg("bob", 1, 5), make_msg("alice", 2, 5)]
+            [make_msg("bob", 1, 5), make_msg("alice", 2, 5)],
         )
 
         await self.run_allowed(cases)
@@ -74,9 +76,7 @@ class TestMentions(RuleTest):
     def relevant_messages(self, case: DisallowedCase) -> Iterable[MockMessage]:
         last_message = case.recent_messages[0]
         return tuple(
-            msg
-            for msg in case.recent_messages
-            if msg.author == last_message.author
+            msg for msg in case.recent_messages if msg.author == last_message.author
         )
 
     def get_report(self, case: DisallowedCase) -> str:

@@ -17,8 +17,8 @@ CHUNK_SIZE = 1000
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
-_Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
-_Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
+_Role = namedtuple("Role", ("id", "name", "colour", "permissions", "position"))
+_Diff = namedtuple("Diff", ("created", "updated", "deleted"))
 
 
 # Implementation of static abstract methods are not enforced if the subclass is never instantiated.
@@ -70,7 +70,11 @@ class Syncer(abc.ABC):
             content = f":x: Synchronisation of {cls.name}s failed: {results}"
         else:
             diff_dict = diff._asdict()
-            results = (f"{name} `{len(val)}`" for name, val in diff_dict.items() if val is not None)
+            results = (
+                f"{name} `{len(val)}`"
+                for name, val in diff_dict.items()
+                if val is not None
+            )
             results = ", ".join(results)
 
             log.info(f"{cls.name} syncer finished: {results}.")
@@ -89,7 +93,7 @@ class RoleSyncer(Syncer):
     async def _get_diff(guild: Guild) -> _Diff:
         """Return the difference of roles between the cache of `guild` and the database."""
         log.trace("Getting the diff for roles.")
-        roles = await bot.instance.api_client.get('bot/roles')
+        roles = await bot.instance.api_client.get("bot/roles")
 
         # Pack DB roles and guild roles into one common, hashable format.
         # They're hashable so that they're easily comparable with sets later.
@@ -123,15 +127,17 @@ class RoleSyncer(Syncer):
         """Synchronise the database with the role cache of `guild`."""
         log.trace("Syncing created roles...")
         for role in diff.created:
-            await bot.instance.api_client.post('bot/roles', json=role._asdict())
+            await bot.instance.api_client.post("bot/roles", json=role._asdict())
 
         log.trace("Syncing updated roles...")
         for role in diff.updated:
-            await bot.instance.api_client.put(f'bot/roles/{role.id}', json=role._asdict())
+            await bot.instance.api_client.put(
+                f"bot/roles/{role.id}", json=role._asdict()
+            )
 
         log.trace("Syncing deleted roles...")
         for role in diff.deleted:
-            await bot.instance.api_client.delete(f'bot/roles/{role.id}')
+            await bot.instance.api_client.delete(f"bot/roles/{role.id}")
 
 
 class UserSyncer(Syncer):
@@ -189,7 +195,7 @@ class UserSyncer(Syncer):
                     "name": member.name,
                     "discriminator": int(member.discriminator),
                     "roles": [role.id for role in member.roles],
-                    "in_guild": True
+                    "in_guild": True,
                 }
                 users_to_create.append(new_user)
 
@@ -198,9 +204,7 @@ class UserSyncer(Syncer):
     @staticmethod
     async def _get_users() -> t.AsyncIterable:
         """GET users from database."""
-        query_params = {
-            "page": 1
-        }
+        query_params = {"page": 1}
         while query_params["page"]:
             res = await bot.instance.api_client.get("bot/users", params=query_params)
             for user in res["results"]:

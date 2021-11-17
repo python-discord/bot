@@ -11,7 +11,7 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
-_V2_LINE_RE = re.compile(r'(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)')
+_V2_LINE_RE = re.compile(r"(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)")
 
 InventoryDict = DefaultDict[str, List[Tuple[str, str]]]
 
@@ -38,14 +38,14 @@ class ZlibStreamReader:
 
     async def __aiter__(self) -> AsyncIterator[str]:
         """Yield lines of decompressed text."""
-        buf = b''
+        buf = b""
         async for chunk in self._read_compressed_chunks():
             buf += chunk
-            pos = buf.find(b'\n')
+            pos = buf.find(b"\n")
             while pos != -1:
                 yield buf[:pos].decode()
-                buf = buf[pos + 1:]
-                pos = buf.find(b'\n')
+                buf = buf[pos + 1 :]
+                pos = buf.find(b"\n")
 
 
 async def _load_v1(stream: aiohttp.StreamReader) -> InventoryDict:
@@ -69,7 +69,13 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
 
     async for line in ZlibStreamReader(stream):
         m = _V2_LINE_RE.match(line.rstrip())
-        name, type_, _prio, location, _dispname = m.groups()  # ignore the parsed items we don't need
+        (
+            name,
+            type_,
+            _prio,
+            location,
+            _dispname,
+        ) = m.groups()  # ignore the parsed items we don't need
         if location.endswith("$"):
             location = location[:-1] + name
 
@@ -80,7 +86,9 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
 async def _fetch_inventory(url: str) -> InventoryDict:
     """Fetch, parse and return an intersphinx inventory file from an url."""
     timeout = aiohttp.ClientTimeout(sock_connect=5, sock_read=5)
-    async with bot.instance.http_session.get(url, timeout=timeout, raise_for_status=True) as response:
+    async with bot.instance.http_session.get(
+        url, timeout=timeout, raise_for_status=True
+    ) as response:
         stream = response.content
 
         inventory_header = (await stream.readline()).decode().rstrip()
@@ -99,7 +107,9 @@ async def _fetch_inventory(url: str) -> InventoryDict:
 
         elif inventory_version == 2:
             if b"zlib" not in await stream.readline():
-                raise InvalidHeaderError("'zlib' not found in header of compressed inventory.")
+                raise InvalidHeaderError(
+                    "'zlib' not found in header of compressed inventory."
+                )
             return await _load_v2(stream)
 
         raise InvalidHeaderError("Incompatible inventory version.")
@@ -112,7 +122,7 @@ async def fetch_inventory(url: str) -> Optional[InventoryDict]:
     `url` should point at a valid sphinx objects.inv inventory file, which will be parsed into the
     inventory dict in the format of {"domain:role": [("symbol_name", "relative_url_to_symbol"), ...], ...}
     """
-    for attempt in range(1, FAILED_REQUEST_ATTEMPTS+1):
+    for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
             inventory = await _fetch_inventory(url)
         except aiohttp.ClientConnectorError:

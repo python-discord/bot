@@ -87,7 +87,7 @@ class Internal(Cog):
                     line = line[6:].strip()
 
             # Combine everything
-            res += (start + line + "\n")
+            res += start + line + "\n"
 
         self.stdout.seek(0)
         text = self.stdout.read()
@@ -95,7 +95,7 @@ class Internal(Cog):
         self.stdout = StringIO()
 
         if text:
-            res += (text + "\n")
+            res += text + "\n"
 
         if out is None:
             # No output, return the input statement
@@ -109,7 +109,9 @@ class Internal(Cog):
             res = (res, out)
 
         else:
-            if (isinstance(out, str) and out.startswith("Traceback (most recent call last):\n")):
+            if isinstance(out, str) and out.startswith(
+                "Traceback (most recent call last):\n"
+            ):
                 # Leave out the traceback message
                 out = "\n" + "\n".join(out.split("\n")[1:])
 
@@ -126,9 +128,11 @@ class Internal(Cog):
                 # Text too long, shorten
                 li = pretty.split("\n")
 
-                pretty = ("\n".join(li[:3])  # First 3 lines
-                          + "\n ...\n"  # Ellipsis to indicate removed lines
-                          + "\n".join(li[-3:]))  # last 3 lines
+                pretty = (
+                    "\n".join(li[:3])  # First 3 lines
+                    + "\n ...\n"  # Ellipsis to indicate removed lines
+                    + "\n".join(li[-3:])
+                )  # last 3 lines
 
             # Add the output
             res += pretty
@@ -155,7 +159,7 @@ class Internal(Cog):
             "bot": self.bot,
             "inspect": inspect,
             "discord": discord,
-            "contextlib": contextlib
+            "contextlib": contextlib,
         }
 
         self.env.update(env)
@@ -172,11 +176,13 @@ async def func():  # (None,) -> Any
             return _
     finally:
         self.env.update(locals())
-""".format(textwrap.indent(code, '            '))
+""".format(
+            textwrap.indent(code, "            ")
+        )
 
         try:
             exec(code_, self.env)  # noqa: B102,S102
-            func = self.env['func']
+            func = self.env["func"]
             res = await func()
 
         except Exception:
@@ -203,36 +209,40 @@ async def func():  # (None,) -> Any
             await ctx.send(
                 f"```py\n{out[:truncate_index]}\n```"
                 f"... response truncated; {paste_text}",
-                embed=embed
+                embed=embed,
             )
             return
 
         await ctx.send(f"```py\n{out}```", embed=embed)
 
-    @group(name='internal', aliases=('int',))
+    @group(name="internal", aliases=("int",))
     @has_any_role(Roles.owners, Roles.admins, Roles.core_developers)
     async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @internal_group.command(name='eval', aliases=('e',))
+    @internal_group.command(name="eval", aliases=("e",))
     @has_any_role(Roles.admins, Roles.owners)
     async def eval(self, ctx: Context, *, code: str) -> None:
         """Run eval in a REPL-like format."""
         code = code.strip("`")
-        if re.match('py(thon)?\n', code):
+        if re.match("py(thon)?\n", code):
             code = "\n".join(code.split("\n")[1:])
 
-        if not re.search(  # Check if it's an expression
-                r"^(return|import|for|while|def|class|"
-                r"from|exit|[a-zA-Z0-9]+\s*=)", code, re.M) and len(
-                    code.split("\n")) == 1:
+        if (
+            not re.search(  # Check if it's an expression
+                r"^(return|import|for|while|def|class|" r"from|exit|[a-zA-Z0-9]+\s*=)",
+                code,
+                re.M,
+            )
+            and len(code.split("\n")) == 1
+        ):
             code = "_ = " + code
 
         await self._eval(ctx, code)
 
-    @internal_group.command(name='socketstats', aliases=('socket', 'stats'))
+    @internal_group.command(name="socketstats", aliases=("socket", "stats"))
     @has_any_role(Roles.admins, Roles.owners, Roles.core_developers)
     async def socketstats(self, ctx: Context) -> None:
         """Fetch information on the socket events received from Discord."""
@@ -243,7 +253,7 @@ async def func():  # (None,) -> Any
         stats_embed = discord.Embed(
             title="WebSocket statistics",
             description=f"Receiving {per_s:0.2f} events per second.",
-            color=discord.Color.og_blurple()
+            color=discord.Color.og_blurple(),
         )
 
         for event_type, count in self.socket_events.most_common(25):

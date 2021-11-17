@@ -13,7 +13,15 @@ from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_ROLES, Roles
+from bot.constants import (
+    MODERATION_ROLES,
+    Channels,
+    Colours,
+    Emojis,
+    Event,
+    Icons,
+    Roles,
+)
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -21,7 +29,11 @@ from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import (
-    TimestampFormats, discord_timestamp, humanize_delta, parse_duration_string, relativedelta_to_timedelta
+    TimestampFormats,
+    discord_timestamp,
+    humanize_delta,
+    parse_duration_string,
+    relativedelta_to_timedelta,
 )
 
 log = get_logger(__name__)
@@ -45,12 +57,19 @@ SECONDS_IN_DAY = 86400
 class Action(Enum):
     """Defcon Action."""
 
-    ActionInfo = namedtuple('LogInfoDetails', ['icon', 'emoji', 'color', 'template'])
+    ActionInfo = namedtuple("LogInfoDetails", ["icon", "emoji", "color", "template"])
 
-    SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Emojis.defcon_unshutdown, Colours.soft_green, "")
-    SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Emojis.defcon_shutdown, Colours.soft_red, "")
+    SERVER_OPEN = ActionInfo(
+        Icons.defcon_unshutdown, Emojis.defcon_unshutdown, Colours.soft_green, ""
+    )
+    SERVER_SHUTDOWN = ActionInfo(
+        Icons.defcon_shutdown, Emojis.defcon_shutdown, Colours.soft_red, ""
+    )
     DURATION_UPDATE = ActionInfo(
-        Icons.defcon_update, Emojis.defcon_update, Colour.og_blurple(), "**Threshold:** {threshold}\n\n"
+        Icons.defcon_update,
+        Emojis.defcon_update,
+        Colour.og_blurple(),
+        "**Threshold:** {threshold}\n\n",
     )
 
 
@@ -88,8 +107,16 @@ class Defcon(Cog):
 
         try:
             settings = await self.defcon_settings.to_dict()
-            self.threshold = parse_duration_string(settings["threshold"]) if settings.get("threshold") else None
-            self.expiry = datetime.fromisoformat(settings["expiry"]) if settings.get("expiry") else None
+            self.threshold = (
+                parse_duration_string(settings["threshold"])
+                if settings.get("threshold")
+                else None
+            )
+            self.expiry = (
+                datetime.fromisoformat(settings["expiry"])
+                if settings.get("expiry")
+                else None
+            )
         except RedisError:
             log.exception("Unable to get DEFCON settings!")
             await self.channel.send(
@@ -102,7 +129,9 @@ class Defcon(Cog):
                 self.scheduler.schedule_at(self.expiry, 0, self._remove_threshold())
 
             self._update_notifier()
-            log.info(f"DEFCON synchronized: {humanize_delta(self.threshold) if self.threshold else '-'}")
+            log.info(
+                f"DEFCON synchronized: {humanize_delta(self.threshold) if self.threshold else '-'}"
+            )
 
         self._update_channel_topic()
 
@@ -121,7 +150,9 @@ class Defcon(Cog):
                     await member.send(REJECTION_MESSAGE.format(user=member.mention))
                     message_sent = True
                 except Forbidden:
-                    log.debug(f"Cannot send DEFCON rejection DM to {member}: DMs disabled")
+                    log.debug(
+                        f"Cannot send DEFCON rejection DM to {member}: DMs disabled"
+                    )
                 except Exception:
                     # Broadly catch exceptions because DM isn't critical, but it's imperative to kick them.
                     log.exception(f"Error sending DEFCON rejection message to {member}")
@@ -129,43 +160,48 @@ class Defcon(Cog):
                 await member.kick(reason="DEFCON active, user is too new")
                 self.bot.stats.incr("defcon.leaves")
 
-                message = (
-                    f"{format_user(member)} was denied entry because their account is too new."
-                )
+                message = f"{format_user(member)} was denied entry because their account is too new."
 
                 if not message_sent:
                     message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
 
                 await self.mod_log.send_log_message(
-                    Icons.defcon_denied, Colours.soft_red, "Entry denied",
-                    message, member.display_avatar.url
+                    Icons.defcon_denied,
+                    Colours.soft_red,
+                    "Entry denied",
+                    message,
+                    member.display_avatar.url,
                 )
 
-    @group(name='defcon', aliases=('dc',), invoke_without_command=True)
+    @group(name="defcon", aliases=("dc",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
         await ctx.send_help(ctx.command)
 
-    @defcon_group.command(aliases=('s',))
+    @defcon_group.command(aliases=("s",))
     @has_any_role(*MODERATION_ROLES)
     async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
-            colour=Colour.og_blurple(), title="DEFCON Status",
+            colour=Colour.og_blurple(),
+            title="DEFCON Status",
             description=f"""
                 **Threshold:** {humanize_delta(self.threshold) if self.threshold else "-"}
                 **Expires:** {discord_timestamp(self.expiry, TimestampFormats.RELATIVE) if self.expiry else "-"}
                 **Verification level:** {ctx.guild.verification_level.name}
-                """
+                """,
         )
 
         await ctx.send(embed=embed)
 
-    @defcon_group.command(name="threshold", aliases=('t', 'd'))
+    @defcon_group.command(name="threshold", aliases=("t", "d"))
     @has_any_role(*MODERATION_ROLES)
     async def threshold_command(
-        self, ctx: Context, threshold: Union[DurationDelta, int], expiry: Optional[Expiry] = None
+        self,
+        ctx: Context,
+        threshold: Union[DurationDelta, int],
+        expiry: Optional[Expiry] = None,
     ) -> None:
         """
         Set how old an account must be to join the server.
@@ -190,7 +226,7 @@ class Defcon(Cog):
             send_messages=False,
             add_reactions=False,
             send_messages_in_threads=False,
-            connect=False
+            connect=False,
         )
         await role.edit(reason="DEFCON shutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
@@ -206,7 +242,7 @@ class Defcon(Cog):
             send_messages=True,
             add_reactions=True,
             send_messages_in_threads=True,
-            connect=True
+            connect=True,
         )
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
@@ -224,11 +260,13 @@ class Defcon(Cog):
         author: User,
         channel: TextChannel,
         threshold: relativedelta,
-        expiry: Optional[Expiry] = None
+        expiry: Optional[Expiry] = None,
     ) -> None:
         """Update the new threshold in the cog, cache, defcon channel, and logs, and additionally schedule expiry."""
         self.threshold = threshold
-        if threshold == relativedelta(days=0):  # If the threshold is 0, we don't need to schedule anything
+        if threshold == relativedelta(
+            days=0
+        ):  # If the threshold is 0, we don't need to schedule anything
             expiry = None
         self.expiry = expiry
 
@@ -244,8 +282,10 @@ class Defcon(Cog):
         try:
             await self.defcon_settings.update(
                 {
-                    'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
-                    'expiry': expiry.isoformat() if expiry else 0
+                    "threshold": Defcon._stringify_relativedelta(self.threshold)
+                    if self.threshold
+                    else "",
+                    "expiry": expiry.isoformat() if expiry else 0,
                 }
             )
         except RedisError:
@@ -256,7 +296,9 @@ class Defcon(Cog):
         expiry_message = ""
         if expiry:
             activity_duration = relativedelta(expiry, arrow.utcnow().datetime)
-            expiry_message = f" for the next {humanize_delta(activity_duration, max_units=2)}"
+            expiry_message = (
+                f" for the next {humanize_delta(activity_duration, max_units=2)}"
+            )
 
         if self.threshold:
             channel_message = (
@@ -285,12 +327,28 @@ class Defcon(Cog):
     @staticmethod
     def _stringify_relativedelta(delta: relativedelta) -> str:
         """Convert a relativedelta object to a duration string."""
-        units = [("years", "y"), ("months", "m"), ("days", "d"), ("hours", "h"), ("minutes", "m"), ("seconds", "s")]
-        return "".join(f"{getattr(delta, unit)}{symbol}" for unit, symbol in units if getattr(delta, unit)) or "0s"
+        units = [
+            ("years", "y"),
+            ("months", "m"),
+            ("days", "d"),
+            ("hours", "h"),
+            ("minutes", "m"),
+            ("seconds", "s"),
+        ]
+        return (
+            "".join(
+                f"{getattr(delta, unit)}{symbol}"
+                for unit, symbol in units
+                if getattr(delta, unit)
+            )
+            or "0s"
+        )
 
     def _log_threshold_stat(self, threshold: relativedelta) -> None:
         """Adds the threshold to the bot stats in days."""
-        threshold_days = relativedelta_to_timedelta(threshold).total_seconds() / SECONDS_IN_DAY
+        threshold_days = (
+            relativedelta_to_timedelta(threshold).total_seconds() / SECONDS_IN_DAY
+        )
         self.bot.stats.gauge("defcon.threshold", threshold_days)
 
     async def _send_defcon_log(self, action: Action, actor: User) -> None:
@@ -306,18 +364,26 @@ class Defcon(Cog):
 
     def _update_notifier(self) -> None:
         """Start or stop the notifier according to the DEFCON status."""
-        if self.threshold and self.expiry is None and not self.defcon_notifier.is_running():
+        if (
+            self.threshold
+            and self.expiry is None
+            and not self.defcon_notifier.is_running()
+        ):
             log.info("DEFCON notifier started.")
             self.defcon_notifier.start()
 
-        elif (not self.threshold or self.expiry is not None) and self.defcon_notifier.is_running():
+        elif (
+            not self.threshold or self.expiry is not None
+        ) and self.defcon_notifier.is_running():
             log.info("DEFCON notifier stopped.")
             self.defcon_notifier.cancel()
 
     @tasks.loop(hours=1)
     async def defcon_notifier(self) -> None:
         """Routinely notify moderators that DEFCON is active."""
-        await self.channel.send(f"Defcon is on and is set to {humanize_delta(self.threshold)}.")
+        await self.channel.send(
+            f"Defcon is on and is set to {humanize_delta(self.threshold)}."
+        )
 
     def cog_unload(self) -> None:
         """Cancel the notifer and threshold removal tasks when the cog unloads."""

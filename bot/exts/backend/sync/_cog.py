@@ -32,7 +32,9 @@ class Sync(Cog):
         for syncer in (_syncers.RoleSyncer, _syncers.UserSyncer):
             await syncer.sync(guild)
 
-    async def patch_user(self, user_id: int, json: Dict[str, Any], ignore_404: bool = False) -> None:
+    async def patch_user(
+        self, user_id: int, json: Dict[str, Any], ignore_404: bool = False
+    ) -> None:
         """Send a PATCH request to partially update a user in the database."""
         try:
             await self.bot.api_client.patch(f"bot/users/{user_id}", json=json)
@@ -40,7 +42,9 @@ class Sync(Cog):
             if e.response.status != 404:
                 raise
             if not ignore_404:
-                log.warning("Unable to update user, got 404. Assuming race condition from join event.")
+                log.warning(
+                    "Unable to update user, got 404. Assuming race condition from join event."
+                )
 
     @Cog.listener()
     async def on_guild_role_create(self, role: Role) -> None:
@@ -49,14 +53,14 @@ class Sync(Cog):
             return
 
         await self.bot.api_client.post(
-            'bot/roles',
+            "bot/roles",
             json={
-                'colour': role.colour.value,
-                'id': role.id,
-                'name': role.name,
-                'permissions': role.permissions.value,
-                'position': role.position,
-            }
+                "colour": role.colour.value,
+                "id": role.id,
+                "name": role.name,
+                "permissions": role.permissions.value,
+                "position": role.position,
+            },
         )
 
     @Cog.listener()
@@ -65,7 +69,7 @@ class Sync(Cog):
         if role.guild.id != constants.Guild.id:
             return
 
-        await self.bot.api_client.delete(f'bot/roles/{role.id}')
+        await self.bot.api_client.delete(f"bot/roles/{role.id}")
 
     @Cog.listener()
     async def on_guild_role_update(self, before: Role, after: Role) -> None:
@@ -82,14 +86,14 @@ class Sync(Cog):
 
         if was_updated:
             await self.bot.api_client.put(
-                f'bot/roles/{after.id}',
+                f"bot/roles/{after.id}",
                 json={
-                    'colour': after.colour.value,
-                    'id': after.id,
-                    'name': after.name,
-                    'permissions': after.permissions.value,
-                    'position': after.position,
-                }
+                    "colour": after.colour.value,
+                    "id": after.id,
+                    "name": after.name,
+                    "permissions": after.permissions.value,
+                    "position": after.position,
+                },
             )
 
     @Cog.listener()
@@ -105,11 +109,11 @@ class Sync(Cog):
             return
 
         packed = {
-            'discriminator': int(member.discriminator),
-            'id': member.id,
-            'in_guild': True,
-            'name': member.name,
-            'roles': sorted(role.id for role in member.roles)
+            "discriminator": int(member.discriminator),
+            "id": member.id,
+            "in_guild": True,
+            "name": member.name,
+            "roles": sorted(role.id for role in member.roles),
         }
 
         got_error = False
@@ -117,7 +121,7 @@ class Sync(Cog):
         try:
             # First try an update of the user to set the `in_guild` field and other
             # fields that may have changed since the last time we've seen them.
-            await self.bot.api_client.put(f'bot/users/{member.id}', json=packed)
+            await self.bot.api_client.put(f"bot/users/{member.id}", json=packed)
 
         except ResponseCodeError as e:
             # If we didn't get 404, something else broke - propagate it up.
@@ -128,7 +132,7 @@ class Sync(Cog):
 
         if got_error:
             # If we got `404`, the user is new. Create them.
-            await self.bot.api_client.post('bot/users', json=packed)
+            await self.bot.api_client.post("bot/users", json=packed)
 
     @Cog.listener()
     async def on_member_remove(self, member: Member) -> None:
@@ -160,18 +164,18 @@ class Sync(Cog):
             # A 404 likely means the user is in another guild.
             await self.patch_user(after.id, json=updated_information, ignore_404=True)
 
-    @commands.group(name='sync')
+    @commands.group(name="sync")
     @commands.has_permissions(administrator=True)
     async def sync_group(self, ctx: Context) -> None:
         """Run synchronizations between the bot and site manually."""
 
-    @sync_group.command(name='roles')
+    @sync_group.command(name="roles")
     @commands.has_permissions(administrator=True)
     async def sync_roles_command(self, ctx: Context) -> None:
         """Manually synchronise the guild's roles with the roles on the site."""
         await _syncers.RoleSyncer.sync(ctx.guild, ctx)
 
-    @sync_group.command(name='users')
+    @sync_group.command(name="users")
     @commands.has_permissions(administrator=True)
     async def sync_users_command(self, ctx: Context) -> None:
         """Manually synchronise the guild's users with the users on the site."""

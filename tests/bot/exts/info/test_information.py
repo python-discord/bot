@@ -17,7 +17,9 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.moderator_role = helpers.MockRole(name="Moderator", id=constants.Roles.moderators)
+        cls.moderator_role = helpers.MockRole(
+            name="Moderator", id=constants.Roles.moderators
+        )
 
     def setUp(self):
         """Sets up fresh objects for each test."""
@@ -39,11 +41,14 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.ctx.send.assert_called_once()
 
         _, kwargs = self.ctx.send.call_args
-        embed = kwargs.pop('embed')
+        embed = kwargs.pop("embed")
 
         self.assertEqual(embed.title, "Role information (Total 1 role)")
         self.assertEqual(embed.colour, discord.Colour.og_blurple())
-        self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
+        self.assertEqual(
+            embed.description,
+            f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n",
+        )
 
     async def test_role_info_command(self):
         """Tests the `role info` command."""
@@ -53,7 +58,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
             colour=discord.Colour.og_blurple(),
             position=10,
             members=[self.ctx.author],
-            permissions=discord.Permissions(0)
+            permissions=discord.Permissions(0),
         )
 
         admin_role = helpers.MockRole(
@@ -70,7 +75,9 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog.role_info.can_run = unittest.mock.AsyncMock()
         self.cog.role_info.can_run.return_value = True
 
-        self.assertIsNone(await self.cog.role_info(self.cog, self.ctx, dummy_role, admin_role))
+        self.assertIsNone(
+            await self.cog.role_info(self.cog, self.ctx, dummy_role, admin_role)
+        )
 
         self.assertEqual(self.ctx.send.call_count, 2)
 
@@ -83,7 +90,9 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(dummy_embed.colour, discord.Colour.og_blurple())
 
         self.assertEqual(dummy_embed.fields[0].value, str(dummy_role.id))
-        self.assertEqual(dummy_embed.fields[1].value, f"#{dummy_role.colour.value:0>6x}")
+        self.assertEqual(
+            dummy_embed.fields[1].value, f"#{dummy_role.colour.value:0>6x}"
+        )
         self.assertEqual(dummy_embed.fields[2].value, "0.63 0.48 218")
         self.assertEqual(dummy_embed.fields[3].value, "1")
         self.assertEqual(dummy_embed.fields[4].value, "10")
@@ -108,15 +117,18 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
         test_values = (
             {
                 "helper_method": self.cog.basic_user_infraction_counts,
-                "expected_args": ("bot/infractions", {'hidden': 'False', 'user__id': str(self.member.id)}),
+                "expected_args": (
+                    "bot/infractions",
+                    {"hidden": "False", "user__id": str(self.member.id)},
+                ),
             },
             {
                 "helper_method": self.cog.expanded_user_infraction_counts,
-                "expected_args": ("bot/infractions", {'user__id': str(self.member.id)}),
+                "expected_args": ("bot/infractions", {"user__id": str(self.member.id)}),
             },
             {
                 "helper_method": self.cog.user_nomination_counts,
-                "expected_args": ("bot/nominations", {'user__id': str(self.member.id)}),
+                "expected_args": ("bot/nominations", {"user__id": str(self.member.id)}),
             },
         )
 
@@ -135,7 +147,9 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
             api_response = test_value["api response"]
             expected_lines = test_value["expected_lines"]
 
-            with self.subTest(method=method, api_response=api_response, expected_lines=expected_lines):
+            with self.subTest(
+                method=method, api_response=api_response, expected_lines=expected_lines
+            ):
                 self.bot.api_client.get.return_value = api_response
 
                 expected_output = "\n".join(expected_lines)
@@ -174,7 +188,9 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
 
         header = "Infractions"
 
-        await self._method_subtests(self.cog.basic_user_infraction_counts, test_values, header)
+        await self._method_subtests(
+            self.cog.basic_user_infraction_counts, test_values, header
+        )
 
     async def test_expanded_user_infraction_counts_returns_correct_strings(self):
         """The method should correctly list the total and active number of all infractions split by infraction type."""
@@ -195,7 +211,9 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
             },
             # Shows hidden inactive infraction as expected
             {
-                "api response": [{"type": "superstar", "active": False, "hidden": True}],
+                "api response": [
+                    {"type": "superstar", "active": False, "hidden": True}
+                ],
                 "expected_lines": ["Superstars: 1"],
             },
             # Shows hidden active infraction as expected
@@ -229,7 +247,9 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
 
         header = "Infractions"
 
-        await self._method_subtests(self.cog.expanded_user_infraction_counts, test_values, header)
+        await self._method_subtests(
+            self.cog.expanded_user_infraction_counts, test_values, header
+        )
 
     async def test_user_nomination_counts_returns_correct_strings(self):
         """The method should list the number of active and historical nominations for the user."""
@@ -239,30 +259,43 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
                 "expected_lines": ["No nominations"],
             },
             {
-                "api response": [{'active': True}],
-                "expected_lines": ["This user is **currently** nominated", "(1 nomination in total)"],
+                "api response": [{"active": True}],
+                "expected_lines": [
+                    "This user is **currently** nominated",
+                    "(1 nomination in total)",
+                ],
             },
             {
-                "api response": [{'active': True}, {'active': False}],
-                "expected_lines": ["This user is **currently** nominated", "(2 nominations in total)"],
+                "api response": [{"active": True}, {"active": False}],
+                "expected_lines": [
+                    "This user is **currently** nominated",
+                    "(2 nominations in total)",
+                ],
             },
             {
-                "api response": [{'active': False}],
-                "expected_lines": ["This user has 1 historical nomination, but is currently not nominated."],
+                "api response": [{"active": False}],
+                "expected_lines": [
+                    "This user has 1 historical nomination, but is currently not nominated."
+                ],
             },
             {
-                "api response": [{'active': False}, {'active': False}],
-                "expected_lines": ["This user has 2 historical nominations, but is currently not nominated."],
+                "api response": [{"active": False}, {"active": False}],
+                "expected_lines": [
+                    "This user has 2 historical nominations, but is currently not nominated."
+                ],
             },
-
         )
 
         header = "Nominations"
 
-        await self._method_subtests(self.cog.user_nomination_counts, test_values, header)
+        await self._method_subtests(
+            self.cog.user_nomination_counts, test_values, header
+        )
 
 
-@unittest.mock.patch("bot.exts.info.information.constants.MODERATION_CHANNELS", new=[50])
+@unittest.mock.patch(
+    "bot.exts.info.information.constants.MODERATION_CHANNELS", new=[50]
+)
 class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the creation of the `!user` embed."""
 
@@ -274,9 +307,11 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
-        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions")),
     )
-    async def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(self):
+    async def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(
+        self,
+    ):
         """The embed should use the string representation of the user if they don't have a nick."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
         user = helpers.MockMember()
@@ -291,7 +326,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
-        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions")),
     )
     async def test_create_user_embed_uses_nick_in_title_if_available(self):
         """The embed should use the nick if it's available."""
@@ -308,12 +343,12 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
-        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions")),
     )
     async def test_create_user_embed_ignores_everyone_role(self):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
-        admins_role = helpers.MockRole(name='Admins')
+        admins_role = helpers.MockRole(name="Admins")
 
         # A `MockMember` has the @Everyone role by default; we add the Admins to that.
         user = helpers.MockMember(roles=[admins_role], colour=100)
@@ -323,17 +358,20 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("&Admins", embed.fields[1].value)
         self.assertNotIn("&Everyone", embed.fields[1].value)
 
-    @unittest.mock.patch(f"{COG_PATH}.expanded_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
-    @unittest.mock.patch(f"{COG_PATH}.user_nomination_counts", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch(
+        f"{COG_PATH}.expanded_user_infraction_counts",
+        new_callable=unittest.mock.AsyncMock,
+    )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_nomination_counts", new_callable=unittest.mock.AsyncMock
+    )
     async def test_create_user_embed_expanded_information_in_moderation_channels(
-            self,
-            nomination_counts,
-            infraction_counts
+        self, nomination_counts, infraction_counts
     ):
         """The embed should contain expanded infractions and nomination info in mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=50))
 
-        moderators_role = helpers.MockRole(name='Moderators')
+        moderators_role = helpers.MockRole(name="Moderators")
 
         infraction_counts.return_value = ("Infractions", "expanded infractions info")
         nomination_counts.return_value = ("Nominations", "nomination info")
@@ -345,29 +383,37 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         nomination_counts.assert_called_once_with(user)
 
         self.assertEqual(
-            textwrap.dedent(f"""
+            textwrap.dedent(
+                f"""
                 Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
-            """).strip(),
-            embed.fields[0].value
+            """
+            ).strip(),
+            embed.fields[0].value,
         )
 
         self.assertEqual(
-            textwrap.dedent(f"""
+            textwrap.dedent(
+                f"""
                 Joined: {"<t:1:R>"}
                 Verified: {"True"}
                 Roles: &Moderators
-            """).strip(),
-            embed.fields[1].value
+            """
+            ).strip(),
+            embed.fields[1].value,
         )
 
-    @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
-    async def test_create_user_embed_basic_information_outside_of_moderation_channels(self, infraction_counts):
+    @unittest.mock.patch(
+        f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock
+    )
+    async def test_create_user_embed_basic_information_outside_of_moderation_channels(
+        self, infraction_counts
+    ):
         """The embed should contain only basic infraction data outside of mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
 
-        moderators_role = helpers.MockRole(name='Moderators')
+        moderators_role = helpers.MockRole(name="Moderators")
 
         infraction_counts.return_value = ("Infractions", "basic infractions info")
 
@@ -377,36 +423,37 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         infraction_counts.assert_called_once_with(user)
 
         self.assertEqual(
-            textwrap.dedent(f"""
+            textwrap.dedent(
+                f"""
                 Created: {"<t:1:R>"}
                 Profile: {user.mention}
                 ID: {user.id}
-            """).strip(),
-            embed.fields[0].value
+            """
+            ).strip(),
+            embed.fields[0].value,
         )
 
         self.assertEqual(
-            textwrap.dedent(f"""
+            textwrap.dedent(
+                f"""
                 Joined: {"<t:1:R>"}
                 Roles: &Moderators
-            """).strip(),
-            embed.fields[1].value
+            """
+            ).strip(),
+            embed.fields[1].value,
         )
 
-        self.assertEqual(
-            "basic infractions info",
-            embed.fields[2].value
-        )
+        self.assertEqual("basic infractions info", embed.fields[2].value)
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
-        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions")),
     )
     async def test_create_user_embed_uses_top_role_colour_when_user_has_roles(self):
         """The embed should be created with the colour of the top role, if a top role is available."""
         ctx = helpers.MockContext()
 
-        moderators_role = helpers.MockRole(name='Moderators')
+        moderators_role = helpers.MockRole(name="Moderators")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
         embed = await self.cog.create_user_embed(ctx, user)
@@ -415,9 +462,11 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
-        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions")),
     )
-    async def test_create_user_embed_uses_og_blurple_colour_when_user_has_no_roles(self):
+    async def test_create_user_embed_uses_og_blurple_colour_when_user_has_no_roles(
+        self,
+    ):
         """The embed should be created with the og blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
 
@@ -428,7 +477,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
-        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+        new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions")),
     )
     async def test_create_user_embed_uses_png_format_of_user_avatar_as_thumbnail(self):
         """The embed thumbnail should be set to the user's avatar in `png` format."""
@@ -455,12 +504,16 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
         self.bassist_role = helpers.MockRole(name="Bassists", id=4, position=3)
 
         self.author = helpers.MockMember(id=1, name="syntaxaire")
-        self.moderator = helpers.MockMember(id=2, name="riffautae", roles=[self.moderator_role])
+        self.moderator = helpers.MockMember(
+            id=2, name="riffautae", roles=[self.moderator_role]
+        )
         self.target = helpers.MockMember(id=3, name="__fluzz__")
 
         # There's no way to mock the channel constant without deferring imports. The constant is
         # used as a default value for a parameter, which gets defined upon import.
-        self.bot_command_channel = helpers.MockTextChannel(id=constants.Channels.bot_commands)
+        self.bot_command_channel = helpers.MockTextChannel(
+            id=constants.Channels.bot_commands
+        )
 
     async def test_regular_member_cannot_target_another_member(self, constants):
         """A regular user should not be able to use `!user` targeting another user."""
@@ -469,20 +522,28 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.user_info(self.cog, ctx, self.target)
 
-        ctx.send.assert_called_once_with("You may not use this command on users other than yourself.")
+        ctx.send.assert_called_once_with(
+            "You may not use this command on users other than yourself."
+        )
 
-    async def test_regular_member_cannot_use_command_outside_of_bot_commands(self, constants):
+    async def test_regular_member_cannot_use_command_outside_of_bot_commands(
+        self, constants
+    ):
         """A regular user should not be able to use this command outside of bot-commands."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         constants.STAFF_ROLES = [self.moderator_role.id]
-        ctx = helpers.MockContext(author=self.author, channel=helpers.MockTextChannel(id=100))
+        ctx = helpers.MockContext(
+            author=self.author, channel=helpers.MockTextChannel(id=100)
+        )
 
         msg = "Sorry, but you may only use this command within <#50>."
         with self.assertRaises(InWhitelistCheckFailure, msg=msg):
             await self.cog.user_info(self.cog, ctx)
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
-    async def test_regular_user_may_use_command_in_bot_commands_channel(self, create_embed, constants):
+    async def test_regular_user_may_use_command_in_bot_commands_channel(
+        self, create_embed, constants
+    ):
         """A regular user should be allowed to use `!user` targeting themselves in bot-commands."""
         constants.STAFF_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.author, channel=self.bot_command_channel)
@@ -504,10 +565,14 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
-    async def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
+    async def test_staff_members_can_bypass_channel_restriction(
+        self, create_embed, constants
+    ):
         """Staff members should be able to bypass the bot-commands channel restriction."""
         constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
-        ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
+        ctx = helpers.MockContext(
+            author=self.moderator, channel=helpers.MockTextChannel(id=200)
+        )
 
         await self.cog.user_info(self.cog, ctx)
 
@@ -519,7 +584,9 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
         constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
-        ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
+        ctx = helpers.MockContext(
+            author=self.moderator, channel=helpers.MockTextChannel(id=50)
+        )
 
         await self.cog.user_info(self.cog, ctx, self.target)
 

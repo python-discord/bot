@@ -12,7 +12,12 @@ from bot.utils import has_lines
 log = get_logger(__name__)
 
 BACKTICK = "`"
-PY_LANG_CODES = ("python-repl", "python", "pycon", "py")  # Order is important; "py" is last cause it's a subset.
+PY_LANG_CODES = (
+    "python-repl",
+    "python",
+    "pycon",
+    "py",
+)  # Order is important; "py" is last cause it's a subset.
 _TICKS = {
     BACKTICK,
     "'",
@@ -40,7 +45,7 @@ _RE_CODE_BLOCK = re.compile(
     (?P<code>.+?)                     # Match the actual code within the block.
     \1                                # Match the same 3 ticks used at the start of the block.
     """,
-    re.DOTALL | re.VERBOSE
+    re.DOTALL | re.VERBOSE,
 )
 
 _RE_LANGUAGE = re.compile(
@@ -49,7 +54,7 @@ _RE_LANGUAGE = re.compile(
     (?P<lang>{'|'.join(PY_LANG_CODES)})  # Match a Python language.
     (?P<newline>\n)?                     # Optionally match a newline following the language.
     """,
-    re.IGNORECASE | re.VERBOSE
+    re.IGNORECASE | re.VERBOSE,
 )
 
 
@@ -85,7 +90,9 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
     for match in _RE_CODE_BLOCK.finditer(message):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")
-        language = groups["lang"].strip()  # Strip the newline cause it's included in the group.
+        language = groups[
+            "lang"
+        ].strip()  # Strip the newline cause it's included in the group.
 
         if groups["tick"] == BACKTICK and language:
             log.trace("Message has a valid code block with a language; returning None.")
@@ -126,7 +133,9 @@ def _is_python_code(content: str) -> bool:
 
 def _is_repl_code(content: str, threshold: int = 3) -> bool:
     """Return True if `content` has at least `threshold` number of (I)Python REPL-like lines."""
-    log.trace(f"Checking if content is (I)Python REPL code using a threshold of {threshold}.")
+    log.trace(
+        f"Checking if content is (I)Python REPL code using a threshold of {threshold}."
+    )
 
     repl_lines = 0
     patterns = (_RE_PYTHON_REPL, _RE_IPYTHON_REPL)

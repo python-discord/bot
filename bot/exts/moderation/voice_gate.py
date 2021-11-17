@@ -10,7 +10,8 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf
+from bot.constants import MODERATION_ROLES, Channels, Event, Roles
+from bot.constants import VoiceGate as GateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -25,7 +26,8 @@ log = get_logger(__name__)
 NO_MSG = 0
 
 FAILED_MESSAGE = (
-    """You are not currently eligible to use voice inside Python Discord for the following reasons:\n\n{reasons}"""
+    "You are not currently eligible to use voice inside Python Discord for the following reasons:"
+    "\n\n{reasons}"
 )
 
 MESSAGE_FIELD_MAP = {
@@ -79,7 +81,9 @@ class VoiceGate(Cog):
                 await self.bot.http.delete_message(Channels.voice_gate, message_id)
             await self.redis_cache.set(member_id, NO_MSG)
         else:
-            log.trace(f"Voice gate reminder message for user {member_id} was already removed")
+            log.trace(
+                f"Voice gate reminder message for user {member_id} was already removed"
+            )
 
     @redis_cache.atomic_transaction
     async def _ping_newcomer(self, member: discord.Member) -> tuple:
@@ -110,15 +114,24 @@ class VoiceGate(Cog):
         voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
 
         try:
-            message = await member.send(VOICE_PING_DM.format(channel_mention=voice_verification_channel.mention))
+            message = await member.send(
+                VOICE_PING_DM.format(channel_mention=voice_verification_channel.mention)
+            )
         except discord.Forbidden:
             log.trace("DM failed for Voice ping message. Sending in channel.")
-            message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
+            message = await voice_verification_channel.send(
+                f"Hello, {member.mention}! {VOICE_PING}"
+            )
 
         await self.redis_cache.set(member.id, message.id)
         return True, message.channel
 
-    @command(aliases=("voiceverify", "voice-verify",))
+    @command(
+        aliases=(
+            "voiceverify",
+            "voice-verify",
+        )
+    )
     @has_no_roles(Roles.voice_verified)
     @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
     async def voice_verify(self, ctx: Context, *_) -> None:
@@ -131,10 +144,14 @@ class VoiceGate(Cog):
         - You must not be actively banned from using our voice channels
         - You must have been active for over a certain number of 10-minute blocks
         """
-        await self._delete_ping(ctx.author.id)  # If user has received a ping in voice_verification, delete the message
+        await self._delete_ping(
+            ctx.author.id
+        )  # If user has received a ping in voice_verification, delete the message
 
         try:
-            data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
+            data = await self.bot.api_client.get(
+                f"bot/users/{ctx.author.id}/metricity_data"
+            )
         except ResponseCodeError as e:
             if e.status == 404:
                 embed = discord.Embed(
@@ -144,9 +161,11 @@ class VoiceGate(Cog):
                         "Please try again shortly, "
                         "if this problem persists please contact the server staff through Modmail."
                     ),
-                    color=Colour.red()
+                    color=Colour.red(),
                 )
-                log.info(f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})")
+                log.info(
+                    f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})"
+                )
             else:
                 embed = discord.Embed(
                     title="Unexpected response",
@@ -154,34 +173,48 @@ class VoiceGate(Cog):
                         "We encountered an error while attempting to find data for your user. "
                         "Please try again and let us know if the problem persists."
                     ),
-                    color=Colour.red()
+                    color=Colour.red(),
                 )
-                log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} Metricity data.")
+                log.warning(
+                    f"Got response code {e.status} while trying to get {ctx.author.id} Metricity data."
+                )
             try:
                 await ctx.author.send(embed=embed)
             except discord.Forbidden:
-                log.info("Could not send user DM. Sending in voice-verify channel and scheduling delete.")
+                log.info(
+                    "Could not send user DM. Sending in voice-verify channel and scheduling delete."
+                )
                 await ctx.send(embed=embed)
 
             return
 
         checks = {
             "joined_at": (
-                ctx.author.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
+                ctx.author.joined_at
+                > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
             ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
-            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
+            "activity_blocks": data["activity_blocks"]
+            < GateConf.minimum_activity_blocks,
         }
         failed = any(checks.values())
-        failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
-        [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]
+        failed_reasons = [
+            MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True
+        ]
+        [
+            self.bot.stats.incr(f"voice_gate.failed.{key}")
+            for key, value in checks.items()
+            if value is True
+        ]
 
         if failed:
             embed = discord.Embed(
                 title="Voice Gate failed",
-                description=FAILED_MESSAGE.format(reasons="\n".join(f'• You {reason}.' for reason in failed_reasons)),
-                color=Colour.red()
+                description=FAILED_MESSAGE.format(
+                    reasons="\n".join(f"• You {reason}." for reason in failed_reasons)
+                ),
+                color=Colour.red(),
             )
             try:
                 await ctx.author.send(embed=embed)
@@ -194,7 +227,7 @@ class VoiceGate(Cog):
         embed = discord.Embed(
             title="Voice gate passed",
             description="You have been granted permission to use voice channels in Python Discord.",
-            color=Colour.green()
+            color=Colour.green(),
         )
 
         if ctx.author.voice:
@@ -208,7 +241,9 @@ class VoiceGate(Cog):
 
         # wait a little bit so those who don't get DMs see the response in-channel before losing perms to see it.
         await asyncio.sleep(3)
-        await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
+        await ctx.author.add_roles(
+            discord.Object(Roles.voice_verified), reason="Voice Gate passed"
+        )
 
         self.bot.stats.incr("voice_gate.passed")
 
@@ -220,7 +255,9 @@ class VoiceGate(Cog):
             return
 
         ctx = await self.bot.get_context(message)
-        is_verify_command = ctx.command is not None and ctx.command.name == "voice_verify"
+        is_verify_command = (
+            ctx.command is not None and ctx.command.name == "voice_verify"
+        )
 
         # When it's a bot sent message, delete it after some time
         if message.author.bot:
@@ -233,8 +270,13 @@ class VoiceGate(Cog):
                 return
 
         # Then check is member moderator+, because we don't want to delete their messages.
-        if any(role.id in MODERATION_ROLES for role in message.author.roles) and is_verify_command is False:
-            log.trace(f"Excluding moderator message {message.id} from deletion in #{message.channel}.")
+        if (
+            any(role.id in MODERATION_ROLES for role in message.author.roles)
+            and is_verify_command is False
+        ):
+            log.trace(
+                f"Excluding moderator message {message.id} from deletion in #{message.channel}."
+            )
             return
 
         # Ignore deleted voice verification messages
@@ -245,7 +287,9 @@ class VoiceGate(Cog):
             await message.delete()
 
     @Cog.listener()
-    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
+    async def on_voice_state_update(
+        self, member: Member, before: VoiceState, after: VoiceState
+    ) -> None:
         """Pings a user if they've never joined the voice chat before and aren't voice verified."""
         if member.bot:
             log.trace("User is a bot. Ignore.")

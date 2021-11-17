@@ -29,7 +29,9 @@ class InfractionScheduler:
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
-        scheduling.create_task(self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop)
+        scheduling.create_task(
+            self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop
+        )
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -40,7 +42,9 @@ class InfractionScheduler:
         """Get the currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
+    async def reschedule_infractions(
+        self, supported_infractions: t.Container[str]
+    ) -> None:
         """Schedule expiration for previous infractions."""
         await self.bot.wait_until_guild_available()
 
@@ -69,16 +73,20 @@ class InfractionScheduler:
             next_reschedule_point = max(
                 dateutil.parser.isoparse(infr["expires_at"]) for infr in to_schedule
             )
-            log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
+            log.trace(
+                "Will reschedule remaining infractions at %s", next_reschedule_point
+            )
 
-            self.scheduler.schedule_at(next_reschedule_point, -1, self.reschedule_infractions(supported_infractions))
+            self.scheduler.schedule_at(
+                next_reschedule_point,
+                -1,
+                self.reschedule_infractions(supported_infractions),
+            )
 
         log.trace("Done rescheduling")
 
     async def reapply_infraction(
-        self,
-        infraction: _utils.Infraction,
-        apply_coro: t.Optional[t.Awaitable]
+        self, infraction: _utils.Infraction, apply_coro: t.Optional[t.Awaitable]
     ) -> None:
         """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
         if infraction["expires_at"] is not None:
@@ -113,7 +121,9 @@ class InfractionScheduler:
                     f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
                 )
         else:
-            log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
+            log.info(
+                f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining."
+            )
 
     async def apply_infraction(
         self,
@@ -137,7 +147,7 @@ class InfractionScheduler:
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
-        id_ = infraction['id']
+        id_ = infraction["id"]
 
         if user_reason is None:
             user_reason = reason
@@ -170,7 +180,9 @@ class InfractionScheduler:
             dm_log_text = "\nDM: **Failed**"
 
             # Accordingly update whether the user was successfully notified via DM.
-            if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+            if await _utils.notify_infraction(
+                user, infr_type.replace("_", " ").title(), expiry, user_reason, icon
+            ):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
 
@@ -179,8 +191,7 @@ class InfractionScheduler:
             log.trace(f"Fetching total infraction count for {user}.")
 
             infractions = await self.bot.api_client.get(
-                "bot/infractions",
-                params={"user__id": str(user.id)}
+                "bot/infractions", params={"user__id": str(user.id)}
             )
             total = len(infractions)
             end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
@@ -221,13 +232,17 @@ class InfractionScheduler:
                 failed = True
 
         if failed:
-            log.trace(f"Deleted infraction {infraction['id']} from database because applying infraction failed.")
+            log.trace(
+                f"Deleted infraction {infraction['id']} from database because applying infraction failed."
+            )
             try:
                 await self.bot.api_client.delete(f"bot/infractions/{id_}")
             except ResponseCodeError as e:
                 confirm_msg += " and failed to delete"
                 log_title += " and failed to delete"
-                log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
+                log.error(
+                    f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}."
+                )
             infr_message = ""
         else:
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
@@ -238,7 +253,9 @@ class InfractionScheduler:
                 dm_log_text = "\nDM: **Failed**"
 
                 # Accordingly update whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+                if await _utils.notify_infraction(
+                    user, infr_type.replace("_", " ").title(), expiry, user_reason, icon
+                ):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
 
@@ -254,27 +271,29 @@ class InfractionScheduler:
             colour=Colours.soft_red,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
             thumbnail=user.display_avatar.url,
-            text=textwrap.dedent(f"""
+            text=textwrap.dedent(
+                f"""
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
                 {additional_info}
-            """),
+            """
+            ),
             content=log_content,
-            footer=f"ID {infraction['id']}"
+            footer=f"ID {infraction['id']}",
         )
 
         log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
         return not failed
 
     async def pardon_infraction(
-            self,
-            ctx: Context,
-            infr_type: str,
-            user: MemberOrUser,
-            *,
-            send_msg: bool = True,
-            notify: bool = True
+        self,
+        ctx: Context,
+        infr_type: str,
+        user: MemberOrUser,
+        *,
+        send_msg: bool = True,
+        notify: bool = True,
     ) -> None:
         """
         Prematurely end an infraction for a user and log the action in the mod log.
@@ -289,26 +308,26 @@ class InfractionScheduler:
         # Check the current active infraction
         log.trace(f"Fetching active {infr_type} infractions for {user}.")
         response = await self.bot.api_client.get(
-            'bot/infractions',
-            params={
-                'active': 'true',
-                'type': infr_type,
-                'user__id': user.id
-            }
+            "bot/infractions",
+            params={"active": "true", "type": infr_type, "user__id": user.id},
         )
 
         if not response:
             log.debug(f"No active {infr_type} infraction found for {user}.")
-            await ctx.send(f":x: There's no active {infr_type} infraction for user {user.mention}.")
+            await ctx.send(
+                f":x: There's no active {infr_type} infraction for user {user.mention}."
+            )
             return
 
         # Deactivate the infraction and cancel its scheduled expiration task.
-        log_text = await self.deactivate_infraction(response[0], send_log=False, notify=notify)
+        log_text = await self.deactivate_infraction(
+            response[0], send_log=False, notify=notify
+        )
 
         log_text["Member"] = messages.format_user(user)
         log_text["Actor"] = ctx.author.mention
         log_content = None
-        id_ = response[0]['id']
+        id_ = response[0]["id"]
         footer = f"ID: {id_}"
 
         # Accordingly display whether the user was successfully notified via DM.
@@ -358,7 +377,7 @@ class InfractionScheduler:
         infraction: _utils.Infraction,
         *,
         send_log: bool = True,
-        notify: bool = True
+        notify: bool = True,
     ) -> t.Dict[str, str]:
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
@@ -404,8 +423,12 @@ class InfractionScheduler:
                     f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
                 )
         except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
-            log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
+            log.warning(
+                f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions."
+            )
+            log_text[
+                "Failure"
+            ] = "The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
             if e.code == 10007 or e.status == 404:
@@ -416,20 +439,20 @@ class InfractionScheduler:
                 log_content = mod_role.mention
             else:
                 log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-                log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
+                log_text[
+                    "Failure"
+                ] = f"HTTPException with status {e.status} and code {e.code}."
                 log_content = mod_role.mention
 
         # Check if the user is currently being watched by Big Brother.
         try:
-            log.trace(f"Determining if user {user_id} is currently being watched by Big Brother.")
+            log.trace(
+                f"Determining if user {user_id} is currently being watched by Big Brother."
+            )
 
             active_watch = await self.bot.api_client.get(
                 "bot/infractions",
-                params={
-                    "active": "true",
-                    "type": "watch",
-                    "user__id": user_id
-                }
+                params={"active": "true", "type": "watch", "user__id": user_id},
             )
 
             log_text["Watching"] = "Yes" if active_watch else "No"
@@ -441,8 +464,7 @@ class InfractionScheduler:
             # Mark infraction as inactive in the database.
             log.trace(f"Marking infraction #{id_} as inactive in the database.")
             await self.bot.api_client.patch(
-                f"bot/infractions/{id_}",
-                json={"active": False}
+                f"bot/infractions/{id_}", json={"active": False}
             )
         except ResponseCodeError as e:
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
@@ -484,9 +506,7 @@ class InfractionScheduler:
 
     @abstractmethod
     async def _pardon_action(
-        self,
-        infraction: _utils.Infraction,
-        notify: bool
+        self, infraction: _utils.Infraction, notify: bool
     ) -> t.Optional[t.Dict[str, str]]:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
@@ -504,4 +524,6 @@ class InfractionScheduler:
         expiration task is cancelled.
         """
         expiry = dateutil.parser.isoparse(infraction["expires_at"])
-        self.scheduler.schedule_at(expiry, infraction["id"], self.deactivate_infraction(infraction))
+        self.scheduler.schedule_at(
+            expiry, infraction["id"], self.deactivate_infraction(infraction)
+        )

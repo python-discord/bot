@@ -21,7 +21,9 @@ _DURATION_REGEX = re.compile(
 )
 
 
-ValidTimestamp = Union[int, datetime.datetime, datetime.date, datetime.timedelta, relativedelta]
+ValidTimestamp = Union[
+    int, datetime.datetime, datetime.date, datetime.timedelta, relativedelta
+]
 
 
 class TimestampFormats(Enum):
@@ -61,10 +63,14 @@ def _stringify_time_unit(value: int, unit: str) -> str:
         return f"{value} {unit}"
 
 
-def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
+def discord_timestamp(
+    timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME
+) -> str:
     """Create and format a Discord flavored markdown timestamp."""
     if format not in TimestampFormats:
-        raise ValueError(f"Format can only be one of {', '.join(TimestampFormats.args)}, not {format}.")
+        raise ValueError(
+            f"Format can only be one of {', '.join(TimestampFormats.args)}, not {format}."
+        )
 
     # Convert each possible timestamp class to an integer.
     if isinstance(timestamp, datetime.datetime):
@@ -79,7 +85,9 @@ def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = Time
     return f"<t:{int(timestamp)}:{format.value}>"
 
 
-def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: int = 6) -> str:
+def humanize_delta(
+    delta: relativedelta, precision: str = "seconds", max_units: int = 6
+) -> str:
     """
     Returns a human-readable version of the relativedelta.
 
@@ -150,7 +158,9 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
     if not match:
         return None
 
-    duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
+    duration_dict = {
+        unit: int(amount) for unit, amount in match.groupdict(default=0).items()
+    }
     delta = relativedelta(**duration_dict)
 
     return delta
@@ -169,7 +179,9 @@ def time_since(past_datetime: datetime.datetime) -> str:
 
 def parse_rfc1123(stamp: str) -> datetime.datetime:
     """Parse RFC1123 time string into datetime."""
-    return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
+    return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(
+        tzinfo=datetime.timezone.utc
+    )
 
 
 def format_infraction(timestamp: str) -> str:
@@ -181,7 +193,7 @@ def format_infraction_with_duration(
     date_to: Optional[str],
     date_from: Optional[datetime.datetime] = None,
     max_units: int = 2,
-    absolute: bool = True
+    absolute: bool = True,
 ) -> Optional[str]:
     """
     Return `date_to` formatted as a discord timestamp with the timestamp duration since `date_from`.
@@ -210,9 +222,7 @@ def format_infraction_with_duration(
     return f"{date_to_formatted}{duration_formatted}"
 
 
-def until_expiration(
-    expiry: Optional[str]
-) -> Optional[str]:
+def until_expiration(expiry: Optional[str]) -> Optional[str]:
     """
     Get the remaining time until infraction's expiration, in a discord timestamp.
 

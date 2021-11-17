@@ -7,7 +7,9 @@ from bot.decorators import in_whitelist
 from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
 
-InWhitelistTestCase = collections.namedtuple("WhitelistedContextTestCase", ("kwargs", "ctx", "description"))
+InWhitelistTestCase = collections.namedtuple(
+    "WhitelistedContextTestCase", ("kwargs", "ctx", "description")
+)
 
 
 class InWhitelistTests(unittest.TestCase):
@@ -34,23 +36,31 @@ class InWhitelistTests(unittest.TestCase):
         test_cases = (
             InWhitelistTestCase(
                 kwargs={"channels": self.channels},
-                ctx=helpers.MockContext(channel=self.bot_commands, author=self.non_staff_member),
+                ctx=helpers.MockContext(
+                    channel=self.bot_commands, author=self.non_staff_member
+                ),
                 description="In whitelisted channels by members without whitelisted roles",
             ),
             InWhitelistTestCase(
                 kwargs={"redirect": self.bot_commands.id},
-                ctx=helpers.MockContext(channel=self.bot_commands, author=self.non_staff_member),
+                ctx=helpers.MockContext(
+                    channel=self.bot_commands, author=self.non_staff_member
+                ),
                 description="`redirect` should be implicitly added to `channels`",
             ),
             InWhitelistTestCase(
                 kwargs={"categories": self.categories},
-                ctx=helpers.MockContext(channel=self.help_channel, author=self.non_staff_member),
+                ctx=helpers.MockContext(
+                    channel=self.help_channel, author=self.non_staff_member
+                ),
                 description="Whitelisted category without whitelisted role",
             ),
             InWhitelistTestCase(
                 kwargs={"roles": self.roles},
-                ctx=helpers.MockContext(channel=self.non_whitelisted_channel, author=self.staff_member),
-                description="Whitelisted role outside of whitelisted channel/category"
+                ctx=helpers.MockContext(
+                    channel=self.non_whitelisted_channel, author=self.staff_member
+                ),
+                description="Whitelisted role outside of whitelisted channel/category",
             ),
             InWhitelistTestCase(
                 kwargs={
@@ -59,7 +69,9 @@ class InWhitelistTests(unittest.TestCase):
                     "roles": self.roles,
                     "redirect": self.bot_commands,
                 },
-                ctx=helpers.MockContext(channel=self.help_channel, author=self.staff_member),
+                ctx=helpers.MockContext(
+                    channel=self.help_channel, author=self.staff_member
+                ),
                 description="Case with all whitelist kwargs used",
             ),
         )
@@ -67,7 +79,9 @@ class InWhitelistTests(unittest.TestCase):
         for test_case in test_cases:
             # patch `commands.check` with a no-op lambda that just returns the predicate passed to it
             # so we can test the predicate that was generated from the specified kwargs.
-            with unittest.mock.patch("bot.decorators.commands.check", new=lambda predicate: predicate):
+            with unittest.mock.patch(
+                "bot.decorators.commands.check", new=lambda predicate: predicate
+            ):
                 predicate = in_whitelist(**test_case.kwargs)
 
             with self.subTest(test_description=test_case.description):
@@ -84,10 +98,11 @@ class InWhitelistTests(unittest.TestCase):
                     "roles": self.roles,
                     "redirect": self.bot_commands.id,
                 },
-                ctx=helpers.MockContext(channel=self.non_whitelisted_channel, author=self.non_staff_member),
+                ctx=helpers.MockContext(
+                    channel=self.non_whitelisted_channel, author=self.non_staff_member
+                ),
                 description="Failing check with an explicit redirect channel",
             ),
-
             # Failing check with implicit `redirect`
             InWhitelistTestCase(
                 kwargs={
@@ -95,10 +110,11 @@ class InWhitelistTests(unittest.TestCase):
                     "channels": self.channels,
                     "roles": self.roles,
                 },
-                ctx=helpers.MockContext(channel=self.non_whitelisted_channel, author=self.non_staff_member),
+                ctx=helpers.MockContext(
+                    channel=self.non_whitelisted_channel, author=self.non_staff_member
+                ),
                 description="Failing check with an implicit redirect channel",
             ),
-
             # Failing check without `redirect`
             InWhitelistTestCase(
                 kwargs={
@@ -107,10 +123,11 @@ class InWhitelistTests(unittest.TestCase):
                     "roles": self.roles,
                     "redirect": None,
                 },
-                ctx=helpers.MockContext(channel=self.non_whitelisted_channel, author=self.non_staff_member),
+                ctx=helpers.MockContext(
+                    channel=self.non_whitelisted_channel, author=self.non_staff_member
+                ),
                 description="Failing check without a redirect channel",
             ),
-
             # Command issued in DM channel
             InWhitelistTestCase(
                 kwargs={
@@ -119,27 +136,40 @@ class InWhitelistTests(unittest.TestCase):
                     "roles": self.roles,
                     "redirect": None,
                 },
-                ctx=helpers.MockContext(channel=self.dm_channel, author=self.dm_channel.me),
+                ctx=helpers.MockContext(
+                    channel=self.dm_channel, author=self.dm_channel.me
+                ),
                 description="Commands issued in DM channel should be rejected",
             ),
         )
 
         for test_case in test_cases:
-            if "redirect" not in test_case.kwargs or test_case.kwargs["redirect"] is not None:
+            if (
+                "redirect" not in test_case.kwargs
+                or test_case.kwargs["redirect"] is not None
+            ):
                 # There are two cases in which we have a redirect channel:
                 #   1. No redirect channel was passed; the default value of `bot_commands` is used
                 #   2. An explicit `redirect` is set that is "not None"
-                redirect_channel = test_case.kwargs.get("redirect", constants.Channels.bot_commands)
-                redirect_message = f" here. Please use the <#{redirect_channel}> channel instead"
+                redirect_channel = test_case.kwargs.get(
+                    "redirect", constants.Channels.bot_commands
+                )
+                redirect_message = (
+                    f" here. Please use the <#{redirect_channel}> channel instead"
+                )
             else:
                 # If an explicit `None` was passed for `redirect`, there is no redirect channel
                 redirect_message = ""
 
-            exception_message = f"You are not allowed to use that command{redirect_message}."
+            exception_message = (
+                f"You are not allowed to use that command{redirect_message}."
+            )
 
             # patch `commands.check` with a no-op lambda that just returns the predicate passed to it
             # so we can test the predicate that was generated from the specified kwargs.
-            with unittest.mock.patch("bot.decorators.commands.check", new=lambda predicate: predicate):
+            with unittest.mock.patch(
+                "bot.decorators.commands.check", new=lambda predicate: predicate
+            ):
                 predicate = in_whitelist(**test_case.kwargs)
 
             with self.subTest(test_description=test_case.description):

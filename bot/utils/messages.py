@@ -9,7 +9,7 @@ import discord
 from discord.ext.commands import Context
 
 import bot
-from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import MODERATION_ROLES, NEGATIVE_REPLIES, Emojis
 from bot.log import get_logger
 from bot.utils import scheduling
 
@@ -39,20 +39,21 @@ def reaction_check(
     if not right_reaction:
         return False
 
-    is_moderator = (
-        allow_mods
-        and any(role.id in MODERATION_ROLES for role in getattr(user, "roles", []))
+    is_moderator = allow_mods and any(
+        role.id in MODERATION_ROLES for role in getattr(user, "roles", [])
     )
 
     if user.id in allowed_users or is_moderator:
         log.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
         return True
     else:
-        log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
+        log.trace(
+            f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user."
+        )
         scheduling.create_task(
             reaction.message.remove_reaction(reaction.emoji, user),
             suppressed_exceptions=(discord.HTTPException,),
-            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
+            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}",
         )
         return False
 
@@ -63,7 +64,7 @@ async def wait_for_deletion(
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
     attach_emojis: bool = True,
-    allow_mods: bool = True
+    allow_mods: bool = True,
 ) -> None:
     """
     Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
@@ -83,7 +84,9 @@ async def wait_for_deletion(
             try:
                 await message.add_reaction(emoji)
             except discord.NotFound:
-                log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
+                log.trace(
+                    f"Aborting wait_for_deletion: message {message.id} deleted prematurely."
+                )
                 return
 
     check = partial(
@@ -96,7 +99,7 @@ async def wait_for_deletion(
 
     try:
         try:
-            await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
+            await bot.instance.wait_for("reaction_add", check=check, timeout=timeout)
         except asyncio.TimeoutError:
             await message.clear_reactions()
         else:
@@ -110,7 +113,7 @@ async def send_attachments(
     destination: Union[discord.TextChannel, discord.Webhook],
     link_large: bool = True,
     use_cached: bool = False,
-    **kwargs
+    **kwargs,
 ) -> List[str]:
     """
     Re-upload the message's attachments to the destination and return a list of their new URLs.
@@ -120,18 +123,16 @@ async def send_attachments(
     embed which links to them. Extra kwargs will be passed to send() when sending the attachment.
     """
     webhook_send_kwargs = {
-        'username': message.author.display_name,
-        'avatar_url': message.author.display_avatar.url,
+        "username": message.author.display_name,
+        "avatar_url": message.author.display_avatar.url,
     }
     webhook_send_kwargs.update(kwargs)
-    webhook_send_kwargs['username'] = sub_clyde(webhook_send_kwargs['username'])
+    webhook_send_kwargs["username"] = sub_clyde(webhook_send_kwargs["username"])
 
     large = []
     urls = []
     for attachment in message.attachments:
-        failure_msg = (
-            f"Failed to re-upload attachment {attachment.filename} from message {message.id}"
-        )
+        failure_msg = f"Failed to re-upload attachment {attachment.filename} from message {message.id}"
 
         try:
             # Allow 512 bytes of leeway for the rest of the request.
@@ -146,7 +147,9 @@ async def send_attachments(
                         msg = await destination.send(file=attachment_file, **kwargs)
                         urls.append(msg.attachments[0].url)
                     else:
-                        await destination.send(file=attachment_file, **webhook_send_kwargs)
+                        await destination.send(
+                            file=attachment_file, **webhook_send_kwargs
+                        )
             elif link_large:
                 large.append(attachment)
             else:
@@ -158,7 +161,9 @@ async def send_attachments(
                 log.warning(f"{failure_msg} with status {e.status}.", exc_info=e)
 
     if link_large and large:
-        desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
+        desc = "\n".join(
+            f"[{attachment.filename}]({attachment.url})" for attachment in large
+        )
         embed = discord.Embed(description=desc)
         embed.set_footer(text="Attachments exceed upload size limit.")
 
@@ -174,7 +179,7 @@ async def count_unique_users_reaction(
     message: discord.Message,
     reaction_predicate: Callable[[discord.Reaction], bool] = lambda _: True,
     user_predicate: Callable[[discord.User], bool] = lambda _: True,
-    count_bots: bool = True
+    count_bots: bool = True,
 ) -> int:
     """
     Count the amount of unique users who reacted to the message.
@@ -215,6 +220,7 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
     """
+
     def replace_e(match: re.Match) -> str:
         char = "е" if match[2] == "e" else "Е"
         return match[1] + char

@@ -16,8 +16,12 @@ from bot.utils.webhooks import send_webhook
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
 
-RECENT_THREADS_TEMPLATE = "https://mail.python.org/archives/list/{name}@python.org/recent-threads"
-THREAD_TEMPLATE_URL = "https://mail.python.org/archives/api/list/{name}@python.org/thread/{id}/"
+RECENT_THREADS_TEMPLATE = (
+    "https://mail.python.org/archives/list/{name}@python.org/recent-threads"
+)
+THREAD_TEMPLATE_URL = (
+    "https://mail.python.org/archives/api/list/{name}@python.org/thread/{id}/"
+)
 MAILMAN_PROFILE_URL = "https://mail.python.org/archives/users/{id}/"
 THREAD_URL = "https://mail.python.org/archives/list/{list}@python.org/thread/{id}/"
 
@@ -28,7 +32,7 @@ AVATAR_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 MARKDOWN_REGEX = re.compile(
     r"(?P<codeblock>`.*?`)"  # matches everything within a codeblock
     r"|(?P<markdown>(?<!\\)[_|])",  # matches unescaped `_` and `|`
-    re.DOTALL  # required to support multi-line codeblocks
+    re.DOTALL,  # required to support multi-line codeblocks
 )
 
 log = get_logger(__name__)
@@ -75,7 +79,9 @@ class PythonNews(Cog):
         """Get webhook author names from maillist API."""
         await self.bot.wait_until_guild_available()
 
-        async with self.bot.http_session.get("https://mail.python.org/archives/api/lists") as resp:
+        async with self.bot.http_session.get(
+            "https://mail.python.org/archives/api/lists"
+        ) as resp:
             lists = await resp.json()
 
         for mail in lists:
@@ -87,7 +93,7 @@ class PythonNews(Cog):
         """Escape the markdown underlines and spoilers that aren't in codeblocks."""
         return MARKDOWN_REGEX.sub(
             lambda match: match.group("codeblock") or "\\" + match.group("markdown"),
-            content
+            content,
         )
 
     async def post_pep_news(self) -> None:
@@ -109,13 +115,12 @@ class PythonNews(Cog):
             try:
                 new_datetime = datetime.strptime(new["published"], "%a, %d %b %Y %X %Z")
             except ValueError:
-                log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
+                log.warning(
+                    f"Wrong datetime format passed in PEP new: {new['published']}"
+                )
                 continue
             pep_nr = new["title"].split(":")[0].split()[1]
-            if (
-                    pep_nr in pep_numbers
-                    or new_datetime.date() < date.today()
-            ):
+            if pep_nr in pep_numbers or new_datetime.date() < date.today():
                 continue
 
             # Build an embed and send a webhook
@@ -124,7 +129,7 @@ class PythonNews(Cog):
                 description=self.escape_markdown(new["summary"]),
                 timestamp=new_datetime,
                 url=new["link"],
-                colour=constants.Colours.soft_green
+                colour=constants.Colours.soft_green,
             )
             embed.set_footer(text=data["feed"]["title"], icon_url=AVATAR_URL)
             msg = await send_webhook(
@@ -140,7 +145,9 @@ class PythonNews(Cog):
             self.bot.stats.incr("python_news.posted.pep")
 
             if msg.channel.is_news():
-                log.trace("Publishing PEP announcement because it was in a news channel")
+                log.trace(
+                    "Publishing PEP announcement because it was in a news channel"
+                )
                 await msg.publish()
 
         # Apply new sent news to DB to avoid duplicate sending
@@ -154,7 +161,9 @@ class PythonNews(Cog):
         payload = existing_news.copy()
 
         for maillist in constants.PythonNews.mail_lists:
-            async with self.bot.http_session.get(RECENT_THREADS_TEMPLATE.format(name=maillist)) as resp:
+            async with self.bot.http_session.get(
+                RECENT_THREADS_TEMPLATE.format(name=maillist)
+            ) as resp:
                 recents = BeautifulSoup(await resp.text(), features="lxml")
 
             # When a <p> element is present in the response then the mailing list
@@ -168,37 +177,50 @@ class PythonNews(Cog):
                 if "latest" in thread["href"]:
                     continue
 
-                thread_information, email_information = await self.get_thread_and_first_mail(
+                (
+                    thread_information,
+                    email_information,
+                ) = await self.get_thread_and_first_mail(
                     maillist, thread["href"].split("/")[-2]
                 )
 
                 try:
-                    new_date = datetime.strptime(email_information["date"], "%Y-%m-%dT%X%z")
+                    new_date = datetime.strptime(
+                        email_information["date"], "%Y-%m-%dT%X%z"
+                    )
                 except ValueError:
-                    log.warning(f"Invalid datetime from Thread email: {email_information['date']}")
+                    log.warning(
+                        f"Invalid datetime from Thread email: {email_information['date']}"
+                    )
                     continue
 
                 if (
-                        thread_information["thread_id"] in existing_news["data"][maillist]
-                        or 'Re: ' in thread_information["subject"]
-                        or new_date.date() < date.today()
+                    thread_information["thread_id"] in existing_news["data"][maillist]
+                    or "Re: " in thread_information["subject"]
+                    or new_date.date() < date.today()
                 ):
                     continue
 
                 content = self.escape_markdown(email_information["content"])
-                link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
+                link = THREAD_URL.format(
+                    id=thread["href"].split("/")[-2], list=maillist
+                )
 
                 # Build an embed and send a message to the webhook
                 embed = discord.Embed(
                     title=self.escape_markdown(thread_information["subject"]),
-                    description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
+                    description=content[:1000] + f"... [continue reading]({link})"
+                    if len(content) > 1000
+                    else content,
                     timestamp=new_date,
                     url=link,
-                    colour=constants.Colours.soft_green
+                    colour=constants.Colours.soft_green,
                 )
                 embed.set_author(
                     name=f"{email_information['sender_name']} ({email_information['sender']['address']})",
-                    url=MAILMAN_PROFILE_URL.format(id=email_information["sender"]["mailman_id"]),
+                    url=MAILMAN_PROFILE_URL.format(
+                        id=email_information["sender"]["mailman_id"]
+                    ),
                 )
                 embed.set_footer(
                     text=f"Posted to {self.webhook_names[maillist]}",
@@ -217,19 +239,25 @@ class PythonNews(Cog):
                 self.bot.stats.incr(f"python_news.posted.{maillist.replace('-', '_')}")
 
                 if msg.channel.is_news():
-                    log.trace("Publishing mailing list message because it was in a news channel")
+                    log.trace(
+                        "Publishing mailing list message because it was in a news channel"
+                    )
                     await msg.publish()
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
 
-    async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> t.Tuple[t.Any, t.Any]:
+    async def get_thread_and_first_mail(
+        self, maillist: str, thread_identifier: str
+    ) -> t.Tuple[t.Any, t.Any]:
         """Get mail thread and first mail from mail.python.org based on `maillist` and `thread_identifier`."""
         async with self.bot.http_session.get(
-                THREAD_TEMPLATE_URL.format(name=maillist, id=thread_identifier)
+            THREAD_TEMPLATE_URL.format(name=maillist, id=thread_identifier)
         ) as resp:
             thread_information = await resp.json()
 
-        async with self.bot.http_session.get(thread_information["starting_email"]) as resp:
+        async with self.bot.http_session.get(
+            thread_information["starting_email"]
+        ) as resp:
             email_information = await resp.json()
         return thread_information, email_information
 

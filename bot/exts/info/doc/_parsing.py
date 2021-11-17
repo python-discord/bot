@@ -4,7 +4,7 @@ import re
 import string
 import textwrap
 from collections import namedtuple
-from typing import Collection, Iterable, Iterator, List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Collection, Iterable, Iterator, List, Optional, Union
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
@@ -62,7 +62,9 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     for index, character in enumerated_string:
         if character in {"'", '"'}:
             # Skip everything inside of strings, regardless of the depth.
-            quote_character = character  # The closing quote must equal the opening quote.
+            quote_character = (
+                character  # The closing quote must equal the opening quote.
+            )
             preceding_backslashes = 0
             for _, character in enumerated_string:
                 # If an odd number of backslashes precedes the quote, it was escaped.
@@ -92,7 +94,9 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     yield parameters_string[last_split:]
 
 
-def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collection[str]]:
+def _truncate_signatures(
+    signatures: Collection[str],
+) -> Union[List[str], Collection[str]]:
     """
     Truncate passed signatures to not exceed `_MAX_SIGNATURES_LENGTH`.
 
@@ -105,14 +109,18 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
         # Total length of signatures is under the length limit; no truncation needed.
         return signatures
 
-    max_signature_length = _EMBED_CODE_BLOCK_LINE_LENGTH * (MAX_SIGNATURE_AMOUNT + 1 - len(signatures))
+    max_signature_length = _EMBED_CODE_BLOCK_LINE_LENGTH * (
+        MAX_SIGNATURE_AMOUNT + 1 - len(signatures)
+    )
     formatted_signatures = []
     for signature in signatures:
         signature = signature.strip()
         if len(signature) > max_signature_length:
             if (parameters_match := _PARAMETERS_RE.search(signature)) is None:
                 # The signature has no parameters or the regex failed; perform a simple truncation of the text.
-                formatted_signatures.append(textwrap.shorten(signature, max_signature_length, placeholder="..."))
+                formatted_signatures.append(
+                    textwrap.shorten(signature, max_signature_length, placeholder="...")
+                )
                 continue
 
             truncated_signature = []
@@ -120,13 +128,19 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
             running_length = len(signature) - len(parameters_string)
             for parameter in _split_parameters(parameters_string):
                 # Check if including this parameter would still be within the maximum length.
-                if (len(parameter) + running_length) <= max_signature_length - 5:  # account for comma and placeholder
+                if (
+                    len(parameter) + running_length
+                ) <= max_signature_length - 5:  # account for comma and placeholder
                     truncated_signature.append(parameter)
                     running_length += len(parameter) + 1
                 else:
                     # There's no more room for this parameter. Truncate the parameter list and put it in the signature.
                     truncated_signature.append(" ...")
-                    formatted_signatures.append(signature.replace(parameters_string, ",".join(truncated_signature)))
+                    formatted_signatures.append(
+                        signature.replace(
+                            parameters_string, ",".join(truncated_signature)
+                        )
+                    )
                     break
         else:
             # The current signature is under the length limit; no truncation needed.
@@ -148,7 +162,9 @@ def _get_truncated_description(
     with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits.
     """
     result = ""
-    markdown_element_ends = []  # Stores indices into `result` which point to the end boundary of each Markdown element.
+    markdown_element_ends = (
+        []
+    )  # Stores indices into `result` which point to the end boundary of each Markdown element.
     rendered_length = 0
 
     tag_end_index = 0
@@ -158,7 +174,9 @@ def _get_truncated_description(
 
         if rendered_length + element_length < max_length:
             if is_tag:
-                element_markdown = markdown_converter.process_tag(element, convert_as_inline=False)
+                element_markdown = markdown_converter.process_tag(
+                    element, convert_as_inline=False
+                )
             else:
                 element_markdown = markdown_converter.process_text(element)
 
@@ -176,7 +194,10 @@ def _get_truncated_description(
 
     # Determine the "hard" truncation index. Account for the ellipsis placeholder for the max length.
     newline_truncate_index = find_nth_occurrence(result, "\n", max_lines)
-    if newline_truncate_index is not None and newline_truncate_index < _MAX_DESCRIPTION_LENGTH - 3:
+    if (
+        newline_truncate_index is not None
+        and newline_truncate_index < _MAX_DESCRIPTION_LENGTH - 3
+    ):
         # Truncate based on maximum lines if there are more than the maximum number of lines.
         truncate_index = newline_truncate_index
     else:
@@ -188,13 +209,15 @@ def _get_truncated_description(
         return result
 
     # Determine the actual truncation index.
-    possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
+    possible_truncation_indices = [
+        cut for cut in markdown_element_ends if cut < truncate_index
+    ]
     if not possible_truncation_indices:
         # In case there is no Markdown element ending before the truncation index, try to find a good cutoff point.
         force_truncated = result[:truncate_index]
         # If there is an incomplete codeblock, cut it out.
         if force_truncated.count("```") % 2:
-            force_truncated = force_truncated[:force_truncated.rfind("```")]
+            force_truncated = force_truncated[: force_truncated.rfind("```")]
         # Search for substrings to truncate at, with decreasing desirability.
         for string_ in ("\n\n", "\n", ". ", ", ", ",", " "):
             cutoff = force_truncated.rfind(string_)
@@ -213,7 +236,9 @@ def _get_truncated_description(
     return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
 
-def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
+def _create_markdown(
+    signatures: Optional[List[str]], description: Iterable[Tag], url: str
+) -> str:
     """
     Create a Markdown string with the signatures at the top, and the converted html description below them.
 
@@ -224,11 +249,13 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
         description,
         markdown_converter=DocMarkdownConverter(bullets="•", page_url=url),
         max_length=750,
-        max_lines=13
+        max_lines=13,
     )
     description = _WHITESPACE_AFTER_NEWLINES_RE.sub("", description)
     if signatures is not None:
-        signature = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
+        signature = "".join(
+            f"```py\n{signature}```" for signature in _truncate_signatures(signatures)
+        )
         return f"{signature}\n{description}"
     else:
         return description
@@ -255,4 +282,8 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     else:
         signature = get_signatures(symbol_heading)
         description = get_dd_description(symbol_heading)
-    return _create_markdown(signature, description, symbol_data.url).replace("¶", "").strip()
+    return (
+        _create_markdown(signature, description, symbol_data.url)
+        .replace("¶", "")
+        .strip()
+    )

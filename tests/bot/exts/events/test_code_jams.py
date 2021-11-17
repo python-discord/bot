@@ -8,8 +8,15 @@ from bot.constants import Roles
 from bot.exts.events import code_jams
 from bot.exts.events.code_jams import _channels, _cog
 from tests.helpers import (
-    MockAttachment, MockBot, MockCategoryChannel, MockContext, MockGuild, MockMember, MockRole, MockTextChannel,
-    autospec
+    MockAttachment,
+    MockBot,
+    MockCategoryChannel,
+    MockContext,
+    MockGuild,
+    MockMember,
+    MockRole,
+    MockTextChannel,
+    autospec,
 )
 
 TEST_CSV = b"""\
@@ -69,9 +76,7 @@ class JamCodejamCreateTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.create(self.cog, self.ctx, None)
 
         create_team_channel.assert_awaited()
-        create_leader_channel.assert_awaited_once_with(
-            self.ctx.guild, team_leaders
-        )
+        create_leader_channel.assert_awaited_once_with(self.ctx.guild, team_leaders)
         self.ctx.send.assert_awaited_once()
 
     async def test_link_returning_non_200_status(self):
@@ -101,15 +106,23 @@ class JamCodejamCreateTests(unittest.IsolatedAsyncioTestCase):
 
                 update.assert_called_once()
                 self.guild.create_category_channel.assert_awaited_once()
-                category_overwrites = self.guild.create_category_channel.call_args[1]["overwrites"]
+                category_overwrites = self.guild.create_category_channel.call_args[1][
+                    "overwrites"
+                ]
 
-                self.assertFalse(category_overwrites[self.guild.default_role].read_messages)
+                self.assertFalse(
+                    category_overwrites[self.guild.default_role].read_messages
+                )
                 self.assertTrue(category_overwrites[self.guild.me].read_messages)
-                self.assertEqual(self.guild.create_category_channel.return_value, actual_category)
+                self.assertEqual(
+                    self.guild.create_category_channel.return_value, actual_category
+                )
 
     async def test_category_channel_exist(self):
         """Should not try to create category channel."""
-        expected_category = get_mock_category(_channels.MAX_CHANNELS - 2, _channels.CATEGORY_NAME)
+        expected_category = get_mock_category(
+            _channels.MAX_CHANNELS - 2, _channels.CATEGORY_NAME
+        )
         self.guild.categories = [
             get_mock_category(_channels.MAX_CHANNELS - 2, "other"),
             expected_category,
@@ -139,11 +152,12 @@ class JamCodejamCreateTests(unittest.IsolatedAsyncioTestCase):
         category.create_text_channel = AsyncMock()
 
         get_category.return_value = category
-        await _channels.create_team_channel(self.guild, "my-team", members, team_leaders)
+        await _channels.create_team_channel(
+            self.guild, "my-team", members, team_leaders
+        )
 
         category.create_text_channel.assert_awaited_once_with(
-            "my-team",
-            overwrites=get_overwrites.return_value
+            "my-team", overwrites=get_overwrites.return_value
         )
 
     async def test_jam_roles_adding(self):

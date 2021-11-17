@@ -14,22 +14,20 @@ class AntispamConfigurationValidationTests(unittest.TestCase):
     def test_unknown_rule_returns_error(self):
         """Configuring an unknown rule returns an error."""
         self.assertEqual(
-            antispam.validate_config({'invalid-rule': {}}),
-            {'invalid-rule': "`invalid-rule` is not recognized as an antispam rule."}
+            antispam.validate_config({"invalid-rule": {}}),
+            {"invalid-rule": "`invalid-rule` is not recognized as an antispam rule."},
         )
 
     def test_missing_keys_returns_error(self):
         """Not configuring required keys returns an error."""
-        keys = (('interval', 'max'), ('max', 'interval'))
+        keys = (("interval", "max"), ("max", "interval"))
         for configured_key, unconfigured_key in keys:
             with self.subTest(
-                configured_key=configured_key,
-                unconfigured_key=unconfigured_key
+                configured_key=configured_key, unconfigured_key=unconfigured_key
             ):
-                config = {'burst': {configured_key: 10}}
-                error = f"Key `{unconfigured_key}` is required but not set for rule `burst`"
-
-                self.assertEqual(
-                    antispam.validate_config(config),
-                    {'burst': error}
+                config = {"burst": {configured_key: 10}}
+                error = (
+                    f"Key `{unconfigured_key}` is required but not set for rule `burst`"
                 )
+
+                self.assertEqual(antispam.validate_config(config), {"burst": error})

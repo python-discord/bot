@@ -5,7 +5,7 @@ from discord import Embed, Forbidden, TextChannel, Thread
 from discord.ext.commands import Cog, Context, command, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Guild, MODERATION_ROLES, URLs
+from bot.constants import MODERATION_ROLES, Guild, URLs
 from bot.log import get_logger
 
 log = get_logger(__name__)
@@ -36,26 +36,30 @@ class BotCog(Cog, name="Bot"):
         """Bot informational commands."""
         await ctx.send_help(ctx.command)
 
-    @botinfo_group.command(name='about', aliases=('info',), hidden=True)
+    @botinfo_group.command(name="about", aliases=("info",), hidden=True)
     async def about_command(self, ctx: Context) -> None:
         """Get information about the bot."""
         embed = Embed(
             description="A utility bot designed just for the Python server! Try `!help` for more info.",
-            url="https://github.com/python-discord/bot"
+            url="https://github.com/python-discord/bot",
         )
 
-        embed.add_field(name="Total Users", value=str(len(self.bot.get_guild(Guild.id).members)))
+        embed.add_field(
+            name="Total Users", value=str(len(self.bot.get_guild(Guild.id).members))
+        )
         embed.set_author(
             name="Python Bot",
             url="https://github.com/python-discord/bot",
-            icon_url=URLs.bot_avatar
+            icon_url=URLs.bot_avatar,
         )
 
         await ctx.send(embed=embed)
 
-    @command(name='echo', aliases=('print',))
+    @command(name="echo", aliases=("print",))
     @has_any_role(*MODERATION_ROLES)
-    async def echo_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+    async def echo_command(
+        self, ctx: Context, channel: Optional[TextChannel], *, text: str
+    ) -> None:
         """Repeat the given message in either a specified channel or the current channel."""
         if channel is None:
             await ctx.send(text)
@@ -64,9 +68,11 @@ class BotCog(Cog, name="Bot"):
         else:
             await channel.send(text)
 
-    @command(name='embed')
+    @command(name="embed")
     @has_any_role(*MODERATION_ROLES)
-    async def embed_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+    async def embed_command(
+        self, ctx: Context, channel: Optional[TextChannel], *, text: str
+    ) -> None:
         """Send the input within an embed to either a specified channel or the current channel."""
         embed = Embed(description=text)
 

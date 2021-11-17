@@ -45,7 +45,9 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
         except KeyError:
             raise ValueError(f"Argument {arg_name!r} doesn't exist.")
     else:
-        raise TypeError("'arg' must either be an int (positional index) or a str (keyword).")
+        raise TypeError(
+            "'arg' must either be an int (positional index) or a str (keyword)."
+        )
 
 
 def get_arg_value_wrapper(
@@ -63,6 +65,7 @@ def get_arg_value_wrapper(
 
     Return the decorator returned by `decorator_func`.
     """
+
     def wrapper(args: BoundArgs) -> t.Any:
         value = get_arg_value(name_or_pos, args)
         if func:
@@ -72,7 +75,9 @@ def get_arg_value_wrapper(
     return decorator_func(wrapper)
 
 
-def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) -> BoundArgs:
+def get_bound_args(
+    func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]
+) -> BoundArgs:
     """
     Bind `args` and `kwargs` to `func` and return a mapping of parameter names to argument values.
 
@@ -86,10 +91,10 @@ def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) 
 
 
 def update_wrapper_globals(
-        wrapper: types.FunctionType,
-        wrapped: types.FunctionType,
-        *,
-        ignored_conflict_names: t.Set[str] = frozenset(),
+    wrapper: types.FunctionType,
+    wrapped: types.FunctionType,
+    *,
+    ignored_conflict_names: t.Set[str] = frozenset(),
 ) -> types.FunctionType:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
@@ -106,11 +111,15 @@ def update_wrapper_globals(
     as this can cause incorrect objects being used by discordpy's converters.
     """
     annotation_global_names = (
-        ann.split(".", maxsplit=1)[0] for ann in wrapped.__annotations__.values() if isinstance(ann, str)
+        ann.split(".", maxsplit=1)[0]
+        for ann in wrapped.__annotations__.values()
+        if isinstance(ann, str)
     )
     # Conflicting globals from both functions' modules that are also used in the wrapper and in wrapped's annotations.
     shared_globals = set(wrapper.__code__.co_names) & set(annotation_global_names)
-    shared_globals &= set(wrapped.__globals__) & set(wrapper.__globals__) - ignored_conflict_names
+    shared_globals &= (
+        set(wrapped.__globals__) & set(wrapper.__globals__) - ignored_conflict_names
+    )
     if shared_globals:
         raise GlobalNameConflictError(
             f"wrapper and the wrapped function share the following "
@@ -119,7 +128,11 @@ def update_wrapper_globals(
         )
 
     new_globals = wrapper.__globals__.copy()
-    new_globals.update((k, v) for k, v in wrapped.__globals__.items() if k not in wrapper.__code__.co_names)
+    new_globals.update(
+        (k, v)
+        for k, v in wrapped.__globals__.items()
+        if k not in wrapper.__code__.co_names
+    )
     return types.FunctionType(
         code=wrapper.__code__,
         globals=new_globals,
@@ -130,16 +143,19 @@ def update_wrapper_globals(
 
 
 def command_wraps(
-        wrapped: types.FunctionType,
-        assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
-        updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
-        *,
-        ignored_conflict_names: t.Set[str] = frozenset(),
+    wrapped: types.FunctionType,
+    assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
+    updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
+    *,
+    ignored_conflict_names: t.Set[str] = frozenset(),
 ) -> t.Callable[[types.FunctionType], types.FunctionType]:
     """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
+
     def decorator(wrapper: types.FunctionType) -> types.FunctionType:
         return functools.update_wrapper(
-            update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),
+            update_wrapper_globals(
+                wrapper, wrapped, ignored_conflict_names=ignored_conflict_names
+            ),
             wrapped,
             assigned,
             updated,

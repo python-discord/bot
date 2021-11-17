@@ -8,7 +8,7 @@ from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
-from bot.constants import Channels, DEBUG_MODE, RedirectOutput
+from bot.constants import DEBUG_MODE, Channels, RedirectOutput
 from bot.log import get_logger
 from bot.utils import function, scheduling
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
@@ -38,9 +38,12 @@ def in_whitelist(
     redirected to the `redirect` channel that was passed (default: #bot-commands) or simply
     told that they're not allowed to use this particular command (if `None` was passed).
     """
+
     def predicate(ctx: Context) -> bool:
         """Check if command was issued in a whitelisted context."""
-        return in_whitelist_check(ctx, channels, categories, roles, redirect, fail_silently)
+        return in_whitelist_check(
+            ctx, channels, categories, roles, redirect, fail_silently
+        )
 
     return commands.check(predicate)
 
@@ -73,9 +76,12 @@ def not_in_blacklist(
 
     The blacklist can be overridden through the roles specified in `override_roles`.
     """
+
     def predicate(ctx: Context) -> bool:
         """Check if command was issued in a blacklisted context."""
-        not_blacklisted = not in_whitelist_check(ctx, channels, categories, roles, fail_silently=True)
+        not_blacklisted = not in_whitelist_check(
+            ctx, channels, categories, roles, fail_silently=True
+        )
         overridden = in_whitelist_check(ctx, roles=override_roles, fail_silently=True)
 
         success = not_blacklisted or overridden
@@ -94,6 +100,7 @@ def has_no_roles(*roles: t.Union[str, int]) -> t.Callable:
 
     `roles` are the names or IDs of the disallowed roles.
     """
+
     async def predicate(ctx: Context) -> bool:
         try:
             await commands.has_any_role(*roles).predicate(ctx)
@@ -102,7 +109,9 @@ def has_no_roles(*roles: t.Union[str, int]) -> t.Callable:
         else:
             # This error is never shown to users, so don't bother trying to make it too pretty.
             roles_ = ", ".join(f"'{item}'" for item in roles)
-            raise commands.CheckFailure(f"You have at least one of the disallowed roles: {roles_}")
+            raise commands.CheckFailure(
+                f"You have at least one of the disallowed roles: {roles_}"
+            )
 
     return commands.check(predicate)
 
@@ -112,7 +121,7 @@ def redirect_output(
     bypass_roles: t.Optional[t.Container[int]] = None,
     channels: t.Optional[t.Container[int]] = None,
     categories: t.Optional[t.Container[int]] = None,
-    ping_user: bool = True
+    ping_user: bool = True,
 ) -> t.Callable:
     """
     Changes the channel in the context of the command to redirect the output to a certain channel.
@@ -123,37 +132,50 @@ def redirect_output(
 
     This decorator must go before (below) the `command` decorator.
     """
+
     def wrap(func: types.FunctionType) -> types.FunctionType:
         @command_wraps(func)
         async def inner(self: Cog, ctx: Context, *args, **kwargs) -> None:
             if ctx.channel.id == destination_channel:
-                log.trace(f"Command {ctx.command} was invoked in destination_channel, not redirecting")
+                log.trace(
+                    f"Command {ctx.command} was invoked in destination_channel, not redirecting"
+                )
                 await func(self, ctx, *args, **kwargs)
                 return
 
-            if bypass_roles and any(role.id in bypass_roles for role in ctx.author.roles):
+            if bypass_roles and any(
+                role.id in bypass_roles for role in ctx.author.roles
+            ):
                 log.trace(f"{ctx.author} has role to bypass output redirection")
                 await func(self, ctx, *args, **kwargs)
                 return
 
             elif channels and ctx.channel.id not in channels:
-                log.trace(f"{ctx.author} used {ctx.command} in a channel that can bypass output redirection")
+                log.trace(
+                    f"{ctx.author} used {ctx.command} in a channel that can bypass output redirection"
+                )
                 await func(self, ctx, *args, **kwargs)
                 return
 
             elif categories and ctx.channel.category.id not in categories:
-                log.trace(f"{ctx.author} used {ctx.command} in a category that can bypass output redirection")
+                log.trace(
+                    f"{ctx.author} used {ctx.command} in a category that can bypass output redirection"
+                )
                 await func(self, ctx, *args, **kwargs)
                 return
 
             redirect_channel = ctx.guild.get_channel(destination_channel)
             old_channel = ctx.channel
 
-            log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
+            log.trace(
+                f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}"
+            )
             ctx.channel = redirect_channel
 
             if ping_user:
-                await ctx.send(f"Here's the output of your command, {ctx.author.mention}")
+                await ctx.send(
+                    f"Here's the output of your command, {ctx.author.mention}"
+                )
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
@@ -170,7 +192,9 @@ def redirect_output(
                 with suppress(NotFound):
                     await ctx.message.delete()
                     log.trace("Redirect output: Deleted invocation message")
+
         return inner
+
     return wrap
 
 
@@ -186,6 +210,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
     This decorator must go before (below) the `command` decorator.
     """
+
     def decorator(func: types.FunctionType) -> types.FunctionType:
         @command_wraps(func)
         async def wrapper(*args, **kwargs) -> None:
@@ -195,7 +220,9 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
             target = function.get_arg_value(member_arg, bound_args)
 
             if not isinstance(target, Member):
-                log.trace("The target is not a discord.Member; skipping role hierarchy check.")
+                log.trace(
+                    "The target is not a discord.Member; skipping role hierarchy check."
+                )
                 await func(*args, **kwargs)
                 return
 
@@ -213,9 +240,13 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                     "someone with an equal or higher top role."
                 )
             else:
-                log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
+                log.trace(
+                    f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func"
+                )
                 await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -227,13 +258,18 @@ def mock_in_debug(return_value: t.Any) -> t.Callable:
     upon each call. This is useful for expensive operations, i.e. media asset uploads
     that are prone to rate-limits but need to be tested extensively.
     """
+
     def decorator(func: t.Callable) -> t.Callable:
         @functools.wraps(func)
         async def wrapped(*args, **kwargs) -> t.Any:
             """Short-circuit and log if in debug mode."""
             if DEBUG_MODE:
-                log.debug(f"Function {func.__name__} called with args: {args}, kwargs: {kwargs}")
+                log.debug(
+                    f"Function {func.__name__} called with args: {args}, kwargs: {kwargs}"
+                )
                 return return_value
             return await func(*args, **kwargs)
+
         return wrapped
+
     return decorator

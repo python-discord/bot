@@ -67,7 +67,9 @@ class DocCog(commands.Cog):
         # Used to calculate inventory diffs on refreshes and to display all currently stored inventories.
         self.base_urls = {}
         self.bot = bot
-        self.doc_symbols: Dict[str, DocItem] = {}  # Maps symbol names to objects containing their metadata.
+        self.doc_symbols: Dict[
+            str, DocItem
+        ] = {}  # Maps symbol names to objects containing their metadata.
         self.item_fetcher = _batch_parser.BatchParser()
         # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
@@ -90,7 +92,9 @@ class DocCog(commands.Cog):
         await self.bot.wait_until_guild_available()
         await self.refresh_inventories()
 
-    def update_single(self, package_name: str, base_url: str, inventory: InventoryDict) -> None:
+    def update_single(
+        self, package_name: str, base_url: str, inventory: InventoryDict
+    ) -> None:
         """
         Build the inventory for a single package.
 
@@ -154,16 +158,20 @@ class DocCog(commands.Cog):
                 delay = FETCH_RESCHEDULE_DELAY.first
             log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
             self.inventory_scheduler.schedule_later(
-                delay*60,
+                delay * 60,
                 api_package_name,
-                self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url),
+                self.update_or_reschedule_inventory(
+                    api_package_name, base_url, inventory_url
+                ),
             )
         else:
             if not base_url:
                 base_url = self.base_url_from_inventory_url(inventory_url)
             self.update_single(api_package_name, base_url, package)
 
-    def ensure_unique_symbol_name(self, package_name: str, group_name: str, symbol_name: str) -> str:
+    def ensure_unique_symbol_name(
+        self, package_name: str, group_name: str, symbol_name: str
+    ) -> str:
         """
         Ensure `symbol_name` doesn't overwrite an another symbol in `doc_symbols`.
 
@@ -204,10 +212,14 @@ class DocCog(commands.Cog):
         # add it as a prefix to disambiguate the symbols.
         elif group_name in FORCE_PREFIX_GROUPS:
             if item.group in FORCE_PREFIX_GROUPS:
-                needs_moving = FORCE_PREFIX_GROUPS.index(group_name) < FORCE_PREFIX_GROUPS.index(item.group)
+                needs_moving = FORCE_PREFIX_GROUPS.index(
+                    group_name
+                ) < FORCE_PREFIX_GROUPS.index(item.group)
             else:
                 needs_moving = False
-            return rename(item.group if needs_moving else group_name, rename_extant=needs_moving)
+            return rename(
+                item.group if needs_moving else group_name, rename_extant=needs_moving
+            )
 
         # If the above conditions didn't pass, either the existing symbol has its group in FORCE_PREFIX_GROUPS,
         # or deciding which item to rename would be arbitrary, so we rename the existing symbol.
@@ -229,7 +241,8 @@ class DocCog(commands.Cog):
         coros = [
             self.update_or_reschedule_inventory(
                 package["package"], package["base_url"], package["inventory_url"]
-            ) for package in await self.bot.api_client.get("bot/documentation-links")
+            )
+            for package in await self.bot.api_client.get("bot/documentation-links")
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
@@ -264,11 +277,16 @@ class DocCog(commands.Cog):
                 markdown = await self.item_fetcher.get_markdown(doc_item)
 
             except aiohttp.ClientError as e:
-                log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
+                log.warning(
+                    f"A network error has occurred when requesting parsing of {doc_item}.",
+                    exc_info=e,
+                )
                 return "Unable to parse the requested symbol due to a network error."
 
             except Exception:
-                log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
+                log.exception(
+                    f"An unexpected error has occurred when requesting parsing of {doc_item}."
+                )
                 return "Unable to parse the requested symbol due to an error."
 
             if markdown is None:
@@ -300,25 +318,31 @@ class DocCog(commands.Cog):
             # with a max of 200 chars.
             if symbol_name in self.renamed_symbols:
                 renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
-                footer_text = textwrap.shorten("Similar names: " + renamed_symbols, 200, placeholder=" ...")
+                footer_text = textwrap.shorten(
+                    "Similar names: " + renamed_symbols, 200, placeholder=" ..."
+                )
             else:
                 footer_text = ""
 
             embed = discord.Embed(
                 title=discord.utils.escape_markdown(symbol_name),
                 url=f"{doc_item.url}#{doc_item.symbol_id}",
-                description=await self.get_symbol_markdown(doc_item)
+                description=await self.get_symbol_markdown(doc_item),
             )
             embed.set_footer(text=footer_text)
             return embed
 
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
+    async def docs_group(
+        self, ctx: commands.Context, *, symbol_name: Optional[str]
+    ) -> None:
         """Look up documentation for Python symbols."""
         await self.get_command(ctx, symbol_name=symbol_name)
 
     @docs_group.command(name="getdoc", aliases=("g",))
-    async def get_command(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
+    async def get_command(
+        self, ctx: commands.Context, *, symbol_name: Optional[str]
+    ) -> None:
         """
         Return a documentation embed for a given symbol.
 
@@ -333,15 +357,21 @@ class DocCog(commands.Cog):
         if not symbol_name:
             inventory_embed = discord.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)",
-                colour=discord.Colour.blue()
+                colour=discord.Colour.blue(),
             )
 
-            lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
+            lines = sorted(
+                f"• [`{name}`]({url})" for name, url in self.base_urls.items()
+            )
             if self.base_urls:
-                await LinePaginator.paginate(lines, ctx, inventory_embed, max_size=400, empty=False)
+                await LinePaginator.paginate(
+                    lines, ctx, inventory_embed, max_size=400, empty=False
+                )
 
             else:
-                inventory_embed.description = "Hmmm, seems like there's nothing here yet."
+                inventory_embed.description = (
+                    "Hmmm, seems like there's nothing here yet."
+                )
                 await ctx.send(embed=inventory_embed)
 
         else:
@@ -350,8 +380,12 @@ class DocCog(commands.Cog):
                 doc_embed = await self.create_symbol_embed(symbol)
 
             if doc_embed is None:
-                error_message = await send_denial(ctx, "No documentation found for the requested symbol.")
-                await wait_for_deletion(error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY)
+                error_message = await send_denial(
+                    ctx, "No documentation found for the requested symbol."
+                )
+                await wait_for_deletion(
+                    error_message, (ctx.author.id,), timeout=NOT_FOUND_DELETE_DELAY
+                )
 
                 # Make sure that we won't cause a ghost-ping by deleting the message
                 if not (ctx.message.mentions or ctx.message.role_mentions):
@@ -395,13 +429,18 @@ class DocCog(commands.Cog):
         body = {
             "package": package_name,
             "base_url": base_url,
-            "inventory_url": inventory_url
+            "inventory_url": inventory_url,
         }
         try:
             await self.bot.api_client.post("bot/documentation-links", json=body)
         except ResponseCodeError as err:
-            if err.status == 400 and "already exists" in err.response_json.get("package", [""])[0]:
-                log.info(f"Ignoring HTTP 400 as package {package_name} has already been added.")
+            if (
+                err.status == 400
+                and "already exists" in err.response_json.get("package", [""])[0]
+            ):
+                log.info(
+                    f"Ignoring HTTP 400 as package {package_name} has already been added."
+                )
                 await ctx.send(f"Package {package_name} has already been added.")
                 return
             raise
@@ -414,12 +453,16 @@ class DocCog(commands.Cog):
         if not base_url:
             base_url = self.base_url_from_inventory_url(inventory_url)
         self.update_single(package_name, base_url, inventory_dict)
-        await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
+        await ctx.send(
+            f"Added the package `{package_name}` to the database and updated the inventories."
+        )
 
     @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
     @commands.has_any_role(*MODERATION_ROLES)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
-    async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
+    async def delete_command(
+        self, ctx: commands.Context, package_name: PackageName
+    ) -> None:
         """
         Removes the specified package from the database.
 
@@ -431,7 +474,9 @@ class DocCog(commands.Cog):
         async with ctx.typing():
             await self.refresh_inventories()
             await doc_cache.delete(package_name)
-        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.")
+        await ctx.send(
+            f"Successfully deleted `{package_name}` and refreshed the inventories."
+        )
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -451,7 +496,7 @@ class DocCog(commands.Cog):
 
         embed = discord.Embed(
             title="Inventories refreshed",
-            description=f"```diff\n{added}\n{removed}```" if added or removed else ""
+            description=f"```diff\n{added}\n{removed}```" if added or removed else "",
         )
         await ctx.send(embed=embed)
 
@@ -460,7 +505,7 @@ class DocCog(commands.Cog):
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: Union[PackageName, allowed_strings("*")]  # noqa: F722
+        package_name: Union[PackageName, allowed_strings("*")],  # noqa: F722
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
@@ -473,4 +518,6 @@ class DocCog(commands.Cog):
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
         self.init_refresh_task.cancel()
-        scheduling.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
+        scheduling.create_task(
+            self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear"
+        )

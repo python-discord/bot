@@ -30,13 +30,16 @@ class CommandNameTests(unittest.TestCase):
     @staticmethod
     def walk_modules() -> t.Iterator[ModuleType]:
         """Yield imported modules from the bot.exts subpackage."""
+
         def on_error(name: str) -> t.NoReturn:
             raise ImportError(name=name)  # pragma: no cover
 
         # The mock prevents asyncio.get_event_loop() from being called.
         with mock.patch("discord.ext.tasks.loop"):
             prefix = f"{exts.__name__}."
-            for module in pkgutil.walk_packages(exts.__path__, prefix, onerror=on_error):
+            for module in pkgutil.walk_packages(
+                exts.__path__, prefix, onerror=on_error
+            ):
                 if not module.ispkg:
                     yield importlib.import_module(module.name)
 
@@ -52,7 +55,9 @@ class CommandNameTests(unittest.TestCase):
     @staticmethod
     def get_qualified_names(command: commands.Command) -> t.List[str]:
         """Return a list of all qualified names, including aliases, for the `command`."""
-        names = [f"{command.full_parent_name} {alias}".strip() for alias in command.aliases]
+        names = [
+            f"{command.full_parent_name} {alias}".strip() for alias in command.aliases
+        ]
         names.append(command.qualified_name)
         names += getattr(command, "root_aliases", [])
 

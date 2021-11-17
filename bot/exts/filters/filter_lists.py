@@ -1,7 +1,14 @@
 from typing import Optional
 
 from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
+from discord.ext.commands import (
+    BadArgument,
+    Cog,
+    Context,
+    IDConverter,
+    group,
+    has_any_role,
+)
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -41,9 +48,7 @@ class FilterLists(Cog):
 
         for method_name in self.methods_with_filterlist_types:
             command = getattr(self, method_name)
-            command.help = (
-                f"{command.help}\n\nValid **list_type** values are {', '.join(valid_types)}."
-            )
+            command.help = f"{command.help}\n\nValid **list_type** values are {', '.join(valid_types)}."
 
     async def _add_data(
         self,
@@ -82,10 +87,7 @@ class FilterLists(Cog):
         }
 
         try:
-            item = await self.bot.api_client.post(
-                "bot/filter-lists",
-                json=payload
-            )
+            item = await self.bot.api_client.post("bot/filter-lists", json=payload)
         except ResponseCodeError as e:
             if e.status == 400:
                 await ctx.message.add_reaction("❌")
@@ -111,7 +113,9 @@ class FilterLists(Cog):
         self.bot.insert_item_into_filter_list_cache(item)
         await ctx.message.add_reaction("✅")
 
-    async def _delete_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType, content: str) -> None:
+    async def _delete_data(
+        self, ctx: Context, allowed: bool, list_type: ValidFilterListType, content: str
+    ) -> None:
         """Remove an item from a filterlist."""
         allow_type = "whitelist" if allowed else "blacklist"
 
@@ -125,14 +129,14 @@ class FilterLists(Cog):
             content = f".{content}"
 
         # Find the content and delete it.
-        log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
+        log.trace(
+            f"Trying to delete the {content} item from the {list_type} {allow_type}"
+        )
         item = self.bot.filter_list_cache[f"{list_type}.{allowed}"].get(content)
 
         if item is not None:
             try:
-                await self.bot.api_client.delete(
-                    f"bot/filter-lists/{item['id']}"
-                )
+                await self.bot.api_client.delete(f"bot/filter-lists/{item['id']}")
                 del self.bot.filter_list_cache[f"{list_type}.{allowed}"][content]
                 await ctx.message.add_reaction("✅")
             except ResponseCodeError as e:
@@ -144,7 +148,9 @@ class FilterLists(Cog):
         else:
             await ctx.message.add_reaction("❌")
 
-    async def _list_all_data(self, ctx: Context, allowed: bool, list_type: ValidFilterListType) -> None:
+    async def _list_all_data(
+        self, ctx: Context, allowed: bool, list_type: ValidFilterListType
+    ) -> None:
         """Paginate and display all items in a filterlist."""
         allow_type = "whitelist" if allowed else "blacklist"
         result = self.bot.filter_list_cache[f"{list_type}.{allowed}"]
@@ -164,9 +170,11 @@ class FilterLists(Cog):
         list_type_plural = list_type.lower().replace("_", " ").title() + "s"
         embed = Embed(
             title=f"{allow_type.title()}ed {list_type_plural} ({len(result)} total)",
-            colour=Colour.blue()
+            colour=Colour.blue(),
         )
-        log.trace(f"Trying to list {len(result)} items from the {list_type.lower()} {allow_type}")
+        log.trace(
+            f"Trying to list {len(result)} items from the {list_type.lower()} {allow_type}"
+        )
 
         if result:
             await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False)
@@ -240,13 +248,29 @@ class FilterLists(Cog):
         """Add an item to the specified denylist."""
         await self._add_data(ctx, False, list_type, content, comment)
 
-    @whitelist.command(name="remove", aliases=("delete", "rm",))
-    async def allow_delete(self, ctx: Context, list_type: ValidFilterListType, content: str) -> None:
+    @whitelist.command(
+        name="remove",
+        aliases=(
+            "delete",
+            "rm",
+        ),
+    )
+    async def allow_delete(
+        self, ctx: Context, list_type: ValidFilterListType, content: str
+    ) -> None:
         """Remove an item from the specified allowlist."""
         await self._delete_data(ctx, True, list_type, content)
 
-    @blacklist.command(name="remove", aliases=("delete", "rm",))
-    async def deny_delete(self, ctx: Context, list_type: ValidFilterListType, content: str) -> None:
+    @blacklist.command(
+        name="remove",
+        aliases=(
+            "delete",
+            "rm",
+        ),
+    )
+    async def deny_delete(
+        self, ctx: Context, list_type: ValidFilterListType, content: str
+    ) -> None:
         """Remove an item from the specified denylist."""
         await self._delete_data(ctx, False, list_type, content)
 

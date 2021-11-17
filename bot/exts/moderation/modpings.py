@@ -7,7 +7,7 @@ from discord import Embed, Member
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
+from bot.constants import MODERATION_ROLES, Colours, Emojis, Guild, Icons, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.utils import scheduling
@@ -67,13 +67,13 @@ class ModPings(Cog):
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
         await self.pings_off_mods.delete(mod.id)
 
-    @group(name='modpings', aliases=('modping',), invoke_without_command=True)
+    @group(name="modpings", aliases=("modping",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def modpings_group(self, ctx: Context) -> None:
         """Allow the removal and re-addition of the pingable moderators role."""
         await ctx.send_help(ctx.command)
 
-    @modpings_group.command(name='off')
+    @modpings_group.command(name="off")
     @has_any_role(*MODERATION_ROLES)
     async def off_command(self, ctx: Context, duration: Expiry) -> None:
         """
@@ -100,8 +100,12 @@ class ModPings(Cog):
 
         mod = ctx.author
 
-        until_date = duration.replace(microsecond=0).isoformat()  # Looks noisy with microseconds.
-        await mod.remove_roles(self.moderators_role, reason=f"Turned pings off until {until_date}.")
+        until_date = duration.replace(
+            microsecond=0
+        ).isoformat()  # Looks noisy with microseconds.
+        await mod.remove_roles(
+            self.moderators_role, reason=f"Turned pings off until {until_date}."
+        )
 
         await self.pings_off_mods.set(mod.id, duration.isoformat())
 
@@ -111,10 +115,13 @@ class ModPings(Cog):
         self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
 
         embed = Embed(timestamp=duration, colour=Colours.bright_green)
-        embed.set_footer(text="Moderators role has been removed until", icon_url=Icons.green_checkmark)
+        embed.set_footer(
+            text="Moderators role has been removed until",
+            icon_url=Icons.green_checkmark,
+        )
         await ctx.send(embed=embed)
 
-    @modpings_group.command(name='on')
+    @modpings_group.command(name="on")
     @has_any_role(*MODERATION_ROLES)
     async def on_command(self, ctx: Context) -> None:
         """Re-apply the pingable moderators role."""
