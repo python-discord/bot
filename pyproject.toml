@@ -74,9 +74,5 @@ source_pkgs = ["bot"]
 source = ["tests"]
 
 [tool.isort]
-multi_line_output = 6
-order_by_type = false
-case_sensitive = true
-combine_as_imports = true
-line_length = 120
-atomic = true
+profile = "black"
+multi_line_output = 3
