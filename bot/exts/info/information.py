@@ -178,7 +178,10 @@ class Information(Cog):
 
         # Server Features are only useful in certain channels
         if ctx.channel.id in (
-            *constants.MODERATION_CHANNELS, constants.Channels.dev_core, constants.Channels.dev_contrib
+            *constants.MODERATION_CHANNELS,
+            constants.Channels.dev_core,
+            constants.Channels.dev_contrib,
+            constants.Channels.bot_commands
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
