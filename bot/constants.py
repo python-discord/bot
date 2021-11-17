@@ -216,6 +216,7 @@ class Redis(metaclass=YAMLGetter):
 class Filter(metaclass=YAMLGetter):
     section = "filter"
 
+    filter_redirects: bool
     filter_domains: bool
     filter_everyone_ping: bool
     filter_invites: bool
@@ -225,6 +226,7 @@ class Filter(metaclass=YAMLGetter):
 
     # Notifications are not expected for "watchlist" type filters
 
+    notify_user_redirects: bool
     notify_user_domains: bool
     notify_user_everyone_ping: bool
     notify_user_invites: bool

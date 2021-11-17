@@ -320,6 +320,7 @@ guild:
 
 filter:
     # What do we filter?
+    filter_redirects:        true
     filter_domains:        true
     filter_everyone_ping:  true
     filter_invites:        true
@@ -329,6 +330,7 @@ filter:
 
     # Notify user on filter?
     # Notifications are not expected for "watchlist" type filters
+    notify_user_redirects:        false
     notify_user_domains:        false
     notify_user_everyone_ping:  true
     notify_user_invites:        true
