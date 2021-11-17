@@ -376,6 +376,10 @@ urls:
     paste_service:                      !JOIN [*SCHEMA, *PASTE, "/{key}"]
     site_logs_view:                     !JOIN [*STAFF, "/bot/logs"]
 
+    # Cloudflare workers
+    worker_domain: &WORKER_DOMAIN "python-discord.workers.dev"
+    unfurl_worker:                !JOIN ["https://url-unfurler.", *WORKER_DOMAIN]
+
     # Snekbox
     snekbox_eval_api: !ENV ["SNEKBOX_EVAL_API", "http://snekbox.default.svc.cluster.local/eval"]
 
@@ -383,7 +387,7 @@ urls:
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
     discord_invite_api: !JOIN [*DISCORD_API, "invites"]
 
-    # Misc URLsw
+    # Misc URLs
     bot_avatar:      "https://raw.githubusercontent.com/python-discord/branding/main/logos/logo_circle/logo_circle.png"
     github_bot_repo: "https://github.com/python-discord/bot"
 

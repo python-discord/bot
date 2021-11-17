@@ -1,11 +1,15 @@
 import asyncio
+import datetime
+import json
 import logging
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import aiohttp.hdrs
 from aiohttp import ClientConnectorError
+from async_rediscache import RedisSession
 
+from bot import constants
 from bot.utils import services
 from tests.helpers import MockBot, autospec
 
@@ -183,3 +187,171 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
                         await callback(response, Mock(), Mock()),
                         "Callback expected to return None on failure, to repeat request."
                     )
+
+
+@autospec(services, "_attempt_request", pass_mocks=True)
+class UnfurlTests(unittest.IsolatedAsyncioTestCase):
+    """Test the URL unfurling utility."""
+
+    async def asyncSetUp(self) -> None:
+        """Instantiate a redis session for every test, and clean it up afterwards."""
+        redis_session = RedisSession(use_fakeredis=True)
+        await redis_session.connect()
+        self.addAsyncCleanup(redis_session.close)
+
+    class ResponseMock(MagicMock):
+        """Utility class which can be used to mock responses from the worker."""
+        class _StatusException(Exception):
+            pass
+
+        def __init__(self, status: int, content: dict, **kwargs):
+            super().__init__(status=status, content=content, **kwargs)
+            self.status = status
+
+        async def json(self):
+            return self.content
+
+        def raise_for_status(self):
+            if self.status >= 400:
+                raise self._StatusException("Exception raised from response mock.")
+
+    async def test_simple_redirect(self, attempt_request: AsyncMock):
+        """Test a successful, short redirect."""
+        attempt_request.return_value = UnfurlTests.ResponseMock(200, {
+            "destination": "dest url",
+            "depth": 1
+        })
+
+        expected_result = ("dest url", 1, None)
+
+        result = await services.unfurl_url("url", max_continues=0, use_cache=False)
+        self.assertEqual(expected_result, (result.destination, result.depth, result.error))
+
+        cached = await services._get_url_from_cache("url")
+        self.assertEqual(
+            expected_result,
+            (cached.destination, cached.depth, cached.error),
+            "Incorrect result saved to cache."
+        )
+
+    async def test_continue(self, attempt_request: AsyncMock):
+        """Test that the utility continues if we reach max-depth."""
+        requests = (
+            (416, {"error": "", "depth": 5, "final": "final url", "next": "next url"}),
+            (200, {"destination": "dest url", "depth": 3})
+        )
+        expected_results = ("dest url", sum(i[1]["depth"] for i in requests) + 1, None)
+
+        attempt_request.side_effect = [UnfurlTests.ResponseMock(*data) for data in requests]
+        result = await services.unfurl_url("url", max_continues=1, use_cache=False)
+
+        self.assertEqual(expected_results, (result.destination, result.depth, result.error))
+
+        self.assertEqual(2, attempt_request.call_count, "Expected the request function to be called twice.")
+        attempt_request.assert_has_calls(any_order=False, calls=[
+            unittest.mock.call(constants.URLs.unfurl_worker, 3, json={"url": "url"}, raise_for_status=False),
+            unittest.mock.call(constants.URLs.unfurl_worker, 3, json={"url": "next url"}, raise_for_status=False),
+        ])
+
+        cached = await services._get_url_from_cache("url")
+        self.assertEqual(
+            expected_results,
+            (cached.destination, cached.depth, cached.error),
+            "Incorrect result saved to cache for the main URL."
+        )
+
+        self.assertIsNone(
+            await services._get_url_from_cache("next url"),
+            "Should not write intermediary url to cache."
+        )
+
+    async def test_max_continues(self, attempt_request: AsyncMock):
+        """Test that we fail if we reach the maximum number of allowed continues."""
+        data = {"error": "error message", "depth": 5, "final": "final url", "next": "next url"}
+        attempt_request.return_value = UnfurlTests.ResponseMock(416, data)
+
+        result = await services.unfurl_url("url", max_continues=0, use_cache=False)
+        self.assertEqual(
+            services._UnfurlReturn(data["next"], data["depth"], data["error"]),
+            result
+        )
+
+        self.assertEqual(1, attempt_request.call_count)
+        self.assertIsNone(await services._get_url_from_cache("url"), "Should not write to cache on failure.")
+
+    async def test_request_failure(self, attempt_request: AsyncMock):
+        """
+        Return None if the request fails to connect.
+
+        This is different from a non-200 response status.
+        """
+        attempt_request.return_value = None
+        self.assertIsNone(await services.unfurl_url("url", use_cache=False))
+        self.assertIsNone(await services._get_url_from_cache("url"), "Should not write to cache on failure.")
+
+    async def test_400_response(self, attempt_request: AsyncMock):
+        """Test the handling of a 400 response status."""
+        attempt_request.return_value = UnfurlTests.ResponseMock(400, {"error": "error message"})
+        self.assertEqual(
+            services._UnfurlReturn(error="error message"),
+            await services.unfurl_url("url", use_cache=False),
+            "Expected the return value to only have an error message."
+        )
+
+        self.assertIsNone(await services._get_url_from_cache("url"), "Should not write to cache on failure.")
+
+    async def test_418_response(self, attempt_request: AsyncMock):
+        """Test the handling of a 418 response status."""
+        attempt_request.return_value = UnfurlTests.ResponseMock(418, {
+            "error": "error message",
+            "depth": 1,
+            "final": "final url"
+        })
+
+        self.assertEqual(
+            services._UnfurlReturn("final url", 1, "error message"),
+            await services.unfurl_url("url", use_cache=False),
+            "Expected the return value to only have an error message."
+        )
+
+        self.assertIsNone(await services._get_url_from_cache("url"), "Should not write to cache on failure.")
+
+    async def test_unexpected_response(self, attempt_request: AsyncMock):
+        """Test that an unexpected status code raises an error."""
+        attempt_request.return_value = UnfurlTests.ResponseMock(500, {})
+        with self.assertRaises(UnfurlTests.ResponseMock._StatusException):
+            await services.unfurl_url("url")
+
+    async def test_cache_hit(self, attempt_request: AsyncMock):
+        """Test that the cache is used if possible."""
+        data = {
+            "destination": "",
+            "depth": 1,
+            "expiry": (datetime.datetime.utcnow() + datetime.timedelta(hours=1)).isoformat()
+        }
+        await services.UNFURL_CACHE.set("url", json.dumps(data))
+        result = await services.unfurl_url("url", use_cache=True)
+
+        self.assertEqual(("", 1, None), (result.destination, result.depth, result.error))
+        attempt_request.assert_not_called()
+
+    async def test_cache_expiry(self, _):
+        """Test that expired entries aren't returned by the cache."""
+        data = {
+            "destination": "",
+            "depth": 1,
+        }
+
+        now = datetime.datetime.utcnow()
+        expired_hit = (now - datetime.timedelta(minutes=10)).isoformat()  # 10 minutes ago
+        unexpired_hit = (now + datetime.timedelta(minutes=10)).isoformat()  # 10 minutes from now
+
+        with self.subTest("Expired cache entry"):
+            data["expiry"] = expired_hit
+            await services.UNFURL_CACHE.set("url", json.dumps(data))
+            self.assertIsNone(await services._get_url_from_cache("url"))
+
+        with self.subTest("Unexpired cache entry"):
+            data["expiry"] = unexpired_hit
+            await services.UNFURL_CACHE.set("url", json.dumps(data))
+            self.assertIsNotNone(await services._get_url_from_cache("url"))
