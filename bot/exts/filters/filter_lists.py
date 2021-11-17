@@ -72,6 +72,10 @@ class FilterLists(Cog):
         elif list_type == "FILE_FORMAT" and not content.startswith("."):
             content = f".{content}"
 
+        # Remove protocol and trailing slash from URLs
+        elif list_type in ("DOMAIN_NAME", "REDIRECT"):
+            content = content.removeprefix("https://").removeprefix("http://").rstrip("/")
+
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
         payload = {
@@ -123,6 +127,10 @@ class FilterLists(Cog):
         # If it's a file format, let's make sure it has a leading dot.
         elif list_type == "FILE_FORMAT" and not content.startswith("."):
             content = f".{content}"
+
+        # Remove protocol and trailing slash from URLs
+        elif list_type in ("DOMAIN_NAME", "REDIRECT"):
+            content = content.removeprefix("https://").removeprefix("http://").rstrip("/")
 
         # Find the content and delete it.
         log.trace(f"Trying to delete the {content} item from the {list_type} {allow_type}")
