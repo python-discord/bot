@@ -476,6 +476,7 @@ class Webhooks(metaclass=YAMLGetter):
     big_brother: int
     dev_log: int
     duck_pond: int
+    incidents: int
     incidents_archive: int
 
 

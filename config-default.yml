@@ -307,6 +307,7 @@ guild:
         big_brother:                        569133704568373283
         dev_log:                            680501655111729222
         duck_pond:                          637821475327311927
+        incidents:                          816650601844572212
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
 
