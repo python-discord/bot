@@ -3,17 +3,18 @@ import re
 import unicodedata
 from typing import Tuple, Union
 
+import discord
 from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from discord.ext.commands import BadArgument, BucketType, Cog, Context, clean_content, command, has_any_role
 from discord.utils import snowflake_time
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, STAFF_ROLES
 from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import messages, time
+from bot.utils import checks, messages, services, time
 
 log = get_logger(__name__)
 
@@ -204,6 +205,75 @@ class Utils(Cog):
         message = await ctx.send(embed=embed)
         for reaction in options:
             await message.add_reaction(reaction)
+
+    @checks.cooldown_with_role_bypass(1, 60, BucketType.user, bypass_roles=STAFF_ROLES)
+    @command(aliases=("unfurl",))
+    async def unfurl_url(self, ctx: Context, url: str, max_continues: int = 0, use_cache: bool = True) -> None:
+        """
+        Unfurl `url` to find where it redirects to.
+
+        The color of the embed will indicate if we managed to correctly find the final destination of the url.
+        If it's red, we did not reach the bottom, or there isn't one.
+
+        Setting `max_continues` will continue unfurling, even if we hit limits on the worker.
+        Setting `use_cache` to False will skip the cache and make a new request.
+        """
+        if max_continues > 5:
+            raise BadArgument("Maximum of 5 redirects allowed.")
+        if not use_cache and not await checks.has_any_role_check(ctx, *STAFF_ROLES):
+            raise BadArgument("You do not have permission to skip the cache.")
+
+        with ctx.typing():
+            result = await services.unfurl_url(url, max_continues=max_continues, use_cache=use_cache)
+
+        if result is None:
+            await ctx.send(
+                f"Could not resolve this URL. If you believe this to be an error, "
+                f"please report it in <#{Channels.dev_contrib}>."
+            )
+            return
+
+        # Shorten the title to a max of 50 characters
+        title = url[:50]
+        if title != url:
+            # If we shortened the URL, add ellipses
+            title += "..."
+
+        # Set the embed color based on the success of the operation
+        color = discord.Color.green() if result.error is None else discord.Color.red()
+
+        embed = discord.Embed(title=f"`{title}`", color=color)
+
+        if result.depth is not None:
+            embed.add_field(name="Redirects", value=result.depth)
+
+        if result.error is None:
+            creation = time.discord_timestamp(result.created_at, time.TimestampFormats.RELATIVE)
+            expiry = time.discord_timestamp(result.created_at + services.CACHE_LENGTH, time.TimestampFormats.RELATIVE)
+
+            embed.add_field(name="Fetched", value=creation)
+            embed.add_field(name="Expiry", value=expiry)
+
+        else:
+            embed.add_field(name="Error", value=result.error, inline=False)
+
+        if result.destination is not None:
+            # Wrap the URL in backticks to prevent hyperlinking and accidental clicks
+            _dest = f"`{result.destination}`"
+            if len(_dest) > 1024:
+                # URL is too long for an embed field, send to the pastebin
+                paste = await services.send_to_paste_service(result.destination, extension="txt")
+                dest = f"Result was too long to display, you can find it [here]({paste})."
+            else:
+                dest = _dest
+
+            embed.add_field(name="Destination", value=dest)
+
+            # Add an invisible field to help with alignment
+            if len(dest) < 30:
+                embed.add_field(name="\u200b", value="\u200b")
+
+        await ctx.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:
