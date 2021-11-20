@@ -1,4 +1,5 @@
-debug: !ENV ["BOT_DEBUG", "true"]
+debug:     !ENV ["BOT_DEBUG", "true"]
+file_logs: !ENV ["FILE_LOGS", "false"]
 
 
 bot:
