@@ -327,7 +327,7 @@ class UnfurlTests(unittest.IsolatedAsyncioTestCase):
         data = {
             "destination": "",
             "depth": 1,
-            "expiry": (datetime.datetime.utcnow() + datetime.timedelta(hours=1)).isoformat()
+            "expiry": (datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(hours=1)).isoformat()
         }
         await services.UNFURL_CACHE.set("url", json.dumps(data))
         result = await services.unfurl_url("url", use_cache=True)
@@ -342,7 +342,7 @@ class UnfurlTests(unittest.IsolatedAsyncioTestCase):
             "depth": 1,
         }
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
         expired_hit = (now - datetime.timedelta(minutes=10)).isoformat()  # 10 minutes ago
         unexpired_hit = (now + datetime.timedelta(minutes=10)).isoformat()  # 10 minutes from now
 

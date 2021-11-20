@@ -127,7 +127,7 @@ async def _get_url_from_cache(url: str) -> Optional[_UnfurlReturn]:
         data = json.loads(cached)
         expiry = datetime.datetime.fromisoformat(data["expiry"])
 
-        if expiry < datetime.datetime.utcnow():
+        if expiry < datetime.datetime.now(tz=datetime.timezone.utc):
             # Cache expired, remove it and continue normally
             log.debug(f"Cache entry for ({url}) expired, deleting.")
             await UNFURL_CACHE.delete(url)
@@ -156,7 +156,7 @@ async def _unfurl_url(url: str, redirects: int, continues: int, max_continues: i
     if response.status == 200:
         # Success, return the destination
         content = await response.json()
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
         return _UnfurlReturn(content["destination"], redirects + content["depth"], None, now), response.status
 
     elif response.status == 400:
