@@ -285,8 +285,7 @@ class Clean(Cog):
 
                 if len(to_delete) == 100:
                     # Only up to 100 messages can be deleted in a bulk
-                    with suppress(NotFound):
-                        await channel.delete_messages(to_delete)
+                    await channel.delete_messages(to_delete)
                     deleted.extend(to_delete)
                     to_delete.clear()
 
