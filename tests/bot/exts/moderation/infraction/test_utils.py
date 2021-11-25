@@ -19,7 +19,6 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         self.member = MockMember(id=1234)
         self.user = MockUser(id=1234)
         self.ctx = MockContext(bot=self.bot, author=self.member)
-        self.maxDiff = None
 
     async def test_post_user(self):
         """Should POST a new user and return the response if successful or otherwise send an error message."""
