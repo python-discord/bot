@@ -126,7 +126,7 @@ class Site(Cog):
         # Remove duplicates and sort the rule indices
         rules = sorted(set(rules))
         invalid = shorten(', '.join(str(index) for index in rules if index
-                          < 1 or index > len(full_rules)), 50, placeholder='...')
+                          < 1 or index > len(full_rules)), 50, placeholder=' ...')
 
         if invalid:
             await ctx.send(f":x: Invalid rule indices: {invalid}")
