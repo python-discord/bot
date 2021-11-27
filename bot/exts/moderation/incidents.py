@@ -91,7 +91,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
     log.trace(f"Creating embed for {incident.id=}")
 
     if outcome is Signal.ACTIONED:
-        colour = Colours.soft_green
+        colour = Colours.green
         footer = f"Actioned by {actioned_by}"
     else:
         colour = Colours.soft_red

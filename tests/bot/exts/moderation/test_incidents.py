@@ -102,7 +102,7 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
         """Embed is coloured green and footer contains 'Actioned' when `outcome=Signal.ACTIONED`."""
         embed, file = await incidents.make_embed(MockMessage(), incidents.Signal.ACTIONED, MockMember())
 
-        self.assertEqual(embed.colour.value, Colours.soft_green)
+        self.assertEqual(embed.colour.value, Colours.green)
         self.assertIn("Actioned", embed.footer.text)
 
     async def test_make_embed_not_actioned(self):

@@ -186,7 +186,7 @@ class Reviewer:
         stripped_content = content.split("\n\n", maxsplit=1)[1].rsplit("\n\n", maxsplit=1)[0]
 
         result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
-        colour = Colours.soft_green if passed else Colours.soft_red
+        colour = Colours.green if passed else Colours.soft_red
         timestamp = datetime.utcnow().strftime("%Y/%m/%d")
 
         embed_content = (

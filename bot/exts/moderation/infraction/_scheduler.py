@@ -345,7 +345,7 @@ class InfractionScheduler:
         # Send a log message to the mod log.
         await self.mod_log.send_log_message(
             icon_url=_utils.INFRACTION_ICONS[infr_type][1],
-            colour=Colours.soft_green,
+            colour=Colours.green,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
             thumbnail=user.display_avatar.url,
             text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
@@ -472,7 +472,7 @@ class InfractionScheduler:
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await self.mod_log.send_log_message(
                 icon_url=_utils.INFRACTION_ICONS[type_][1],
-                colour=Colours.soft_green,
+                colour=Colours.green,
                 title=f"Infraction {log_title}: {type_}",
                 thumbnail=avatar,
                 text="\n".join(f"{k}: {v}" for k, v in log_text.items()),

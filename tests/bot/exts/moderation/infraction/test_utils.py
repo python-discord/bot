@@ -252,7 +252,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         for case in test_cases:
             expected = Embed(
                 description="Example content",
-                colour=Colours.soft_green
+                colour=Colours.green
             ).set_author(
                 name="Test title",
                 icon_url=case.icon

@@ -110,7 +110,7 @@ class ModPings(Cog):
             self._role_scheduler.cancel(mod.id)
         self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
 
-        embed = Embed(timestamp=duration, colour=Colours.bright_green)
+        embed = Embed(timestamp=duration, colour=Colours.green)
         embed.set_footer(text="Moderators role has been removed until", icon_url=Icons.green_checkmark)
         await ctx.send(embed=embed)
 

@@ -50,7 +50,7 @@ def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
 
     For both `title` and `description`, empty string are valid values ~ fields will be empty.
     """
-    colour = Colours.soft_green if success else Colours.soft_red
+    colour = Colours.green if success else Colours.soft_red
     return discord.Embed(title=title[:256], description=description[:4096], colour=colour)
 
 

@@ -249,11 +249,10 @@ class Colours(metaclass=YAMLGetter):
     subsection = "colours"
 
     blue: int
-    bright_green: int
+    green: int
     orange: int
     pink: int
     purple: int
-    soft_green: int
     soft_orange: int
     soft_red: int
     white: int

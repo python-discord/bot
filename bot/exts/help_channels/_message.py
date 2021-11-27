@@ -101,7 +101,7 @@ async def dm_on_open(message: discord.Message) -> None:
     embed = discord.Embed(
         title="Help channel opened",
         description=f"You claimed {message.channel.mention}.",
-        colour=bot.constants.Colours.bright_green,
+        colour=bot.constants.Colours.green,
         timestamp=message.created_at,
     )
 
@@ -184,7 +184,7 @@ async def send_available_message(channel: discord.TextChannel) -> None:
     log.trace(f"Sending available message in {channel_info}.")
 
     embed = discord.Embed(
-        color=constants.Colours.bright_green,
+        color=constants.Colours.green,
         description=AVAILABLE_MSG,
     )
     embed.set_author(name=AVAILABLE_TITLE, icon_url=constants.Icons.green_checkmark)

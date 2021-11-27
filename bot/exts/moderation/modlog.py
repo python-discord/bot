@@ -160,7 +160,7 @@ class ModLog(Cog, name="ModLog"):
             else:
                 message = f"{channel.name} (`{channel.id}`)"
 
-        await self.send_log_message(Icons.hash_green, Colours.soft_green, title, message)
+        await self.send_log_message(Icons.hash_green, Colours.green, title, message)
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel: GUILD_CHANNEL) -> None:
@@ -261,7 +261,7 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.crown_green, Colours.soft_green,
+            Icons.crown_green, Colours.green,
             "Role created", f"`{role.id}`"
         )
 
@@ -412,7 +412,7 @@ class ModLog(Cog, name="ModLog"):
             message = f"{Emojis.new} {message}"
 
         await self.send_log_message(
-            Icons.sign_in, Colours.soft_green,
+            Icons.sign_in, Colours.green,
             "User joined", message,
             thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
@@ -796,7 +796,7 @@ class ModLog(Cog, name="ModLog"):
             action = "archived"
             icon = Icons.hash_red
         elif before.archived and not after.archived:
-            colour = Colours.soft_green
+            colour = Colours.green
             action = "un-archived"
             icon = Icons.hash_green
         else:
@@ -843,7 +843,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             Icons.hash_green,
-            Colours.soft_green,
+            Colours.green,
             "Thread created",
             (
                 f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
@@ -908,7 +908,7 @@ class ModLog(Cog, name="ModLog"):
                 elif old is None or old is True:
                     # Joined a channel or was unmuted/undeafened.
                     icon = Icons.voice_state_green
-                    colour = Colours.soft_green
+                    colour = Colours.green
 
         if not changes:
             return

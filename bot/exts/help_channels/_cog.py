@@ -590,7 +590,7 @@ class HelpChannels(commands.Cog):
             embed = discord.Embed(
                 title="Currently Helping",
                 description=f"You're currently helping in {message.channel.mention}",
-                color=constants.Colours.soft_green,
+                color=constants.Colours.green,
                 timestamp=message.created_at
             )
             embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")

@@ -124,7 +124,7 @@ class PythonNews(Cog):
                 description=self.escape_markdown(new["summary"]),
                 timestamp=new_datetime,
                 url=new["link"],
-                colour=constants.Colours.soft_green
+                colour=constants.Colours.green
             )
             embed.set_footer(text=data["feed"]["title"], icon_url=AVATAR_URL)
             msg = await send_webhook(
@@ -194,7 +194,7 @@ class PythonNews(Cog):
                     description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
                     timestamp=new_date,
                     url=link,
-                    colour=constants.Colours.soft_green
+                    colour=constants.Colours.green
                 )
                 embed.set_author(
                     name=f"{email_information['sender_name']} ({email_information['sender']['address']})",

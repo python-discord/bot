@@ -30,11 +30,10 @@ bot:
 style:
     colours:
         blue: 0x3775a8
-        bright_green: 0x01d277
+        green: 0x01d277
         orange: 0xe67e22
         pink: 0xcf84e0
         purple: 0xb734eb
-        soft_green: 0x68c290
         soft_orange: 0xf9cb54
         soft_red: 0xcd6d6d
         white: 0xfffffe

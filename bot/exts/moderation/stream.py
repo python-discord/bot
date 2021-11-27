@@ -221,7 +221,7 @@ class Stream(commands.Cog):
             lines = [line[1] for line in streamer_info]
             embed = discord.Embed(
                 title=f"Members with streaming permission (`{len(lines)}` total)",
-                colour=Colours.soft_green
+                colour=Colours.green
             )
             await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
         else:

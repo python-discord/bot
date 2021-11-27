@@ -200,7 +200,7 @@ async def notify_pardon(
 
     embed = discord.Embed(
         description=content,
-        colour=Colours.soft_green
+        colour=Colours.green
     )
 
     embed.set_author(name=title, icon_url=icon_url)
