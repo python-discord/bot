@@ -601,7 +601,7 @@ class Filtering(Cog):
         return False, None
 
     def _extract_url(self, text: str, blacklisted_urls: list[str]) -> Optional[tuple[str, str]]:
-        """Extract a URL from a message, and return the filer and match."""
+        """Extract a URL from a message, and return the filter and match."""
         text = self.clean_input(text)
         for match in URL_RE.finditer(text):
             url_parsed = tldextract.extract(match.group("url").lower())
