@@ -432,7 +432,7 @@ class Channels(metaclass=YAMLGetter):
     black_formatter: int
 
     bot_commands: int
-    discord_py: int
+    discord_bots: int
     esoteric: int
     voice_gate: int
     code_jam_planning: int
