@@ -441,11 +441,13 @@ class Filtering(Cog):
                         # If the message is classed as offensive, we store it in the site db and
                         # it will be deleted after one week.
                         if _filter["schedule_deletion"] and not is_private:
-                            delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
+                            delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME)
 
                             if filter_name == "filter_redirects":
                                 # Redirects delete the message immediately
-                                delete_date = (datetime.datetime.utcnow() + timedelta(seconds=10)).isoformat()
+                                delete_date = datetime.datetime.now(tz=datetime.timezone.utc) + timedelta(seconds=10)
+
+                            delete_date = delete_date.isoformat()
 
                             data = {
                                 'id': msg.id,
