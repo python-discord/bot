@@ -143,7 +143,7 @@ class Patreon(commands.Cog):
 
     @commands.command("patreon")
     async def patreon_info(self, ctx: commands.Context) -> None:
-        """Sends patreon info."""
+        """Send information about how Python Discord uses Patreon."""
         await ctx.send(embed=discord.Embed(
             title="Patreon",
             description=(
