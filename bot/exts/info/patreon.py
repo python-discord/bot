@@ -148,8 +148,9 @@ class Patreon(commands.Cog):
             title="Patreon",
             description=(
                 "We use the money from Patreon to offer excellent prizes for all of our events. Prizes like t-shirts, "
-                "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\nYou can"
-                " read more about how Patreon supports us, or even support us yourself, on our Patreon page "
+                "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\n"
+
+                "You can" read more about how Patreon supports us, or even support us yourself, on our Patreon page "
                 "[here](https://pydis.com/patreon)!"
             )
         ))
