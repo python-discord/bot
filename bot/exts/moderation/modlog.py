@@ -775,6 +775,10 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_thread_update(self, before: Thread, after: Thread) -> None:
         """Log thread archiving, un-archiving and name edits."""
+        if self.is_channel_ignored(after.id):
+            log.trace("Ignoring update of thread %s (%d)", after.mention, after.id)
+            return
+
         if before.name != after.name:
             await self.send_log_message(
                 Icons.hash_blurple,
@@ -811,6 +815,10 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_thread_delete(self, thread: Thread) -> None:
         """Log thread deletion."""
+        if self.is_channel_ignored(thread.id):
+            log.trace("Ignoring deletion of thread %s (%d)", thread.mention, thread.id)
+            return
+
         await self.send_log_message(
             Icons.hash_red,
             Colours.soft_red,
@@ -827,6 +835,10 @@ class ModLog(Cog, name="ModLog"):
         # If we are in the thread already we can most probably assume we already logged it?
         # We don't really have a better way of doing this since the API doesn't make any difference between the two
         if thread.me:
+            return
+
+        if self.is_channel_ignored(thread.id):
+            log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
             return
 
         await self.send_log_message(

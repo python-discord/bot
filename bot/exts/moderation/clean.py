@@ -293,7 +293,8 @@ class Clean(Cog):
                 return deleted
             if len(to_delete) > 0:
                 # Deleting any leftover messages if there are any
-                await channel.delete_messages(to_delete)
+                with suppress(NotFound):
+                    await channel.delete_messages(to_delete)
                 deleted.extend(to_delete)
 
             if not self.cleaning:

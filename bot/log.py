@@ -48,16 +48,17 @@ def setup() -> None:
     logging.addLevelName(TRACE_LEVEL, "TRACE")
     logging.setLoggerClass(CustomLogger)
 
+    root_log = get_logger()
+
     format_string = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
     log_format = logging.Formatter(format_string)
 
-    log_file = Path("logs", "bot.log")
-    log_file.parent.mkdir(exist_ok=True)
-    file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7, encoding="utf8")
-    file_handler.setFormatter(log_format)
-
-    root_log = get_logger()
-    root_log.addHandler(file_handler)
+    if constants.FILE_LOGS:
+        log_file = Path("logs", "bot.log")
+        log_file.parent.mkdir(exist_ok=True)
+        file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7, encoding="utf8")
+        file_handler.setFormatter(log_format)
+        root_log.addHandler(file_handler)
 
     if "COLOREDLOGS_LEVEL_STYLES" not in os.environ:
         coloredlogs.DEFAULT_LEVEL_STYLES = {
