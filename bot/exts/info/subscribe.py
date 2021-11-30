@@ -1,4 +1,5 @@
 import calendar
+import operator
 import typing as t
 from dataclasses import dataclass
 
@@ -164,6 +165,8 @@ class Subscribe(commands.Cog):
                     name=discord_role.name,
                 )
             )
+        # Sort unavailable roles to the end of the list
+        self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe")
