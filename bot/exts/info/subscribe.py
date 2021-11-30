@@ -181,7 +181,7 @@ class Subscribe(commands.Cog):
             row = index // ITEMS_PER_ROW
             button_view.add_item(SingleRoleButton(role, role.role_id in author_roles, row))
 
-        await ctx.send(
+        await ctx.reply(
             "Click the buttons below to add or remove your roles!",
             view=button_view,
             delete_after=DELETE_MESSAGE_AFTER,
