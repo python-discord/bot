@@ -91,7 +91,7 @@ class SingleRoleButton(discord.ui.Button):
             label = self.LABEL_FORMAT.format(action="Remove" if assigned else "Add", role_name=role.name)
         else:
             style = self.UNAVAILABLE_STYLE
-            label = role.name
+            label = f"🔒 {role.name}"
 
         super().__init__(
             style=style,
