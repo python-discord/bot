@@ -19,6 +19,7 @@ ASSIGNABLE_ROLES = (
     (constants.Roles.advent_of_code, 12),
 )
 ITEMS_PER_ROW = 3
+DELETE_MESSAGE_AFTER = 300  # Seconds
 
 log = get_logger(__name__)
 
@@ -128,7 +129,11 @@ class Subscribe(commands.Cog):
             row = index // ITEMS_PER_ROW
             button_view.add_item(SingleRoleButton(role, role in ctx.author.roles, row))
 
-        await ctx.send("Click the buttons below to add or remove your roles!", view=button_view)
+        await ctx.send(
+            "Click the buttons below to add or remove your roles!",
+            view=button_view,
+            delete_after=DELETE_MESSAGE_AFTER,
+        )
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
