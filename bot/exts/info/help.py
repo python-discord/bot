@@ -137,9 +137,8 @@ class GroupView(CommandView):
             return
 
         for subcommand in subcommands:
-            presentable_name = subcommand.name.replace("_", " ").title()
             self.children.append(
-                SubcommandButton(help_command, subcommand, label=presentable_name)
+                SubcommandButton(help_command, subcommand, label=subcommand.name)
             )
         # This is required to normalize the button positions.
         self.__weights = ui.view._ViewWeights(self.children)
