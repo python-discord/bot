@@ -10,9 +10,9 @@ from discord.interactions import Interaction
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist
+from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.utils import checks, members, scheduling
+from bot.utils import members, scheduling
 
 
 @dataclass(frozen=True)
@@ -172,7 +172,10 @@ class Subscribe(commands.Cog):
 
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe")
-    @in_whitelist(channels=(constants.Channels.bot_commands,))
+    @redirect_output(
+        destination_channel=constants.Channels.bot_commands,
+        bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES,
+    )
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
         """Display the member's current state for each role, and allow them to add/remove the roles."""
         await self.init_task
@@ -183,17 +186,11 @@ class Subscribe(commands.Cog):
             row = index // ITEMS_PER_ROW
             button_view.add_item(SingleRoleButton(role, role.role_id in author_roles, row))
 
-        await ctx.reply(
+        await ctx.send(
             "Click the buttons below to add or remove your roles!",
             view=button_view,
             delete_after=DELETE_MESSAGE_AFTER,
         )
-
-    # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
-        """Check for & ignore any InWhitelistCheckFailure."""
-        if isinstance(error, checks.InWhitelistCheckFailure):
-            error.handled = True
 
 
 def setup(bot: Bot) -> None:
