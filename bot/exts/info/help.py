@@ -137,11 +137,9 @@ class GroupView(CommandView):
             return
 
         for subcommand in subcommands:
-            self.children.append(
+            self.add_item(
                 SubcommandButton(help_command, subcommand, label=subcommand.name)
             )
-        # This is required to normalize the button positions.
-        self.__weights = ui.view._ViewWeights(self.children)
 
 
 class HelpQueryNotFound(ValueError):
