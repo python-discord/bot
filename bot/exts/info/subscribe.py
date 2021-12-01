@@ -165,7 +165,9 @@ class Subscribe(commands.Cog):
                     name=discord_role.name,
                 )
             )
-        # Sort unavailable roles to the end of the list
+
+        # Sort by role name, then shift unavailable roles to the end of the list
+        self.assignable_roles.sort(key=operator.attrgetter("name"))
         self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
