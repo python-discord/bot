@@ -134,12 +134,11 @@ class GroupView(CommandView):
         super().__init__(help_command, group)
         # Don't add buttons if only a portion of the subcommands can be shown.
         if len(subcommands) + len(self.children) > self.MAX_ROWS * self.MAX_BUTTONS_IN_ROW:
+            log.trace(f"Attempted to add navigation buttons for `{group.qualified_name}`, but there was no space.")
             return
 
         for subcommand in subcommands:
-            self.add_item(
-                SubcommandButton(help_command, subcommand, label=subcommand.name)
-            )
+            self.add_item(SubcommandButton(help_command, subcommand, label=subcommand.name))
 
 
 class HelpQueryNotFound(ValueError):
