@@ -498,7 +498,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
-    async def on_member_ban(self, guild: Guild, user: Union[MemberOrUser]) -> None:
+    async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
         """Remove `user` from the talent pool after they are banned."""
         await self.end_nomination(user.id, "User was banned.")
 
