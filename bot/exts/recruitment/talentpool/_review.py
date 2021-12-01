@@ -375,10 +375,10 @@ class Reviewer:
 
     @staticmethod
     def _random_ducky(guild: Guild) -> Union[Emoji, str]:
-        """Picks a random ducky emoji. If no duckies found returns :eyes:."""
+        """Picks a random ducky emoji. If no duckies found returns 👀."""
         duckies = [emoji for emoji in guild.emojis if emoji.name.startswith("ducky")]
         if not duckies:
-            return ":eyes:"
+            return "\N{EYES}"
         return random.choice(duckies)
 
     @staticmethod
