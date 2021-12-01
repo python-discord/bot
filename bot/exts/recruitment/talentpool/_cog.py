@@ -516,6 +516,9 @@ class TalentPool(Cog, name="Talentpool"):
         if payload.channel_id != Channels.nomination_voting:
             return
 
+        if payload.user_id == self.bot.user.id:
+            return
+
         message: PartialMessage = self.bot.get_channel(payload.channel_id).get_partial_message(payload.message_id)
         emoji = str(payload.emoji)
 
