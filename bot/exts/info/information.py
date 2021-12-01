@@ -178,7 +178,10 @@ class Information(Cog):
 
         # Server Features are only useful in certain channels
         if ctx.channel.id in (
-            *constants.MODERATION_CHANNELS, constants.Channels.dev_core, constants.Channels.dev_contrib
+            *constants.MODERATION_CHANNELS,
+            constants.Channels.dev_core,
+            constants.Channels.dev_contrib,
+            constants.Channels.bot_commands
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
@@ -419,7 +422,12 @@ class Information(Cog):
                 activity_output = "No activity"
         else:
             activity_output.append(user_activity["total_messages"] or "No messages")
-            activity_output.append(user_activity["activity_blocks"] or "No activity")
+
+            if (activity_blocks := user_activity.get("activity_blocks")) is not None:
+                # activity_blocks is not included in the response if the user has a lot of messages
+                activity_output.append(activity_blocks or "No activity")  # Special case when activity_blocks is 0.
+            else:
+                activity_output.append("Too many to count!")
 
             activity_output = "\n".join(
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)

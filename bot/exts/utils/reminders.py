@@ -214,7 +214,7 @@ class Reminders(Cog):
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
     ) -> None:
         """
         Commands for managing your reminders.
@@ -234,7 +234,7 @@ class Reminders(Cog):
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
     ) -> None:
         """
         Set yourself a simple reminder.
@@ -282,6 +282,20 @@ class Reminders(Cog):
             return
 
         mention_ids = [mention.id for mention in mentions]
+
+        # If `content` isn't provided then we try to get message content of a replied message
+        if not content:
+            if reference := ctx.message.reference:
+                if isinstance((resolved_message := reference.resolved), discord.Message):
+                    content = resolved_message.content
+            # If we weren't able to get the content of a replied message
+            if content is None:
+                await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
+                return
+
+            # If the replied message has no content (e.g. only attachments/embeds)
+            if content == "":
+                content = "See referenced message."
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(

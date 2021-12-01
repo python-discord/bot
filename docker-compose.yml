@@ -90,7 +90,6 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./logs:/bot/logs
       - .:/bot:ro
     tty: true
     depends_on:
