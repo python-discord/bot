@@ -78,7 +78,7 @@ class Reviewer:
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
         review, reviewed_emoji, nominee = await self.make_review(user_id)
-        if not review:
+        if not nominee:
             return
 
         guild = self.bot.get_guild(Guild.id)
