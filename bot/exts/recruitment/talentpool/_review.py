@@ -104,8 +104,8 @@ class Reviewer:
             nomination = self._pool.cache.get(user_id)
             await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
 
-    async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji]]:
-        """Format a generic review of a user and return it with the reviewed emoji."""
+    async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
+        """Format a generic review of a user and return it with the reviewed emoji and the user themselves."""
         log.trace(f"Formatting the review of {user_id}")
 
         # Since `cache` is a defaultdict, we should take care
@@ -115,7 +115,7 @@ class Reviewer:
         nomination = self._pool.cache.get(user_id)
         if not nomination:
             log.trace(f"There doesn't appear to be an active nomination for {user_id}")
-            return "", None
+            return f"There doesn't appear to be an active nomination for {user_id}", None, None
 
         guild = self.bot.get_guild(Guild.id)
         nominee = await get_or_fetch_member(guild, user_id)

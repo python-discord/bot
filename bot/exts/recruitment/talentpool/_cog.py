@@ -484,11 +484,8 @@ class TalentPool(Cog, name="Talentpool"):
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
         review, _, _ = await self.reviewer.make_review(user_id)
-        if review:
-            file = discord.File(StringIO(review), f"{user_id}_review.md")
-            await ctx.send(file=file)
-        else:
-            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
+        file = discord.File(StringIO(review), f"{user_id}_review.md")
+        await ctx.send(file=file)
 
     @nomination_group.command(aliases=('review',))
     @has_any_role(*MODERATION_ROLES)
