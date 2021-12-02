@@ -691,7 +691,7 @@ class VideoPermission(metaclass=YAMLGetter):
 class ThreadArchiveTimes(Enum):
     HOUR = 60
     DAY = 1440
-    THREE_DAY = 4230
+    THREE_DAY = 4320
     WEEK = 10080
 
 
