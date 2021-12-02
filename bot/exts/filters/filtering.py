@@ -345,14 +345,14 @@ class Filtering(Cog):
 
         if result is None:
             log.debug("Failed to unfurl a redirect.")
-            message_override = ". URL could not be unfurled for an unknown reason."
+            message_extend = ". URL could not be unfurled for an unknown reason."
             ping = True
 
         elif result.error is None:
             has_urls = await self._has_urls(result.destination)
             if has_urls[0]:
                 log.debug("Unfurled redirect, and destination was blacklisted.")
-                message_override = (
+                message_extend = (
                     ", and tripped a domain filter.\n\n"
                     f"Destination: `{result.destination}`\n"
                     f"Redirects: {result.depth}\n\n"
@@ -365,11 +365,11 @@ class Filtering(Cog):
 
             else:
                 log.debug("Unfurled redirect, but destination was not blacklisted.")
-                message_override = ". URL unfurled, but destination was not blacklisted. Tripped "
+                message_extend = ". URL unfurled, but destination was not blacklisted. Tripped "
                 ping = False
         else:
             log.debug("Failed to unfurl a redirect.")
-            message_override = (
+            message_extend = (
                 f".\nFailed to unfurl this URL after {result.depth} attempts due to the following error:\n"
                 f"{result.error}\n\n"
                 f"You can try to manually unfurl with `{constants.Bot.prefix}unfurl {url}`.\n"
@@ -378,7 +378,7 @@ class Filtering(Cog):
             ping = True
 
         await self._send_log(
-            filter_data[0], filter_data[1], message, stats, reason, ping=ping, message_override=message_override
+            filter_data[0], filter_data[1], message, stats, reason, ping=ping, message_extend=message_extend
         )
 
     async def _filter_message(self, msg: Message, delta: Optional[int] = None) -> None:
@@ -486,7 +486,7 @@ class Filtering(Cog):
         reason: Optional[str] = None,
         *,
         ping: Optional[bool] = None,
-        message_override: str = "",
+        message_extend: str = "",
         is_eval: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
@@ -508,7 +508,7 @@ class Filtering(Cog):
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
         message = (
-            f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)}{message_override} "
+            f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)}{message_extend} "
             f"{channel_str} {eval_msg}with [the following message]({msg.jump_url}):\n\n"
             f"{stats.message_content}"
         )
