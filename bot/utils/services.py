@@ -21,7 +21,7 @@ UNFURL_CACHE = RedisCache(namespace="UnfurledRedirects")
 CACHE_LENGTH = datetime.timedelta(days=1)
 
 
-@dataclasses.dataclass()
+@dataclasses.dataclass(frozen=True, eq=True)
 class _UnfurlReturn:
     """The return value for the URL unfurling utility."""
 
