@@ -1,16 +1,18 @@
 import asyncio
-import typing as t
+import re
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 import discord
-from discord.ext.commands import Cog
+from async_rediscache import RedisCache
+from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Guild, Webhooks
+from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks
 from bot.log import get_logger
 from bot.utils import scheduling
-from bot.utils.messages import sub_clyde
+from bot.utils.messages import format_user, sub_clyde
 
 log = get_logger(__name__)
 
@@ -21,6 +23,12 @@ CRAWL_LIMIT = 50
 
 # Seconds for `crawl_task` to sleep after adding reactions to a message
 CRAWL_SLEEP = 2
+
+DISCORD_MESSAGE_LINK_RE = re.compile(
+    r"(https?:\/\/(?:(ptb|canary|www)\.)?discord(?:app)?\.com\/channels\/"
+    r"[0-9]{15,20}"
+    r"\/[0-9]{15,20}\/[0-9]{15,20})"
+)
 
 
 class Signal(Enum):
@@ -37,17 +45,17 @@ class Signal(Enum):
 
 
 # Reactions from non-mod roles will be removed
-ALLOWED_ROLES: t.Set[int] = set(Guild.moderation_roles)
+ALLOWED_ROLES: set[int] = set(Guild.moderation_roles)
 
 # Message must have all of these emoji to pass the `has_signals` check
-ALL_SIGNALS: t.Set[str] = {signal.value for signal in Signal}
+ALL_SIGNALS: set[str] = {signal.value for signal in Signal}
 
 # An embed coupled with an optional file to be dispatched
 # If the file is not None, the embed attempts to show it in its body
-FileEmbed = t.Tuple[discord.Embed, t.Optional[discord.File]]
+FileEmbed = tuple[discord.Embed, Optional[discord.File]]
 
 
-async def download_file(attachment: discord.Attachment) -> t.Optional[discord.File]:
+async def download_file(attachment: discord.Attachment) -> Optional[discord.File]:
     """
     Download & return `attachment` file.
 
@@ -121,7 +129,7 @@ def is_incident(message: discord.Message) -> bool:
     return all(conditions)
 
 
-def own_reactions(message: discord.Message) -> t.Set[str]:
+def own_reactions(message: discord.Message) -> set[str]:
     """Get the set of reactions placed on `message` by the bot itself."""
     return {str(reaction.emoji) for reaction in message.reactions if reaction.me}
 
@@ -129,6 +137,108 @@ def own_reactions(message: discord.Message) -> t.Set[str]:
 def has_signals(message: discord.Message) -> bool:
     """True if `message` already has all `Signal` reactions, False otherwise."""
     return ALL_SIGNALS.issubset(own_reactions(message))
+
+
+def shorten_text(text: str) -> str:
+    """
+    Truncate the text if there are over 3 lines or 300 characters, or if it is a single word.
+
+    The maximum length of the string would be 303 characters across 3 lines at maximum.
+    """
+    original_length = len(text)
+    # Truncate text to a maximum of 300 characters
+    if len(text) > 300:
+        text = text[:300]
+
+    # Limit to a maximum of three lines
+    text = "\n".join(text.split("\n", maxsplit=3)[:3])
+
+    # If it is a single word, then truncate it to 50 characters
+    if text.find(" ") == -1:
+        text = text[:50]
+
+    # Remove extra whitespaces from the `text`
+    text = text.strip()
+
+    # Add placeholder if the text was shortened
+    if len(text) < original_length:
+        text = f"{text}..."
+
+    return text
+
+
+async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[discord.Embed]:
+    """
+    Create an embedded representation of the discord message link contained in the incident report.
+
+    The Embed would contain the following information -->
+        Author: @Jason Terror ♦ (736234578745884682)
+        Channel: Special/#bot-commands (814190307980607493)
+        Content: This is a very important message!
+    """
+    embed = None
+
+    try:
+        message: discord.Message = await MessageConverter().convert(ctx, message_link)
+    except MessageNotFound:
+        mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
+
+        last_100_logs: list[discord.Message] = await mod_logs_channel.history(limit=100).flatten()
+
+        for log_entry in last_100_logs:
+            if not log_entry.embeds:
+                continue
+
+            log_embed: discord.Embed = log_entry.embeds[0]
+            if (
+                    log_embed.author.name == "Message deleted"
+                    and f"[Jump to message]({message_link})" in log_embed.description
+            ):
+                embed = discord.Embed(
+                    colour=discord.Colour.dark_gold(),
+                    title="Deleted Message Link",
+                    description=(
+                        f"Found <#{Channels.mod_log}> entry for deleted message: "
+                        f"[Jump to message]({log_entry.jump_url})."
+                    )
+                )
+        if not embed:
+            embed = discord.Embed(
+                colour=discord.Colour.red(),
+                title="Bad Message Link",
+                description=f"Message {message_link} not found."
+            )
+    except discord.DiscordException as e:
+        log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
+    else:
+        channel = message.channel
+        if not channel.permissions_for(channel.guild.get_role(Roles.helpers)).view_channel:
+            log.info(
+                f"Helpers don't have read permissions in #{channel.name},"
+                f" not sending message link embed for {message_link}"
+            )
+            return
+
+        embed = discord.Embed(
+            colour=discord.Colour.gold(),
+            description=(
+                f"**Author:** {format_user(message.author)}\n"
+                f"**Channel:** {channel.mention} ({channel.category}"
+                f"{f'/#{channel.parent.name} - ' if isinstance(channel, discord.Thread) else '/#'}"
+                f"{channel.name})\n"
+            ),
+            timestamp=message.created_at
+        )
+        embed.add_field(
+            name="Content",
+            value=shorten_text(message.content) if message.content else "[No Message Content]"
+        )
+        embed.set_footer(text=f"Message ID: {message.id}")
+
+        if message.attachments:
+            embed.set_image(url=message.attachments[0].url)
+
+    return embed
 
 
 async def add_signals(incident: discord.Message) -> None:
@@ -168,6 +278,7 @@ class Incidents(Cog):
         * See: `crawl_incidents`
 
     On message:
+        * Run message through `extract_message_links` and send them into the channel
         * Add `Signal` member emoji if message qualifies as an incident
         * Ignore messages starting with #
             * Use this if verbal communication is necessary
@@ -181,17 +292,34 @@ class Incidents(Cog):
         * If `Signal.ACTIONED` or `Signal.NOT_ACTIONED` were chosen, attempt to
           relay the incident message to #incidents-archive
         * If relay successful, delete original message
+        * Delete quotation message if cached
         * See: `on_raw_reaction_add`
 
     Please refer to function docstrings for implementation details.
     """
 
+    # This dictionary maps an incident report message to the message link embed's ID
+    # RedisCache[discord.Message.id, discord.Message.id]
+    message_link_embeds_cache = RedisCache()
+
     def __init__(self, bot: Bot) -> None:
         """Prepare `event_lock` and schedule `crawl_task` on start-up."""
         self.bot = bot
+        self.incidents_webhook = None
+
+        scheduling.create_task(self.fetch_webhook(), event_loop=self.bot.loop)
 
         self.event_lock = asyncio.Lock()
         self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
+
+    async def fetch_webhook(self) -> None:
+        """Fetch the incidents webhook object, so we can post message link embeds to it."""
+        await self.bot.wait_until_guild_available()
+
+        try:
+            self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+        except discord.HTTPException:
+            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents}`.")
 
     async def crawl_incidents(self) -> None:
         """
@@ -292,8 +420,11 @@ class Incidents(Cog):
         This ensures that if there is a racing event awaiting the lock, it will fail to find the
         message, and will abort. There is a `timeout` to ensure that this doesn't hold the lock
         forever should something go wrong.
+
+        Deletes cache value (`message_link_embeds_cache`) of `incident` if it exists. It then removes the
+        webhook message for that particular link from the channel.
         """
-        members_roles: t.Set[int] = {role.id for role in member.roles}
+        members_roles: set[int] = {role.id for role in member.roles}
         if not members_roles & ALLOWED_ROLES:  # Intersection is truthy on at least 1 common element
             log.debug(f"Removing invalid reaction: user {member} is not permitted to send signals")
             try:
@@ -340,7 +471,11 @@ class Incidents(Cog):
         else:
             log.trace("Deletion was confirmed")
 
-    async def resolve_message(self, message_id: int) -> t.Optional[discord.Message]:
+        if self.incidents_webhook:
+            # Deletes the message link embeds found in cache from the channel and cache.
+            await self.delete_msg_link_embed(incident.id)
+
+    async def resolve_message(self, message_id: int) -> Optional[discord.Message]:
         """
         Get `discord.Message` for `message_id` from cache, or API.
 
@@ -355,7 +490,7 @@ class Incidents(Cog):
         """
         await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
         log.trace(f"Resolving message for: {message_id=}")
-        message: t.Optional[discord.Message] = self.bot._connection._get_message(message_id)
+        message: Optional[discord.Message] = self.bot._connection._get_message(message_id)
 
         if message is not None:
             log.trace("Message was found in cache")
@@ -419,9 +554,107 @@ class Incidents(Cog):
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
-        """Pass `message` to `add_signals` if and only if it satisfies `is_incident`."""
-        if is_incident(message):
-            await add_signals(message)
+        """
+        Pass `message` to `add_signals` and `extract_message_links` if it satisfies `is_incident`.
+
+        If `message` is an incident report, then run it through `extract_message_links` to get all
+        the message link embeds (embeds which contain information about that particular link).
+        These message link embeds are then sent into the channel.
+
+        Also passes the message into `add_signals` if the message is an incident.
+        """
+        if not is_incident(message):
+            return
+
+        await add_signals(message)
+
+        # Only use this feature if incidents webhook embed is found
+        if self.incidents_webhook:
+            if embed_list := await self.extract_message_links(message):
+                await self.send_message_link_embeds(embed_list, message, self.incidents_webhook)
+
+    @Cog.listener()
+    async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent) -> None:
+        """
+        Delete message link embeds for `payload.message_id`.
+
+        Search through the cache for message, if found delete it from cache and channel.
+        """
+        if self.incidents_webhook:
+            await self.delete_msg_link_embed(payload.message_id)
+
+    async def extract_message_links(self, message: discord.Message) -> Optional[list[discord.Embed]]:
+        """
+        Check if there's any message links in the text content.
+
+        Then pass the message_link into `make_message_link_embed` to format an
+        embed for it containing information about the link.
+
+        As Discord only allows a max of 10 embeds in a single webhook, just send the
+        first 10 embeds and don't care about the rest.
+
+        If no links are found for the message, just log a trace statement.
+        """
+        message_links = DISCORD_MESSAGE_LINK_RE.findall(message.content)
+        if not message_links:
+            log.trace(
+                f"No message links detected on incident message with id {message.id}."
+            )
+            return
+
+        embeds = []
+        for message_link in message_links[:10]:
+            ctx = await self.bot.get_context(message)
+            embed = await make_message_link_embed(ctx, message_link[0])
+            if embed:
+                embeds.append(embed)
+
+        return embeds
+
+    async def send_message_link_embeds(
+            self,
+            webhook_embed_list: list,
+            message: discord.Message,
+            webhook: discord.Webhook,
+    ) -> Optional[int]:
+        """
+        Send message link embeds to #incidents channel.
+
+        Using the `webhook` passed in as a parameter to send
+        the embeds in the `webhook_embed_list` parameter.
+
+        After sending each embed it maps the `message.id`
+        to the `webhook_msg_ids` IDs in the async redis-cache.
+        """
+        try:
+            webhook_msg = await webhook.send(
+                embeds=[embed for embed in webhook_embed_list if embed],
+                username=sub_clyde(message.author.name),
+                avatar_url=message.author.display_avatar.url,
+                wait=True,
+            )
+        except discord.DiscordException:
+            log.exception(
+                f"Failed to send message link embed {message.id} to #incidents."
+            )
+        else:
+            await self.message_link_embeds_cache.set(message.id, webhook_msg.id)
+            log.trace("Message link embeds sent successfully to #incidents!")
+            return webhook_msg.id
+
+    async def delete_msg_link_embed(self, message_id: int) -> None:
+        """Delete the Discord message link message found in cache for `message_id`."""
+        log.trace("Deleting Discord message link's webhook message.")
+        webhook_msg_id = await self.message_link_embeds_cache.get(int(message_id))
+
+        if webhook_msg_id:
+            try:
+                await self.incidents_webhook.delete_message(webhook_msg_id)
+            except discord.errors.NotFound:
+                log.trace(f"Incidents message link embed (`{webhook_msg_id}`) has already been deleted, skipping.")
+
+        await self.message_link_embeds_cache.delete(message_id)
+        log.trace("Successfully deleted discord links webhook message.")
 
 
 def setup(bot: Bot) -> None:

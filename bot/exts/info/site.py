@@ -1,3 +1,5 @@
+from textwrap import shorten
+
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, Greedy, group
 
@@ -123,10 +125,11 @@ class Site(Cog):
 
         # Remove duplicates and sort the rule indices
         rules = sorted(set(rules))
+
         invalid = ', '.join(str(index) for index in rules if index < 1 or index > len(full_rules))
 
         if invalid:
-            await ctx.send(f":x: Invalid rule indices: {invalid}")
+            await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=' ...'))
             return
 
         for rule in rules:

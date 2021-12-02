@@ -30,9 +30,9 @@ Infraction = t.Dict[str, t.Union[str, int, bool]]
 APPEAL_SERVER_INVITE = "https://discord.gg/WXrCJxWBnm"
 
 INFRACTION_TITLE = "Please review our rules"
-INFRACTION_APPEAL_SERVER_FOOTER = f"\n\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
+INFRACTION_APPEAL_SERVER_FOOTER = f"\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
 INFRACTION_APPEAL_MODMAIL_FOOTER = (
-    '\n\nIf you would like to discuss or appeal this infraction, '
+    '\nIf you would like to discuss or appeal this infraction, '
     'send a message to the ModMail bot.'
 )
 INFRACTION_AUTHOR_NAME = "Infraction information"

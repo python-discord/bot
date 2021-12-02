@@ -5,9 +5,7 @@ from discord.ext.commands import Cog, Context, command, has_any_role
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist
 from bot.log import get_logger
-from bot.utils.checks import InWhitelistCheckFailure
 
 log = get_logger(__name__)
 
@@ -29,11 +27,11 @@ You can find a copy of our rules for reference at <https://pythondiscord.com/pag
 
 Additionally, if you'd like to receive notifications for the announcements \
 we post in <#{constants.Channels.announcements}>
-from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
+from time to time, you can send `{constants.Bot.prefix}subscribe` to <#{constants.Channels.bot_commands}> at any time \
 to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
 
-If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
-<#{constants.Channels.bot_commands}>.
+If you'd like to unsubscribe from the announcement notifications, simply send `{constants.Bot.prefix}subscribe` to \
+<#{constants.Channels.bot_commands}> and click the role again!.
 
 To introduce you to our community, we've made the following video:
 https://youtu.be/ZH26PuX3re0
@@ -61,11 +59,9 @@ async def safe_dm(coro: t.Coroutine) -> None:
 
 class Verification(Cog):
     """
-    User verification and role management.
+    User verification.
 
     Statistics are collected in the 'verification.' namespace.
-
-    Additionally, this cog offers the !subscribe and !unsubscribe commands,
     """
 
     def __init__(self, bot: Bot) -> None:
@@ -108,66 +104,7 @@ class Verification(Cog):
                 log.exception("DM dispatch failed on unexpected error code")
 
     # endregion
-    # region: subscribe commands
-
-    @command(name='subscribe')
-    @in_whitelist(channels=(constants.Channels.bot_commands,))
-    async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
-        """Subscribe to announcement notifications by assigning yourself the role."""
-        has_role = False
-
-        for role in ctx.author.roles:
-            if role.id == constants.Roles.announcements:
-                has_role = True
-                break
-
-        if has_role:
-            await ctx.send(f"{ctx.author.mention} You're already subscribed!")
-            return
-
-        log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
-        await ctx.author.add_roles(discord.Object(constants.Roles.announcements), reason="Subscribed to announcements")
-
-        log.trace(f"Deleting the message posted by {ctx.author}.")
-
-        await ctx.send(
-            f"{ctx.author.mention} Subscribed to <#{constants.Channels.announcements}> notifications.",
-        )
-
-    @command(name='unsubscribe')
-    @in_whitelist(channels=(constants.Channels.bot_commands,))
-    async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
-        """Unsubscribe from announcement notifications by removing the role from yourself."""
-        has_role = False
-
-        for role in ctx.author.roles:
-            if role.id == constants.Roles.announcements:
-                has_role = True
-                break
-
-        if not has_role:
-            await ctx.send(f"{ctx.author.mention} You're already unsubscribed!")
-            return
-
-        log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
-        await ctx.author.remove_roles(
-            discord.Object(constants.Roles.announcements), reason="Unsubscribed from announcements"
-        )
-
-        log.trace(f"Deleting the message posted by {ctx.author}.")
-
-        await ctx.send(
-            f"{ctx.author.mention} Unsubscribed from <#{constants.Channels.announcements}> notifications."
-        )
-
-    # endregion
     # region: miscellaneous
-
-    # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
-        """Check for & ignore any InWhitelistCheckFailure."""
-        if isinstance(error, InWhitelistCheckFailure):
-            error.handled = True
 
     @command(name='verify')
     @has_any_role(*constants.MODERATION_ROLES)

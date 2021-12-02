@@ -243,8 +243,9 @@ class ModManagement(commands.Cog):
             else:
                 user_str = str(user.id)
 
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions for {user_str} ({len(infraction_list)} total)",
+            title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
@@ -256,14 +257,69 @@ class ModManagement(commands.Cog):
             'bot/infractions/expanded',
             params={'search': reason}
         )
+
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions matching `{reason}` ({len(infraction_list)} total)",
+            title=f"Infractions matching `{reason}` ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
     # endregion
+    # region: Search for infractions by given actor
+
+    @infraction_group.command(name="by", aliases=("b",))
+    async def search_by_actor(
+        self,
+        ctx: Context,
+        actor: t.Union[t.Literal["m", "me"], UnambiguousUser],
+        oldest_first: bool = False
+    ) -> None:
+        """
+        Search for infractions made by `actor`.
+
+        Use "m" or "me" as the `actor` to get infractions by author.
+
+        Use "1" for `oldest_first` to send oldest infractions first.
+        """
+        if isinstance(actor, str):
+            actor = ctx.author
+
+        if oldest_first:
+            ordering = 'inserted_at'  # oldest infractions first
+        else:
+            ordering = '-inserted_at'  # newest infractions first
+
+        infraction_list = await self.bot.api_client.get(
+            'bot/infractions/expanded',
+            params={
+                'actor__id': str(actor.id),
+                'ordering': ordering
+            }
+        )
+
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
+        embed = discord.Embed(
+            title=f"Infractions by {actor} ({formatted_infraction_count} total)",
+            colour=discord.Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    # endregion
     # region: Utility functions
+
+    @staticmethod
+    def format_infraction_count(infraction_count: int) -> str:
+        """
+        Returns a string-formatted infraction count.
+
+        API limits returned infractions to a maximum of 100, so if `infraction_count`
+        is 100 then we return `"100+"`. Otherwise, return `str(infraction_count)`.
+        """
+        if infraction_count == 100:
+            return "100+"
+        return str(infraction_count)
 
     async def send_infraction_list(
         self,

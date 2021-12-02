@@ -1,4 +1,5 @@
-debug: !ENV ["BOT_DEBUG", "true"]
+debug:     !ENV ["BOT_DEBUG", "true"]
+file_logs: !ENV ["FILE_LOGS", "false"]
 
 
 bot:
@@ -263,7 +264,12 @@ guild:
         - *BLACK_FORMATTER
 
     roles:
+        # Self-assignable roles, see the Subscribe cog
+        advent_of_code:                         518565788744024082
         announcements:                          463658397560995840
+        lovefest:                               542431903886606399
+        pyweek_announcements:                   897568414044938310
+
         contributors:                           295488872404484098
         help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
@@ -307,6 +313,7 @@ guild:
         big_brother:                        569133704568373283
         dev_log:                            680501655111729222
         duck_pond:                          637821475327311927
+        incidents:                          816650601844572212
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
 

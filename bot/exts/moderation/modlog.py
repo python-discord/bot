@@ -41,7 +41,6 @@ class ModLog(Cog, name="ModLog"):
         self.bot = bot
         self._ignored = {event: [] for event in Event}
 
-        self._cached_deletes = []
         self._cached_edits = []
 
     async def upload_log(
@@ -552,22 +551,20 @@ class ModLog(Cog, name="ModLog"):
 
         return channel.id in GuildConstant.modlog_blacklist
 
-    @Cog.listener()
-    async def on_message_delete(self, message: discord.Message) -> None:
-        """Log message delete event to message change log."""
+    async def log_cached_deleted_message(self, message: discord.Message) -> None:
+        """
+        Log the message's details to message change log.
+
+        This is called when a cached message is deleted.
+        """
         channel = message.channel
         author = message.author
 
         if self.is_message_blacklisted(message):
             return
 
-        self._cached_deletes.append(message.id)
-
         if message.id in self._ignored[Event.message_delete]:
             self._ignored[Event.message_delete].remove(message.id)
-            return
-
-        if author.bot:
             return
 
         if channel.category:
@@ -610,17 +607,14 @@ class ModLog(Cog, name="ModLog"):
             channel_id=Channels.message_log
         )
 
-    @Cog.listener()
-    async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
-        """Log raw message delete event to message change log."""
+    async def log_uncached_deleted_message(self, event: discord.RawMessageDeleteEvent) -> None:
+        """
+        Log the message's details to message change log.
+
+        This is called when a message absent from the cache is deleted.
+        Hence, the message contents aren't logged.
+        """
         if self.is_channel_ignored(event.channel_id):
-            return
-
-        await asyncio.sleep(1)  # Wait here in case the normal event was fired
-
-        if event.message_id in self._cached_deletes:
-            # It was in the cache and the normal event was fired, so we can just ignore it
-            self._cached_deletes.remove(event.message_id)
             return
 
         if event.message_id in self._ignored[Event.message_delete]:
@@ -650,6 +644,14 @@ class ModLog(Cog, name="ModLog"):
             response,
             channel_id=Channels.message_log
         )
+
+    @Cog.listener()
+    async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
+        """Log message deletions to message change log."""
+        if event.cached_message is not None:
+            await self.log_cached_deleted_message(event.cached_message)
+        else:
+            await self.log_uncached_deleted_message(event)
 
     @Cog.listener()
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
@@ -773,6 +775,10 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_thread_update(self, before: Thread, after: Thread) -> None:
         """Log thread archiving, un-archiving and name edits."""
+        if self.is_channel_ignored(after.id):
+            log.trace("Ignoring update of thread %s (%d)", after.mention, after.id)
+            return
+
         if before.name != after.name:
             await self.send_log_message(
                 Icons.hash_blurple,
@@ -809,6 +815,10 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_thread_delete(self, thread: Thread) -> None:
         """Log thread deletion."""
+        if self.is_channel_ignored(thread.id):
+            log.trace("Ignoring deletion of thread %s (%d)", thread.mention, thread.id)
+            return
+
         await self.send_log_message(
             Icons.hash_red,
             Colours.soft_red,
@@ -825,6 +835,10 @@ class ModLog(Cog, name="ModLog"):
         # If we are in the thread already we can most probably assume we already logged it?
         # We don't really have a better way of doing this since the API doesn't make any difference between the two
         if thread.me:
+            return
+
+        if self.is_channel_ignored(thread.id):
+            log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
             return
 
         await self.send_log_message(
