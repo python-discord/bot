@@ -5,7 +5,6 @@ import time
 from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
-from itertools import islice
 from typing import Any, Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
 from discord import Colour, Message, NotFound, TextChannel, User, errors
@@ -21,8 +20,6 @@ from bot.utils.channel import is_mod_channel
 
 log = logging.getLogger(__name__)
 
-# Default number of messages to look at in each channel.
-DEFAULT_TRAVERSE = 10
 # Number of seconds before command invocations and responses are deleted in non-moderation channels.
 MESSAGE_DELETE_DELAY = 5
 
@@ -87,7 +84,6 @@ class Clean(Cog):
 
     @staticmethod
     def _validate_input(
-            traverse: int,
             channels: Optional[CleanChannels],
             bots_only: bool,
             users: Optional[list[User]],
@@ -95,9 +91,9 @@ class Clean(Cog):
             second_limit: Optional[CleanLimit],
     ) -> None:
         """Raise errors if an argument value or a combination of values is invalid."""
-        # Is this an acceptable amount of messages to traverse?
-        if traverse > CleanMessages.message_limit:
-            raise BadArgument(f"Cannot traverse more than {CleanMessages.message_limit} messages.")
+        if first_limit is None:
+            # This is an optional argument for the sake of the master command, but it's actually required.
+            raise BadArgument("Missing cleaning limit.")
 
         if (isinstance(first_limit, Message) or isinstance(second_limit, Message)) and channels:
             raise BadArgument("Both a message limit and channels specified.")
@@ -195,11 +191,11 @@ class Clean(Cog):
                 # Invocation message has already been deleted
                 log.info("Tried to delete invocation message, but it was already deleted.")
 
-    def _get_messages_from_cache(self, traverse: int, to_delete: Predicate) -> tuple[defaultdict[Any, list], list[int]]:
+    def _get_messages_from_cache(self, to_delete: Predicate) -> tuple[defaultdict[Any, list], list[int]]:
         """Helper function for getting messages from the cache."""
         message_mappings = defaultdict(list)
         message_ids = []
-        for message in islice(self.bot.cached_messages, traverse):
+        for message in self.bot.cached_messages:
             if not self.cleaning:
                 # Cleaning was canceled
                 return message_mappings, message_ids
@@ -212,17 +208,16 @@ class Clean(Cog):
 
     async def _get_messages_from_channels(
         self,
-        traverse: int,
         channels: Iterable[TextChannel],
         to_delete: Predicate,
-        before: Optional[datetime] = None,
+        before: datetime,
         after: Optional[datetime] = None
     ) -> tuple[defaultdict[Any, list], list]:
         message_mappings = defaultdict(list)
         message_ids = []
 
         for channel in channels:
-            async for message in channel.history(limit=traverse, before=before, after=after):
+            async for message in channel.history(limit=CleanMessages.message_limit, before=before, after=after):
 
                 if not self.cleaning:
                     # Cleaning was canceled, return empty containers.
@@ -343,7 +338,6 @@ class Clean(Cog):
     async def _clean_messages(
         self,
         ctx: Context,
-        traverse: int,
         channels: Optional[CleanChannels],
         bots_only: bool = False,
         users: Optional[list[User]] = None,
@@ -353,7 +347,7 @@ class Clean(Cog):
         use_cache: Optional[bool] = True
     ) -> None:
         """A helper function that does the actual message cleaning."""
-        self._validate_input(traverse, channels, bots_only, users, first_limit, second_limit)
+        self._validate_input(channels, bots_only, users, first_limit, second_limit)
 
         # Are we already performing a clean?
         if self.cleaning:
@@ -387,13 +381,12 @@ class Clean(Cog):
         await self._delete_invocation(ctx)
 
         if channels == "*" and use_cache:
-            message_mappings, message_ids = self._get_messages_from_cache(traverse=traverse, to_delete=predicate)
+            message_mappings, message_ids = self._get_messages_from_cache(to_delete=predicate)
         else:
             deletion_channels = channels
             if channels == "*":
                 deletion_channels = [channel for channel in ctx.guild.channels if isinstance(channel, TextChannel)]
             message_mappings, message_ids = await self._get_messages_from_channels(
-                traverse=traverse,
                 channels=deletion_channels,
                 to_delete=predicate,
                 before=second_limit,
@@ -422,7 +415,6 @@ class Clean(Cog):
         self,
         ctx: Context,
         users: Greedy[User] = None,
-        traverse: Optional[int] = None,
         first_limit: Optional[CleanLimit] = None,
         second_limit: Optional[CleanLimit] = None,
         use_cache: Optional[bool] = None,
@@ -437,11 +429,9 @@ class Clean(Cog):
         If arguments are provided, will act as a master command from which all subcommands can be derived.
 
         \u2003• `users`: A series of user mentions, ID's, or names.
-        \u2003• `traverse`: The number of messages to look at in each channel. If using the cache, will look at the
-        first `traverse` messages in the cache.
         \u2003• `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
+        At least one limit is required.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
-        If a limit is provided, multiple channels cannot be provided.
         If only one of them is provided, acts as `clean until`. If both are provided, acts as `clean between`.
         \u2003• `use_cache`: Whether to use the message cache.
         If not provided, will default to False unless an asterisk is used for the channels.
@@ -451,20 +441,15 @@ class Clean(Cog):
         If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
         \u2003• `channels`: A series of channels to delete in, or an asterisk to delete from all channels.
         """
-        if not any([traverse, users, first_limit, second_limit, regex, channels]):
+        if not any([users, first_limit, second_limit, regex, channels]):
             await ctx.send_help(ctx.command)
             return
 
-        if not traverse:
-            if first_limit:
-                traverse = CleanMessages.message_limit
-            else:
-                traverse = DEFAULT_TRAVERSE
         if use_cache is None:
             use_cache = channels == "*"
 
         await self._clean_messages(
-            ctx, traverse, channels, bots_only, users, regex, first_limit, second_limit, use_cache
+            ctx, channels, bots_only, users, regex, first_limit, second_limit, use_cache
         )
 
     @clean_group.command(name="user", aliases=["users"])
@@ -472,56 +457,68 @@ class Clean(Cog):
         self,
         ctx: Context,
         user: User,
-        traverse: Optional[int] = DEFAULT_TRAVERSE,
+        message_or_time: CleanLimit,
         use_cache: Optional[bool] = True,
         *,
         channels: CleanChannels = None
     ) -> None:
-        """Delete messages posted by the provided user, stop cleaning after traversing `traverse` messages."""
-        await self._clean_messages(ctx, traverse, users=[user], channels=channels, use_cache=use_cache)
+        """
+        Delete messages posted by the provided user, stop cleaning after reaching `message_or_time`.
 
-    @clean_group.command(name="all", aliases=["everything"])
-    async def clean_all(
-        self,
-        ctx: Context,
-        traverse: Optional[int] = DEFAULT_TRAVERSE,
-        use_cache: Optional[bool] = True,
-        *,
-        channels: CleanChannels = None
-    ) -> None:
-        """Delete all messages, regardless of poster, stop cleaning after traversing `traverse` messages."""
-        await self._clean_messages(ctx, traverse, channels=channels, use_cache=use_cache)
+        `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
+        datetime.
+
+        If a message is specified, `channels` cannot be specified.
+        """
+        await self._clean_messages(
+            ctx, users=[user], channels=channels, first_limit=message_or_time, use_cache=use_cache
+        )
 
     @clean_group.command(name="bots", aliases=["bot"])
     async def clean_bots(
         self,
         ctx: Context,
-        traverse: Optional[int] = DEFAULT_TRAVERSE,
+        message_or_time: CleanLimit,
         use_cache: Optional[bool] = True,
         *,
         channels: CleanChannels = None
     ) -> None:
-        """Delete all messages posted by a bot, stop cleaning after traversing `traverse` messages."""
-        await self._clean_messages(ctx, traverse, bots_only=True, channels=channels, use_cache=use_cache)
+        """
+        Delete all messages posted by a bot, stop cleaning after traversing `traverse` messages.
+
+        `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
+        datetime.
+
+        If a message is specified, `channels` cannot be specified.
+        """
+        await self._clean_messages(
+            ctx, bots_only=True, channels=channels, first_limit=message_or_time, use_cache=use_cache
+        )
 
     @clean_group.command(name="regex", aliases=["word", "expression", "pattern"])
     async def clean_regex(
         self,
         ctx: Context,
         regex: Regex,
-        traverse: Optional[int] = DEFAULT_TRAVERSE,
+        message_or_time: CleanLimit,
         use_cache: Optional[bool] = True,
         *,
         channels: CleanChannels = None
     ) -> None:
         """
-        Delete all messages that match a certain regex, stop cleaning after traversing `traverse` messages.
+        Delete all messages that match a certain regex, stop cleaning after reaching `message_or_time`.
+
+        `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
+        datetime.
+        If a message is specified, `channels` cannot be specified.
 
         The pattern must be provided enclosed in backticks.
         If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
         For example: `[0-9]`
         """
-        await self._clean_messages(ctx, traverse, regex=regex, channels=channels, use_cache=use_cache)
+        await self._clean_messages(
+            ctx, regex=regex, channels=channels, first_limit=message_or_time, use_cache=use_cache
+        )
 
     @clean_group.command(name="until")
     async def clean_until(
@@ -538,7 +535,6 @@ class Clean(Cog):
         """
         await self._clean_messages(
             ctx,
-            CleanMessages.message_limit,
             channels=[channel] if channel else None,
             first_limit=until,
         )
@@ -562,7 +558,6 @@ class Clean(Cog):
         """
         await self._clean_messages(
             ctx,
-            CleanMessages.message_limit,
             channels=[channel] if channel else None,
             first_limit=first_limit,
             second_limit=second_limit,
