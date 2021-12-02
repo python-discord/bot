@@ -119,11 +119,11 @@ class Clean(Cog):
 
     @staticmethod
     def _build_predicate(
+        first_limit: datetime,
+        second_limit: Optional[datetime] = None,
         bots_only: bool = False,
         users: Optional[list[User]] = None,
         regex: Optional[re.Pattern] = None,
-        first_limit: Optional[datetime] = None,
-        second_limit: Optional[datetime] = None,
     ) -> Predicate:
         """Return the predicate that decides whether to delete a given message."""
         def predicate_bots_only(message: Message) -> bool:
@@ -164,20 +164,18 @@ class Clean(Cog):
 
         predicates = []
         # Set up the correct predicate
+        if second_limit:
+            predicates.append(predicate_range)  # Delete messages in the specified age range
+        else:
+            predicates.append(predicate_after)  # Delete messages older than the specified age
+
         if bots_only:
             predicates.append(predicate_bots_only)  # Delete messages from bots
         if users:
             predicates.append(predicate_specific_users)  # Delete messages from specific user
         if regex:
             predicates.append(predicate_regex)  # Delete messages that match regex
-        # Add up to one of the following:
-        if second_limit:
-            predicates.append(predicate_range)  # Delete messages in the specified age range
-        elif first_limit:
-            predicates.append(predicate_after)  # Delete messages older than specific message
 
-        if not predicates:
-            return lambda m: True
         if len(predicates) == 1:
             return predicates[0]
         return lambda m: all(pred(m) for pred in predicates)
@@ -383,7 +381,7 @@ class Clean(Cog):
             first_limit, second_limit = sorted([first_limit, second_limit])
 
         # Needs to be called after standardizing the input.
-        predicate = self._build_predicate(bots_only, users, regex, first_limit, second_limit)
+        predicate = self._build_predicate(first_limit, second_limit, bots_only, users, regex)
 
         # Delete the invocation first
         await self._delete_invocation(ctx)
