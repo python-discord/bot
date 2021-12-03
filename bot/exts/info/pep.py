@@ -16,7 +16,7 @@ log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
-PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=master"
+PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=main"
 
 pep_cache = AsyncCache()
 
