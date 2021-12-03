@@ -15,7 +15,7 @@ from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, DEFAULT_THREAD_ARCHIVE_TIME, Emojis, Guild, Roles
+from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
@@ -96,7 +96,6 @@ class Reviewer:
 
         thread = await last_message.create_thread(
             name=f"Nomination - {nominee}",
-            auto_archive_duration=DEFAULT_THREAD_ARCHIVE_TIME
         )
         await thread.send(fr"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
