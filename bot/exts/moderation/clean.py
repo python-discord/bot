@@ -107,10 +107,6 @@ class Clean(Cog):
         if users and bots_only:
             raise BadArgument("Marked as bots only, but users were specified.")
 
-        # This is an implementation error rather than user error.
-        if second_limit and not first_limit:
-            raise ValueError("Second limit specified without the first.")
-
     @staticmethod
     async def _send_expiring_message(ctx: Context, content: str) -> None:
         """Send `content` to the context channel. Automatically delete if it's not a mod channel."""
