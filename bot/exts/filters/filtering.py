@@ -2,14 +2,13 @@ import asyncio
 import re
 import unicodedata
 from datetime import timedelta
-import urllib.parse
-from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
 import dateutil.parser
 import discord.errors
 import regex
+import tldextract
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
@@ -536,13 +535,10 @@ class Filtering(Cog):
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
         for match in URL_RE.finditer(text):
             for url in domain_blacklist:
-                blacklisted_parsed = urllib.parse.urlparse(url)
-                url_parsed = urllib.parse.urlparse(match.group(1).lower())
-                if blacklisted_parsed.netloc != "":
-                    if url_parsed.netloc in (f"www.{blacklisted_parsed.netloc}", blacklisted_parsed.netloc):
-                        return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
-                else:
-                    if url_parsed.netloc in (f"www.{blacklisted_parsed.path}", blacklisted_parsed.path):
+                if url.lower() in match.group(1).lower():
+                    blacklisted_parsed = tldextract.extract(url.lower())
+                    url_parsed = tldextract.extract(match.group(1).lower())
+                    if blacklisted_parsed.registered_domain == url_parsed.registered_domain:
                         return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
