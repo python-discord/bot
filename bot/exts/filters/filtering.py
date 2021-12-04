@@ -370,7 +370,7 @@ class Filtering(Cog):
         else:
             log.debug("Failed to unfurl a redirect.")
             message_extend = (
-                f".\nFailed to unfurl this URL after {result.depth} attempts due to the following error:\n"
+                f".\n\nFailed to unfurl this URL after {result.depth} attempts due to the following error: "
                 f"{result.error}\n\n"
                 f"You can try to manually unfurl with `{constants.Bot.prefix}unfurl {url}`.\n"
                 " Tripped "
