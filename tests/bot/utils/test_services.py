@@ -248,9 +248,13 @@ class UnfurlTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(expected_results, (result.destination, result.depth, result.error))
 
         self.assertEqual(2, attempt_request.call_count, "Expected the request function to be called twice.")
+
+        body = {"max-depth": services.MAX_UNFURLS}
         attempt_request.assert_has_calls(any_order=False, calls=[
-            unittest.mock.call(constants.URLs.unfurl_worker, 3, json={"url": "url"}, raise_for_status=False),
-            unittest.mock.call(constants.URLs.unfurl_worker, 3, json={"url": "next url"}, raise_for_status=False),
+            unittest.mock.call(constants.URLs.unfurl_worker, 3, json={**body, "url": "url"}, raise_for_status=False),
+            unittest.mock.call(
+                constants.URLs.unfurl_worker, 3, json={**body, "url": "next url"}, raise_for_status=False
+            ),
         ])
 
         cached = await services._get_url_from_cache("url")
@@ -278,6 +282,30 @@ class UnfurlTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(1, attempt_request.call_count)
         self.assertIsNone(await services._get_url_from_cache("url"), "Should not write to cache on failure.")
+
+    async def test_continue_calculation(self, attempt_request: AsyncMock):
+        """Test that the right number of requests is made when `calculate_continue` is True."""
+        requests = (
+            (416, {"error": "", "depth": 8, "final": "final url", "next": "next url"}),
+            (200, {"destination": "dest url", "depth": 3})
+        )
+        expected_results = ("dest url", sum(i[1]["depth"] for i in requests) + 1, None)
+
+        attempt_request.side_effect = [UnfurlTests.ResponseMock(*data) for data in requests]
+        result = await services.unfurl_url("url", max_per_attempt=15, calculate_continues=True, use_cache=False)
+
+        self.assertEqual(expected_results, (result.destination, result.depth, result.error))
+
+        self.assertEqual(2, attempt_request.call_count, "Expected the request function to be called twice.")
+
+        attempt_request.assert_has_calls(any_order=False, calls=[
+            unittest.mock.call(
+                constants.URLs.unfurl_worker, 3, json={"max-depth": 8, "url": "url"}, raise_for_status=False
+            ),
+            unittest.mock.call(
+                constants.URLs.unfurl_worker, 3, json={"max-depth": 6, "url": "next url"}, raise_for_status=False
+            ),
+        ])
 
     async def test_request_failure(self, attempt_request: AsyncMock):
         """

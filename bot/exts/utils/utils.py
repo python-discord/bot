@@ -208,23 +208,26 @@ class Utils(Cog):
 
     @checks.cooldown_with_role_bypass(1, 60, BucketType.user, bypass_roles=STAFF_ROLES)
     @command(aliases=("unfurl",))
-    async def unfurl_url(self, ctx: Context, url: str, max_continues: int = 0, use_cache: bool = True) -> None:
+    async def unfurl_url(self, ctx: Context, url: str, max_redirects: int = 5, use_cache: bool = True) -> None:
         """
         Unfurl `url` to find where it redirects to.
+
+        We unfurl to a maximum depth of `max_redirects`.
 
         The color of the embed will indicate if we managed to correctly find the final destination of the url.
         If it's red, we did not reach the bottom, or there isn't one.
 
-        Setting `max_continues` will continue unfurling, even if we hit limits on the worker.
         Setting `use_cache` to False will skip the cache and make a new request.
         """
-        if max_continues > 5:
-            raise BadArgument("Maximum of 5 redirects allowed.")
+        if not 0 < max_redirects <= services.MAX_UNFURLS * 5:
+            raise BadArgument(f"Max redirects has to be a number between {0} and {services.MAX_UNFURLS * 5}.")
         if not use_cache and not await checks.has_any_role_check(ctx, *STAFF_ROLES):
             raise BadArgument("You do not have permission to skip the cache.")
 
         with ctx.typing():
-            result = await services.unfurl_url(url, max_continues=max_continues, use_cache=use_cache)
+            result = await services.unfurl_url(
+                url, max_per_attempt=max_redirects, calculate_continues=True, use_cache=use_cache
+            )
 
         if result is None:
             await ctx.send(

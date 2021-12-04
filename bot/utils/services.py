@@ -19,6 +19,7 @@ FAILED_REQUEST_ATTEMPTS = 3
 
 UNFURL_CACHE = RedisCache(namespace="UnfurledRedirects")
 CACHE_LENGTH = datetime.timedelta(days=1)
+MAX_UNFURLS = 8  # Hard cap defined by the worker
 
 
 @dataclasses.dataclass(frozen=True, eq=True)
@@ -136,7 +137,13 @@ async def _get_url_from_cache(url: str) -> Optional[_UnfurlReturn]:
             return _UnfurlReturn(data["destination"], data["depth"], None, expiry - CACHE_LENGTH)
 
 
-async def _unfurl_url(url: str, redirects: int, continues: int, max_continues: int) -> _JOIN_RETURNS:
+async def _unfurl_url(
+    url: str,
+    redirects: int,
+    continues: int,
+    max_redirects: int,
+    max_continues: int
+) -> _JOIN_RETURNS:
     """
     The actual core logic of the unfurling.
 
@@ -148,7 +155,8 @@ async def _unfurl_url(url: str, redirects: int, continues: int, max_continues: i
     """
     # See link for documentation on how to use the worker
     # https://github.com/python-discord/workers/tree/main/url-unfurler
-    response = await _attempt_request(URLs.unfurl_worker, 3, json={"url": url}, raise_for_status=False)
+    body = {"url": url, "max-depth": max_redirects}
+    response = await _attempt_request(URLs.unfurl_worker, 3, json=body, raise_for_status=False)
 
     if response is None:
         return
@@ -200,7 +208,14 @@ async def _unfurl_url(url: str, redirects: int, continues: int, max_continues: i
         response.raise_for_status()
 
 
-async def unfurl_url(url: str, *, max_continues: int = 0, use_cache: bool = True) -> Optional[_UnfurlReturn]:
+async def unfurl_url(
+    url: str,
+    *,
+    max_per_attempt: int = MAX_UNFURLS,
+    max_continues: int = 0,
+    calculate_continues: bool = False,
+    use_cache: bool = True,
+) -> Optional[_UnfurlReturn]:
     """
     Follow all redirects of a URL, and return the final address.
 
@@ -210,9 +225,19 @@ async def unfurl_url(url: str, *, max_continues: int = 0, use_cache: bool = True
     The error in the return is only set if the operation failed.
     If false, the final destination might not be accurate, and the date will be None.
 
-    If the worker errors out due to too many redirects,
-    we'll attempt to continue from the last URL `max_continues` times.
+    `max_per_attempt` is passed directly to the worker. If the worker errors out due to too many redirects,
+    we'll attempt to restart from the last URL `max_continues` times.
+
+    If `calculate_continues` is true, we'll paginate `max_per_attempt` into as many continues as necessary.
     """
+    if not calculate_continues and max_per_attempt > MAX_UNFURLS:
+        raise ValueError(f"Max attempts `{max_per_attempt}` is greater than the maximum allowable `{MAX_UNFURLS}`.")
+
+    max_redirects = 0
+    if calculate_continues:
+        max_continues = (max_per_attempt // MAX_UNFURLS) - (1 if max_per_attempt % MAX_UNFURLS == 0 else 0)
+        max_redirects = max_per_attempt
+
     next_url = url
     redirects = 0
     continues = 0
@@ -225,7 +250,11 @@ async def unfurl_url(url: str, *, max_continues: int = 0, use_cache: bool = True
         if use_cache and (hit := await _get_url_from_cache(next_url)) is not None:
             return hit
 
-        response = await _unfurl_url(next_url, redirects, continues, max_continues)
+        if calculate_continues:
+            redirects_left = max_redirects - redirects
+            max_per_attempt = max(min(redirects_left, MAX_UNFURLS), 0)  # Get a number bound between 0 and MAX_UNFURLS
+
+        response = await _unfurl_url(next_url, redirects, continues, max_per_attempt, max_continues)
 
         if response is None:
             # We couldn't resolve this URL

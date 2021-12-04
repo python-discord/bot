@@ -340,7 +340,7 @@ class Filtering(Cog):
         """Unfurl redirect, run the URL filters on it, and check if further punishment is required."""
         log.trace(f"Processing redirects for {message.id} by {message.author}.")
         filter_data = "filter_redirects", self.filters["filter_redirects"]
-        result = await services.unfurl_url(url, max_continues=0, use_cache=True)
+        result = await services.unfurl_url(url, max_per_attempt=3, max_continues=0, use_cache=True)
         reason = None
 
         if result is None:
