@@ -217,8 +217,11 @@ class Reviewer:
         # Thread channel IDs are the same as the message ID of the parent message.
         nomination_thread = message.guild.get_thread(message.id)
         if not nomination_thread:
-            log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
-            return
+            try:
+                nomination_thread = await message.guild.fetch_channel(message.id)
+            except NotFound:
+                log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
+                return
 
         for message_ in messages:
             with contextlib.suppress(NotFound):
