@@ -31,12 +31,12 @@ CleanLimit = Union[Message, Age, ISODateTime]
 
 
 class CleanChannels(Converter):
-    """A converter that turns the given string to a list of channels to clean, or the literal `*` for all channels."""
+    """A converter to turn the string into a list of channels to clean, or the literal `*` for all public channels."""
 
     _channel_converter = TextChannelConverter()
 
     async def convert(self, ctx: Context, argument: str) -> Union[Literal["*"], list[TextChannel]]:
-        """Converts a string to a list of channels to clean, or the literal `*` for all channels."""
+        """Converts a string to a list of channels to clean, or the literal `*` for all public channels."""
         if argument == "*":
             return "*"
         return [await self._channel_converter.convert(ctx, channel) for channel in argument.split()]
@@ -129,7 +129,12 @@ class Clean(Cog):
                 channels = {ctx.channel}
         else:
             if channels == "*":
-                channels = {channel for channel in ctx.guild.channels if isinstance(channel, TextChannel)}
+                channels = {
+                    channel for channel in ctx.guild.channels
+                    if isinstance(channel, TextChannel)
+                    # Assume that non-public channels are not needed to optimize for speed.
+                    and channel.permissions_for(ctx.guild.default_role).view_channel
+                }
             else:
                 channels = set(channels)
 
@@ -339,7 +344,7 @@ class Clean(Cog):
 
         # Build the embed and send it
         if channels == "*":
-            target_channels = "all channels"
+            target_channels = "all public channels"
         else:
             target_channels = ", ".join(channel.mention for channel in channels)
 
@@ -456,7 +461,7 @@ class Clean(Cog):
         The pattern must be provided enclosed in backticks.
         If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
         \u2003• `bots_only`: Whether to delete only bots. If specified, users cannot be specified.
-        \u2003• `channels`: A series of channels to delete in, or an asterisk to delete from all channels.
+        \u2003• `channels`: A series of channels to delete in, or an asterisk to delete from all public channels.
         """
         if not any([users, first_limit, second_limit, regex, channels]):
             await ctx.send_help(ctx.command)
