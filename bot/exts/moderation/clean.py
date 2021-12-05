@@ -114,6 +114,28 @@ class Clean(Cog):
         await ctx.send(content, delete_after=delete_after)
 
     @staticmethod
+    def _channels_set(
+            channels: CleanChannels, ctx: Context, first_limit: CleanLimit, second_limit: CleanLimit
+    ) -> set[TextChannel]:
+        """Standardize the input `channels` argument to a usable set of text channels."""
+        # Default to using the invoking context's channel or the channel of the message limit(s).
+        if not channels:
+            # Input was validated - if first_limit is a message, second_limit won't point at a different channel.
+            if isinstance(first_limit, Message):
+                channels = {first_limit.channel}
+            elif isinstance(second_limit, Message):
+                channels = {second_limit.channel}
+            else:
+                channels = {ctx.channel}
+        else:
+            if channels == "*":
+                channels = {channel for channel in ctx.guild.channels if isinstance(channel, TextChannel)}
+            else:
+                channels = set(channels)
+
+        return channels
+
+    @staticmethod
     def _build_predicate(
         first_limit: datetime,
         second_limit: Optional[datetime] = None,
@@ -192,6 +214,7 @@ class Clean(Cog):
 
     def _get_messages_from_cache(
         self,
+        channels: set[TextChannel],
         to_delete: Predicate,
         lower_limit: datetime
     ) -> tuple[defaultdict[TextChannel, list], list[int]]:
@@ -203,7 +226,7 @@ class Clean(Cog):
                 # Cleaning was canceled
                 return message_mappings, message_ids
 
-            if to_delete(message):
+            if message.channel in channels and to_delete(message):
                 message_mappings[message.channel].append(message)
                 message_ids.append(message.id)
 
@@ -359,15 +382,7 @@ class Clean(Cog):
             return
         self.cleaning = True
 
-        # Default to using the invoking context's channel or the channel of the message limit(s).
-        if not channels:
-            # Input was validated - if first_limit is a message, second_limit won't point at a different channel.
-            if isinstance(first_limit, Message):
-                channels = [first_limit.channel]
-            elif isinstance(second_limit, Message):
-                channels = [second_limit.channel]
-            else:
-                channels = [ctx.channel]
+        deletion_channels = self._channels_set(channels, ctx, first_limit, second_limit)
 
         if isinstance(first_limit, Message):
             first_limit = first_limit.created_at
@@ -384,12 +399,11 @@ class Clean(Cog):
 
         if self._use_cache(first_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in the cache.")
-            message_mappings, message_ids = self._get_messages_from_cache(to_delete=predicate, lower_limit=first_limit)
+            message_mappings, message_ids = self._get_messages_from_cache(
+                channels=deletion_channels, to_delete=predicate, lower_limit=first_limit
+            )
         else:
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in channel histories.")
-            deletion_channels = channels
-            if channels == "*":
-                deletion_channels = [channel for channel in ctx.guild.channels if isinstance(channel, TextChannel)]
             message_mappings, message_ids = await self._get_messages_from_channels(
                 channels=deletion_channels,
                 to_delete=predicate,
@@ -406,6 +420,8 @@ class Clean(Cog):
         deleted_messages = await self._delete_found(message_mappings)
         self.cleaning = False
 
+        if not channels:
+            channels = deletion_channels
         logged = await self._modlog_cleaned_messages(deleted_messages, channels, ctx)
 
         if logged and is_mod_channel(ctx.channel):
