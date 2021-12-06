@@ -97,9 +97,12 @@ class PythonEnhancementProposals(Cog):
 
     def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> Embed:
         """Generate PEP embed based on PEP headers data."""
+        # the parsed header can be wrapped to multiple lines, so we need to make sure that is removed
+        # for an example of a pep with this issue, see pep 500
+        title = " ".join(pep_header["Title"].split())
         # Assemble the embed
         pep_embed = Embed(
-            title=f"**PEP {pep_nr} - {pep_header['Title']}**",
+            title=f"**PEP {pep_nr} - {title}**",
             description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
         )
 
