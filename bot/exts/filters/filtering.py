@@ -209,7 +209,7 @@ class Filtering(Cog):
     def get_name_match(self, name: str) -> Optional[re.Match]:
         """Check bad words from passed string (name). Return the first match found."""
         normalised_name = unicodedata.normalize("NFKC", name)
-        cleaned_normalised_name = "".join(c for c in normalised_name if not unicodedata.combining(c))
+        cleaned_normalised_name = "".join([c for c in normalised_name if not unicodedata.combining(c)])
 
         # Run filters against normalised, cleaned normalised and the original name,
         # in case we have filters for one but not the other.
