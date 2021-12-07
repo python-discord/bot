@@ -377,7 +377,7 @@ urls:
     site_logs_view:                     !JOIN [*STAFF, "/bot/logs"]
 
     # Snekbox
-    snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"
+    snekbox_eval_api: !ENV ["SNEKBOX_EVAL_API", "http://snekbox.default.svc.cluster.local/eval"]
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"
