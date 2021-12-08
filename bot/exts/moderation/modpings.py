@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 
+import arrow
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse, parse as dateutil_parse
 from discord import Embed, Member
@@ -71,7 +72,7 @@ class ModPings(Cog):
             if mod.id not in pings_off:
                 await self.reapply_role(mod)
             else:
-                expiry = isoparse(pings_off[mod.id]).replace(tzinfo=None)
+                expiry = isoparse(pings_off[mod.id])
                 self._role_scheduler.schedule_at(expiry, mod.id, self.reapply_role(mod))
 
     async def reschedule_modpings_schedule(self) -> None:
@@ -153,7 +154,7 @@ class ModPings(Cog):
 
         The duration cannot be longer than 30 days.
         """
-        delta = duration - datetime.datetime.utcnow()
+        delta = duration - arrow.utcnow()
         if delta > datetime.timedelta(days=30):
             await ctx.send(":x: Cannot remove the role for longer than 30 days.")
             return

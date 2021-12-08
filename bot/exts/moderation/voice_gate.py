@@ -1,7 +1,8 @@
 import asyncio
 from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+import arrow
 import discord
 from async_rediscache import RedisCache
 from discord import Colour, Member, VoiceState
@@ -166,13 +167,16 @@ class VoiceGate(Cog):
 
         checks = {
             "joined_at": (
-                ctx.author.joined_at.replace(tzinfo=None) > datetime.utcnow()
-                - timedelta(days=GateConf.minimum_days_member)
+                ctx.author.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
             ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
-            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
         }
+        if activity_blocks := data.get("activity_blocks"):
+            # activity_blocks is not included in the response if the user has a lot of messages.
+            # Only check if the user has enough activity blocks if it is included.
+            checks["activity_blocks"] = activity_blocks < GateConf.minimum_activity_blocks
+
         failed = any(checks.values())
         failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
         [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]

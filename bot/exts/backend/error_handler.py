@@ -1,5 +1,4 @@
 import difflib
-import typing as t
 
 from discord import Embed
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
@@ -97,13 +96,14 @@ class ErrorHandler(Cog):
             # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
 
-    @staticmethod
-    def get_help_command(ctx: Context) -> t.Coroutine:
+    async def send_command_help(self, ctx: Context) -> None:
         """Return a prepared `help` command invocation coroutine."""
         if ctx.command:
-            return ctx.send_help(ctx.command)
+            self.bot.help_command.context = ctx
+            await ctx.send_help(ctx.command)
+            return
 
-        return ctx.send_help()
+        await ctx.send_help()
 
     async def try_silence(self, ctx: Context) -> bool:
         """
@@ -245,7 +245,6 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
             await ctx.send(embed=embed)
-            self.get_help_command(ctx).close()
             self.bot.stats.incr("errors.argument_parsing_error")
             return
         else:
@@ -256,7 +255,7 @@ class ErrorHandler(Cog):
             self.bot.stats.incr("errors.other_user_input_error")
 
         await ctx.send(embed=embed)
-        await self.get_help_command(ctx)
+        await self.send_command_help(ctx)
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:

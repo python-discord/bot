@@ -66,6 +66,9 @@ class HelpChannels(commands.Cog):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
+        self.guild: discord.Guild = None
+        self.cooldown_role: discord.Role = None
+
         # Categories
         self.available_category: discord.CategoryChannel = None
         self.in_use_category: discord.CategoryChannel = None
@@ -95,24 +98,6 @@ class HelpChannels(commands.Cog):
 
         self.scheduler.cancel_all()
 
-    async def _handle_role_change(self, member: discord.Member, coro: t.Callable[..., t.Coroutine]) -> None:
-        """
-        Change `member`'s cooldown role via awaiting `coro` and handle errors.
-
-        `coro` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
-        """
-        try:
-            await coro(self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.help_cooldown))
-        except discord.NotFound:
-            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
-        except discord.Forbidden:
-            log.debug(
-                f"Forbidden to change role for {member} ({member.id}); "
-                f"possibly due to role hierarchy"
-            )
-        except discord.HTTPException as e:
-            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
-
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True)
@@ -125,14 +110,19 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
         await self.move_to_in_use(message.channel)
-        await self._handle_role_change(message.author, message.author.add_roles)
+
+        # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
+        if not isinstance(message.author, discord.Member):
+            log.debug(f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM.")
+        else:
+            await members.handle_role_change(message.author, message.author.add_roles, self.cooldown_role)
+
+            try:
+                await _message.dm_on_open(message)
+            except Exception as e:
+                log.warning("Error occurred while sending DM:", exc_info=e)
 
         await _message.pin(message)
-
-        try:
-            await _message.dm_on_open(message)
-        except Exception as e:
-            log.warning("Error occurred while sending DM:", exc_info=e)
 
         # Add user with channel for dormant check.
         await _caches.claimants.set(message.channel.id, message.author.id)
@@ -297,6 +287,9 @@ class HelpChannels(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         log.trace("Initialising the cog.")
+        self.guild = self.bot.get_guild(constants.Guild.id)
+        self.cooldown_role = self.guild.get_role(constants.Roles.help_cooldown)
+
         await self.init_categories()
 
         self.channel_queue = self.create_channel_queue()
@@ -369,6 +362,12 @@ class HelpChannels(commands.Cog):
 
         log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
 
+        # Unpin any previously stuck pins
+        log.trace(f"Looking for pins stuck in #{channel} ({channel.id}).")
+        for message in await channel.pins():
+            await _message.pin_wrapper(message.id, channel, pin=False)
+            log.debug(f"Removed a stuck pin from #{channel} ({channel.id}). ID: {message.id}")
+
         await _channel.move_to_bottom(
             channel=channel,
             category_id=constants.Categories.help_available,
@@ -434,11 +433,11 @@ class HelpChannels(commands.Cog):
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = await members.get_or_fetch_member(self.bot.get_guild(constants.Guild.id), claimant_id)
+        claimant = await members.get_or_fetch_member(self.guild, claimant_id)
         if claimant is None:
             log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
         else:
-            await self._handle_role_change(claimant, claimant.remove_roles)
+            await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
 
         await _message.unpin(channel)
         await _stats.report_complete_session(channel.id, closed_on)
@@ -579,7 +578,7 @@ class HelpChannels(commands.Cog):
             embed = discord.Embed(
                 title="Currently Helping",
                 description=f"You're currently helping in {message.channel.mention}",
-                color=constants.Colours.soft_green,
+                color=constants.Colours.bright_green,
                 timestamp=message.created_at
             )
             embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")

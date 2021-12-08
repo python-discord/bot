@@ -160,7 +160,7 @@ class CodeJams(commands.Cog):
 
         embed = Embed(
             title=str(member),
-            colour=Colour.blurple()
+            colour=Colour.og_blurple()
         )
         embed.add_field(name="Team", value=self.team_name(channel), inline=True)
 
