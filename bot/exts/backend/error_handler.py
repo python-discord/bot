@@ -7,7 +7,6 @@ from sentry_sdk import push_scope
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
-from bot.converters import TagNameConverter
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.log import get_logger
 from bot.utils.checks import ContextCheckFailure
@@ -174,16 +173,8 @@ class ErrorHandler(Cog):
             await self.on_command_error(ctx, tag_error)
             return
 
-        try:
-            tag_name = await TagNameConverter.convert(ctx, ctx.invoked_with)
-        except errors.BadArgument:
-            log.debug(
-                f"{ctx.author} tried to use an invalid command "
-                f"and the fallback tag failed validation in TagNameConverter."
-            )
-        else:
-            if await ctx.invoke(tags_get_command, tag_name=tag_name):
-                return
+        if await ctx.invoke(tags_get_command, argument_string=ctx.message.content):
+            return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
