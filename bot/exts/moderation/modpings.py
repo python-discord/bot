@@ -93,7 +93,7 @@ class ModPings(Cog):
 
     async def remove_role_schedule(self, mod: Member, work_time: int, schedule_start: datetime.datetime) -> None:
         """Removes the moderator's role to the given moderator."""
-        log.trace(f"Removing moderator role to mod with ID {mod.id}")
+        log.trace(f"Removing moderator role from mod with ID {mod.id}")
         await mod.remove_roles(self.moderators_role, reason="Moderator schedule time expired.")
 
         # Remove the task before scheduling it again
