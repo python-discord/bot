@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Union
 
+import arrow
 from aioredis import RedisError
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
@@ -49,7 +50,7 @@ class Action(Enum):
     SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Emojis.defcon_unshutdown, Colours.soft_green, "")
     SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Emojis.defcon_shutdown, Colours.soft_red, "")
     DURATION_UPDATE = ActionInfo(
-        Icons.defcon_update, Emojis.defcon_update, Colour.blurple(), "**Threshold:** {threshold}\n\n"
+        Icons.defcon_update, Emojis.defcon_update, Colour.og_blurple(), "**Threshold:** {threshold}\n\n"
     )
 
 
@@ -109,7 +110,7 @@ class Defcon(Cog):
     async def on_member_join(self, member: Member) -> None:
         """Check newly joining users to see if they meet the account age threshold."""
         if self.threshold:
-            now = datetime.utcnow()
+            now = arrow.utcnow()
 
             if now - member.created_at < relativedelta_to_timedelta(self.threshold):
                 log.info(f"Rejecting user {member}: Account is too new")
@@ -137,7 +138,7 @@ class Defcon(Cog):
 
                 await self.mod_log.send_log_message(
                     Icons.defcon_denied, Colours.soft_red, "Entry denied",
-                    message, member.avatar_url_as(static_format="png")
+                    message, member.display_avatar.url
                 )
 
     @group(name='defcon', aliases=('dc',), invoke_without_command=True)
@@ -151,7 +152,7 @@ class Defcon(Cog):
     async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
         embed = Embed(
-            colour=Colour.blurple(), title="DEFCON Status",
+            colour=Colour.og_blurple(), title="DEFCON Status",
             description=f"""
                 **Threshold:** {humanize_delta(self.threshold) if self.threshold else "-"}
                 **Expires:** {discord_timestamp(self.expiry, TimestampFormats.RELATIVE) if self.expiry else "-"}
@@ -185,7 +186,12 @@ class Defcon(Cog):
         role = ctx.guild.default_role
         permissions = role.permissions
 
-        permissions.update(send_messages=False, add_reactions=False, connect=False)
+        permissions.update(
+            send_messages=False,
+            add_reactions=False,
+            send_messages_in_threads=False,
+            connect=False
+        )
         await role.edit(reason="DEFCON shutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_SHUTDOWN.value.emoji} Server shut down.")
 
@@ -196,7 +202,12 @@ class Defcon(Cog):
         role = ctx.guild.default_role
         permissions = role.permissions
 
-        permissions.update(send_messages=True, add_reactions=True, connect=True)
+        permissions.update(
+            send_messages=True,
+            add_reactions=True,
+            send_messages_in_threads=True,
+            connect=True
+        )
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
 
@@ -244,7 +255,8 @@ class Defcon(Cog):
 
         expiry_message = ""
         if expiry:
-            expiry_message = f" for the next {humanize_delta(relativedelta(expiry, datetime.utcnow()), max_units=2)}"
+            activity_duration = relativedelta(expiry, arrow.utcnow().datetime)
+            expiry_message = f" for the next {humanize_delta(activity_duration, max_units=2)}"
 
         if self.threshold:
             channel_message = (

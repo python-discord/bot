@@ -17,12 +17,15 @@ from bot.utils import scheduling
 
 from . import _cog, doc_cache
 from ._parsing import get_symbol_markdown
+from ._redis_cache import StaleItemCounter
 
 log = get_logger(__name__)
 
 
 class StaleInventoryNotifier:
     """Handle sending notifications about stale inventories through `DocItem`s to dev log."""
+
+    symbol_counter = StaleItemCounter()
 
     def __init__(self):
         self._init_task = scheduling.create_task(
@@ -40,13 +43,16 @@ class StaleInventoryNotifier:
     async def send_warning(self, doc_item: _cog.DocItem) -> None:
         """Send a warning to dev log if one wasn't already sent for `item`'s url."""
         if doc_item.url not in self._warned_urls:
-            self._warned_urls.add(doc_item.url)
-            await self._init_task
-            embed = discord.Embed(
-                description=f"Doc item `{doc_item.symbol_id=}` present in loaded documentation inventories "
-                            f"not found on [site]({doc_item.url}), inventories may need to be refreshed."
-            )
-            await self._dev_log.send(embed=embed)
+            # Only warn if the item got less than 3 warnings
+            # or if it has been more than 3 weeks since the last warning
+            if await self.symbol_counter.increment_for(doc_item) < 3:
+                self._warned_urls.add(doc_item.url)
+                await self._init_task
+                embed = discord.Embed(
+                    description=f"Doc item `{doc_item.symbol_id=}` present in loaded documentation inventories "
+                                f"not found on [site]({doc_item.url}), inventories may need to be refreshed."
+                )
+                await self._dev_log.send(embed=embed)
 
 
 class QueueItem(NamedTuple):
@@ -103,7 +109,7 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
-            async with bot.instance.http_session.get(doc_item.url) as response:
+            async with bot.instance.http_session.get(doc_item.url, raise_for_status=True) as response:
                 soup = await bot.instance.loop.run_in_executor(
                     None,
                     BeautifulSoup,

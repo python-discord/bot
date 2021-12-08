@@ -103,4 +103,4 @@ class CommandTestCase(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(commands.MissingPermissions) as cm:
             await cmd.can_run(ctx)
 
-        self.assertCountEqual(permissions.keys(), cm.exception.missing_perms)
+        self.assertCountEqual(permissions.keys(), cm.exception.missing_permissions)

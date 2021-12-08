@@ -94,7 +94,7 @@ class DuckPond(Cog):
                 webhook=self.webhook,
                 content=message.clean_content,
                 username=message.author.display_name,
-                avatar_url=message.author.avatar_url
+                avatar_url=message.author.display_avatar.url
             )
 
         if message.attachments:
@@ -109,7 +109,7 @@ class DuckPond(Cog):
                     webhook=self.webhook,
                     embed=e,
                     username=message.author.display_name,
-                    avatar_url=message.author.avatar_url
+                    avatar_url=message.author.display_avatar.url
                 )
             except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")

@@ -18,6 +18,11 @@ if os.name == "nt":
 
 monkey_patches.patch_typing()
 
+# This patches any convertors that use PartialMessage, but not the PartialMessageConverter itself
+# as library objects are made by this mapping.
+# https://github.com/Rapptz/discord.py/blob/1a4e73d59932cdbe7bf2c281f25e32529fc7ae1f/discord/ext/commands/converter.py#L984-L1004
+commands.converter.PartialMessageConverter = monkey_patches.FixedPartialMessageConverter
+
 # Monkey-patch discord.py decorators to use the Command subclass which supports root aliases.
 # Must be patched before any cogs are added.
 commands.command = partial(commands.command, cls=monkey_patches.Command)

@@ -1,4 +1,5 @@
-debug: !ENV ["BOT_DEBUG", "true"]
+debug:     !ENV ["BOT_DEBUG", "true"]
+file_logs: !ENV ["FILE_LOGS", "false"]
 
 
 bot:
@@ -207,6 +208,7 @@ guild:
         incidents_archive:                  720668923636351037
         mod_alerts:                         473092532147060736
         mods:               &MODS           305126844661760000
+        mod_meta:                           775412552795947058
         nominations:                        822920136150745168
         nomination_voting:                  822853512709931008
         organisation:       &ORGANISATION   551789653284356126
@@ -248,15 +250,13 @@ guild:
         - *ADMIN_SPAM
         - *MODS
 
-    # Modlog cog ignores events which occur in these channels
+    # Modlog cog explicitly ignores events which occur in these channels.
+    # This is on top of implicitly ignoring events in channels that the mod team cannot view.
     modlog_blacklist:
-        - *ADMINS
-        - *ADMINS_VOICE
         - *ATTACH_LOG
         - *MESSAGE_LOG
         - *MOD_LOG
         - *STAFF_VOICE
-        - *DEV_CORE_VOTING
 
     reminder_whitelist:
         - *BOT_CMD
@@ -264,7 +264,12 @@ guild:
         - *BLACK_FORMATTER
 
     roles:
+        # Self-assignable roles, see the Subscribe cog
+        advent_of_code:                         518565788744024082
         announcements:                          463658397560995840
+        lovefest:                               542431903886606399
+        pyweek_announcements:                   897568414044938310
+
         contributors:                           295488872404484098
         help_cooldown:                          699189276025421825
         muted:              &MUTED_ROLE         277914926603829249
@@ -308,6 +313,7 @@ guild:
         big_brother:                        569133704568373283
         dev_log:                            680501655111729222
         duck_pond:                          637821475327311927
+        incidents:                          816650601844572212
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
 
@@ -371,7 +377,7 @@ urls:
     site_logs_view:                     !JOIN [*STAFF, "/bot/logs"]
 
     # Snekbox
-    snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"
+    snekbox_eval_api: !ENV ["SNEKBOX_EVAL_API", "http://snekbox.default.svc.cluster.local/eval"]
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"

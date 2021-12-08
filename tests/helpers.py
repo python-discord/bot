@@ -39,7 +39,7 @@ class HashableMixin(discord.mixins.EqualityComparable):
 
 
 class ColourMixin:
-    """A mixin for Mocks that provides the aliasing of color->colour like discord.py does."""
+    """A mixin for Mocks that provides the aliasing of (accent_)color->(accent_)colour like discord.py does."""
 
     @property
     def color(self) -> discord.Colour:
@@ -48,6 +48,14 @@ class ColourMixin:
     @color.setter
     def color(self, color: discord.Colour) -> None:
         self.colour = color
+
+    @property
+    def accent_color(self) -> discord.Colour:
+        return self.accent_colour
+
+    @accent_color.setter
+    def accent_color(self, color: discord.Colour) -> None:
+        self.accent_colour = color
 
 
 class CustomMockMixin:
@@ -242,7 +250,13 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
 
 
 # Create a User instance to get a realistic Mock of `discord.User`
-user_instance = discord.User(data=unittest.mock.MagicMock(), state=unittest.mock.MagicMock())
+_user_data_mock = collections.defaultdict(unittest.mock.MagicMock, {
+    "accent_color": 0
+})
+user_instance = discord.User(
+    data=unittest.mock.MagicMock(get=unittest.mock.Mock(side_effect=_user_data_mock.get)),
+    state=unittest.mock.MagicMock()
+)
 
 
 class MockUser(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
@@ -428,7 +442,12 @@ message_instance = discord.Message(state=state, channel=channel, data=message_da
 
 
 # Create a Context instance to get a realistic MagicMock of `discord.ext.commands.Context`
-context_instance = Context(message=unittest.mock.MagicMock(), prefix=unittest.mock.MagicMock())
+context_instance = Context(
+    message=unittest.mock.MagicMock(),
+    prefix="$",
+    bot=MockBot(),
+    view=None
+)
 context_instance.invoked_from_error_handler = None
 
 
@@ -537,7 +556,7 @@ class MockReaction(CustomMockMixin, unittest.mock.MagicMock):
         self.__str__.return_value = str(self.emoji)
 
 
-webhook_instance = discord.Webhook(data=unittest.mock.MagicMock(), adapter=unittest.mock.MagicMock())
+webhook_instance = discord.Webhook(data=unittest.mock.MagicMock(), session=unittest.mock.MagicMock())
 
 
 class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):

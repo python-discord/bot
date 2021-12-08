@@ -8,13 +8,14 @@ from collections import Counter
 from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
+import arrow
 from dateutil.parser import isoparse
-from discord import Embed, Emoji, Member, Message, NoMoreItems, PartialMessage, TextChannel
+from discord import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Emojis, Guild
+from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
@@ -35,9 +36,8 @@ MAX_MESSAGE_SIZE = 2000
 MAX_EMBED_SIZE = 4000
 
 # Regex for finding the first message of a nomination, and extracting the nominee.
-# Historic nominations will have 2 role mentions at the start, new ones won't, optionally match for this.
 NOMINATION_MESSAGE_REGEX = re.compile(
-    r"(?:<@&\d+> <@&\d+>\n)*?<@!?(\d+?)> \(.+#\d{4}\) for Helper!\n\n\*\*Nominated by:\*\*",
+    r"<@!?(\d+)> \(.+#\d{4}\) for Helper!\n\n",
     re.MULTILINE
 )
 
@@ -68,23 +68,23 @@ class Reviewer:
         log.trace(f"Scheduling review of user with ID {user_id}")
 
         user_data = self._pool.cache.get(user_id)
-        inserted_at = isoparse(user_data['inserted_at']).replace(tzinfo=None)
+        inserted_at = isoparse(user_data['inserted_at'])
         review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
 
         # If it's over a day overdue, it's probably an old nomination and shouldn't be automatically reviewed.
-        if datetime.utcnow() - review_at < timedelta(days=1):
+        if arrow.utcnow() - review_at < timedelta(days=1):
             self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
-        review, reviewed_emoji = await self.make_review(user_id)
-        if not review:
+        review, reviewed_emoji, nominee = await self.make_review(user_id)
+        if not nominee:
             return
 
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.nomination_voting)
 
-        log.trace(f"Posting the review of {user_id}")
+        log.trace(f"Posting the review of {nominee} ({nominee.id})")
         messages = await self._bulk_send(channel, review)
 
         await pin_no_system_message(messages[0])
@@ -94,12 +94,17 @@ class Reviewer:
             for reaction in (reviewed_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
                 await last_message.add_reaction(reaction)
 
+        thread = await last_message.create_thread(
+            name=f"Nomination - {nominee}",
+        )
+        await thread.send(fr"<@&{Roles.mod_team}> <@&{Roles.admins}>")
+
         if update_database:
             nomination = self._pool.cache.get(user_id)
             await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
 
-    async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji]]:
-        """Format a generic review of a user and return it with the reviewed emoji."""
+    async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
+        """Format a generic review of a user and return it with the reviewed emoji and the user themselves."""
         log.trace(f"Formatting the review of {user_id}")
 
         # Since `cache` is a defaultdict, we should take care
@@ -109,17 +114,17 @@ class Reviewer:
         nomination = self._pool.cache.get(user_id)
         if not nomination:
             log.trace(f"There doesn't appear to be an active nomination for {user_id}")
-            return "", None
+            return f"There doesn't appear to be an active nomination for {user_id}", None, None
 
         guild = self.bot.get_guild(Guild.id)
-        member = await get_or_fetch_member(guild, user_id)
+        nominee = await get_or_fetch_member(guild, user_id)
 
-        if not member:
+        if not nominee:
             return (
                 f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
-            ), None
+            ), None, None
 
-        opening = f"{member.mention} ({member}) for Helper!"
+        opening = f"{nominee.mention} ({nominee}) for Helper!"
 
         current_nominations = "\n\n".join(
             f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}"
@@ -127,7 +132,7 @@ class Reviewer:
         )
         current_nominations = f"**Nominated by:**\n{current_nominations}"
 
-        review_body = await self._construct_review_body(member)
+        review_body = await self._construct_review_body(nominee)
 
         reviewed_emoji = self._random_ducky(guild)
         vote_request = (
@@ -137,7 +142,7 @@ class Reviewer:
         )
 
         review = "\n\n".join((opening, current_nominations, review_body, vote_request))
-        return review, reviewed_emoji
+        return review, reviewed_emoji, nominee
 
     async def archive_vote(self, message: PartialMessage, passed: bool) -> None:
         """Archive this vote to #nomination-archive."""
@@ -209,8 +214,21 @@ class Reviewer:
                 colour=colour
             ))
 
+        # Thread channel IDs are the same as the message ID of the parent message.
+        nomination_thread = message.guild.get_thread(message.id)
+        if not nomination_thread:
+            try:
+                nomination_thread = await message.guild.fetch_channel(message.id)
+            except NotFound:
+                log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
+                return
+
         for message_ in messages:
-            await message_.delete()
+            with contextlib.suppress(NotFound):
+                await message_.delete()
+
+        with contextlib.suppress(NotFound):
+            await nomination_thread.edit(archived=True)
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""
@@ -347,7 +365,7 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time_since(isoparse(history[0]['ended_at']).replace(tzinfo=None))
+        end_time = time_since(isoparse(history[0]['ended_at']))
 
         review = (
             f"They were nominated **{nomination_times}** before"
@@ -359,10 +377,10 @@ class Reviewer:
 
     @staticmethod
     def _random_ducky(guild: Guild) -> Union[Emoji, str]:
-        """Picks a random ducky emoji. If no duckies found returns :eyes:."""
+        """Picks a random ducky emoji. If no duckies found returns 👀."""
         duckies = [emoji for emoji in guild.emojis if emoji.name.startswith("ducky")]
         if not duckies:
-            return ":eyes:"
+            return "\N{EYES}"
         return random.choice(duckies)
 
     @staticmethod

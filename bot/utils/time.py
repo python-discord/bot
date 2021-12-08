@@ -3,6 +3,7 @@ import re
 from enum import Enum
 from typing import Optional, Union
 
+import arrow
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
@@ -67,9 +68,9 @@ def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = Time
 
     # Convert each possible timestamp class to an integer.
     if isinstance(timestamp, datetime.datetime):
-        timestamp = (timestamp.replace(tzinfo=None) - datetime.datetime.utcfromtimestamp(0)).total_seconds()
+        timestamp = (timestamp - arrow.get(0)).total_seconds()
     elif isinstance(timestamp, datetime.date):
-        timestamp = (timestamp - datetime.date.fromtimestamp(0)).total_seconds()
+        timestamp = (timestamp - arrow.get(0)).total_seconds()
     elif isinstance(timestamp, datetime.timedelta):
         timestamp = timestamp.total_seconds()
     elif isinstance(timestamp, relativedelta):
@@ -124,7 +125,7 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
 
 def get_time_delta(time_string: str) -> str:
     """Returns the time in human-readable time delta format."""
-    date_time = dateutil.parser.isoparse(time_string).replace(tzinfo=None)
+    date_time = dateutil.parser.isoparse(time_string)
     time_delta = time_since(date_time)
 
     return time_delta
@@ -157,7 +158,7 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
 
 def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
     """Converts a relativedelta object to a timedelta object."""
-    utcnow = datetime.datetime.utcnow()
+    utcnow = arrow.utcnow()
     return utcnow + delta - utcnow
 
 
@@ -196,8 +197,8 @@ def format_infraction_with_duration(
 
     date_to_formatted = format_infraction(date_to)
 
-    date_from = date_from or datetime.datetime.utcnow()
-    date_to = dateutil.parser.isoparse(date_to).replace(tzinfo=None, microsecond=0)
+    date_from = date_from or datetime.datetime.now(datetime.timezone.utc)
+    date_to = dateutil.parser.isoparse(date_to).replace(microsecond=0)
 
     delta = relativedelta(date_to, date_from)
     if absolute:
@@ -215,15 +216,15 @@ def until_expiration(
     """
     Get the remaining time until infraction's expiration, in a discord timestamp.
 
-    Returns a human-readable version of the remaining duration between datetime.utcnow() and an expiry.
+    Returns a human-readable version of the remaining duration between arrow.utcnow() and an expiry.
     Similar to time_since, except that this function doesn't error on a null input
     and return null if the expiry is in the paste
     """
     if not expiry:
         return None
 
-    now = datetime.datetime.utcnow()
-    since = dateutil.parser.isoparse(expiry).replace(tzinfo=None, microsecond=0)
+    now = arrow.utcnow()
+    since = dateutil.parser.isoparse(expiry).replace(microsecond=0)
 
     if since < now:
         return None

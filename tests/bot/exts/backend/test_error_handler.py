@@ -107,7 +107,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         """Should send error with `ctx.send` when error is `CommandOnCooldown`."""
         self.ctx.reset_mock()
         cog = ErrorHandler(self.bot)
-        error = errors.CommandOnCooldown(10, 9)
+        error = errors.CommandOnCooldown(10, 9, type=None)
         self.assertIsNone(await cog.on_command_error(self.ctx, error))
         self.ctx.send.assert_awaited_once_with(error)
 
@@ -542,38 +542,6 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
                 push_scope_mock.set_tag.has_calls(set_tag_calls)
                 push_scope_mock.set_extra.has_calls(set_extra_calls)
-
-
-class OtherErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
-    """Other `ErrorHandler` tests."""
-
-    def setUp(self):
-        self.bot = MockBot()
-        self.ctx = MockContext()
-
-    async def test_get_help_command_command_specified(self):
-        """Should return coroutine of help command of specified command."""
-        self.ctx.command = "foo"
-        result = ErrorHandler.get_help_command(self.ctx)
-        expected = self.ctx.send_help("foo")
-        self.assertEqual(result.__qualname__, expected.__qualname__)
-        self.assertEqual(result.cr_frame.f_locals, expected.cr_frame.f_locals)
-
-        # Await coroutines to avoid warnings
-        await result
-        await expected
-
-    async def test_get_help_command_no_command_specified(self):
-        """Should return coroutine of help command."""
-        self.ctx.command = None
-        result = ErrorHandler.get_help_command(self.ctx)
-        expected = self.ctx.send_help()
-        self.assertEqual(result.__qualname__, expected.__qualname__)
-        self.assertEqual(result.cr_frame.f_locals, expected.cr_frame.f_locals)
-
-        # Await coroutines to avoid warnings
-        await result
-        await expected
 
 
 class ErrorHandlerSetupTests(unittest.TestCase):

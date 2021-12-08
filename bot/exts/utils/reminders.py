@@ -1,7 +1,7 @@
 import random
 import textwrap
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 from operator import itemgetter
 
 import discord
@@ -52,14 +52,14 @@ class Reminders(Cog):
             params={'active': 'true'}
         )
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         for reminder in response:
             is_valid, *_ = self.ensure_valid_reminder(reminder)
             if not is_valid:
                 continue
 
-            remind_at = isoparse(reminder['expiration']).replace(tzinfo=None)
+            remind_at = isoparse(reminder['expiration'])
 
             # If the reminder is already overdue ...
             if remind_at < now:
@@ -144,7 +144,7 @@ class Reminders(Cog):
 
     def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
-        reminder_datetime = isoparse(reminder['expiration']).replace(tzinfo=None)
+        reminder_datetime = isoparse(reminder['expiration'])
         self.scheduler.schedule_at(reminder_datetime, reminder["id"], self.send_reminder(reminder))
 
     async def _edit_reminder(self, reminder_id: int, payload: dict) -> dict:
@@ -183,7 +183,7 @@ class Reminders(Cog):
                 name="Sorry, your reminder should have arrived earlier!"
             )
         else:
-            embed.colour = discord.Colour.blurple()
+            embed.colour = discord.Colour.og_blurple()
             embed.set_author(
                 icon_url=Icons.remind_blurple,
                 name="It has arrived!"
@@ -214,7 +214,7 @@ class Reminders(Cog):
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
     ) -> None:
         """
         Commands for managing your reminders.
@@ -234,7 +234,7 @@ class Reminders(Cog):
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
     ) -> None:
         """
         Set yourself a simple reminder.
@@ -282,6 +282,20 @@ class Reminders(Cog):
             return
 
         mention_ids = [mention.id for mention in mentions]
+
+        # If `content` isn't provided then we try to get message content of a replied message
+        if not content:
+            if reference := ctx.message.reference:
+                if isinstance((resolved_message := reference.resolved), discord.Message):
+                    content = resolved_message.content
+            # If we weren't able to get the content of a replied message
+            if content is None:
+                await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
+                return
+
+            # If the replied message has no content (e.g. only attachments/embeds)
+            if content == "":
+                content = "See referenced message."
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
@@ -333,7 +347,7 @@ class Reminders(Cog):
 
         for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
-            remind_datetime = isoparse(remind_at).replace(tzinfo=None)
+            remind_datetime = isoparse(remind_at)
             time = discord_timestamp(remind_datetime, TimestampFormats.RELATIVE)
 
             mentions = ", ".join([
@@ -350,7 +364,7 @@ class Reminders(Cog):
             lines.append(text)
 
         embed = discord.Embed()
-        embed.colour = discord.Colour.blurple()
+        embed.colour = discord.Colour.og_blurple()
         embed.title = f"Reminders for {ctx.author}"
 
         # Remind the user that they have no reminders :^)
@@ -360,7 +374,7 @@ class Reminders(Cog):
             return
 
         # Construct the embed and paginate it.
-        embed.colour = discord.Colour.blurple()
+        embed.colour = discord.Colour.og_blurple()
 
         await LinePaginator.paginate(
             lines,

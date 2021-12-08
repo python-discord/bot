@@ -1,3 +1,5 @@
+from typing import Union
+
 import discord
 
 import bot
@@ -16,8 +18,11 @@ def is_help_channel(channel: discord.TextChannel) -> bool:
     return any(is_in_category(channel, category) for category in categories)
 
 
-def is_mod_channel(channel: discord.TextChannel) -> bool:
-    """True if `channel` is considered a mod channel."""
+def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
+    """True if channel, or channel.parent for threads, is considered a mod channel."""
+    if isinstance(channel, discord.Thread):
+        channel = channel.parent
+
     if channel.id in constants.MODERATION_CHANNELS:
         log.trace(f"Channel #{channel} is a configured mod channel")
         return True
