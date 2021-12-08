@@ -238,3 +238,12 @@ async def send_denial(ctx: Context, reason: str) -> discord.Message:
 def format_user(user: discord.abc.User) -> str:
     """Return a string for `user` which has their mention and ID."""
     return f"{user.mention} (`{user.id}`)"
+
+
+def format_channel(channel: discord.abc.Messageable) -> str:
+    """Return a string for `channel` with its mention, ID, and the parent channel if it is a thread."""
+    formatted = f"{channel.mention} ({channel.category}/#{channel}"
+    if hasattr(channel, "parent"):
+        formatted += f"/{channel.parent}"
+    formatted += ")"
+    return formatted
