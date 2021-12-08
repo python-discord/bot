@@ -13,7 +13,6 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import URLs
 from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
@@ -528,14 +527,14 @@ class Information(Cog):
     @command(aliases=("rule",))
     async def rules(self, ctx: Context, rules: Greedy[int]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url=f"{URLs.site_schema}{URLs.site}/pages/rules")
+        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
 
         if not rules:
             # Rules were not submitted. Return the default description.
             rules_embed.description = (
-                f"The rules and guidelines that apply to this community can be found on"
-                f" our [rules page]({URLs.site_schema}{URLs.site}/pages/rules). We expect"
-                f" all members of the community to have read and understood these."
+                "The rules and guidelines that apply to this community can be found on"
+                " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
+                " all members of the community to have read and understood these."
             )
 
             await ctx.send(embed=rules_embed)
