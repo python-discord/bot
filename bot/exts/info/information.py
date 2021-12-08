@@ -2,11 +2,12 @@ import colorsys
 import pprint
 import textwrap
 from collections import defaultdict
+from textwrap import shorten
 from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
+from discord.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 
 from bot import constants
@@ -522,6 +523,40 @@ class Information(Cog):
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await self.send_raw_content(ctx, message, json=True)
+
+    @command(aliases=("rule",))
+    async def rules(self, ctx: Context, rules: Greedy[int]) -> None:
+        """Provides a link to all rules or, if specified, displays specific rule(s)."""
+        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
+
+        if not rules:
+            # Rules were not submitted. Return the default description.
+            rules_embed.description = (
+                "The rules and guidelines that apply to this community can be found on"
+                " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
+                " all members of the community to have read and understood these."
+            )
+
+            await ctx.send(embed=rules_embed)
+            return
+
+        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+
+        # Remove duplicates and sort the rule indices
+        rules = sorted(set(rules))
+
+        invalid = ", ".join(str(index) for index in rules if index < 1 or index > len(full_rules))
+
+        if invalid:
+            await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
+            return
+
+        for rule in rules:
+            self.bot.stats.incr(f"rule_uses.{rule}")
+
+        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
+
+        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
 def setup(bot: Bot) -> None:
