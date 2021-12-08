@@ -168,11 +168,11 @@ class Tags(Cog):
         """Get tags with identifiers similar to `tag_identifier`."""
         suggestions = []
 
-        if tag_identifier.group is not None and len(tag_identifier.group) >= 3:
+        if tag_identifier.group is not None and len(tag_identifier.group) >= 2:
             # Try fuzzy matching with only a name first
             suggestions += self._get_suggestions(TagIdentifier(None, tag_identifier.group))
 
-        if len(tag_identifier.name) >= 3:
+        if len(tag_identifier.name) >= 2:
             suggestions += self._get_suggestions(tag_identifier)
 
         return suggestions
