@@ -574,6 +574,54 @@ class Infraction(Converter):
                 raise e
 
 
+class DayDuration(Converter):
+    """
+    Convert a string representing day time (hours and minutes) to an UTC datetime object.
+
+    The hours and mintues would be combined with UTC day, if no 'am' or 'pm' is passed with
+    the string, then it is assumed that the time is in 24 hour format.
+
+    The following formats are excepted:
+        - H:M
+        - H:M am/pm
+        - H am/pm
+        - H
+
+    where `H` represents Hours and `M` represents Minutes.
+    """
+
+    TIME_RE = re.compile(
+        r"^(1[0-2]|0?[1-9]):?([0-5][0-9])? ?([AaPp][Mm])$"  # Twelve hour format
+        "|"
+        r"^([0-9]|0[0-9]|1[0-9]|2[0-4]):?([0-5][0-9])?$"   # Twenty four hour format
+    )
+
+    async def convert(self, _ctx: Context, argument: str) -> datetime:
+        """Attempts to converting `argument` to an UTC datetime object."""
+        match = self.TIME_RE.fullmatch(argument).groups()
+        if not match:
+            raise BadArgument(f"`{argument}` is not a valid time duration string.")
+
+        hour_12, minute_12, meridiem, hour_24, minute_24 = match
+        time = None
+
+        if hour_12 and meridiem and minute_12:
+            time = datetime.strptime(f"{hour_12}:{minute_12} {meridiem}", "%I:%M %p")
+        elif hour_12 and meridiem:
+            time = datetime.strptime(f"{hour_12} {meridiem}", "%I %p")
+        elif hour_24 and minute_24:
+            time = datetime.strptime(f"{hour_24}:{minute_24}", "%H:%M")
+        else:
+            time = datetime.strptime(hour_24, "%H")
+
+        today = datetime.utcnow().date()
+        return time.replace(
+            year=today.year,
+            month=today.month,
+            day=today.day
+        )
+
+
 if t.TYPE_CHECKING:
     ValidDiscordServerInvite = dict  # noqa: F811
     ValidFilterListType = str  # noqa: F811
