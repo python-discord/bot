@@ -1,5 +1,3 @@
-**str.strip versus str.removesuffix/str.removeprefix**
-
 When working with `strip`, `lstrip`, or `rstrip`, you might think that this would be the case:
 ```py
 >>> "Monty Python".rstrip(" Python")
