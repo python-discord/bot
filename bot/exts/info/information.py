@@ -174,7 +174,6 @@ class Information(Cog):
         embed = Embed(colour=Colour.og_blurple(), title="Server Information")
 
         created = discord_timestamp(ctx.guild.created_at, TimestampFormats.RELATIVE)
-        region = ctx.guild.region
         num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
         # Server Features are only useful in certain channels
@@ -199,7 +198,6 @@ class Information(Cog):
 
         embed.description = (
             f"Created: {created}"
-            f"\nVoice region: {region}"
             f"{features}"
             f"\nRoles: {num_roles}"
             f"\nMember status: {member_status}"
