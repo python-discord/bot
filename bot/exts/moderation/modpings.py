@@ -17,7 +17,7 @@ from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
-MAXIMUM_WORK_LIMIT = 16
+MAXIMUM_WORK_OFF_LIMIT = 16
 
 
 class ModPings(Cog):
@@ -201,15 +201,13 @@ class ModPings(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def schedule_modpings(self, ctx: Context, start: DayDuration, end: DayDuration) -> None:
         """Schedule modpings role to be added at <start> and removed at <end> everyday at UTC time!"""
-        print(start, end)
-
         if end < start:
             end += datetime.timedelta(days=1)
 
-        if (end - start) > datetime.timedelta(hours=MAXIMUM_WORK_LIMIT):
+        if datetime.timedelta(hours=24) - (end - start) > datetime.timedelta(hours=MAXIMUM_WORK_OFF_LIMIT):
             await ctx.send(
-                f":x: {ctx.author.mention} You can't have the modpings role for"
-                f" more than {MAXIMUM_WORK_LIMIT} hours!"
+                f":x: {ctx.author.mention} You can't have the modpings role off for"
+                f" more than {MAXIMUM_WORK_OFF_LIMIT} hours!"
             )
             return
 
