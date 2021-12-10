@@ -12,6 +12,7 @@ from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import DayDuration, Expiry
 from bot.log import get_logger
 from bot.utils import scheduling
+from bot.utils.members import get_or_fetch_member
 from bot.utils.scheduling import Scheduler
 from bot.utils.time import TimestampFormats, discord_timestamp
 
@@ -85,7 +86,14 @@ class ModPings(Cog):
             start_timestamp, work_time = schedule.split("|")
             start = datetime.datetime.fromtimestamp(float(start_timestamp))
 
-            mod = await self.bot.fetch_user(mod_id)
+            guild = self.bot.get_guild(Guild.id)
+            mod = await get_or_fetch_member(guild, mod_id)
+            if not mod:
+                log.info(
+                    f"I tried to get moderator with ID `{mod_id}`, but they don't appear to be on the server :pensive:"
+                )
+                continue
+
             self._modpings_scheduler.schedule_at(
                 start,
                 mod_id,
