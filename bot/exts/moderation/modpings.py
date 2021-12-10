@@ -124,6 +124,15 @@ class ModPings(Cog):
 
     async def reapply_role(self, mod: Member) -> None:
         """Reapply the moderator's role to the given moderator."""
+        mod_schedule = self.modpings_schedule.get(mod.id)
+        if (
+            mod_schedule
+            and datetime.datetime.utcnow()
+            < datetime.datetime.utcfromtimestamp(mod_schedule.split("|")[0])
+        ):
+            log.trace(f"Skipping re-applying role to mod with ID {mod.id} as their modpings schedule is over.")
+            return
+
         log.trace(f"Re-applying role to mod with ID {mod.id}.")
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
         await self.pings_off_mods.delete(mod.id)
