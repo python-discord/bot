@@ -90,7 +90,7 @@ class ModPings(Cog):
             mod = await get_or_fetch_member(guild, mod_id)
             if not mod:
                 log.info(
-                    f"I tried to get moderator with ID `{mod_id}`, but they don't appear to be on the server :pensive:"
+                    f"I tried to get moderator with ID `{mod_id}`, but they don't appear to be on the server 😔"
                 )
                 continue
 
@@ -218,7 +218,7 @@ class ModPings(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def schedule_modpings(self, ctx: Context, start: DayDuration, end: DayDuration) -> None:
         """
-        Schedule modpings role to be added at <start> and removed at <end> everyday at UTC time!
+        Schedule modpings role to be added at <start> and removed at <end> every day at UTC!
 
         You can have the modpings role off for a maximum of 16 hours i.e. having the modpings role
         on for a minimum of 8 hours in a day.

@@ -576,12 +576,12 @@ class Infraction(Converter):
 
 class DayDuration(Converter):
     """
-    Convert a string representing day time (hours and minutes) to an UTC datetime object.
+    Convert a string representing day time (hours and minutes) to a UTC datetime object.
 
-    The hours and mintues would be combined with UTC day, if no 'am' or 'pm' is passed with
+    The hours and minutes would be combined with UTC day if no 'am' or 'pm' is passed with
     the string, then it is assumed that the time is in 24 hour format.
 
-    The following formats are excepted:
+    The following formats are accepted:
         - H:M
         - H:M am/pm
         - H am/pm
