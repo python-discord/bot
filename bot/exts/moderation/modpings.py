@@ -116,16 +116,25 @@ class ModPings(Cog):
             log.trace(f"Skipping adding moderator role to mod with ID {mod.id} - found in pings off cache.")
         else:
             log.trace(f"Applying moderator role to mod with ID {mod.id}")
-            await mod.add_roles(self.moderators_role, reason="Moderator scheduled time started!")
+            await self.reapply_role(mod, reason="Moderator scheduled time started!")
 
         log.trace(f"Sleeping for {work_time} seconds, worktime for mod with ID {mod.id}")
         await asyncio.sleep(work_time)
         await self.remove_role_schedule(mod, work_time, schedule_start)
 
-    async def reapply_role(self, mod: Member) -> None:
+    async def reapply_role(self, mod: Member, *, reason: str = None) -> None:
         """Reapply the moderator's role to the given moderator."""
+        if self.guild.get_role(Roles.mod_team) not in mod.roles:
+            log.info(
+                f"Preventing {mod} from being assigned the moderator role"
+                "since they are missing the mod team role."
+            )
+            # the code that calls this method either prechecks the moderator's roles
+            # or it doesn't matter since this was called in a task
+            # the logging statement above is enough to ensure that this was caught
+            return
         log.trace(f"Re-applying role to mod with ID {mod.id}.")
-        await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
+        await mod.add_roles(self.moderators_role, reason=reason or "Pings off period expired.")
         await self.pings_off_mods.delete(mod.id)
 
     @group(name='modpings', aliases=('modping',), invoke_without_command=True)
@@ -184,9 +193,7 @@ class ModPings(Cog):
             await ctx.send(":question: You already have the role.")
             return
 
-        await mod.add_roles(self.moderators_role, reason="Pings off period canceled.")
-
-        await self.pings_off_mods.delete(mod.id)
+        await self.reapply_role(mod, reason="Pings off period canceled.")
 
         # We assume the task exists. Lack of it may indicate a bug.
         self._role_scheduler.cancel(mod.id)
