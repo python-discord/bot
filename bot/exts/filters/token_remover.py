@@ -1,5 +1,6 @@
 import base64
 import binascii
+import contextlib
 import re
 import typing as t
 
@@ -30,7 +31,7 @@ DELETION_MESSAGE_TEMPLATE = (
     "token in your message and have removed your message. "
     "This means that your token has been **compromised**. "
     "Please change your token **immediately** at: "
-    "<https://discordapp.com/developers/applications/me>\n\n"
+    "<https://discord.com/developers/applications/me>\n\n"
     "Feel free to re-post it with the token removed. "
     "If you believe this was a mistake, please let us know!"
 )
@@ -40,8 +41,12 @@ TOKEN_EPOCH = 1_293_840_000
 # Three parts delimited by dots: user ID, creation timestamp, HMAC.
 # The HMAC isn't parsed further, but it's in the regex to ensure it at least exists in the string.
 # Each part only matches base64 URL-safe characters.
-# Padding has never been observed, but the padding character '=' is matched just in case.
-TOKEN_RE = re.compile(r"([\w\-=]+)\.([\w\-=]+)\.([\w\-=]+)", re.ASCII)
+# These regexes were taken from discord-developers, which are used by the client itself.
+TOKEN_RE = re.compile(r"([a-z0-9_-]{23,28})\.([a-z0-9_-]{6,7})\.([a-z0-9_-]{27})", re.IGNORECASE)
+
+# This checks for MFA tokens, and its not nearly as complex. if we match this, we don't check everything
+# because its not possible.
+MFA_TOKEN_RE = re.compile(r"mfa\.([a-z0-9_-]{20,})", re.IGNORECASE)
 
 
 class Token(t.NamedTuple):
@@ -53,7 +58,7 @@ class Token(t.NamedTuple):
 
 
 class TokenRemover(Cog):
-    """Scans messages for potential discord.py bot tokens and removes them."""
+    """Scans messages for potential discord client tokens and removes them."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -62,6 +67,54 @@ class TokenRemover(Cog):
     def mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
+
+    @Cog.listener(name="on_message")
+    async def mfa_token_listener(self, msg: Message) -> None:
+        """
+        Check all messages for a string that matches the mfa token pattern.
+
+        Due to how the mfa tokens work, there is no user information supplied for this token.
+        """
+        # Ignore DMs; can't delete messages in there anyway.
+        if not msg.guild or msg.author.bot:
+            return
+
+        was_valid = False
+        for match in MFA_TOKEN_RE.finditer(msg.content):
+
+            if self.is_maybe_valid_hmac(match.group()):
+                was_valid = True
+                break
+        if not was_valid:
+            return
+
+        token = match.group()
+        # since the token was probably valid, we can now delete the message and ping the moderators.
+        # the user is not informed, given the reasoning for deleting the message.
+        with contextlib.suppress(NotFound):
+            await msg.delete()
+
+        log_message = (
+            f"Deleted mfa token sent by {msg.author} in {msg.channel}: "
+            f"mfa.{token[:3]}{'x' * len(token[3:-3])}{token[-3:]}"
+        )
+
+        log.info(log_message)
+
+        await self.mod_log.send_log_message(
+            icon_url=Icons.token_removed,
+            colour=Colour(Colours.soft_red),
+            title="MFA Token removed!",
+            text=log_message,
+            thumbnail=msg.author.display_avatar.url,
+            channel_id=Channels.mod_alerts,
+            ping_everyone=True,
+        )
+
+    @Cog.listener(name="on_message_edit")
+    async def mfa_token_edit(self, before: Message, after: Message) -> None:
+        """Check each edit for a string that matches Discord's mfa token pattern."""
+        await self.mfa_token_listener(after)
 
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
@@ -167,7 +220,7 @@ class TokenRemover(Cog):
                 return token
 
         # No matching substring
-        return
+        return None
 
     @staticmethod
     def extract_user_id(b64_content: str) -> t.Optional[int]:
