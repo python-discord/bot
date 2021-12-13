@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument
 
-from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName
+from bot.converters import DayDuration, Duration, HushDurationConverter, ISODateTime, PackageName
 
 
 class ConverterTests(unittest.IsolatedAsyncioTestCase):
@@ -252,3 +252,61 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(invalid_minutes_string=invalid_minutes_string, exception_message=exception_message):
                 with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
                     await converter.convert(self.context, invalid_minutes_string)
+
+    async def test_day_duration_convertor_for_valid(self):
+        """DayDuration converter returns correct datetime for valid datetime string."""
+        test_values = (
+            # H:M am/pm
+            ("2:14 pm", 51240),
+            ("2:14 am", 8040),
+            ("2:14Pm", 51240),
+            ("2:14AM", 8040),
+
+            # HM am/pm
+            ("942pm", 78120),
+            ("854 am", 32040),
+
+            # H am/pm
+            ("11pm", 82800),
+            ("2 am", 7200),
+
+            # H:M
+            ("2:14", 8040),
+            ("23:05", 83100),
+            ("2305", 83100),
+
+            # H
+            ("5", 18000),
+            ("18", 64800),
+        )
+        converter = DayDuration()
+        for day_duration_string, expected_1970 in test_values:
+            with self.subTest(day_duration_string=day_duration_string, expected_1970_dt=expected_1970):
+                converted = await converter.convert(self.context, day_duration_string)
+
+                expected_1970_dt = datetime.utcfromtimestamp(expected_1970)
+                today = datetime.utcnow().date()
+                expected_now = expected_1970_dt.replace(
+                    year=today.year,
+                    month=today.month,
+                    day=today.day
+                )
+
+                self.assertEqual(expected_now, converted)
+
+    async def test_day_duration_convertor_for_invalid(self):
+        """DayDuration converter raises the correct exception for invalid datetime strings."""
+        test_values = (
+            # Check if it fails when providing the date part
+            '2019-11-12 09:15',
+
+            # Other non-valid strings
+            'fisk the tag master',
+        )
+
+        converter = DayDuration()
+        for datetime_string in test_values:
+            with self.subTest(datetime_string=datetime_string):
+                exception_message = f"`{datetime_string}` is not a valid time duration string."
+                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
+                    await converter.convert(self.context, datetime_string)

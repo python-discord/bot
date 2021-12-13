@@ -583,8 +583,9 @@ class DayDuration(Converter):
 
     The following formats are accepted:
         - H:M
-        - H:M am/pm
-        - H am/pm
+        - H:Mam/pm
+        - HMam/pm
+        - Ham/pm
         - H
 
     where `H` represents Hours and `M` represents Minutes.
@@ -598,11 +599,11 @@ class DayDuration(Converter):
 
     async def convert(self, _ctx: Context, argument: str) -> datetime:
         """Attempts to converting `argument` to an UTC datetime object."""
-        match = self.TIME_RE.fullmatch(argument).groups()
+        match = self.TIME_RE.fullmatch(argument)
         if not match:
             raise BadArgument(f"`{argument}` is not a valid time duration string.")
 
-        hour_12, minute_12, meridiem, hour_24, minute_24 = match
+        hour_12, minute_12, meridiem, hour_24, minute_24 = match.groups()
         time = None
 
         if hour_12 and meridiem and minute_12:
