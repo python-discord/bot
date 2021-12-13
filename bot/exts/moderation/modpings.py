@@ -223,7 +223,7 @@ class ModPings(Cog):
         You can have the modpings role off for a maximum of 16 hours i.e. having the modpings role
         on for a minimum of 8 hours in a day.
 
-        The command excepts two arguments `start` and `end` which represent hour and minute of a day,
+        The command expects two arguments `start` and `end` which represent hour and minute of a day,
         you would get the modpings role at `start` and it would removed from you at `end`. `start` and
         `end` can be in the following formats:
             - H:Mam/pm (10:14pm)
@@ -238,7 +238,9 @@ class ModPings(Cog):
         if end < start:
             end += datetime.timedelta(days=1)
 
-        if datetime.timedelta(hours=24) - (end - start) > datetime.timedelta(hours=MAXIMUM_WORK_OFF_LIMIT):
+        modpings_on_period = end - start
+        # Check if the modpings off period for a day is more than the max
+        if datetime.timedelta(hours=24) - modpings_on_period > datetime.timedelta(hours=MAXIMUM_WORK_OFF_LIMIT):
             await ctx.send(
                 f":x: {ctx.author.mention} You can't have the modpings role off for"
                 f" more than {MAXIMUM_WORK_OFF_LIMIT} hours!"
