@@ -227,7 +227,7 @@ class Information(Cog):
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
     async def user_info(self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None) -> None:
         """Returns info about a user."""
-        if isinstance(user_or_message, Message):
+        if passed_as_message := isinstance(user_or_message, Message):
             user = user_or_message.author
         else:
             user = user_or_message
@@ -242,10 +242,10 @@ class Information(Cog):
 
         # Will redirect to #bot-commands if it fails.
         if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
-            embed = await self.create_user_embed(ctx, user)
+            embed = await self.create_user_embed(ctx, user, passed_as_message)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: MemberOrUser) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: MemberOrUser, passed_as_message: bool) -> Embed:
         """Creates an embed containing information on the `user`."""
         on_server = bool(await get_or_fetch_member(ctx.guild, user.id))
 
@@ -255,6 +255,9 @@ class Information(Cog):
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
         name = escape_markdown(name)
+
+        if passed_as_message:
+            name += " - From Message"
 
         if user.public_flags.verified_bot:
             name += f" {constants.Emojis.verified_bot}"
@@ -282,7 +285,6 @@ class Information(Cog):
 
             membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
-            roles = None
             membership = "The user is not a member of the server"
 
         fields = [
