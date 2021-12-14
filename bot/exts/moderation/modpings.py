@@ -50,11 +50,17 @@ class ModPings(Cog):
             name="mod-pings-reschedule",
             event_loop=self.bot.loop,
         )
+        self.bot.loop.create_task(self.fetch_guild())
+
+    async def fetch_guild(self) -> None:
+        """Fetch the guild."""
+        await self.bot.wait_until_guild_available()
+        self.guild = self.bot.get_guild(Guild.id)
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
-        await self.bot.wait_until_guild_available()
-        self.guild = self.bot.get_guild(Guild.id)
+        if not self.guild:
+            await self.fetch_guild()
         self.moderators_role = self.guild.get_role(Roles.moderators)
 
         mod_team = self.guild.get_role(Roles.mod_team)
@@ -124,6 +130,8 @@ class ModPings(Cog):
 
     async def reapply_role(self, mod: Member, *, reason: str = None) -> None:
         """Reapply the moderator's role to the given moderator."""
+        if not self.guild:
+            await self.fetch_guild()
         if self.guild.get_role(Roles.mod_team) not in mod.roles:
             log.info(
                 f"Preventing {mod} from being assigned the moderator role"
