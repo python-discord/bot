@@ -41,6 +41,7 @@ class ModPings(Cog):
         self.guild = None
         self.moderators_role = None
 
+        self.fetch_guild_task = self.bot.loop.create_task(self.fetch_guild())
         self.modpings_schedule_task = scheduling.create_task(
             self.reschedule_modpings_schedule(),
             event_loop=self.bot.loop
@@ -50,7 +51,6 @@ class ModPings(Cog):
             name="mod-pings-reschedule",
             event_loop=self.bot.loop,
         )
-        self.bot.loop.create_task(self.fetch_guild())
 
     async def fetch_guild(self) -> None:
         """Fetch the guild."""
@@ -262,6 +262,8 @@ class ModPings(Cog):
     def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
         log.trace("Cog unload: canceling role tasks.")
+        self.fetch_guild_task.cancel()
+
         self.reschedule_task.cancel()
         self._role_scheduler.cancel_all()
 
