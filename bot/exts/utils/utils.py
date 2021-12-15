@@ -49,7 +49,7 @@ class Utils(Cog):
         self.bot = bot
 
     @command()
-    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_py), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_bots), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
