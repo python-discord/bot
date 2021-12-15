@@ -484,7 +484,12 @@ class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
+    # Self-assignable roles, see the Subscribe cog
+    advent_of_code: int
     announcements: int
+    lovefest: int
+    pyweek_announcements: int
+
     contributors: int
     help_cooldown: int
     muted: int
@@ -681,6 +686,13 @@ class VideoPermission(metaclass=YAMLGetter):
     section = "video_permission"
 
     default_permission_duration: int
+
+
+class ThreadArchiveTimes(Enum):
+    HOUR = 60
+    DAY = 1440
+    THREE_DAY = 4320
+    WEEK = 10080
 
 
 # Debug mode
