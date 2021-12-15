@@ -56,3 +56,11 @@ class DocMarkdownConverter(MarkdownConverter):
         if parent is not None and parent.name == "li":
             return f"{text}\n"
         return super().convert_p(el, text, convert_as_inline)
+
+    def convert_hr(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+        """
+        Convert hr tags to an empty string.
+
+        Later versions of markdownify added this method, but discord markdown does not support headers.
+        """
+        return ""
