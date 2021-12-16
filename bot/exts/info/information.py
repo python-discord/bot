@@ -420,8 +420,8 @@ class Information(Cog):
             if e.status == 404:
                 activity_output = "No activity"
         else:
-            activity_output.append(user_activity["total_messages"] or "No messages")
-            activity_output.append(user_activity["activity_blocks"] or "No activity")
+            activity_output.append(f"{user_activity['total_messages']:,}" or "No messages")
+            activity_output.append(f"{user_activity['activity_blocks']:,}" or "No activity")
 
             activity_output = "\n".join(
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
