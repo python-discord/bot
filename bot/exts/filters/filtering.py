@@ -1,5 +1,6 @@
 import asyncio
 import re
+import unicodedata
 from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
@@ -205,15 +206,21 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    def get_name_matches(self, name: str) -> List[re.Match]:
-        """Check bad words from passed string (name). Return list of matches."""
-        name = self.clean_input(name)
-        matches = []
+    def get_name_match(self, name: str) -> Optional[re.Match]:
+        """Check bad words from passed string (name). Return the first match found."""
+        normalised_name = unicodedata.normalize("NFKC", name)
+        cleaned_normalised_name = "".join([c for c in normalised_name if not unicodedata.combining(c)])
+
+        # Run filters against normalised, cleaned normalised and the original name,
+        # in case we have filters for one but not the other.
+        names_to_check = (name, normalised_name, cleaned_normalised_name)
+
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
-            if match := re.search(pattern, name, flags=re.IGNORECASE):
-                matches.append(match)
-        return matches
+            for name in names_to_check:
+                if match := re.search(pattern, name, flags=re.IGNORECASE):
+                    return match
+        return None
 
     async def check_send_alert(self, member: Member) -> bool:
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
@@ -229,10 +236,14 @@ class Filtering(Cog):
         """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
         # Use lock to avoid race conditions
         async with self.name_lock:
-            # Check whether the users display name contains any words in our blacklist
-            matches = self.get_name_matches(member.display_name)
+            # Check if we recently alerted about this user first,
+            # to avoid running all the filter tokens against their name again.
+            if not await self.check_send_alert(member):
+                return
 
-            if not matches or not await self.check_send_alert(member):
+            # Check whether the users display name contains any words in our blacklist
+            match = self.get_name_match(member.display_name)
+            if not match:
                 return
 
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
@@ -240,7 +251,7 @@ class Filtering(Cog):
             log_string = (
                 f"**User:** {format_user(member)}\n"
                 f"**Display Name:** {escape_markdown(member.display_name)}\n"
-                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+                f"**Bad Match:** {match.group()}"
             )
 
             await self.mod_log.send_log_message(

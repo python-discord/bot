@@ -174,7 +174,7 @@ guild:
         how_to_get_help:    704250143020417084
 
         # Topical
-        discord_py:         343944376055103488
+        discord_bots:         343944376055103488
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
@@ -377,7 +377,7 @@ urls:
     site_logs_view:                     !JOIN [*STAFF, "/bot/logs"]
 
     # Snekbox
-    snekbox_eval_api: "http://snekbox.default.svc.cluster.local/eval"
+    snekbox_eval_api: !ENV ["SNEKBOX_EVAL_API", "http://snekbox.default.svc.cluster.local/eval"]
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"

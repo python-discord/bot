@@ -12,3 +12,4 @@ INVITE_RE = re.compile(
     r"(?P<invite>[a-zA-Z0-9\-]+)",                # the invite code itself
     flags=re.IGNORECASE
 )
+MESSAGE_ID_RE = re.compile(r'(?P<message_id>[0-9]{15,20})$')
