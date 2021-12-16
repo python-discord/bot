@@ -363,13 +363,19 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         )
 
     @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
-    async def test_create_user_embed_basic_information_outside_of_moderation_channels(self, infraction_counts):
+    @unittest.mock.patch(f"{COG_PATH}.user_messages", new_callable=unittest.mock.AsyncMock)
+    async def test_create_user_embed_basic_information_outside_of_moderation_channels(
+        self,
+        user_messages,
+        infraction_counts,
+    ):
         """The embed should contain only basic infraction data outside of mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
 
         moderators_role = helpers.MockRole(name='Moderators')
 
         infraction_counts.return_value = ("Infractions", "basic infractions info")
+        user_messages.return_value = ("Messages", "user message counts")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
         embed = await self.cog.create_user_embed(ctx, user)
@@ -394,8 +400,13 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(
-            "basic infractions info",
+            "user message counts",
             embed.fields[2].value
+        )
+
+        self.assertEqual(
+            "basic infractions info",
+            embed.fields[3].value
         )
 
     @unittest.mock.patch(

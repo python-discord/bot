@@ -298,11 +298,11 @@ class Information(Cog):
                 "Member information",
                 membership
             ),
+            await self.user_messages(user),
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
-            fields.append(await self.user_messages(user))
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
