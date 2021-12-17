@@ -17,7 +17,7 @@ async def apply(
 
     total_recent_mentions = sum(
         not user.bot
-        and msg.author.id != user.id
+        and msg.author != user
         for msg in relevant_messages
         for user in msg.mentions
     )
