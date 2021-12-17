@@ -23,8 +23,11 @@ async def apply(
     )
 
     # we don't want to include the mentions that the author mentioned with a reply
-    total_recent_mentions = 0
     for msg in relevant_messages:
+        # break the loop to save processing if total_recent_mentions is 0
+        # additionally, ensures that we don't find a mention that wasn't originally there.
+        if not total_recent_mentions:
+            break
         if not msg.reference:
             continue
         resolved = msg.reference.resolved
