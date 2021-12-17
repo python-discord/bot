@@ -1,6 +1,8 @@
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from discord import Member, Message
+from discord import DeletedReferencedMessage, Member, Message
+
+import bot
 
 
 async def apply(
@@ -15,9 +17,25 @@ async def apply(
 
     total_recent_mentions = sum(
         not user.bot
+        and msg.author.id != user.id
         for msg in relevant_messages
         for user in msg.mentions
     )
+
+    # we don't want to include the mentions that the author mentioned with a reply
+    total_recent_mentions = 0
+    for msg in relevant_messages:
+        if not msg.reference:
+            continue
+        resolved = msg.reference.resolved
+        if isinstance(resolved, DeletedReferencedMessage):
+            # can't figure out the author
+            continue
+        if not resolved:
+            ref = msg.reference
+            resolved = await bot.instance.get_partial_messageable(ref.channel_id).fetch_message(ref.message_id)
+        if resolved.author in msg.mentions:
+            total_recent_mentions -= 1
 
     if total_recent_mentions > config['max']:
         return (
