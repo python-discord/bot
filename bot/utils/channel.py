@@ -36,12 +36,16 @@ def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
         return False
 
 
-def is_staff_channel(channel: discord.TextChannel) -> bool:
+def is_staff_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
     """True if `channel` is considered a staff channel."""
     guild = bot.instance.get_guild(constants.Guild.id)
 
     if channel.type is discord.ChannelType.category:
         return False
+
+    # Get the parent channel if the channel is a discord thread
+    if isinstance(channel, discord.Thread):
+        channel = channel.parent
 
     # Channel is staff-only if staff have explicit read allow perms
     # and @everyone has explicit read deny perms

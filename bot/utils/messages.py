@@ -6,12 +6,13 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
-from discord.ext.commands import Context
+from discord.ext.commands import Context, MessageConverter, MessageNotFound
 
 import bot
-from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import Channels, Emojis, MODERATION_ROLES, NEGATIVE_REPLIES, Roles
 from bot.log import get_logger
 from bot.utils import scheduling
+from bot.utils.regex import DISCORD_MESSAGE_LINK_RE
 
 log = get_logger(__name__)
 
@@ -238,3 +239,102 @@ async def send_denial(ctx: Context, reason: str) -> discord.Message:
 def format_user(user: discord.abc.User) -> str:
     """Return a string for `user` which has their mention and ID."""
     return f"{user.mention} (`{user.id}`)"
+
+
+def shorten_text(text: str) -> str:
+    """
+    Truncate the text if there are over 3 lines or 300 characters, or if it is a single word.
+
+    The maximum length of the string would be 303 characters across 3 lines at maximum.
+    """
+    original_length = len(text)
+    # Truncate text to a maximum of 300 characters
+    if len(text) > 300:
+        text = text[:300]
+
+    # Limit to a maximum of three lines
+    text = "\n".join(text.split("\n", maxsplit=3)[:3])
+
+    # If it is a single word, then truncate it to 50 characters
+    if text.find(" ") == -1:
+        text = text[:50]
+
+    # Remove extra whitespaces from the `text`
+    text = text.strip()
+
+    # Add placeholder if the text was shortened
+    if len(text) < original_length:
+        text = f"{text}..."
+
+    return text
+
+
+async def extract_message_links(message: discord.Message) -> Optional[list[str]]:
+    """This method extracts discord message links from a message object."""
+    return [msg_link[0] for msg_link in DISCORD_MESSAGE_LINK_RE.findall(message.content)]
+
+
+async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[discord.Embed]:
+    """Create an embedded representation of the discord message link."""
+    embed = None
+
+    try:
+        message: discord.Message = await MessageConverter().convert(ctx, message_link)
+    except MessageNotFound:
+        mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
+        last_100_logs: list[discord.Message] = await mod_logs_channel.history(limit=100).flatten()
+
+        for log_entry in last_100_logs:
+            if not log_entry.embeds:
+                continue
+
+            log_embed: discord.Embed = log_entry.embeds[0]
+            if (
+                log_embed.author.name == "Message deleted"
+                and f"[Jump to message]({message_link})" in log_embed.description
+            ):
+                embed = discord.Embed(
+                    colour=discord.Colour.dark_gold(),
+                    title="Deleted Message Link",
+                    description=(
+                        f"Found <#{Channels.mod_log}> entry for deleted message: "
+                        f"[Jump to message]({log_entry.jump_url})."
+                    )
+                )
+        if not embed:
+            embed = discord.Embed(
+                colour=discord.Colour.red(),
+                title="Bad Message Link",
+                description=f"Message {message_link} not found."
+            )
+    except discord.DiscordException as e:
+        log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
+    else:
+        channel = message.channel
+        if not channel.permissions_for(channel.guild.get_role(Roles.helpers)).view_channel:
+            log.info(
+                f"Helpers don't have read permissions in #{channel.name},"
+                f" not sending message link embed for {message_link}"
+            )
+            return
+
+        embed = discord.Embed(
+            colour=discord.Colour.gold(),
+            description=(
+                f"**Author:** {format_user(message.author)}\n"
+                f"**Channel:** {channel.mention} ({channel.category}"
+                f"{f'/#{channel.parent.name} - ' if isinstance(channel, discord.Thread) else '/#'}"
+                f"{channel.name})\n"
+            ),
+            timestamp=message.created_at
+        )
+        embed.add_field(
+            name="Content",
+            value=shorten_text(message.content) if message.content else "[No Message Content]"
+        )
+        embed.set_footer(text=f"Message ID: {message.id}")
+
+        if message.attachments:
+            embed.set_image(url=message.attachments[0].url)
+
+    return embed
