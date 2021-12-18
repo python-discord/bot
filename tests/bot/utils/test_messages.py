@@ -68,15 +68,16 @@ class TestMessages(unittest.TestCase):
     def test_extract_invalid_message_links(self):
         """Test message link detection regex."""
         test_links = (
-            "https://discord.com/channels/884793126525489203/884793128073195592/921717920869003294",
-            "http:/discord.com/channels/884793126525489203/884793128073195592/9217179208609003294",
-            "http://ptb.discord.com/channels/8847931265254203/884793128073195592/921717920869003294",
+            "https://discord.com/channels/884793126525489203/884793128073195592000/921717920869003294",
+            "http:/discord.com/channels/884793126525489203/884793128073195592/92171792086900329400",
+            "http://ptb.discord.com/channels/884793126525489203/884793128073195592000/921717920869003294",
             "http://canary.discord.app/channels/884793126525489203/884793128073195592/921717920869003294",
         )
 
         for link in test_links:
             with self.subTest(token=link):
                 results = regex.DISCORD_MESSAGE_LINK_RE.findall(link)
+                print(results)
                 self.assertEqual(
                     len(results), 0, f"Invalid link '{link}' was matched by the regex"
                 )
