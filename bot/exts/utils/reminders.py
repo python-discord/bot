@@ -10,7 +10,7 @@ from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
-from bot.converters import DayDuration, Duration, Expiry, UnambiguousUser
+from bot.converters import DayDuration, Expiry, UnambiguousUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import scheduling
@@ -29,6 +29,7 @@ MAXIMUM_REMINDERS = 5
 MIDNIGHT = time(hour=0, minute=0, second=0, microsecond=0)
 Mentionable = t.Union[discord.Member, discord.Role]
 ReminderMention = t.Union[UnambiguousUser, discord.Role]
+Expiration = t.Union[DayDuration, Expiry]
 
 
 class Reminders(Cog):
@@ -43,6 +44,21 @@ class Reminders(Cog):
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
+
+    @staticmethod
+    async def validate_expiry(ctx: Context, expiration: Expiration) -> t.Optional[datetime]:
+        """
+        Validate the provided input is in the future and not the past.
+
+        The converters we are using can give datetimes in the past,
+        so we need to ensure the user provided a time in the future.
+        """
+        if not expiration.tzinfo:
+            expiration = expiration.replace(tzinfo=timezone.utc)
+        if expiration < datetime.now(timezone.utc):
+            await send_denial(ctx, "You must specify a time in the future (time is calculated from UTC)!")
+            return None
+        return expiration
 
     async def reschedule_reminders(self) -> None:
         """Get all current reminders from the API and reschedule them."""
@@ -217,7 +233,7 @@ class Reminders(Cog):
         self,
         ctx: Context,
         mentions: Greedy[ReminderMention],
-        expiration: t.Union[DayDuration, Expiry],
+        expiration: Expiration,
         *,
         content: t.Optional[str] = None,
     ) -> None:
@@ -242,7 +258,7 @@ class Reminders(Cog):
         self,
         ctx: Context,
         mentions: Greedy[ReminderMention],
-        expiration: t.Union[DayDuration, Expiry],
+        expiration: Expiration,
         *,
         content: t.Optional[str] = None,
     ) -> None:
@@ -282,11 +298,9 @@ class Reminders(Cog):
             if len(active_reminders) > MAXIMUM_REMINDERS:
                 await send_denial(ctx, "You have too many active reminders!")
                 return
-        # ensure that the time is in the future
-        if not expiration.tzinfo:
-            expiration = expiration.replace(tzinfo=timezone.utc)
-        if expiration < datetime.now(timezone.utc):
-            await send_denial(ctx, "You must specify a time in the future (time is calculated from UTC)!")
+        expiration = await self.validate_expiry(ctx, expiration)
+        if not expiration:
+            # error handled by validate_expiry
             return
         # Remove duplicate mentions
         mentions = set(mentions)
@@ -422,7 +436,7 @@ class Reminders(Cog):
         await ctx.send_help(ctx.command)
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
-    async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: Duration) -> None:
+    async def edit_reminder_duration(self, ctx: Context, id_: int, expiration: t.Union[DayDuration, Expiry]) -> None:
         """
         Edit one of your reminder's expiration.
 
@@ -437,6 +451,10 @@ class Reminders(Cog):
 
         For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
         """
+        expiration = await self.validate_expiry(ctx, expiration)
+        if not expiration:
+            # error handled by validate_expiry
+            return
         await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
