@@ -1,7 +1,7 @@
 import random
 import textwrap
 import typing as t
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from operator import itemgetter
 
 import discord
@@ -10,7 +10,7 @@ from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
-from bot.converters import Duration, UnambiguousUser
+from bot.converters import DayDuration, Duration, Expiry, UnambiguousUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import scheduling
@@ -26,7 +26,7 @@ log = get_logger(__name__)
 LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
-
+MIDNIGHT = time(hour=0, minute=0, second=0, microsecond=0)
 Mentionable = t.Union[discord.Member, discord.Role]
 ReminderMention = t.Union[UnambiguousUser, discord.Role]
 
@@ -214,7 +214,12 @@ class Reminders(Cog):
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
+        self,
+        ctx: Context,
+        mentions: Greedy[ReminderMention],
+        expiration: t.Union[DayDuration, Expiry],
+        *,
+        content: t.Optional[str] = None,
     ) -> None:
         """
         Commands for managing your reminders.
@@ -234,7 +239,12 @@ class Reminders(Cog):
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
+        self,
+        ctx: Context,
+        mentions: Greedy[ReminderMention],
+        expiration: t.Union[DayDuration, Expiry],
+        *,
+        content: t.Optional[str] = None,
     ) -> None:
         """
         Set yourself a simple reminder.
@@ -272,7 +282,12 @@ class Reminders(Cog):
             if len(active_reminders) > MAXIMUM_REMINDERS:
                 await send_denial(ctx, "You have too many active reminders!")
                 return
-
+        # ensure that the time is in the future
+        if not expiration.tzinfo:
+            expiration = expiration.replace(tzinfo=timezone.utc)
+        if expiration < datetime.now(timezone.utc):
+            await send_denial(ctx, "You must specify a time in the future (time is calculated from UTC)!")
+            return
         # Remove duplicate mentions
         mentions = set(mentions)
         mentions.discard(ctx.author)
@@ -309,8 +324,13 @@ class Reminders(Cog):
                 'mentions': mention_ids,
             }
         )
-
-        mention_string = f"Your reminder will arrive on {discord_timestamp(expiration, TimestampFormats.DAY_TIME)}"
+        # determine the mode if the reminder will show all of the data or just the day
+        # if the reminder will arrive at exactly midnight, its certainly chosen from a date
+        if expiration.time() == MIDNIGHT:
+            timestamp_format = TimestampFormats.DATE
+        else:
+            timestamp_format = TimestampFormats.DAY_TIME
+        mention_string = f"Your reminder will arrive on {discord_timestamp(expiration, timestamp_format)}"
 
         if mentions:
             mention_string += f" and will mention {len(mentions)} other(s)"
