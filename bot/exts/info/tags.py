@@ -275,6 +275,11 @@ class Tags(Cog):
         ]
 
         tag = self.tags.get(tag_identifier)
+
+        if tag is None and tag_identifier.group is not None:
+            # Try exact match with only the name
+            tag = self.tags.get(TagIdentifier(None, tag_identifier.group))
+
         if tag is None and len(filtered_tags) == 1:
             tag_identifier = filtered_tags[0][0]
             tag = filtered_tags[0][1]
