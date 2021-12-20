@@ -53,7 +53,7 @@ class ModPings(Cog):
         )
 
     async def fetch_guild(self) -> None:
-        """Fetch the guild."""
+        """Fetch the configured constants.Guild.id guild object and assign to self.guild."""
         await self.bot.wait_until_guild_available()
         self.guild = self.bot.get_guild(Guild.id)
 
@@ -131,13 +131,14 @@ class ModPings(Cog):
         """Reapply the moderator's role to the given moderator."""
         await self.fetch_guild_task
         if self.guild.get_role(Roles.mod_team) not in mod.roles:
-            log.info(
+            log.warning(
                 f"Preventing {mod} from being assigned the moderator role"
                 "since they are missing the mod team role."
             )
-            # the code that calls this method either prechecks the moderator's roles
-            # or it doesn't matter since this was called in a task
-            # the logging statement above is enough to ensure that this was caught
+            # The code that calls this method either prechecks the moderator's roles,
+            # or it doesn't matter since this was called in a task.
+            # The logging statement above is enough to ensure that this was caught
+            # as with a logging level of WARNING, it will create a sentry issue.
             return
         log.trace(f"Re-applying role to mod with ID {mod.id}.")
         await mod.add_roles(self.moderators_role, reason=reason or "Pings off period expired.")
