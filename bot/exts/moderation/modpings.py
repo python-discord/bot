@@ -53,7 +53,7 @@ class ModPings(Cog):
         )
 
     async def fetch_guild(self) -> None:
-        """Fetch the configured constants.Guild.id guild object and assign to self.guild."""
+        """Fetch the configured `constants.Guild.id` guild object and assign to `self.guild`."""
         await self.bot.wait_until_guild_available()
         self.guild = self.bot.get_guild(Guild.id)
 
