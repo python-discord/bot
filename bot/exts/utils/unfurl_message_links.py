@@ -19,7 +19,7 @@ class UnfurlMsgLinks(Cog):
         if (
             not message.guild
             or message.guild.id != Guild.id
-            or message.channel.id != Channels.incidents
+            or message.channel.id == Channels.incidents
             or not is_staff_channel(message.channel)
         ):
             return
