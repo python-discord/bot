@@ -641,6 +641,7 @@ if t.TYPE_CHECKING:
     UnambiguousUser = discord.User  # noqa: F811
     UnambiguousMember = discord.Member  # noqa: F811
     Infraction = t.Optional[dict]  # noqa: F811
+    DayDuration = datetime  # noqa: F811
 
 Expiry = t.Union[Duration, ISODateTime]
 MemberOrUser = t.Union[discord.Member, discord.User]
