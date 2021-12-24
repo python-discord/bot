@@ -89,9 +89,7 @@ class ModPings(Cog):
             guild = self.bot.get_guild(Guild.id)
             mod = await get_or_fetch_member(guild, mod_id)
             if not mod:
-                log.info(
-                    f"I tried to get moderator with ID `{mod_id}`, but they don't appear to be on the server 😔"
-                )
+                log.warning(f"I tried to get moderator with ID `{mod_id}`, but they don't appear to be on the server 😔")
                 continue
 
             self._modpings_scheduler.schedule_at(
