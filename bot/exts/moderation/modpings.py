@@ -218,22 +218,20 @@ class ModPings(Cog):
     @has_any_role(*MODERATION_ROLES)
     async def schedule_modpings(self, ctx: Context, start: DayDuration, end: DayDuration) -> None:
         """
-        Schedule modpings role to be added at <start> and removed at <end> every day at UTC!
+        Schedule modpings role to be added at <start> and removed at <end> every day (UTC time)!
 
-        You can have the modpings role off for a maximum of 16 hours i.e. having the modpings role
-        on for a minimum of 8 hours in a day.
+        You must have the pingable Moderators role for a minimum of 8 hours a day,
+        meaning the schedule removing this role has a maximum duration of 16 hours.
+         The command expects two arguments, `start` and `end`, which are when the role is removed and re-added.
 
-        The command expects two arguments `start` and `end` which represent hour and minute of a day,
-        you would get the modpings role at `start` and it would removed from you at `end`. `start` and
-        `end` can be in the following formats:
+        The following formats are accepted for `start` and `end`:
             - H:Mam/pm (10:14pm)
             - HMam/pm (1014pm)
             - Ham/pm (10pm)
             - H (22 - 24hour format as no meridiem is specified)
             - HM (2214 - 24hour format as no meridiem is specified)
 
-        If a moderator has scheduled temporarily removed modpings role and its time for their modpings
-        schedule start, the off would take higher priority and the modpings role won't be added for them.
+        The pingable Moderators role won't be re-added until the scheduled time has finished.
         """
         if end < start:
             end += datetime.timedelta(days=1)

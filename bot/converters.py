@@ -578,7 +578,7 @@ class DayDuration(Converter):
     """
     Convert a string representing day time (hours and minutes) to a UTC datetime object.
 
-    The hours and minutes would be combined with UTC day if no 'am' or 'pm' is passed with
+    The hours and minutes would be combined with UTC day. If no 'am' or 'pm' is passed with
     the string, then it is assumed that the time is in 24 hour format.
 
     The following formats are accepted:
@@ -598,7 +598,7 @@ class DayDuration(Converter):
     )
 
     async def convert(self, _ctx: Context, argument: str) -> datetime:
-        """Attempts to converting `argument` to an UTC datetime object."""
+        """Attempts to convert `argument` to a UTC datetime object."""
         match = self.TIME_RE.fullmatch(argument)
         if not match:
             raise BadArgument(f"`{argument}` is not a valid time duration string.")
