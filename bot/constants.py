@@ -432,7 +432,7 @@ class Channels(metaclass=YAMLGetter):
     black_formatter: int
 
     bot_commands: int
-    discord_py: int
+    discord_bots: int
     esoteric: int
     voice_gate: int
     code_jam_planning: int
@@ -476,6 +476,7 @@ class Webhooks(metaclass=YAMLGetter):
     big_brother: int
     dev_log: int
     duck_pond: int
+    incidents: int
     incidents_archive: int
 
 
@@ -483,7 +484,12 @@ class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
+    # Self-assignable roles, see the Subscribe cog
+    advent_of_code: int
     announcements: int
+    lovefest: int
+    pyweek_announcements: int
+
     contributors: int
     help_cooldown: int
     muted: int
@@ -682,8 +688,16 @@ class VideoPermission(metaclass=YAMLGetter):
     default_permission_duration: int
 
 
+class ThreadArchiveTimes(Enum):
+    HOUR = 60
+    DAY = 1440
+    THREE_DAY = 4320
+    WEEK = 10080
+
+
 # Debug mode
 DEBUG_MODE: bool = _CONFIG_YAML["debug"] == "true"
+FILE_LOGS: bool = _CONFIG_YAML["file_logs"].lower() == "true"
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)

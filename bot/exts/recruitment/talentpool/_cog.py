@@ -483,12 +483,9 @@ class TalentPool(Cog, name="Talentpool"):
     @has_any_role(*MODERATION_ROLES)
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
-        review = (await self.reviewer.make_review(user_id))[0]
-        if review:
-            file = discord.File(StringIO(review), f"{user_id}_review.md")
-            await ctx.send(file=file)
-        else:
-            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
+        review, _, _ = await self.reviewer.make_review(user_id)
+        file = discord.File(StringIO(review), f"{user_id}_review.md")
+        await ctx.send(file=file)
 
     @nomination_group.command(aliases=('review',))
     @has_any_role(*MODERATION_ROLES)
@@ -501,7 +498,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
-    async def on_member_ban(self, guild: Guild, user: Union[MemberOrUser]) -> None:
+    async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
         """Remove `user` from the talent pool after they are banned."""
         await self.end_nomination(user.id, "User was banned.")
 
@@ -514,6 +511,9 @@ class TalentPool(Cog, name="Talentpool"):
         Adding an incident reaction will archive the message.
         """
         if payload.channel_id != Channels.nomination_voting:
+            return
+
+        if payload.user_id == self.bot.user.id:
             return
 
         message: PartialMessage = self.bot.get_channel(payload.channel_id).get_partial_message(payload.message_id)
