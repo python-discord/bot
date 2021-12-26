@@ -8,6 +8,7 @@ import arrow
 import dateutil.parser
 import discord.errors
 import regex
+import tldextract
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
@@ -535,7 +536,10 @@ class Filtering(Cog):
         for match in URL_RE.finditer(text):
             for url in domain_blacklist:
                 if url.lower() in match.group(1).lower():
-                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
+                    blacklisted_parsed = tldextract.extract(url.lower())
+                    url_parsed = tldextract.extract(match.group(1).lower())
+                    if blacklisted_parsed.registered_domain == url_parsed.registered_domain:
+                        return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod
