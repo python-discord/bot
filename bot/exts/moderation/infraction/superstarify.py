@@ -1,5 +1,4 @@
 import json
-import logging
 import random
 import textwrap
 import typing as t
@@ -14,10 +13,12 @@ from bot.bot import Bot
 from bot.converters import Duration, Expiry
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.log import get_logger
+from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 from bot.utils.time import format_infraction
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
 SUPERSTARIFY_DEFAULT_DURATION = "1h"
 
@@ -132,6 +133,10 @@ class Superstarify(InfractionScheduler, Cog):
         An optional reason can be provided, which would be added to a message stating their old nickname
         and linking to the nickname policy.
         """
+        if member.top_role >= ctx.me.top_role:
+            await ctx.send(":x: I can't starify users above or equal to me in the role hierarchy.")
+            return
+
         if await _utils.get_active_infraction(ctx, member, "superstar"):
             return
 
@@ -192,13 +197,13 @@ class Superstarify(InfractionScheduler, Cog):
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
 
-    async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
-        """Pardon a superstar infraction and return a log dict."""
+    async def _pardon_action(self, infraction: _utils.Infraction, notify: bool) -> t.Optional[t.Dict[str, str]]:
+        """Pardon a superstar infraction, optionally notify the user via DM, and return a log dict."""
         if infraction["type"] != "superstar":
             return
 
         guild = self.bot.get_guild(constants.Guild.id)
-        user = guild.get_member(infraction["user"])
+        user = await get_or_fetch_member(guild, infraction["user"])
 
         # Don't bother sending a notification if the user left the guild.
         if not user:
@@ -208,18 +213,19 @@ class Superstarify(InfractionScheduler, Cog):
             )
             return {}
 
-        # DM the user about the expiration.
-        notified = await _utils.notify_pardon(
-            user=user,
-            title="You are no longer superstarified",
-            content="You may now change your nickname on the server.",
-            icon_url=_utils.INFRACTION_ICONS["superstar"][1]
-        )
+        log_text = {"Member": format_user(user)}
 
-        return {
-            "Member": format_user(user),
-            "DM": "Sent" if notified else "**Failed**"
-        }
+        # DM the user about the expiration.
+        if notify:
+            notified = await _utils.notify_pardon(
+                user=user,
+                title="You are no longer superstarified",
+                content="You may now change your nickname on the server.",
+                icon_url=_utils.INFRACTION_ICONS["superstar"][1]
+            )
+            log_text["DM"] = "Sent" if notified else "**Failed**"
+
+        return log_text
 
     @staticmethod
     def get_nick(infraction_id: int, member_id: int) -> str:

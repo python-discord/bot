@@ -1,26 +1,29 @@
 import colorsys
-import logging
 import pprint
 import textwrap
 from collections import defaultdict
+from textwrap import shorten
 from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
+from discord.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
+from discord.utils import escape_markdown
 
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.converters import FetchedMember
+from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Information(Cog):
@@ -45,13 +48,13 @@ class Information(Cog):
     @staticmethod
     def join_role_stats(role_ids: list[int], guild: Guild, name: Optional[str] = None) -> dict[str, int]:
         """Return a dictionary with the number of `members` of each role given, and the `name` for this joined group."""
-        members = 0
+        member_count = 0
         for role_id in role_ids:
             if (role := guild.get_role(role_id)) is not None:
-                members += len(role.members)
+                member_count += len(role.members)
             else:
                 raise NonExistentRoleError(role_id)
-        return {name or role.name.title(): members}
+        return {name or role.name.title(): member_count}
 
     @staticmethod
     def get_member_counts(guild: Guild) -> dict[str, int]:
@@ -71,7 +74,8 @@ class Information(Cog):
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
         if cog := self.bot.get_cog("Talentpool"):
-            talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
+            num_nominated = len(cog.cache) if cog.cache else "-"
+            talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
         if cog := self.bot.get_cog("Big Brother"):
@@ -94,7 +98,7 @@ class Information(Cog):
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
         """)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -109,12 +113,12 @@ class Information(Cog):
         # Build an embed
         embed = Embed(
             title=f"Role information (Total {len(roles)} role{'s' * (len(role_list) > 1)})",
-            colour=Colour.blurple()
+            colour=Colour.og_blurple()
         )
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -167,15 +171,17 @@ class Information(Cog):
     @command(name="server", aliases=["server_info", "guild", "guild_info"])
     async def server_info(self, ctx: Context) -> None:
         """Returns an embed full of server information."""
-        embed = Embed(colour=Colour.blurple(), title="Server Information")
+        embed = Embed(colour=Colour.og_blurple(), title="Server Information")
 
         created = discord_timestamp(ctx.guild.created_at, TimestampFormats.RELATIVE)
-        region = ctx.guild.region
         num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
         # Server Features are only useful in certain channels
         if ctx.channel.id in (
-            *constants.MODERATION_CHANNELS, constants.Channels.dev_core, constants.Channels.dev_contrib
+            *constants.MODERATION_CHANNELS,
+            constants.Channels.dev_core,
+            constants.Channels.dev_contrib,
+            constants.Channels.bot_commands
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
@@ -192,12 +198,11 @@ class Information(Cog):
 
         embed.description = (
             f"Created: {created}"
-            f"\nVoice region: {region}"
             f"{features}"
             f"\nRoles: {num_roles}"
             f"\nMember status: {member_status}"
         )
-        embed.set_thumbnail(url=ctx.guild.icon_url)
+        embed.set_thumbnail(url=ctx.guild.icon.url)
 
         # Members
         total_members = f"{ctx.guild.member_count:,}"
@@ -220,8 +225,13 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user: FetchedMember = None) -> None:
+    async def user_info(self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None) -> None:
         """Returns info about a user."""
+        if isinstance(user_or_message, Message):
+            user = user_or_message.author
+        else:
+            user = user_or_message
+
         if user is None:
             user = ctx.author
 
@@ -231,19 +241,20 @@ class Information(Cog):
             return
 
         # Will redirect to #bot-commands if it fails.
-        if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
+        if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: FetchedMember) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: MemberOrUser) -> Embed:
         """Creates an embed containing information on the `user`."""
-        on_server = bool(ctx.guild.get_member(user.id))
+        on_server = bool(await get_or_fetch_member(ctx.guild, user.id))
 
         created = discord_timestamp(user.created_at, TimestampFormats.RELATIVE)
 
         name = str(user)
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
+        name = escape_markdown(name)
 
         if user.public_flags.verified_bot:
             name += f" {constants.Emojis.verified_bot}"
@@ -257,7 +268,11 @@ class Information(Cog):
                 badges.append(emoji)
 
         if on_server:
-            joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            if user.joined_at:
+                joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+            else:
+                joined = "Unable to get join date"
+
             # The 0 is for excluding the default @everyone role,
             # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
             roles = ", ".join(role.mention for role in user.roles[:0:-1])
@@ -302,12 +317,12 @@ class Information(Cog):
         for field_name, field_content in fields:
             embed.add_field(name=field_name, value=field_content, inline=False)
 
-        embed.set_thumbnail(url=user.avatar_url_as(static_format="png"))
-        embed.colour = user.colour if user.colour != Colour.default() else Colour.blurple()
+        embed.set_thumbnail(url=user.display_avatar.url)
+        embed.colour = user.colour if user.colour != Colour.default() else Colour.og_blurple()
 
         return embed
 
-    async def basic_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def basic_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
         infractions = await self.bot.api_client.get(
             'bot/infractions',
@@ -324,7 +339,7 @@ class Information(Cog):
 
         return "Infractions", infraction_output
 
-    async def expanded_user_infraction_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def expanded_user_infraction_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """
         Gets expanded infraction counts for the given `member`.
 
@@ -365,7 +380,7 @@ class Information(Cog):
 
         return "Infractions", "\n".join(infraction_output)
 
-    async def user_nomination_counts(self, user: FetchedMember) -> Tuple[str, str]:
+    async def user_nomination_counts(self, user: MemberOrUser) -> Tuple[str, str]:
         """Gets the active and historical nomination counts for the given `member`."""
         nominations = await self.bot.api_client.get(
             'bot/nominations',
@@ -390,7 +405,7 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
-    async def user_messages(self, user: FetchedMember) -> Tuple[Union[bool, str], Tuple[str, str]]:
+    async def user_messages(self, user: MemberOrUser) -> Tuple[Union[bool, str], Tuple[str, str]]:
         """
         Gets the amount of messages for `member`.
 
@@ -406,7 +421,12 @@ class Information(Cog):
                 activity_output = "No activity"
         else:
             activity_output.append(user_activity["total_messages"] or "No messages")
-            activity_output.append(user_activity["activity_blocks"] or "No activity")
+
+            if (activity_blocks := user_activity.get("activity_blocks")) is not None:
+                # activity_blocks is not included in the response if the user has a lot of messages
+                activity_output.append(activity_blocks or "No activity")  # Special case when activity_blocks is 0.
+            else:
+                activity_output.append("Too many to count!")
 
             activity_output = "\n".join(
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
@@ -449,11 +469,12 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
-    @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
-    async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
-        """Shows information about the raw API response."""
+    async def send_raw_content(self, ctx: Context, message: Message, json: bool = False) -> None:
+        """
+        Send information about the raw API response for a `discord.Message`.
+
+        If `json` is True, send the information in a copy-pasteable Python format.
+        """
         if ctx.author not in message.channel.members:
             await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
@@ -489,10 +510,51 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    @group(invoke_without_command=True)
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    async def raw(self, ctx: Context, message: Message) -> None:
+        """Shows information about the raw API response."""
+        await self.send_raw_content(ctx, message)
+
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
-        await ctx.invoke(self.raw, message=message, json=True)
+        await self.send_raw_content(ctx, message, json=True)
+
+    @command(aliases=("rule",))
+    async def rules(self, ctx: Context, rules: Greedy[int]) -> None:
+        """Provides a link to all rules or, if specified, displays specific rule(s)."""
+        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
+
+        if not rules:
+            # Rules were not submitted. Return the default description.
+            rules_embed.description = (
+                "The rules and guidelines that apply to this community can be found on"
+                " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
+                " all members of the community to have read and understood these."
+            )
+
+            await ctx.send(embed=rules_embed)
+            return
+
+        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+
+        # Remove duplicates and sort the rule indices
+        rules = sorted(set(rules))
+
+        invalid = ", ".join(str(index) for index in rules if index < 1 or index > len(full_rules))
+
+        if invalid:
+            await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
+            return
+
+        for rule in rules:
+            self.bot.stats.incr(f"rule_uses.{rule}")
+
+        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
+
+        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
 def setup(bot: Bot) -> None:

@@ -1,4 +1,5 @@
 from bot.bot import Bot
+
 from ._redis_cache import DocRedisCache
 
 MAX_SIGNATURE_AMOUNT = 3

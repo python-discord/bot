@@ -1,19 +1,12 @@
-import datetime
 import re
 import unittest
+from datetime import MAXYEAR, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument
 
-from bot.converters import (
-    Duration,
-    HushDurationConverter,
-    ISODateTime,
-    PackageName,
-    TagContentConverter,
-    TagNameConverter,
-)
+from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName
 
 
 class ConverterTests(unittest.IsolatedAsyncioTestCase):
@@ -24,59 +17,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         cls.context = MagicMock
         cls.context.author = 'bob'
 
-        cls.fixed_utc_now = datetime.datetime.fromisoformat('2019-01-01T00:00:00')
-
-    async def test_tag_content_converter_for_valid(self):
-        """TagContentConverter should return correct values for valid input."""
-        test_values = (
-            ('hello', 'hello'),
-            ('  h ello  ', 'h ello'),
-        )
-
-        for content, expected_conversion in test_values:
-            with self.subTest(content=content, expected_conversion=expected_conversion):
-                conversion = await TagContentConverter.convert(self.context, content)
-                self.assertEqual(conversion, expected_conversion)
-
-    async def test_tag_content_converter_for_invalid(self):
-        """TagContentConverter should raise the proper exception for invalid input."""
-        test_values = (
-            ('', "Tag contents should not be empty, or filled with whitespace."),
-            ('   ', "Tag contents should not be empty, or filled with whitespace."),
-        )
-
-        for value, exception_message in test_values:
-            with self.subTest(tag_content=value, exception_message=exception_message):
-                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
-                    await TagContentConverter.convert(self.context, value)
-
-    async def test_tag_name_converter_for_valid(self):
-        """TagNameConverter should return the correct values for valid tag names."""
-        test_values = (
-            ('tracebacks', 'tracebacks'),
-            ('Tracebacks', 'tracebacks'),
-            ('  Tracebacks  ', 'tracebacks'),
-        )
-
-        for name, expected_conversion in test_values:
-            with self.subTest(name=name, expected_conversion=expected_conversion):
-                conversion = await TagNameConverter.convert(self.context, name)
-                self.assertEqual(conversion, expected_conversion)
-
-    async def test_tag_name_converter_for_invalid(self):
-        """TagNameConverter should raise the correct exception for invalid tag names."""
-        test_values = (
-            ('👋', "Don't be ridiculous, you can't use that character!"),
-            ('', "Tag names should not be empty, or filled with whitespace."),
-            ('  ', "Tag names should not be empty, or filled with whitespace."),
-            ('42', "Tag names must contain at least one letter."),
-            ('x' * 128, "Are you insane? That's way too long!"),
-        )
-
-        for invalid_name, exception_message in test_values:
-            with self.subTest(invalid_name=invalid_name, exception_message=exception_message):
-                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
-                    await TagNameConverter.convert(self.context, invalid_name)
+        cls.fixed_utc_now = datetime.fromisoformat('2019-01-01T00:00:00+00:00')
 
     async def test_package_name_for_valid(self):
         """PackageName returns valid package names unchanged."""
@@ -155,7 +96,7 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
             expected_datetime = self.fixed_utc_now + relativedelta(**duration_dict)
 
             with patch('bot.converters.datetime') as mock_datetime:
-                mock_datetime.utcnow.return_value = self.fixed_utc_now
+                mock_datetime.now.return_value = self.fixed_utc_now
 
                 with self.subTest(duration=duration, duration_dict=duration_dict):
                     converted_datetime = await converter.convert(self.context, duration)
@@ -201,52 +142,53 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
     async def test_duration_converter_out_of_range(self, mock_datetime):
         """Duration converter should raise BadArgument if datetime raises a ValueError."""
         mock_datetime.__add__.side_effect = ValueError
-        mock_datetime.utcnow.return_value = mock_datetime
+        mock_datetime.now.return_value = mock_datetime
 
-        duration = f"{datetime.MAXYEAR}y"
+        duration = f"{MAXYEAR}y"
         exception_message = f"`{duration}` results in a datetime outside the supported range."
         with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
             await Duration().convert(self.context, duration)
 
     async def test_isodatetime_converter_for_valid(self):
         """ISODateTime converter returns correct datetime for valid datetime string."""
+        utc = timezone.utc
         test_values = (
             # `YYYY-mm-ddTHH:MM:SSZ` | `YYYY-mm-dd HH:MM:SSZ`
-            ('2019-09-02T02:03:05Z', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02 02:03:05Z', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+            ('2019-09-02T02:03:05Z', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02 02:03:05Z', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
 
             # `YYYY-mm-ddTHH:MM:SS±HH:MM` | `YYYY-mm-dd HH:MM:SS±HH:MM`
-            ('2019-09-02T03:18:05+01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02 03:18:05+01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02T00:48:05-01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02 00:48:05-01:15', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+            ('2019-09-02T03:18:05+01:15', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02 03:18:05+01:15', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02T00:48:05-01:15', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02 00:48:05-01:15', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
 
             # `YYYY-mm-ddTHH:MM:SS±HHMM` | `YYYY-mm-dd HH:MM:SS±HHMM`
-            ('2019-09-02T03:18:05+0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02 03:18:05+0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02T00:48:05-0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02 00:48:05-0115', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+            ('2019-09-02T03:18:05+0115', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02 03:18:05+0115', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02T00:48:05-0115', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02 00:48:05-0115', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
 
             # `YYYY-mm-ddTHH:MM:SS±HH` | `YYYY-mm-dd HH:MM:SS±HH`
-            ('2019-09-02 03:03:05+01', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02T01:03:05-01', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+            ('2019-09-02 03:03:05+01', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02T01:03:05-01', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
 
             # `YYYY-mm-ddTHH:MM:SS` | `YYYY-mm-dd HH:MM:SS`
-            ('2019-09-02T02:03:05', datetime.datetime(2019, 9, 2, 2, 3, 5)),
-            ('2019-09-02 02:03:05', datetime.datetime(2019, 9, 2, 2, 3, 5)),
+            ('2019-09-02T02:03:05', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
+            ('2019-09-02 02:03:05', datetime(2019, 9, 2, 2, 3, 5, tzinfo=utc)),
 
             # `YYYY-mm-ddTHH:MM` | `YYYY-mm-dd HH:MM`
-            ('2019-11-12T09:15', datetime.datetime(2019, 11, 12, 9, 15)),
-            ('2019-11-12 09:15', datetime.datetime(2019, 11, 12, 9, 15)),
+            ('2019-11-12T09:15', datetime(2019, 11, 12, 9, 15, tzinfo=utc)),
+            ('2019-11-12 09:15', datetime(2019, 11, 12, 9, 15, tzinfo=utc)),
 
             # `YYYY-mm-dd`
-            ('2019-04-01', datetime.datetime(2019, 4, 1)),
+            ('2019-04-01', datetime(2019, 4, 1, tzinfo=utc)),
 
             # `YYYY-mm`
-            ('2019-02-01', datetime.datetime(2019, 2, 1)),
+            ('2019-02-01', datetime(2019, 2, 1, tzinfo=utc)),
 
             # `YYYY`
-            ('2025', datetime.datetime(2025, 1, 1)),
+            ('2025', datetime(2025, 1, 1, tzinfo=utc)),
         )
 
         converter = ISODateTime()
@@ -254,7 +196,6 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         for datetime_string, expected_dt in test_values:
             with self.subTest(datetime_string=datetime_string, expected_dt=expected_dt):
                 converted_dt = await converter.convert(self.context, datetime_string)
-                self.assertIsNone(converted_dt.tzinfo)
                 self.assertEqual(converted_dt, expected_dt)
 
     async def test_isodatetime_converter_for_invalid(self):

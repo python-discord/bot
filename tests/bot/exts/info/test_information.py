@@ -42,7 +42,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         embed = kwargs.pop('embed')
 
         self.assertEqual(embed.title, "Role information (Total 1 role)")
-        self.assertEqual(embed.colour, discord.Colour.blurple())
+        self.assertEqual(embed.colour, discord.Colour.og_blurple())
         self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
     async def test_role_info_command(self):
@@ -50,7 +50,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         dummy_role = helpers.MockRole(
             name="Dummy",
             id=112233445566778899,
-            colour=discord.Colour.blurple(),
+            colour=discord.Colour.og_blurple(),
             position=10,
             members=[self.ctx.author],
             permissions=discord.Permissions(0)
@@ -80,7 +80,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         admin_embed = admin_kwargs["embed"]
 
         self.assertEqual(dummy_embed.title, "Dummy info")
-        self.assertEqual(dummy_embed.colour, discord.Colour.blurple())
+        self.assertEqual(dummy_embed.colour, discord.Colour.og_blurple())
 
         self.assertEqual(dummy_embed.fields[0].value, str(dummy_role.id))
         self.assertEqual(dummy_embed.fields[1].value, f"#{dummy_role.colour.value:0>6x}")
@@ -417,14 +417,14 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
-    async def test_create_user_embed_uses_blurple_colour_when_user_has_no_roles(self):
-        """The embed should be created with a blurple colour if the user has no assigned roles."""
+    async def test_create_user_embed_uses_og_blurple_colour_when_user_has_no_roles(self):
+        """The embed should be created with the og blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=discord.Colour.default())
         embed = await self.cog.create_user_embed(ctx, user)
 
-        self.assertEqual(embed.colour, discord.Colour.blurple())
+        self.assertEqual(embed.colour, discord.Colour.og_blurple())
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
@@ -435,10 +435,9 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=0)
-        user.avatar_url_as.return_value = "avatar url"
+        user.display_avatar.url = "avatar url"
         embed = await self.cog.create_user_embed(ctx, user)
 
-        user.avatar_url_as.assert_called_once_with(static_format="png")
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
 
@@ -507,7 +506,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
     async def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
-        constants.STAFF_ROLES = [self.moderator_role.id]
+        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 
         await self.cog.user_info(self.cog, ctx)
@@ -519,7 +518,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_moderators_can_target_another_member(self, create_embed, constants):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
-        constants.STAFF_ROLES = [self.moderator_role.id]
+        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
 
         await self.cog.user_info(self.cog, ctx, self.target)

@@ -1,11 +1,9 @@
-import logging
-
 import aiohttp
 
 import bot
 from bot import constants
 from bot.bot import Bot, StartupError
-from bot.log import setup_sentry
+from bot.log import get_logger, setup_sentry
 
 setup_sentry()
 
@@ -21,7 +19,7 @@ except StartupError as e:
         message = "Could not connect to Redis. Is it running?"
 
     # The exception is logged with an empty message so the actual message is visible at the bottom
-    log = logging.getLogger("bot")
+    log = get_logger("bot")
     log.fatal("", exc_info=e.exception)
     log.fatal(message)
 

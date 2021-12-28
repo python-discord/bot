@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import re
 import string
 import textwrap
@@ -10,14 +9,17 @@ from typing import Collection, Iterable, Iterator, List, Optional, TYPE_CHECKING
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
 
+from bot.log import get_logger
 from bot.utils.helpers import find_nth_occurrence
+
 from . import MAX_SIGNATURE_AMOUNT
 from ._html import get_dd_description, get_general_description, get_signatures
 from ._markdown import DocMarkdownConverter
+
 if TYPE_CHECKING:
     from ._cog import DocItem
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 _WHITESPACE_AFTER_NEWLINES_RE = re.compile(r"(?<=\n\n)(\s+)")
 _PARAMETERS_RE = re.compile(r"\((.+)\)")

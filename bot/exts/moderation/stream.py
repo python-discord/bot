@@ -1,4 +1,3 @@
-import logging
 from datetime import timedelta, timezone
 from operator import itemgetter
 
@@ -9,13 +8,17 @@ from async_rediscache import RedisCache
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES, VideoPermission
+from bot.constants import (
+    Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
+)
 from bot.converters import Expiry
+from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.scheduling import Scheduler
+from bot.utils import scheduling
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import discord_timestamp, format_infraction_with_duration
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Stream(commands.Cog):
@@ -27,8 +30,8 @@ class Stream(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
-        self.reload_task = self.bot.loop.create_task(self._reload_tasks_from_redis())
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
+        self.reload_task = scheduling.create_task(self._reload_tasks_from_redis(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel all scheduled tasks."""
@@ -44,23 +47,17 @@ class Stream(commands.Cog):
         """Reload outstanding tasks from redis on startup, delete the task if the member has since left the server."""
         await self.bot.wait_until_guild_available()
         items = await self.task_cache.items()
+        guild = self.bot.get_guild(Guild.id)
         for key, value in items:
-            member = self.bot.get_guild(Guild.id).get_member(key)
+            member = await get_or_fetch_member(guild, key)
 
             if not member:
-                # Member isn't found in the cache
-                try:
-                    member = await self.bot.get_guild(Guild.id).fetch_member(key)
-                except discord.errors.NotFound:
-                    log.debug(
-                        f"Member {key} left the guild before we could schedule "
-                        "the revoking of their streaming permissions."
-                    )
-                    await self.task_cache.delete(key)
-                    continue
-                except discord.HTTPException:
-                    log.exception(f"Exception while trying to retrieve member {key} from Discord.")
-                    continue
+                log.debug(
+                    "User with ID %d left the guild before their streaming permissions could be revoked.",
+                    key
+                )
+                await self.task_cache.delete(key)
+                continue
 
             revoke_time = Arrow.utcfromtimestamp(value)
             log.debug(f"Scheduling {member} ({member.id}) to have streaming permission revoked at {revoke_time}")
@@ -193,17 +190,17 @@ class Stream(commands.Cog):
     @commands.command(aliases=('lstream',))
     @commands.has_any_role(*MODERATION_ROLES)
     async def liststream(self, ctx: commands.Context) -> None:
-        """Lists all non-staff users who have permission to stream."""
-        non_staff_members_with_stream = [
+        """Lists all users who aren't staff, partners or members of the python community and have stream permissions."""
+        non_staff_partners_community_members_with_stream = [
             member
             for member in ctx.guild.get_role(Roles.video).members
-            if not any(role.id in STAFF_ROLES for role in member.roles)
+            if not any(role.id in STAFF_PARTNERS_COMMUNITY_ROLES for role in member.roles)
         ]
 
         # List of tuples (UtcPosixTimestamp, str)
         # So that the list can be sorted on the UtcPosixTimestamp before the message is passed to the paginator.
         streamer_info = []
-        for member in non_staff_members_with_stream:
+        for member in non_staff_partners_community_members_with_stream:
             if revoke_time := await self.task_cache.get(member.id):
                 # Member only has temporary streaming perms
                 revoke_delta = Arrow.utcfromtimestamp(revoke_time).humanize()

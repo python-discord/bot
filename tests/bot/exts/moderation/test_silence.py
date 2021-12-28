@@ -12,14 +12,7 @@ from discord import PermissionOverwrite
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.moderation import silence
 from tests.helpers import (
-    MockBot,
-    MockContext,
-    MockGuild,
-    MockMember,
-    MockRole,
-    MockTextChannel,
-    MockVoiceChannel,
-    autospec
+    MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel, MockVoiceChannel, autospec
 )
 
 redis_session = None
@@ -438,7 +431,13 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         asyncio.run(self.cog._async_init())  # Populate instance attributes.
 
         self.text_channel = MockTextChannel()
-        self.text_overwrite = PermissionOverwrite(send_messages=True, add_reactions=False)
+        self.text_overwrite = PermissionOverwrite(
+            send_messages=True,
+            add_reactions=False,
+            create_private_threads=True,
+            create_public_threads=False,
+            send_messages_in_threads=True
+        )
         self.text_channel.overwrites_for.return_value = self.text_overwrite
 
         self.voice_channel = MockVoiceChannel()
@@ -509,9 +508,39 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_skipped_already_silenced(self):
         """Permissions were not set and `False` was returned for an already silenced channel."""
         subtests = (
-            (False, MockTextChannel(), PermissionOverwrite(send_messages=False, add_reactions=False)),
-            (True, MockTextChannel(), PermissionOverwrite(send_messages=True, add_reactions=True)),
-            (True, MockTextChannel(), PermissionOverwrite(send_messages=False, add_reactions=False)),
+            (
+                False,
+                MockTextChannel(),
+                PermissionOverwrite(
+                    send_messages=False,
+                    add_reactions=False,
+                    create_private_threads=False,
+                    create_public_threads=False,
+                    send_messages_in_threads=False
+                )
+            ),
+            (
+                True,
+                MockTextChannel(),
+                PermissionOverwrite(
+                    send_messages=True,
+                    add_reactions=True,
+                    create_private_threads=True,
+                    create_public_threads=True,
+                    send_messages_in_threads=True
+                )
+            ),
+            (
+                True,
+                MockTextChannel(),
+                PermissionOverwrite(
+                    send_messages=False,
+                    add_reactions=False,
+                    create_private_threads=False,
+                    create_public_threads=False,
+                    send_messages_in_threads=False
+                )
+            ),
             (False, MockVoiceChannel(), PermissionOverwrite(connect=False, speak=False)),
             (True, MockVoiceChannel(), PermissionOverwrite(connect=True, speak=True)),
             (True, MockVoiceChannel(), PermissionOverwrite(connect=False, speak=False)),
@@ -559,11 +588,16 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         await self.cog._set_silence_overwrites(self.text_channel)
         new_overwrite_dict = dict(self.text_overwrite)
 
-        # Remove 'send_messages' & 'add_reactions' keys because they were changed by the method.
-        del prev_overwrite_dict['send_messages']
-        del prev_overwrite_dict['add_reactions']
-        del new_overwrite_dict['send_messages']
-        del new_overwrite_dict['add_reactions']
+        # Remove related permission keys because they were changed by the method.
+        for perm_name in (
+                "send_messages",
+                "add_reactions",
+                "create_private_threads",
+                "create_public_threads",
+                "send_messages_in_threads"
+        ):
+            del prev_overwrite_dict[perm_name]
+            del new_overwrite_dict[perm_name]
 
         self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
@@ -601,7 +635,10 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cached_previous_overwrites(self):
         """Channel's previous overwrites were cached."""
-        overwrite_json = '{"send_messages": true, "add_reactions": false}'
+        overwrite_json = (
+            '{"send_messages": true, "add_reactions": false, "create_private_threads": true, '
+            '"create_public_threads": false, "send_messages_in_threads": true}'
+        )
         await self.cog._set_silence_overwrites(self.text_channel)
         self.cog.previous_overwrites.set.assert_awaited_once_with(self.text_channel.id, overwrite_json)
 

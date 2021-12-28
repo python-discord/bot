@@ -1,4 +1,3 @@
-import logging
 import typing as t
 from datetime import timedelta
 from enum import Enum
@@ -10,9 +9,10 @@ from arrow import Arrow
 import bot
 from bot import constants
 from bot.exts.help_channels import _caches, _message
-from bot.utils.channel import try_get_channel
+from bot.log import get_logger
+from bot.utils.channel import get_or_fetch_channel
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 MAX_CHANNELS_PER_CATEGORY = 50
 EXCLUDED_CHANNELS = (constants.Channels.cooldown,)
@@ -133,7 +133,7 @@ async def move_to_bottom(channel: discord.TextChannel, category_id: int, **optio
     options should be avoided, as it may interfere with the category move we perform.
     """
     # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
-    category = await try_get_channel(category_id)
+    category = await get_or_fetch_channel(category_id)
 
     payload = [{"id": c.id, "position": c.position} for c in category.channels]
 

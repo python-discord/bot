@@ -1,6 +1,11 @@
-from typing import Hashable, Union
+from __future__ import annotations
 
-from discord import Member, User
+from typing import Hashable, TYPE_CHECKING, Union
+
+from discord.ext.commands import ConversionError, Converter
+
+if TYPE_CHECKING:
+    from bot.converters import MemberOrUser
 
 
 class LockedResourceError(RuntimeError):
@@ -30,11 +35,26 @@ class InvalidInfractedUserError(Exception):
         `user` -- User or Member which is invalid
     """
 
-    def __init__(self, user: Union[Member, User], reason: str = "User infracted is a bot."):
+    def __init__(self, user: MemberOrUser, reason: str = "User infracted is a bot."):
+
         self.user = user
         self.reason = reason
 
         super().__init__(reason)
+
+
+class InvalidInfraction(ConversionError):
+    """
+    Raised by the Infraction converter when trying to fetch an invalid infraction id.
+
+    Attributes:
+        `infraction_arg` -- the value that we attempted to convert into an Infraction
+    """
+
+    def __init__(self, converter: Converter, original: Exception, infraction_arg: Union[int, str]):
+
+        self.infraction_arg = infraction_arg
+        super().__init__(converter, original)
 
 
 class BrandingMisconfiguration(RuntimeError):

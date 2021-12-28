@@ -1,10 +1,9 @@
-import logging
 import textwrap
 import typing as t
 from abc import abstractmethod
-from datetime import datetime
 from gettext import ngettext
 
+import arrow
 import dateutil.parser
 import discord
 from discord.ext.commands import Context
@@ -13,13 +12,14 @@ from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours
+from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
-from bot.exts.moderation.infraction._utils import UserSnowflake
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils import messages, scheduling, time
 from bot.utils.channel import is_mod_channel
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class InfractionScheduler:
@@ -29,7 +29,7 @@ class InfractionScheduler:
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
-        self.bot.loop.create_task(self.reschedule_infractions(supported_infractions))
+        scheduling.create_task(self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -67,7 +67,7 @@ class InfractionScheduler:
         # We make sure to fire this
         if to_schedule:
             next_reschedule_point = max(
-                dateutil.parser.isoparse(infr["expires_at"]).replace(tzinfo=None) for infr in to_schedule
+                dateutil.parser.isoparse(infr["expires_at"]) for infr in to_schedule
             )
             log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
 
@@ -81,12 +81,16 @@ class InfractionScheduler:
         apply_coro: t.Optional[t.Awaitable]
     ) -> None:
         """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
-        # Calculate the time remaining, in seconds, for the mute.
-        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
-        delta = (expiry - datetime.utcnow()).total_seconds()
+        if infraction["expires_at"] is not None:
+            # Calculate the time remaining, in seconds, for the mute.
+            expiry = dateutil.parser.isoparse(infraction["expires_at"])
+            delta = (expiry - arrow.utcnow()).total_seconds()
+        else:
+            # If the infraction is permanent, it is not possible to get the time remaining.
+            delta = None
 
-        # Mark as inactive if less than a minute remains.
-        if delta < 60:
+        # Mark as inactive if the infraction is not permanent and less than a minute remains.
+        if delta is not None and delta < 60:
             log.info(
                 "Infraction will be deactivated instead of re-applied "
                 "because less than 1 minute remains."
@@ -115,7 +119,7 @@ class InfractionScheduler:
         self,
         ctx: Context,
         infraction: _utils.Infraction,
-        user: UserSnowflake,
+        user: MemberOrUser,
         action_coro: t.Optional[t.Awaitable] = None,
         user_reason: t.Optional[str] = None,
         additional_info: str = "",
@@ -161,30 +165,19 @@ class InfractionScheduler:
         # send DMs to user that it doesn't share a guild with. If we were to
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
-        if not infraction["hidden"]:
+        if not infraction["hidden"] and infr_type in {"ban", "kick"}:
             dm_result = f"{constants.Emojis.failmail} "
             dm_log_text = "\nDM: **Failed**"
 
-            # Sometimes user is a discord.Object; make it a proper user.
-            try:
-                if not isinstance(user, (discord.Member, discord.User)):
-                    user = await self.bot.fetch_user(user.id)
-            except discord.HTTPException as e:
-                log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
-            else:
-                # Accordingly display whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
-                    dm_result = ":incoming_envelope: "
-                    dm_log_text = "\nDM: Sent"
+            # Accordingly update whether the user was successfully notified via DM.
+            if await _utils.notify_infraction(
+                    self.bot, user, infraction["id"], infr_type.replace("_", " ").title(), expiry, user_reason, icon
+            ):
+                dm_result = ":incoming_envelope: "
+                dm_log_text = "\nDM: Sent"
 
         end_msg = ""
-        if infraction["actor"] == self.bot.user.id:
-            log.trace(
-                f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
-            )
-            if reason:
-                end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
-        elif is_mod_channel(ctx.channel):
+        if is_mod_channel(ctx.channel):
             log.trace(f"Fetching total infraction count for {user}.")
 
             infractions = await self.bot.api_client.get(
@@ -193,6 +186,12 @@ class InfractionScheduler:
             )
             total = len(infractions)
             end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
+        elif infraction["actor"] == self.bot.user.id:
+            log.trace(
+                f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
+            )
+            if reason:
+                end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
 
         purge = infraction.get("purge", "")
 
@@ -235,6 +234,18 @@ class InfractionScheduler:
         else:
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
 
+            # If we need to DM and haven't already tried to
+            if not infraction["hidden"] and infr_type not in {"ban", "kick"}:
+                dm_result = f"{constants.Emojis.failmail} "
+                dm_log_text = "\nDM: **Failed**"
+
+                # Accordingly update whether the user was successfully notified via DM.
+                if await _utils.notify_infraction(
+                        self.bot, user, infraction["id"], infr_type.replace("_", " ").title(), expiry, user_reason, icon
+                ):
+                    dm_result = ":incoming_envelope: "
+                    dm_log_text = "\nDM: Sent"
+
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.")
@@ -246,7 +257,7 @@ class InfractionScheduler:
             icon_url=icon,
             colour=Colours.soft_red,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.display_avatar.url,
             text=textwrap.dedent(f"""
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
@@ -264,14 +275,18 @@ class InfractionScheduler:
             self,
             ctx: Context,
             infr_type: str,
-            user: UserSnowflake,
-            send_msg: bool = True
+            user: MemberOrUser,
+            *,
+            send_msg: bool = True,
+            notify: bool = True
     ) -> None:
         """
         Prematurely end an infraction for a user and log the action in the mod log.
 
         If `send_msg` is True, then a pardoning confirmation message will be sent to
-        the context channel.  Otherwise, no such message will be sent.
+        the context channel. Otherwise, no such message will be sent.
+
+        If `notify` is True, notify the user of the pardon via DM where applicable.
         """
         log.trace(f"Pardoning {infr_type} infraction for {user}.")
 
@@ -292,7 +307,7 @@ class InfractionScheduler:
             return
 
         # Deactivate the infraction and cancel its scheduled expiration task.
-        log_text = await self.deactivate_infraction(response[0], send_log=False)
+        log_text = await self.deactivate_infraction(response[0], send_log=False, notify=notify)
 
         log_text["Member"] = messages.format_user(user)
         log_text["Actor"] = ctx.author.mention
@@ -336,7 +351,7 @@ class InfractionScheduler:
             icon_url=_utils.INFRACTION_ICONS[infr_type][1],
             colour=Colours.soft_green,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.display_avatar.url,
             text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
             footer=footer,
             content=log_content,
@@ -345,7 +360,9 @@ class InfractionScheduler:
     async def deactivate_infraction(
         self,
         infraction: _utils.Infraction,
-        send_log: bool = True
+        *,
+        send_log: bool = True,
+        notify: bool = True
     ) -> t.Dict[str, str]:
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
@@ -353,6 +370,8 @@ class InfractionScheduler:
         The infraction is removed from Discord, marked as inactive in the database, and has its
         expiration task cancelled. If `send_log` is True, a mod log is sent for the
         deactivation of the infraction.
+
+        If `notify` is True, notify the user of the pardon via DM where applicable.
 
         Infractions of unsupported types will raise a ValueError.
         """
@@ -367,7 +386,7 @@ class InfractionScheduler:
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
 
-        expiry = dateutil.parser.isoparse(expiry).replace(tzinfo=None) if expiry else None
+        expiry = dateutil.parser.isoparse(expiry) if expiry else None
         created = time.format_infraction_with_duration(inserted_at, expiry)
 
         log_content = None
@@ -380,7 +399,7 @@ class InfractionScheduler:
 
         try:
             log.trace("Awaiting the pardon action coroutine.")
-            returned_log = await self._pardon_action(infraction)
+            returned_log = await self._pardon_action(infraction, notify)
 
             if returned_log is not None:
                 log_text = {**log_text, **returned_log}  # Merge the logs together
@@ -449,7 +468,7 @@ class InfractionScheduler:
             log_title = "expiration failed" if "Failure" in log_text else "expired"
 
             user = self.bot.get_user(user_id)
-            avatar = user.avatar_url_as(static_format="png") if user else None
+            avatar = user.display_avatar.url if user else None
 
             # Move reason to end so when reason is too long, this is not gonna cut out required items.
             log_text["Reason"] = log_text.pop("Reason")
@@ -468,10 +487,15 @@ class InfractionScheduler:
         return log_text
 
     @abstractmethod
-    async def _pardon_action(self, infraction: _utils.Infraction) -> t.Optional[t.Dict[str, str]]:
+    async def _pardon_action(
+        self,
+        infraction: _utils.Infraction,
+        notify: bool
+    ) -> t.Optional[t.Dict[str, str]]:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
 
+        If `notify` is True, notify the user of the pardon via DM where applicable.
         If an infraction type is unsupported, return None instead.
         """
         raise NotImplementedError
@@ -483,5 +507,5 @@ class InfractionScheduler:
         At the time of expiration, the infraction is marked as inactive on the website and the
         expiration task is cancelled.
         """
-        expiry = dateutil.parser.isoparse(infraction["expires_at"]).replace(tzinfo=None)
+        expiry = dateutil.parser.isoparse(infraction["expires_at"])
         self.scheduler.schedule_at(expiry, infraction["id"], self.deactivate_infraction(infraction))
