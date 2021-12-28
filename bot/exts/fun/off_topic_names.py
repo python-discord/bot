@@ -1,6 +1,5 @@
 import difflib
-import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 
 import arrow
@@ -20,8 +19,8 @@ CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 
 # In case, the off topic channel name format is modified.
 OTN_FORMATTER = "ot{number}-{name}"
-OT_NUMBER_INDEX = OTN_FORMATTER.index("{number}")
-NAME_START_INDEX = OTN_FORMATTER.index("{name}")
+OT_NUMBER_INDEX = 2
+NAME_START_INDEX = 4
 
 log = get_logger(__name__)
 
@@ -173,8 +172,9 @@ class OffTopicNames(Cog):
         new_channel_name = response[0]
         old_channel_name = channel.name
 
-        await channel.edit(name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name)),
-        old_channel_name = old_channel_name[NAME_START_INDEX]
+        await channel.edit(name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name))
+        old_channel_name = old_channel_name[NAME_START_INDEX:]
+
         log.info(
             f"{ctx.author} Off-topic channel re-named from `{old_channel_name}` "
             f"to `{new_channel_name}`."
