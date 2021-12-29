@@ -300,11 +300,11 @@ class Information(Cog):
                 "Member information",
                 membership
             ),
+            await self.user_messages(user),
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
-            fields.append(await self.user_messages(user))
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
@@ -422,13 +422,8 @@ class Information(Cog):
             if e.status == 404:
                 activity_output = "No activity"
         else:
-            activity_output.append(user_activity["total_messages"] or "No messages")
-
-            if (activity_blocks := user_activity.get("activity_blocks")) is not None:
-                # activity_blocks is not included in the response if the user has a lot of messages
-                activity_output.append(activity_blocks or "No activity")  # Special case when activity_blocks is 0.
-            else:
-                activity_output.append("Too many to count!")
+            activity_output.append(f"{user_activity['total_messages']:,}" or "No messages")
+            activity_output.append(f"{user_activity['activity_blocks']:,}" or "No activity")
 
             activity_output = "\n".join(
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)

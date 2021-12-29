@@ -5,6 +5,7 @@ import discord
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
+from bot.bot import Bot
 from bot.constants import Colours, Icons
 from bot.converters import MemberOrUser
 from bot.errors import InvalidInfractedUserError
@@ -78,7 +79,8 @@ async def post_infraction(
         reason: str,
         expires_at: datetime = None,
         hidden: bool = False,
-        active: bool = True
+        active: bool = True,
+        dm_sent: bool = False,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
@@ -93,7 +95,8 @@ async def post_infraction(
         "reason": reason,
         "type": infr_type,
         "user": user.id,
-        "active": active
+        "active": active,
+        "dm_sent": dm_sent
     }
     if expires_at:
         payload['expires_at'] = expires_at.isoformat()
@@ -156,7 +159,9 @@ async def send_active_infraction_message(ctx: Context, infraction: Infraction) -
 
 
 async def notify_infraction(
+        bot: Bot,
         user: MemberOrUser,
+        infr_id: id,
         infr_type: str,
         expires_at: t.Optional[str] = None,
         reason: t.Optional[str] = None,
@@ -186,7 +191,15 @@ async def notify_infraction(
     embed.title = INFRACTION_TITLE
     embed.url = RULES_URL
 
-    return await send_private_embed(user, embed)
+    dm_sent = await send_private_embed(user, embed)
+    if dm_sent:
+        await bot.api_client.patch(
+            f"bot/infractions/{infr_id}",
+            json={"dm_sent": True}
+        )
+        log.debug(f"Update infraction #{infr_id} dm_sent field to true.")
+
+    return dm_sent
 
 
 async def notify_pardon(

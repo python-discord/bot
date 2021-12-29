@@ -276,6 +276,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(self):
         """The embed should use the string representation of the user if they don't have a nick."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -292,6 +296,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
     )
     async def test_create_user_embed_uses_nick_in_title_if_available(self):
         """The embed should use the nick if it's available."""
@@ -310,6 +318,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_ignores_everyone_role(self):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -325,6 +337,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
     @unittest.mock.patch(f"{COG_PATH}.expanded_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
     @unittest.mock.patch(f"{COG_PATH}.user_nomination_counts", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_expanded_information_in_moderation_channels(
             self,
             nomination_counts,
@@ -363,13 +379,19 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         )
 
     @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
-    async def test_create_user_embed_basic_information_outside_of_moderation_channels(self, infraction_counts):
+    @unittest.mock.patch(f"{COG_PATH}.user_messages", new_callable=unittest.mock.AsyncMock)
+    async def test_create_user_embed_basic_information_outside_of_moderation_channels(
+        self,
+        user_messages,
+        infraction_counts,
+    ):
         """The embed should contain only basic infraction data outside of mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
 
         moderators_role = helpers.MockRole(name='Moderators')
 
         infraction_counts.return_value = ("Infractions", "basic infractions info")
+        user_messages.return_value = ("Messages", "user message counts")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
         embed = await self.cog.create_user_embed(ctx, user, False)
@@ -394,13 +416,22 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(
-            "basic infractions info",
+            "user message counts",
             embed.fields[2].value
+        )
+
+        self.assertEqual(
+            "basic infractions info",
+            embed.fields[3].value
         )
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
     )
     async def test_create_user_embed_uses_top_role_colour_when_user_has_roles(self):
         """The embed should be created with the colour of the top role, if a top role is available."""
@@ -417,6 +448,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_uses_og_blurple_colour_when_user_has_no_roles(self):
         """The embed should be created with the og blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
@@ -429,6 +464,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
     )
     async def test_create_user_embed_uses_png_format_of_user_avatar_as_thumbnail(self):
         """The embed thumbnail should be set to the user's avatar in `png` format."""
