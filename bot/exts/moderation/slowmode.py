@@ -16,7 +16,7 @@ SLOWMODE_MAX_DELAY = 21600  # seconds
 
 COMMONLY_SLOWMODED_CHANNELS = {
     Channels.python_general: "python_general",
-    Channels.discord_py: "discordpy",
+    Channels.discord_bots: "discord_bots",
     Channels.off_topic_0: "ot0",
 }
 

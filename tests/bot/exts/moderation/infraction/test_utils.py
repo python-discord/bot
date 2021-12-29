@@ -132,7 +132,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         """
         test_cases = [
             {
-                "args": (self.user, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
+                "args": (self.bot, self.user, 0, "ban", "2020-02-26 09:20 (23 hours and 59 minutes)"),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
@@ -150,7 +150,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "send_result": True
             },
             {
-                "args": (self.user, "warning", None, "Test reason."),
+                "args": (self.bot, self.user, 0, "warning", None, "Test reason."),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
@@ -170,7 +170,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             # Note that this test case asserts that the DM that *would* get sent to the user is formatted
             # correctly, even though that message is deliberately never sent.
             {
-                "args": (self.user, "note", None, None, Icons.defcon_denied),
+                "args": (self.bot, self.user, 0, "note", None, None, Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
@@ -188,7 +188,15 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "send_result": False
             },
             {
-                "args": (self.user, "mute", "2020-02-26 09:20 (23 hours and 59 minutes)", "Test", Icons.defcon_denied),
+                "args": (
+                    self.bot,
+                    self.user,
+                    0,
+                    "mute",
+                    "2020-02-26 09:20 (23 hours and 59 minutes)",
+                    "Test",
+                    Icons.defcon_denied
+                ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
@@ -206,7 +214,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "send_result": False
             },
             {
-                "args": (self.user, "mute", None, "foo bar" * 4000, Icons.defcon_denied),
+                "args": (self.bot, self.user, 0, "mute", None, "foo bar" * 4000, Icons.defcon_denied),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
@@ -238,7 +246,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertEqual(embed.to_dict(), case["expected_output"].to_dict())
 
-                send_private_embed_mock.assert_awaited_once_with(case["args"][0], embed)
+                send_private_embed_mock.assert_awaited_once_with(case["args"][1], embed)
 
     @patch("bot.exts.moderation.infraction._utils.send_private_embed")
     async def test_notify_pardon(self, send_private_embed_mock):
@@ -313,7 +321,8 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "type": "ban",
             "user": self.member.id,
             "active": False,
-            "expires_at": now.isoformat()
+            "expires_at": now.isoformat(),
+            "dm_sent": False
         }
 
         self.ctx.bot.api_client.post.return_value = "foo"
@@ -350,7 +359,8 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "reason": "Test reason",
             "type": "mute",
             "user": self.user.id,
-            "active": True
+            "active": True,
+            "dm_sent": False
         }
 
         self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]

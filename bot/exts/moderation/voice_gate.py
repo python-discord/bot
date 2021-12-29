@@ -171,11 +171,8 @@ class VoiceGate(Cog):
             ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
+            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
         }
-        if activity_blocks := data.get("activity_blocks"):
-            # activity_blocks is not included in the response if the user has a lot of messages.
-            # Only check if the user has enough activity blocks if it is included.
-            checks["activity_blocks"] = activity_blocks < GateConf.minimum_activity_blocks
 
         failed = any(checks.values())
         failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]

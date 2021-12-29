@@ -352,6 +352,7 @@ class ModManagement(commands.Cog):
         user = infraction["user"]
         expires_at = infraction["expires_at"]
         created = time.format_infraction(infraction["inserted_at"])
+        dm_sent = infraction["dm_sent"]
 
         # Format the user string.
         if user_obj := self.bot.get_user(user["id"]):
@@ -377,11 +378,18 @@ class ModManagement(commands.Cog):
             date_to = dateutil.parser.isoparse(expires_at)
             duration = humanize_delta(relativedelta(date_to, date_from))
 
+        # Format `dm_sent`
+        if dm_sent is None:
+            dm_sent_text = "N/A"
+        else:
+            dm_sent_text = "Yes" if dm_sent else "No"
+
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {user_str}
             Type: **{infraction["type"]}**
+            DM Sent: {dm_sent_text}
             Shadow: {infraction["hidden"]}
             Created: {created}
             Expires: {remaining}
