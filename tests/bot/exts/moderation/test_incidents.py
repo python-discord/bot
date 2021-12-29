@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import enum
 import logging
 import typing as t
@@ -13,6 +14,7 @@ from async_rediscache import RedisSession
 from bot.constants import Colours
 from bot.exts.moderation import incidents
 from bot.utils.messages import format_user
+from bot.utils.time import TimestampFormats, discord_timestamp
 from tests.helpers import (
     MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
     MockUser
@@ -114,10 +116,19 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
 
     async def test_make_embed_content(self):
         """Incident content appears as embed description."""
-        incident = MockMessage(content="this is an incident")
+        current_time = datetime.datetime(2022, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        incident = MockMessage(content="this is an incident", created_at=current_time)
+
+        day_timestamp = discord_timestamp(current_time, TimestampFormats.DATE)
+        time_timestamp = discord_timestamp(current_time, TimestampFormats.TIME)
+        relative_timestamp = discord_timestamp(current_time, TimestampFormats.RELATIVE)
+
         embed, file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
 
-        self.assertEqual(incident.content, embed.description)
+        self.assertEqual(
+            f"{incident.content}\n\n__*Reported {day_timestamp} at {time_timestamp} ({relative_timestamp}).*__",
+            embed.description
+        )
 
     async def test_make_embed_with_attachment_succeeds(self):
         """Incident's attachment is downloaded and displayed in the embed's image field."""
@@ -391,7 +402,7 @@ class TestArchive(TestIncidents):
         # Define our own `incident` to be archived
         incident = MockMessage(
             content="this is an incident",
-            author=MockUser(name="author_name", display_avatar=Mock(url="author_avatar")),
+            author=MockUser(display_name="author_name", display_avatar=Mock(url="author_avatar")),
             id=123,
         )
         built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
@@ -422,7 +433,7 @@ class TestArchive(TestIncidents):
         webhook = MockAsyncWebhook()
         self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)
 
-        message_from_clyde = MockMessage(author=MockUser(name="clyde the great"))
+        message_from_clyde = MockMessage(author=MockUser(display_name="clyde the great"))
         await self.cog_instance.archive(message_from_clyde, MagicMock(incidents.Signal), MockMember())
 
         self.assertNotIn("clyde", webhook.send.call_args.kwargs["username"])
@@ -521,12 +532,13 @@ class TestProcessEvent(TestIncidents):
     async def test_process_event_confirmation_task_is_awaited(self):
         """Task given by `Incidents.make_confirmation_task` is awaited before method exits."""
         mock_task = AsyncMock()
+        mock_member = MockMember(display_name="Bobby Johnson", roles=[MockRole(id=1)])
 
         with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
             await self.cog_instance.process_event(
                 reaction=incidents.Signal.ACTIONED.value,
-                incident=MockMessage(id=123),
-                member=MockMember(roles=[MockRole(id=1)])
+                incident=MockMessage(author=mock_member, id=123),
+                member=mock_member
             )
 
         mock_task.assert_awaited()
