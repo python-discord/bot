@@ -9,7 +9,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
+from bot.converters import Age, Duration, Expiry, Infraction, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -18,6 +18,11 @@ from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
+
+if t.TYPE_CHECKING:
+    from bot.exts.moderation.clean import Clean
+    from bot.exts.moderation.infraction.management import ModManagement
+    from bot.exts.moderation.watchchannels.bigbrother import BigBrother
 
 
 class Infractions(InfractionScheduler, commands.Cog):
@@ -101,11 +106,44 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str] = None
     ) -> None:
         """
-        Same as ban but removes all their messages of the last 24 hours.
+        Same as ban, but also cleans all their messages from the last hour.
 
         If duration is specified, it temporarily bans that user for the given duration.
         """
-        await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
+        clean_cog: t.Optional[Clean] = self.bot.get_cog("Clean")
+        if clean_cog is None:
+            # If we can't get the clean cog, fall back to native purgeban.
+            await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
+            return
+
+        infraction = await self.apply_ban(ctx, user, reason, expires_at=duration)
+        if not infraction or not infraction.get("id"):
+            # Ban was unsuccessful, quit early.
+            return
+
+        # Calling commands directly skips Discord.py's convertors, so we need to convert args manually.
+        clean_time = await Age().convert(ctx, "1h")
+        infraction = await Infraction().convert(ctx, infraction["id"])
+
+        log_url = await clean_cog._clean_messages(
+            ctx,
+            users=[user],
+            channels="*",
+            first_limit=clean_time,
+            attempt_delete_invocation=False,
+        )
+
+        infr_manage_cog: t.Optional[ModManagement] = self.bot.get_cog("ModManagement")
+        if infr_manage_cog is None:
+            # If we can't get the mod management cog, don't bother appending the log.
+            return
+
+        # Overwrite the context's send function so infraction append
+        # doesn't output the update infraction confirmation message.
+        async def send(*args, **kwargs) -> None:
+            pass
+        ctx.send = send
+        await infr_manage_cog.infraction_append(ctx, infraction, None, reason=f"[Clean log]({log_url})")
 
     @command(aliases=("vban",))
     async def voiceban(self, ctx: Context) -> None:
@@ -368,7 +406,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str],
         purge_days: t.Optional[int] = 0,
         **kwargs
-    ) -> None:
+    ) -> t.Optional[dict]:
         """
         Apply a ban infraction with kwargs passed to `post_infraction`.
 
@@ -376,7 +414,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         if isinstance(user, Member) and user.top_role >= ctx.me.top_role:
             await ctx.send(":x: I can't ban users above or equal to me in the role hierarchy.")
-            return
+            return None
 
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
         is_temporary = kwargs.get("expires_at") is not None
@@ -385,19 +423,19 @@ class Infractions(InfractionScheduler, commands.Cog):
         if active_infraction:
             if is_temporary:
                 log.trace("Tempban ignored as it cannot overwrite an active ban.")
-                return
+                return None
 
             if active_infraction.get('expires_at') is None:
                 log.trace("Permaban already exists, notify.")
                 await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
-                return
+                return None
 
             log.trace("Old tempban is being replaced by new permaban.")
             await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
 
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
-            return
+            return None
 
         infraction["purge"] = "purge " if purge_days else ""
 
@@ -409,19 +447,17 @@ class Infractions(InfractionScheduler, commands.Cog):
         action = ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
         await self.apply_infraction(ctx, infraction, user, action)
 
+        bb_cog: t.Optional[BigBrother] = self.bot.get_cog("Big Brother")
         if infraction.get('expires_at') is not None:
             log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
-            return
-
-        bb_cog = self.bot.get_cog("Big Brother")
-        if not bb_cog:
+        elif not bb_cog:
             log.error(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
-            return
+        else:
+            log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
+            bb_reason = "User has been permanently banned from the server. Automatically removed."
+            await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
 
-        log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
-
-        bb_reason = "User has been permanently banned from the server. Automatically removed."
-        await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
+        return infraction
 
     @respect_role_hierarchy(member_arg=2)
     async def apply_voice_mute(self, ctx: Context, user: MemberOrUser, reason: t.Optional[str], **kwargs) -> None:
