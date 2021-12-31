@@ -96,8 +96,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
-    @command(aliases=('pban',))
-    async def purgeban(
+    @command(aliases=("cban", "purgeban", "pban"))
+    async def cleanban(
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
