@@ -132,6 +132,9 @@ class Infractions(InfractionScheduler, commands.Cog):
             first_limit=clean_time,
             attempt_delete_invocation=False,
         )
+        if not log_url:
+            # Cleaning failed, or there were no messages to clean, exit early.
+            return
 
         infr_manage_cog: t.Optional[ModManagement] = self.bot.get_cog("ModManagement")
         if infr_manage_cog is None:
