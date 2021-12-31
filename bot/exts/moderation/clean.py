@@ -331,12 +331,17 @@ class Clean(Cog):
 
         return deleted
 
-    async def _modlog_cleaned_messages(self, messages: list[Message], channels: CleanChannels, ctx: Context) -> bool:
-        """Log the deleted messages to the modlog. Return True if logging was successful."""
+    async def _modlog_cleaned_messages(
+        self,
+        messages: list[Message],
+        channels: CleanChannels,
+        ctx: Context
+    ) -> Optional[str]:
+        """Log the deleted messages to the modlog, returning the log url if logging was successful."""
         if not messages:
             # Can't build an embed, nothing to clean!
             await self._send_expiring_message(ctx, ":x: No matching messages could be found.")
-            return False
+            return None
 
         # Reverse the list to have reverse chronological order
         log_messages = reversed(messages)
@@ -362,7 +367,7 @@ class Clean(Cog):
             channel_id=Channels.mod_log,
         )
 
-        return True
+        return log_url
 
     # endregion
 
@@ -375,8 +380,8 @@ class Clean(Cog):
         regex: Optional[re.Pattern] = None,
         first_limit: Optional[CleanLimit] = None,
         second_limit: Optional[CleanLimit] = None,
-    ) -> None:
-        """A helper function that does the actual message cleaning."""
+    ) -> Optional[str]:
+        """A helper function that does the actual message cleaning, returns the log url if logging was successful."""
         self._validate_input(channels, bots_only, users, first_limit, second_limit)
 
         # Are we already performing a clean?
@@ -384,7 +389,7 @@ class Clean(Cog):
             await self._send_expiring_message(
                 ctx, ":x: Please wait for the currently ongoing clean operation to complete."
             )
-            return
+            return None
         self.cleaning = True
 
         deletion_channels = self._channels_set(channels, ctx, first_limit, second_limit)
@@ -418,7 +423,7 @@ class Clean(Cog):
 
         if not self.cleaning:
             # Means that the cleaning was canceled
-            return
+            return None
 
         # Now let's delete the actual messages with purge.
         self.mod_log.ignore(Event.message_delete, *message_ids)
@@ -427,11 +432,18 @@ class Clean(Cog):
 
         if not channels:
             channels = deletion_channels
-        logged = await self._modlog_cleaned_messages(deleted_messages, channels, ctx)
+        log_url = await self._modlog_cleaned_messages(deleted_messages, channels, ctx)
 
-        if logged and is_mod_channel(ctx.channel):
-            with suppress(NotFound):  # Can happen if the invoker deleted their own messages.
-                await ctx.message.add_reaction(Emojis.check_mark)
+        success_message = (
+            f"{Emojis.ok_hand} Deleted {len(deleted_messages)} messages. "
+            f"A log of the deleted messages can be found here {log_url}."
+        )
+        if log_url and is_mod_channel(ctx.channel):
+            await ctx.reply(success_message)
+        elif log_url:
+            if mods := self.bot.get_channel(Channels.mods):
+                await mods.send(f"{ctx.author.mention} {success_message}")
+        return log_url
 
     # region: Commands
 
