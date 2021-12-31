@@ -380,6 +380,7 @@ class Clean(Cog):
         regex: Optional[re.Pattern] = None,
         first_limit: Optional[CleanLimit] = None,
         second_limit: Optional[CleanLimit] = None,
+        attempt_delete_invocation: bool = True,
     ) -> Optional[str]:
         """A helper function that does the actual message cleaning, returns the log url if logging was successful."""
         self._validate_input(channels, bots_only, users, first_limit, second_limit)
@@ -404,8 +405,9 @@ class Clean(Cog):
         # Needs to be called after standardizing the input.
         predicate = self._build_predicate(first_limit, second_limit, bots_only, users, regex)
 
-        # Delete the invocation first
-        await self._delete_invocation(ctx)
+        if attempt_delete_invocation:
+            # Delete the invocation first
+            await self._delete_invocation(ctx)
 
         if self._use_cache(first_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in the cache.")
