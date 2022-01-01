@@ -176,7 +176,7 @@ class ModManagement(commands.Cog):
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
             if infraction['expires_at']:
-                self.infractions_cog.scheduler.cancel(new_infraction['id'])
+                self.infractions_cog.scheduler.cancel(infraction_id)
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
@@ -210,7 +210,8 @@ class ModManagement(commands.Cog):
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
                 Edited by: {ctx.message.author.mention}{log_text}
-            """)
+            """),
+            footer=f"ID: {infraction_id}"
         )
 
     # endregion
