@@ -3,8 +3,9 @@ from typing import Dict, Iterable, List, Optional, Tuple
 from discord import DeletedReferencedMessage, Member, Message, MessageType, NotFound
 
 import bot
+from bot.log import get_logger
 
-log = bot.log.get_logger(__name__)
+log = get_logger(__name__)
 
 
 async def apply(
@@ -27,8 +28,10 @@ async def apply(
     # Additionally, msg.mentions includes the user replied to, even if the mention doesn't occur in the body.
     # In order to exclude users who are mentioned as a reply, we check if the msg has a reference
     #
-    # While we could use regex to parse the message content, and get a list of the mentions,
-    # that is very prone to breaking, as both the markdown, if discord used it, code block, etc
+    # While we could use regex to parse the message content, and get a list of
+    # the mentions, that solution is very prone to breaking.
+    # We would need to deal with codeblocks, escaping markdown. and any discrepancies between
+    # our implementation and discord's markdown parser would cause false positives or false negatives.
     total_recent_mentions = sum(
         not user.bot
         and msg.author != user
@@ -36,23 +39,27 @@ async def apply(
         for user in msg.mentions
     )
 
-    # we don't want to include the mentions that the author mentioned with a reply
+    # we don't want to include mentions that are to the replied user in message replies.
     for msg in relevant_messages:
-        # break the loop to save processing if total_recent_mentions is 0
-        # additionally, ensures that we don't find a mention that wasn't originally there.
+        # break the loop to save processing if `total_recent_mentions` is 0
+        # no reason to run processing and fetch messages if there are no mentions.
         if not total_recent_mentions:
             break
+
         if msg.type != MessageType.reply and not msg.reference:
             continue
+
         resolved = msg.reference.resolved
         if isinstance(resolved, DeletedReferencedMessage):
             # can't figure out the author
             continue
+
         if not resolved:
             ref = msg.reference
+            # it is possible, in a very unusual situation, for a message to have a reference
+            # that is both not in the cache, and deleted while running this function.
+            # in such a situation this will throw an error.
             try:
-                # its possible, in a very unusual situation, for a message to have a reference
-                # that is both not in the cache, and deleted while running this function.
                 resolved = await bot.instance.get_partial_messageable(ref.channel_id).fetch_message(ref.message_id)
             except NotFound:
                 log.info('Could not fetch the replied reference as its been deleted.')
