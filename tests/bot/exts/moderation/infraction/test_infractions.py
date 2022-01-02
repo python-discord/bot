@@ -1,13 +1,15 @@
 import inspect
 import textwrap
 import unittest
-from unittest.mock import ANY, AsyncMock, MagicMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, DEFAULT, MagicMock, Mock, patch
 
 from discord.errors import NotFound
 
 from bot.constants import Event
+from bot.exts.moderation.clean import Clean
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
+from bot.exts.moderation.infraction.management import ModManagement
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockRole, MockUser, autospec
 
 
@@ -231,3 +233,89 @@ class VoiceMuteTests(unittest.IsolatedAsyncioTestCase):
             "DM": "**Failed**"
         })
         notify_pardon_mock.assert_awaited_once()
+
+
+class CleanBanTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for cleanban functionality."""
+
+    def setUp(self):
+        self.bot = MockBot()
+        self.mod = MockMember(roles=[MockRole(id=7890123, position=10)])
+        self.user = MockMember(roles=[MockRole(id=123456, position=1)])
+        self.guild = MockGuild()
+        self.ctx = MockContext(bot=self.bot, author=self.mod)
+        self.cog = Infractions(self.bot)
+        self.clean_cog = Clean(self.bot)
+        self.management_cog = ModManagement(self.bot)
+
+        self.cog.apply_ban = AsyncMock(return_value={"id": 42})
+        self.log_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        self.clean_cog._clean_messages = AsyncMock(return_value=self.log_url)
+
+    def mock_get_cog(self, enable_clean, enable_manage):
+        def inner(name):
+            if name == "ModManagement":
+                return self.management_cog if enable_manage else None
+            elif name == "Clean":
+                return self.clean_cog if enable_clean else None
+            else:
+                return DEFAULT
+        return inner
+
+    async def test_cleanban_falls_back_to_native_purge_without_clean_cog(self):
+        """Should fallback to native purge if the Clean cog is not available."""
+        self.bot.get_cog.side_effect = self.mock_get_cog(False, False)
+
+        self.assertIsNone(await self.cog.cleanban(self.cog, self.ctx, self.user, None, reason="FooBar"))
+        self.cog.apply_ban.assert_awaited_once_with(
+            self.ctx,
+            self.user,
+            "FooBar",
+            1,
+            expires_at=None,
+        )
+
+    async def test_cleanban_doesnt_purge_messages_if_clean_cog_available(self):
+        """Cleanban command should use the native purge messages if the clean cog is available."""
+        self.bot.get_cog.side_effect = self.mock_get_cog(True, False)
+
+        self.assertIsNone(await self.cog.cleanban(self.cog, self.ctx, self.user, None, reason="FooBar"))
+        self.cog.apply_ban.assert_awaited_once_with(
+            self.ctx,
+            self.user,
+            "FooBar",
+            expires_at=None,
+        )
+
+    @patch("bot.exts.moderation.infraction.infractions.Age")
+    async def test_cleanban_uses_clean_cog_when_available(self, mocked_age_converter):
+        """Test cleanban uses the clean cog to clean messages if it's available."""
+        self.bot.api_client.patch = AsyncMock()
+        self.bot.get_cog.side_effect = self.mock_get_cog(True, False)
+
+        mocked_age_converter.return_value.convert = AsyncMock(return_value="81M")
+        self.assertIsNone(await self.cog.cleanban(self.cog, self.ctx, self.user, None, reason="FooBar"))
+
+        self.clean_cog._clean_messages.assert_awaited_once_with(
+            self.ctx,
+            users=[self.user],
+            channels="*",
+            first_limit="81M",
+            attempt_delete_invocation=False,
+        )
+
+    @patch("bot.exts.moderation.infraction.infractions.Infraction")
+    async def test_cleanban_edits_infraction_reason(self, mocked_infraction_converter):
+        """Ensure cleanban edits the ban reason with a link to the clean log."""
+        self.bot.get_cog.side_effect = self.mock_get_cog(True, True)
+
+        self.management_cog.infraction_append = AsyncMock()
+        mocked_infraction_converter.return_value.convert = AsyncMock(return_value=42)
+        self.assertIsNone(await self.cog.cleanban(self.cog, self.ctx, self.user, None, reason="FooBar"))
+
+        self.management_cog.infraction_append.assert_awaited_once_with(
+            self.ctx,
+            42,
+            None,
+            reason=f"[Clean log]({self.log_url})"
+        )
