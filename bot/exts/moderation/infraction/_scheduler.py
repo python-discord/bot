@@ -223,7 +223,7 @@ class InfractionScheduler:
                 failed = True
 
         if failed:
-            log.trace(f"Deleted infraction {infraction['id']} from database because applying infraction failed.")
+            log.trace(f"Trying to delete infraction {id_} from database because applying infraction failed.")
             try:
                 await self.bot.api_client.delete(f"bot/infractions/{id_}")
             except ResponseCodeError as e:
@@ -265,7 +265,7 @@ class InfractionScheduler:
                 {additional_info}
             """),
             content=log_content,
-            footer=f"ID {infraction['id']}"
+            footer=f"ID: {id_}"
         )
 
         log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
