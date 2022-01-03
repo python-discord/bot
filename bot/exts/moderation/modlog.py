@@ -96,6 +96,7 @@ class ModLog(Cog, name="ModLog"):
         footer: t.Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
+        await self.bot.wait_until_guild_available()
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
             description=text[:4093] + "..." if len(text) > 4096 else text
@@ -614,6 +615,7 @@ class ModLog(Cog, name="ModLog"):
         This is called when a message absent from the cache is deleted.
         Hence, the message contents aren't logged.
         """
+        await self.bot.wait_until_guild_available()
         if self.is_channel_ignored(event.channel_id):
             return
 
@@ -727,9 +729,9 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_edit(self, event: discord.RawMessageUpdateEvent) -> None:
         """Log raw message edit event to message change log."""
+        await self.bot.wait_until_guild_available()
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))
-            await self.bot.wait_until_guild_available()
             message = await channel.fetch_message(event.message_id)
         except discord.NotFound:  # Was deleted before we got the event
             return
