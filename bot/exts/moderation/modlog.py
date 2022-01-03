@@ -729,6 +729,7 @@ class ModLog(Cog, name="ModLog"):
         """Log raw message edit event to message change log."""
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))
+            await self.bot.wait_until_guild_available()
             message = await channel.fetch_message(event.message_id)
         except discord.NotFound:  # Was deleted before we got the event
             return
