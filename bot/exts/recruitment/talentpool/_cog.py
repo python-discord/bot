@@ -281,7 +281,7 @@ class TalentPool(Cog, name="Talentpool"):
                 if response_data.get('user', False):
                     await ctx.send(":x: The specified user can't be found in the database tables")
                 elif response_data.get('actor', False):
-                    await ctx.send(":x: You have already nominated this user")
+                    await ctx.send(f":x: You have already nominated {user.mention}")
 
                 return
             else:
@@ -438,7 +438,7 @@ class TalentPool(Cog, name="Talentpool"):
             json={"actor": actor.id, "reason": reason}
         )
         await self.refresh_cache()  # Update cache
-        await ctx.send(":white_check_mark: Successfully updated nomination reason.")
+        await ctx.send(f":white_check_mark: Successfully updated nomination reason for {actor.mention}")
 
     @nomination_edit_group.command(name='end_reason')
     @has_any_role(*MODERATION_ROLES)
