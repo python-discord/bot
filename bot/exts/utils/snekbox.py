@@ -7,7 +7,7 @@ from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord import HTTPException, Message, NotFound, Reaction, User
+from discord import AllowedMentions, HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
@@ -218,7 +218,8 @@ class Snekbox(Cog):
             if filter_triggered:
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
-                response = await ctx.send(msg)
+                allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
+                response = await ctx.send(msg, allowed_mentions=allowed_mentions)
             scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
