@@ -17,8 +17,8 @@ CHUNK_SIZE = 1000
 
 # These objects are declared as namedtuples because tuples are hashable,
 # something that we make use of when diffing site roles against guild roles.
-_Role = namedtuple('Role', ('id', 'name', 'colour', 'permissions', 'position'))
-_Diff = namedtuple('Diff', ('created', 'updated', 'deleted'))
+_Role = namedtuple("Role", ("id", "name", "colour", "permissions", "position")) 
+_Diff = namedtuple("Diff", ("created", "updated", "deleted"))
 
 
 # Implementation of static abstract methods are not enforced if the subclass is never instantiated.
