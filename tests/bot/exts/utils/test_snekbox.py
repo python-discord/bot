@@ -2,6 +2,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
+from discord import AllowedMentions
 from discord.ext import commands
 
 from bot import constants
@@ -201,7 +202,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx = MockContext()
         ctx.message = MockMessage()
         ctx.send = AsyncMock()
-        ctx.author.mention = '@LemonLemonishBeard#0042'
+        ctx.author = MockUser(mention='@LemonLemonishBeard#0042')
 
         self.cog.post_eval = AsyncMock(return_value={'stdout': '', 'returncode': 0})
         self.cog.get_results_message = MagicMock(return_value=('Return code 0', ''))
@@ -213,9 +214,16 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value = mocked_filter_cog
 
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
-        ctx.send.assert_called_once_with(
+
+        ctx.send.assert_called_once()
+        self.assertEqual(
+            ctx.send.call_args.args[0],
             '@LemonLemonishBeard#0042 :yay!: Return code 0.\n\n```\n[No output]\n```'
         )
+        allowed_mentions = ctx.send.call_args.kwargs['allowed_mentions']
+        expected_allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
+        self.assertEqual(allowed_mentions.to_dict(), expected_allowed_mentions.to_dict())
+
         self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
         self.cog.get_status_emoji.assert_called_once_with({'stdout': '', 'returncode': 0})
         self.cog.get_results_message.assert_called_once_with({'stdout': '', 'returncode': 0})
@@ -238,10 +246,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value = mocked_filter_cog
 
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
-        ctx.send.assert_called_once_with(
+
+        ctx.send.assert_called_once()
+        self.assertEqual(
+            ctx.send.call_args.args[0],
             '@LemonLemonishBeard#0042 :yay!: Return code 0.'
             '\n\n```\nWay too long beard\n```\nFull output: lookatmybeard.com'
         )
+
         self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0})
         self.cog.get_results_message.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0})
@@ -263,9 +275,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value = mocked_filter_cog
 
         await self.cog.send_eval(ctx, 'MyAwesomeCode')
-        ctx.send.assert_called_once_with(
+
+        ctx.send.assert_called_once()
+        self.assertEqual(
+            ctx.send.call_args.args[0],
             '@LemonLemonishBeard#0042 :nope!: Return code 127.\n\n```\nBeard got stuck in the eval\n```'
         )
+
         self.cog.post_eval.assert_called_once_with('MyAwesomeCode')
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
         self.cog.get_results_message.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
