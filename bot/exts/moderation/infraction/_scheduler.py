@@ -137,7 +137,13 @@ class InfractionScheduler:
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         expiry = time.format_infraction_with_duration(infraction["expires_at"])
+        expiry_datetime = arrow.get(infraction["expires_at"])
         id_ = infraction['id']
+
+        now_datetime = arrow.utcnow()
+        if expiry_datetime < now_datetime:
+            await ctx.send(":x: Expiration is in the past.")
+            return False
 
         if user_reason is None:
             user_reason = reason
