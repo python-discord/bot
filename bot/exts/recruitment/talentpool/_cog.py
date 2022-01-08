@@ -406,9 +406,11 @@ class TalentPool(Cog, name="Talentpool"):
             return
         if isinstance(target, int):
             nomination_id = target
+            target_mention = (await self.bot.fetch_user(target)).mention
         else:
             if nomination := self.cache.get(target.id):
                 nomination_id = nomination["id"]
+                target_mention = target.mention
             else:
                 await ctx.send("No active nomination found for that member.")
                 return
@@ -438,7 +440,7 @@ class TalentPool(Cog, name="Talentpool"):
             json={"actor": actor.id, "reason": reason}
         )
         await self.refresh_cache()  # Update cache
-        await ctx.send(f":white_check_mark: Successfully updated nomination reason for {actor.mention}")
+        await ctx.send(f":white_check_mark: Successfully updated nomination reason for {target_mention}")
 
     @nomination_edit_group.command(name='end_reason')
     @has_any_role(*MODERATION_ROLES)
