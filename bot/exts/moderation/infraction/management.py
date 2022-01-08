@@ -1,10 +1,10 @@
 import textwrap
 import typing as t
-from datetime import datetime, timezone
 
-import dateutil.parser
+import arrow
 import discord
 from dateutil.relativedelta import relativedelta
+from dateutil.tz import tzutc
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
@@ -150,7 +150,7 @@ class ModManagement(commands.Cog):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
-            now_datetime = datetime.now(timezone.utc)
+            now_datetime = arrow.utcnow()
             if duration < now_datetime:
                 await ctx.send(":x: Expiration is in the past.")
                 return
@@ -376,12 +376,12 @@ class ModManagement(commands.Cog):
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = datetime.fromtimestamp(
+            date_from = arrow.Arrow.fromtimestamp(
                 float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
-                timezone.utc
+                tzutc()
             )
-            date_to = dateutil.parser.isoparse(expires_at)
-            duration = humanize_delta(relativedelta(date_to, date_from))
+            date_to = arrow.get(expires_at)
+            duration = humanize_delta(relativedelta(date_to.datetime, date_from.datetime))
 
         # Format `dm_sent`
         if dm_sent is None:
