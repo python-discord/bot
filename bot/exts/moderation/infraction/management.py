@@ -150,7 +150,7 @@ class ModManagement(commands.Cog):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
-            now_datetime = datetime.now(duration.tzinfo) if duration.tzinfo else datetime.utcnow()
+            now_datetime = datetime.now(timezone.utc)
             if duration < now_datetime:
                 await ctx.send(":x: Expiration is in the past.")
                 return
