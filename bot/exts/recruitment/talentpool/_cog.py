@@ -440,7 +440,7 @@ class TalentPool(Cog, name="Talentpool"):
         await self.refresh_cache()  # Update cache
         await ctx.send(
             f":white_check_mark: Successfully updated nomination reason"
-            f" for {(await self.bot.fetch_user(nomination['user'])).mention}"
+            f" for <@{nomination['user']}>"
         )
 
     @nomination_edit_group.command(name='end_reason')
