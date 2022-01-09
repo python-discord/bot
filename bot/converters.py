@@ -9,6 +9,7 @@ import dateutil.parser
 import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
+from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
@@ -21,7 +22,6 @@ from bot.exts.info.doc import _inventory_parser
 from bot.exts.info.tags import TagIdentifier
 from bot.log import get_logger
 from bot.utils.extensions import EXTENSIONS, unqualify
-from bot.utils.regex import INVITE_RE
 from bot.utils.time import parse_duration_string
 
 if t.TYPE_CHECKING:
@@ -72,7 +72,7 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
-        invite_code = INVITE_RE.match(server_invite)
+        invite_code = DISCORD_INVITE.match(server_invite)
         if invite_code:
             response = await ctx.bot.http_session.get(
                 f"{URLs.discord_invite_api}/{invite_code.group('invite')}"
