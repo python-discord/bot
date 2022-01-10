@@ -50,7 +50,7 @@ class TimestampFormats(Enum):
 
 def _stringify_time_unit(value: int, unit: str) -> str:
     """
-    Returns a string to represent a value and time unit, ensuring that it uses the right plural form of the unit.
+    Return a string to represent a value and time unit, ensuring the unit's correct plural form is used.
 
     >>> _stringify_time_unit(1, "seconds")
     "1 second"
@@ -213,7 +213,7 @@ def humanize_delta(
         ("seconds", delta.seconds),
     )
 
-    # Add the time units that are >0, but stop at accuracy or max_units.
+    # Add the time units that are >0, but stop at precision or max_units.
     time_strings = []
     unit_count = 0
     for unit, value in units:
@@ -224,7 +224,7 @@ def humanize_delta(
         if unit == precision or unit_count >= max_units:
             break
 
-    # Add the 'and' between the last two units, if necessary
+    # Add the 'and' between the last two units, if necessary.
     if len(time_strings) > 1:
         time_strings[-1] = f"{time_strings[-2]} and {time_strings[-1]}"
         del time_strings[-2]
@@ -240,9 +240,10 @@ def humanize_delta(
 
 def parse_duration_string(duration: str) -> Optional[relativedelta]:
     """
-    Converts a `duration` string to a relativedelta object.
+    Convert a `duration` string to a relativedelta object.
 
-    The function supports the following symbols for each unit of time:
+    The following symbols are supported for each unit of time:
+
     - years: `Y`, `y`, `year`, `years`
     - months: `m`, `month`, `months`
     - weeks: `w`, `W`, `week`, `weeks`
@@ -250,8 +251,9 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
     - hours: `H`, `h`, `hour`, `hours`
     - minutes: `M`, `minute`, `minutes`
     - seconds: `S`, `s`, `second`, `seconds`
+
     The units need to be provided in descending order of magnitude.
-    If the string does represent a durationdelta object, it will return None.
+    Return None if the `duration` string cannot be parsed according to the symbols above.
     """
     match = _DURATION_REGEX.fullmatch(duration)
     if not match:
@@ -264,7 +266,7 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
 
 
 def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
-    """Converts a relativedelta object to a timedelta object."""
+    """Convert a relativedelta object to a timedelta object."""
     utcnow = arrow.utcnow()
     return utcnow + delta - utcnow
 
