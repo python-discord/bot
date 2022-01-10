@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from ssl import CertificateError
 
 import dateutil.parser
-import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
@@ -454,9 +453,9 @@ class ISODateTime(Converter):
             raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
 
         if dt.tzinfo:
-            dt = dt.astimezone(dateutil.tz.UTC)
+            dt = dt.astimezone(timezone.utc)
         else:  # Without a timezone, assume it represents UTC.
-            dt = dt.replace(tzinfo=dateutil.tz.UTC)
+            dt = dt.replace(tzinfo=timezone.utc)
 
         return dt
 
