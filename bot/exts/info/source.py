@@ -8,7 +8,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.converters import SourceConverter
-from bot.exts.info.tags import TagIdentifier
+from bot.utils.tags import TagIdentifier
 
 SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, TagIdentifier, commands.ExtensionNotLoaded]
 
@@ -65,7 +65,7 @@ class BotSource(commands.Cog):
 
         # Handle tag file location differently than others to avoid errors in some cases
         if not first_line_no:
-            file_location = Path(filename).relative_to("bot/")
+            file_location = str(filename)
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
