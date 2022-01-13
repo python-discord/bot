@@ -1,7 +1,7 @@
 import difflib
-import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+import arrow
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.utils import sleep_until
@@ -10,10 +10,12 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES
 from bot.converters import OffTopicName
+from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 async def update_names(bot: Bot) -> None:
@@ -21,9 +23,9 @@ async def update_names(bot: Bot) -> None:
     while True:
         # Since we truncate the compute timedelta to seconds, we add one second to ensure
         # we go past midnight in the `seconds_to_sleep` set below.
-        today_at_midnight = datetime.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
+        today_at_midnight = arrow.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
         next_midnight = today_at_midnight + timedelta(days=1)
-        await sleep_until(next_midnight)
+        await sleep_until(next_midnight.datetime)
 
         try:
             channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
@@ -50,7 +52,7 @@ class OffTopicNames(Cog):
         self.bot = bot
         self.updater_task = None
 
-        self.bot.loop.create_task(self.init_offtopic_updater())
+        scheduling.create_task(self.init_offtopic_updater(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel any running updater tasks on cog unload."""
@@ -62,7 +64,7 @@ class OffTopicNames(Cog):
         await self.bot.wait_until_guild_available()
         if self.updater_task is None:
             coro = update_names(self.bot)
-            self.updater_task = self.bot.loop.create_task(coro)
+            self.updater_task = scheduling.create_task(coro, event_loop=self.bot.loop)
 
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)

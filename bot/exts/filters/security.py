@@ -1,10 +1,9 @@
-import logging
-
 from discord.ext.commands import Cog, Context, NoPrivateMessage
 
 from bot.bot import Bot
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Security(Cog):

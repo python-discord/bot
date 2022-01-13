@@ -1,4 +1,3 @@
-import logging
 import time
 from typing import Optional
 
@@ -11,11 +10,12 @@ from bot.bot import Bot
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.info.codeblock._instructions import get_instructions
-from bot.utils import has_lines
+from bot.log import get_logger
+from bot.utils import has_lines, scheduling
 from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class CodeBlockCog(Cog, name="Code Block"):
@@ -114,7 +114,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
 
-        self.bot.loop.create_task(wait_for_deletion(bot_message, (message.author.id,)))
+        scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)), event_loop=self.bot.loop)
 
         # Increase amount of codeblock correction in stats
         self.bot.stats.incr("codeblock_corrections")
@@ -177,10 +177,13 @@ class CodeBlockCog(Cog, name="Code Block"):
         if not bot_message:
             return
 
-        if not instructions:
-            log.info("User's incorrect code block has been fixed. Removing instructions message.")
-            await bot_message.delete()
-            del self.codeblock_message_ids[payload.message_id]
-        else:
-            log.info("Message edited but still has invalid code blocks; editing the instructions.")
-            await bot_message.edit(embed=self.create_embed(instructions))
+        try:
+            if not instructions:
+                log.info("User's incorrect code block was fixed. Removing instructions message.")
+                await bot_message.delete()
+                del self.codeblock_message_ids[payload.message_id]
+            else:
+                log.info("Message edited but still has invalid code blocks; editing instructions.")
+                await bot_message.edit(embed=self.create_embed(instructions))
+        except discord.NotFound:
+            log.debug("Could not find instructions message; it was probably deleted.")

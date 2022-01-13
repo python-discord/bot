@@ -32,6 +32,7 @@ class ChecksTests(unittest.IsolatedAsyncioTestCase):
     async def test_has_no_roles_check_without_guild(self):
         """`has_no_roles_check` should return `False` when `Context.guild` is None."""
         self.ctx.channel = MagicMock(DMChannel)
+        self.ctx.guild = None
         self.assertFalse(await checks.has_no_roles_check(self.ctx))
 
     async def test_has_no_roles_check_returns_false_with_unwanted_role(self):

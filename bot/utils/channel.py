@@ -1,12 +1,13 @@
-import logging
+from typing import Union
 
 import discord
 
 import bot
 from bot import constants
 from bot.constants import Categories
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def is_help_channel(channel: discord.TextChannel) -> bool:
@@ -17,8 +18,11 @@ def is_help_channel(channel: discord.TextChannel) -> bool:
     return any(is_in_category(channel, category) for category in categories)
 
 
-def is_mod_channel(channel: discord.TextChannel) -> bool:
-    """True if `channel` is considered a mod channel."""
+def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
+    """True if channel, or channel.parent for threads, is considered a mod channel."""
+    if isinstance(channel, discord.Thread):
+        channel = channel.parent
+
     if channel.id in constants.MODERATION_CHANNELS:
         log.trace(f"Channel #{channel} is a configured mod channel")
         return True
@@ -53,7 +57,7 @@ def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     return getattr(channel, "category_id", None) == category_id
 
 
-async def try_get_channel(channel_id: int) -> discord.abc.GuildChannel:
+async def get_or_fetch_channel(channel_id: int) -> discord.abc.GuildChannel:
     """Attempt to get or fetch a channel and return it."""
     log.trace(f"Getting the channel {channel_id}.")
 

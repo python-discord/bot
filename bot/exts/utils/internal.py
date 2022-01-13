@@ -1,23 +1,23 @@
 import contextlib
 import inspect
-import logging
 import pprint
 import re
 import textwrap
 import traceback
 from collections import Counter
-from datetime import datetime
 from io import StringIO
 from typing import Any, Optional, Tuple
 
+import arrow
 import discord
-from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
 
 from bot.bot import Bot
-from bot.constants import Roles
+from bot.constants import DEBUG_MODE, Roles
+from bot.log import get_logger
 from bot.utils import find_nth_occurrence, send_to_paste_service
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Internal(Cog):
@@ -29,16 +29,18 @@ class Internal(Cog):
         self.ln = 0
         self.stdout = StringIO()
 
-        self.socket_since = datetime.utcnow()
+        self.socket_since = arrow.utcnow()
         self.socket_event_total = 0
         self.socket_events = Counter()
 
+        if DEBUG_MODE:
+            self.eval.add_check(is_owner().predicate)
+
     @Cog.listener()
-    async def on_socket_response(self, msg: dict) -> None:
+    async def on_socket_event_type(self, event_type: str) -> None:
         """When a websocket event is received, increase our counters."""
-        if event_type := msg.get("t"):
-            self.socket_event_total += 1
-            self.socket_events[event_type] += 1
+        self.socket_event_total += 1
+        self.socket_events[event_type] += 1
 
     def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
         """Format the eval output into a string & attempt to format it into an Embed."""
@@ -234,14 +236,14 @@ async def func():  # (None,) -> Any
     @has_any_role(Roles.admins, Roles.owners, Roles.core_developers)
     async def socketstats(self, ctx: Context) -> None:
         """Fetch information on the socket events received from Discord."""
-        running_s = (datetime.utcnow() - self.socket_since).total_seconds()
+        running_s = (arrow.utcnow() - self.socket_since).total_seconds()
 
         per_s = self.socket_event_total / running_s
 
         stats_embed = discord.Embed(
             title="WebSocket statistics",
             description=f"Receiving {per_s:0.2f} events per second.",
-            color=discord.Color.blurple()
+            color=discord.Color.og_blurple()
         )
 
         for event_type, count in self.socket_events.most_common(25):

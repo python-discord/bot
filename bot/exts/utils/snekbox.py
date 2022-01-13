@@ -1,23 +1,23 @@
 import asyncio
 import contextlib
 import datetime
-import logging
 import re
 import textwrap
 from functools import partial
 from signal import Signals
 from typing import Awaitable, Callable, Optional, Tuple
 
-from discord import HTTPException, Message, NotFound, Reaction, User
+from discord import AllowedMentions, HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Command, Context, command, guild_only
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Roles, URLs
 from bot.decorators import redirect_output
-from bot.utils import send_to_paste_service
+from bot.log import get_logger
+from bot.utils import scheduling, send_to_paste_service
 from bot.utils.messages import wait_for_deletion
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
@@ -241,8 +241,9 @@ class Snekbox(Cog):
             if filter_triggered:
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
-                response = await ctx.send(msg)
-            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,)))
+                allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
+                response = await ctx.send(msg, allowed_mentions=allowed_mentions)
+            scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response

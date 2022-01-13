@@ -1,19 +1,17 @@
 import difflib
-import logging
-import typing as t
 
 from discord import Embed
-from discord.ext.commands import Cog, Context, errors
+from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
-from bot.converters import TagNameConverter
-from bot.errors import InvalidInfractedUser, LockedResourceError
+from bot.errors import InvalidInfractedUserError, LockedResourceError
+from bot.log import get_logger
 from bot.utils.checks import ContextCheckFailure
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ErrorHandler(Cog):
@@ -59,51 +57,52 @@ class ErrorHandler(Cog):
             log.trace(f"Command {command} had its error already handled locally; ignoring.")
             return
 
+        debug_message = (
+            f"Command {command} invoked by {ctx.message.author} with error "
+            f"{e.__class__.__name__}: {e}"
+        )
+
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
             if await self.try_silence(ctx):
                 return
-            # Try to look for a tag with the command's name
-            await self.try_get_tag(ctx)
-            return  # Exit early to avoid logging.
+            await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
         elif isinstance(e, errors.UserInputError):
+            log.debug(debug_message)
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):
+            log.debug(debug_message)
             await self.handle_check_failure(ctx, e)
         elif isinstance(e, errors.CommandOnCooldown):
+            log.debug(debug_message)
             await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             elif isinstance(e.original, LockedResourceError):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
-            elif isinstance(e.original, InvalidInfractedUser):
+            elif isinstance(e.original, InvalidInfractedUserError):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
             else:
                 await self.handle_unexpected_error(ctx, e.original)
-            return  # Exit early to avoid logging.
         elif isinstance(e, errors.ConversionError):
             if isinstance(e.original, ResponseCodeError):
                 await self.handle_api_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
-            return  # Exit early to avoid logging.
-        elif not isinstance(e, errors.DisabledCommand):
+        elif isinstance(e, errors.DisabledCommand):
+            log.debug(debug_message)
+        else:
             # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
-            return  # Exit early to avoid logging.
 
-        log.debug(
-            f"Command {command} invoked by {ctx.message.author} with error "
-            f"{e.__class__.__name__}: {e}"
-        )
-
-    @staticmethod
-    def get_help_command(ctx: Context) -> t.Coroutine:
+    async def send_command_help(self, ctx: Context) -> None:
         """Return a prepared `help` command invocation coroutine."""
         if ctx.command:
-            return ctx.send_help(ctx.command)
+            self.bot.help_command.context = ctx
+            await ctx.send_help(ctx.command)
+            return
 
-        return ctx.send_help()
+        await ctx.send_help()
 
     async def try_silence(self, ctx: Context) -> bool:
         """
@@ -115,8 +114,10 @@ class ErrorHandler(Cog):
         Return bool depending on success of command.
         """
         command = ctx.invoked_with.lower()
+        args = ctx.message.content.lower().split(" ")
         silence_command = self.bot.get_command("silence")
         ctx.invoked_from_error_handler = True
+
         try:
             if not await silence_command.can_run(ctx):
                 log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
@@ -124,11 +125,30 @@ class ErrorHandler(Cog):
         except errors.CommandError:
             log.debug("Cancelling attempt to invoke silence/unsilence due to failed checks.")
             return False
+
+        # Parse optional args
+        channel = None
+        duration = min(command.count("h") * 2, 15)
+        kick = False
+
+        if len(args) > 1:
+            # Parse channel
+            for converter in (TextChannelConverter(), VoiceChannelConverter()):
+                try:
+                    channel = await converter.convert(ctx, args[1])
+                    break
+                except ChannelNotFound:
+                    continue
+
+        if len(args) > 2 and channel is not None:
+            # Parse kick
+            kick = args[2].lower() == "true"
+
         if command.startswith("shh"):
-            await ctx.invoke(silence_command, duration=min(command.count("h")*2, 15))
+            await ctx.invoke(silence_command, duration_or_channel=channel, duration=duration, kick=kick)
             return True
         elif command.startswith("unshh"):
-            await ctx.invoke(self.bot.get_command("unsilence"))
+            await ctx.invoke(self.bot.get_command("unsilence"), channel=channel)
             return True
         return False
 
@@ -153,22 +173,11 @@ class ErrorHandler(Cog):
             await self.on_command_error(ctx, tag_error)
             return
 
-        try:
-            tag_name = await TagNameConverter.convert(ctx, ctx.invoked_with)
-        except errors.BadArgument:
-            log.debug(
-                f"{ctx.author} tried to use an invalid command "
-                f"and the fallback tag failed validation in TagNameConverter."
-            )
-        else:
-            if await ctx.invoke(tags_get_command, tag_name=tag_name):
-                return
+        if await ctx.invoke(tags_get_command, argument_string=ctx.message.content):
+            return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
-
-        # Return to not raise the exception
-        return
 
     async def send_command_suggestion(self, ctx: Context, command_name: str) -> None:
         """Sends user similar commands if any can be found."""
@@ -214,37 +223,30 @@ class ErrorHandler(Cog):
         """
         if isinstance(e, errors.MissingRequiredArgument):
             embed = self._get_error_embed("Missing required argument", e.param.name)
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.missing_required_argument")
         elif isinstance(e, errors.TooManyArguments):
             embed = self._get_error_embed("Too many arguments", str(e))
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.too_many_arguments")
         elif isinstance(e, errors.BadArgument):
             embed = self._get_error_embed("Bad argument", str(e))
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.bad_argument")
         elif isinstance(e, errors.BadUnionArgument):
             embed = self._get_error_embed("Bad argument", f"{e}\n{e.errors[-1]}")
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.bad_union_argument")
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
             await ctx.send(embed=embed)
-            self.get_help_command(ctx).close()
             self.bot.stats.incr("errors.argument_parsing_error")
+            return
         else:
             embed = self._get_error_embed(
                 "Input error",
                 "Something about your input seems off. Check the arguments and try again."
             )
-            await ctx.send(embed=embed)
-            await self.get_help_command(ctx)
             self.bot.stats.incr("errors.other_user_input_error")
+
+        await ctx.send(embed=embed)
+        await self.send_command_help(ctx)
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:
@@ -278,8 +280,8 @@ class ErrorHandler(Cog):
     async def handle_api_error(ctx: Context, e: ResponseCodeError) -> None:
         """Send an error message in `ctx` for ResponseCodeError and log it."""
         if e.status == 404:
-            await ctx.send("There does not seem to be anything matching your query.")
             log.debug(f"API responded with 404 for command {ctx.command}")
+            await ctx.send("There does not seem to be anything matching your query.")
             ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
             content = await e.response.json()
@@ -287,12 +289,12 @@ class ErrorHandler(Cog):
             await ctx.send("According to the API, your request is malformed.")
             ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
-            await ctx.send("Sorry, there seems to be an internal issue with the API.")
             log.warning(f"API responded with {e.status} for command {ctx.command}")
+            await ctx.send("Sorry, there seems to be an internal issue with the API.")
             ctx.bot.stats.incr("errors.api_internal_server_error")
         else:
-            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
             log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
+            await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
             ctx.bot.stats.incr(f"errors.api_error_{e.status}")
 
     @staticmethod

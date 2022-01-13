@@ -1,12 +1,14 @@
 import asyncio
-import logging
 import re
-from datetime import datetime, timedelta
+import unicodedata
+from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
-import dateutil
+import arrow
+import dateutil.parser
 import discord.errors
 import regex
+import tldextract
 from async_rediscache import RedisCache
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
@@ -15,16 +17,15 @@ from discord.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import (
-    Channels, Colours, Filter,
-    Guild, Icons, URLs
-)
+from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
+from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.messages import format_user
 from bot.utils.regex import INVITE_RE
-from bot.utils.scheduling import Scheduler
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Regular expressions
 CODE_BLOCK_RE = re.compile(
@@ -45,6 +46,23 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 DAYS_BETWEEN_ALERTS = 3
 OFFENSIVE_MSG_DELETE_TIME = timedelta(days=Filter.offensive_msg_delete_days)
 
+# Autoban
+LINK_PASSWORD = "https://support.discord.com/hc/en-us/articles/218410947-I-forgot-my-Password-Where-can-I-set-a-new-one"
+LINK_2FA = "https://support.discord.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication"
+AUTO_BAN_REASON = (
+    "Your account has been used to send links to a phishing website. You have been automatically banned. "
+    "If you are not aware of sending them, that means your account has been compromised.\n\n"
+
+    f"Here is a guide from Discord on [how to change your password]({LINK_PASSWORD}).\n\n"
+
+    f"We also highly recommend that you [enable 2 factor authentication on your account]({LINK_2FA}), "
+    "for heightened security.\n\n"
+
+    "Once you have changed your password, feel free to follow the instructions at the bottom of "
+    "this message to appeal your ban."
+)
+AUTO_BAN_DURATION = timedelta(days=4)
+
 FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
 
 
@@ -63,7 +81,7 @@ class Filtering(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.scheduler = Scheduler(self.__class__.__name__)
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.name_lock = asyncio.Lock()
 
         staff_mistake_str = "If you believe this was a mistake, please let staff know!"
@@ -103,19 +121,6 @@ class Filtering(Cog):
                 ),
                 "schedule_deletion": False
             },
-            "filter_everyone_ping": {
-                "enabled": Filter.filter_everyone_ping,
-                "function": self._has_everyone_ping,
-                "type": "filter",
-                "content_only": True,
-                "user_notification": Filter.notify_user_everyone_ping,
-                "notification_msg": (
-                    "Please don't try to ping `@everyone` or `@here`. "
-                    f"Your message has been removed. {staff_mistake_str}"
-                ),
-                "schedule_deletion": False,
-                "ping_everyone": False
-            },
             "watch_regex": {
                 "enabled": Filter.watch_regex,
                 "function": self._has_watch_regex_match,
@@ -129,10 +134,23 @@ class Filtering(Cog):
                 "type": "watchlist",
                 "content_only": False,
                 "schedule_deletion": False
-            }
+            },
+            "filter_everyone_ping": {
+                "enabled": Filter.filter_everyone_ping,
+                "function": self._has_everyone_ping,
+                "type": "filter",
+                "content_only": True,
+                "user_notification": Filter.notify_user_everyone_ping,
+                "notification_msg": (
+                    "Please don't try to ping `@everyone` or `@here`. "
+                    f"Your message has been removed. {staff_mistake_str}"
+                ),
+                "schedule_deletion": False,
+                "ping_everyone": False
+            },
         }
 
-        self.bot.loop.create_task(self.reschedule_offensive_msg_deletion())
+        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
 
     def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
@@ -173,29 +191,43 @@ class Filtering(Cog):
         """
         Invoke message filter for message edits.
 
-        If there have been multiple edits, calculate the time delta from the previous edit.
+        Also calculates the time delta from the previous edit or when message was sent if there's no prior edits.
         """
+        # We only care about changes to the message contents/attachments and embed additions, not pin status etc.
+        if all((
+            before.content == after.content,  # content hasn't changed
+            before.attachments == after.attachments,  # attachments haven't changed
+            len(before.embeds) >= len(after.embeds)  # embeds haven't been added
+        )):
+            return
+
         if not before.edited_at:
             delta = relativedelta(after.edited_at, before.created_at).microseconds
         else:
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    def get_name_matches(self, name: str) -> List[re.Match]:
-        """Check bad words from passed string (name). Return list of matches."""
-        name = self.clean_input(name)
-        matches = []
+    def get_name_match(self, name: str) -> Optional[re.Match]:
+        """Check bad words from passed string (name). Return the first match found."""
+        normalised_name = unicodedata.normalize("NFKC", name)
+        cleaned_normalised_name = "".join([c for c in normalised_name if not unicodedata.combining(c)])
+
+        # Run filters against normalised, cleaned normalised and the original name,
+        # in case we have filters for one but not the other.
+        names_to_check = (name, normalised_name, cleaned_normalised_name)
+
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
-            if match := re.search(pattern, name, flags=re.IGNORECASE):
-                matches.append(match)
-        return matches
+            for name in names_to_check:
+                if match := re.search(pattern, name, flags=re.IGNORECASE):
+                    return match
+        return None
 
     async def check_send_alert(self, member: Member) -> bool:
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
         if last_alert := await self.name_alerts.get(member.id):
-            last_alert = datetime.utcfromtimestamp(last_alert)
-            if datetime.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
+            last_alert = arrow.get(last_alert)
+            if arrow.utcnow() - timedelta(days=DAYS_BETWEEN_ALERTS) < last_alert:
                 log.trace(f"Last alert was too recent for {member}'s nickname.")
                 return False
 
@@ -205,10 +237,14 @@ class Filtering(Cog):
         """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
         # Use lock to avoid race conditions
         async with self.name_lock:
-            # Check whether the users display name contains any words in our blacklist
-            matches = self.get_name_matches(member.display_name)
+            # Check if we recently alerted about this user first,
+            # to avoid running all the filter tokens against their name again.
+            if not await self.check_send_alert(member):
+                return
 
-            if not matches or not await self.check_send_alert(member):
+            # Check whether the users display name contains any words in our blacklist
+            match = self.get_name_match(member.display_name)
+            if not match:
                 return
 
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
@@ -216,7 +252,7 @@ class Filtering(Cog):
             log_string = (
                 f"**User:** {format_user(member)}\n"
                 f"**Display Name:** {escape_markdown(member.display_name)}\n"
-                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+                f"**Bad Match:** {match.group()}"
             )
 
             await self.mod_log.send_log_message(
@@ -225,11 +261,11 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.avatar_url
+                thumbnail=member.display_avatar.url
             )
 
             # Update time when alert sent
-            await self.name_alerts.set(member.id, datetime.utcnow().timestamp())
+            await self.name_alerts.set(member.id, arrow.utcnow().timestamp())
 
     async def filter_eval(self, result: str, msg: Message) -> bool:
         """
@@ -281,6 +317,12 @@ class Filtering(Cog):
                         if delta is not None and delta < 100:
                             continue
 
+                    if filter_name in ("filter_invites", "filter_everyone_ping"):
+                        # Disable invites filter in codejam team channels
+                        category = getattr(msg.channel, "category", None)
+                        if category and category.name == JAM_CATEGORY_NAME:
+                            continue
+
                     # Does the filter only need the message content or the full message?
                     if _filter["content_only"]:
                         payload = msg.content
@@ -319,7 +361,7 @@ class Filtering(Cog):
                                 await self.notify_member(msg.author, _filter["notification_msg"], msg.channel)
 
                         # If the message is classed as offensive, we store it in the site db and
-                        # it will be deleted it after one week.
+                        # it will be deleted after one week.
                         if _filter["schedule_deletion"] and not is_private:
                             delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
                             data = {
@@ -342,6 +384,24 @@ class Filtering(Cog):
                         stats = self._add_stats(filter_name, match, msg.content)
                         await self._send_log(filter_name, _filter, msg, stats, reason)
 
+                        # If the filter reason contains `[autoban]`, we want to auto-ban the user
+                        if reason and "[autoban]" in reason.lower():
+                            # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
+                            # This sends the ban confirmation directly under watchlist trigger embed, to inform
+                            # mods that the user was auto-banned for the message.
+                            context = await self.bot.get_context(msg)
+                            context.guild = self.bot.get_guild(Guild.id)
+                            context.author = context.guild.get_member(self.bot.user.id)
+                            context.channel = self.bot.get_channel(Channels.mod_alerts)
+                            context.command = self.bot.get_command("tempban")
+
+                            await context.invoke(
+                                context.command,
+                                msg.author,
+                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                reason=AUTO_BAN_REASON
+                            )
+
                         break  # We don't want multiple filters to trigger
 
     async def _send_log(
@@ -363,6 +423,10 @@ class Filtering(Cog):
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
+        # If we are going to autoban, we don't want to ping
+        if reason and "[autoban]" in reason:
+            ping_everyone = False
+
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
         message = (
@@ -379,7 +443,7 @@ class Filtering(Cog):
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
             text=message,
-            thumbnail=msg.author.avatar_url_as(static_format="png"),
+            thumbnail=msg.author.display_avatar.url,
             channel_id=Channels.mod_alerts,
             ping_everyone=ping_everyone,
             additional_embeds=stats.additional_embeds,
@@ -452,10 +516,6 @@ class Filtering(Cog):
 
         text = self.clean_input(text)
 
-        # Make sure it's not a URL
-        if URL_RE.search(text):
-            return False, None
-
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
             match = re.search(pattern, text, flags=re.IGNORECASE)
@@ -471,16 +531,15 @@ class Filtering(Cog):
         Second return value is a reason of URL blacklisting (can be None).
         """
         text = self.clean_input(text)
-        if not URL_RE.search(text):
-            return False, None
 
-        text = text.lower()
         domain_blacklist = self._get_filterlist_items("domain_name", allowed=False)
-
-        for url in domain_blacklist:
-            if url.lower() in text:
-                return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
-
+        for match in URL_RE.finditer(text):
+            for url in domain_blacklist:
+                if url.lower() in match.group(1).lower():
+                    blacklisted_parsed = tldextract.extract(url.lower())
+                    url_parsed = tldextract.extract(match.group(1).lower())
+                    if blacklisted_parsed.registered_domain == url_parsed.registered_domain:
+                        return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod
@@ -507,7 +566,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = INVITE_RE.findall(text)
+        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:
@@ -603,7 +662,7 @@ class Filtering(Cog):
 
     def schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
-        delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+        delete_at = dateutil.parser.isoparse(msg['delete_date'])
         self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
     async def reschedule_offensive_msg_deletion(self) -> None:
@@ -611,17 +670,17 @@ class Filtering(Cog):
         await self.bot.wait_until_ready()
         response = await self.bot.api_client.get('bot/offensive-messages',)
 
-        now = datetime.utcnow()
+        now = arrow.utcnow()
 
         for msg in response:
-            delete_at = dateutil.parser.isoparse(msg['delete_date']).replace(tzinfo=None)
+            delete_at = dateutil.parser.isoparse(msg['delete_date'])
 
             if delete_at < now:
                 await self.delete_offensive_msg(msg)
             else:
                 self.schedule_msg_delete(msg)
 
-    async def delete_offensive_msg(self, msg: Mapping[str, str]) -> None:
+    async def delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
         """Delete an offensive message, and then delete it from the db."""
         try:
             channel = self.bot.get_channel(msg['channel_id'])

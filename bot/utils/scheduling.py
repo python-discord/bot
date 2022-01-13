@@ -1,10 +1,11 @@
 import asyncio
 import contextlib
 import inspect
-import logging
 import typing as t
 from datetime import datetime
 from functools import partial
+
+from bot.log import get_logger
 
 
 class Scheduler:
@@ -27,7 +28,7 @@ class Scheduler:
     def __init__(self, name: str):
         self.name = name
 
-        self._log = logging.getLogger(f"{__name__}.{name}")
+        self._log = get_logger(f"{__name__}.{name}")
         self._scheduled_tasks: t.Dict[t.Hashable, asyncio.Task] = {}
 
     def __contains__(self, task_id: t.Hashable) -> bool:
@@ -161,9 +162,22 @@ class Scheduler:
                 self._log.error(f"Error in task #{task_id} {id(done_task)}!", exc_info=exception)
 
 
-def create_task(coro: t.Awaitable, *suppressed_exceptions: t.Type[Exception], **kwargs) -> asyncio.Task:
-    """Wrapper for `asyncio.create_task` which logs exceptions raised in the task."""
-    task = asyncio.create_task(coro, **kwargs)
+def create_task(
+    coro: t.Awaitable,
+    *,
+    suppressed_exceptions: tuple[t.Type[Exception]] = (),
+    event_loop: t.Optional[asyncio.AbstractEventLoop] = None,
+    **kwargs,
+) -> asyncio.Task:
+    """
+    Wrapper for creating asyncio `Task`s which logs exceptions raised in the task.
+
+    If the loop kwarg is provided, the task is created from that event loop, otherwise the running loop is used.
+    """
+    if event_loop is not None:
+        task = event_loop.create_task(coro, **kwargs)
+    else:
+        task = asyncio.create_task(coro, **kwargs)
     task.add_done_callback(partial(_log_task_exception, suppressed_exceptions=suppressed_exceptions))
     return task
 
@@ -174,5 +188,5 @@ def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.
         exception = task.exception()
         # Log the exception if one exists.
         if exception and not isinstance(exception, suppressed_exceptions):
-            log = logging.getLogger(__name__)
+            log = get_logger(__name__)
             log.error(f"Error in task {task.get_name()} {id(task)}!", exc_info=exception)

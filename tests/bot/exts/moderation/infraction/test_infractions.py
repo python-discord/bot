@@ -3,6 +3,8 @@ import textwrap
 import unittest
 from unittest.mock import ANY, AsyncMock, MagicMock, Mock, patch
 
+from discord.errors import NotFound
+
 from bot.constants import Event
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
@@ -13,12 +15,13 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
     """Tests for ban and kick command reason truncation."""
 
     def setUp(self):
+        self.me = MockMember(id=7890, roles=[MockRole(id=7890, position=5)])
         self.bot = MockBot()
         self.cog = Infractions(self.bot)
-        self.user = MockMember(id=1234, top_role=MockRole(id=3577, position=10))
-        self.target = MockMember(id=1265, top_role=MockRole(id=9876, position=0))
+        self.user = MockMember(id=1234, roles=[MockRole(id=3577, position=10)])
+        self.target = MockMember(id=1265, roles=[MockRole(id=9876, position=1)])
         self.guild = MockGuild(id=4567)
-        self.ctx = MockContext(bot=self.bot, author=self.user, guild=self.guild)
+        self.ctx = MockContext(me=self.me, bot=self.bot, author=self.user, guild=self.guild)
 
     @patch("bot.exts.moderation.infraction._utils.get_active_infraction")
     @patch("bot.exts.moderation.infraction._utils.post_infraction")
@@ -64,8 +67,8 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.bot = MockBot()
-        self.mod = MockMember(top_role=10)
-        self.user = MockMember(top_role=1, roles=[MockRole(id=123456)])
+        self.mod = MockMember(roles=[MockRole(id=7890123, position=10)])
+        self.user = MockMember(roles=[MockRole(id=123456, position=1)])
         self.guild = MockGuild()
         self.ctx = MockContext(bot=self.bot, author=self.mod)
         self.cog = Infractions(self.bot)
@@ -195,7 +198,8 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
     async def test_voice_unban_user_not_found(self):
         """Should include info to return dict when user was not found from guild."""
         self.guild.get_member.return_value = None
-        result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
+        self.guild.fetch_member.side_effect = NotFound(Mock(status=404), "Not found")
+        result = await self.cog.pardon_voice_ban(self.user.id, self.guild)
         self.assertEqual(result, {"Info": "User was not found in the guild."})
 
     @patch("bot.exts.moderation.infraction.infractions._utils.notify_pardon")
@@ -206,7 +210,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         notify_pardon_mock.return_value = True
         format_user_mock.return_value = "my-user"
 
-        result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
+        result = await self.cog.pardon_voice_ban(self.user.id, self.guild)
         self.assertEqual(result, {
             "Member": "my-user",
             "DM": "Sent"
@@ -221,7 +225,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         notify_pardon_mock.return_value = False
         format_user_mock.return_value = "my-user"
 
-        result = await self.cog.pardon_voice_ban(self.user.id, self.guild, "foobar")
+        result = await self.cog.pardon_voice_ban(self.user.id, self.guild)
         self.assertEqual(result, {
             "Member": "my-user",
             "DM": "**Failed**"

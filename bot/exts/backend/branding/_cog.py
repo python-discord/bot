@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import logging
 import random
 import typing as t
 from datetime import timedelta
@@ -17,8 +16,10 @@ from bot.bot import Bot
 from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, MODERATION_ROLES
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
+from bot.log import get_logger
+from bot.utils import scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class AssetType(Enum):
@@ -50,7 +51,7 @@ def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
     For both `title` and `description`, empty string are valid values ~ fields will be empty.
     """
     colour = Colours.soft_green if success else Colours.soft_red
-    return discord.Embed(title=title[:256], description=description[:2048], colour=colour)
+    return discord.Embed(title=title[:256], description=description[:4096], colour=colour)
 
 
 def extract_event_duration(event: Event) -> str:
@@ -126,7 +127,7 @@ class Branding(commands.Cog):
         self.bot = bot
         self.repository = BrandingRepository(bot)
 
-        self.bot.loop.create_task(self.maybe_start_daemon())  # Start depending on cache.
+        scheduling.create_task(self.maybe_start_daemon(), event_loop=self.bot.loop)  # Start depending on cache.
 
     # region: Internal logic & state management
 
@@ -293,8 +294,8 @@ class Branding(commands.Cog):
 
         else:
             content = "Python Discord is entering a new event!" if is_notification else None
-            embed = discord.Embed(description=description[:2048], colour=discord.Colour.blurple())
-            embed.set_footer(text=duration[:2048])
+            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
+            embed.set_footer(text=duration[:4096])
 
         await channel.send(content=content, embed=embed)
 
@@ -572,7 +573,7 @@ class Branding(commands.Cog):
             await ctx.send(embed=resp)
             return
 
-        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.blurple())
+        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.og_blurple())
 
         # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
         first_25 = list(available_events.items())[:25]

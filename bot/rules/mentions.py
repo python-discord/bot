@@ -13,7 +13,11 @@ async def apply(
         if msg.author == last_message.author
     )
 
-    total_recent_mentions = sum(len(msg.mentions) for msg in relevant_messages)
+    total_recent_mentions = sum(
+        not user.bot
+        for msg in relevant_messages
+        for user in msg.mentions
+    )
 
     if total_recent_mentions > config['max']:
         return (

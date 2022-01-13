@@ -9,8 +9,6 @@ the custom configuration. Any settings left
 out in the custom user configuration will stay
 their default values from `config-default.yml`.
 """
-
-import logging
 import os
 from collections.abc import Mapping
 from enum import Enum
@@ -24,8 +22,6 @@ try:
     dotenv.load_dotenv()
 except ModuleNotFoundError:
     pass
-
-log = logging.getLogger(__name__)
 
 
 def _env_var_constructor(loader, node):
@@ -104,7 +100,7 @@ def _recursive_update(original, new):
 
 
 if Path("config.yml").exists():
-    log.info("Found `config.yml` file, loading constants from it.")
+    print("Found `config.yml` file, loading constants from it.")
     with open("config.yml", encoding="UTF-8") as f:
         user_config = yaml.safe_load(f)
     _recursive_update(_CONFIG_YAML, user_config)
@@ -123,11 +119,10 @@ def check_required_keys(keys):
                 if lookup is None:
                     raise KeyError(key)
         except KeyError:
-            log.critical(
+            raise KeyError(
                 f"A configuration for `{key_path}` is required, but was not found. "
                 "Please set it in `config.yml` or setup an environment variable and try again."
             )
-            raise
 
 
 try:
@@ -186,8 +181,7 @@ class YAMLGetter(type):
                 (cls.section, cls.subsection, name)
                 if cls.subsection is not None else (cls.section, name)
             )
-            # Only an INFO log since this can be caught through `hasattr` or `getattr`.
-            log.info(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
+            print(f"Tried accessing configuration variable at `{dotted_path}`, but it could not be found.")
             raise AttributeError(repr(name)) from e
 
     def __getitem__(cls, name):
@@ -400,6 +394,8 @@ class Categories(metaclass=YAMLGetter):
     modmail: int
     voice: int
 
+    # 2021 Summer Code Jam
+    summer_code_jam: int
 
 class Channels(metaclass=YAMLGetter):
     section = "guild"
@@ -433,10 +429,13 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
 
+    black_formatter: int
+
     bot_commands: int
-    discord_py: int
+    discord_bots: int
     esoteric: int
     voice_gate: int
+    code_jam_planning: int
 
     admins: int
     admin_spam: int
@@ -445,6 +444,7 @@ class Channels(metaclass=YAMLGetter):
     incidents: int
     incidents_archive: int
     mod_alerts: int
+    mod_meta: int
     nominations: int
     nomination_voting: int
     organisation: int
@@ -454,18 +454,19 @@ class Channels(metaclass=YAMLGetter):
     staff_announcements: int
 
     admins_voice: int
+    code_help_voice_0: int
     code_help_voice_1: int
-    code_help_voice_2: int
-    general_voice: int
+    general_voice_0: int
+    general_voice_1: int
     staff_voice: int
 
+    code_help_chat_0: int
     code_help_chat_1: int
-    code_help_chat_2: int
     staff_voice_chat: int
-    voice_chat: int
+    voice_chat_0: int
+    voice_chat_1: int
 
     big_brother_logs: int
-    talent_pool: int
 
 
 class Webhooks(metaclass=YAMLGetter):
@@ -475,15 +476,20 @@ class Webhooks(metaclass=YAMLGetter):
     big_brother: int
     dev_log: int
     duck_pond: int
+    incidents: int
     incidents_archive: int
-    talent_pool: int
 
 
 class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
+    # Self-assignable roles, see the Subscribe cog
+    advent_of_code: int
     announcements: int
+    lovefest: int
+    pyweek_announcements: int
+
     contributors: int
     help_cooldown: int
     muted: int
@@ -495,8 +501,10 @@ class Roles(metaclass=YAMLGetter):
 
     admins: int
     core_developers: int
+    code_jam_event_team: int
     devops: int
     domain_leads: int
+    events_lead: int
     helpers: int
     moderators: int
     mod_team: int
@@ -504,7 +512,6 @@ class Roles(metaclass=YAMLGetter):
     project_leads: int
 
     jammers: int
-    team_leaders: int
 
 
 class Guild(metaclass=YAMLGetter):
@@ -560,12 +567,15 @@ class Metabase(metaclass=YAMLGetter):
 
     username: Optional[str]
     password: Optional[str]
-    url: str
+    base_url: str
+    public_url: str
     max_session_age: int
 
 
 class AntiSpam(metaclass=YAMLGetter):
     section = 'anti_spam'
+
+    cache_size: int
 
     clean_offending: bool
     ping_everyone: bool
@@ -602,7 +612,6 @@ class HelpChannels(metaclass=YAMLGetter):
     section = 'help_channels'
 
     enable: bool
-    claim_minutes: int
     cmd_whitelist: List[int]
     idle_minutes_claimant: int
     idle_minutes_others: int
@@ -679,8 +688,16 @@ class VideoPermission(metaclass=YAMLGetter):
     default_permission_duration: int
 
 
+class ThreadArchiveTimes(Enum):
+    HOUR = 60
+    DAY = 1440
+    THREE_DAY = 4320
+    WEEK = 10080
+
+
 # Debug mode
-DEBUG_MODE = 'local' in os.environ.get("SITE_URL", "local")
+DEBUG_MODE: bool = _CONFIG_YAML["debug"] == "true"
+FILE_LOGS: bool = _CONFIG_YAML["file_logs"].lower() == "true"
 
 # Paths
 BOT_DIR = os.path.dirname(__file__)
@@ -689,6 +706,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 # Default role combinations
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
+STAFF_PARTNERS_COMMUNITY_ROLES = STAFF_ROLES + [Roles.partners, Roles.python_community]
 
 # Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels

@@ -1,4 +1,3 @@
-import logging
 import textwrap
 import typing as t
 
@@ -9,22 +8,21 @@ from arrow import Arrow
 import bot
 from bot import constants
 from bot.exts.help_channels import _caches
-from bot.utils.channel import is_in_category
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 
 AVAILABLE_MSG = f"""
-**Send your question here to claim the channel**
-This channel will be dedicated to answering your question only. Others will try to answer and help you solve the issue.
+Send your question here to claim the channel.
 
-**Keep in mind:**
-• It's always ok to just ask your question. You don't need permission.
-• Explain what you expect to happen and what actually happens.
-• Include a code sample and error message, if you got any.
+**Remember to:**
+• **Ask** your Python question, not if you can ask or if there's an expert who can help.
+• **Show** a code sample as text (rather than a screenshot) and the error message, if you got one.
+• **Explain** what you expect to happen and what actually happens.
 
-For more tips, check out our guide on **[asking good questions]({ASKING_GUIDE_URL})**.
+For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
 
 AVAILABLE_TITLE = "Available help channel"
@@ -32,12 +30,12 @@ AVAILABLE_TITLE = "Available help channel"
 AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
 
 DORMANT_MSG = f"""
-This help channel has been marked as **dormant**, and has been moved into the **Help: Dormant** \
+This help channel has been marked as **dormant**, and has been moved into the **{{dormant}}** \
 category at the bottom of the channel list. It is no longer possible to send messages in this \
 channel until it becomes available again.
 
 If your question wasn't answered yet, you can claim a new help channel from the \
-**Help: Available** category by simply asking your question again. Consider rephrasing the \
+**{{available}}** category by simply asking your question again. Consider rephrasing the \
 question to maximize your chance of getting a good answer. If you're not sure how, have a look \
 through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
 """
@@ -47,23 +45,21 @@ async def update_message_caches(message: discord.Message) -> None:
     """Checks the source of new content in a help channel and updates the appropriate cache."""
     channel = message.channel
 
-    # Confirm the channel is an in use help channel
-    if is_in_category(channel, constants.Categories.help_in_use):
-        log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
+    log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
 
-        claimant_id = await _caches.claimants.get(channel.id)
-        if not claimant_id:
-            # The mapping for this channel doesn't exist, we can't do anything.
-            return
+    claimant_id = await _caches.claimants.get(channel.id)
+    if not claimant_id:
+        # The mapping for this channel doesn't exist, we can't do anything.
+        return
 
-        # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
-        timestamp = Arrow.fromdatetime(message.created_at).timestamp()
+    # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
+    timestamp = Arrow.fromdatetime(message.created_at).timestamp()
 
-        # Overwrite the appropriate last message cache depending on the author of the message
-        if message.author.id == claimant_id:
-            await _caches.claimant_last_message_times.set(channel.id, timestamp)
-        else:
-            await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
+    # Overwrite the appropriate last message cache depending on the author of the message
+    if message.author.id == claimant_id:
+        await _caches.claimant_last_message_times.set(channel.id, timestamp)
+    else:
+        await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
 
 
 async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
@@ -178,7 +174,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arr
 
 async def pin(message: discord.Message) -> None:
     """Pin an initial question `message` and store it in a cache."""
-    if await _pin_wrapper(message.id, message.channel, pin=True):
+    if await pin_wrapper(message.id, message.channel, pin=True):
         await _caches.question_messages.set(message.channel.id, message.id)
 
 
@@ -209,7 +205,7 @@ async def unpin(channel: discord.TextChannel) -> None:
     if msg_id is None:
         log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
     else:
-        await _pin_wrapper(msg_id, channel, pin=False)
+        await pin_wrapper(msg_id, channel, pin=False)
 
 
 def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> bool:
@@ -224,7 +220,7 @@ def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> 
     return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
 
 
-async def _pin_wrapper(msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
+async def pin_wrapper(msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
     """
     Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
 
