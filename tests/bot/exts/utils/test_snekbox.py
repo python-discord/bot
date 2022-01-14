@@ -61,7 +61,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         )
         for case, expected, testname in cases:
             with self.subTest(msg=f'Extract code from {testname}.'):
-                self.assertEqual(self.cog.prepare_input(case), expected)
+                self.assertEqual('\n'.join(self.cog.prepare_input(case)), expected)
 
     def test_get_results_message(self):
         """Return error and message according to the eval result."""
@@ -156,7 +156,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Test the eval command procedure."""
         ctx = MockContext()
         response = MockMessage()
-        self.cog.prepare_input = MagicMock(return_value='MyAwesomeFormattedCode')
+        self.cog.prepare_input = MagicMock(return_value=['MyAwesomeFormattedCode'])
         self.cog.send_eval = AsyncMock(return_value=response)
         self.cog.continue_eval = AsyncMock(return_value=None)
 
@@ -297,7 +297,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         actual = await self.cog.continue_eval(ctx, response)
         self.cog.get_code.assert_awaited_once_with(new_msg, ctx.command)
-        self.assertEqual(actual, expected)
+        self.assertEqual(actual, [expected])
         self.bot.wait_for.assert_has_awaits(
             (
                 call(
