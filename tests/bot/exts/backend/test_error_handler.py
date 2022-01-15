@@ -6,7 +6,7 @@ from discord.ext.commands import errors
 from bot.api import ResponseCodeError
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.exts.backend.error_handler import ErrorHandler, setup
-from bot.exts.info.tags import Tags
+from bot.exts.info.tags._cog import Tags
 from bot.exts.moderation.silence import Silence
 from bot.utils.checks import InWhitelistCheckFailure
 from tests.helpers import MockBot, MockContext, MockGuild, MockRole, MockTextChannel

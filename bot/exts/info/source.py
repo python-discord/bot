@@ -8,7 +8,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.converters import SourceConverter
-from bot.utils.tags import TagIdentifier
+from bot.exts.info.tags._utils import TagIdentifier
 
 SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, TagIdentifier, commands.ExtensionNotLoaded]
 

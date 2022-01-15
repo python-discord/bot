@@ -9,10 +9,10 @@ from discord.ext.commands import Cog, Context, group
 
 from bot import constants
 from bot.bot import Bot
+from bot.exts.info.tags._utils import COOLDOWN, Tag, TagIdentifier
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
-from bot.utils.tags import COOLDOWN, Tag, TagIdentifier
 
 log = get_logger(__name__)
 
@@ -286,8 +286,3 @@ class Tags(Cog):
             )
         # A valid tag was found and was either sent, or is on cooldown
         return True
-
-
-def setup(bot: Bot) -> None:
-    """Load the Tags cog."""
-    bot.add_cog(Tags(bot))

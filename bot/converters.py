@@ -18,7 +18,7 @@ from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
-from bot.exts.info.tags import TagIdentifier
+from bot.exts.info.tags._utils import TagIdentifier
 from bot.log import get_logger
 from bot.utils.extensions import EXTENSIONS, unqualify
 from bot.utils.regex import INVITE_RE
