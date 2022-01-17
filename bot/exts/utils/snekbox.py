@@ -120,7 +120,7 @@ class Snekbox(Cog):
         Use the first code block, but prefer a fenced code block.
         If there are several fenced code blocks, concatenate only the fenced code blocks.
 
-        Retrun a list of code blocks if any, otherwise return a list with a single string of code.
+        Return a list of code blocks if any, otherwise return a list with a single string of code.
         """
         if match := list(FORMATTED_CODE_REGEX.finditer(code)):
             blocks = [block for block in match if block.group("block")]
