@@ -156,32 +156,35 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Test the eval command procedure."""
         ctx = MockContext()
         response = MockMessage()
+        ctx.command = MagicMock()
+
         self.cog.prepare_input = MagicMock(return_value=['MyAwesomeFormattedCode'])
         self.cog.send_eval = AsyncMock(return_value=response)
-        self.cog.continue_eval = AsyncMock(return_value=None)
+        self.cog.continue_eval = AsyncMock(return_value=(None, None))
 
         await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.assert_called_once_with('MyAwesomeCode')
         self.cog.send_eval.assert_called_once_with(
             ctx, 'MyAwesomeFormattedCode', args=None, format_func=self.cog.format_output
         )
-        self.cog.continue_eval.assert_called_once_with(ctx, response)
+        self.cog.continue_eval.assert_called_once_with(ctx, response, ctx.command)
 
     async def test_eval_command_evaluate_twice(self):
         """Test the eval and re-eval command procedure."""
         ctx = MockContext()
         response = MockMessage()
+        ctx.command = MagicMock()
         self.cog.prepare_input = MagicMock(return_value='MyAwesomeFormattedCode')
         self.cog.send_eval = AsyncMock(return_value=response)
         self.cog.continue_eval = AsyncMock()
-        self.cog.continue_eval.side_effect = ('MyAwesomeFormattedCode', None)
+        self.cog.continue_eval.side_effect = (('MyAwesomeFormattedCode', None), (None, None))
 
         await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
         self.cog.prepare_input.has_calls(call('MyAwesomeCode'), call('MyAwesomeCode-2'))
         self.cog.send_eval.assert_called_with(
             ctx, 'MyAwesomeFormattedCode', args=None, format_func=self.cog.format_output
         )
-        self.cog.continue_eval.assert_called_with(ctx, response)
+        self.cog.continue_eval.assert_called_with(ctx, response, ctx.command)
 
     async def test_eval_command_reject_two_eval_at_the_same_time(self):
         """Test if the eval command rejects an eval if the author already have a running eval."""
@@ -295,9 +298,9 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         expected = "NewCode"
         self.cog.get_code = create_autospec(self.cog.get_code, spec_set=True, return_value=expected)
 
-        actual = await self.cog.continue_eval(ctx, response)
+        actual = await self.cog.continue_eval(ctx, response, self.cog.eval_command)
         self.cog.get_code.assert_awaited_once_with(new_msg, ctx.command)
-        self.assertEqual(actual, [expected])
+        self.assertEqual(actual, (expected, None))
         self.bot.wait_for.assert_has_awaits(
             (
                 call(
@@ -316,8 +319,8 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx = MockContext(message=MockMessage(clear_reactions=AsyncMock()))
         self.bot.wait_for.side_effect = asyncio.TimeoutError
 
-        actual = await self.cog.continue_eval(ctx, MockMessage())
-        self.assertEqual(actual, None)
+        actual = await self.cog.continue_eval(ctx, MockMessage(), self.cog.eval_command)
+        self.assertEqual(actual, (None, None))
         ctx.message.clear_reaction.assert_called_once_with(snekbox.REEVAL_EMOJI)
 
     async def test_get_code(self):
