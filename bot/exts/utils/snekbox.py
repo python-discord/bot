@@ -5,7 +5,7 @@ import re
 from functools import partial
 from signal import Signals
 from textwrap import dedent
-from typing import Awaitable, Callable, Optional, Tuple
+from typing import Optional, Tuple
 
 from discord import AllowedMentions, HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Command, Context, command, guild_only
@@ -69,8 +69,6 @@ if not hasattr(sys, "_setup_finished"):
 {setup}
 """
 
-TIMEIT_OUTPUT_REGEX = re.compile(r"\d+ loops, best of \d+: \d(?:\.\d\d?)? [mnu]?sec per loop")
-
 MAX_PASTE_LEN = 10000
 
 # `!eval` command whitelists and blacklists.
@@ -82,8 +80,6 @@ SIGKILL = 9
 
 REEVAL_EMOJI = '\U0001f501'  # :repeat:
 REEVAL_TIMEOUT = 30
-
-FormatFunc = Callable[[str], Awaitable[tuple[str, Optional[str]]]]
 
 
 class Snekbox(Cog):
@@ -299,8 +295,8 @@ class Snekbox(Cog):
         """
         Check if the eval session should continue.
 
-        If the code is to be evaluated, return the new code and the args if the command is the timeit command.
-        Otherwise return None if the eval session should be terminated.
+        If the code is to be re-evaluated, return the new code, and the args if the command is the timeit command.
+        Otherwise return (None, None) if the eval session should be terminated.
         """
         _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
         _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
@@ -324,6 +320,9 @@ class Snekbox(Cog):
                 with contextlib.suppress(HTTPException):
                     await response.delete()
 
+                if code is None:
+                    return None, None
+
             except asyncio.TimeoutError:
                 await ctx.message.clear_reaction(REEVAL_EMOJI)
                 return None, None
@@ -341,7 +340,7 @@ class Snekbox(Cog):
         """
         Return the code from `message` to be evaluated.
 
-        If the message is an invocation of the eval command, return the first argument or None if it
+        If the message is an invocation of the command, return the first argument or None if it
         doesn't exist. Otherwise, return the full content of the message.
         """
         log.trace(f"Getting context for message {message.id}.")
