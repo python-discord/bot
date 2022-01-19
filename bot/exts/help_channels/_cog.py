@@ -559,7 +559,9 @@ class HelpChannels(commands.Cog):
 
         If they meet the requirements they are notified.
         """
-        if await _caches.claimants.get(message.channel.id) == message.author.id:
+        claimant_id = await _caches.claimants.get(message.channel.id)
+        claimant = self.bot.get_user(claimant_id) or await self.bot.fetch_user(claimant_id)
+        if claimant == message.author:
             return  # Ignore messages sent by claimants
 
         if not await _caches.help_dm.get(message.author.id):
@@ -577,10 +579,11 @@ class HelpChannels(commands.Cog):
 
             embed = discord.Embed(
                 title="Currently Helping",
-                description=f"You're currently helping in {message.channel.mention}",
+                description=f"You're currently helping {claimant.mention} ({claimant}) in {message.channel.mention}",
                 color=constants.Colours.bright_green,
                 timestamp=message.created_at
             )
+            embed.set_thumbnail(url=claimant.display_avatar.url)
             embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
 
             try:
