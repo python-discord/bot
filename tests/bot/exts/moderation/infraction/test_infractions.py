@@ -89,7 +89,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         """Should call infraction pardoning function."""
         self.cog.pardon_infraction = AsyncMock()
         self.assertIsNone(await self.cog.unvoiceban(self.cog, self.ctx, self.user))
-        self.cog.pardon_infraction.assert_awaited_once_with(self.ctx, "voice_ban", self.user)
+        self.cog.pardon_infraction.assert_awaited_once_with(self.ctx, "voice_mute", self.user)
 
     @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
     @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
@@ -97,7 +97,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         """Should return early when user already have Voice Ban infraction."""
         get_active_infraction.return_value = {"foo": "bar"}
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar"))
-        get_active_infraction.assert_awaited_once_with(self.ctx, self.user, "voice_ban")
+        get_active_infraction.assert_awaited_once_with(self.ctx, self.user, "voice_mute")
         post_infraction_mock.assert_not_awaited()
 
     @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
@@ -120,7 +120,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
         post_infraction_mock.return_value = None
         self.assertIsNone(await self.cog.apply_voice_ban(self.ctx, self.user, "foobar", my_kwarg=23))
         post_infraction_mock.assert_awaited_once_with(
-            self.ctx, self.user, "voice_ban", "foobar", active=True, my_kwarg=23
+            self.ctx, self.user, "voice_mute", "foobar", active=True, my_kwarg=23
         )
 
     @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
@@ -187,7 +187,7 @@ class VoiceBanTests(unittest.IsolatedAsyncioTestCase):
 
         user = MockUser()
         await self.cog.voiceban(self.cog, self.ctx, user, reason=None)
-        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_ban", None, active=True, expires_at=None)
+        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_mute", None, active=True, expires_at=None)
         apply_infraction_mock.assert_called_once_with(self.cog, self.ctx, infraction, user, ANY)
 
         # Test action

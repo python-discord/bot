@@ -27,7 +27,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     category_description = "Server moderation tools."
 
     def __init__(self, bot: Bot):
-        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_ban"})
+        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_mute"})
 
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
@@ -273,7 +273,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command(aliases=("uvban",))
     async def unvoiceban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Prematurely end the active voice ban infraction for the user."""
-        await self.pardon_infraction(ctx, "voice_ban", user)
+        await self.pardon_infraction(ctx, "voice_mute", user)
 
     # endregion
     # region: Base apply functions
@@ -397,10 +397,10 @@ class Infractions(InfractionScheduler, commands.Cog):
     @respect_role_hierarchy(member_arg=2)
     async def apply_voice_ban(self, ctx: Context, user: MemberOrUser, reason: t.Optional[str], **kwargs) -> None:
         """Apply a voice ban infraction with kwargs passed to `post_infraction`."""
-        if await _utils.get_active_infraction(ctx, user, "voice_ban"):
+        if await _utils.get_active_infraction(ctx, user, "voice_mute"):
             return
 
-        infraction = await _utils.post_infraction(ctx, user, "voice_ban", reason, active=True, **kwargs)
+        infraction = await _utils.post_infraction(ctx, user, "voice_mute", reason, active=True, **kwargs)
         if infraction is None:
             return
 
@@ -414,7 +414,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             if not isinstance(user, Member):
                 return
 
-            await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+            await user.move_to(None, reason="Disconnected from voice to apply voice mute.")
             await user.remove_roles(self._voice_verified_role, reason=reason)
 
         await self.apply_infraction(ctx, infraction, user, action())
@@ -487,9 +487,9 @@ class Infractions(InfractionScheduler, commands.Cog):
                 # DM user about infraction expiration
                 notified = await _utils.notify_pardon(
                     user=user,
-                    title="Voice ban ended",
-                    content="You have been unbanned and can verify yourself again in the server.",
-                    icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
+                    title="Voice mute ended",
+                    content="You have been unmuted and can verify yourself again in the server.",
+                    icon_url=_utils.INFRACTION_ICONS["voice_mute"][1]
                 )
                 log_text["DM"] = "Sent" if notified else "**Failed**"
 
@@ -514,8 +514,8 @@ class Infractions(InfractionScheduler, commands.Cog):
             return await self.pardon_mute(user_id, guild, reason, notify=notify)
         elif infraction["type"] == "ban":
             return await self.pardon_ban(user_id, guild, reason)
-        elif infraction["type"] == "voice_ban":
-            return await self.pardon_voice_ban(user_id, guild, notify=notify)
+        elif infraction["type"] == "voice_mute":
+            return await self.pardon_voice_mute(user_id, guild, notify=notify)
 
     # endregion
 
