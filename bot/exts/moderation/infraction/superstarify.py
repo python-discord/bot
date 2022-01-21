@@ -14,9 +14,9 @@ from bot.converters import Duration, Expiry
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
-from bot.utils.time import format_infraction
 
 log = get_logger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
@@ -73,7 +73,7 @@ class Superstarify(InfractionScheduler, Cog):
         notified = await _utils.notify_infraction(
             user=after,
             infr_type="Superstarify",
-            expires_at=format_infraction(infraction["expires_at"]),
+            expires_at=time.discord_timestamp(infraction["expires_at"]),
             reason=(
                 "You have tried to change your nickname on the **Python Discord** server "
                 f"from **{before.display_name}** to **{after.display_name}**, but as you "
@@ -150,7 +150,7 @@ class Superstarify(InfractionScheduler, Cog):
         id_ = infraction["id"]
 
         forced_nick = self.get_nick(id_, member.id)
-        expiry_str = format_infraction(infraction["expires_at"])
+        expiry_str = time.discord_timestamp(infraction["expires_at"])
 
         # Apply the infraction
         async def action() -> None:

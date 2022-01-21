@@ -17,10 +17,10 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import get_time_delta, time_since
 
 if typing.TYPE_CHECKING:
     from bot.exts.recruitment.talentpool._cog import TalentPool
@@ -273,7 +273,7 @@ class Reviewer:
                 last_channel = user_activity["top_channel_activity"][-1]
                 channels += f", and {last_channel[1]} in {last_channel[0]}"
 
-        joined_at_formatted = time_since(member.joined_at)
+        joined_at_formatted = time.format_relative(member.joined_at)
         review = (
             f"{member.name} joined the server **{joined_at_formatted}**"
             f" and has **{messages} messages**{channels}."
@@ -321,7 +321,7 @@ class Reviewer:
             infractions += ", with the last infraction issued "
 
         # Infractions were ordered by time since insertion descending.
-        infractions += get_time_delta(infraction_list[0]['inserted_at'])
+        infractions += time.format_relative(infraction_list[0]['inserted_at'])
 
         return f"They have {infractions}."
 
@@ -365,7 +365,7 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time_since(isoparse(history[0]['ended_at']))
+        end_time = time.format_relative(history[0]['ended_at'])
 
         review = (
             f"They were nominated **{nomination_times}** before"
