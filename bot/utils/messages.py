@@ -11,7 +11,7 @@ from discord.ext.commands import Context
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.log import get_logger
-from bot.utils import scheduling
+from bot.utils import channel as channel_util, scheduling
 
 log = get_logger(__name__)
 
@@ -233,6 +233,20 @@ async def send_denial(ctx: Context, reason: str) -> discord.Message:
     embed.description = reason
 
     return await ctx.send(embed=embed)
+
+
+async def get_or_fetch_message(message_id: int, channel_id: int) -> discord.Message:
+    """Get a message from the cache or fetch it if needed."""
+    log.trace(f"Getting message {message_id}.")
+
+    message = discord.utils.get(bot.instance.cached_messages, id=message_id)
+    if not message:
+        log.debug(f"Message {message_id} is not in cache; fetching from API.")
+        channel = await channel_util.get_or_fetch_channel(channel_id)
+        message = await channel.fetch_message(message_id)
+
+    log.trace(f"Message {channel_id}-{message_id} retrieved.")
+    return message
 
 
 def format_user(user: discord.abc.User) -> str:
