@@ -107,6 +107,17 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
 
+    @command(aliases=("vban",))
+    async def voiceban(self, ctx: Context) -> None:
+        """
+        NOT IMPLEMENTED.
+
+        Permanently ban a user from joining voice channels.
+
+        If duration is specified, it temporarily voice bans that user for the given duration.
+        """
+        await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `voicemute`?")
+
     @command(aliases=("vmute",))
     async def voicemute(
         self,
@@ -184,6 +195,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
+
+    @command(aliases=("tempvban", "tvban"))
+    async def tempvoiceban(self, ctx: Context) -> None:
+        """
+        NOT IMPLEMENTED.
+
+        Temporarily voice bans that user for the given duration.
+        """
+        await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `tempvoicemute`?")
 
     @command(aliases=("tempvmute", "tvmute"))
     async def tempvoicemute(
@@ -269,6 +289,15 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def unban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user)
+
+    @command(aliases=("uvban",))
+    async def unvoiceban(self, ctx: Context) -> None:
+        """
+        NOT IMPLEMENTED.
+
+        Temporarily voice bans that user for the given duration.
+        """
+        await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `unvoicemute`?")
 
     @command(aliases=("uvmute",))
     async def unvoicemute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
