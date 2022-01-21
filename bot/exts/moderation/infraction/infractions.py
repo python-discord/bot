@@ -107,8 +107,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
 
-    @command(aliases=('vban',))
-    async def voiceban(
+    @command(aliases=("vmute",))
+    async def voicemute(
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
@@ -117,11 +117,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str]
     ) -> None:
         """
-        Permanently ban user from using voice channels.
+        Permanently mute user in voice channels.
 
-        If duration is specified, it temporarily voice bans that user for the given duration.
+        If duration is specified, it temporarily voice mutes that user for the given duration.
         """
-        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Temporary infractions
@@ -185,17 +185,17 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
-    @command(aliases=("tempvban", "tvban"))
-    async def tempvoiceban(
-            self,
-            ctx: Context,
-            user: UnambiguousMemberOrUser,
-            duration: Expiry,
-            *,
-            reason: t.Optional[str]
+    @command(aliases=("tempvmute", "tvmute"))
+    async def tempvoicemute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        duration: Expiry,
+        *,
+        reason: t.Optional[str]
     ) -> None:
         """
-        Temporarily voice ban a user for the given reason and duration.
+        Temporarily voice mute a user for the given reason and duration.
 
         A unit of time should be appended to the duration.
         Units (∗case-sensitive):
@@ -209,7 +209,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Permanent shadow infractions
@@ -270,9 +270,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user)
 
-    @command(aliases=("uvban",))
-    async def unvoiceban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
-        """Prematurely end the active voice ban infraction for the user."""
+    @command(aliases=("uvmute",))
+    async def unvoicemute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+        """Prematurely end the active voice mute infraction for the user."""
         await self.pardon_infraction(ctx, "voice_mute", user)
 
     # endregion
@@ -395,8 +395,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
 
     @respect_role_hierarchy(member_arg=2)
-    async def apply_voice_ban(self, ctx: Context, user: MemberOrUser, reason: t.Optional[str], **kwargs) -> None:
-        """Apply a voice ban infraction with kwargs passed to `post_infraction`."""
+    async def apply_voice_mute(self, ctx: Context, user: MemberOrUser, reason: t.Optional[str], **kwargs) -> None:
+        """Apply a voice mute infraction with kwargs passed to `post_infraction`."""
         if await _utils.get_active_infraction(ctx, user, "voice_mute"):
             return
 
@@ -471,7 +471,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def pardon_voice_ban(
+    async def pardon_voice_mute(
         self,
         user_id: int,
         guild: discord.Guild,
