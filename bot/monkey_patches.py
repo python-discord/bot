@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 import arrow
@@ -5,9 +6,9 @@ from discord import Forbidden, http
 from discord.ext import commands
 
 from bot.log import get_logger
-from bot.utils.regex import MESSAGE_ID_RE
 
 log = get_logger(__name__)
+MESSAGE_ID_RE = re.compile(r'(?P<message_id>[0-9]{15,20})$')
 
 
 class Command(commands.Command):
