@@ -107,7 +107,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],   # noqa: F821
+        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],
         *,
         reason: str = None
     ) -> None:
