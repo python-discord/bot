@@ -8,8 +8,9 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.converters import SourceConverter
+from bot.exts.info.tags import TagIdentifier
 
-SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, str, commands.ExtensionNotLoaded]
+SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, TagIdentifier, commands.ExtensionNotLoaded]
 
 
 class BotSource(commands.Cog):
@@ -41,9 +42,9 @@ class BotSource(commands.Cog):
             source_item = inspect.unwrap(source_item.callback)
             src = source_item.__code__
             filename = src.co_filename
-        elif isinstance(source_item, str):
+        elif isinstance(source_item, TagIdentifier):
             tags_cog = self.bot.get_cog("Tags")
-            filename = tags_cog._cache[source_item]["location"]
+            filename = tags_cog.tags[source_item].file_path
         else:
             src = type(source_item)
             try:
@@ -51,7 +52,7 @@ class BotSource(commands.Cog):
             except TypeError:
                 raise commands.BadArgument("Cannot get source for a dynamically-created object.")
 
-        if not isinstance(source_item, str):
+        if not isinstance(source_item, TagIdentifier):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
@@ -64,7 +65,7 @@ class BotSource(commands.Cog):
 
         # Handle tag file location differently than others to avoid errors in some cases
         if not first_line_no:
-            file_location = Path(filename).relative_to("/bot/")
+            file_location = Path(filename).relative_to("bot/")
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
@@ -82,7 +83,7 @@ class BotSource(commands.Cog):
         elif isinstance(source_object, commands.Command):
             description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
-        elif isinstance(source_object, str):
+        elif isinstance(source_object, TagIdentifier):
             title = f"Tag: {source_object}"
             description = ""
         else:

@@ -464,7 +464,7 @@ class DocCog(commands.Cog):
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
-            await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete()
+            await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
             await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
         else:
             await ctx.send("No keys matching the package found.")

@@ -1,10 +1,7 @@
 import textwrap
 import typing as t
-from datetime import datetime, timezone
 
-import dateutil.parser
 import discord
-from dateutil.relativedelta import relativedelta
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
@@ -20,7 +17,6 @@ from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import humanize_delta, until_expiration
 
 log = get_logger(__name__)
 
@@ -151,7 +147,7 @@ class ModManagement(commands.Cog):
             confirm_messages.append("marked as permanent")
         elif duration is not None:
             request_data['expires_at'] = duration.isoformat()
-            expiry = time.format_infraction_with_duration(request_data['expires_at'])
+            expiry = time.format_with_duration(duration)
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
@@ -176,15 +172,15 @@ class ModManagement(commands.Cog):
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
             if infraction['expires_at']:
-                self.infractions_cog.scheduler.cancel(new_infraction['id'])
+                self.infractions_cog.scheduler.cancel(infraction_id)
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
-                Previous expiry: {until_expiration(infraction['expires_at']) or "Permanent"}
-                New expiry: {until_expiration(new_infraction['expires_at']) or "Permanent"}
+                Previous expiry: {time.until_expiration(infraction['expires_at'])}
+                New expiry: {time.until_expiration(new_infraction['expires_at'])}
             """.rstrip()
 
         changes = ' & '.join(confirm_messages)
@@ -210,7 +206,8 @@ class ModManagement(commands.Cog):
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
                 Edited by: {ctx.message.author.mention}{log_text}
-            """)
+            """),
+            footer=f"ID: {infraction_id}"
         )
 
     # endregion
@@ -243,8 +240,9 @@ class ModManagement(commands.Cog):
             else:
                 user_str = str(user.id)
 
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions for {user_str} ({len(infraction_list)} total)",
+            title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
@@ -256,14 +254,69 @@ class ModManagement(commands.Cog):
             'bot/infractions/expanded',
             params={'search': reason}
         )
+
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions matching `{reason}` ({len(infraction_list)} total)",
+            title=f"Infractions matching `{reason}` ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
     # endregion
+    # region: Search for infractions by given actor
+
+    @infraction_group.command(name="by", aliases=("b",))
+    async def search_by_actor(
+        self,
+        ctx: Context,
+        actor: t.Union[t.Literal["m", "me"], UnambiguousUser],
+        oldest_first: bool = False
+    ) -> None:
+        """
+        Search for infractions made by `actor`.
+
+        Use "m" or "me" as the `actor` to get infractions by author.
+
+        Use "1" for `oldest_first` to send oldest infractions first.
+        """
+        if isinstance(actor, str):
+            actor = ctx.author
+
+        if oldest_first:
+            ordering = 'inserted_at'  # oldest infractions first
+        else:
+            ordering = '-inserted_at'  # newest infractions first
+
+        infraction_list = await self.bot.api_client.get(
+            'bot/infractions/expanded',
+            params={
+                'actor__id': str(actor.id),
+                'ordering': ordering
+            }
+        )
+
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
+        embed = discord.Embed(
+            title=f"Infractions by {actor} ({formatted_infraction_count} total)",
+            colour=discord.Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    # endregion
     # region: Utility functions
+
+    @staticmethod
+    def format_infraction_count(infraction_count: int) -> str:
+        """
+        Returns a string-formatted infraction count.
+
+        API limits returned infractions to a maximum of 100, so if `infraction_count`
+        is 100 then we return `"100+"`. Otherwise, return `str(infraction_count)`.
+        """
+        if infraction_count == 100:
+            return "100+"
+        return str(infraction_count)
 
     async def send_infraction_list(
         self,
@@ -295,7 +348,9 @@ class ModManagement(commands.Cog):
         active = infraction["active"]
         user = infraction["user"]
         expires_at = infraction["expires_at"]
-        created = time.format_infraction(infraction["inserted_at"])
+        inserted_at = infraction["inserted_at"]
+        created = time.discord_timestamp(inserted_at)
+        dm_sent = infraction["dm_sent"]
 
         # Format the user string.
         if user_obj := self.bot.get_user(user["id"]):
@@ -307,25 +362,27 @@ class ModManagement(commands.Cog):
             user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
         if active:
-            remaining = time.until_expiration(expires_at) or "Expired"
+            remaining = time.until_expiration(expires_at)
         else:
             remaining = "Inactive"
 
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = datetime.fromtimestamp(
-                float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
-                timezone.utc
-            )
-            date_to = dateutil.parser.isoparse(expires_at)
-            duration = humanize_delta(relativedelta(date_to, date_from))
+            duration = time.humanize_delta(inserted_at, expires_at)
+
+        # Format `dm_sent`
+        if dm_sent is None:
+            dm_sent_text = "N/A"
+        else:
+            dm_sent_text = "Yes" if dm_sent else "No"
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {user_str}
             Type: **{infraction["type"]}**
+            DM Sent: {dm_sent_text}
             Shadow: {infraction["hidden"]}
             Created: {created}
             Expires: {remaining}

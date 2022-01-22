@@ -171,8 +171,9 @@ class VoiceGate(Cog):
             ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_banned": data["voice_banned"],
-            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
+            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
         }
+
         failed = any(checks.values())
         failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
         [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]
