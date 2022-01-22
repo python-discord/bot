@@ -136,7 +136,7 @@ class OffTopicNames(Cog):
     @otname_group.command(name='activate', aliases=('whitelist',))
     @has_any_role(*MODERATION_ROLES)
     async def activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
-        """Deactivate/blacklist off topic name."""
+        """Whitelist off topic name."""
         await self.toggle_ot_name_activity(ctx, name, True)
 
     @otname_group.command(name='deactivate', aliases=('blacklist',))
