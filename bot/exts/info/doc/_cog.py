@@ -460,7 +460,7 @@ class DocCog(commands.Cog):
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: Union[PackageName, Literal["*"]]  # noqa: F722
+        package_name: Union[PackageName, Literal["*"]]
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
