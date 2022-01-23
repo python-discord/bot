@@ -87,6 +87,20 @@ class OffTopicNames(Cog):
         await self.bot.api_client.patch(f"bot/off-topic-channel-names/{name}", data=data)
         await ctx.send(f"Off topic name `{name}` has been {'whitelisted' if active else 'blacklisted'}.")
 
+    async def list_ot_names(self, ctx: Context, active: bool = True) -> None:
+        """Send an embed containing active/inactive off topic channel names."""
+        result = await self.bot.api_client.get('bot/off-topic-channel-names', params={'active': json.dumps(active)})
+        lines = sorted(f"• {name}" for name in result)
+        embed = Embed(
+            title=f"{'Active' if active else 'Inactive'} off-topic names (`{len(result)}` total)",
+            colour=Colour.blue()
+        )
+        if result:
+            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+        else:
+            embed.description = "Hmmm, seems like there's nothing here yet."
+            await ctx.send(embed=embed)
+
     @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def otname_group(self, ctx: Context) -> None:
@@ -252,17 +266,19 @@ class OffTopicNames(Cog):
 
         Restricted to Moderator and above to not spoil the surprise.
         """
-        result = await self.bot.api_client.get('bot/off-topic-channel-names')
-        lines = sorted(f"• {name}" for name in result)
-        embed = Embed(
-            title=f"Known off-topic names (`{len(result)}` total)",
-            colour=Colour.blue()
-        )
-        if result:
-            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
-        else:
-            embed.description = "Hmmm, seems like there's nothing here yet."
-            await ctx.send(embed=embed)
+        await self.active_otnames_command(ctx)
+
+    @list_command.command(name='active')
+    @has_any_role(*MODERATION_ROLES)
+    async def active_otnames_command(self, ctx: Context) -> None:
+        """List active off topic channel names."""
+        await self.list_ot_names(ctx, True)
+
+    @list_command.command(name='inactive')
+    @has_any_role(*MODERATION_ROLES)
+    async def inactive_otnames_command(self, ctx: Context) -> None:
+        """List inactive off topic channel names."""
+        await self.list_ot_names(ctx, False)
 
     @otname_group.command(name='search', aliases=('s',))
     @has_any_role(*MODERATION_ROLES)
