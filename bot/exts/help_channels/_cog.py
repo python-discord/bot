@@ -14,7 +14,7 @@ from bot.bot import Bot
 from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.log import get_logger
-from bot.utils import channel as channel_utils, lock, members, scheduling
+from bot.utils import channel as channel_utils, lock, members, messages, scheduling, users
 
 log = get_logger(__name__)
 
@@ -23,6 +23,29 @@ HELP_CHANNEL_TOPIC = """
 This is a Python help channel. You can claim your own help channel in the Python Help: Available category.
 """
 AVAILABLE_HELP_CHANNELS = "**Currently available help channel(s):** {available}"
+
+
+class DMMessageInfo(t.NamedTuple):
+    """
+    Stores the recipient's id, the DM channel id and a message id.
+
+    This is used for easy access to the values stored in the
+    helpdm_messages cache.
+    """
+
+    recipient_id: int
+    dm_channel_id: int
+    message_id: int
+
+    def get_serialised_string(self) -> str:
+        """Serialise the ids as a string for storing in redis."""
+        return f"{self.recipient_id}-{self.dm_channel_id}-{self.message_id}"
+
+    @classmethod
+    def from_string(cls, info_string: str) -> "DMMessageInfo":
+        """Deserialise ids from a hyphen-separated string."""
+        ids = (int(id_) for id_ in info_string.split("-"))
+        return cls(*ids)
 
 
 class HelpChannels(commands.Cog):
@@ -408,6 +431,7 @@ class HelpChannels(commands.Cog):
 
         Unpin the claimant's question message and move the channel to the Dormant category.
         Remove the cooldown role from the channel claimant if they have no other channels claimed.
+        Edit the messages sent to members who participated in the channel and had help DMs enabled.
         Cancel the scheduled cooldown role removal task.
 
         `closed_on` is the reason that the channel was closed. See _channel.ClosingReason for possible values.
@@ -431,7 +455,8 @@ class HelpChannels(commands.Cog):
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
-        await _caches.session_participants.delete(channel.id)
+        await self.edit_helpdm_messages(channel.id)
+        await _caches.helpdm_messages.delete(channel.id)
 
         claimant = await members.get_or_fetch_member(self.guild, claimant_id)
         if claimant is None:
@@ -542,14 +567,20 @@ class HelpChannels(commands.Cog):
         await _caches.dynamic_message.set("message_id", self.dynamic_message)
 
     @staticmethod
-    def _serialise_session_participants(participants: set[int]) -> str:
-        """Convert a set to a comma separated string."""
-        return ','.join(str(p) for p in participants)
+    async def _set_helpdm_messages(help_channel_id: int, ids: t.Iterable[DMMessageInfo]) -> None:
+        """Set the value for help dm messages associated with the help channel."""
+        info_string = ",".join(info.get_serialised_string() for info in ids)
+        await _caches.helpdm_messages.set(help_channel_id, info_string)
 
     @staticmethod
-    def _deserialise_session_participants(s: str) -> set[int]:
-        """Convert a comma separated string into a set."""
-        return set(int(user_id) for user_id in s.split(",") if user_id != "")
+    async def _get_helpdm_messages(help_channel_id: int) -> set[DMMessageInfo]:
+        """Get parsed help dm messages associated with the help channel."""
+        info_string = await _caches.helpdm_messages.get(help_channel_id) or ""
+        return {
+            DMMessageInfo.from_string(message_info)
+            for message_info in info_string.split(",")
+            if message_info
+        }
 
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
@@ -560,7 +591,7 @@ class HelpChannels(commands.Cog):
         If they meet the requirements they are notified.
         """
         claimant_id = await _caches.claimants.get(message.channel.id)
-        claimant = self.bot.get_user(claimant_id) or await self.bot.fetch_user(claimant_id)
+        claimant = await users.get_or_fetch_user(claimant_id)
         if claimant == message.author:
             return  # Ignore messages sent by claimants
 
@@ -570,13 +601,13 @@ class HelpChannels(commands.Cog):
         if (await self.bot.get_context(message)).command == self.close_command:
             return  # Ignore messages that are closing the channel
 
-        session_participants = self._deserialise_session_participants(
-            await _caches.session_participants.get(message.channel.id) or ""
-        )
+        helpdm_messages = await self._get_helpdm_messages(message.channel.id)
+        session_participants = {message_info.recipient_id for message_info in helpdm_messages}
 
         if message.author.id not in session_participants:
-            session_participants.add(message.author.id)
-
+            # Changes made to the construction of this embed will be
+            # reflected in the embed that gets sent when the help
+            # channel is closed.
             embed = discord.Embed(
                 title="Currently Helping",
                 description=f"You're currently helping {claimant.mention} ({claimant}) in {message.channel.mention}",
@@ -587,7 +618,7 @@ class HelpChannels(commands.Cog):
             embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
 
             try:
-                await message.author.send(embed=embed)
+                dm_message = await message.author.send(embed=embed)
             except discord.Forbidden:
                 log.trace(
                     f"Failed to send helpdm message to {message.author.id}. DMs Closed/Blocked. "
@@ -600,12 +631,22 @@ class HelpChannels(commands.Cog):
                     "To receive updates on help channels you're active in, enable your DMs.",
                     delete_after=RedirectOutput.delete_delay
                 )
-                return
+            else:
+                info = DMMessageInfo(message.author.id, dm_message.channel.id, dm_message.id)
+                helpdm_messages.add(info)
+                await self._set_helpdm_messages(message.channel.id, helpdm_messages)
 
-            await _caches.session_participants.set(
-                message.channel.id,
-                self._serialise_session_participants(session_participants)
-            )
+    async def edit_helpdm_messages(self, help_channel_id: int) -> None:
+        """Edit help DM messages upon help channel closure."""
+        for message_info in await self._get_helpdm_messages(help_channel_id):
+            dm_message = await messages.get_or_fetch_message(message_info.message_id, message_info.dm_channel_id)
+
+            # This embed was created in notify_session_participants
+            embed = dm_message.embeds[0].copy()
+            embed.color = constants.Colours.soft_orange
+            embed.title = "Previously helped"
+            embed.description = embed.description.replace("You're currently helping", "You helped")
+            await dm_message.edit(embed=embed)
 
     @commands.command(name="helpdm")
     async def helpdm_command(
