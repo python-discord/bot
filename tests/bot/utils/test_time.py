@@ -13,13 +13,15 @@ class TimeTests(unittest.TestCase):
         """humanize_delta should be able to handle unknown units, and will not abort."""
         # Does not abort for unknown units, as the unit name is checked
         # against the attribute of the relativedelta instance.
-        self.assertEqual(time.humanize_delta(relativedelta(days=2, hours=2), 'elephants', 2), '2 days and 2 hours')
+        actual = time.humanize_delta(relativedelta(days=2, hours=2), precision='elephants', max_units=2)
+        self.assertEqual(actual, '2 days and 2 hours')
 
     def test_humanize_delta_handle_high_units(self):
         """humanize_delta should be able to handle very high units."""
         # Very high maximum units, but it only ever iterates over
         # each value the relativedelta might have.
-        self.assertEqual(time.humanize_delta(relativedelta(days=2, hours=2), 'hours', 20), '2 days and 2 hours')
+        actual = time.humanize_delta(relativedelta(days=2, hours=2), precision='hours', max_units=20)
+        self.assertEqual(actual, '2 days and 2 hours')
 
     def test_humanize_delta_should_normal_usage(self):
         """Testing humanize delta."""
@@ -32,7 +34,8 @@ class TimeTests(unittest.TestCase):
 
         for delta, precision, max_units, expected in test_cases:
             with self.subTest(delta=delta, precision=precision, max_units=max_units, expected=expected):
-                self.assertEqual(time.humanize_delta(delta, precision, max_units), expected)
+                actual = time.humanize_delta(delta, precision=precision, max_units=max_units)
+                self.assertEqual(actual, expected)
 
     def test_humanize_delta_raises_for_invalid_max_units(self):
         """humanize_delta should raises ValueError('max_units must be positive') for invalid max_units."""
@@ -40,22 +43,11 @@ class TimeTests(unittest.TestCase):
 
         for max_units in test_cases:
             with self.subTest(max_units=max_units), self.assertRaises(ValueError) as error:
-                time.humanize_delta(relativedelta(days=2, hours=2), 'hours', max_units)
-            self.assertEqual(str(error.exception), 'max_units must be positive')
+                time.humanize_delta(relativedelta(days=2, hours=2), precision='hours', max_units=max_units)
+            self.assertEqual(str(error.exception), 'max_units must be positive.')
 
-    def test_parse_rfc1123(self):
-        """Testing parse_rfc1123."""
-        self.assertEqual(
-            time.parse_rfc1123('Sun, 15 Sep 2019 12:00:00 GMT'),
-            datetime(2019, 9, 15, 12, 0, 0, tzinfo=timezone.utc)
-        )
-
-    def test_format_infraction(self):
-        """Testing format_infraction."""
-        self.assertEqual(time.format_infraction('2019-12-12T00:01:00Z'), '<t:1576108860:f>')
-
-    def test_format_infraction_with_duration_none_expiry(self):
-        """format_infraction_with_duration should work for None expiry."""
+    def test_format_with_duration_none_expiry(self):
+        """format_with_duration should work for None expiry."""
         test_cases = (
             (None, None, None, None),
 
@@ -67,10 +59,10 @@ class TimeTests(unittest.TestCase):
 
         for expiry, date_from, max_units, expected in test_cases:
             with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
-                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
+                self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
-    def test_format_infraction_with_duration_custom_units(self):
-        """format_infraction_with_duration should work for custom max_units."""
+    def test_format_with_duration_custom_units(self):
+        """format_with_duration should work for custom max_units."""
         test_cases = (
             ('3000-12-12T00:01:00Z', datetime(3000, 12, 11, 12, 5, 5, tzinfo=timezone.utc), 6,
              '<t:32533488060:f> (11 hours, 55 minutes and 55 seconds)'),
@@ -80,10 +72,10 @@ class TimeTests(unittest.TestCase):
 
         for expiry, date_from, max_units, expected in test_cases:
             with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
-                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
+                self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
-    def test_format_infraction_with_duration_normal_usage(self):
-        """format_infraction_with_duration should work for normal usage, across various durations."""
+    def test_format_with_duration_normal_usage(self):
+        """format_with_duration should work for normal usage, across various durations."""
         utc = timezone.utc
         test_cases = (
             ('2019-12-12T00:01:00Z', datetime(2019, 12, 11, 12, 0, 5, tzinfo=utc), 2,
@@ -105,11 +97,11 @@ class TimeTests(unittest.TestCase):
 
         for expiry, date_from, max_units, expected in test_cases:
             with self.subTest(expiry=expiry, date_from=date_from, max_units=max_units, expected=expected):
-                self.assertEqual(time.format_infraction_with_duration(expiry, date_from, max_units), expected)
+                self.assertEqual(time.format_with_duration(expiry, date_from, max_units), expected)
 
     def test_until_expiration_with_duration_none_expiry(self):
-        """until_expiration should work for None expiry."""
-        self.assertEqual(time.until_expiration(None), None)
+        """until_expiration should return "Permanent" is expiry is None."""
+        self.assertEqual(time.until_expiration(None), "Permanent")
 
     def test_until_expiration_with_duration_custom_units(self):
         """until_expiration should work for custom max_units."""
@@ -130,7 +122,6 @@ class TimeTests(unittest.TestCase):
             ('3000-12-12T00:00:00Z', '<t:32533488000:R>'),
             ('3000-11-23T20:09:00Z', '<t:32531918940:R>'),
             ('3000-11-23T20:09:00Z', '<t:32531918940:R>'),
-            (None, None),
         )
 
         for expiry, expected in test_cases:

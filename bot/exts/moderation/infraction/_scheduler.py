@@ -136,7 +136,7 @@ class InfractionScheduler:
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = time.format_infraction_with_duration(infraction["expires_at"])
+        expiry = time.format_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
         if user_reason is None:
@@ -223,7 +223,7 @@ class InfractionScheduler:
                 failed = True
 
         if failed:
-            log.trace(f"Deleted infraction {infraction['id']} from database because applying infraction failed.")
+            log.trace(f"Trying to delete infraction {id_} from database because applying infraction failed.")
             try:
                 await self.bot.api_client.delete(f"bot/infractions/{id_}")
             except ResponseCodeError as e:
@@ -265,7 +265,7 @@ class InfractionScheduler:
                 {additional_info}
             """),
             content=log_content,
-            footer=f"ID {infraction['id']}"
+            footer=f"ID: {id_}"
         )
 
         log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
@@ -381,20 +381,15 @@ class InfractionScheduler:
         actor = infraction["actor"]
         type_ = infraction["type"]
         id_ = infraction["id"]
-        inserted_at = infraction["inserted_at"]
-        expiry = infraction["expires_at"]
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
-
-        expiry = dateutil.parser.isoparse(expiry) if expiry else None
-        created = time.format_infraction_with_duration(inserted_at, expiry)
 
         log_content = None
         log_text = {
             "Member": f"<@{user_id}>",
             "Actor": f"<@{actor}>",
             "Reason": infraction["reason"],
-            "Created": created,
+            "Created": time.format_with_duration(infraction["inserted_at"], infraction["expires_at"]),
         }
 
         try:

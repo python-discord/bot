@@ -1,10 +1,7 @@
 import textwrap
 import typing as t
-from datetime import datetime, timezone
 
-import dateutil.parser
 import discord
-from dateutil.relativedelta import relativedelta
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
@@ -20,7 +17,6 @@ from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import humanize_delta, until_expiration
 
 log = get_logger(__name__)
 
@@ -151,7 +147,7 @@ class ModManagement(commands.Cog):
             confirm_messages.append("marked as permanent")
         elif duration is not None:
             request_data['expires_at'] = duration.isoformat()
-            expiry = time.format_infraction_with_duration(request_data['expires_at'])
+            expiry = time.format_with_duration(duration)
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
@@ -176,15 +172,15 @@ class ModManagement(commands.Cog):
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
             if infraction['expires_at']:
-                self.infractions_cog.scheduler.cancel(new_infraction['id'])
+                self.infractions_cog.scheduler.cancel(infraction_id)
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
-                Previous expiry: {until_expiration(infraction['expires_at']) or "Permanent"}
-                New expiry: {until_expiration(new_infraction['expires_at']) or "Permanent"}
+                Previous expiry: {time.until_expiration(infraction['expires_at'])}
+                New expiry: {time.until_expiration(new_infraction['expires_at'])}
             """.rstrip()
 
         changes = ' & '.join(confirm_messages)
@@ -210,7 +206,8 @@ class ModManagement(commands.Cog):
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
                 Edited by: {ctx.message.author.mention}{log_text}
-            """)
+            """),
+            footer=f"ID: {infraction_id}"
         )
 
     # endregion
@@ -351,7 +348,8 @@ class ModManagement(commands.Cog):
         active = infraction["active"]
         user = infraction["user"]
         expires_at = infraction["expires_at"]
-        created = time.format_infraction(infraction["inserted_at"])
+        inserted_at = infraction["inserted_at"]
+        created = time.discord_timestamp(inserted_at)
         dm_sent = infraction["dm_sent"]
 
         # Format the user string.
@@ -364,19 +362,14 @@ class ModManagement(commands.Cog):
             user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
         if active:
-            remaining = time.until_expiration(expires_at) or "Expired"
+            remaining = time.until_expiration(expires_at)
         else:
             remaining = "Inactive"
 
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = datetime.fromtimestamp(
-                float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
-                timezone.utc
-            )
-            date_to = dateutil.parser.isoparse(expires_at)
-            duration = humanize_delta(relativedelta(date_to, date_from))
+            duration = time.humanize_delta(inserted_at, expires_at)
 
         # Format `dm_sent`
         if dm_sent is None:

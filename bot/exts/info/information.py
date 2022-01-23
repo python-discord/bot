@@ -18,10 +18,10 @@ from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
 log = get_logger(__name__)
 
@@ -83,7 +83,7 @@ class Information(Cog):
 
         defcon_info = ""
         if cog := self.bot.get_cog("Defcon"):
-            threshold = humanize_delta(cog.threshold) if cog.threshold else "-"
+            threshold = time.humanize_delta(cog.threshold) if cog.threshold else "-"
             defcon_info = f"Defcon threshold: {threshold}\n"
 
         verification = f"Verification level: {ctx.guild.verification_level.name}\n"
@@ -173,7 +173,7 @@ class Information(Cog):
         """Returns an embed full of server information."""
         embed = Embed(colour=Colour.og_blurple(), title="Server Information")
 
-        created = discord_timestamp(ctx.guild.created_at, TimestampFormats.RELATIVE)
+        created = time.format_relative(ctx.guild.created_at)
         num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
         # Server Features are only useful in certain channels
@@ -227,7 +227,7 @@ class Information(Cog):
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
     async def user_info(self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None) -> None:
         """Returns info about a user."""
-        if isinstance(user_or_message, Message):
+        if passed_as_message := isinstance(user_or_message, Message):
             user = user_or_message.author
         else:
             user = user_or_message
@@ -242,19 +242,22 @@ class Information(Cog):
 
         # Will redirect to #bot-commands if it fails.
         if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
-            embed = await self.create_user_embed(ctx, user)
+            embed = await self.create_user_embed(ctx, user, passed_as_message)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: MemberOrUser) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: MemberOrUser, passed_as_message: bool) -> Embed:
         """Creates an embed containing information on the `user`."""
         on_server = bool(await get_or_fetch_member(ctx.guild, user.id))
 
-        created = discord_timestamp(user.created_at, TimestampFormats.RELATIVE)
+        created = time.format_relative(user.created_at)
 
         name = str(user)
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
         name = escape_markdown(name)
+
+        if passed_as_message:
+            name += " - From Message"
 
         if user.public_flags.verified_bot:
             name += f" {constants.Emojis.verified_bot}"
@@ -269,7 +272,7 @@ class Information(Cog):
 
         if on_server:
             if user.joined_at:
-                joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+                joined = time.format_relative(user.joined_at)
             else:
                 joined = "Unable to get join date"
 
@@ -282,7 +285,6 @@ class Information(Cog):
 
             membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
-            roles = None
             membership = "The user is not a member of the server"
 
         fields = [
