@@ -1,15 +1,20 @@
+import asyncio
 import difflib
+import json
+import random
 from datetime import timedelta
+from functools import partial
 from typing import Optional
 
 import arrow
-from discord import Colour, Embed
+from discord import ButtonStyle, Colour, Embed, Interaction
 from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ui import Button, View
 from discord.utils import sleep_until
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES
+from bot.constants import Channels, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.converters import OffTopicName
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -147,7 +152,7 @@ class OffTopicNames(Cog):
 
     @otname_group.command(name='reroll')
     @has_any_role(*MODERATION_ROLES)
-    async def re_roll_command(self, ctx: Context, ot_channel_index: Optional[int]) -> None:
+    async def re_roll_command(self, ctx: Context, ot_channel_index: Optional[int] = None) -> None:
         """
         Re-rolls off topic name for an off-topic channel and blacklists the name.
 
@@ -166,28 +171,80 @@ class OffTopicNames(Cog):
             await ctx.send("Please specify channel for which the off topic name should be re-rolled.")
             return
 
+        old_channel_name = channel.name
+        old_ot_name = old_channel_name[NAME_START_INDEX:]  # ot1-name-of-ot -> name-of-ot
+
+        await self.de_activate_ot_name(ctx, old_ot_name)
+
         response = await self.bot.api_client.get(
             'bot/off-topic-channel-names', params={'random_items': 1}
         )
-        new_channel_name = response[0]
-        old_channel_name = channel.name
+        try:
+            new_channel_name = response[0]
+        except IndexError:
+            await ctx.send("Out of active off topic names. Add new names to reroll.")
+            return
 
-        await channel.edit(name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name))
-        old_channel_name = old_channel_name[NAME_START_INDEX:]
+        async def rename_channel() -> None:
+            """Rename off topic channel and log events."""
+            await channel.edit(
+                name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name)
+            )
+            log.info(
+                f"{ctx.author} Off-topic channel re-named from `{old_ot_name}` "
+                f"to `{new_channel_name}`."
+            )
 
-        log.info(
-            f"{ctx.author} Off-topic channel re-named from `{old_channel_name}` "
-            f"to `{new_channel_name}`."
-        )
+            await ctx.message.reply(
+                f":ok_hand: Off-topic channel re-named from `{old_ot_name}` "
+                f"to `{new_channel_name}`. "
+            )
 
-        await ctx.send(
-            f":ok_hand: Off-topic channel re-named from `{old_channel_name}` "
-            f"to `{new_channel_name}`. "
-        )
+        try:
+            await asyncio.wait_for(
+                rename_channel(),
+                3
+            )
+        except asyncio.TimeoutError:
+            # Channel rename endpoint rate limited. Cancel task and blacklist/de-activate name.
+            btn_yes = Button(label="Yes", style=ButtonStyle.success)
+            btn_no = Button(label="No", style=ButtonStyle.danger)
 
-        await self.de_activate_ot_name(ctx, old_channel_name)
+            embed = Embed(
+                title=random.choice(NEGATIVE_REPLIES),
+                description=(
 
-    @otname_group.command(name='list', aliases=('l',))
+                    "Re-naming the channel is being rate-limited. "
+                    "Would you like to schedule a channel re-name process within the current bot session ?"
+                ),
+                colour=Colour.blurple()
+            )
+
+            async def btn_call_back(schedule: bool, interaction: Interaction) -> None:
+
+                message = interaction.message
+
+                embed.description = (
+                    "Scheduled a channel re-name process within the current bot session."
+                    if schedule
+                    else
+                    "Channel not re-named due to rate limit. Please try again later."
+                )
+                await message.edit(embed=embed, view=None)
+
+                if schedule:
+                    await rename_channel()
+
+            btn_yes.callback = partial(btn_call_back, True)
+            btn_no.callback = partial(btn_call_back, False)
+
+            view = View()
+            view.add_item(btn_yes)
+            view.add_item(btn_no)
+
+            await ctx.message.reply(embed=embed, view=view)
+
+    @otname_group.group(name='list', aliases=('l',), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def list_command(self, ctx: Context) -> None:
         """
