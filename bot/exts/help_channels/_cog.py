@@ -615,6 +615,10 @@ class HelpChannels(commands.Cog):
                 timestamp=message.created_at
             )
             embed.set_thumbnail(url=claimant.display_avatar.url)
+
+            formatted_message = _message.shorten_text(message.content)
+            if formatted_message:
+                embed.add_field(name="Their message", value=formatted_message, inline=False)
             embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
 
             try:

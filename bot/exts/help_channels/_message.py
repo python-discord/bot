@@ -92,6 +92,11 @@ async def is_empty(channel: discord.TextChannel) -> bool:
     return False
 
 
+def shorten_text(message: str) -> str:
+    """Shorten the message if needed to fit within 100 characters."""
+    return textwrap.shorten(message, width=100, placeholder="...")
+
+
 async def dm_on_open(message: discord.Message) -> None:
     """
     DM claimant with a link to the claimed channel's first message, with a 100 letter preview of the message.
@@ -106,7 +111,7 @@ async def dm_on_open(message: discord.Message) -> None:
     )
 
     embed.set_thumbnail(url=constants.Icons.green_questionmark)
-    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...")
+    formatted_message = shorten_text(message.content)
     if formatted_message:
         embed.add_field(name="Your message", value=formatted_message, inline=False)
     embed.add_field(
