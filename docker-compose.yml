@@ -38,6 +38,7 @@ services:
 
   metricity:
     << : *logging
+    << : *restart_policy
     restart: on-failure  # USE_METRICITY=false will stop the container, so this ensures it only restarts on error
     depends_on:
       postgres:
