@@ -71,15 +71,15 @@ if not hasattr(sys, "_setup_finished"):
 
 MAX_PASTE_LEN = 10000
 
-# `!eval` command whitelists and blacklists.
-NO_EVAL_CHANNELS = (Channels.python_general,)
-NO_EVAL_CATEGORIES = ()
-EVAL_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
+# The Snekbox commands' whitelists and blacklists.
+NO_SNEKBOX_CHANNELS = (Channels.python_general,)
+NO_SNEKBOX_CATEGORIES = ()
+SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
 SIGKILL = 9
 
-REEVAL_EMOJI = '\U0001f501'  # :repeat:
-REEVAL_TIMEOUT = 30
+REDO_EMOJI = '\U0001f501'  # :repeat:
+REDO_TIMEOUT = 30
 
 
 class Snekbox(Cog):
@@ -89,7 +89,7 @@ class Snekbox(Cog):
         self.bot = bot
         self.jobs = {}
 
-    async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
+    async def post_job(self, code: str, *, args: Optional[list[str]] = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = URLs.snekbox_eval_api
         data = {"input": code}
@@ -101,7 +101,7 @@ class Snekbox(Cog):
             return await resp.json()
 
     async def upload_output(self, output: str) -> Optional[str]:
-        """Upload the eval output to a paste service and return a URL to it if successful."""
+        """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
         if len(output) > MAX_PASTE_LEN:
@@ -241,7 +241,7 @@ class Snekbox(Cog):
 
         return output, paste_link
 
-    async def send_eval(
+    async def send_job(
         self,
         ctx: Context,
         code: str,
@@ -255,7 +255,7 @@ class Snekbox(Cog):
         Return the bot response.
         """
         async with ctx.typing():
-            results = await self.post_eval(code, args=args)
+            results = await self.post_job(code, args=args)
             msg, error = self.get_results_message(results, job_name)
 
             if error:
@@ -269,7 +269,7 @@ class Snekbox(Cog):
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
-            # Collect stats of eval fails + successes
+            # Collect stats of job fails + successes
             if icon == ":x:":
                 self.bot.stats.incr("snekbox.python.fail")
             else:
@@ -278,7 +278,7 @@ class Snekbox(Cog):
             filter_cog = self.bot.get_cog("Filtering")
             filter_triggered = False
             if filter_cog:
-                filter_triggered = await filter_cog.filter_eval(msg, ctx.message)
+                filter_triggered = await filter_cog.filter_snekbox_job(msg, ctx.message)
             if filter_triggered:
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
@@ -289,26 +289,26 @@ class Snekbox(Cog):
             log.info(f"{ctx.author}'s {job_name} job had a return code of {results['returncode']}")
         return response
 
-    async def continue_eval(
+    async def continue_job(
         self, ctx: Context, response: Message, command: Command
     ) -> tuple[Optional[str], Optional[list[str]]]:
         """
-        Check if the eval session should continue.
+        Check if the job's session should continue.
 
         If the code is to be re-evaluated, return the new code, and the args if the command is the timeit command.
-        Otherwise return (None, None) if the eval session should be terminated.
+        Otherwise return (None, None) if the job's session should be terminated.
         """
-        _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
-        _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
+        _predicate_message_edit = partial(predicate_message_edit, ctx)
+        _predicate_emoji_reaction = partial(predicate_emoji_reaction, ctx)
 
         with contextlib.suppress(NotFound):
             try:
                 _, new_message = await self.bot.wait_for(
                     'message_edit',
-                    check=_predicate_eval_message_edit,
-                    timeout=REEVAL_TIMEOUT
+                    check=_predicate_message_edit,
+                    timeout=REDO_TIMEOUT
                 )
-                await ctx.message.add_reaction(REEVAL_EMOJI)
+                await ctx.message.add_reaction(REDO_EMOJI)
                 await self.bot.wait_for(
                     'reaction_add',
                     check=_predicate_emoji_reaction,
@@ -316,7 +316,7 @@ class Snekbox(Cog):
                 )
 
                 code = await self.get_code(new_message, ctx.command)
-                await ctx.message.clear_reaction(REEVAL_EMOJI)
+                await ctx.message.clear_reaction(REDO_EMOJI)
                 with contextlib.suppress(HTTPException):
                     await response.delete()
 
@@ -324,7 +324,7 @@ class Snekbox(Cog):
                     return None, None
 
             except asyncio.TimeoutError:
-                await ctx.message.clear_reaction(REEVAL_EMOJI)
+                await ctx.message.clear_reaction(REDO_EMOJI)
                 return None, None
 
             codeblocks = self.prepare_input(code)
@@ -347,11 +347,11 @@ class Snekbox(Cog):
         new_ctx = await self.bot.get_context(message)
 
         if new_ctx.command is command:
-            log.trace(f"Message {message.id} invokes eval command.")
+            log.trace(f"Message {message.id} invokes {command} command.")
             split = message.content.split(maxsplit=1)
             code = split[1] if len(split) > 1 else None
         else:
-            log.trace(f"Message {message.id} does not invoke eval command.")
+            log.trace(f"Message {message.id} does not invoke {command} command.")
             code = message.content
 
         return code
@@ -389,11 +389,11 @@ class Snekbox(Cog):
         while True:
             self.jobs[ctx.author.id] = datetime.datetime.now()
             try:
-                response = await self.send_eval(ctx, code, args=args, job_name=job_name)
+                response = await self.send_job(ctx, code, args=args, job_name=job_name)
             finally:
                 del self.jobs[ctx.author.id]
 
-            code, args = await self.continue_eval(ctx, response, ctx.command)
+            code, args = await self.continue_job(ctx, response, ctx.command)
             if not code:
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
@@ -402,9 +402,9 @@ class Snekbox(Cog):
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
-        bypass_roles=EVAL_ROLES,
-        categories=NO_EVAL_CATEGORIES,
-        channels=NO_EVAL_CHANNELS,
+        bypass_roles=SNEKBOX_ROLES,
+        categories=NO_SNEKBOX_CATEGORIES,
+        channels=NO_SNEKBOX_CHANNELS,
         ping_user=False
     )
     async def eval_command(self, ctx: Context, *, code: str) -> None:
@@ -425,9 +425,9 @@ class Snekbox(Cog):
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
-        bypass_roles=EVAL_ROLES,
-        categories=NO_EVAL_CATEGORIES,
-        channels=NO_EVAL_CHANNELS,
+        bypass_roles=SNEKBOX_ROLES,
+        categories=NO_SNEKBOX_CATEGORIES,
+        channels=NO_SNEKBOX_CHANNELS,
         ping_user=False
     )
     async def timeit_command(self, ctx: Context, *, code: str) -> str:
@@ -450,14 +450,14 @@ class Snekbox(Cog):
         await self.run_job("timeit", ctx, code=code, args=args)
 
 
-def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
+def predicate_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
     """Return True if the edited message is the context message and the content was indeed modified."""
     return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
 
 
-def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
-    """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
-    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
+def predicate_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
+    """Return True if the reaction REDO_EMOJI was added by the context message author on this message."""
+    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REDO_EMOJI
 
 
 def setup(bot: Bot) -> None:
