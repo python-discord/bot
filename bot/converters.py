@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 from ssl import CertificateError
 
 import dateutil.parser
-import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
+from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
@@ -20,9 +20,8 @@ from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
 from bot.exts.info.tags import TagIdentifier
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.extensions import EXTENSIONS, unqualify
-from bot.utils.regex import INVITE_RE
-from bot.utils.time import parse_duration_string
 
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
@@ -72,7 +71,7 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
-        invite_code = INVITE_RE.match(server_invite)
+        invite_code = DISCORD_INVITE.match(server_invite)
         if invite_code:
             response = await ctx.bot.http_session.get(
                 f"{URLs.discord_invite_api}/{invite_code.group('invite')}"
@@ -338,7 +337,7 @@ class DurationDelta(Converter):
 
         The units need to be provided in descending order of magnitude.
         """
-        if not (delta := parse_duration_string(duration)):
+        if not (delta := time.parse_duration_string(duration)):
             raise BadArgument(f"`{duration}` is not a valid duration string.")
 
         return delta
@@ -454,9 +453,9 @@ class ISODateTime(Converter):
             raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
 
         if dt.tzinfo:
-            dt = dt.astimezone(dateutil.tz.UTC)
+            dt = dt.astimezone(timezone.utc)
         else:  # Without a timezone, assume it represents UTC.
-            dt = dt.replace(tzinfo=dateutil.tz.UTC)
+            dt = dt.replace(tzinfo=timezone.utc)
 
         return dt
 

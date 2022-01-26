@@ -39,8 +39,7 @@ class Slowmode(Cog):
         if channel is None:
             channel = ctx.channel
 
-        delay = relativedelta(seconds=channel.slowmode_delay)
-        humanized_delay = time.humanize_delta(delay)
+        humanized_delay = time.humanize_delta(seconds=channel.slowmode_delay)
 
         await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 

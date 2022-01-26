@@ -10,6 +10,7 @@ import discord.errors
 import regex
 import tldextract
 from async_rediscache import RedisCache
+from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
@@ -23,7 +24,6 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.messages import format_user
-from bot.utils.regex import INVITE_RE
 
 log = get_logger(__name__)
 
@@ -566,7 +566,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
+        invites = [m.group("invite") for m in DISCORD_INVITE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:
