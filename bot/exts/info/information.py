@@ -180,8 +180,6 @@ class Information(Cog):
         if ctx.channel.id in (
             *constants.MODERATION_CHANNELS,
             constants.Channels.dev_core,
-            constants.Channels.dev_contrib,
-            constants.Channels.bot_commands
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
