@@ -22,7 +22,7 @@ from bot.utils import scheduling
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 
-# In case, the off topic channel name format is modified.
+# In case, the off-topic channel name format is modified.
 OTN_FORMATTER = "ot{number}-{name}"
 OT_NUMBER_INDEX = 2
 NAME_START_INDEX = 4
@@ -44,7 +44,7 @@ async def update_names(bot: Bot) -> None:
                 'bot/off-topic-channel-names', params={'random_items': 3}
             )
         except ResponseCodeError as e:
-            log.error(f"Failed to get new off topic channel names: code {e.response.status}")
+            log.error(f"Failed to get new off-topic channel names: code {e.response.status}")
             continue
         channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
 
@@ -80,19 +80,19 @@ class OffTopicNames(Cog):
             self.updater_task = scheduling.create_task(coro, event_loop=self.bot.loop)
 
     async def toggle_ot_name_activity(self, ctx: Context, name: str, active: bool) -> None:
-        """Toggle active attribute for an off topic name."""
+        """Toggle active attribute for an off-topic name."""
         data = {
             "active": active
         }
         await self.bot.api_client.patch(f"bot/off-topic-channel-names/{name}", data=data)
-        await ctx.send(f"Off topic name `{name}` has been {'whitelisted' if active else 'blacklisted'}.")
+        await ctx.send(f"Off-topic name `{name}` has been {'activated' if active else 'deactivated'}.")
 
     async def list_ot_names(self, ctx: Context, active: bool = True) -> None:
-        """Send an embed containing active/inactive off topic channel names."""
+        """Send an embed containing active/deactivated off-topic channel names."""
         result = await self.bot.api_client.get('bot/off-topic-channel-names', params={'active': json.dumps(active)})
         lines = sorted(f"• {name}" for name in result)
         embed = Embed(
-            title=f"{'Active' if active else 'Inactive'} off-topic names (`{len(result)}` total)",
+            title=f"{'Active' if active else 'Deactivated'} off-topic names (`{len(result)}` total)",
             colour=Colour.blue()
         )
         if result:
@@ -155,20 +155,20 @@ class OffTopicNames(Cog):
     @otname_group.command(name='activate', aliases=('whitelist',))
     @has_any_role(*MODERATION_ROLES)
     async def activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
-        """Whitelist off topic name."""
+        """Activate an existing off-topic name."""
         await self.toggle_ot_name_activity(ctx, name, True)
 
     @otname_group.command(name='deactivate', aliases=('blacklist',))
     @has_any_role(*MODERATION_ROLES)
     async def de_activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
-        """Deactivate/blacklist off topic name."""
+        """Deactivate a specific off-topic name."""
         await self.toggle_ot_name_activity(ctx, name, False)
 
     @otname_group.command(name='reroll')
     @has_any_role(*MODERATION_ROLES)
     async def re_roll_command(self, ctx: Context, ot_channel_index: Optional[int] = None) -> None:
         """
-        Re-rolls off topic name for an off-topic channel and blacklists the name.
+        Re-roll an off-topic name for a specific off-topic channel and deactivate the current name.
 
         ot_channel_index: [0, 1, 2, ...]
         """
@@ -176,13 +176,13 @@ class OffTopicNames(Cog):
             try:
                 channel = self.bot.get_channel(CHANNELS[ot_channel_index])
             except IndexError:
-                await ctx.send(f":x: Off-topic channel not found with index {ot_channel_index}.")
+                await ctx.send(f":x: No off-topic channel found with index {ot_channel_index}.")
                 return
         elif ctx.channel.id in CHANNELS:
             channel = ctx.channel
 
         else:
-            await ctx.send("Please specify channel for which the off topic name should be re-rolled.")
+            await ctx.send("Please specify channel for which the off-topic name should be re-rolled.")
             return
 
         old_channel_name = channel.name
@@ -196,11 +196,11 @@ class OffTopicNames(Cog):
         try:
             new_channel_name = response[0]
         except IndexError:
-            await ctx.send("Out of active off topic names. Add new names to reroll.")
+            await ctx.send("Out of active off-topic names. Add new names to reroll.")
             return
 
         async def rename_channel() -> None:
-            """Rename off topic channel and log events."""
+            """Rename off-topic channel and log events."""
             await channel.edit(
                 name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name)
             )
@@ -220,16 +220,15 @@ class OffTopicNames(Cog):
                 3
             )
         except asyncio.TimeoutError:
-            # Channel rename endpoint rate limited. Cancel task and blacklist/de-activate name.
+            # Channel rename endpoint rate limited. The task was cancelled by asyncio.
             btn_yes = Button(label="Yes", style=ButtonStyle.success)
             btn_no = Button(label="No", style=ButtonStyle.danger)
 
             embed = Embed(
                 title=random.choice(NEGATIVE_REPLIES),
                 description=(
-
                     "Re-naming the channel is being rate-limited. "
-                    "Would you like to schedule a channel re-name process within the current bot session ?"
+                    "Would you like to schedule an asyncio task to rename the channel within the current bot session ?"
                 ),
                 colour=Colour.blurple()
             )
@@ -268,16 +267,16 @@ class OffTopicNames(Cog):
         """
         await self.active_otnames_command(ctx)
 
-    @list_command.command(name='active')
+    @list_command.command(name='active', aliases=('a',))
     @has_any_role(*MODERATION_ROLES)
     async def active_otnames_command(self, ctx: Context) -> None:
-        """List active off topic channel names."""
+        """List active off-topic channel names."""
         await self.list_ot_names(ctx, True)
 
-    @list_command.command(name='inactive')
+    @list_command.command(name='deactivated', aliases=('d',))
     @has_any_role(*MODERATION_ROLES)
-    async def inactive_otnames_command(self, ctx: Context) -> None:
-        """List inactive off topic channel names."""
+    async def deactivated_otnames_command(self, ctx: Context) -> None:
+        """List deactivated off-topic channel names."""
         await self.list_ot_names(ctx, False)
 
     @otname_group.command(name='search', aliases=('s',))
