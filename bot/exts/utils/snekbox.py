@@ -419,7 +419,7 @@ class Snekbox(Cog):
         channels=NO_SNEKBOX_CHANNELS,
         ping_user=False
     )
-    async def timeit_command(self, ctx: Context, *, code: CodeblockConverter) -> str:
+    async def timeit_command(self, ctx: Context, *, code: CodeblockConverter) -> None:
         """
         Profile Python Code to find execution time.
 
