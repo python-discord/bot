@@ -57,7 +57,9 @@ class Superstarify(InfractionScheduler, Cog):
             return
 
         infraction = active_superstarifies[0]
-        forced_nick = self.get_nick(infraction["id"], before.id)
+        infr_id = infraction["id"]
+
+        forced_nick = self.get_nick(infr_id, before.id)
         if after.display_name == forced_nick:
             return  # Nick change was triggered by this event. Ignore.
 
@@ -67,11 +69,13 @@ class Superstarify(InfractionScheduler, Cog):
         )
         await after.edit(
             nick=forced_nick,
-            reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
+            reason=f"Superstarified member tried to escape the prison: {infr_id}"
         )
 
         notified = await _utils.notify_infraction(
+            bot=self.bot,
             user=after,
+            infr_id=infr_id,
             infr_type="Superstarify",
             expires_at=time.discord_timestamp(infraction["expires_at"]),
             reason=(
