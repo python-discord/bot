@@ -21,7 +21,7 @@ INFRACTION_ICONS = {
     "note": (Icons.user_warn, None),
     "superstar": (Icons.superstarify, Icons.unsuperstarify),
     "warning": (Icons.user_warn, None),
-    "voice_ban": (Icons.voice_state_red, Icons.voice_state_green),
+    "voice_mute": (Icons.voice_state_red, Icons.voice_state_green),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
 
