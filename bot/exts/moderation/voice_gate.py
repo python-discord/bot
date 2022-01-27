@@ -30,7 +30,7 @@ FAILED_MESSAGE = (
 
 MESSAGE_FIELD_MAP = {
     "joined_at": f"have been on the server for less than {GateConf.minimum_days_member} days",
-    "voice_muted": "have an active voice mute infraction",
+    "voice_gate_blocked": "have an active voice infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
     "activity_blocks": f"have been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
 }
@@ -170,7 +170,7 @@ class VoiceGate(Cog):
                 ctx.author.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
             ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
-            "voice_muted": data["voice_muted"],
+            "voice_gate_blocked": data["voice_gate_blocked"],
             "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
         }
 
