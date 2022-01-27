@@ -267,7 +267,7 @@ class Filtering(Cog):
             # Update time when alert sent
             await self.name_alerts.set(member.id, arrow.utcnow().timestamp())
 
-    async def filter_snekbox_job(self, result: str, msg: Message) -> bool:
+    async def filter_snekbox_output(self, result: str, msg: Message) -> bool:
         """
         Filter the result of a snekbox command to see if it violates any of our rules, and then respond accordingly.
 

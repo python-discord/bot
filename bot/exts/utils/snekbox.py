@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 from botcore.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from discord import AllowedMentions, HTTPException, Message, NotFound, Reaction, User
-from discord.ext.commands import Cog, Command, Context, command, guild_only
+from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Roles, URLs
@@ -68,35 +68,11 @@ REDO_EMOJI = '\U0001f501'  # :repeat:
 REDO_TIMEOUT = 30
 
 
-class Snekbox(Cog):
-    """Safe evaluation of Python code using Snekbox."""
+class CodeblockConverter(Converter):
+    """Attempts to extract code from a codeblock, if provided."""
 
-    def __init__(self, bot: Bot):
-        self.bot = bot
-        self.jobs = {}
-
-    async def post_job(self, code: str, *, args: Optional[list[str]] = None) -> dict:
-        """Send a POST request to the Snekbox API to evaluate code and return the results."""
-        url = URLs.snekbox_eval_api
-        data = {"input": code}
-
-        if args is not None:
-            data["args"] = args
-
-        async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
-            return await resp.json()
-
-    async def upload_output(self, output: str) -> Optional[str]:
-        """Upload the job's output to a paste service and return a URL to it if successful."""
-        log.trace("Uploading full output to paste service...")
-
-        if len(output) > MAX_PASTE_LEN:
-            log.info("Full output is too long to upload")
-            return "too long to upload"
-        return await send_to_paste_service(output, extension="txt")
-
-    @staticmethod
-    def prepare_input(code: str) -> list[str]:
+    @classmethod
+    async def convert(cls, ctx: Context, code: str) -> list[str]:
         """
         Extract code from the Markdown, format it, and insert it into the code template.
 
@@ -127,6 +103,34 @@ class Snekbox(Cog):
         code = "\n".join(codeblocks)
         log.trace(f"Extracted {info} for evaluation:\n{code}")
         return codeblocks
+
+
+class Snekbox(Cog):
+    """Safe evaluation of Python code using Snekbox."""
+
+    def __init__(self, bot: Bot):
+        self.bot = bot
+        self.jobs = {}
+
+    async def post_job(self, code: str, *, args: Optional[list[str]] = None) -> dict:
+        """Send a POST request to the Snekbox API to evaluate code and return the results."""
+        url = URLs.snekbox_eval_api
+        data = {"input": code}
+
+        if args is not None:
+            data["args"] = args
+
+        async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
+            return await resp.json()
+
+    async def upload_output(self, output: str) -> Optional[str]:
+        """Upload the job's output to a paste service and return a URL to it if successful."""
+        log.trace("Uploading full output to paste service...")
+
+        if len(output) > MAX_PASTE_LEN:
+            log.info("Full output is too long to upload")
+            return "too long to upload"
+        return await send_to_paste_service(output, extension="txt")
 
     @staticmethod
     def prepare_timeit_input(codeblocks: list[str]) -> tuple[str, list[str]]:
@@ -313,7 +317,7 @@ class Snekbox(Cog):
                 await ctx.message.clear_reaction(REDO_EMOJI)
                 return None, None
 
-            codeblocks = self.prepare_input(code)
+            codeblocks = await CodeblockConverter.convert(ctx, code)
 
             if command is self.timeit_command:
                 return self.prepare_timeit_input(codeblocks)
@@ -393,7 +397,7 @@ class Snekbox(Cog):
         channels=NO_SNEKBOX_CHANNELS,
         ping_user=False
     )
-    async def eval_command(self, ctx: Context, *, code: str) -> None:
+    async def eval_command(self, ctx: Context, *, code: CodeblockConverter) -> None:
         """
         Run Python code and get the results.
 
@@ -404,8 +408,7 @@ class Snekbox(Cog):
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-        code = "\n".join(self.prepare_input(code))
-        await self.run_job("eval", ctx, code)
+        await self.run_job("eval", ctx, "\n".join(code))
 
     @command(name="timeit", aliases=("ti",))
     @guild_only()
@@ -416,7 +419,7 @@ class Snekbox(Cog):
         channels=NO_SNEKBOX_CHANNELS,
         ping_user=False
     )
-    async def timeit_command(self, ctx: Context, *, code: str) -> str:
+    async def timeit_command(self, ctx: Context, *, code: CodeblockConverter) -> str:
         """
         Profile Python Code to find execution time.
 
@@ -430,8 +433,7 @@ class Snekbox(Cog):
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-        codeblocks = self.prepare_input(code)
-        code, args = self.prepare_timeit_input(codeblocks)
+        code, args = self.prepare_timeit_input(code)
 
         await self.run_job("timeit", ctx, code=code, args=args)
 
