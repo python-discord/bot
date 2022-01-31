@@ -133,7 +133,7 @@ async def notify_none_remaining(channel: discord.TextChannel, last_notification:
 
     Configuration:
         * `HelpChannels.notify_minutes`              - minimum interval between notifications
-        * `HelpChannels.notify_none_remaining`       - toggle notifications
+        * `HelpChannels.notify_none_remaining`       - toggle none_remaining notifications
         * `HelpChannels.notify_none_remaining_roles` - roles mentioned in notifications
     """
     if not constants.HelpChannels.notify_none_remaining:
@@ -169,6 +169,21 @@ async def notify_none_remaining(channel: discord.TextChannel, last_notification:
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about lack of dormant channels!")
+
+
+async def notify_running_low():
+    """
+    Send a non-pinging message in `channel` notifying about there being a low amount of dormant channels.
+
+    If a notification was sent, return the time at which the message was sent.
+    Otherwise, return None.
+
+    Configuration:
+        * `HelpChannels.notify_minutes`               - minimum interval between notifications
+        * `HelpChannels.notify_running_low`           - toggle running_low notifications
+        * `HelpChannels.notify_running_low_threshold` - minimum amount of channels to trigger running_low notifications
+    """
+    ...
 
 
 async def pin(message: discord.Message) -> None:
