@@ -137,7 +137,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arr
     * `HelpChannels.notify_minutes` - minimum interval between notifications
     * `HelpChannels.notify_roles` - roles mentioned in notifications
     """
-    if not constants.HelpChannels.notify:
+    if not constants.HelpChannels.notify_none_remaining:
         return
 
     log.trace("Notifying about lack of channels.")
@@ -156,8 +156,8 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arr
     try:
         log.trace("Sending notification message.")
 
-        mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_roles)
-        allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_roles]
+        mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_none_remaining_roles)
+        allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_none_remaining_roles]
 
         message = await channel.send(
             f"{mentions} A new available help channel is needed but there "
