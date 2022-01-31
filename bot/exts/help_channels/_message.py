@@ -124,7 +124,7 @@ async def dm_on_open(message: discord.Message) -> None:
         )
 
 
-async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arrow]) -> t.Optional[Arrow]:
+async def notify_none_remaining(channel: discord.TextChannel, last_notification: t.Optional[Arrow]) -> t.Optional[Arrow]:
     """
     Send a message in `channel` notifying about a lack of available help channels.
 

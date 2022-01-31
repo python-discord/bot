@@ -236,7 +236,7 @@ class HelpChannels(commands.Cog):
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
                 notify_channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
-                last_notification = await _message.notify(notify_channel, self.last_notification)
+                last_notification = await _message.notify_none_remaining(notify_channel, self.last_notification)
                 if last_notification:
                     self.last_notification = last_notification
                     self.bot.stats.incr("help.out_of_channel_alerts")
