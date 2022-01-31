@@ -126,16 +126,15 @@ async def dm_on_open(message: discord.Message) -> None:
 
 async def notify_none_remaining(channel: discord.TextChannel, last_notification: t.Optional[Arrow]) -> t.Optional[Arrow]:
     """
-    Send a message in `channel` notifying about a lack of available help channels.
+    Send a pinging message in `channel` notifying about there being no dormant channels remaining.
 
     If a notification was sent, return the time at which the message was sent.
     Otherwise, return None.
 
     Configuration:
-
-    * `HelpChannels.notify` - toggle notifications
-    * `HelpChannels.notify_minutes` - minimum interval between notifications
-    * `HelpChannels.notify_roles` - roles mentioned in notifications
+        * `HelpChannels.notify_minutes`              - minimum interval between notifications
+        * `HelpChannels.notify_none_remaining`       - toggle notifications
+        * `HelpChannels.notify_none_remaining_roles` - roles mentioned in notifications
     """
     if not constants.HelpChannels.notify_none_remaining:
         return
