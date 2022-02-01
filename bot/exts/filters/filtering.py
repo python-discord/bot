@@ -208,8 +208,8 @@ class Filtering(Cog):
         await self._filter_message(after, delta)
 
     @Cog.listener()
-    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
-        """When a member initially joins a voice channel or switches to a new one, check for a bad name in username."""
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
+        """Checks for bad words in usernames when users join or change voice channels."""
         if after.channel and not before.channel:
             await self.check_bad_words_in_name(member)
 
