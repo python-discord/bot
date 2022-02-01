@@ -6,13 +6,13 @@ from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
 import dateutil.parser
-import discord.errors
+import discord
 import regex
 import tldextract
 from async_rediscache import RedisCache
 from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel, VoiceState
+from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel, VoiceState, Forbidden
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
@@ -360,7 +360,7 @@ class Filtering(Cog):
                                 # In addition, to avoid sending two notifications to the user, the
                                 # logs, and mod_alert, we return if the message no longer exists.
                                 await msg.delete()
-                            except discord.errors.NotFound:
+                            except NotFound:
                                 return
 
                             # Notify the user if the filter specifies
@@ -664,7 +664,7 @@ class Filtering(Cog):
         """
         try:
             await filtered_member.send(reason)
-        except discord.errors.Forbidden:
+        except Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
     def schedule_msg_delete(self, msg: dict) -> None:
