@@ -12,7 +12,7 @@ import tldextract
 from async_rediscache import RedisCache
 from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
+from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel, VoiceState
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
@@ -206,6 +206,12 @@ class Filtering(Cog):
         else:
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
+
+    @Cog.listener()
+    async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState):
+        """When a member initially joins a voice channel or switches to a new one, check for a bad name in username."""
+        if after.channel and not before.channel:
+            await self.check_bad_words_in_name(member)
 
     def get_name_match(self, name: str) -> Optional[re.Match]:
         """Check bad words from passed string (name). Return the first match found."""
