@@ -261,7 +261,8 @@ class Filtering(Cog):
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.display_avatar.url
+                thumbnail=member.display_avatar.url,
+                ping_everyone=True
             )
 
             # Update time when alert sent
