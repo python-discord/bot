@@ -151,7 +151,7 @@ class TokenRemover(Cog):
 
         log_message = (
             f"Deleted mfa token sent by {msg.author} in {msg.channel}: "
-            f"{token[:4]}{'x' * len(token[3:-3])}{token[-3:]}"
+            f"{token[:4]}{'x' * len(token[4:-3])}{token[-3:]}"
         )
 
         log.info(log_message)
