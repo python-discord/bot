@@ -1,7 +1,6 @@
 import textwrap
 import typing as t
 
-import arrow
 import discord
 from arrow import Arrow
 
@@ -158,7 +157,8 @@ async def notify_none_remaining(channel: discord.TextChannel) -> None:
 async def notify_running_low(channel: discord.TextChannel, number_of_channels_left: int) -> None:
     """
     Send a non-pinging message in `channel` notifying about there being a low amount of dormant channels.
-        Including the amount of channels left in dormant.
+
+    This will include the number of dormant channels left `number_of_channels_left`
 
     Configuration:
         * `HelpChannels.notify_minutes`               - minimum interval between notifications

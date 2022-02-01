@@ -233,9 +233,13 @@ class HelpChannels(commands.Cog):
         try:
             channel = self.channel_queue.get_nowait()
 
-            within_interval = (arrow.utcnow() - self.last_running_low_notification).seconds >= self.notify_interval_seconds
+            time_since_last_notify_seconds = (arrow.utcnow() - self.last_running_low_notification).seconds
+            within_interval = time_since_last_notify_seconds >= self.notify_interval_seconds
             if within_interval and self.channel_queue.qsize() <= constants.HelpChannels.notify_running_low_threshold:
-                await _message.notify_running_low(self.bot.get_channel(constants.HelpChannels.notify_channel), self.channel_queue.qsize())
+                await _message.notify_running_low(
+                    self.bot.get_channel(constants.HelpChannels.notify_channel),
+                    self.channel_queue.qsize()
+                )
                 self.last_running_low_notification = arrow.utcnow()
 
         except asyncio.QueueEmpty:
