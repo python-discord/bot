@@ -514,7 +514,7 @@ help_channels:
     name_prefix: 'help-'
 
     notify_channel:                *HELPERS  # Channel in which to send notifications messages
-    notify_minutes:                15        # Minimum interval between helper notifications, used by both none_remaining and running_low
+    notify_minutes:                15        # Minimum interval between none_remaining or running_low notifications
 
     notify_none_remaining:         true      # Pinging notification for the Helper role when no dormant channels remain
     notify_none_remaining_roles:             # Mention these roles in the non_remaining notification
