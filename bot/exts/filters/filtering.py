@@ -6,13 +6,14 @@ from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
 import dateutil.parser
-import discord
 import regex
 import tldextract
 from async_rediscache import RedisCache
 from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from discord import Colour, Forbidden, HTTPException, Member, Message, NotFound, TextChannel, VoiceState
+from discord import (
+    ChannelType, Colour, Embed, Forbidden, HTTPException, Member, Message, NotFound, TextChannel, VoiceState
+)
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
@@ -63,14 +64,14 @@ AUTO_BAN_REASON = (
 )
 AUTO_BAN_DURATION = timedelta(days=4)
 
-FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
+FilterMatch = Union[re.Match, dict, bool, List[Embed]]
 
 
 class Stats(NamedTuple):
     """Additional stats on a triggered filter to append to a mod log."""
 
     message_content: str
-    additional_embeds: Optional[List[discord.Embed]]
+    additional_embeds: Optional[List[Embed]]
 
 
 class Filtering(Cog):
@@ -345,7 +346,7 @@ class Filtering(Cog):
                         match = result
 
                     if match:
-                        is_private = msg.channel.type is discord.ChannelType.private
+                        is_private = msg.channel.type is ChannelType.private
 
                         # If this is a filter (not a watchlist) and not in a DM, delete the message.
                         if _filter["type"] == "filter" and not is_private:
@@ -415,14 +416,14 @@ class Filtering(Cog):
         self,
         filter_name: str,
         _filter: Dict[str, Any],
-        msg: discord.Message,
+        msg: Message,
         stats: Stats,
         reason: Optional[str] = None,
         *,
         is_eval: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
-        if msg.channel.type is discord.ChannelType.private:
+        if msg.channel.type is ChannelType.private:
             channel_str = "via DM"
             ping_everyone = False
         else:
@@ -480,7 +481,7 @@ class Filtering(Cog):
             additional_embeds = []
             for _, data in match.items():
                 reason = f"Reason: {data['reason']} | " if data.get('reason') else ""
-                embed = discord.Embed(description=(
+                embed = Embed(description=(
                     f"**Members:**\n{data['members']}\n"
                     f"**Active:**\n{data['active']}"
                 ))
@@ -628,7 +629,7 @@ class Filtering(Cog):
         return invite_data if invite_data else False
 
     @staticmethod
-    async def _has_rich_embed(msg: Message) -> Union[bool, List[discord.Embed]]:
+    async def _has_rich_embed(msg: Message) -> Union[bool, List[Embed]]:
         """Determines if `msg` contains any rich embeds not auto-generated from a URL."""
         if msg.embeds:
             for embed in msg.embeds:
