@@ -80,6 +80,7 @@ class HelpChannels(commands.Cog):
 
         # Notifications
         self.notify_interval_seconds = constants.HelpChannels.notify_minutes * 60
+        # Using a very old date so that we don't have to use Optional typing.
         self.last_none_remaining_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
         self.last_running_low_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
 
