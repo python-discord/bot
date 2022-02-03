@@ -124,7 +124,7 @@ async def dm_on_open(message: discord.Message) -> None:
         )
 
 
-async def notify_none_remaining(channel: discord.TextChannel, last_notification: Arrow) -> t.Optional[Arrow]:
+async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
     """
     Send a pinging message in `channel` notifying about there being no dormant channels remaining.
 
@@ -145,6 +145,10 @@ async def notify_none_remaining(channel: discord.TextChannel, last_notification:
     mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_none_remaining_roles)
     allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_none_remaining_roles]
 
+    channel = bot.instance.get_channel(constants.HelpChannels.notify_channel)
+    if channel is None:
+        log.trace("Did not send none_remaining notification as the notification channel couldn't be gathered.")
+
     try:
         await channel.send(
             f"{mentions} A new available help channel is needed but there "
@@ -160,11 +164,7 @@ async def notify_none_remaining(channel: discord.TextChannel, last_notification:
         return arrow.utcnow()
 
 
-async def notify_running_low(
-    channel: discord.TextChannel,
-    number_of_channels_left: int,
-    last_notification: Arrow
-) -> t.Optional[Arrow]:
+async def notify_running_low(number_of_channels_left: int, last_notification: Arrow) -> t.Optional[Arrow]:
     """
     Send a non-pinging message in `channel` notifying about there being a low amount of dormant channels.
 
@@ -187,6 +187,11 @@ async def notify_running_low(
         return None
 
     log.trace("Notifying about getting close to no dormant channels.")
+
+    channel = bot.instance.get_channel(constants.HelpChannels.notify_channel)
+    if channel is None:
+        log.trace("Did not send notify_running notification as the notification channel couldn't be gathered.")
+
     try:
         await channel.send(
             f"There are only {number_of_channels_left} dormant channels left. "

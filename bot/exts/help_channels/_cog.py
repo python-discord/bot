@@ -238,10 +238,7 @@ class HelpChannels(commands.Cog):
 
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
-                last_notification = await _message.notify_none_remaining(
-                    self.bot.get_channel(constants.HelpChannels.notify_channel),
-                    self.last_none_remaining_notification
-                )
+                last_notification = await _message.notify_none_remaining(self.last_none_remaining_notification)
 
                 if last_notification:
                     self.last_none_remaining_notification = last_notification
@@ -249,11 +246,7 @@ class HelpChannels(commands.Cog):
                 channel = await self.wait_for_dormant_channel()  # Blocks until a new channel is available
 
         else:
-            last_notification = await _message.notify_running_low(
-                self.bot.get_channel(constants.HelpChannels.notify_channel),
-                self.channel_queue.qsize(),
-                self.last_running_low_notification
-            )
+            last_notification = await _message.notify_running_low(self.channel_queue.qsize(), self.last_running_low_notification)
 
             if last_notification:
                 self.last_running_low_notification = last_notification
