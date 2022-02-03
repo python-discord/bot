@@ -128,6 +128,9 @@ async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
     """
     Send a pinging message in `channel` notifying about there being no dormant channels remaining.
 
+     If a notification was sent, return the time at which the message was sent.
+        Otherwise, return None.
+
     Configuration:
         * `HelpChannels.notify_minutes`              - minimum interval between notifications
         * `HelpChannels.notify_none_remaining`       - toggle none_remaining notifications
@@ -170,6 +173,9 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
     Send a non-pinging message in `channel` notifying about there being a low amount of dormant channels.
 
     This will include the number of dormant channels left `number_of_channels_left`
+
+    If a notification was sent, return the time at which the message was sent.
+        Otherwise, return None.
 
     Configuration:
         * `HelpChannels.notify_minutes`               - minimum interval between notifications
