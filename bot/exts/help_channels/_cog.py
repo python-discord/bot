@@ -79,7 +79,7 @@ class HelpChannels(commands.Cog):
         self.name_queue: t.Deque[str] = None
 
         # Notifications
-        self.notify_interval_seconds = (constants.HelpChannels.notify_minutes * 60)
+        self.notify_interval_seconds = constants.HelpChannels.notify_minutes * 60
         self.last_none_remaining_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
         self.last_running_low_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
 
