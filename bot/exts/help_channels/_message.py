@@ -1,6 +1,7 @@
 import textwrap
 import typing as t
 
+import arrow
 import discord
 from arrow import Arrow
 
@@ -123,7 +124,7 @@ async def dm_on_open(message: discord.Message) -> None:
         )
 
 
-async def notify_none_remaining(channel: discord.TextChannel) -> None:
+async def notify_none_remaining(channel: discord.TextChannel, last_notification: Arrow) -> t.Optional[Arrow]:
     """
     Send a pinging message in `channel` notifying about there being no dormant channels remaining.
 
@@ -133,16 +134,18 @@ async def notify_none_remaining(channel: discord.TextChannel) -> None:
         * `HelpChannels.notify_none_remaining_roles` - roles mentioned in notifications
     """
     if not constants.HelpChannels.notify_none_remaining:
-        return
+        return None
+
+    if (arrow.utcnow() - last_notification).seconds < (constants.HelpChannels.notify_minutes * 60):
+        log.trace("Did not send none_remaining notification as it hasn't been enough time since the last one.")
+        return None
 
     log.trace("Notifying about lack of channels.")
 
+    mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_none_remaining_roles)
+    allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_none_remaining_roles]
+
     try:
-        log.trace("Sending notification message.")
-
-        mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_none_remaining_roles)
-        allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_none_remaining_roles]
-
         await channel.send(
             f"{mentions} A new available help channel is needed but there "
             "are no more dormant ones. Consider freeing up some in-use channels manually by "
@@ -152,9 +155,16 @@ async def notify_none_remaining(channel: discord.TextChannel) -> None:
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about lack of dormant channels!")
+    finally:
+        bot.instance.stats.incr("help.out_of_channel_alerts")
+        return arrow.utcnow()
 
 
-async def notify_running_low(channel: discord.TextChannel, number_of_channels_left: int) -> None:
+async def notify_running_low(
+    channel: discord.TextChannel,
+    number_of_channels_left: int,
+    last_notification: Arrow
+) -> t.Optional[Arrow]:
     """
     Send a non-pinging message in `channel` notifying about there being a low amount of dormant channels.
 
@@ -166,14 +176,28 @@ async def notify_running_low(channel: discord.TextChannel, number_of_channels_le
         * `HelpChannels.notify_running_low_threshold` - minimum amount of channels to trigger running_low notifications
     """
     if not constants.HelpChannels.notify_running_low:
-        return
+        return None
+
+    if number_of_channels_left > constants.HelpChannels.notify_running_low_threshold:
+        log.trace("Did not send notify_running_low notification as the threshold was not met.")
+        return None
+
+    if (arrow.utcnow() - last_notification).seconds < (constants.HelpChannels.notify_minutes * 60):
+        log.trace("Did not send notify_running_low notification as it hasn't been enough time since the last one.")
+        return None
 
     log.trace("Notifying about getting close to no dormant channels.")
-
-    await channel.send(
-        f"There are only {number_of_channels_left} dormant channels left. "
-        "Consider participating in some help channels so that we don't run out."
-    )
+    try:
+        await channel.send(
+            f"There are only {number_of_channels_left} dormant channels left. "
+            "Consider participating in some help channels so that we don't run out."
+        )
+    except Exception:
+        # Handle it here cause this feature isn't critical for the functionality of the system.
+        log.exception("Failed to send notification about running low of dormant channels!")
+    finally:
+        bot.instance.stats.incr("help.running_low_alerts")
+        return arrow.utcnow()
 
 
 async def pin(message: discord.Message) -> None:
