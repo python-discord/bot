@@ -246,7 +246,10 @@ class HelpChannels(commands.Cog):
                 channel = await self.wait_for_dormant_channel()  # Blocks until a new channel is available
 
         else:
-            last_notification = await _message.notify_running_low(self.channel_queue.qsize(), self.last_running_low_notification)
+            last_notification = await _message.notify_running_low(
+                self.channel_queue.qsize(),
+                self.last_running_low_notification
+            )
 
             if last_notification:
                 self.last_running_low_notification = last_notification
