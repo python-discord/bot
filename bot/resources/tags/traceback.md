@@ -12,3 +12,5 @@ Traceback (most recent call last):
         a = num + 3
 TypeError: can only concatenate str (not "int") to str
 ```
+
+If the traceback is long, use [our pastebin](https://paste.pythondiscord.com/).
