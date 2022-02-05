@@ -208,7 +208,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.format_output = AsyncMock(return_value=('[No output]', None))
 
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_job = AsyncMock(return_value=False)
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
         await self.cog.send_job(ctx, 'MyAwesomeCode', job_name='eval')
@@ -240,7 +240,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.format_output = AsyncMock(return_value=('Way too long beard', 'lookatmybeard.com'))
 
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_job = AsyncMock(return_value=False)
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
         await self.cog.send_job(ctx, 'MyAwesomeCode', job_name='eval')
@@ -269,7 +269,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.format_output = AsyncMock()  # This function isn't called
 
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_job = AsyncMock(return_value=False)
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
         await self.cog.send_job(ctx, 'MyAwesomeCode', job_name='eval')
