@@ -66,6 +66,21 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                     '\n'.join(await snekbox.CodeblockConverter.convert(ctx, case)), expected
                 )
 
+    def test_prepare_timeit_input(self):
+        """Test the prepare_timeit_input codeblock detection."""
+        base_args = ('-m', 'timeit', '-s')
+        cases = (
+            (['print("Hello World")'], '', 'single block of code'),
+            (['x = 1', 'print(x)'], 'x = 1', 'two blocks of code'),
+            (['x = 1', 'print(x)', 'print("Some other code.")'], 'x = 1', 'three blocks of code')
+        )
+
+        for case, setup_code, testname in cases:
+            setup = snekbox.TIMEIT_SETUP_WRAPPER.format(setup=setup_code)
+            expected = ('\n'.join(case[1:] if setup_code else case), [*base_args, setup])
+            with self.subTest(msg=f'Test with {testname} and expected return {expected}'):
+                self.assertEqual(self.cog.prepare_timeit_input(case), expected)
+
     def test_get_results_message(self):
         """Return error and message according to the eval result."""
         cases = (
