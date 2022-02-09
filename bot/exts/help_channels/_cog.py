@@ -326,6 +326,7 @@ class HelpChannels(commands.Cog):
 
         log.trace("Moving or rescheduling in-use channels.")
         for channel in _channel.get_category_channels(self.in_use_category):
+            await _channel.ensure_cached_claimant(channel)
             await self.move_idle_channel(channel, has_task=False)
 
         # Prevent the command from being used until ready.
