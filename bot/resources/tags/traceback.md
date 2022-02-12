@@ -6,10 +6,10 @@ Please avoid screenshots so we can copy and paste parts of the message.
 A full traceback could look like:
 ```py
 Traceback (most recent call last):
-    File "my_file.py", line 3, in
-        add_three("6")
-    File "tiny", line 2, in do_something
-        a = num + 3
+  File "my_file.py", line 5, in <module>
+    add_three("6")
+  File "my_file.py", line 2, in add_three
+    a = num + 3
 TypeError: can only concatenate str (not "int") to str
 ```
 
