@@ -171,7 +171,7 @@ class Subscribe(commands.Cog):
         self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
-    @commands.command(name="subscribe")
+    @commands.command(name="subscribe", aliases=("unsubscribe",))
     @redirect_output(
         destination_channel=constants.Channels.bot_commands,
         bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES,
