@@ -66,20 +66,19 @@ class Reminders(Cog):
             else:
                 self.schedule_reminder(reminder)
 
-    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.User, discord.TextChannel]:
-        """Ensure reminder author and channel can be fetched otherwise delete the reminder."""
-        user = self.bot.get_user(reminder['author'])
+    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.TextChannel]:
+        """Ensure reminder channel can be fetched otherwise delete the reminder."""
         channel = self.bot.get_channel(reminder['channel_id'])
         is_valid = True
-        if not user or not channel:
+        if not channel:
             is_valid = False
             log.info(
                 f"Reminder {reminder['id']} invalid: "
-                f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
+                f"Channel {reminder['channel_id']}={channel}."
             )
             scheduling.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
 
-        return is_valid, user, channel
+        return is_valid, channel
 
     @staticmethod
     async def _send_confirmation(
@@ -170,7 +169,7 @@ class Reminders(Cog):
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(self, reminder: dict, expected_time: t.Optional[time.Timestamp] = None) -> None:
         """Send the reminder."""
-        is_valid, user, channel = self.ensure_valid_reminder(reminder)
+        is_valid, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
             # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
@@ -206,7 +205,7 @@ class Reminders(Cog):
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
             )
-            await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
+            await channel.send(content=f"<@{reminder['author']}> {additional_mentions}", embed=embed)
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
