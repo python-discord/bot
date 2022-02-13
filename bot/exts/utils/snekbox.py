@@ -31,26 +31,35 @@ from collections import deque
 
 if not hasattr(sys, "_setup_finished"):
     class Writer(deque):
+        '''A single-item deque wrapper for sys.stdout that will return the last line when read() is called.'''
+
         def __init__(self):
             super().__init__(maxlen=1)
 
         def write(self, string):
+            '''Append the line to the queue if it is not empty.'''
             if string.strip():
                 self.append(string)
 
         def read(self):
+            '''This method will be called when print() is called.
+
+            The queue is emptied as we don't need the output later.
+            '''
             return self.pop()
 
         def flush(self):
+            '''This method will be called eventually, but we don't need to do anything here.'''
             pass
 
     sys.stdout = Writer()
 
     def print_last_line():
-        if sys.stdout:
+        if sys.stdout: # If the deque is empty (i.e. an error happened), calling read() will raise an error
+            # Use sys.__stdout__ here because sys.stdout is set to a Writer() instance
             print(sys.stdout.read(), file=sys.__stdout__)
 
-    atexit.register(print_last_line)
+    atexit.register(print_last_line) # When exiting, print the last line (hopefully it will be the timeit output)
     sys._setup_finished = None
 {setup}
 """
