@@ -210,14 +210,12 @@ class Utils(Cog):
     @command(aliases=("unfurl",))
     async def unfurl_url(self, ctx: Context, url: str, max_redirects: int = 5, use_cache: bool = True) -> None:
         """
-        Unfurl `url` to find where it redirects to.
+        Unfurl `url` to find where it redirects to, to a maximum depth of `max_redirects`.
 
-        We unfurl to a maximum depth of `max_redirects`.
+        Colour the embed green if the final destination of the url is found correctly.
+        Otherwise, colour it red.
 
-        The color of the embed will indicate if we managed to correctly find the final destination of the url.
-        If it's red, we did not reach the bottom, or there isn't one.
-
-        Setting `use_cache` to False will skip the cache and make a new request.
+        Skip the cache and make a new request if `use_case` is False.
         """
         if not 0 < max_redirects <= services.MAX_UNFURLS * 5:
             raise BadArgument(f"Max redirects has to be a number between {0} and {services.MAX_UNFURLS * 5}.")
@@ -264,9 +262,9 @@ class Utils(Cog):
             # Wrap the URL in backticks to prevent hyperlinking and accidental clicks
             _dest = f"`{result.destination}`"
             if len(_dest) > 1024:
-                # URL is too long for an embed field, send to the pastebin
+                # URL is too long for an embed field; send to the pastebin
                 paste = await services.send_to_paste_service(result.destination, extension="txt")
-                dest = f"Result was too long to display, you can find it [here]({paste})."
+                dest = f"Result was too long to display. You can find it [here]({paste})."
             else:
                 dest = _dest
 

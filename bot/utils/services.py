@@ -53,8 +53,8 @@ async def _attempt_request(
     Return None for failures.
 
     If callback is not None, return the result of calling that instead.
-    Callbacks that return None will also be reattempted in the same fashion as the request.
-    Callback is called with (response, current_attempt, max_attempts)
+    Retry the callback if it returns None similar to how the request is retried.
+    The callback's signature should be `callback(response, current_attempt, max_attempts)`.
     """
     for attempt in range(1, attempts + 1):
         try:
@@ -83,9 +83,9 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
     """
     Upload `contents` to the paste service.
 
-    `extension` is added to the output URL
+    Append `extension` to the output URL.
 
-    When an error occurs, `None` is returned, otherwise the generated URL with the suffix.
+    Return None when an error occurs. Otherwise, return the generated URL with the suffix.
     """
     extension = extension and f".{extension}"
     log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
@@ -96,8 +96,8 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
 
         if "message" in response_json:
             log.warning(
-                f"Paste service returned error {response_json['message']} with status code {_response.status}, "
-                f"trying again ({_attempt}/{_attempts})."
+                f"Paste service returned error {response_json['message']} with status code {_response.status}. "
+                f"Trying again ({_attempt}/{_attempts})."
             )
             return
 
@@ -113,7 +113,7 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
 
         log.warning(
             f"Got unexpected JSON response from paste service: {response_json}\n"
-            f"trying again ({_attempt}/{_attempts})."
+            f"Trying again ({_attempt}/{_attempts})."
         )
 
     return await _attempt_request(paste_url, FAILED_REQUEST_ATTEMPTS, data=contents, callback=_callback)
@@ -145,12 +145,12 @@ async def _unfurl_url(
     max_continues: int
 ) -> _JOIN_RETURNS:
     """
-    The actual core logic of the unfurling.
+    Unfurl a URL once.
 
-    Unlike the public utility, this will only follow one redirect, and parse the results.
-    The handling of the results is managed by the public function.
+    Follow a single redirect and parse the results.
+    `unfurl_url` is instead responsible for following all redirects and handling the results.
 
-    Returns a tuple with a final UnfurlReturn and response status,
+    Return a tuple with a final `_UnfurlReturn` and response status,
     or a tuple containing data to allow the caller to continue, or None.
     """
     # See link for documentation on how to use the worker
@@ -219,16 +219,16 @@ async def unfurl_url(
     """
     Follow all redirects of a URL, and return the final address.
 
-    Returns an object containing the final URL, number of redirects, error text, and date of last fetch.
-    Returns None if we couldn't resolve the URL for any reason.
+    Return an object containing the final URL, number of redirects, error text, and date of last fetch.
+    Return None if the URL could not be resolved for any reason.
 
-    The error in the return is only set if the operation failed.
+    Only set the error attribute in the returned object if the operation failed.
     If false, the final destination might not be accurate, and the date will be None.
 
-    `max_per_attempt` is passed directly to the worker. If the worker errors out due to too many redirects,
-    we'll attempt to restart from the last URL `max_continues` times.
+    Pass `max_per_attempt` directly to the worker. If the worker errors out due to too many redirects,
+    attempt to restart from the last URL `max_continues` times.
 
-    If `calculate_continues` is true, we'll paginate `max_per_attempt` into as many continues as necessary.
+    If `calculate_continues` is True, paginate `max_per_attempt` into as many continues as necessary.
     """
     if not calculate_continues and max_per_attempt > MAX_UNFURLS:
         raise ValueError(f"Max attempts `{max_per_attempt}` is greater than the maximum allowable `{MAX_UNFURLS}`.")
