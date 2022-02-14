@@ -253,6 +253,7 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
         self.clean_cog._clean_messages = AsyncMock(return_value=self.log_url)
 
     def mock_get_cog(self, enable_clean, enable_manage):
+        """Mock get cog factory that allows the user to specify whether clean and manage cogs are enabled."""
         def inner(name):
             if name == "ModManagement":
                 return self.management_cog if enable_manage else None

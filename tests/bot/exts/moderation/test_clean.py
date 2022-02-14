@@ -81,7 +81,7 @@ class CleanTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("2 messages", sent_message)
 
     @patch("bot.exts.moderation.clean.is_mod_channel")
-    async def test_clean_send_success_message__to_mods_when_ran_in_non_mod_channel(self, mod_channel_check):
+    async def test_clean_send_success_message_to_mods_when_ran_in_non_mod_channel(self, mod_channel_check):
         """Clean command should send a confirmation message to #mods if invoked in a non-mod channel."""
         mod_channel_check.return_value = False
         mocked_mods = MockTextChannel(id=1234567)
