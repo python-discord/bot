@@ -255,16 +255,23 @@ class CodeSnippets(Cog):
             except discord.NotFound:
                 # Don't send snippets if the original message was deleted.
                 return
+            except discord.Forbidden as e:
+                # We still want to send snippets when in DMs, but if we're in guild then
+                # reraise error since that means there's a permissions issue with the bot.
+                if message.guild:
+                    raise e
 
-            if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
-                # Redirects to #bot-commands if the snippet contents are too long
-                await self.bot.wait_until_guild_available()
-                destination = self.bot.get_channel(Channels.bot_commands)
+            # If we're in a guild, then check if we need to redirect to #bot-commands
+            if destination.guild:
+                if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
+                    # Redirects to #bot-commands if the snippet contents are too long
+                    await self.bot.wait_until_guild_available()
+                    destination = self.bot.get_channel(Channels.bot_commands)
 
-                await message.channel.send(
-                    'The snippet you tried to send was too long. '
-                    f'Please see {destination.mention} for the full snippet.'
-                )
+                    await message.channel.send(
+                        'The snippet you tried to send was too long. '
+                        f'Please see {destination.mention} for the full snippet.'
+                    )
 
             await wait_for_deletion(
                 await destination.send(message_to_send),
