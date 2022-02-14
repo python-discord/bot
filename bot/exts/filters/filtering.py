@@ -11,9 +11,7 @@ import tldextract
 from async_rediscache import RedisCache
 from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from discord import (
-    ChannelType, Colour, Embed, Forbidden, HTTPException, Member, Message, NotFound, TextChannel, VoiceState
-)
+from discord import ChannelType, Colour, Embed, Forbidden, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
