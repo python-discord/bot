@@ -2,7 +2,7 @@ import asyncio
 from typing import Union
 
 import discord
-from discord import Color, Embed, Message, RawReactionActionEvent, TextChannel, errors
+from discord import Color, Embed, Message, RawReactionActionEvent, TextChannel, Thread, errors
 from discord.ext.commands import Cog, Context, command
 
 from bot import constants
@@ -47,14 +47,18 @@ class DuckPond(Cog):
         return False
 
     @staticmethod
-    def is_helper_viewable(channel: TextChannel) -> bool:
+    def is_helper_viewable(channel: Union[TextChannel, Thread]) -> bool:
         """Check if helpers can view a specific channel."""
         guild = channel.guild
         helper_role = guild.get_role(constants.Roles.helpers)
         # check channel overwrites for both the Helper role and @everyone and
         # return True for channels that they have permissions to view.
-        helper_overwrites = channel.overwrites_for(helper_role)
-        default_overwrites = channel.overwrites_for(guild.default_role)
+        if isinstance(channel, Thread):
+            helper_overwrites = channel.permissions_for(helper_role)
+            default_overwrites = channel.permissions_for(guild.default_role)
+        else:
+            helper_overwrites = channel.overwrites_for(helper_role)
+            default_overwrites = channel.overwrites_for(guild.default_role)
         return default_overwrites.view_channel is None or helper_overwrites.view_channel is True
 
     async def has_green_checkmark(self, message: Message) -> bool:
@@ -165,7 +169,9 @@ class DuckPond(Cog):
         if not self._payload_has_duckpond_emoji(payload.emoji):
             return
 
-        channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        await self.bot.wait_until_guild_available()
+        guild = self.bot.get_guild(payload.guild_id)
+        channel = discord.utils.get(guild.text_channels + guild.threads, id=payload.channel_id)
         if channel is None:
             return
 
