@@ -113,12 +113,14 @@ class Infractions(InfractionScheduler, commands.Cog):
         clean_cog: t.Optional[Clean] = self.bot.get_cog("Clean")
         if clean_cog is None:
             # If we can't get the clean cog, fall back to native purgeban.
-            await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
+            await self.apply_ban(ctx, user, reason, purge_days=1, expires_at=duration)
             return
 
         infraction = await self.apply_ban(ctx, user, reason, expires_at=duration)
         if not infraction or not infraction.get("id"):
             # Ban was unsuccessful, quit early.
+            await ctx.send(":x: Failed to apply ban.")
+            log.error("Failed to apply ban to user %d", user.id)
             return
 
         # Calling commands directly skips Discord.py's convertors, so we need to convert args manually.

@@ -271,7 +271,7 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
             self.ctx,
             self.user,
             "FooBar",
-            1,
+            purge_days=1,
             expires_at=None,
         )
 
