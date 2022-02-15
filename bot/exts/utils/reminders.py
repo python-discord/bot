@@ -1,6 +1,7 @@
 import random
 import textwrap
 import typing as t
+from contextlib import suppress
 from datetime import datetime, timezone
 from operator import itemgetter
 
@@ -8,6 +9,7 @@ import discord
 from botcore.utils import scheduling
 from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
+from dateutil.relativedelta import relativedelta
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
@@ -29,6 +31,133 @@ MAXIMUM_REMINDERS = 5
 
 Mentionable = t.Union[discord.Member, discord.Role]
 ReminderMention = t.Union[UnambiguousUser, discord.Role]
+
+
+class SnoozeSelectView(discord.ui.View):
+    """The reminder's select dropdown UI View."""
+
+    SNOOZE_DURATIONS: dict[str, t.Optional[int]] = {
+        # Mapping of `duration string: num_seconds_in_duration`.
+        #
+        # `num_seconds_in_duration` is `None` for durations >= 1 month
+        # since the amount of seconds depends on the date of lookup
+        # (i.e. seconds from 1st jan to 1st feb is different than from 1st feb to 1st march etc).
+        "1 minute": 60,
+        "5 minutes": 5 * 60,
+        "15 minutes": 15 * 60,
+        "30 minutes": 30 * 60,
+        "1 hour": 60 * 60,
+        "3 hours": 3 * 60 * 60,
+        "6 hours": 6 * 60 * 60,
+        "1 day": 24 * 60 * 60,
+        "1 week": 7 * 24 * 60 * 60,
+        "1 month": None,
+        "3 months": None,
+        "6 months": None,
+        "1 year": None
+    }
+
+    def __init__(self, bot: Bot, reminder_id: int, reminder_author_id: int):
+        super().__init__(timeout=30)
+        self.new_expiry: t.Optional[datetime] = None
+        self.reminder_was_snoozed = False
+
+        self.bot = bot
+        self.reminder_id = reminder_id
+        self.interaction_owner_id = reminder_author_id
+
+        self.dropdown: discord.ui.Select = self.children[0]
+        for duration in self.SNOOZE_DURATIONS:
+            self.dropdown.add_option(label=duration)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Ensure that the user clicking the button is the member who invoked the command."""
+        if interaction.user.id != self.interaction_owner_id:
+            await interaction.response.send_message(":x: This is not your reminder to react to!", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.select(placeholder="Select the snooze duration")
+    async def select_snooze_duration(self, _: discord.ui.Select, interaction: discord.Interaction) -> None:
+        """Drop down menu which contains a list of snooze durations one can choose."""
+        selected_duration = interaction.data["values"][0]
+        current_datetime = datetime.now()
+        if (num_seconds := self.SNOOZE_DURATIONS.get(selected_duration)) is None:
+            amount, unit = selected_duration.split()
+            if unit.startswith("month"):
+                num_seconds = (current_datetime + relativedelta(months=int(amount)) - current_datetime).total_seconds()
+
+            else:  # unit is years
+                num_seconds = (current_datetime + relativedelta(years=int(amount)) - current_datetime).total_seconds()
+
+        new_reminder_end_time = current_datetime + relativedelta(seconds=num_seconds)
+
+        await self.bot.api_client.patch(
+            f'bot/reminders/{self.reminder_id}',
+            json={'expiration': new_reminder_end_time.isoformat()}
+        )
+
+        self.new_expiry = new_reminder_end_time
+        new_end_timestamp = time.discord_timestamp(new_reminder_end_time, format=time.TimestampFormats.DAY_TIME)
+        original_embed = interaction.message.embeds[0]
+        new_embed = discord.Embed(
+            colour=discord.Colour.green(),
+            title=random.choice(POSITIVE_REPLIES),
+            description=f"Successfully snoozed reminder for {selected_duration}. New remind time: {new_end_timestamp}",
+        )
+        new_embed.set_footer(text=f"ID: {self.reminder_id}")
+        try:
+            await interaction.response.edit_message(embeds=[original_embed, new_embed], view=None)
+        except discord.NotFound:
+            await interaction.message.channel.send(embed=new_embed)
+
+        self.reminder_was_snoozed = True
+        self.stop()
+
+
+class SnoozeButtonView(discord.ui.View):
+    """The reminder's snooze button UI View."""
+
+    def __init__(self, bot: Bot, reminder_id: int, reminder_author_id: int):
+        super().__init__(timeout=300)
+        self.new_expiry: t.Optional[datetime] = None
+        self.reminder_was_snoozed = False
+
+        self.bot = bot
+        self.reminder_id = reminder_id
+        self.reminder_author_id = reminder_author_id
+
+        snooze_button = SnoozeButton(self)
+        self.add_item(snooze_button)
+
+
+class SnoozeButton(discord.ui.Button):
+    """The reminder's snooze button."""
+
+    def __init__(self, parent_view: SnoozeButtonView):
+        super().__init__(label="Snooze Reminder")
+        self.parent_view = parent_view
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        """Ensure the reminder author matches the user who clicked button and then display select view."""
+        if interaction.user.id != self.parent_view.reminder_author_id:
+            await interaction.response.send_message(":x: This is not your reminder to react to!", ephemeral=True)
+            return
+
+        snooze_select_view = SnoozeSelectView(
+            bot=self.parent_view.bot,
+            reminder_id=self.parent_view.reminder_id,
+            reminder_author_id=self.parent_view.reminder_author_id
+        )
+        await interaction.response.edit_message(view=snooze_select_view)
+
+        await snooze_select_view.wait()
+
+        if snooze_select_view.reminder_was_snoozed:
+            self.parent_view.new_expiry = snooze_select_view.new_expiry
+            self.parent_view.reminder_was_snoozed = True
+
+        self.parent_view.stop()
 
 
 class Reminders(Cog):
@@ -59,11 +188,22 @@ class Reminders(Cog):
 
             remind_at = isoparse(reminder['expiration'])
 
-            # If the reminder is already overdue ...
-            if remind_at < now:
-                await self.send_reminder(reminder, remind_at)
-            else:
+            if remind_at > now:
                 self.schedule_reminder(reminder)
+                continue
+
+            # At this point, we know that the reminder either has or should have arrived.
+            #
+            # To try and tell whether it has arrived, we check if the reminder was supposed to have been sent more than
+            # 5 minutes ago. If this is the case, the reminder CAN'T be waiting for the user to decide whether they
+            # want to snooze or not, and so was DEFINITELY missed, and we need to send now.
+            #
+            # NOTE: This method means that reminders which WERE missed within the 5-minute period won't be sent until
+            # next reschedule. To help debug these "missing" reminders, we log that we're skipping them.
+            if (now - relativedelta(minutes=5)) > remind_at:
+                log.debug(f"Skipping sending reminder #{reminder['id']} since it could be waiting for snooze response")
+                continue
+            await self.send_reminder(reminder, remind_at)
 
     def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.TextChannel]:
         """Ensure reminder channel can be fetched otherwise delete the reminder."""
@@ -197,17 +337,41 @@ class Reminders(Cog):
         jump_url = reminder.get("jump_url")
         embed.description += f"\n[Jump back to when you created the reminder]({jump_url})"
         partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
+        reminder_id = reminder['id']
+        reminder_author_id = reminder['author']
+        snooze_button_view = SnoozeButtonView(self.bot, reminder_id, reminder_author_id)
         try:
-            await partial_message.reply(content=f"{additional_mentions}", embed=embed)
+            m = await partial_message.reply(
+                content=f"{additional_mentions}",
+                embed=embed,
+                view=snooze_button_view
+            )
         except discord.HTTPException as e:
             log.info(
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
             )
-            await channel.send(content=f"<@{reminder['author']}> {additional_mentions}", embed=embed)
+            m = await channel.send(
+                content=f"<@{reminder_author_id}> {additional_mentions}",
+                embed=embed,
+                view=snooze_button_view
+            )
 
-        log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
-        await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
+        # Before deleting the reminder, see if the user wants to "snooze" it
+        await snooze_button_view.wait()
+
+        if not snooze_button_view.reminder_was_snoozed:
+            # User didn't snooze the reminder
+            log.debug(f"Deleting reminder #{reminder_id} ({reminder_author_id} has been reminded and didn't snooze).")
+            await self.bot.api_client.delete(f"bot/reminders/{reminder_id}")
+
+            with suppress(discord.NotFound):
+                await m.edit(view=None)
+            return
+
+        # Reminder was snoozed, so we need to reschedule it
+        log.debug(f"Snoozing reminder #{reminder_id}. New expiration: {snooze_button_view.new_expiry}")
+        await self._reschedule_reminder(reminder | {"expiration": snooze_button_view.new_expiry.isoformat()})
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
