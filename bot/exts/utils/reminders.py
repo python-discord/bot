@@ -73,7 +73,7 @@ class SnoozeSelectView(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Ensure that the user clicking the button is the member who invoked the command."""
         if interaction.user.id != self.interaction_owner_id:
-            await interaction.response.send_message(":x: This is not your reminder to react to!", ephemeral=True)
+            await interaction.response.send_message(":x: This is not your reminder to snooze!", ephemeral=True)
             return False
         return True
 
@@ -141,7 +141,7 @@ class SnoozeButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         """Ensure the reminder author matches the user who clicked button and then display select view."""
         if interaction.user.id != self.parent_view.reminder_author_id:
-            await interaction.response.send_message(":x: This is not your reminder to react to!", ephemeral=True)
+            await interaction.response.send_message(":x: This is not your reminder to snooze!", ephemeral=True)
             return
 
         snooze_select_view = SnoozeSelectView(
