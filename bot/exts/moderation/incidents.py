@@ -229,6 +229,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
             ),
             timestamp=message.created_at
         )
+        embed.set_author(name=message.author, icon_url=message.author.display_avatar.url)
         embed.add_field(
             name="Content",
             value=shorten_text(message.content) if message.content else "[No Message Content]"

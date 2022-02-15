@@ -105,10 +105,18 @@ class HelpChannels(commands.Cog):
         """
         Claim the channel in which the question `message` was sent.
 
-        Move the channel to the In Use category and pin the `message`. Add a cooldown to the
-        claimant to prevent them from asking another question. Lastly, make a new channel available.
+        Send an embed stating the claimant, move the channel to the In Use category, and pin the `message`.
+        Add a cooldown to the claimant to prevent them from asking another question.
+        Lastly, make a new channel available.
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
+
+        embed = discord.Embed(
+            description=f"Channel claimed by {message.author.mention}.",
+            color=constants.Colours.bright_green,
+        )
+        await message.channel.send(embed=embed)
+
         await self.move_to_in_use(message.channel)
 
         # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
