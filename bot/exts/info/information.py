@@ -470,7 +470,7 @@ class Information(Cog):
 
         If `json` is True, send the information in a copy-pasteable Python format.
         """
-        if ctx.author not in message.channel.members:
+        if not message.channel.permissions_for(ctx.author).read_messages:
             await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
 
