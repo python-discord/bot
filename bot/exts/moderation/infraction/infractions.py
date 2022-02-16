@@ -9,7 +9,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Age, Duration, Expiry, Infraction, MemberOrUser, UnambiguousMemberOrUser
+from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -125,7 +125,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         # Calling commands directly skips Discord.py's convertors, so we need to convert args manually.
         clean_time = await Age().convert(ctx, "1h")
-        infraction = await Infraction().convert(ctx, infraction["id"])
 
         log_url = await clean_cog._clean_messages(
             ctx,

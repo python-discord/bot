@@ -305,18 +305,16 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
             attempt_delete_invocation=False,
         )
 
-    @patch("bot.exts.moderation.infraction.infractions.Infraction")
-    async def test_cleanban_edits_infraction_reason(self, mocked_infraction_converter):
+    async def test_cleanban_edits_infraction_reason(self):
         """Ensure cleanban edits the ban reason with a link to the clean log."""
         self.bot.get_cog.side_effect = self.mock_get_cog(True, True)
 
         self.management_cog.infraction_append = AsyncMock()
-        mocked_infraction_converter.return_value.convert = AsyncMock(return_value=42)
         self.assertIsNone(await self.cog.cleanban(self.cog, self.ctx, self.user, None, reason="FooBar"))
 
         self.management_cog.infraction_append.assert_awaited_once_with(
             self.ctx,
-            42,
+            {"id": 42},
             None,
             reason=f"[Clean log]({self.log_url})"
         )
