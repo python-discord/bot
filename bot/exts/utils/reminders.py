@@ -201,7 +201,7 @@ class Reminders(Cog):
             # NOTE: This method means that reminders which WERE missed within the 5-minute period won't be sent until
             # next reschedule. To help debug these "missing" reminders, we log that we're skipping them.
             if (now - relativedelta(minutes=5)) > remind_at:
-                log.debug(f"Skipping sending reminder #{reminder['id']} since it could be waiting for snooze response")
+                log.info(f"Skipping sending reminder #{reminder['id']} since it could be waiting for snooze response")
                 continue
             await self.send_reminder(reminder, remind_at)
 
