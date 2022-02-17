@@ -262,7 +262,7 @@ class CodeSnippets(Cog):
                     raise e
 
             # If we're in a guild, then check if we need to redirect to #bot-commands
-            if destination.guild:
+            if message.guild:
                 if len(message_to_send) > 1000 and message.channel.id != Channels.bot_commands:
                     # Redirects to #bot-commands if the snippet contents are too long
                     await self.bot.wait_until_guild_available()
@@ -273,10 +273,12 @@ class CodeSnippets(Cog):
                         f'Please see {destination.mention} for the full snippet.'
                     )
 
-            await wait_for_deletion(
-                await destination.send(message_to_send),
-                (message.author.id,)
-            )
+                await wait_for_deletion(
+                    await destination.send(message_to_send),
+                    (message.author.id,)
+                )
+            else:
+                await destination.send(message_to_send)
 
 
 def setup(bot: Bot) -> None:
