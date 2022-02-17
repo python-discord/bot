@@ -171,7 +171,7 @@ class DuckPond(Cog):
 
         await self.bot.wait_until_guild_available()
         guild = self.bot.get_guild(payload.guild_id)
-        channel = discord.utils.get(guild.text_channels + guild.threads, id=payload.channel_id)
+        channel = guild.get_channel_or_thread(payload.channel_id)
         if channel is None:
             return
 
