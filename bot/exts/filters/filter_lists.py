@@ -77,11 +77,11 @@ class FilterLists(Cog):
         elif list_type == "FILTER_TOKEN":
             try:
                 _ = re.compile(content)
-            except re.error:
+            except re.error as e:
                 await ctx.message.add_reaction("❌")
                 await ctx.send(
                     f"{ctx.author.mention} that's not a valid regex! "
-                    "You may have forgotten to escape part of the regex."
+                    f"Regex error message: {e.msg}."
                 )
                 return
 
