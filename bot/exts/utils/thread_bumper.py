@@ -8,7 +8,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
+from bot.utils import channel, scheduling
 
 log = get_logger(__name__)
 
@@ -23,22 +23,50 @@ class ThreadBumper(commands.Cog):
         self.bot = bot
         self.init_task = scheduling.create_task(self.ensure_bumped_threads_are_active(), event_loop=self.bot.loop)
 
+    async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
+        """
+        Iterate through and unarchive any threads that weren't manually archived recently.
+
+        This is done by extracting the manually archived threads from the audit log.
+
+        Only the last 200 thread_update logs are checked,
+        as this is assumed to be more than enough to cover bot downtime.
+        """
+        guild = self.bot.get_guild(constants.Guild.id)
+
+        recent_manually_archived_thread_ids = []
+        async for thread_update in guild.audit_logs(limit=200, action=discord.AuditLogAction.thread_update):
+            if getattr(thread_update.after, "archived", False):
+                recent_manually_archived_thread_ids.append(thread_update.target.id)
+
+        for thread in threads:
+            if thread.id in recent_manually_archived_thread_ids:
+                log.info(
+                    "#%s (%d) was manually archived. Leaving archived, and removing from bumped threads.",
+                    thread.name,
+                    thread.id
+                )
+                await self.threads_to_bump.delete(thread.id)
+            else:
+                await thread.edit(archived=False)
+
     async def ensure_bumped_threads_are_active(self) -> None:
         """Ensure bumped threads are active, since threads could have been archived while the bot was down."""
         await self.bot.wait_until_guild_available()
 
+        threads_to_maybe_bump = []
         for thread_id, _ in await self.threads_to_bump.items():
-            if thread := self.bot.get_channel(thread_id):
-                if not thread.archived:
-                    continue
-
             try:
-                thread = await self.bot.fetch_channel(thread_id)
+                thread = await channel.get_or_fetch_channel(thread_id)
             except discord.NotFound:
-                log.info(f"Thread {thread_id} has been deleted, removing from bumped threads.")
+                log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
                 await self.threads_to_bump.delete(thread_id)
+                continue
+
             if thread.archived:
-                await thread.edit(archived=False)
+                threads_to_maybe_bump.append(thread)
+
+        await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
 
     @commands.group(name="bump")
     async def thread_bump_group(self, ctx: commands.Context) -> None:
@@ -100,7 +128,7 @@ class ThreadBumper(commands.Cog):
 
         bumped_threads = [k for k, _ in await self.threads_to_bump.items()]
         if after.id in bumped_threads:
-            await after.edit(archived=False)
+            await self.unarchive_threads_not_manually_archived([after])
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Only allow staff & partner roles to invoke the commands in this cog."""
