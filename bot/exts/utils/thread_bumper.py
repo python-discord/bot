@@ -74,7 +74,7 @@ class ThreadBumper(commands.Cog):
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @thread_bump_group.command(name="add")
+    @thread_bump_group.command(name="add", aliases=("a",))
     async def add_thread_to_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
         """Add a thread to the bump list."""
         await self.init_task
@@ -84,6 +84,9 @@ class ThreadBumper(commands.Cog):
                 thread = ctx.channel
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
+
+        if await self.threads_to_bump.contains(thread.id):
+            raise commands.BadArgument("This thread is already in the bump list.")
 
         await self.threads_to_bump.set(thread.id, "sentinel")
         await ctx.send(f":ok_hand:{thread.mention} has been added to the bump list.")
@@ -98,6 +101,9 @@ class ThreadBumper(commands.Cog):
                 thread = ctx.channel
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
+
+        if not await self.threads_to_bump.contains(thread.id):
+            raise commands.BadArgument("This thread is not in the bump list.")
 
         await self.threads_to_bump.delete(thread.id)
         await ctx.send(f":ok_hand: {thread.mention} has been removed from the bump list.")
@@ -126,8 +132,7 @@ class ThreadBumper(commands.Cog):
         if not after.archived:
             return
 
-        bumped_threads = [k for k, _ in await self.threads_to_bump.items()]
-        if after.id in bumped_threads:
+        if await self.threads_to_bump.contains(after.id):
             await self.unarchive_threads_not_manually_archived([after])
 
     async def cog_check(self, ctx: commands.Context) -> bool:
