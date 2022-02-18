@@ -439,6 +439,7 @@ class Filtering(Cog):
 
         # Send pretty mod log embed to mod-alerts
         await self.mod_log.send_log_message(
+            content=str(msg.author.id),  # quality-of-life improvement for mobile moderators to copy & paste
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",

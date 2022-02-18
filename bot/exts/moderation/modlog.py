@@ -116,7 +116,7 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"<@&{Roles.moderators}>\n{content}"
+                content = f"<@&{Roles.moderators}> {content}"
             else:
                 content = f"<@&{Roles.moderators}>"
 
