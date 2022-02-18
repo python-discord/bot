@@ -76,7 +76,7 @@ class FilterLists(Cog):
         # If it's a filter token, validate the passed regex
         elif list_type == "FILTER_TOKEN":
             try:
-                _ = re.compile(content)
+                re.compile(content)
             except re.error as e:
                 await ctx.message.add_reaction("❌")
                 await ctx.send(
