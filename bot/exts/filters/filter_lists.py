@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from discord import Colour, Embed
@@ -71,6 +72,18 @@ class FilterLists(Cog):
         # If it's a file format, let's make sure it has a leading dot.
         elif list_type == "FILE_FORMAT" and not content.startswith("."):
             content = f".{content}"
+
+        # If it's a filter token, validate the passed regex
+        elif list_type == "FILTER_TOKEN":
+            try:
+                re.compile(content)
+            except re.error as e:
+                await ctx.message.add_reaction("❌")
+                await ctx.send(
+                    f"{ctx.author.mention} that's not a valid regex! "
+                    f"Regex error message: {e.msg}."
+                )
+                return
 
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
