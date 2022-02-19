@@ -234,7 +234,9 @@ class OffTopicNames(Cog):
             )
 
             async def btn_call_back(schedule: bool, interaction: Interaction) -> None:
-
+                if ctx.author != interaction.user:
+                    log.info("User is not author, skipping.")
+                    return
                 message = interaction.message
 
                 embed.description = (
