@@ -111,13 +111,30 @@ class HelpChannels(commands.Cog):
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
 
+        try:
+            await self.move_to_in_use(message.channel)
+        except discord.DiscordServerError:
+            try:
+                await message.channel.send(
+                    "The bot encountered a Discord API error while trying to move this channel, please try again later."
+                )
+            except Exception as e:
+                log.warning("Error occurred while sending fail claim message:", exc_info=e)
+            log.info(
+                "500 error from Discord when moving #%s (%d) to in-use for %s (%d). Cancelling claim.",
+                message.channel.name,
+                message.channel.id,
+                message.author.name,
+                message.author.id,
+            )
+            self.bot.stats.incr("help.failed_claims.500_on_move")
+            return
+
         embed = discord.Embed(
             description=f"Channel claimed by {message.author.mention}.",
             color=constants.Colours.bright_green,
         )
         await message.channel.send(embed=embed)
-
-        await self.move_to_in_use(message.channel)
 
         # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
         if not isinstance(message.author, discord.Member):
@@ -309,6 +326,7 @@ class HelpChannels(commands.Cog):
 
         log.trace("Moving or rescheduling in-use channels.")
         for channel in _channel.get_category_channels(self.in_use_category):
+            await _channel.ensure_cached_claimant(channel)
             await self.move_idle_channel(channel, has_task=False)
 
         # Prevent the command from being used until ready.
@@ -434,18 +452,21 @@ class HelpChannels(commands.Cog):
     async def _unclaim_channel(
         self,
         channel: discord.TextChannel,
-        claimant_id: int,
+        claimant_id: t.Optional[int],
         closed_on: _channel.ClosingReason
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = await members.get_or_fetch_member(self.guild, claimant_id)
-        if claimant is None:
-            log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+        if not claimant_id:
+            log.info("No claimant given when un-claiming %s (%d). Skipping role removal.", channel, channel.id)
         else:
-            await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
+            claimant = await members.get_or_fetch_member(self.guild, claimant_id)
+            if claimant is None:
+                log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+            else:
+                await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
 
         await _message.unpin(channel)
         await _stats.report_complete_session(channel.id, closed_on)
