@@ -452,18 +452,21 @@ class HelpChannels(commands.Cog):
     async def _unclaim_channel(
         self,
         channel: discord.TextChannel,
-        claimant_id: int,
+        claimant_id: t.Optional[int],
         closed_on: _channel.ClosingReason
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = await members.get_or_fetch_member(self.guild, claimant_id)
-        if claimant is None:
-            log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+        if not claimant_id:
+            log.info("No claimant given when un-claiming %s (%d). Skipping role removal.", channel, channel.id)
         else:
-            await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
+            claimant = await members.get_or_fetch_member(self.guild, claimant_id)
+            if claimant is None:
+                log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+            else:
+                await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
 
         await _message.unpin(channel)
         await _stats.report_complete_session(channel.id, closed_on)
