@@ -27,3 +27,10 @@ class Filter(ABC):
     @abstractmethod
     def triggered_on(self, ctx: FilterContext) -> bool:
         """Search for the filter's content within a given context."""
+
+    def __str__(self) -> str:
+        """A string representation of the filter."""
+        string = f"#{self.id}. `{self.content}`"
+        if self.description:
+            string += f" - {self.description}"
+        return string

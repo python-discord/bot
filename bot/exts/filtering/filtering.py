@@ -3,17 +3,21 @@ from collections import defaultdict
 from functools import reduce
 from typing import Optional
 
-from discord import Embed, HTTPException, Message
-from discord.ext.commands import Cog
+from discord import Colour, Embed, HTTPException, Message
+from discord.ext import commands
+from discord.ext.commands import BadArgument, Cog, Context, has_any_role
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Colours, Webhooks
+from bot.constants import Colours, MODERATION_ROLES, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
-from bot.exts.filtering._filter_lists import FilterList, filter_list_types
+from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
+from bot.exts.filtering._ui import ArgumentCompletionView
+from bot.exts.filtering._utils import past_tense
 from bot.log import get_logger
+from bot.pagination import LinePaginator
 from bot.utils.messages import format_channel, format_user
 
 log = get_logger(__name__)
@@ -21,6 +25,8 @@ log = get_logger(__name__)
 
 class Filtering(Cog):
     """Filtering and alerting for content posted on the server."""
+
+    # region: init
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -54,7 +60,7 @@ class Filtering(Cog):
         try:
             self.webhook = await self.bot.fetch_webhook(Webhooks.filters)
         except HTTPException:
-            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents}`.")
+            log.error(f"Failed to fetch incidents webhook with ID `{Webhooks.incidents}`.")
 
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
         """
@@ -73,21 +79,12 @@ class Filtering(Cog):
             if filter_list not in self._subscriptions[event]:
                 self._subscriptions[event].append(filter_list)
 
-    async def _resolve_action(
-        self, ctx: FilterContext
-    ) -> tuple[dict[FilterList, list[Filter]], Optional[ActionSettings]]:
-        """Get the filters triggered per list, and resolve from them the action that needs to be taken for the event."""
-        triggered = {}
-        for filter_list in self._subscriptions[ctx.event]:
-            triggered[filter_list] = filter_list.triggers_for(ctx)
+    async def cog_check(self, ctx: Context) -> bool:
+        """Only allow moderators to invoke the commands in this cog."""
+        return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
-        result_actions = None
-        if triggered:
-            result_actions = reduce(
-                operator.or_, (filter_.actions for filters in triggered.values() for filter_ in filters)
-            )
-
-        return triggered, result_actions
+    # endregion
+    # region: listeners
 
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
@@ -102,6 +99,100 @@ class Filtering(Cog):
             await result_actions.action(ctx)
             if ctx.send_alert:
                 await self._send_alert(ctx, triggered)
+
+    # endregion
+    # region: blacklist commands
+
+    @commands.group(aliases=("bl", "blacklist", "denylist", "dl"))
+    async def blocklist(self, ctx: Context) -> None:
+        """Group for managing blacklisted items."""
+        if not ctx.invoked_subcommand:
+            await ctx.send_help(ctx.command)
+
+    @blocklist.command(name="list", aliases=("get",))
+    async def bl_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
+        """List the contents of a specified blacklist."""
+        if list_name is None:
+            await ctx.send(
+                "The **list_name** argument is unspecified. Please pick a value from the options below:",
+                view=ArgumentCompletionView(ctx, "list_name", list(self.filter_lists))
+            )
+            return
+        await self._send_list(ctx, list_name, ListType.DENY)
+
+    # endregion
+    # region: whitelist commands
+
+    @commands.group(aliases=("wl", "whitelist", "al"))
+    async def allowlist(self, ctx: Context) -> None:
+        """Group for managing blacklisted items."""
+        if not ctx.invoked_subcommand:
+            await ctx.send_help(ctx.command)
+
+    @allowlist.command(name="list", aliases=("get",))
+    async def al_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
+        """List the contents of a specified whitelist."""
+        if list_name is None:
+            await ctx.send(
+                "The **list_name** argument is unspecified. Please pick a value from the options below:",
+                view=ArgumentCompletionView(ctx, "list_name", list(self.filter_lists))
+            )
+            return
+        await self._send_list(ctx, list_name, ListType.ALLOW)
+
+    # endregion
+    # region: filter commands
+
+    @commands.group(aliases=("filters", "f"))
+    async def filter(self, ctx: Context) -> None:
+        """Group for managing filters."""
+        if not ctx.invoked_subcommand:
+            await ctx.send_help(ctx.command)
+
+    @filter.command(name="list", aliases=("get",))
+    async def f_list(
+            self, ctx: Context, list_type: Optional[ListTypeConverter] = None, list_name: Optional[str] = None
+    ) -> None:
+        """List the contents of a specified list of filters."""
+        if list_name is None:
+            await ctx.send(
+                "The **list_name** argument is unspecified. Please pick a value from the options below:",
+                view=ArgumentCompletionView(ctx, "list_name", list(self.filter_lists))
+            )
+            return
+
+        if list_type is None:
+            filter_list = self._get_list_by_name(list_name)
+            if len(filter_list.filter_lists) > 1:
+                await ctx.send(
+                    "The **list_type** argument is unspecified. Please pick a value from the options below:",
+                    view=ArgumentCompletionView(ctx, "list_type", [option.name for option in ListType])
+                )
+                return
+            list_type = list(filter_list.filter_lists)[0]
+
+        await self._send_list(ctx, list_name, list_type)
+
+    # endregion
+    # region: helper functions
+
+    async def _resolve_action(
+        self, ctx: FilterContext
+    ) -> tuple[dict[FilterList, list[Filter]], Optional[ActionSettings]]:
+        """Get the filters triggered per list, and resolve from them the action that needs to be taken for the event."""
+        triggered = {}
+        for filter_list in self._subscriptions[ctx.event]:
+            result = filter_list.triggers_for(ctx)
+            if result:
+                triggered[filter_list] = result
+
+        result_actions = None
+        if triggered:
+            result_actions = reduce(
+                operator.or_, (filter_.actions for filters in triggered.values() for filter_ in filters)
+            )
+
+        return triggered, result_actions
 
     async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, list[Filter]]) -> None:
         """Build an alert message from the filter context, and send it via the alert webhook."""
@@ -143,6 +234,32 @@ class Filtering(Cog):
         embed.description = embed_content
 
         await self.webhook.send(username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds])
+
+    def _get_list_by_name(self, list_name: str) -> FilterList:
+        """Get a filter list by its name, or raise an error if there's no such list."""
+        log.trace(f"Getting the filter list matching the name {list_name}")
+        filter_list = self.filter_lists.get(list_name)
+        if not filter_list:
+            if list_name.endswith("s"):  # The user may have attempted to use the plural form.
+                filter_list = self.filter_lists.get(list_name[:-1])
+            if not filter_list:
+                raise BadArgument(f"There's no filter list named {list_name!r}.")
+        log.trace(f"Found list named {filter_list.name}")
+        return filter_list
+
+    async def _send_list(self, ctx: Context, list_name: str, list_type: ListType) -> None:
+        """Show the list of filters identified by the list name and type."""
+        filter_list = self._get_list_by_name(list_name)
+        lines = list(map(str, filter_list.filter_lists.get(list_type, [])))
+        log.trace(f"Sending a list of {len(lines)} filters.")
+
+        list_name_plural = list_name + ("s" if not list_name.endswith("s") else "")
+        embed = Embed(colour=Colour.blue())
+        embed.set_author(name=f"List of {past_tense(list_type.name.lower())} {list_name_plural} ({len(lines)} total)")
+
+        await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False)
+
+    # endregion
 
 
 async def setup(bot: Bot) -> None:

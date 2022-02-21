@@ -47,6 +47,17 @@ def clean_input(string: str) -> str:
     return INVISIBLE_RE.sub("", no_zalgo)
 
 
+def past_tense(word: str) -> str:
+    """Return the past tense form of the input word."""
+    if not word:
+        return word
+    if word.endswith("e"):
+        return word + "d"
+    if word.endswith("y") and len(word) > 1 and word[-2] not in "aeiou":
+        return word[:-1] + "ied"
+    return word + "ed"
+
+
 class FieldRequiring(ABC):
     """A mixin class that can force its concrete subclasses to set a value for specific class attributes."""
 

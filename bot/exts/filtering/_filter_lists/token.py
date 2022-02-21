@@ -33,7 +33,7 @@ class TokensList(FilterList):
         ctx = ctx.replace(content=text)
 
         return self.filter_list_result(
-            ctx, self._filter_lists[ListType.DENY], self._defaults[ListType.DENY]["validations"]
+            ctx, self.filter_lists[ListType.DENY], self.defaults[ListType.DENY]["validations"]
         )
 
     @staticmethod

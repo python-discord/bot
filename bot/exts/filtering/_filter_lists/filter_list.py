@@ -2,18 +2,38 @@ from abc import abstractmethod
 from enum import Enum
 from typing import Dict, List, Type
 
-from bot.exts.filtering._settings import Settings, ValidationSettings, create_settings
-from bot.exts.filtering._filters.filter import Filter
+from discord.ext.commands import BadArgument, Context, Converter
+
 from bot.exts.filtering._filter_context import FilterContext
-from bot.exts.filtering._utils import FieldRequiring
+from bot.exts.filtering._filters.filter import Filter
+from bot.exts.filtering._settings import Settings, ValidationSettings, create_settings
+from bot.exts.filtering._utils import FieldRequiring, past_tense
 from bot.log import get_logger
 
 log = get_logger(__name__)
 
 
 class ListType(Enum):
+    """An enumeration of list types."""
+
     DENY = 0
     ALLOW = 1
+
+
+class ListTypeConverter(Converter):
+    """A Converter to get the appropriate list type."""
+
+    aliases = (
+        (ListType.DENY, {"deny", "blocklist", "blacklist", "denylist", "bl", "dl"}),
+        (ListType.ALLOW, {"allow", "allowlist", "whitelist", "al", "wl"})
+    )
+
+    async def convert(self, ctx: Context, argument: str) -> ListType:
+        """Get the appropriate list type."""
+        for list_type, aliases in self.aliases:
+            if argument in aliases or argument in map(past_tense, aliases):
+                return list_type
+        raise BadArgument(f"No matching list type found for {argument!r}.")
 
 
 class FilterList(FieldRequiring):
@@ -24,8 +44,8 @@ class FilterList(FieldRequiring):
     name = FieldRequiring.MUST_SET_UNIQUE
 
     def __init__(self, filter_type: Type[Filter]):
-        self._filter_lists: dict[ListType, list[Filter]] = {}
-        self._defaults: dict[ListType, dict[str, Settings]] = {}
+        self.filter_lists: dict[ListType, list[Filter]] = {}
+        self.defaults: dict[ListType, dict[str, Settings]] = {}
 
         self.filter_type = filter_type
 
@@ -33,7 +53,7 @@ class FilterList(FieldRequiring):
         """Add a new type of list (such as a whitelist or a blacklist) this filter list."""
         actions, validations = create_settings(list_data["settings"])
         list_type = ListType(list_data["list_type"])
-        self._defaults[list_type] = {"actions": actions, "validations": validations}
+        self.defaults[list_type] = {"actions": actions, "validations": validations}
 
         filters = []
         for filter_data in list_data["filters"]:
@@ -41,7 +61,7 @@ class FilterList(FieldRequiring):
                 filters.append(self.filter_type(filter_data, actions))
             except TypeError as e:
                 log.warning(e)
-        self._filter_lists[list_type] = filters
+        self.filter_lists[list_type] = filters
 
     @abstractmethod
     def triggers_for(self, ctx: FilterContext) -> list[Filter]:
