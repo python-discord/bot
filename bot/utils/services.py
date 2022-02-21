@@ -5,6 +5,7 @@ import typing
 from typing import Optional
 
 import aiohttp
+import arrow
 from aiohttp import ClientConnectorError
 from async_rediscache import RedisCache
 
@@ -29,7 +30,7 @@ class _UnfurlReturn:
     destination: Optional[str] = None
     depth: Optional[int] = None
     error: Optional[str] = None
-    created_at: Optional[datetime.datetime] = None
+    created_at: Optional[arrow.Arrow] = None
 
 
 _CONTINUE_RETURN = tuple[str, int]
@@ -39,15 +40,13 @@ _JOIN_RETURNS = typing.Union[tuple[_UnfurlReturn, int], _CONTINUE_RETURN, None]
 async def _attempt_request(
     url: str,
     attempts: int,
-    *,
+    *data,
     method: str = aiohttp.hdrs.METH_POST,
     callback: Optional[typing.Callable[[aiohttp.ClientResponse, int, int], typing.Awaitable[T]]] = None,
     **kw_data,
 ) -> Optional[typing.Union[aiohttp.ClientResponse, T]]:
     """
     Attempt to perform a request to `url`, `attempt` times, and return the response.
-
-    Make sure to close
 
     `data` and `kw_data` are passed to the request as is.
     Return None for failures.
@@ -58,12 +57,11 @@ async def _attempt_request(
     """
     for attempt in range(1, attempts + 1):
         try:
-            response = await bot.instance.http_session.request(method, url, **kw_data)
-
-            if callback is None:
-                return response
-            elif (result := await callback(response, attempt, attempts)) is not None:
-                return result
+            async with bot.instance.http_session.request(method, url, *data, **kw_data) as response:
+                if callback is None:
+                    return response
+                elif (result := await callback(response, attempt, attempts)) is not None:
+                    return result
 
         except ClientConnectorError:
             log.warning(
@@ -126,9 +124,9 @@ async def _get_url_from_cache(url: str) -> Optional[_UnfurlReturn]:
     if cached is not None:
         log.trace(f"Found hit for URL ({log}) in unfurl cache.")
         data = json.loads(cached)
-        expiry = datetime.datetime.fromisoformat(data["expiry"])
+        expiry = arrow.get(data["expiry"])
 
-        if expiry < datetime.datetime.now(tz=datetime.timezone.utc):
+        if expiry < arrow.utcnow():
             # Cache expired, remove it and continue normally
             log.debug(f"Cache entry for ({url}) expired, deleting.")
             await UNFURL_CACHE.delete(url)
@@ -164,7 +162,7 @@ async def _unfurl_url(
     if response.status == 200:
         # Success, return the destination
         content = await response.json()
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = arrow.utcnow()
         return _UnfurlReturn(content["destination"], redirects + content["depth"], None, now), response.status
 
     elif response.status == 400:
