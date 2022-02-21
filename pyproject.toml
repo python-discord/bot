@@ -9,7 +9,7 @@ license = "MIT"
 python = "3.9.*"
 disnake = "~=2.4"
 # See https://bot-core.pythondiscord.com/ for docs.
-bot-core = {url = "https://github.com/python-discord/bot-core/archive/refs/tags/v2.1.0.zip"}
+bot-core = {url = "https://github.com/python-discord/bot-core/archive/refs/tags/v3.0.0.zip"}
 aio-pika = "~=6.1"
 aiodns = "~=2.0"
 aiohttp = "~=3.7"

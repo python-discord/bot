@@ -7,7 +7,7 @@ from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
-from botcore.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
+from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from disnake import AllowedMentions, HTTPException, Message, NotFound, Reaction, User
 from disnake.ext.commands import Cog, Context, command, guild_only
 

@@ -8,7 +8,7 @@ from ssl import CertificateError
 import dateutil.parser
 import disnake
 from aiohttp import ClientConnectorError
-from botcore.regex import DISCORD_INVITE
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from disnake.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from disnake.utils import escape_markdown, snowflake_time

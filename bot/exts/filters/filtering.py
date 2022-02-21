@@ -10,7 +10,7 @@ import disnake.errors
 import regex
 import tldextract
 from async_rediscache import RedisCache
-from botcore.regex import DISCORD_INVITE
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from disnake import Colour, HTTPException, Member, Message, NotFound, TextChannel
 from disnake.ext.commands import Cog
