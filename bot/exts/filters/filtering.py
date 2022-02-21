@@ -37,7 +37,7 @@ CODE_BLOCK_RE = re.compile(
 )
 EVERYONE_PING_RE = re.compile(rf"@everyone|<@&{Guild.id}>|@here")
 SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
-URL_RE = re.compile(r"(?<url>https?://[^\s]+)", flags=re.IGNORECASE)
+URL_RE = re.compile(r"(?P<url>https?://[^\s]+)", flags=re.IGNORECASE)
 
 # Exclude variation selectors from zalgo because they're actually invisible.
 VARIATION_SELECTORS = r"\uFE00-\uFE0F\U000E0100-\U000E01EF"
