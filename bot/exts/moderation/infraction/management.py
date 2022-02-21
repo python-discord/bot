@@ -3,8 +3,6 @@ import typing as t
 
 import arrow
 import discord
-from dateutil.relativedelta import relativedelta
-from dateutil.tz import tzutc
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
