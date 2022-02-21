@@ -22,13 +22,14 @@ class RequestTests(unittest.IsolatedAsyncioTestCase):
         self.bot = patcher.start()
         self.addCleanup(patcher.stop)
 
-        self.bot.http_session.request = AsyncMock()
+        self.request = MagicMock()
+        self.bot.http_session.request = self.request
 
     async def test_successful_post(self):
         """The utility makes one request, and returns the response object when successful."""
         response = MagicMock()
-        self.bot.http_session.request.return_value = response
-        self.bot.http_session.reset_mock()
+        self.request.return_value.__aenter__ = AsyncMock(return_value=response)
+        self.request.return_value.__aexit__ = AsyncMock(return_value=False)
 
         url = "url"
         actual_response = await services._attempt_request(url, 1)
@@ -37,11 +38,11 @@ class RequestTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_callback_called(self):
         """If callback is passed, it's called upon success, and it's value returned."""
+        response = MagicMock()
+        self.request.return_value.__aenter__ = AsyncMock(return_value=response)
+
         return_value = "Callback return"
         callback = AsyncMock(return_value=return_value)
-
-        response = MagicMock()
-        self.bot.http_session.request.return_value = response
 
         actual_response = await services._attempt_request("url", 1, callback=callback)
         self.assertEqual(
@@ -69,7 +70,7 @@ class RequestTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(attempts=attempts, expected_failure=expected_failure):
                 # Call the mocks to get a coroutine, and return each coroutine in subsequent calls to `request`
                 wrapped_responses = [mock.__call__() for mock in responses[0:attempts]]
-                self.bot.http_session.request = Mock(side_effect=wrapped_responses)
+                self.bot.http_session.request.return_value.__aenter__ = Mock(side_effect=wrapped_responses)
 
                 # Ensure we didn't swallow any exceptions
                 try:
@@ -84,14 +85,14 @@ class RequestTests(unittest.IsolatedAsyncioTestCase):
                     raise Exception(f"Unexpected exceptions raised during this run:\n{output}")
 
                 self.assertEqual(None if expected_failure else "Success", response)
-                self.assertEqual(attempts, self.bot.http_session.request.call_count)
+                self.assertEqual(attempts, self.bot.http_session.request.return_value.__aenter__.call_count)
 
     async def test_repeat_callback(self):
         """Test that `callback` is repeated with a new request if it returns None."""
         async def callback(_response, *_):
             return _response
 
-        self.bot.http_session.request = AsyncMock(side_effect=(None, "Valid response"))
+        self.bot.http_session.request.return_value.__aenter__ = AsyncMock(side_effect=(None, "Valid response"))
         response = await services._attempt_request("url", 2, callback=callback)
 
         self.assertEqual("Valid response", response)
@@ -114,7 +115,7 @@ class RequestTests(unittest.IsolatedAsyncioTestCase):
             MagicMock(side_effect=Exception("Mock exception")),
             MagicMock(return_value="Valid return"),
         )
-        self.bot.http_session.request = AsyncMock(side_effect=responses)
+        self.bot.http_session.request.return_value.__aenter__ = AsyncMock(side_effect=responses)
 
         response = await services._attempt_request("url", len(responses), callback=callback)
 
@@ -133,7 +134,8 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
         self.bot = patcher.start()
         self.addCleanup(patcher.stop)
 
-        self.bot.http_session.request = AsyncMock()
+        self.request = MagicMock()
+        self.bot.http_session.request = self.request
 
     @patch("bot.utils.services.URLs.paste_service", "https://paste_service.com/{key}")
     @autospec(services, "_attempt_request", pass_mocks=True)
@@ -161,7 +163,9 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
             (f"https://paste_service.com/{key}.py", "py"),
             (f"https://paste_service.com/{key}?noredirect", ""),
         )
-        self.bot.http_session.request.return_value = AsyncMock(json=AsyncMock(return_value={"key": key}))
+        self.bot.http_session.request.return_value.__aenter__ = AsyncMock(
+            return_value=AsyncMock(json=AsyncMock(return_value={"key": key}))
+        )
 
         for expected_output, extension in test_cases:
             with self.subTest(msg=f"Send contents with extension {repr(extension)}"):
