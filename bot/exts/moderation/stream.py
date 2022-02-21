@@ -133,8 +133,12 @@ class Stream(commands.Cog):
         await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {time.discord_timestamp(duration)}.")
 
         # Convert here for nicer logging
-        revoke_time = time.format_with_duration(duration)
-        log.debug(f"Successfully gave {member} ({member.id}) permission to stream until {revoke_time}.")
+        humanized_duration = time.humanize_delta(duration, arrow.utcnow(), max_units=2)
+        end_time = duration.strftime("%Y-%m-%d %H:%M:%S")
+        log.debug(
+            f"Successfully gave {member} ({member.id}) permission "
+            f"to stream for {humanized_duration} (until {end_time})."
+        )
 
     @commands.command(aliases=("pstream",))
     @commands.has_any_role(*MODERATION_ROLES)

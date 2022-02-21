@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from discord import Colour, Embed
@@ -75,6 +76,18 @@ class FilterLists(Cog):
         # Remove protocol and trailing slash from URLs
         elif list_type in ("DOMAIN_NAME", "REDIRECT"):
             content = content.removeprefix("https://").removeprefix("http://").rstrip("/")
+
+        # If it's a filter token, validate the passed regex
+        elif list_type == "FILTER_TOKEN":
+            try:
+                re.compile(content)
+            except re.error as e:
+                await ctx.message.add_reaction("❌")
+                await ctx.send(
+                    f"{ctx.author.mention} that's not a valid regex! "
+                    f"Regex error message: {e.msg}."
+                )
+                return
 
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
