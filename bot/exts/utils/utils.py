@@ -218,7 +218,7 @@ class Utils(Cog):
         Skip the cache and make a new request if `use_case` is False.
         """
         if not 0 < max_redirects <= services.MAX_UNFURLS * 5:
-            raise BadArgument(f"Max redirects has to be a number between {0} and {services.MAX_UNFURLS * 5}.")
+            raise BadArgument(f"Max redirects has to be a number between 1 and {services.MAX_UNFURLS * 5} inclusive.")
         if not use_cache and not await checks.has_any_role_check(ctx, *STAFF_ROLES):
             raise BadArgument("You do not have permission to skip the cache.")
 
@@ -234,16 +234,11 @@ class Utils(Cog):
             )
             return
 
-        # Shorten the title to a max of 50 characters
-        title = url[:50]
-        if title != url:
-            # If we shortened the URL, add ellipses
-            title += "..."
+        if len(url) > 50:
+            # Shorten the title to a max of 50 characters
+            url = url[:47] + "..."
 
-        # Set the embed color based on the success of the operation
-        color = discord.Color.green() if result.error is None else discord.Color.red()
-
-        embed = discord.Embed(title=f"`{title}`", color=color)
+        embed = discord.Embed(title=f"`{url}`")
 
         if result.depth is not None:
             embed.add_field(name="Redirects", value=result.depth)
@@ -251,22 +246,22 @@ class Utils(Cog):
         if result.error is None:
             creation = time.discord_timestamp(result.created_at, time.TimestampFormats.RELATIVE)
             expiry = time.discord_timestamp(result.created_at + services.CACHE_LENGTH, time.TimestampFormats.RELATIVE)
+            embed.colour = discord.Colour.green()
 
             embed.add_field(name="Fetched", value=creation)
             embed.add_field(name="Expiry", value=expiry)
 
         else:
+            embed.colour = discord.Colour.red()
             embed.add_field(name="Error", value=result.error, inline=False)
 
         if result.destination is not None:
             # Wrap the URL in backticks to prevent hyperlinking and accidental clicks
-            _dest = f"`{result.destination}`"
-            if len(_dest) > 1024:
+            dest = f"`{result.destination}`"
+            if len(dest) > 1024:
                 # URL is too long for an embed field; send to the pastebin
                 paste = await services.send_to_paste_service(result.destination, extension="txt")
                 dest = f"Result was too long to display. You can find it [here]({paste})."
-            else:
-                dest = _dest
 
             embed.add_field(name="Destination", value=dest)
 
