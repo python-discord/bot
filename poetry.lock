@@ -143,7 +143,7 @@ lxml = ["lxml"]
 
 [[package]]
 name = "bot-core"
-version = "1.2.0"
+version = "2.1.0"
 description = "Bot-Core provides the core functionality and utilities for the bots of the Python Discord community."
 category = "main"
 optional = false
@@ -154,7 +154,7 @@ python-versions = "3.9.*"
 
 [package.source]
 type = "url"
-url = "https://github.com/python-discord/bot-core/archive/511bcba1b0196cd498c707a525ea56921bd971db.zip"
+url = "https://github.com/python-discord/bot-core/archive/refs/tags/v2.1.0.zip"
 [[package]]
 name = "certifi"
 version = "2021.10.8"
@@ -1074,7 +1074,7 @@ toml = ">=0.10.0,<0.11.0"
 
 [[package]]
 name = "testfixtures"
-version = "6.18.3"
+version = "6.18.5"
 description = "A collection of helpers and mock objects for unit tests and doc tests."
 category = "dev"
 optional = false
@@ -1169,7 +1169,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.*"
-content-hash = "538a4809b9fc6fa93ee1baccf4016515ae311a886f1b7ec9b3d544bb87c830a3"
+content-hash = "b8b28311c13f7a66f028041bae889131d3916ca7f667c9a7539871d21bbcd077"
 
 [metadata.files]
 aio-pika = [
@@ -1990,8 +1990,8 @@ taskipy = [
     {file = "taskipy-1.7.0.tar.gz", hash = "sha256:960e480b1004971e76454ecd1a0484e640744a30073a1069894a311467f85ed8"},
 ]
 testfixtures = [
-    {file = "testfixtures-6.18.3-py2.py3-none-any.whl", hash = "sha256:6ddb7f56a123e1a9339f130a200359092bd0a6455e31838d6c477e8729bb7763"},
-    {file = "testfixtures-6.18.3.tar.gz", hash = "sha256:2600100ae96ffd082334b378e355550fef8b4a529a6fa4c34f47130905c7426d"},
+    {file = "testfixtures-6.18.5-py2.py3-none-any.whl", hash = "sha256:7de200e24f50a4a5d6da7019fb1197aaf5abd475efb2ec2422fdcf2f2eb98c1d"},
+    {file = "testfixtures-6.18.5.tar.gz", hash = "sha256:02dae883f567f5b70fd3ad3c9eefb95912e78ac90be6c7444b5e2f46bf572c84"},
 ]
 tldextract = [
     {file = "tldextract-3.1.2-py2.py3-none-any.whl", hash = "sha256:f55e05f6bf4cc952a87d13594386d32ad2dd265630a8bdfc3df03bd60425c6b0"},

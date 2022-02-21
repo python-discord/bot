@@ -6,12 +6,12 @@ from datetime import datetime, timezone
 from ssl import CertificateError
 
 import dateutil.parser
-import discord
+import disnake
 from aiohttp import ClientConnectorError
 from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
-from discord.utils import escape_markdown, snowflake_time
+from disnake.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
+from disnake.utils import escape_markdown, snowflake_time
 
 from bot import exts
 from bot.api import ResponseCodeError
@@ -505,14 +505,14 @@ AMBIGUOUS_ARGUMENT_MSG = ("`{argument}` is not a User mention, a User ID or a Us
 
 class UnambiguousUser(UserConverter):
     """
-    Converts to a `discord.User`, but only if a mention, userID or a username (name#discrim) is provided.
+    Converts to a `disnake.User`, but only if a mention, userID or a username (name#discrim) is provided.
 
     Unlike the default `UserConverter`, it doesn't allow conversion from a name.
     This is useful in cases where that lookup strategy would lead to too much ambiguity.
     """
 
-    async def convert(self, ctx: Context, argument: str) -> discord.User:
-        """Convert the `argument` to a `discord.User`."""
+    async def convert(self, ctx: Context, argument: str) -> disnake.User:
+        """Convert the `argument` to a `disnake.User`."""
         if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
         else:
@@ -521,14 +521,14 @@ class UnambiguousUser(UserConverter):
 
 class UnambiguousMember(MemberConverter):
     """
-    Converts to a `discord.Member`, but only if a mention, userID or a username (name#discrim) is provided.
+    Converts to a `disnake.Member`, but only if a mention, userID or a username (name#discrim) is provided.
 
     Unlike the default `MemberConverter`, it doesn't allow conversion from a name or nickname.
     This is useful in cases where that lookup strategy would lead to too much ambiguity.
     """
 
-    async def convert(self, ctx: Context, argument: str) -> discord.Member:
-        """Convert the `argument` to a `discord.Member`."""
+    async def convert(self, ctx: Context, argument: str) -> disnake.Member:
+        """Convert the `argument` to a `disnake.Member`."""
         if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
         else:
@@ -588,10 +588,10 @@ if t.TYPE_CHECKING:
     OffTopicName = str  # noqa: F811
     ISODateTime = datetime  # noqa: F811
     HushDurationConverter = int  # noqa: F811
-    UnambiguousUser = discord.User  # noqa: F811
-    UnambiguousMember = discord.Member  # noqa: F811
+    UnambiguousUser = disnake.User  # noqa: F811
+    UnambiguousMember = disnake.Member  # noqa: F811
     Infraction = t.Optional[dict]  # noqa: F811
 
 Expiry = t.Union[Duration, ISODateTime]
-MemberOrUser = t.Union[discord.Member, discord.User]
+MemberOrUser = t.Union[disnake.Member, disnake.User]
 UnambiguousMemberOrUser = t.Union[UnambiguousMember, UnambiguousUser]

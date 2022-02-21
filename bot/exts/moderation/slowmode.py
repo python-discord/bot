@@ -1,8 +1,8 @@
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
-from discord import TextChannel
-from discord.ext.commands import Cog, Context, group, has_any_role
+from disnake import TextChannel
+from disnake.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, MODERATION_ROLES

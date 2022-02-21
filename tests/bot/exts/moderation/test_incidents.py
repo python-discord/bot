@@ -7,7 +7,7 @@ from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import aiohttp
-import discord
+import disnake
 from async_rediscache import RedisSession
 
 from bot.constants import Colours
@@ -24,7 +24,7 @@ class MockAsyncIterable:
     Helper for mocking asynchronous for loops.
 
     It does not appear that the `unittest` library currently provides anything that would
-    allow us to simply mock an async iterator, such as `discord.TextChannel.history`.
+    allow us to simply mock an async iterator, such as `disnake.TextChannel.history`.
 
     We therefore write our own helper to wrap a regular synchronous iterable, and feed
     its values via `__anext__` rather than `__next__`.
@@ -60,7 +60,7 @@ class MockSignal(enum.Enum):
     B = "B"
 
 
-mock_404 = discord.NotFound(
+mock_404 = disnake.NotFound(
     response=MagicMock(aiohttp.ClientResponse),  # Mock the erroneous response
     message="Not found",
 )
@@ -70,8 +70,8 @@ class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
     """Collection of tests for the `download_file` helper function."""
 
     async def test_download_file_success(self):
-        """If `to_file` succeeds, function returns the acquired `discord.File`."""
-        file = MagicMock(discord.File, filename="bigbadlemon.jpg")
+        """If `to_file` succeeds, function returns the acquired `disnake.File`."""
+        file = MagicMock(disnake.File, filename="bigbadlemon.jpg")
         attachment = MockAttachment(to_file=AsyncMock(return_value=file))
 
         acquired_file = await incidents.download_file(attachment)
@@ -86,7 +86,7 @@ class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
 
     async def test_download_file_fail(self):
         """If `to_file` fails on a non-404 error, function logs the exception & returns None."""
-        arbitrary_error = discord.HTTPException(MagicMock(aiohttp.ClientResponse), "Arbitrary API error")
+        arbitrary_error = disnake.HTTPException(MagicMock(aiohttp.ClientResponse), "Arbitrary API error")
         attachment = MockAttachment(to_file=AsyncMock(side_effect=arbitrary_error))
 
         with self.assertLogs(logger=incidents.log, level=logging.ERROR):
@@ -121,7 +121,7 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
 
     async def test_make_embed_with_attachment_succeeds(self):
         """Incident's attachment is downloaded and displayed in the embed's image field."""
-        file = MagicMock(discord.File, filename="bigbadjoe.jpg")
+        file = MagicMock(disnake.File, filename="bigbadjoe.jpg")
         attachment = MockAttachment(filename="bigbadjoe.jpg")
         incident = MockMessage(content="this is an incident", attachments=[attachment])
 
@@ -394,7 +394,7 @@ class TestArchive(TestIncidents):
             author=MockUser(name="author_name", display_avatar=Mock(url="author_avatar")),
             id=123,
         )
-        built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
+        built_embed = MagicMock(disnake.Embed, id=123)  # We patch `make_embed` to return this
 
         with patch("bot.exts.moderation.incidents.make_embed", AsyncMock(return_value=(built_embed, None))):
             archive_return = await self.cog_instance.archive(incident, MagicMock(value="A"), MockMember())
@@ -616,7 +616,7 @@ class TestResolveMessage(TestIncidents):
         """
         self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
 
-        arbitrary_error = discord.HTTPException(
+        arbitrary_error = disnake.HTTPException(
             response=MagicMock(aiohttp.ClientResponse),
             message="Arbitrary error",
         )
@@ -649,7 +649,7 @@ class TestOnRawReactionAdd(TestIncidents):
         super().setUp()  # Ensure `cog_instance` is assigned
 
         self.payload = MagicMock(
-            discord.RawReactionActionEvent,
+            disnake.RawReactionActionEvent,
             channel_id=123,  # Patched at class level
             message_id=456,
             member=MockMember(bot=False),

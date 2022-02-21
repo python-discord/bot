@@ -2,8 +2,8 @@ import re
 from datetime import timedelta
 
 import arrow
-from discord import Forbidden, http
-from discord.ext import commands
+from disnake import Forbidden, http
+from disnake.ext import commands
 
 from bot.log import get_logger
 
@@ -13,7 +13,7 @@ MESSAGE_ID_RE = re.compile(r'(?P<message_id>[0-9]{15,20})$')
 
 class Command(commands.Command):
     """
-    A `discord.ext.commands.Command` subclass which supports root aliases.
+    A `disnake.ext.commands.Command` subclass which supports root aliases.
 
     A `root_aliases` keyword argument is added, which is a sequence of alias names that will act as
     top-level commands rather than being aliases of the command's group. It's stored as an attribute

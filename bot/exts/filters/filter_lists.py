@@ -1,8 +1,8 @@
 import re
 from typing import Optional
 
-from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
+from disnake import Colour, Embed
+from disnake.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
 
 from bot import constants
 from bot.api import ResponseCodeError

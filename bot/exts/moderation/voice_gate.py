@@ -3,10 +3,10 @@ from contextlib import suppress
 from datetime import timedelta
 
 import arrow
-import discord
+import disnake
 from async_rediscache import RedisCache
-from discord import Colour, Member, VoiceState
-from discord.ext.commands import Cog, Context, command
+from disnake import Colour, Member, VoiceState
+from disnake.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -51,7 +51,7 @@ VOICE_PING_DM = (
 class VoiceGate(Cog):
     """Voice channels verification management."""
 
-    # RedisCache[t.Union[discord.User.id, discord.Member.id], t.Union[discord.Message.id, int]]
+    # RedisCache[t.Union[disnake.User.id, disnake.Member.id], t.Union[disnake.Message.id, int]]
     # The cache's keys are the IDs of members who are verified or have joined a voice channel
     # The cache's values are either the message ID of the ping message or 0 (NO_MSG) if no message is present
     redis_cache = RedisCache()
@@ -75,14 +75,14 @@ class VoiceGate(Cog):
         """
         if message_id := await self.redis_cache.get(member_id):
             log.trace(f"Removing voice gate reminder message for user: {member_id}")
-            with suppress(discord.NotFound):
+            with suppress(disnake.NotFound):
                 await self.bot.http.delete_message(Channels.voice_gate, message_id)
             await self.redis_cache.set(member_id, NO_MSG)
         else:
             log.trace(f"Voice gate reminder message for user {member_id} was already removed")
 
     @redis_cache.atomic_transaction
-    async def _ping_newcomer(self, member: discord.Member) -> tuple:
+    async def _ping_newcomer(self, member: disnake.Member) -> tuple:
         """
         See if `member` should be sent a voice verification notification, and send it if so.
 
@@ -91,7 +91,7 @@ class VoiceGate(Cog):
         * The `member` is already voice-verified
 
         Otherwise, the notification message ID is stored in `redis_cache` and return (True, channel).
-        channel is either [discord.TextChannel, discord.DMChannel].
+        channel is either [disnake.TextChannel, disnake.DMChannel].
         """
         if await self.redis_cache.contains(member.id):
             log.trace("User already in cache. Ignore.")
@@ -111,7 +111,7 @@ class VoiceGate(Cog):
 
         try:
             message = await member.send(VOICE_PING_DM.format(channel_mention=voice_verification_channel.mention))
-        except discord.Forbidden:
+        except disnake.Forbidden:
             log.trace("DM failed for Voice ping message. Sending in channel.")
             message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
 
@@ -137,7 +137,7 @@ class VoiceGate(Cog):
             data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
         except ResponseCodeError as e:
             if e.status == 404:
-                embed = discord.Embed(
+                embed = disnake.Embed(
                     title="Not found",
                     description=(
                         "We were unable to find user data for you. "
@@ -148,7 +148,7 @@ class VoiceGate(Cog):
                 )
                 log.info(f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})")
             else:
-                embed = discord.Embed(
+                embed = disnake.Embed(
                     title="Unexpected response",
                     description=(
                         "We encountered an error while attempting to find data for your user. "
@@ -159,7 +159,7 @@ class VoiceGate(Cog):
                 log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} Metricity data.")
             try:
                 await ctx.author.send(embed=embed)
-            except discord.Forbidden:
+            except disnake.Forbidden:
                 log.info("Could not send user DM. Sending in voice-verify channel and scheduling delete.")
                 await ctx.send(embed=embed)
 
@@ -179,7 +179,7 @@ class VoiceGate(Cog):
         [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]
 
         if failed:
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 title="Voice Gate failed",
                 description=FAILED_MESSAGE.format(reasons="\n".join(f'• You {reason}.' for reason in failed_reasons)),
                 color=Colour.red()
@@ -187,12 +187,12 @@ class VoiceGate(Cog):
             try:
                 await ctx.author.send(embed=embed)
                 await ctx.send(f"{ctx.author}, please check your DMs.")
-            except discord.Forbidden:
+            except disnake.Forbidden:
                 await ctx.channel.send(ctx.author.mention, embed=embed)
             return
 
         self.mod_log.ignore(Event.member_update, ctx.author.id)
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title="Voice gate passed",
             description="You have been granted permission to use voice channels in Python Discord.",
             color=Colour.green()
@@ -204,17 +204,17 @@ class VoiceGate(Cog):
         try:
             await ctx.author.send(embed=embed)
             await ctx.send(f"{ctx.author}, please check your DMs.")
-        except discord.Forbidden:
+        except disnake.Forbidden:
             await ctx.channel.send(ctx.author.mention, embed=embed)
 
         # wait a little bit so those who don't get DMs see the response in-channel before losing perms to see it.
         await asyncio.sleep(3)
-        await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
+        await ctx.author.add_roles(disnake.Object(Roles.voice_verified), reason="Voice Gate passed")
 
         self.bot.stats.incr("voice_gate.passed")
 
     @Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    async def on_message(self, message: disnake.Message) -> None:
         """Delete all non-staff messages from voice gate channel that don't invoke voice verify command."""
         # Check is channel voice gate
         if message.channel.id != Channels.voice_gate:
@@ -229,7 +229,7 @@ class VoiceGate(Cog):
             if message.content.endswith(VOICE_PING):
                 log.trace("Message is the voice verification ping. Ignore.")
                 return
-            with suppress(discord.NotFound):
+            with suppress(disnake.NotFound):
                 await message.delete(delay=GateConf.bot_message_delete_delay)
                 return
 
@@ -242,7 +242,7 @@ class VoiceGate(Cog):
         if ctx.command is not None and ctx.command.name == "voice_verify":
             self.mod_log.ignore(Event.message_delete, message.id)
 
-        with suppress(discord.NotFound):
+        with suppress(disnake.NotFound):
             await message.delete()
 
     @Cog.listener()
@@ -257,7 +257,7 @@ class VoiceGate(Cog):
             log.trace("User not in a voice channel. Ignore.")
             return
 
-        if isinstance(after.channel, discord.StageChannel):
+        if isinstance(after.channel, disnake.StageChannel):
             log.trace("User joined a stage channel. Ignore.")
             return
 
@@ -267,7 +267,7 @@ class VoiceGate(Cog):
 
         # Schedule the channel ping notification to be deleted after the configured delay, which is
         # again delegated to an atomic helper
-        if notification_sent and isinstance(message_channel, discord.TextChannel):
+        if notification_sent and isinstance(message_channel, disnake.TextChannel):
             await asyncio.sleep(GateConf.voice_ping_delete_delay)
             await self._delete_ping(member.id)
 

@@ -3,7 +3,7 @@ import os
 from functools import partial, partialmethod
 from typing import TYPE_CHECKING
 
-from discord.ext import commands
+from disnake.ext import commands
 
 from bot import log, monkey_patches
 

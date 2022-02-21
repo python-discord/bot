@@ -2,8 +2,8 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
-from discord import AllowedMentions
-from discord.ext import commands
+from disnake import AllowedMentions
+from disnake.ext import commands
 
 from bot import constants
 from bot.exts.utils import snekbox

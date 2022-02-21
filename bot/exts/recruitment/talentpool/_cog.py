@@ -3,10 +3,10 @@ from collections import ChainMap, defaultdict
 from io import StringIO
 from typing import Optional, Union
 
-import discord
+import disnake
 from async_rediscache import RedisCache
-from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
-from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from disnake import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
+from disnake.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -483,7 +483,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
         review, _, _ = await self.reviewer.make_review(user_id)
-        file = discord.File(StringIO(review), f"{user_id}_review.md")
+        file = disnake.File(StringIO(review), f"{user_id}_review.md")
         await ctx.send(file=file)
 
     @nomination_group.command(aliases=('review',))

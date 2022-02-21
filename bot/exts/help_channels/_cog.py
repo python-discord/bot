@@ -5,9 +5,9 @@ from datetime import timedelta
 from operator import attrgetter
 
 import arrow
-import discord
-import discord.abc
-from discord.ext import commands
+import disnake
+import disnake.abc
+from disnake.ext import commands
 
 from bot import constants
 from bot.bot import Bot
@@ -66,16 +66,16 @@ class HelpChannels(commands.Cog):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
-        self.guild: discord.Guild = None
-        self.cooldown_role: discord.Role = None
+        self.guild: disnake.Guild = None
+        self.cooldown_role: disnake.Role = None
 
         # Categories
-        self.available_category: discord.CategoryChannel = None
-        self.in_use_category: discord.CategoryChannel = None
-        self.dormant_category: discord.CategoryChannel = None
+        self.available_category: disnake.CategoryChannel = None
+        self.in_use_category: disnake.CategoryChannel = None
+        self.dormant_category: disnake.CategoryChannel = None
 
         # Queues
-        self.channel_queue: asyncio.Queue[discord.TextChannel] = None
+        self.channel_queue: asyncio.Queue[disnake.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
         # Notifications
@@ -84,7 +84,7 @@ class HelpChannels(commands.Cog):
         self.last_running_low_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
 
         self.dynamic_message: t.Optional[int] = None
-        self.available_help_channels: t.Set[discord.TextChannel] = set()
+        self.available_help_channels: t.Set[disnake.TextChannel] = set()
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
@@ -104,7 +104,7 @@ class HelpChannels(commands.Cog):
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True)
-    async def claim_channel(self, message: discord.Message) -> None:
+    async def claim_channel(self, message: disnake.Message) -> None:
         """
         Claim the channel in which the question `message` was sent.
 
@@ -116,7 +116,7 @@ class HelpChannels(commands.Cog):
 
         try:
             await self.move_to_in_use(message.channel)
-        except discord.DiscordServerError:
+        except disnake.DiscordServerError:
             try:
                 await message.channel.send(
                     "The bot encountered a Discord API error while trying to move this channel, please try again later."
@@ -133,14 +133,14 @@ class HelpChannels(commands.Cog):
             self.bot.stats.incr("help.failed_claims.500_on_move")
             return
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             description=f"Channel claimed by {message.author.mention}.",
             color=constants.Colours.bright_green,
         )
         await message.channel.send(embed=embed)
 
-        # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
-        if not isinstance(message.author, discord.Member):
+        # Handle odd edge case of `message.author` not being a `disnake.Member` (see bot#1839)
+        if not isinstance(message.author, disnake.Member):
             log.debug(f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM.")
         else:
             await members.handle_role_change(message.author, message.author.add_roles, self.cooldown_role)
@@ -189,7 +189,7 @@ class HelpChannels(commands.Cog):
 
         return queue
 
-    async def create_dormant(self) -> t.Optional[discord.TextChannel]:
+    async def create_dormant(self) -> t.Optional[disnake.TextChannel]:
         """
         Create and return a new channel in the Dormant category.
 
@@ -234,12 +234,12 @@ class HelpChannels(commands.Cog):
 
         May only be invoked by the channel's claimant or by staff.
         """
-        # Don't use a discord.py check because the check needs to fail silently.
+        # Don't use a disnake check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
             await self.unclaim_channel(ctx.channel, closed_on=_channel.ClosingReason.COMMAND)
 
-    async def get_available_candidate(self) -> discord.TextChannel:
+    async def get_available_candidate(self) -> disnake.TextChannel:
         """
         Return a dormant channel to turn into an available channel.
 
@@ -313,7 +313,7 @@ class HelpChannels(commands.Cog):
             self.dormant_category = await channel_utils.get_or_fetch_channel(
                 constants.Categories.help_dormant
             )
-        except discord.HTTPException:
+        except disnake.HTTPException:
             log.exception("Failed to get a category; cog will be removed")
             self.bot.remove_cog(self.qualified_name)
 
@@ -355,7 +355,7 @@ class HelpChannels(commands.Cog):
 
         log.info("Cog is ready!")
 
-    async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
+    async def move_idle_channel(self, channel: disnake.TextChannel, has_task: bool = True) -> None:
         """
         Make the `channel` dormant if idle or schedule the move if still active.
 
@@ -416,7 +416,7 @@ class HelpChannels(commands.Cog):
 
         _stats.report_counts()
 
-    async def move_to_dormant(self, channel: discord.TextChannel) -> None:
+    async def move_to_dormant(self, channel: disnake.TextChannel) -> None:
         """Make the `channel` dormant."""
         log.info(f"Moving #{channel} ({channel.id}) to the Dormant category.")
         await _channel.move_to_bottom(
@@ -425,7 +425,7 @@ class HelpChannels(commands.Cog):
         )
 
         log.trace(f"Sending dormant message for #{channel} ({channel.id}).")
-        embed = discord.Embed(
+        embed = disnake.Embed(
             description=_message.DORMANT_MSG.format(
                 dormant=self.dormant_category.name,
                 available=self.available_category.name,
@@ -439,7 +439,7 @@ class HelpChannels(commands.Cog):
         _stats.report_counts()
 
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "channel")
-    async def unclaim_channel(self, channel: discord.TextChannel, *, closed_on: _channel.ClosingReason) -> None:
+    async def unclaim_channel(self, channel: disnake.TextChannel, *, closed_on: _channel.ClosingReason) -> None:
         """
         Unclaim an in-use help `channel` to make it dormant.
 
@@ -462,7 +462,7 @@ class HelpChannels(commands.Cog):
 
     async def _unclaim_channel(
         self,
-        channel: discord.TextChannel,
+        channel: disnake.TextChannel,
         claimant_id: t.Optional[int],
         closed_on: _channel.ClosingReason
     ) -> None:
@@ -488,7 +488,7 @@ class HelpChannels(commands.Cog):
         if closed_on == _channel.ClosingReason.COMMAND:
             self.scheduler.cancel(channel.id)
 
-    async def move_to_in_use(self, channel: discord.TextChannel) -> None:
+    async def move_to_in_use(self, channel: disnake.TextChannel) -> None:
         """Make a channel in-use and schedule it to be made dormant."""
         log.info(f"Moving #{channel} ({channel.id}) to the In Use category.")
 
@@ -504,7 +504,7 @@ class HelpChannels(commands.Cog):
         _stats.report_counts()
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    async def on_message(self, message: disnake.Message) -> None:
         """Move an available channel to the In Use category and replace it with a dormant one."""
         if message.author.bot:
             return  # Ignore messages sent by bots.
@@ -520,7 +520,7 @@ class HelpChannels(commands.Cog):
             await _message.update_message_caches(message)
 
     @commands.Cog.listener()
-    async def on_message_delete(self, msg: discord.Message) -> None:
+    async def on_message_delete(self, msg: disnake.Message) -> None:
         """
         Reschedule an in-use channel to become dormant sooner if the channel is empty.
 
@@ -542,7 +542,7 @@ class HelpChannels(commands.Cog):
         delay = constants.HelpChannels.deleted_idle_minutes * 60
         self.scheduler.schedule_later(delay, msg.channel.id, self.move_idle_channel(msg.channel))
 
-    async def wait_for_dormant_channel(self) -> discord.TextChannel:
+    async def wait_for_dormant_channel(self) -> disnake.TextChannel:
         """Wait for a dormant channel to become available in the queue and return it."""
         log.trace("Waiting for a dormant channel.")
 
@@ -569,7 +569,7 @@ class HelpChannels(commands.Cog):
                 await self.bot.http.edit_message(
                     constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels, files=None
                 )
-            except discord.NotFound:
+            except disnake.NotFound:
                 pass
             else:
                 return
@@ -593,7 +593,7 @@ class HelpChannels(commands.Cog):
 
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
-    async def notify_session_participants(self, message: discord.Message) -> None:
+    async def notify_session_participants(self, message: disnake.Message) -> None:
         """
         Check if the message author meets the requirements to be notified.
 
@@ -615,7 +615,7 @@ class HelpChannels(commands.Cog):
         if message.author.id not in session_participants:
             session_participants.add(message.author.id)
 
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 title="Currently Helping",
                 description=f"You're currently helping in {message.channel.mention}",
                 color=constants.Colours.bright_green,
@@ -625,7 +625,7 @@ class HelpChannels(commands.Cog):
 
             try:
                 await message.author.send(embed=embed)
-            except discord.Forbidden:
+            except disnake.Forbidden:
                 log.trace(
                     f"Failed to send helpdm message to {message.author.id}. DMs Closed/Blocked. "
                     "Removing user from helpdm."

@@ -6,8 +6,8 @@ from collections import namedtuple
 from contextlib import suppress
 from typing import List, Optional, Union
 
-from discord import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, ui
-from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
+from disnake import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, ui
+from disnake.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
 from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
 

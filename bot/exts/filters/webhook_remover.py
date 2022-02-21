@@ -1,7 +1,7 @@
 import re
 
-from discord import Colour, Message, NotFound
-from discord.ext.commands import Cog
+from disnake import Colour, Message, NotFound
+from disnake.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Event, Icons

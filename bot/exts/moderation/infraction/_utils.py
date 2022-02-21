@@ -1,8 +1,8 @@
 import typing as t
 from datetime import datetime
 
-import discord
-from discord.ext.commands import Context
+import disnake
+from disnake.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -83,7 +83,7 @@ async def post_infraction(
         dm_sent: bool = False,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
-    if isinstance(user, (discord.Member, discord.User)) and user.bot:
+    if isinstance(user, (disnake.Member, disnake.User)) and user.bot:
         log.trace(f"Posting of {infr_type} infraction for {user} to the API aborted. User is a bot.")
         raise InvalidInfractedUserError(user)
 
@@ -182,7 +182,7 @@ async def notify_infraction(
 
     text += INFRACTION_APPEAL_SERVER_FOOTER if infr_type.lower() == 'ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
 
-    embed = discord.Embed(
+    embed = disnake.Embed(
         description=text,
         colour=Colours.soft_red
     )
@@ -211,7 +211,7 @@ async def notify_pardon(
     """DM a user about their pardoned infraction and return True if the DM is successful."""
     log.trace(f"Sending {user} a DM about their pardoned infraction.")
 
-    embed = discord.Embed(
+    embed = disnake.Embed(
         description=content,
         colour=Colours.soft_green
     )
@@ -221,7 +221,7 @@ async def notify_pardon(
     return await send_private_embed(user, embed)
 
 
-async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
+async def send_private_embed(user: MemberOrUser, embed: disnake.Embed) -> bool:
     """
     A helper method for sending an embed to a user's DMs.
 
@@ -230,7 +230,7 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
     try:
         await user.send(embed=embed)
         return True
-    except (discord.HTTPException, discord.Forbidden, discord.NotFound):
+    except (disnake.HTTPException, disnake.Forbidden, disnake.NotFound):
         log.debug(
             f"Infraction-related information could not be sent to user {user} ({user.id}). "
             "The user either could not be retrieved or probably disabled their DMs."
