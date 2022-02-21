@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import re
 import unicodedata
 from datetime import timedelta
@@ -285,7 +284,7 @@ class Filtering(Cog):
         Filter the result of an !eval to see if it violates any of our rules, and then respond accordingly.
 
         Also requires the original message, to check whether to filter and for mod logs.
-        Returns whether a filter was triggered or not.
+        Return whether a filter was triggered or not.
         """
         filter_triggered = False
         # Should we filter this message?
@@ -445,7 +444,7 @@ class Filtering(Cog):
 
                             if filter_name == "filter_redirects":
                                 # Redirects delete the message immediately
-                                delete_date = datetime.datetime.now(tz=datetime.timezone.utc) + timedelta(seconds=10)
+                                delete_date = arrow.utcnow() + timedelta(seconds=10)
 
                             delete_date = delete_date.isoformat()
 
@@ -468,7 +467,7 @@ class Filtering(Cog):
 
                         stats = self._add_stats(filter_name, match, msg.content)
                         if filter_name == "filter_redirects":
-                            # The redirect filter processes the content further and sends it's own log message
+                            # The redirect filter processes the content further and sends its own log message
                             task_id = str(msg.id) + "redirect"
                             self.scheduler.schedule(task_id, self._process_redirect(reason, msg, stats))
                         else:
@@ -615,7 +614,7 @@ class Filtering(Cog):
 
     async def _has_redirects(self, text: str) -> tuple[bool, Optional[str]]:
         """
-        Returns True if the text contains a URL from the redirects blacklist.
+        Return True if the text contains a URL from the redirects blacklist.
 
         Second return value is the match that tripped the filter.
         """
@@ -627,7 +626,7 @@ class Filtering(Cog):
 
     async def _has_urls(self, text: str) -> tuple[bool, Optional[str]]:
         """
-        Returns True if the text contains one of the blacklisted URLs from the config file.
+        Return True if the text contains one of the blacklisted URLs from the config file.
 
         Second return value is a reason of URL blacklisting (can be None).
         """
@@ -640,7 +639,7 @@ class Filtering(Cog):
     @staticmethod
     async def _has_zalgo(text: str) -> bool:
         """
-        Returns True if the text contains zalgo characters.
+        Return True if the text contains zalgo characters.
 
         Zalgo range is \u0300 – \u036F and \u0489.
         """
