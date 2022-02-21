@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "3.9.*"
-"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/45d498c1b76deaf3b394d17ccf56112fa691d160.zip"}
+disnake = "~=2.4"
 # See https://bot-core.pythondiscord.com/ for docs.
 bot-core = {url = "https://github.com/python-discord/bot-core/archive/511bcba1b0196cd498c707a525ea56921bd971db.zip"}
 aio-pika = "~=6.1"

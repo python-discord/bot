@@ -567,7 +567,7 @@ class HelpChannels(commands.Cog):
             try:
                 log.trace("Help channels have changed, dynamic message has been edited.")
                 await self.bot.http.edit_message(
-                    constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels
+                    constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels, files=None
                 )
             except discord.NotFound:
                 pass
