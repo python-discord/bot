@@ -5,6 +5,8 @@ import typing as t
 from datetime import datetime
 from functools import partial
 
+from arrow import Arrow
+
 from bot.log import get_logger
 
 
@@ -58,7 +60,7 @@ class Scheduler:
         self._scheduled_tasks[task_id] = task
         self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
-    def schedule_at(self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    def schedule_at(self, time: t.Union[datetime, Arrow], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
         Schedule `coroutine` to be executed at the given `time`.
 

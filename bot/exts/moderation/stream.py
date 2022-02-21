@@ -14,9 +14,8 @@ from bot.constants import (
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
+from bot.utils import scheduling, time
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import discord_timestamp, format_infraction_with_duration
 
 log = get_logger(__name__)
 
@@ -131,11 +130,15 @@ class Stream(commands.Cog):
 
         await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
 
-        await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {discord_timestamp(duration)}.")
+        await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {time.discord_timestamp(duration)}.")
 
         # Convert here for nicer logging
-        revoke_time = format_infraction_with_duration(str(duration))
-        log.debug(f"Successfully gave {member} ({member.id}) permission to stream until {revoke_time}.")
+        humanized_duration = time.humanize_delta(duration, arrow.utcnow(), max_units=2)
+        end_time = duration.strftime("%Y-%m-%d %H:%M:%S")
+        log.debug(
+            f"Successfully gave {member} ({member.id}) permission "
+            f"to stream for {humanized_duration} (until {end_time})."
+        )
 
     @commands.command(aliases=("pstream",))
     @commands.has_any_role(*MODERATION_ROLES)
