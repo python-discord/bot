@@ -62,7 +62,7 @@ class FilterTests(unittest.TestCase):
     def test_context_doesnt_trigger_for_disabled_channel(self):
         """A filter shouldn't trigger if it's been disabled in the channel."""
         channel = MockTextChannel(id=123)
-        scope = ChannelScope({"disabled_channels": [123], "disabled_categories": None, "enabled_channels": None})
+        scope = ChannelScope({"disabled_channels": ["123"], "disabled_categories": None, "enabled_channels": None})
         self.ctx.channel = channel
 
         result = scope.triggers_on(self.ctx)
@@ -71,9 +71,9 @@ class FilterTests(unittest.TestCase):
 
     def test_context_doesnt_trigger_in_disabled_category(self):
         """A filter shouldn't trigger if it's been disabled in the category."""
-        channel = MockTextChannel()
+        channel = MockTextChannel(category=MockCategoryChannel(id=456))
         scope = ChannelScope({
-            "disabled_channels": None, "disabled_categories": [channel.category.id], "enabled_channels": None
+            "disabled_channels": None, "disabled_categories": ["456"], "enabled_channels": None
         })
         self.ctx.channel = channel
 
@@ -84,7 +84,7 @@ class FilterTests(unittest.TestCase):
     def test_context_triggers_in_enabled_channel_in_disabled_category(self):
         """A filter should trigger in an enabled channel even if it's been disabled in the category."""
         channel = MockTextChannel(id=123, category=MockCategoryChannel(id=234))
-        scope = ChannelScope({"disabled_channels": None, "disabled_categories": [234], "enabled_channels": [123]})
+        scope = ChannelScope({"disabled_channels": None, "disabled_categories": ["234"], "enabled_channels": ["123"]})
         self.ctx.channel = channel
 
         result = scope.triggers_on(self.ctx)

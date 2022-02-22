@@ -89,7 +89,7 @@ class Filtering(Cog):
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Filter the contents of a sent message."""
-        if msg.author.bot:
+        if msg.author.bot or msg.webhook_id:
             return
 
         ctx = FilterContext(Event.MESSAGE, msg.author, msg.channel, msg.content, msg, msg.embeds)

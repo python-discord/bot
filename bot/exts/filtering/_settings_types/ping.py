@@ -5,7 +5,6 @@ from discord import Guild
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
-from bot.exts.filtering._utils import ROLE_LITERALS
 
 
 class Ping(ActionEntry):
@@ -40,13 +39,18 @@ class Ping(ActionEntry):
         """Return the appropriate formatting for the formatting, be it a literal, a user ID, or a role ID."""
         if mention in ("here", "everyone"):
             return f"@{mention}"
-        if mention in ROLE_LITERALS:
-            return f"<@&{ROLE_LITERALS[mention]}>"
-        if not mention.isdigit():
-            return mention
+        if mention.isdigit():  # It's an ID.
+            mention = int(mention)
+            if any(mention == role.id for role in guild.roles):
+                return f"<@&{mention}>"
+            else:
+                return f"<@{mention}>"
 
-        mention = int(mention)
-        if any(mention == role.id for role in guild.roles):
-            return f"<@&{mention}>"
-        else:
-            return f"<@{mention}>"
+        # It's a name
+        for role in guild.roles:
+            if role.name == mention:
+                return role.mention
+        for member in guild.members:
+            if str(member) == mention:
+                return member.mention
+        return mention

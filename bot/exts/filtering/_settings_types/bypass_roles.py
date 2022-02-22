@@ -4,7 +4,6 @@ from discord import Member
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ValidationEntry
-from bot.exts.filtering._utils import ROLE_LITERALS
 
 
 class RoleBypass(ValidationEntry):
@@ -16,14 +15,16 @@ class RoleBypass(ValidationEntry):
         super().__init__(entry_data)
         self.roles = set()
         for role in entry_data:
-            if role in ROLE_LITERALS:
-                self.roles.add(ROLE_LITERALS[role])
-            elif role.isdigit():
+            if role.isdigit():
                 self.roles.add(int(role))
-            # Ignore entries that can't be resolved.
+            else:
+                self.roles.add(role)
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """Return whether the filter should be triggered on this user given their roles."""
         if not isinstance(ctx.author, Member):
             return True
-        return all(member_role.id not in self.roles for member_role in ctx.author.roles)
+        return all(
+            member_role.id not in self.roles and member_role.name not in self.roles
+            for member_role in ctx.author.roles
+        )

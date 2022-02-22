@@ -8,14 +8,6 @@ from typing import Set
 
 import regex
 
-from bot.constants import Roles
-
-ROLE_LITERALS = {
-    "admins": Roles.admins,
-    "onduty": Roles.moderators,
-    "staff": Roles.helpers
-}
-
 VARIATION_SELECTORS = r"\uFE00-\uFE0F\U000E0100-\U000E01EF"
 INVISIBLE_RE = regex.compile(rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT}}\p{{CONTROL}}--\s]", regex.V1)
 ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIATION_SELECTORS}]]", regex.V1)

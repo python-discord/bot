@@ -423,7 +423,7 @@ category_channel_instance = discord.CategoryChannel(
 class MockCategoryChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     def __init__(self, **kwargs) -> None:
         default_kwargs = {'id': next(self.discord_id)}
-        super().__init__(**collections.ChainMap(default_kwargs, kwargs))
+        super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
 
 # Create a Message instance to get a realistic MagicMock of `discord.Message`
