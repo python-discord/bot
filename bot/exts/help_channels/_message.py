@@ -162,10 +162,9 @@ async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about lack of dormant channels!")
-    finally:
+    else:
         bot.instance.stats.incr("help.out_of_channel_alerts")
-
-    return arrow.utcnow()
+        return arrow.utcnow()
 
 
 async def notify_running_low(number_of_channels_left: int, last_notification: Arrow) -> t.Optional[Arrow]:
@@ -210,10 +209,9 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about running low of dormant channels!")
-    finally:
+    else:
         bot.instance.stats.incr("help.running_low_alerts")
-
-    return arrow.utcnow()
+        return arrow.utcnow()
 
 
 async def pin(message: discord.Message) -> None:
