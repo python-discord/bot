@@ -139,7 +139,7 @@ async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
     if not constants.HelpChannels.notify_none_remaining:
         return None
 
-    if (arrow.utcnow() - last_notification).seconds < (constants.HelpChannels.notify_minutes * 60):
+    if (arrow.utcnow() - last_notification).total_seconds() < (constants.HelpChannels.notify_minutes * 60):
         log.trace("Did not send none_remaining notification as it hasn't been enough time since the last one.")
         return None
 
@@ -188,7 +188,7 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
         log.trace("Did not send notify_running_low notification as the threshold was not met.")
         return None
 
-    if (arrow.utcnow() - last_notification).seconds < (constants.HelpChannels.notify_minutes * 60):
+    if (arrow.utcnow() - last_notification).total_seconds() < (constants.HelpChannels.notify_minutes * 60):
         log.trace("Did not send notify_running_low notification as it hasn't been enough time since the last one.")
         return None
 
