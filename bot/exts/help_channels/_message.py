@@ -128,8 +128,8 @@ async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
     """
     Send a pinging message in `channel` notifying about there being no dormant channels remaining.
 
-     If a notification was sent, return the time at which the message was sent.
-        Otherwise, return None.
+    If a notification was sent, return the time at which the message was sent.
+    Otherwise, return None.
 
     Configuration:
         * `HelpChannels.notify_minutes`              - minimum interval between notifications
@@ -175,7 +175,7 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
     This will include the number of dormant channels left `number_of_channels_left`
 
     If a notification was sent, return the time at which the message was sent.
-        Otherwise, return None.
+    Otherwise, return None.
 
     Configuration:
         * `HelpChannels.notify_minutes`               - minimum interval between notifications
@@ -200,10 +200,13 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
         log.trace("Did not send notify_running notification as the notification channel couldn't be gathered.")
 
     try:
-        await channel.send(
-            f"There are only {number_of_channels_left} dormant channels left. "
-            "Consider participating in some help channels so that we don't run out."
-        )
+        if number_of_channels_left == 1:
+            message = f"There is only {number_of_channels_left} dormant channel left. "
+        else:
+            message = f"There are only {number_of_channels_left} dormant channels left. "
+        message += "Consider participating in some help channels so that we don't run out."
+        await channel.send(message)
+
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about running low of dormant channels!")
