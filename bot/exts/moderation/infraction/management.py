@@ -65,9 +65,10 @@ class ModManagement(commands.Cog):
             await ctx.send(f"{constants.Emojis.failmail} You may not resend hidden infractions.")
             return
 
-        member = await get_or_fetch_member(ctx.guild, infraction["user"])
+        member_id = infraction["user"]["id"]
+        member = await get_or_fetch_member(ctx.guild, member_id)
         if not member:
-            await ctx.send(f"{constants.Emojis.failmail} Cannot find member `{infraction['user']}`.")
+            await ctx.send(f"{constants.Emojis.failmail} Cannot find member `{member_id}` in the guild.")
             return
 
         id_ = infraction["id"]
