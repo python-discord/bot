@@ -60,13 +60,13 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
 class SyncCogTests(SyncCogTestCase):
     """Tests for the Sync cog."""
 
+    @mock.patch("bot.utils.scheduling.create_task")
     @mock.patch.object(Sync, "sync_guild", new_callable=mock.MagicMock)
-    def test_sync_cog_init(self, sync_guild):
+    def test_sync_cog_init(self, sync_guild, create_task):
         """Should instantiate syncers and run a sync for the guild."""
         # Reset because a Sync cog was already instantiated in setUp.
         self.RoleSyncer.reset_mock()
         self.UserSyncer.reset_mock()
-        self.bot.loop.create_task = mock.MagicMock()
 
         mock_sync_guild_coro = mock.MagicMock()
         sync_guild.return_value = mock_sync_guild_coro
@@ -74,7 +74,8 @@ class SyncCogTests(SyncCogTestCase):
         Sync(self.bot)
 
         sync_guild.assert_called_once_with()
-        self.bot.loop.create_task.assert_called_once_with(mock_sync_guild_coro)
+        create_task.assert_called_once()
+        self.assertEqual(create_task.call_args.args[0], mock_sync_guild_coro)
 
     async def test_sync_cog_sync_guild(self):
         """Roles and users should be synced only if a guild is successfully retrieved."""

@@ -1,11 +1,10 @@
-from datetime import datetime
-
+import arrow
 from aiohttp import client_exceptions
 from discord import Embed
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Channels, STAFF_ROLES, URLs
+from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES, URLs
 from bot.decorators import in_whitelist
 
 DESCRIPTIONS = (
@@ -23,7 +22,7 @@ class Latency(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def ping(self, ctx: commands.Context) -> None:
         """
         Gets different measures of latency within the bot.
@@ -32,7 +31,7 @@ class Latency(commands.Cog):
         """
         # datetime.datetime objects do not have the "milliseconds" attribute.
         # It must be converted to seconds before converting to milliseconds.
-        bot_ping = (datetime.utcnow() - ctx.message.created_at).total_seconds() * 1000
+        bot_ping = (arrow.utcnow() - ctx.message.created_at).total_seconds() * 1000
         if bot_ping <= 0:
             bot_ping = "Your clock is out of sync, could not calculate ping."
         else:

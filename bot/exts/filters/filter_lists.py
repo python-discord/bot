@@ -1,4 +1,4 @@
-import logging
+import re
 from typing import Optional
 
 from discord import Colour, Embed
@@ -7,10 +7,13 @@ from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, 
 from bot import constants
 from bot.api import ResponseCodeError
 from bot.bot import Bot
+from bot.constants import Channels
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
+from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils import scheduling
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class FilterLists(Cog):
@@ -27,7 +30,7 @@ class FilterLists(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.bot.loop.create_task(self._amend_docstrings())
+        scheduling.create_task(self._amend_docstrings(), event_loop=self.bot.loop)
 
     async def _amend_docstrings(self) -> None:
         """Add the valid FilterList types to the docstrings, so they'll appear in !help invocations."""
@@ -70,6 +73,18 @@ class FilterLists(Cog):
         elif list_type == "FILE_FORMAT" and not content.startswith("."):
             content = f".{content}"
 
+        # If it's a filter token, validate the passed regex
+        elif list_type == "FILTER_TOKEN":
+            try:
+                re.compile(content)
+            except re.error as e:
+                await ctx.message.add_reaction("❌")
+                await ctx.send(
+                    f"{ctx.author.mention} that's not a valid regex! "
+                    f"Regex error message: {e.msg}."
+                )
+                return
+
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
         payload = {
@@ -98,6 +113,12 @@ class FilterLists(Cog):
                     "and we do not permit any duplicates."
                 )
             raise
+
+        # If it is an autoban trigger we send a warning in #mod-meta
+        if comment and "[autoban]" in comment:
+            await self.bot.get_channel(Channels.mod_meta).send(
+                f":warning: Heads-up! The new filter `{content}` (`{comment}`) will automatically ban users."
+            )
 
         # Insert the item into the cache
         self.bot.insert_item_into_filter_list_cache(item)

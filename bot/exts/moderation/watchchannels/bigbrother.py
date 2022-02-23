@@ -1,4 +1,3 @@
-import logging
 import textwrap
 from collections import ChainMap
 
@@ -6,11 +5,12 @@ from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Webhooks
-from bot.converters import FetchedMember
+from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction._utils import post_infraction
 from bot.exts.moderation.watchchannels._watchchannel import WatchChannel
+from bot.log import get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class BigBrother(WatchChannel, Cog, name="Big Brother"):
@@ -60,7 +60,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='watch', aliases=('w',), root_aliases=('watch',))
     @has_any_role(*MODERATION_ROLES)
-    async def watch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
         Relay messages sent by the given `user` to the `#big-brother` channel.
 
@@ -71,11 +71,11 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
     @bigbrother_group.command(name='unwatch', aliases=('uw',), root_aliases=('unwatch',))
     @has_any_role(*MODERATION_ROLES)
-    async def unwatch_command(self, ctx: Context, user: FetchedMember, *, reason: str) -> None:
+    async def unwatch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
         await self.apply_unwatch(ctx, user, reason)
 
-    async def apply_watch(self, ctx: Context, user: FetchedMember, reason: str) -> None:
+    async def apply_watch(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """
         Add `user` to watched users and apply a watch infraction with `reason`.
 
@@ -87,14 +87,14 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             return
 
         if not await self.fetch_user_cache():
-            await ctx.send(f":x: Updating the user cache failed, can't watch user {user}")
+            await ctx.send(f":x: Updating the user cache failed, can't watch user {user.mention}")
             return
 
         if user.id in self.watched_users:
-            await ctx.send(f":x: {user} is already being watched.")
+            await ctx.send(f":x: {user.mention} is already being watched.")
             return
 
-        # FetchedUser instances don't have a roles attribute
+        # discord.User instances don't have a roles attribute
         if hasattr(user, "roles") and any(role.id in MODERATION_ROLES for role in user.roles):
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I must be kind to my masters.")
             return
@@ -103,7 +103,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         if response is not None:
             self.watched_users[user.id] = response
-            msg = f":white_check_mark: Messages sent by {user} will now be relayed to Big Brother."
+            msg = f":white_check_mark: Messages sent by {user.mention} will now be relayed to Big Brother."
 
             history = await self.bot.api_client.get(
                 self.api_endpoint,
@@ -125,7 +125,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
         await ctx.send(msg)
 
-    async def apply_unwatch(self, ctx: Context, user: FetchedMember, reason: str, send_message: bool = True) -> None:
+    async def apply_unwatch(self, ctx: Context, user: MemberOrUser, reason: str, send_message: bool = True) -> None:
         """
         Remove `user` from watched users and mark their infraction as inactive with `reason`.
 
@@ -156,7 +156,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
                 log.debug(f"Perma-banned user {user} was unwatched.")
                 return
             log.trace("User is not banned.  Sending message to channel")
-            message = f":white_check_mark: Messages sent by {user} will no longer be relayed."
+            message = f":white_check_mark: Messages sent by {user.mention} will no longer be relayed."
 
         else:
             log.trace("No active watches found for user.")

@@ -1,4 +1,4 @@
-import logging
+import re
 import typing as t
 from datetime import date, datetime
 
@@ -10,6 +10,8 @@ from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
+from bot.log import get_logger
+from bot.utils import scheduling
 from bot.utils.webhooks import send_webhook
 
 PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
@@ -21,7 +23,15 @@ THREAD_URL = "https://mail.python.org/archives/list/{list}@python.org/thread/{id
 
 AVATAR_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 
-log = logging.getLogger(__name__)
+# By first matching everything within a codeblock,
+# when matching markdown it won't be within a codeblock
+MARKDOWN_REGEX = re.compile(
+    r"(?P<codeblock>`.*?`)"  # matches everything within a codeblock
+    r"|(?P<markdown>(?<!\\)[_|])",  # matches unescaped `_` and `|`
+    re.DOTALL  # required to support multi-line codeblocks
+)
+
+log = get_logger(__name__)
 
 
 class PythonNews(Cog):
@@ -32,8 +42,8 @@ class PythonNews(Cog):
         self.webhook_names = {}
         self.webhook: t.Optional[discord.Webhook] = None
 
-        self.bot.loop.create_task(self.get_webhook_names())
-        self.bot.loop.create_task(self.get_webhook_and_channel())
+        scheduling.create_task(self.get_webhook_names(), event_loop=self.bot.loop)
+        scheduling.create_task(self.get_webhook_and_channel(), event_loop=self.bot.loop)
 
     async def start_tasks(self) -> None:
         """Start the tasks for fetching new PEPs and mailing list messages."""
@@ -72,6 +82,14 @@ class PythonNews(Cog):
             if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
                 self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
 
+    @staticmethod
+    def escape_markdown(content: str) -> str:
+        """Escape the markdown underlines and spoilers that aren't in codeblocks."""
+        return MARKDOWN_REGEX.sub(
+            lambda match: match.group("codeblock") or "\\" + match.group("markdown"),
+            content
+        )
+
     async def post_pep_news(self) -> None:
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
         # Wait until everything is ready and http_session available
@@ -102,8 +120,8 @@ class PythonNews(Cog):
 
             # Build an embed and send a webhook
             embed = discord.Embed(
-                title=new["title"],
-                description=new["summary"],
+                title=self.escape_markdown(new["title"]),
+                description=self.escape_markdown(new["summary"]),
                 timestamp=new_datetime,
                 url=new["link"],
                 colour=constants.Colours.soft_green
@@ -122,7 +140,7 @@ class PythonNews(Cog):
             self.bot.stats.incr("python_news.posted.pep")
 
             if msg.channel.is_news():
-                log.trace("Publishing PEP annnouncement because it was in a news channel")
+                log.trace("Publishing PEP announcement because it was in a news channel")
                 await msg.publish()
 
         # Apply new sent news to DB to avoid duplicate sending
@@ -167,13 +185,13 @@ class PythonNews(Cog):
                 ):
                     continue
 
-                content = email_information["content"]
+                content = self.escape_markdown(email_information["content"])
                 link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
 
                 # Build an embed and send a message to the webhook
                 embed = discord.Embed(
-                    title=thread_information["subject"],
-                    description=content[:500] + f"... [continue reading]({link})" if len(content) > 500 else content,
+                    title=self.escape_markdown(thread_information["subject"]),
+                    description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
                     timestamp=new_date,
                     url=link,
                     colour=constants.Colours.soft_green

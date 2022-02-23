@@ -1,14 +1,16 @@
 import itertools
-import logging
 import random
 import re
+from contextlib import suppress
 
-from discord import Embed
+from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
+from bot.log import get_logger
+from bot.utils.messages import wait_for_deletion
 
 URL = "https://pypi.org/pypi/{package}/json"
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
@@ -18,7 +20,7 @@ PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 ILLEGAL_CHARACTERS = re.compile(r"[^-_.a-zA-Z0-9]+")
 INVALID_INPUT_DELETE_DELAY = RedirectOutput.delete_delay
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class PyPi(Cog):
@@ -27,7 +29,7 @@ class PyPi(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(name="pypi", aliases=("package", "pack"))
+    @command(name="pypi", aliases=("package", "pack", "pip"))
     async def get_package_info(self, ctx: Context, package: str) -> None:
         """Provide information about a specific package from PyPI."""
         embed = Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
@@ -67,8 +69,15 @@ class PyPi(Cog):
                     log.trace(f"Error when fetching PyPi package: {response.status}.")
 
         if error:
-            await ctx.send(embed=embed, delete_after=INVALID_INPUT_DELETE_DELAY)
-            await ctx.message.delete(delay=INVALID_INPUT_DELETE_DELAY)
+            error_message = await ctx.send(embed=embed)
+            await wait_for_deletion(error_message, (ctx.author.id,), timeout=INVALID_INPUT_DELETE_DELAY)
+
+            # Make sure that we won't cause a ghost-ping by deleting the message
+            if not (ctx.message.mentions or ctx.message.role_mentions):
+                with suppress(NotFound):
+                    await ctx.message.delete()
+                    await error_message.delete()
+
         else:
             await ctx.send(embed=embed)
 

@@ -6,11 +6,25 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-test:
     runs-on: ubuntu-latest
     env:
+      # List of licenses that are compatible with the MIT License and
+      # can be used in our project
+      ALLOWED_LICENSE: Apache Software License;
+        BSD License;
+        GNU Library or Lesser General Public License (LGPL);
+        ISC License (ISCL);
+        MIT License;
+        Mozilla Public License 2.0 (MPL 2.0);
+        Public Domain;
+        Python Software Foundation License
+
       # Dummy values for required bot environment variables
       BOT_API_KEY: foo
       BOT_SENTRY_DSN: blah
@@ -31,6 +45,10 @@ jobs:
       POETRY_CACHE_DIR: ${{ github.workspace }}/.cache/py-user-base
       PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
       PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
+
+      # See https://github.com/pre-commit/pre-commit/issues/2178#issuecomment-1002163763
+      # for why we set this.
+      SETUPTOOLS_USE_DISTUTILS: stdlib
 
     steps:
       - name: Add custom PYTHONUSERBASE to PATH
@@ -67,6 +85,15 @@ jobs:
           pip install poetry
           poetry install
 
+      # Check all of our non-dev dependencies are compatible with the MIT license.
+      # If you added a new dependencies that is being rejected,
+      # please make sure it is compatible with the license for this project,
+      # and add it to the ALLOWED_LICENSE variable
+      - name: Check Dependencies License
+        run: |
+          pip-licenses --allow-only="$ALLOWED_LICENSE" \
+            --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
+
       # This step caches our pre-commit environment. To make sure we
       # do create a new environment when our pre-commit setup changes,
       # we create a cache key based on relevant factors.
@@ -99,13 +126,6 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: pytest -n auto --cov --disable-warnings -q
-
-      # This step will publish the coverage reports coveralls.io and
-      # print a "job" link in the output of the GitHub Action
-      - name: Publish coverage report to coveralls.io
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's

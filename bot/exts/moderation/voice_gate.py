@@ -1,22 +1,22 @@
 import asyncio
-import logging
 from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+import arrow
 import discord
 from async_rediscache import RedisCache
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
-
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.utils.checks import InWhitelistCheckFailure
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Flag written to the cog's RedisCache as a value when the Member's (key) notification
 # was already removed ~ this signals both that no further notifications should be sent,
@@ -30,7 +30,7 @@ FAILED_MESSAGE = (
 
 MESSAGE_FIELD_MAP = {
     "joined_at": f"have been on the server for less than {GateConf.minimum_days_member} days",
-    "voice_banned": "have an active voice ban infraction",
+    "voice_gate_blocked": "have an active voice infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
     "activity_blocks": f"have been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
 }
@@ -166,11 +166,14 @@ class VoiceGate(Cog):
             return
 
         checks = {
-            "joined_at": ctx.author.joined_at > datetime.utcnow() - timedelta(days=GateConf.minimum_days_member),
+            "joined_at": (
+                ctx.author.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
+            ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
-            "voice_banned": data["voice_banned"],
-            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks
+            "voice_gate_blocked": data["voice_gate_blocked"],
+            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
         }
+
         failed = any(checks.values())
         failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
         [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]

@@ -1,12 +1,12 @@
-import logging
 from typing import Optional
 
 import discord
 from discord import Embed
 
+from bot.log import get_logger
 from bot.utils.messages import sub_clyde
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 async def send_webhook(

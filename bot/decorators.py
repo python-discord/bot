@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import logging
 import types
 import typing as t
 from contextlib import suppress
@@ -10,11 +9,12 @@ from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
-from bot.utils import function
+from bot.log import get_logger
+from bot.utils import function, scheduling
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
 from bot.utils.function import command_wraps
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def in_whitelist(
@@ -154,7 +154,7 @@ def redirect_output(
 
             if ping_user:
                 await ctx.send(f"Here's the output of your command, {ctx.author.mention}")
-            asyncio.create_task(func(self, ctx, *args, **kwargs))
+            scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
                 f"Hey, {ctx.author.mention}, you can find the output of your command here: "
@@ -188,7 +188,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     """
     def decorator(func: types.FunctionType) -> types.FunctionType:
         @command_wraps(func)
-        async def wrapper(*args, **kwargs) -> None:
+        async def wrapper(*args, **kwargs) -> t.Any:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
             bound_args = function.get_bound_args(func, args, kwargs)
@@ -196,8 +196,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
             if not isinstance(target, Member):
                 log.trace("The target is not a discord.Member; skipping role hierarchy check.")
-                await func(*args, **kwargs)
-                return
+                return await func(*args, **kwargs)
 
             ctx = function.get_arg_value(1, bound_args)
             cmd = ctx.command.name
@@ -214,7 +213,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                 )
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
-                await func(*args, **kwargs)
+                return await func(*args, **kwargs)
         return wrapper
     return decorator
 

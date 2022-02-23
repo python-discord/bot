@@ -1,10 +1,13 @@
 import asyncio
 import contextlib
 import inspect
-import logging
 import typing as t
 from datetime import datetime
 from functools import partial
+
+from arrow import Arrow
+
+from bot.log import get_logger
 
 
 class Scheduler:
@@ -27,7 +30,7 @@ class Scheduler:
     def __init__(self, name: str):
         self.name = name
 
-        self._log = logging.getLogger(f"{__name__}.{name}")
+        self._log = get_logger(f"{__name__}.{name}")
         self._scheduled_tasks: t.Dict[t.Hashable, asyncio.Task] = {}
 
     def __contains__(self, task_id: t.Hashable) -> bool:
@@ -57,7 +60,7 @@ class Scheduler:
         self._scheduled_tasks[task_id] = task
         self._log.debug(f"Scheduled task #{task_id} {id(task)}.")
 
-    def schedule_at(self, time: datetime, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    def schedule_at(self, time: t.Union[datetime, Arrow], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
         Schedule `coroutine` to be executed at the given `time`.
 
@@ -187,5 +190,5 @@ def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.
         exception = task.exception()
         # Log the exception if one exists.
         if exception and not isinstance(exception, suppressed_exceptions):
-            log = logging.getLogger(__name__)
+            log = get_logger(__name__)
             log.error(f"Error in task {task.get_name()} {id(task)}!", exc_info=exception)

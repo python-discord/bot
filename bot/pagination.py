@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import typing as t
 from contextlib import suppress
 from functools import partial
@@ -9,6 +8,7 @@ from discord.abc import User
 from discord.ext.commands import Context, Paginator
 
 from bot import constants
+from bot.log import get_logger
 from bot.utils import messages
 
 FIRST_EMOJI = "\u23EE"   # [:track_previous:]
@@ -19,7 +19,7 @@ DELETE_EMOJI = constants.Emojis.trashcan  # [:trashcan:]
 
 PAGINATION_EMOJI = (FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI)
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class EmptyPaginatorEmbedError(Exception):
@@ -49,8 +49,8 @@ class LinePaginator(Paginator):
         self,
         prefix: str = '```',
         suffix: str = '```',
-        max_size: int = 2000,
-        scale_to_size: int = 2000,
+        max_size: int = 4000,
+        scale_to_size: int = 4000,
         max_lines: t.Optional[int] = None,
         linesep: str = "\n"
     ) -> None:
@@ -59,10 +59,10 @@ class LinePaginator(Paginator):
 
         It overrides in order to allow us to configure the maximum number of lines per page.
         """
-        # Embeds that exceed 2048 characters will result in an HTTPException
-        # (Discord API limit), so we've set a limit of 2000
-        if max_size > 2000:
-            raise ValueError(f"max_size must be <= 2,000 characters. ({max_size} > 2000)")
+        # Embeds that exceed 4096 characters will result in an HTTPException
+        # (Discord API limit), so we've set a limit of 4000
+        if max_size > 4000:
+            raise ValueError(f"max_size must be <= 4,000 characters. ({max_size} > 4000)")
 
         super().__init__(
             prefix,
@@ -74,8 +74,8 @@ class LinePaginator(Paginator):
         if scale_to_size < max_size:
             raise ValueError(f"scale_to_size must be >= max_size. ({scale_to_size} < {max_size})")
 
-        if scale_to_size > 2000:
-            raise ValueError(f"scale_to_size must be <= 2,000 characters. ({scale_to_size} > 2000)")
+        if scale_to_size > 4000:
+            raise ValueError(f"scale_to_size must be <= 4,000 characters. ({scale_to_size} > 4000)")
 
         self.scale_to_size = scale_to_size - len(suffix)
         self.max_lines = max_lines
@@ -197,7 +197,7 @@ class LinePaginator(Paginator):
         suffix: str = "",
         max_lines: t.Optional[int] = None,
         max_size: int = 500,
-        scale_to_size: int = 2000,
+        scale_to_size: int = 4000,
         empty: bool = True,
         restrict_to_user: User = None,
         timeout: int = 300,

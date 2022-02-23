@@ -1,7 +1,5 @@
-import logging
 import textwrap
 import typing as t
-from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -10,15 +8,18 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, Snowflake, UserMention, allowed_strings, proxy_user
+from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
+from bot.utils.members import get_or_fetch_member
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class ModManagement(commands.Cog):
@@ -40,9 +41,22 @@ class ModManagement(commands.Cog):
         return self.bot.get_cog("Infractions")
 
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
-    async def infraction_group(self, ctx: Context) -> None:
-        """Infraction management commands."""
-        await ctx.send_help(ctx.command)
+    async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
+        """
+        Infraction management commands.
+
+        If `infraction` is passed then this command fetches that infraction. The `Infraction` converter
+        supports 'l', 'last' and 'recent' to get the most recent infraction made by `ctx.author`.
+        """
+        if infraction is None:
+            await ctx.send_help(ctx.command)
+            return
+
+        embed = discord.Embed(
+            title=f"Infraction #{infraction['id']}",
+            colour=discord.Colour.orange()
+        )
+        await self.send_infraction_list(ctx, embed, [infraction])
 
     @infraction_group.command(name="resend", aliases=("send", "rs", "dm"))
     async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
@@ -51,11 +65,16 @@ class ModManagement(commands.Cog):
             await ctx.send(f"{constants.Emojis.failmail} You may not resend hidden infractions.")
             return
 
+        member = await get_or_fetch_member(ctx.guild, infraction["user"])
+        if not member:
+            await ctx.send(f"{constants.Emojis.failmail} Cannot find member `{infraction['user']}`.")
+            return
+
         id_ = infraction["id"]
         reason = infraction["reason"] or "No reason provided."
         reason += "\n\n**This is a re-sent message for a previously applied infraction which may have been edited.**"
 
-        if await _utils.notify_infraction(infraction, reason=reason):
+        if await _utils.notify_infraction(infraction, member, reason):
             await ctx.send(f":incoming_envelope: Resent DM for infraction `{id_}`.")
         else:
             await ctx.send(f"{constants.Emojis.failmail} Failed to resend DM for infraction `{id_}`.")
@@ -95,7 +114,7 @@ class ModManagement(commands.Cog):
         """
         old_reason = infraction["reason"]
 
-        if old_reason is not None:
+        if old_reason is not None and reason is not None:
             add_period = not old_reason.endswith((".", "!", "?"))
             reason = old_reason + (". " if add_period else " ") + reason
 
@@ -140,16 +159,17 @@ class ModManagement(commands.Cog):
         log_text = ""
 
         if duration is not None and not infraction['active']:
-            if reason is None:
+            if (infr_type := infraction['type']) in ('note', 'warning'):
+                await ctx.send(f":x: Cannot edit the expiration of a {infr_type}.")
+            else:
                 await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
-                return
-            confirm_messages.append("expiry unchanged (infraction already expired)")
+            return
         elif isinstance(duration, str):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
             request_data['expires_at'] = duration.isoformat()
-            expiry = time.format_infraction_with_duration(request_data['expires_at'])
+            expiry = time.format_with_duration(duration)
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
@@ -174,15 +194,15 @@ class ModManagement(commands.Cog):
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
             if infraction['expires_at']:
-                self.infractions_cog.scheduler.cancel(new_infraction['id'])
+                self.infractions_cog.scheduler.cancel(infraction_id)
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
-                Previous expiry: {infraction['expires_at'] or "Permanent"}
-                New expiry: {new_infraction['expires_at'] or "Permanent"}
+                Previous expiry: {time.until_expiration(infraction['expires_at'])}
+                New expiry: {time.until_expiration(new_infraction['expires_at'])}
             """.rstrip()
 
         changes = ' & '.join(confirm_messages)
@@ -190,54 +210,61 @@ class ModManagement(commands.Cog):
 
         # Get information about the infraction's user
         user_id = new_infraction['user']
-        user = ctx.guild.get_member(user_id)
+        user = await get_or_fetch_member(ctx.guild, user_id)
 
         if user:
             user_text = messages.format_user(user)
-            thumbnail = user.avatar_url_as(static_format="png")
+            thumbnail = user.display_avatar.url
         else:
             user_text = f"<@{user_id}>"
             thumbnail = None
 
         await self.mod_log.send_log_message(
             icon_url=constants.Icons.pencil,
-            colour=discord.Colour.blurple(),
+            colour=discord.Colour.og_blurple(),
             title="Infraction edited",
             thumbnail=thumbnail,
             text=textwrap.dedent(f"""
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
                 Edited by: {ctx.message.author.mention}{log_text}
-            """)
+            """),
+            footer=f"ID: {infraction_id}"
         )
 
     # endregion
     # region: Search infractions
 
     @infraction_group.group(name="search", aliases=('s',), invoke_without_command=True)
-    async def infraction_search_group(self, ctx: Context, query: t.Union[UserMention, Snowflake, str]) -> None:
+    async def infraction_search_group(self, ctx: Context, query: t.Union[UnambiguousUser, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
             await self.search_user(ctx, discord.Object(query))
-        else:
+        elif isinstance(query, str):
             await self.search_reason(ctx, query)
+        else:
+            await self.search_user(ctx, query)
 
-    @infraction_search_group.command(name="user", aliases=("member", "id"))
-    async def search_user(self, ctx: Context, user: t.Union[discord.User, proxy_user]) -> None:
+    @infraction_search_group.command(name="user", aliases=("member", "userid"))
+    async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={'user__id': str(user.id)}
         )
 
-        user = self.bot.get_user(user.id)
-        if not user and infraction_list:
-            # Use the user data retrieved from the DB for the username.
-            user = infraction_list[0]["user"]
-            user = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+        if isinstance(user, (discord.Member, discord.User)):
+            user_str = escape_markdown(str(user))
+        else:
+            if infraction_list:
+                user = infraction_list[0]["user"]
+                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+            else:
+                user_str = str(user.id)
 
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions for {user} ({len(infraction_list)} total)",
+            title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
@@ -249,14 +276,69 @@ class ModManagement(commands.Cog):
             'bot/infractions/expanded',
             params={'search': reason}
         )
+
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions matching `{reason}` ({len(infraction_list)} total)",
+            title=f"Infractions matching `{reason}` ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
     # endregion
+    # region: Search for infractions by given actor
+
+    @infraction_group.command(name="by", aliases=("b",))
+    async def search_by_actor(
+        self,
+        ctx: Context,
+        actor: t.Union[t.Literal["m", "me"], UnambiguousUser],
+        oldest_first: bool = False
+    ) -> None:
+        """
+        Search for infractions made by `actor`.
+
+        Use "m" or "me" as the `actor` to get infractions by author.
+
+        Use "1" for `oldest_first` to send oldest infractions first.
+        """
+        if isinstance(actor, str):
+            actor = ctx.author
+
+        if oldest_first:
+            ordering = 'inserted_at'  # oldest infractions first
+        else:
+            ordering = '-inserted_at'  # newest infractions first
+
+        infraction_list = await self.bot.api_client.get(
+            'bot/infractions/expanded',
+            params={
+                'actor__id': str(actor.id),
+                'ordering': ordering
+            }
+        )
+
+        formatted_infraction_count = self.format_infraction_count(len(infraction_list))
+        embed = discord.Embed(
+            title=f"Infractions by {actor} ({formatted_infraction_count} total)",
+            colour=discord.Colour.orange()
+        )
+
+        await self.send_infraction_list(ctx, embed, infraction_list)
+
+    # endregion
     # region: Utility functions
+
+    @staticmethod
+    def format_infraction_count(infraction_count: int) -> str:
+        """
+        Returns a string-formatted infraction count.
+
+        API limits returned infractions to a maximum of 100, so if `infraction_count`
+        is 100 then we return `"100+"`. Otherwise, return `str(infraction_count)`.
+        """
+        if infraction_count == 100:
+            return "100+"
+        return str(infraction_count)
 
     async def send_infraction_list(
         self,
@@ -288,7 +370,9 @@ class ModManagement(commands.Cog):
         active = infraction["active"]
         user = infraction["user"]
         expires_at = infraction["expires_at"]
-        created = time.format_infraction(infraction["inserted_at"])
+        inserted_at = infraction["inserted_at"]
+        created = time.discord_timestamp(inserted_at)
+        dm_sent = infraction["dm_sent"]
 
         # Format the user string.
         if user_obj := self.bot.get_user(user["id"]):
@@ -300,25 +384,31 @@ class ModManagement(commands.Cog):
             user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
         if active:
-            remaining = time.until_expiration(expires_at) or "Expired"
+            remaining = time.until_expiration(expires_at)
         else:
             remaining = "Inactive"
 
         if expires_at is None:
-            expires = "*Permanent*"
+            duration = "*Permanent*"
         else:
-            date_from = datetime.strptime(created, time.INFRACTION_FORMAT)
-            expires = time.format_infraction_with_duration(expires_at, date_from)
+            duration = time.humanize_delta(inserted_at, expires_at)
+
+        # Format `dm_sent`
+        if dm_sent is None:
+            dm_sent_text = "N/A"
+        else:
+            dm_sent_text = "Yes" if dm_sent else "No"
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {user_str}
             Type: **{infraction["type"]}**
+            DM Sent: {dm_sent_text}
             Shadow: {infraction["hidden"]}
             Created: {created}
-            Expires: {expires}
-            Remaining: {remaining}
+            Expires: {remaining}
+            Duration: {duration}
             Actor: <@{infraction["actor"]["id"]}>
             ID: `{infraction["id"]}`
             Reason: {infraction["reason"] or "*None*"}
@@ -339,12 +429,19 @@ class ModManagement(commands.Cog):
         return all(checks)
 
     # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
-        """Send a notification to the invoking context on a Union failure."""
+    async def cog_command_error(self, ctx: Context, error: commands.CommandError) -> None:
+        """Handles errors for commands within this cog."""
         if isinstance(error, commands.BadUnionArgument):
             if discord.User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
+
+        elif isinstance(error, InvalidInfraction):
+            if error.infraction_arg.isdigit():
+                await ctx.send(f":x: Could not find an infraction with id `{error.infraction_arg}`.")
+            else:
+                await ctx.send(f":x: `{error.infraction_arg}` is not a valid integer infraction id.")
+            error.handled = True
 
 
 def setup(bot: Bot) -> None:

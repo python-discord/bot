@@ -1,4 +1,3 @@
-import logging
 import typing as t
 from datetime import datetime
 
@@ -8,10 +7,12 @@ from discord.ext.commands import Context
 import bot
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
+from bot.converters import MemberOrUser
 from bot.errors import InvalidInfractedUserError
+from bot.log import get_logger
 from bot.utils import time
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # apply icon, pardon icon
 INFRACTION_ICONS = {
@@ -21,24 +22,24 @@ INFRACTION_ICONS = {
     "note": (Icons.user_warn, None),
     "superstar": (Icons.superstarify, Icons.unsuperstarify),
     "warning": (Icons.user_warn, None),
-    "voice_ban": (Icons.voice_state_red, Icons.voice_state_green),
+    "voice_mute": (Icons.voice_state_red, Icons.voice_state_green),
 }
 RULES_URL = "https://pythondiscord.com/pages/rules"
 
 # Type aliases
-UserObject = t.Union[discord.Member, discord.User]
-UserSnowflake = t.Union[UserObject, discord.Object]
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 
-APPEAL_EMAIL = "appeals@pythondiscord.com"
+APPEAL_SERVER_INVITE = "https://discord.gg/WXrCJxWBnm"
 
 INFRACTION_TITLE = "Please review our rules"
-INFRACTION_APPEAL_EMAIL_FOOTER = f"To appeal this infraction, send an e-mail to {APPEAL_EMAIL}"
+INFRACTION_APPEAL_SERVER_FOOTER = f"\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
 INFRACTION_APPEAL_MODMAIL_FOOTER = (
-    'If you would like to discuss or appeal this infraction, '
-    'send a message to the ModMail bot'
+    '\nIf you would like to discuss or appeal this infraction, '
+    'send a message to the ModMail bot.'
 )
 INFRACTION_AUTHOR_NAME = "Infraction information"
+
+LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL_MODMAIL_FOOTER))
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Type:** {type}\n"
@@ -47,7 +48,7 @@ INFRACTION_DESCRIPTION_TEMPLATE = (
 )
 
 
-async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
+async def post_user(ctx: Context, user: MemberOrUser) -> t.Optional[dict]:
     """
     Create a new user in the database.
 
@@ -55,14 +56,11 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
     """
     log.trace(f"Attempting to add user {user.id} to the database.")
 
-    if not isinstance(user, (discord.Member, discord.User)):
-        log.debug("The user being added to the DB is not a Member or User object.")
-
     payload = {
-        'discriminator': int(getattr(user, 'discriminator', 0)),
+        'discriminator': int(user.discriminator),
         'id': user.id,
         'in_guild': False,
-        'name': getattr(user, 'name', 'Name unknown'),
+        'name': user.name,
         'roles': []
     }
 
@@ -77,12 +75,13 @@ async def post_user(ctx: Context, user: UserSnowflake) -> t.Optional[dict]:
 
 async def post_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: MemberOrUser,
         infr_type: str,
         reason: str,
         expires_at: datetime = None,
         hidden: bool = False,
-        active: bool = True
+        active: bool = True,
+        dm_sent: bool = False,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
@@ -97,7 +96,8 @@ async def post_infraction(
         "reason": reason,
         "type": infr_type,
         "user": user.id,
-        "active": active
+        "active": active,
+        "dm_sent": dm_sent
     }
     if expires_at:
         payload['expires_at'] = expires_at.isoformat()
@@ -120,7 +120,7 @@ async def post_infraction(
 
 async def get_active_infraction(
         ctx: Context,
-        user: UserSnowflake,
+        user: MemberOrUser,
         infr_type: str,
         send_msg: bool = True
 ) -> t.Optional[dict]:
@@ -145,34 +145,52 @@ async def get_active_infraction(
         # Checks to see if the moderator should be told there is an active infraction
         if send_msg:
             log.trace(f"{user} has active infractions of type {infr_type}.")
-            await ctx.send(
-                f":x: According to my records, this user already has a {infr_type} infraction. "
-                f"See infraction **#{active_infractions[0]['id']}**."
-            )
+            await send_active_infraction_message(ctx, active_infractions[0])
         return active_infractions[0]
     else:
         log.trace(f"{user} does not have active infractions of type {infr_type}.")
 
 
-async def send_infraction_embed(
-        user: UserObject,
-        infr_type: str,
-        expires_at: t.Optional[str] = None,
-        reason: t.Optional[str] = None,
-        icon_url: str = Icons.token_removed
+async def send_active_infraction_message(ctx: Context, infraction: Infraction) -> None:
+    """Send a message stating that the given infraction is active."""
+    await ctx.send(
+        f":x: According to my records, this user already has a {infraction['type']} infraction. "
+        f"See infraction **#{infraction['id']}**."
+    )
+
+
+async def notify_infraction(
+        infraction: Infraction,
+        user: MemberOrUser,
+        reason: t.Optional[str] = None
 ) -> bool:
-    """DM a user about their new infraction and return True if the DM is successful."""
+    """
+    DM a user about their new infraction and return True if the DM is successful.
+
+    `reason` can be used to override what is in `infraction`. Otherwise, this data will
+    be retrieved from `infraction`.
+    """
+    infr_id = infraction["id"]
+    infr_type = infraction["type"].replace("_", " ").title()
+    icon_url = INFRACTION_ICONS[infraction["type"]][0]
+    expires_at = time.format_with_duration(infraction["expires_at"])
+
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
+
+    if reason is None:
+        reason = infraction["reason"]
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=f"{expires_at} UTC" if expires_at else "N/A",
+        expires=expires_at or "N/A",
         reason=reason or "No reason provided."
     )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
-    if len(text) > 2048:
-        text = f"{text[:2045]}..."
+    if len(text) > 4096 - LONGEST_EXTRAS:
+        text = f"{text[:4093-LONGEST_EXTRAS]}..."
+
+    text += INFRACTION_APPEAL_SERVER_FOOTER if infraction["type"] == 'ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
 
     embed = discord.Embed(
         description=text,
@@ -183,49 +201,19 @@ async def send_infraction_embed(
     embed.title = INFRACTION_TITLE
     embed.url = RULES_URL
 
-    embed.set_footer(
-        text=INFRACTION_APPEAL_EMAIL_FOOTER if infr_type == 'Ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
-    )
+    dm_sent = await send_private_embed(user, embed)
+    if dm_sent:
+        await bot.instance.api_client.patch(
+            f"bot/infractions/{infr_id}",
+            json={"dm_sent": True}
+        )
+        log.debug(f"Update infraction #{infr_id} dm_sent field to true.")
 
-    return await send_private_embed(user, embed)
-
-
-async def notify_infraction(
-        infraction: Infraction,
-        user: t.Optional[UserSnowflake] = None,
-        reason: t.Optional[str] = None
-) -> bool:
-    """
-    DM a user about their new infraction and return True if the DM is successful.
-
-    `user` and `reason` can be used to override what is in `infraction`. Otherwise, this data will
-    be retrieved from `infraction`.
-
-    Also return False if the user needs to be fetched but fails to be fetched.
-    """
-    if user is None:
-        user = discord.Object(infraction["user"])
-
-    # Sometimes user is a discord.Object; make it a proper user.
-    try:
-        if not isinstance(user, (discord.Member, discord.User)):
-            user = await bot.instance.fetch_user(user.id)
-    except discord.HTTPException as e:
-        log.error(f"Failed to DM {user.id}: could not fetch user (status {e.status})")
-        return False
-
-    type_ = infraction["type"].replace("_", " ").title()
-    icon = INFRACTION_ICONS[infraction["type"]][0]
-    expiry = time.format_infraction_with_duration(infraction["expires_at"])
-
-    if reason is None:
-        reason = infraction["reason"]
-
-    return await send_infraction_embed(user, type_, expiry, reason, icon)
+    return dm_sent
 
 
 async def notify_pardon(
-        user: UserObject,
+        user: MemberOrUser,
         title: str,
         content: str,
         icon_url: str = Icons.user_verified
@@ -243,7 +231,7 @@ async def notify_pardon(
     return await send_private_embed(user, embed)
 
 
-async def send_private_embed(user: UserObject, embed: discord.Embed) -> bool:
+async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
     """
     A helper method for sending an embed to a user's DMs.
 
