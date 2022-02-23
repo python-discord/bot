@@ -182,9 +182,10 @@ async def ensure_cached_claimant(channel: discord.TextChannel) -> None:
             if _message._match_bot_embed(message, _message.DORMANT_MSG):
                 log.info("Hit the dormant message embed before finding a claimant in %s (%d).", channel, channel.id)
                 break
-            user_id = CLAIMED_BY_RE.match(message.embeds[0].description).group("user_id")
-            await _caches.claimants.set(channel.id, int(user_id))
-            return
+            # Only set the claimant if the first embed matches the claimed channel embed regex
+            if match := CLAIMED_BY_RE.match(message.embeds[0].description):
+                await _caches.claimants.set(channel.id, int(match.group("user_id")))
+                return
 
     await bot.instance.get_channel(constants.Channels.helpers).send(
         f"I couldn't find a claimant for {channel.mention} in that last 1000 messages. "
