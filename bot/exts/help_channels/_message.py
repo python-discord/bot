@@ -205,7 +205,6 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
             message = f"There are only {number_of_channels_left} dormant channels left. "
         message += "Consider participating in some help channels so that we don't run out."
         await channel.send(message)
-
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
         log.exception("Failed to send notification about running low of dormant channels!")
