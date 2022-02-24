@@ -24,7 +24,7 @@ class ClosingReason(Enum):
     """All possible closing reasons for help channels."""
 
     COMMAND = "command"
-    LATEST_MESSSAGE = "auto.latest_message"
+    LATEST_MESSAGE = "auto.latest_message"
     CLAIMANT_TIMEOUT = "auto.claimant_timeout"
     OTHER_TIMEOUT = "auto.other_timeout"
     DELETED = "auto.deleted"
@@ -77,7 +77,7 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
 
         # Use the greatest offset to avoid the possibility of prematurely closing the channel.
         time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
-        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSSAGE
+        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSAGE
         return time, reason
 
     claimant_time = Arrow.utcfromtimestamp(claimant_time)

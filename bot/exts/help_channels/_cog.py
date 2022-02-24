@@ -78,7 +78,10 @@ class HelpChannels(commands.Cog):
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
-        self.last_notification: t.Optional[arrow.Arrow] = None
+        # Notifications
+        # Using a very old date so that we don't have to use Optional typing.
+        self.last_none_remaining_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
+        self.last_running_low_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
 
         self.dynamic_message: t.Optional[int] = None
         self.available_help_channels: t.Set[discord.TextChannel] = set()
@@ -252,13 +255,21 @@ class HelpChannels(commands.Cog):
 
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
-                notify_channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
-                last_notification = await _message.notify(notify_channel, self.last_notification)
-                if last_notification:
-                    self.last_notification = last_notification
-                    self.bot.stats.incr("help.out_of_channel_alerts")
+                last_notification = await _message.notify_none_remaining(self.last_none_remaining_notification)
 
-                channel = await self.wait_for_dormant_channel()
+                if last_notification:
+                    self.last_none_remaining_notification = last_notification
+
+                channel = await self.wait_for_dormant_channel()  # Blocks until a new channel is available
+
+        else:
+            last_notification = await _message.notify_running_low(
+                self.channel_queue.qsize(),
+                self.last_running_low_notification
+            )
+
+            if last_notification:
+                self.last_running_low_notification = last_notification
 
         return channel
 
