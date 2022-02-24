@@ -116,7 +116,7 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"<@&{Roles.moderators}>\n{content}"
+                content = f"<@&{Roles.moderators}> {content}"
             else:
                 content = f"<@&{Roles.moderators}>"
 
@@ -729,6 +729,9 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_edit(self, event: discord.RawMessageUpdateEvent) -> None:
         """Log raw message edit event to message change log."""
+        if event.guild_id is None:
+            return  # ignore DM edits
+
         await self.bot.wait_until_guild_available()
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))

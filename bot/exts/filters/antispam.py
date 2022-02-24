@@ -103,6 +103,7 @@ class DeletionContext:
             mod_alert_message += content
 
         await modlog.send_log_message(
+            content=", ".join(str(m.id) for m in self.members),  # quality-of-life improvement for mobile moderators
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title="Spam detected!",
