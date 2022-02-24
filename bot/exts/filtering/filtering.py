@@ -12,7 +12,6 @@ from bot.bot import Bot
 from bot.constants import Colours, MODERATION_ROLES, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
-from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui import ArgumentCompletionView
 from bot.exts.filtering._utils import past_tense
@@ -94,11 +93,11 @@ class Filtering(Cog):
 
         ctx = FilterContext(Event.MESSAGE, msg.author, msg.channel, msg.content, msg, msg.embeds)
 
-        triggered, result_actions = await self._resolve_action(ctx)
+        result_actions, list_messages = await self._resolve_action(ctx)
         if result_actions:
             await result_actions.action(ctx)
-            if ctx.send_alert:
-                await self._send_alert(ctx, triggered)
+        if ctx.send_alert:
+            await self._send_alert(ctx, list_messages)
 
     # endregion
     # region: blacklist commands
@@ -178,23 +177,29 @@ class Filtering(Cog):
 
     async def _resolve_action(
         self, ctx: FilterContext
-    ) -> tuple[dict[FilterList, list[Filter]], Optional[ActionSettings]]:
-        """Get the filters triggered per list, and resolve from them the action that needs to be taken for the event."""
-        triggered = {}
+    ) -> tuple[Optional[ActionSettings], dict[FilterList, str]]:
+        """
+        Return the actions that should be taken for all filter lists in the given context.
+
+        Additionally, a message is possibly provided from each filter list describing the triggers,
+        which should be relayed to the moderators.
+        """
+        actions = []
+        messages = {}
         for filter_list in self._subscriptions[ctx.event]:
-            result = filter_list.triggers_for(ctx)
-            if result:
-                triggered[filter_list] = result
+            list_actions, list_message = filter_list.actions_for(ctx)
+            if list_actions:
+                actions.append(list_actions)
+            if list_message:
+                messages[filter_list] = list_message
 
         result_actions = None
-        if triggered:
-            result_actions = reduce(
-                operator.or_, (filter_.actions for filters in triggered.values() for filter_ in filters)
-            )
+        if actions:
+            result_actions = reduce(operator.or_, (action for action in actions))
 
-        return triggered, result_actions
+        return result_actions, messages
 
-    async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, list[Filter]]) -> None:
+    async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, str]) -> None:
         """Build an alert message from the filter context, and send it via the alert webhook."""
         if not self.webhook:
             return
@@ -208,19 +213,12 @@ class Filtering(Cog):
             triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}"
         else:
             triggered_in = "**DM**"
-        if len(triggered_filters) == 1 and len(list(triggered_filters.values())[0]) == 1:
-            filter_list, (filter_,) = next(iter(triggered_filters.items()))
-            filters = f"**{filter_list.name.title()} Filter:** #{filter_.id} (`{filter_.content}`)"
-            if filter_.description:
-                filters += f" - {filter_.description}"
-        else:
-            filters = []
-            for filter_list, list_filters in triggered_filters.items():
-                filters.append(
-                    (f"**{filter_list.name.title()} Filters:** "
-                     ", ".join(f"#{filter_.id} (`{filter_.content}`)" for filter_ in list_filters))
-                )
-            filters = "\n".join(filters)
+
+        filters = []
+        for filter_list, list_message in triggered_filters.items():
+            if list_message:
+                filters.append(f"**{filter_list.name.title()} Filters:** {list_message}")
+        filters = "\n".join(filters)
 
         matches = "**Matches:** " + ", ".join(repr(match) for match in ctx.matches)
         actions = "**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")

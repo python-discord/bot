@@ -1,12 +1,12 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import Dict, List, Type
+from typing import Dict, List, Optional, Type
 
 from discord.ext.commands import BadArgument, Context, Converter
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
-from bot.exts.filtering._settings import Settings, ValidationSettings, create_settings
+from bot.exts.filtering._settings import ActionSettings, ValidationSettings, create_settings
 from bot.exts.filtering._utils import FieldRequiring, past_tense
 from bot.log import get_logger
 
@@ -45,7 +45,7 @@ class FilterList(FieldRequiring):
 
     def __init__(self, filter_type: Type[Filter]):
         self.filter_lists: dict[ListType, list[Filter]] = {}
-        self.defaults: dict[ListType, dict[str, Settings]] = {}
+        self.defaults = {}
 
         self.filter_type = filter_type
 
@@ -64,8 +64,8 @@ class FilterList(FieldRequiring):
         self.filter_lists[list_type] = filters
 
     @abstractmethod
-    def triggers_for(self, ctx: FilterContext) -> list[Filter]:
-        """Dispatch the given event to the list's filters, and return filters triggered."""
+    def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
+        """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
 
     @staticmethod
     def filter_list_result(ctx: FilterContext, filters: List[Filter], defaults: ValidationSettings) -> list[Filter]:

@@ -4,7 +4,7 @@ from enum import Enum, auto
 from typing import Any, Optional
 
 import arrow
-from discord import Colour
+from discord import Colour, Embed
 from discord.errors import Forbidden
 
 import bot
@@ -74,22 +74,20 @@ class InfractionAndNotification(ActionEntry):
         # If there is no infraction to apply, any DM contents already provided in the context take precedence.
         if self.infraction_type == Infraction.NONE and (ctx.dm_content or ctx.dm_embed):
             dm_content = ctx.dm_content
-            dm_embed = ctx.dm_embed.description
+            dm_embed = ctx.dm_embed
         else:
             dm_content = self.dm_content
             dm_embed = self.dm_embed
 
         if dm_content or dm_embed:
             dm_content = f"Hey {ctx.author.mention}!\n{dm_content}"
-            ctx.dm_embed.description = dm_embed
-            if not ctx.dm_embed.colour:
-                ctx.dm_embed.colour = Colour.og_blurple()
+            dm_embed = Embed(description=dm_embed, colour=Colour.og_blurple())
 
             try:
-                await ctx.author.send(dm_content, embed=ctx.dm_embed)
+                await ctx.author.send(dm_content, embed=dm_embed)
+                ctx.action_descriptions.append("notified")
             except Forbidden:
-                await ctx.channel.send(ctx.dm_content, embed=ctx.dm_embed)
-            ctx.action_descriptions.append("notified")
+                ctx.action_descriptions.append("notified (failed)")
 
         msg_ctx = await bot.instance.get_context(ctx.message)
         msg_ctx.guild = bot.instance.get_guild(Guild.id)
