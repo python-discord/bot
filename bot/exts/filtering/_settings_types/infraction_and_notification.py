@@ -81,7 +81,7 @@ class InfractionAndNotification(ActionEntry):
 
         if dm_content or dm_embed:
             dm_content = f"Hey {ctx.author.mention}!\n{dm_content}"
-            dm_embed = Embed(description=dm_embed, colour=Colour.og_blurple())
+            dm_embed = Embed(description=dm_embed, colour=Colour.og_blurple()) if dm_embed else None
 
             try:
                 await ctx.author.send(dm_content, embed=dm_embed)

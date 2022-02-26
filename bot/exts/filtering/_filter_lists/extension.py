@@ -43,10 +43,14 @@ class ExtensionsList(FilterList):
         filtering_cog.subscribe(self, Event.MESSAGE)
         self._whitelisted_description = None
 
-    def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
+    async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
         # Return early if the message doesn't have attachments.
         if not ctx.message.attachments:
+            return None, ""
+
+        _, failed = self.defaults[ListType.ALLOW]["validations"].evaluate(ctx)
+        if failed:  # There's no extension filtering in this context.
             return None, ""
 
         # Find all extensions in the message.
@@ -54,9 +58,7 @@ class ExtensionsList(FilterList):
             (splitext(attachment.filename.lower())[1], attachment.filename) for attachment in ctx.message.attachments
         }
         new_ctx = ctx.replace(content={ext for ext, _ in all_ext})  # And prepare the context for the filters to read.
-        triggered = self.filter_list_result(
-            new_ctx, self.filter_lists[ListType.ALLOW], self.defaults[ListType.ALLOW]["validations"]
-        )
+        triggered = [filter_ for filter_ in self.filter_lists[ListType.ALLOW] if filter_.triggered_on(new_ctx)]
         allowed_ext = {filter_.content for filter_ in triggered}  # Get the extensions in the message that are allowed.
 
         # See if there are any extensions left which aren't allowed.

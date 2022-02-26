@@ -27,7 +27,7 @@ class TokensList(FilterList):
         super().__init__(TokenFilter)
         filtering_cog.subscribe(self, Event.MESSAGE, Event.MESSAGE_EDIT)
 
-    def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
+    async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
         text = ctx.content
         if not text:

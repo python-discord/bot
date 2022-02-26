@@ -175,9 +175,7 @@ class Filtering(Cog):
     # endregion
     # region: helper functions
 
-    async def _resolve_action(
-        self, ctx: FilterContext
-    ) -> tuple[Optional[ActionSettings], dict[FilterList, str]]:
+    async def _resolve_action(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], dict[FilterList, str]]:
         """
         Return the actions that should be taken for all filter lists in the given context.
 
@@ -187,7 +185,7 @@ class Filtering(Cog):
         actions = []
         messages = {}
         for filter_list in self._subscriptions[ctx.event]:
-            list_actions, list_message = filter_list.actions_for(ctx)
+            list_actions, list_message = await filter_list.actions_for(ctx)
             if list_actions:
                 actions.append(list_actions)
             if list_message:
@@ -231,7 +229,7 @@ class Filtering(Cog):
             embed_content = embed_content[:4000] + " [...]"
         embed.description = embed_content
 
-        await self.webhook.send(username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds])
+        await self.webhook.send(username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10])
 
     def _get_list_by_name(self, list_name: str) -> FilterList:
         """Get a filter list by its name, or raise an error if there's no such list."""
@@ -248,12 +246,16 @@ class Filtering(Cog):
     async def _send_list(self, ctx: Context, list_name: str, list_type: ListType) -> None:
         """Show the list of filters identified by the list name and type."""
         filter_list = self._get_list_by_name(list_name)
-        lines = list(map(str, filter_list.filter_lists.get(list_type, [])))
+        type_filters = filter_list.filter_lists.get(list_type)
+        if type_filters is None:
+            await ctx.send(f":x: There is no list of {past_tense(list_type.name.lower())} {filter_list.name}s.")
+            return
+
+        lines = list(map(str, type_filters))
         log.trace(f"Sending a list of {len(lines)} filters.")
 
-        list_name_plural = list_name + ("s" if not list_name.endswith("s") else "")
         embed = Embed(colour=Colour.blue())
-        embed.set_author(name=f"List of {past_tense(list_type.name.lower())} {list_name_plural} ({len(lines)} total)")
+        embed.set_author(name=f"List of {past_tense(list_type.name.lower())} {filter_list.name}s ({len(lines)} total)")
 
         await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False)
 

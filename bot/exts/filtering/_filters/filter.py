@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Optional
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings import ActionSettings, create_settings
@@ -13,7 +13,7 @@ class Filter(ABC):
     and defines what action should be performed if it is triggered.
     """
 
-    def __init__(self, filter_data: Dict, action_defaults: Optional[ActionSettings] = None):
+    def __init__(self, filter_data: dict, action_defaults: Optional[ActionSettings] = None):
         self.id = filter_data["id"]
         self.content = filter_data["content"]
         self.description = filter_data["description"]
