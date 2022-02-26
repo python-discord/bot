@@ -2,7 +2,7 @@ from abc import abstractmethod
 from enum import Enum
 from typing import Dict, List, Optional, Type
 
-from discord.ext.commands import BadArgument, Context, Converter
+from discord.ext.commands import BadArgument
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
@@ -20,20 +20,20 @@ class ListType(Enum):
     ALLOW = 1
 
 
-class ListTypeConverter(Converter):
-    """A Converter to get the appropriate list type."""
+#  Alternative names with which each list type can be specified in commands.
+aliases = (
+    (ListType.DENY, {"deny", "blocklist", "blacklist", "denylist", "bl", "dl"}),
+    (ListType.ALLOW, {"allow", "allowlist", "whitelist", "al", "wl"})
+)
 
-    aliases = (
-        (ListType.DENY, {"deny", "blocklist", "blacklist", "denylist", "bl", "dl"}),
-        (ListType.ALLOW, {"allow", "allowlist", "whitelist", "al", "wl"})
-    )
 
-    async def convert(self, ctx: Context, argument: str) -> ListType:
-        """Get the appropriate list type."""
-        for list_type, aliases in self.aliases:
-            if argument in aliases or argument in map(past_tense, aliases):
-                return list_type
-        raise BadArgument(f"No matching list type found for {argument!r}.")
+def list_type_converter(argument: str) -> ListType:
+    """A converter to get the appropriate list type."""
+    argument = argument.lower()
+    for list_type, list_aliases in aliases:
+        if argument in list_aliases or argument in map(past_tense, list_aliases):
+            return list_type
+    raise BadArgument(f"No matching list type found for {argument!r}.")
 
 
 class FilterList(FieldRequiring):

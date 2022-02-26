@@ -5,7 +5,7 @@ from functools import reduce
 from operator import or_
 from typing import Optional
 
-from botcore.regex import DISCORD_INVITE
+from botcore.utils.regex import DISCORD_INVITE
 from discord import Embed, Invite
 from discord.errors import NotFound
 

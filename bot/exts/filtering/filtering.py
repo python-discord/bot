@@ -11,7 +11,7 @@ from discord.utils import escape_markdown
 from bot.bot import Bot
 from bot.constants import Colours, MODERATION_ROLES, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
-from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
+from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui import ArgumentCompletionView
 from bot.exts.filtering._utils import past_tense
@@ -114,7 +114,7 @@ class Filtering(Cog):
         if list_name is None:
             await ctx.send(
                 "The **list_name** argument is unspecified. Please pick a value from the options below:",
-                view=ArgumentCompletionView(ctx, "list_name", list(self.filter_lists))
+                view=ArgumentCompletionView(ctx, [], "list_name", list(self.filter_lists), 1, None)
             )
             return
         await self._send_list(ctx, list_name, ListType.DENY)
@@ -134,7 +134,7 @@ class Filtering(Cog):
         if list_name is None:
             await ctx.send(
                 "The **list_name** argument is unspecified. Please pick a value from the options below:",
-                view=ArgumentCompletionView(ctx, "list_name", list(self.filter_lists))
+                view=ArgumentCompletionView(ctx, [], "list_name", list(self.filter_lists), 1, None)
             )
             return
         await self._send_list(ctx, list_name, ListType.ALLOW)
@@ -150,13 +150,13 @@ class Filtering(Cog):
 
     @filter.command(name="list", aliases=("get",))
     async def f_list(
-            self, ctx: Context, list_type: Optional[ListTypeConverter] = None, list_name: Optional[str] = None
+            self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
     ) -> None:
         """List the contents of a specified list of filters."""
         if list_name is None:
             await ctx.send(
                 "The **list_name** argument is unspecified. Please pick a value from the options below:",
-                view=ArgumentCompletionView(ctx, "list_name", list(self.filter_lists))
+                view=ArgumentCompletionView(ctx, [list_type], "list_name", list(self.filter_lists), 1, None)
             )
             return
 
@@ -165,7 +165,9 @@ class Filtering(Cog):
             if len(filter_list.filter_lists) > 1:
                 await ctx.send(
                     "The **list_type** argument is unspecified. Please pick a value from the options below:",
-                    view=ArgumentCompletionView(ctx, "list_type", [option.name for option in ListType])
+                    view=ArgumentCompletionView(
+                        ctx, [list_name], "list_type", [option.name for option in ListType], 0, list_type_converter
+                    )
                 )
                 return
             list_type = list(filter_list.filter_lists)[0]
