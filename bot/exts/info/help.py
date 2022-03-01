@@ -121,7 +121,7 @@ class CommandView(ui.View):
             self.children.append(GroupButton(help_command, command, emoji="↩️"))
 
     async def interaction_check(self, interaction: Interaction) -> bool:
-        """Ensures the button only works for the user who spawned the help command."""
+        """Ensures that the button only works for the user who spawned the help command."""
         if interaction.user is not None:
 
             if interaction.user.id == self.context.author.id:
