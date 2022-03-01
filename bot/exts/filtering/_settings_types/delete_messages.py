@@ -14,11 +14,11 @@ class DeleteMessages(ActionEntry):
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)
-        self.delete: bool = entry_data
+        self.delete_messages: bool = entry_data
 
     async def action(self, ctx: FilterContext) -> None:
         """Delete the context message(s)."""
-        if not self.delete or ctx.event not in (Event.MESSAGE, Event.MESSAGE_EDIT):
+        if not self.delete_messages or ctx.event not in (Event.MESSAGE, Event.MESSAGE_EDIT):
             return
 
         with suppress(NotFound):
@@ -31,5 +31,4 @@ class DeleteMessages(ActionEntry):
         if not isinstance(other, DeleteMessages):
             return NotImplemented
 
-        return DeleteMessages(self.delete or other.delete)
-
+        return DeleteMessages(self.delete_messages or other.delete_messages)

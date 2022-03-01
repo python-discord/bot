@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 from abc import abstractmethod
-from typing import Iterator, Mapping, Optional
+from typing import Any, Iterator, Mapping, Optional, TypeVar
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types import settings_types
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry, ValidationEntry
 from bot.exts.filtering._utils import FieldRequiring
 from bot.log import get_logger
+
+TSettings = TypeVar("TSettings", bound="Settings")
 
 log = get_logger(__name__)
 
@@ -15,7 +18,7 @@ _already_warned: set[str] = set()
 
 def create_settings(settings_data: dict) -> tuple[Optional[ActionSettings], Optional[ValidationSettings]]:
     """
-    Create and return instances of the Settings subclasses from the given data
+    Create and return instances of the Settings subclasses from the given data.
 
     Additionally, warn for data entries with no matching class.
     """
@@ -75,22 +78,29 @@ class Settings(FieldRequiring):
                         f"Attempted to load a {entry_name} setting, but the response is malformed: {entry_data}"
                     ) from e
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: str) -> bool:
         return item in self._entries
 
     def __setitem__(self, key: str, value: entry_type) -> None:
         self._entries[key] = value
 
-    def copy(self):
+    def copy(self: TSettings) -> TSettings:
+        """Create a shallow copy of the object."""
         copy = self.__class__({})
-        copy._entries = self._entries
+        copy._entries = self._entries.copy()
         return copy
 
     def items(self) -> Iterator[tuple[str, entry_type]]:
+        """Return an iterator for the items in the entries dictionary."""
         yield from self._entries.items()
 
     def update(self, mapping: Mapping[str, entry_type], **kwargs: entry_type) -> None:
+        """Update the entries with items from `mapping` and the kwargs."""
         self._entries.update(mapping, **kwargs)
+
+    def get(self, key: str, default: Optional[Any] = None) -> entry_type:
+        """Get the entry matching the key, or fall back to the default value if the key is missing."""
+        return self._entries.get(key, default)
 
     @classmethod
     def create(cls, settings_data: dict) -> Optional[Settings]:
@@ -152,7 +162,7 @@ class ActionSettings(Settings):
         super().__init__(settings_data)
 
     def __or__(self, other: ActionSettings) -> ActionSettings:
-        """Combine the entries of two collections of settings into a new ActionsSettings"""
+        """Combine the entries of two collections of settings into a new ActionsSettings."""
         actions = {}
         # A settings object doesn't necessarily have all types of entries (e.g in the case of filter overrides).
         for entry in self._entries:

@@ -33,6 +33,7 @@ class FilterContext:
     alert_embeds: list = field(default_factory=list)  # Any embeds to add to the alert
     action_descriptions: list = field(default_factory=list)  # What actions were taken
     matches: list = field(default_factory=list)  # What exactly was found
+    notification_domain: str = field(default_factory=str)  # A domain to send the user for context
 
     def replace(self, **changes) -> FilterContext:
         """Return a new context object assigning new values to the specified fields."""
