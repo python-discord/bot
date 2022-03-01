@@ -3,7 +3,9 @@ import functools
 import types
 import typing as t
 from contextlib import suppress
+from datetime import datetime
 
+import arrow
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
@@ -235,4 +237,32 @@ def mock_in_debug(return_value: t.Any) -> t.Callable:
                 return return_value
             return await func(*args, **kwargs)
         return wrapped
+    return decorator
+
+
+def ensure_duration_in_future(duration_arg: function.Argument) -> t.Callable:
+    """
+    Ensure the duration argument is in the future.
+
+    If the condition fails, a warning is sent to the invoking context.
+
+    `duration_arg` is the keyword name or position index of the parameter of the decorated command
+    whose value is the target duration.
+
+    This decorator must go before (below) the `command` decorator.
+    """
+    def decorator(func: types.FunctionType) -> types.FunctionType:
+        @command_wraps(func)
+        async def wrapper(*args, **kwargs) -> t.Any:
+            bound_args = function.get_bound_args(func, args, kwargs)
+            target = function.get_arg_value(duration_arg, bound_args)
+
+            ctx = function.get_arg_value(1, bound_args)
+
+            if isinstance(target, datetime) and target < arrow.utcnow():
+                await ctx.send(":x: Expiration is in the past.")
+                return
+
+            return await func(*args, **kwargs)
+        return wrapper
     return decorator

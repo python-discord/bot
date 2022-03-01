@@ -1,7 +1,6 @@
 import textwrap
 import typing as t
 
-import arrow
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -10,6 +9,7 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.decorators import ensure_duration_in_future
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
@@ -100,6 +100,7 @@ class ModManagement(commands.Cog):
         await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
     @infraction_group.command(name='edit', aliases=('e',))
+    @ensure_duration_in_future(duration_arg=3)
     async def infraction_edit(
         self,
         ctx: Context,
@@ -147,10 +148,6 @@ class ModManagement(commands.Cog):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
-            now_datetime = arrow.utcnow()
-            if duration < now_datetime:
-                await ctx.send(":x: Expiration is in the past.")
-                return
             request_data['expires_at'] = duration.isoformat()
             expiry = time.format_with_duration(duration)
             confirm_messages.append(f"set to expire on {expiry}")
