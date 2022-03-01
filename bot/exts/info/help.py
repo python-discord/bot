@@ -113,11 +113,21 @@ class CommandView(ui.View):
     If the command has a parent, a button is added to the view to show that parent's help embed.
     """
 
-    def __init__(self, help_command: CustomHelpCommand, command: Command):
+    def __init__(self, help_command: CustomHelpCommand, command: Command, context: Context):
+        self.context = context
         super().__init__()
 
         if command.parent:
             self.children.append(GroupButton(help_command, command, emoji="↩️"))
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """Ensures the button only works for the user who spawned the help command."""
+        if interaction.user is not None:
+
+            if interaction.user.id == self.context.author.id:
+                return True
+
+        return False
 
 
 class GroupView(CommandView):
@@ -130,8 +140,8 @@ class GroupView(CommandView):
     MAX_BUTTONS_IN_ROW = 5
     MAX_ROWS = 5
 
-    def __init__(self, help_command: CustomHelpCommand, group: Group, subcommands: list[Command]):
-        super().__init__(help_command, group)
+    def __init__(self, help_command: CustomHelpCommand, group: Group, subcommands: list[Command], context: Context):
+        super().__init__(help_command, group, context)
         # Don't add buttons if only a portion of the subcommands can be shown.
         if len(subcommands) + len(self.children) > self.MAX_ROWS * self.MAX_BUTTONS_IN_ROW:
             log.trace(f"Attempted to add navigation buttons for `{group.qualified_name}`, but there was no space.")
@@ -302,7 +312,7 @@ class CustomHelpCommand(HelpCommand):
         embed.description = command_details
 
         # If the help is invoked in the context of an error, don't show subcommand navigation.
-        view = CommandView(self, command) if not self.context.command_failed else None
+        view = CommandView(self, command, self.context) if not self.context.command_failed else None
         return embed, view
 
     async def send_command_help(self, command: Command) -> None:
@@ -347,7 +357,7 @@ class CustomHelpCommand(HelpCommand):
             embed.description += f"\n**Subcommands:**\n{command_details}"
 
         # If the help is invoked in the context of an error, don't show subcommand navigation.
-        view = GroupView(self, group, commands_) if not self.context.command_failed else None
+        view = GroupView(self, group, commands_, self.context) if not self.context.command_failed else None
         return embed, view
 
     async def send_group_help(self, group: Group) -> None:
