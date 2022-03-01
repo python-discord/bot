@@ -123,8 +123,10 @@ class CommandView(ui.View):
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Ensures that the button only works for the user who spawned the help command."""
         if interaction.user is not None:
+            if any(role.id in constants.MODERATION_ROLES for role in interaction.user.roles):
+                return True
 
-            if interaction.user.id == self.context.author.id:
+            elif interaction.user.id == self.context.author.id:
                 return True
 
         return False
