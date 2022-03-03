@@ -22,7 +22,7 @@ class Filter(ABC):
             self.actions = action_defaults
         elif action_defaults:
             self.actions.fallback_to(action_defaults)
-        self.exact = filter_data["additional_field"]
+        self.extra_fields = filter_data["additional_field"] or "{}"  # noqa: P103
 
     @abstractmethod
     def triggered_on(self, ctx: FilterContext) -> bool:
