@@ -16,8 +16,8 @@ from discord.utils import escape_markdown
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.messages import format_user
-from bot.utils.time import humanize_delta
 
 log = get_logger(__name__)
 
@@ -96,6 +96,7 @@ class ModLog(Cog, name="ModLog"):
         footer: t.Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
+        await self.bot.wait_until_guild_available()
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
             description=text[:4093] + "..." if len(text) > 4096 else text
@@ -115,7 +116,7 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"<@&{Roles.moderators}>\n{content}"
+                content = f"<@&{Roles.moderators}> {content}"
             else:
                 content = f"<@&{Roles.moderators}>"
 
@@ -406,7 +407,7 @@ class ModLog(Cog, name="ModLog"):
         now = datetime.now(timezone.utc)
         difference = abs(relativedelta(now, member.created_at))
 
-        message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
+        message = format_user(member) + "\n\n**Account age:** " + time.humanize_delta(difference)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
@@ -614,6 +615,7 @@ class ModLog(Cog, name="ModLog"):
         This is called when a message absent from the cache is deleted.
         Hence, the message contents aren't logged.
         """
+        await self.bot.wait_until_guild_available()
         if self.is_channel_ignored(event.channel_id):
             return
 
@@ -711,7 +713,7 @@ class ModLog(Cog, name="ModLog"):
             # datetime as the baseline and create a human-readable delta between this edit event
             # and the last time the message was edited
             timestamp = msg_before.edited_at
-            delta = humanize_delta(relativedelta(msg_after.edited_at, msg_before.edited_at))
+            delta = time.humanize_delta(msg_after.edited_at, msg_before.edited_at)
             footer = f"Last edited {delta} ago"
         else:
             # Message was not previously edited, use the created_at datetime as the baseline, no
@@ -727,6 +729,10 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_edit(self, event: discord.RawMessageUpdateEvent) -> None:
         """Log raw message edit event to message change log."""
+        if event.guild_id is None:
+            return  # ignore DM edits
+
+        await self.bot.wait_until_guild_available()
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))
             message = await channel.fetch_message(event.message_id)

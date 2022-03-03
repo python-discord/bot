@@ -11,10 +11,9 @@ from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import DayDuration, Expiry
 from bot.log import get_logger
-from bot.utils import scheduling
+from bot.utils import scheduling, time
 from bot.utils.members import get_or_fetch_member
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
@@ -263,8 +262,8 @@ class ModPings(Cog):
 
         await ctx.send(
             f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from "
-            f"{discord_timestamp(start, TimestampFormats.TIME)} to "
-            f"{discord_timestamp(end, TimestampFormats.TIME)}!"
+            f"{time.discord_timestamp(start, time.TimestampFormats.TIME)} to "
+            f"{time.discord_timestamp(end, time.TimestampFormats.TIME)}!"
         )
 
     @schedule_modpings.command(name='delete', aliases=('del', 'd'))

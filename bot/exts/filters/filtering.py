@@ -8,7 +8,9 @@ import arrow
 import dateutil.parser
 import discord.errors
 import regex
+import tldextract
 from async_rediscache import RedisCache
+from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
@@ -22,7 +24,6 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.messages import format_user
-from bot.utils.regex import INVITE_RE
 
 log = get_logger(__name__)
 
@@ -255,6 +256,7 @@ class Filtering(Cog):
             )
 
             await self.mod_log.send_log_message(
+                content=str(member.id),  # quality-of-life improvement for mobile moderators
                 icon_url=Icons.token_removed,
                 colour=Colours.soft_red,
                 title="Username filtering alert",
@@ -422,9 +424,12 @@ class Filtering(Cog):
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
-        # If we are going to autoban, we don't want to ping
+        content = str(msg.author.id)  # quality-of-life improvement for mobile moderators
+
+        # If we are going to autoban, we don't want to ping and don't need the user ID
         if reason and "[autoban]" in reason:
             ping_everyone = False
+            content = None
 
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
@@ -438,6 +443,7 @@ class Filtering(Cog):
 
         # Send pretty mod log embed to mod-alerts
         await self.mod_log.send_log_message(
+            content=content,
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
@@ -535,7 +541,10 @@ class Filtering(Cog):
         for match in URL_RE.finditer(text):
             for url in domain_blacklist:
                 if url.lower() in match.group(1).lower():
-                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
+                    blacklisted_parsed = tldextract.extract(url.lower())
+                    url_parsed = tldextract.extract(match.group(1).lower())
+                    if blacklisted_parsed.registered_domain == url_parsed.registered_domain:
+                        return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod
@@ -562,7 +571,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
+        invites = [m.group("invite") for m in DISCORD_INVITE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:
