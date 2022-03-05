@@ -8,6 +8,7 @@ class FilterDM(ValidationEntry):
     """A setting entry which tells whether to apply the filter to DMs."""
 
     name = "filter_dm"
+    description = "A boolean field. If True, the filter can trigger for messages sent to the bot in DMs."
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)

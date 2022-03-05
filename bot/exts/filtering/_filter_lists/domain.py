@@ -4,11 +4,12 @@ import re
 import typing
 from functools import reduce
 from operator import or_
-from typing import Optional
+from typing import Optional, Type
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.domain import DomainFilter
+from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._utils import clean_input
 
@@ -19,13 +20,26 @@ URL_RE = re.compile(r"https?://([^\s]+)", flags=re.IGNORECASE)
 
 
 class DomainsList(FilterList):
-    """A list of filters, each looking for a specific domain given by URL."""
+    """
+    A list of filters, each looking for a specific domain given by URL.
+
+    The blacklist defaults dictate what happens by default when a filter is matched, and can be overridden by
+    individual filters.
+
+    Domains are found by looking for a URL schema (http or https).
+    Filters will also trigger for subdomains unless set otherwise.
+    """
 
     name = "domain"
 
     def __init__(self, filtering_cog: Filtering):
         super().__init__(DomainFilter)
         filtering_cog.subscribe(self, Event.MESSAGE, Event.MESSAGE_EDIT)
+
+    @property
+    def filter_types(self) -> set[Type[Filter]]:
+        """Return the types of filters used by this list."""
+        return {DomainFilter}
 
     async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""

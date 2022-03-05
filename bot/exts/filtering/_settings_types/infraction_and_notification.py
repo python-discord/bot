@@ -46,6 +46,19 @@ class InfractionAndNotification(ActionEntry):
     """
 
     name = "infraction_and_notification"
+    description = {
+        "infraction_type": (
+            "The type of infraction to issue when the filter triggers, or 'NONE'. "
+            "If two infractions are triggered for the same message, "
+            "the harsher one will be applied (by type or duration). "
+            "Superstars will be triggered even if there is a harsher infraction.\n\n"
+            "Valid infraction types in order of harshness: "
+        ) + ", ".join(infraction.name for infraction in Infraction),
+        "infraction_duration": "How long the infraction should last for in seconds, or 'None' for permanent.",
+        "infraction_reason": "The reason delivered with the infraction.",
+        "dm_content": "The contents of a message to be DMed to the offending user.",
+        "dm_embed": "The contents of the embed to be DMed to the offending user."
+    }
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)

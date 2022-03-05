@@ -63,6 +63,11 @@ class FilterList(FieldRequiring):
                 log.warning(e)
         self.filter_lists[list_type] = filters
 
+    @property
+    @abstractmethod
+    def filter_types(self) -> set[Type[Filter]]:
+        """Return the types of filters used by this list."""
+
     @abstractmethod
     async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""

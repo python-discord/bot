@@ -11,6 +11,7 @@ class DeleteMessages(ActionEntry):
     """A setting entry which tells whether to delete the offending message(s)."""
 
     name = "delete_messages"
+    description = "A boolean field. If True, the filter being triggered will cause the offending message to be deleted."
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)

@@ -17,6 +17,9 @@ class SettingsEntry(FieldRequiring):
     # Each subclass must define a name matching the entry name we're expecting to receive from the database.
     # Names must be unique across all filter lists.
     name = FieldRequiring.MUST_SET_UNIQUE
+    # Each subclass must define a description of what it does. If the data an entry type receives is comprised of
+    # several DB fields, the value should a dictionary of field names and their descriptions.
+    description = FieldRequiring.MUST_SET
 
     @abstractmethod
     def __init__(self, entry_data: Any):

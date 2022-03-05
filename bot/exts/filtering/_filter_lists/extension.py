@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import typing
 from os.path import splitext
-from typing import Optional
+from typing import Optional, Type
 
 import bot
 from bot.constants import Channels, URLs
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.extension import ExtensionFilter
+from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 
 if typing.TYPE_CHECKING:
@@ -34,7 +35,16 @@ DISALLOWED_EMBED_DESCRIPTION = (
 
 
 class ExtensionsList(FilterList):
-    """A list of filters, each looking for an attachment with a specific extension."""
+    """
+    A list of filters, each looking for a file attachment with a specific extension.
+
+    If an extension is not explicitly allowed, it will be blocked.
+
+    Whitelist defaults dictate what happens when an extension is *not* explicitly allowed,
+    and whitelist filters overrides have no effect.
+
+    Items should be added as file extensions preceded by a dot.
+    """
 
     name = "extension"
 
@@ -42,6 +52,11 @@ class ExtensionsList(FilterList):
         super().__init__(ExtensionFilter)
         filtering_cog.subscribe(self, Event.MESSAGE)
         self._whitelisted_description = None
+
+    @property
+    def filter_types(self) -> set[Type[Filter]]:
+        """Return the types of filters used by this list."""
+        return {ExtensionFilter}
 
     async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""

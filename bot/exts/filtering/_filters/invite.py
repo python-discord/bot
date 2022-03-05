@@ -6,7 +6,13 @@ from bot.exts.filtering._settings import ActionSettings
 
 
 class InviteFilter(Filter):
-    """A filter which looks for invites to a specific guild in messages."""
+    """
+    A filter which looks for invites to a specific guild in messages.
+
+    The filter stores the guild ID which is allowed or denied.
+    """
+
+    name = "invite"
 
     def __init__(self, filter_data: dict, action_defaults: Optional[ActionSettings] = None):
         super().__init__(filter_data, action_defaults)

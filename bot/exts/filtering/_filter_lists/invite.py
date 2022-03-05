@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from functools import reduce
 from operator import or_
-from typing import Optional
+from typing import Optional, Type
 
 from botcore.utils.regex import DISCORD_INVITE
 from discord import Embed, Invite
@@ -12,6 +12,7 @@ from discord.errors import NotFound
 import bot
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
+from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._filters.invite import InviteFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._utils import clean_input
@@ -21,13 +22,30 @@ if typing.TYPE_CHECKING:
 
 
 class InviteList(FilterList):
-    """A list of filters, each looking for guild invites to a specific guild."""
+    """
+    A list of filters, each looking for guild invites to a specific guild.
+
+    If the invite is not whitelisted, it will be blocked. Partnered and verified servers are allowed unless blacklisted.
+
+    Whitelist defaults dictate what happens when an invite is *not* explicitly allowed,
+    and whitelist filters overrides have no effect.
+
+    Blacklist defaults dictate what happens by default when an explicitly blocked invite is found.
+
+    Items in the list are added through invites for the purpose of fetching the guild info.
+    Items are stored as guild IDs, guild invites are *not* stored.
+    """
 
     name = "invite"
 
     def __init__(self, filtering_cog: Filtering):
         super().__init__(InviteFilter)
         filtering_cog.subscribe(self, Event.MESSAGE)
+
+    @property
+    def filter_types(self) -> set[Type[Filter]]:
+        """Return the types of filters used by this list."""
+        return {InviteFilter}
 
     async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""

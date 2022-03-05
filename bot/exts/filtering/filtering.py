@@ -1,4 +1,5 @@
 import operator
+import re
 from collections import defaultdict
 from functools import reduce
 from typing import Optional
@@ -33,6 +34,10 @@ class Filtering(Cog):
         self._subscriptions: defaultdict[Event, list[FilterList]] = defaultdict(list)
         self.webhook = None
 
+        self.loaded_settings = {}
+        self.loaded_filters = {}
+        self.loaded_filter_settings = {}
+
     async def cog_load(self) -> None:
         """
         Fetch the filter data from the API, parse it, and load it to the appropriate data structures.
@@ -61,6 +66,8 @@ class Filtering(Cog):
         except HTTPException:
             log.error(f"Failed to fetch incidents webhook with ID `{Webhooks.incidents}`.")
 
+        self.collect_loaded_types()
+
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
         """
         Subscribe a filter list to the given events.
@@ -77,6 +84,49 @@ class Filtering(Cog):
         for event in events:
             if filter_list not in self._subscriptions[event]:
                 self._subscriptions[event].append(filter_list)
+
+    def collect_loaded_types(self) -> None:
+        """
+        Go over the classes used in initialization and collect them to dictionaries.
+
+        The information that is collected is about the types actually used to load the API response, not all types
+        available in the filtering extension.
+        """
+        # Get the filter types used by each filter list.
+        for filter_list in self.filter_lists.values():
+            self.loaded_filters.update({filter_type.name: filter_type for filter_type in filter_list.filter_types})
+
+        # Get the setting types used by each filter list.
+        if self.filter_lists:
+            # Any filter list has the fields for all settings in the DB schema, so picking any one of them is enough.
+            list_defaults = list(list(self.filter_lists.values())[0].defaults.values())[0]
+            settings_types = set()
+            # The settings are split between actions and validations.
+            settings_types.update(type(setting) for _, setting in list_defaults["actions"].items())
+            settings_types.update(type(setting) for _, setting in list_defaults["validations"].items())
+            for setting_type in settings_types:
+                # The description should be either a string or a dictionary.
+                if isinstance(setting_type.description, str):
+                    # If it's a string, then the setting matches a single field in the DB,
+                    # and its name is the setting type's name attribute.
+                    self.loaded_settings[setting_type.name] = setting_type.description, setting_type
+                else:
+                    # Otherwise, the setting type works with compound settings.
+                    self.loaded_settings.update({
+                        subsetting: (description, setting_type)
+                        for subsetting, description in setting_type.description.items()
+                    })
+
+        # Get the settings per filter as well.
+        for filter_name, filter_type in self.loaded_filters.items():
+            extra_fields_type = filter_type.extra_fields_type
+            if not extra_fields_type:
+                continue
+            # A class var with a `_description` suffix is expected per field name.
+            self.loaded_filter_settings[filter_name] = {
+                field_name: (getattr(extra_fields_type, f"{field_name}_description", ""), extra_fields_type)
+                for field_name in extra_fields_type.__fields__
+            }
 
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
@@ -173,6 +223,86 @@ class Filtering(Cog):
             list_type = list(filter_list.filter_lists)[0]
 
         await self._send_list(ctx, list_name, list_type)
+
+    @filter.command(name="describe", aliases=("explain", "manual"))
+    async def f_describe(self, ctx: Context, filter_name: Optional[str]) -> None:
+        """Show a description of the specified filter, or a list of possible values if no name is specified."""
+        if not filter_name:
+            embed = Embed(description="\n".join(self.loaded_filters))
+            embed.set_author(name="List of filter names")
+        else:
+            filter_type = self.loaded_filters.get(filter_name)
+            if not filter_type:
+                filter_type = self.loaded_filters.get(filter_name[:-1])  # A plural form or a typo.
+                if not filter_type:
+                    await ctx.send(f":x: There's no filter type named {filter_name!r}.")
+                    return
+            # Use the class's docstring, and ignore single newlines.
+            embed = Embed(description=re.sub(r"(?<!\n)\n(?!\n)", " ", filter_type.__doc__))
+            embed.set_author(name=f"Description of the {filter_name} filter")
+        embed.colour = Colour.blue()
+        await ctx.send(embed=embed)
+
+    @filter.group(aliases=("settings",))
+    async def setting(self, ctx: Context) -> None:
+        """Group for settings-related commands."""
+        if not ctx.invoked_subcommand:
+            await ctx.send_help(ctx.command)
+
+    @setting.command(name="describe", aliases=("explain", "manual"))
+    async def s_describe(self, ctx: Context, setting_name: Optional[str]) -> None:
+        """Show a description of the specified setting, or a list of possible settings if no name is specified."""
+        if not setting_name:
+            settings_list = list(self.loaded_settings)
+            for filter_name, filter_settings in self.loaded_filter_settings.items():
+                settings_list.extend(f"{filter_name}/{setting}" for setting in filter_settings)
+            embed = Embed(description="\n".join(settings_list))
+            embed.set_author(name="List of setting names")
+        else:
+            # The setting is either in a SettingsEntry subclass, or a pydantic model.
+            setting_data = self.loaded_settings.get(setting_name)
+            description = None
+            if setting_data:
+                description = setting_data[0]
+            elif "/" in setting_name:  # It's a filter specific setting.
+                filter_name, filter_setting_name = setting_name.split("/", maxsplit=1)
+                if filter_name in self.loaded_filter_settings:
+                    if filter_setting_name in self.loaded_filter_settings[filter_name]:
+                        description = self.loaded_filter_settings[filter_name][filter_setting_name][0]
+            if description is None:
+                await ctx.send(f":x: There's no setting type named {setting_name!r}.")
+                return
+            embed = Embed(description=description)
+            embed.set_author(name=f"Description of the {setting_name} setting")
+        embed.colour = Colour.blue()
+        await ctx.send(embed=embed)
+
+    # endregion
+    # region: filterlist group
+
+    @commands.group(aliases=("fl",))
+    async def filterlist(self, ctx: Context) -> None:
+        """Group for managing filter lists."""
+        if not ctx.invoked_subcommand:
+            await ctx.send_help(ctx.command)
+
+    @filterlist.command(name="describe", aliases=("explain", "manual"))
+    async def fl_describe(self, ctx: Context, filterlist_name: Optional[str]) -> None:
+        """Show a description of the specified filter list, or a list of possible values if no name is specified."""
+        if not filterlist_name:
+            embed = Embed(description="\n".join(self.filter_lists))
+            embed.set_author(name="List of filter lists names")
+        else:
+            try:
+                filter_list = self._get_list_by_name(filterlist_name)
+            except BadArgument as e:
+                await ctx.send(f":x: {e}")
+                return
+            # Use the class's docstring, and ignore single newlines.
+            embed = Embed(description=re.sub(r"(?<!\n)\n(?!\n)", " ", filter_list.__doc__))
+            embed.set_author(name=f"Description of the {filterlist_name} filter list")
+        embed.colour = Colour.blue()
+        await ctx.send(embed=embed)
 
     # endregion
     # region: helper functions

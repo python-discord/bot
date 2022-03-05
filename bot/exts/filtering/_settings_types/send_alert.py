@@ -8,6 +8,7 @@ class SendAlert(ActionEntry):
     """A setting entry which tells whether to send an alert message."""
 
     name = "send_alert"
+    description = "A boolean field. If all filters triggered set this to False, no mod-alert will be created."
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)
@@ -23,4 +24,3 @@ class SendAlert(ActionEntry):
             return NotImplemented
 
         return SendAlert(self.send_alert or other.send_alert)
-

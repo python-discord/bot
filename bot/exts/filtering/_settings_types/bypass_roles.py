@@ -10,6 +10,7 @@ class RoleBypass(ValidationEntry):
     """A setting entry which tells whether the roles the member has allow them to bypass the filter."""
 
     name = "bypass_roles"
+    description = "A list of role IDs or role names. Users with these roles will not trigger the filter."
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)

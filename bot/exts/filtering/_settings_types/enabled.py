@@ -8,6 +8,7 @@ class Enabled(ValidationEntry):
     """A setting entry which tells whether the filter is enabled."""
 
     name = "enabled"
+    description = "A boolean field. Setting it to False allows disabling the filter without deleting it entirely."
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)

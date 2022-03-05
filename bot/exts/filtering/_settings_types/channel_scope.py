@@ -15,6 +15,16 @@ class ChannelScope(ValidationEntry):
     """A setting entry which tells whether the filter was invoked in a whitelisted channel or category."""
 
     name = "channel_scope"
+    description = {
+        "disabled_channels": "A list of channel IDs or channel names. The filter will not trigger in these channels.",
+        "disabled_categories": (
+            "A list of category IDs or category names. The filter will not trigger in these categories."
+        ),
+        "enabled_channels": (
+            "A list of channel IDs or channel names. "
+            "The filter can trigger in these channels even if the category is disabled."
+        )
+    }
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)

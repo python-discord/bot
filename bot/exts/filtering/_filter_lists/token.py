@@ -4,10 +4,11 @@ import re
 import typing
 from functools import reduce
 from operator import or_
-from typing import Optional
+from typing import Optional, Type
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
+from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._filters.token import TokenFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._utils import clean_input
@@ -19,13 +20,27 @@ SPOILER_RE = re.compile(r"(\|\|.+?\|\|)", re.DOTALL)
 
 
 class TokensList(FilterList):
-    """A list of filters, each looking for a specific token given by regex."""
+    """
+    A list of filters, each looking for a specific token in the given content given as regex.
+
+    The blacklist defaults dictate what happens by default when a filter is matched, and can be overridden by
+    individual filters.
+
+    Usually, if blocking literal strings, the literals themselves can be specified as the filter's value.
+    But since this is a list of regex patterns, be careful of the items added. For example, a dot needs to be escaped
+    to function as a literal dot.
+    """
 
     name = "token"
 
     def __init__(self, filtering_cog: Filtering):
         super().__init__(TokenFilter)
         filtering_cog.subscribe(self, Event.MESSAGE, Event.MESSAGE_EDIT)
+
+    @property
+    def filter_types(self) -> set[Type[Filter]]:
+        """Return the types of filters used by this list."""
+        return {TokenFilter}
 
     async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""

@@ -11,6 +11,16 @@ class Ping(ActionEntry):
     """A setting entry which adds the appropriate pings to the alert."""
 
     name = "mentions"
+    description = {
+        "ping_type": (
+            "A list of role IDs/role names/user IDs/user names/here/everyone. "
+            "If a mod-alert is generated for a filter triggered in a public channel, these will be pinged."
+        ),
+        "dm_ping_type": (
+            "A list of role IDs/role names/user IDs/user names/here/everyone. "
+            "If a mod-alert is generated for a filter triggered in DMs, these will be pinged."
+        )
+    }
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)

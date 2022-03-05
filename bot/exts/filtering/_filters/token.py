@@ -1,11 +1,13 @@
 import re
 
-from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._filter_context import FilterContext
+from bot.exts.filtering._filters.filter import Filter
 
 
 class TokenFilter(Filter):
     """A filter which looks for a specific token given by regex."""
+
+    name = "token"
 
     def triggered_on(self, ctx: FilterContext) -> bool:
         """Searches for a regex pattern within a given context."""
@@ -16,5 +18,3 @@ class TokenFilter(Filter):
             ctx.matches.append(match[0])
             return True
         return False
-
-
