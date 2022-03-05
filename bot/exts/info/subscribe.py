@@ -1,4 +1,5 @@
 import calendar
+import contextlib
 import operator
 import typing as t
 from dataclasses import dataclass
@@ -82,7 +83,7 @@ class SingleRoleButton(disnake.ui.Button):
     ADD_STYLE = disnake.ButtonStyle.success
     REMOVE_STYLE = disnake.ButtonStyle.red
     UNAVAILABLE_STYLE = disnake.ButtonStyle.secondary
-    LABEL_FORMAT = "{action} role {role_name}."
+    LABEL_FORMAT = "{action} role {role_name}"
     CUSTOM_ID_FORMAT = "subscribe-{role_id}"
 
     def __init__(self, role: AssignableRole, assigned: bool, row: int):
@@ -106,7 +107,8 @@ class SingleRoleButton(disnake.ui.Button):
         """Update the member's role and change button text to reflect current text."""
         if isinstance(interaction.user, disnake.User):
             log.trace("User %s is not a member", interaction.user)
-            await interaction.message.delete()
+            with contextlib.suppress(disnake.HTTPException):
+                await interaction.delete_original_message()
             self.view.stop()
             return
 
@@ -132,8 +134,8 @@ class SingleRoleButton(disnake.ui.Button):
         self.style = self.REMOVE_STYLE if self.assigned else self.ADD_STYLE
         self.label = self.LABEL_FORMAT.format(action="Remove" if self.assigned else "Add", role_name=self.role.name)
         try:
-            await interaction.message.edit(view=self.view)
-        except disnake.NotFound:
+            await interaction.response.edit_message(view=self.view)
+        except disnake.HTTPException:
             log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
             self.view.stop()
 
