@@ -6,7 +6,7 @@ from collections import namedtuple
 from contextlib import suppress
 from typing import List, Optional, Union
 
-from disnake import ButtonStyle, Colour, Embed, Emoji, HTTPException, Interaction, PartialEmoji, ui
+from disnake import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, ui
 from disnake.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
 from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
@@ -57,13 +57,16 @@ class SubcommandButton(ui.Button):
 
     async def callback(self, interaction: Interaction) -> None:
         """Edits the help embed to that of the subcommand."""
+        message = interaction.message
+        if not message:
+            return
+
         subcommand = self.command
         if isinstance(subcommand, Group):
             embed, subcommand_view = await self.help_command.format_group_help(subcommand)
         else:
             embed, subcommand_view = await self.help_command.command_formatting(subcommand)
-        with suppress(HTTPException):
-            await interaction.response.edit_message(embed=embed, view=subcommand_view)
+        await message.edit(embed=embed, view=subcommand_view)
 
 
 class GroupButton(ui.Button):
@@ -95,9 +98,12 @@ class GroupButton(ui.Button):
 
     async def callback(self, interaction: Interaction) -> None:
         """Edits the help embed to that of the parent."""
+        message = interaction.message
+        if not message:
+            return
+
         embed, group_view = await self.help_command.format_group_help(self.command.parent)
-        with suppress(HTTPException):
-            await interaction.response.edit_message(embed=embed, view=group_view)
+        await message.edit(embed=embed, view=group_view)
 
 
 class CommandView(ui.View):
