@@ -1,6 +1,7 @@
 import typing as t
 from datetime import datetime
 
+import arrow
 import discord
 from discord.ext.commands import Context
 
@@ -44,6 +45,7 @@ LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL
 INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Type:** {type}\n"
     "**Expires:** {expires}\n"
+    "**Duration:** {duration}\n"
     "**Reason:** {reason}\n"
 )
 
@@ -173,7 +175,23 @@ async def notify_infraction(
     infr_id = infraction["id"]
     infr_type = infraction["type"].replace("_", " ").title()
     icon_url = INFRACTION_ICONS[infraction["type"]][0]
-    expires_at = time.format_with_duration(infraction["expires_at"])
+
+    if infraction["expires_at"] is None:
+        expires_at = "Never"
+        duration = "Permanent"
+    else:
+        expiry = arrow.get(infraction["expires_at"])
+        now = arrow.utcnow()
+
+        expires_at = time.format_relative(expiry)
+        duration = time.humanize_delta(infraction["inserted_at"], expiry, max_units=2)
+
+        if expiry < now:
+            expires_at += " (Expired)"
+        else:
+            remaining = time.humanize_delta(expiry, now, max_units=2)
+            if duration != remaining:
+                duration += f" ({remaining} remaining)"
 
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
@@ -182,7 +200,8 @@ async def notify_infraction(
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=expires_at or "N/A",
+        expires=expires_at,
+        duration=duration,
         reason=reason or "No reason provided."
     )
 
