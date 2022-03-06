@@ -74,7 +74,7 @@ def setup() -> None:
     coloredlogs.install(level=TRACE_LEVEL, logger=root_log, stream=sys.stdout)
 
     root_log.setLevel(logging.DEBUG if constants.DEBUG_MODE else logging.INFO)
-    get_logger("discord").setLevel(logging.WARNING)
+    get_logger("disnake").setLevel(logging.WARNING)
     get_logger("websockets").setLevel(logging.WARNING)
     get_logger("chardet").setLevel(logging.WARNING)
     get_logger("async_rediscache").setLevel(logging.WARNING)

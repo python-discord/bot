@@ -1,7 +1,7 @@
 from typing import Optional
 
-from discord import Embed, TextChannel
-from discord.ext.commands import Cog, Context, command, group, has_any_role
+from disnake import Embed, TextChannel
+from disnake.ext.commands import Cog, Context, command, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Guild, MODERATION_ROLES, URLs

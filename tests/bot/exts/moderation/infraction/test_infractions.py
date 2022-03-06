@@ -3,7 +3,7 @@ import textwrap
 import unittest
 from unittest.mock import ANY, AsyncMock, DEFAULT, MagicMock, Mock, patch
 
-from discord.errors import NotFound
+from disnake.errors import NotFound
 
 from bot.constants import Event
 from bot.exts.moderation.clean import Clean

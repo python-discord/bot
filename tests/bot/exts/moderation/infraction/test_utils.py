@@ -3,7 +3,7 @@ from collections import namedtuple
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
-from discord import Embed, Forbidden, HTTPException, NotFound
+from disnake import Embed, Forbidden, HTTPException, NotFound
 
 from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons

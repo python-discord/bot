@@ -3,7 +3,7 @@ from re import Match
 from unittest import mock
 from unittest.mock import MagicMock
 
-from discord import Colour, NotFound
+from disnake import Colour, NotFound
 
 from bot import constants
 from bot.exts.filters import token_remover

@@ -1,8 +1,8 @@
 import string
 
-from discord import Member, Message
-from discord.ext.commands import Cog, Context
-from discord.ext.tasks import loop
+from disnake import Member, Message
+from disnake.ext.commands import Cog, Context
+from disnake.ext.tasks import loop
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Guild

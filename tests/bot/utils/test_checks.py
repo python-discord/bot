@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from discord import DMChannel
+from disnake import DMChannel
 
 from bot.utils import checks
 from bot.utils.checks import InWhitelistCheckFailure

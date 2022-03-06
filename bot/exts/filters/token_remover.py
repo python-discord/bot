@@ -3,8 +3,8 @@ import binascii
 import re
 import typing as t
 
-from discord import Colour, Message, NotFound
-from discord.ext.commands import Cog
+from disnake import Colour, Message, NotFound
+from disnake.ext.commands import Cog
 
 from bot import utils
 from bot.bot import Bot
@@ -53,7 +53,7 @@ class Token(t.NamedTuple):
 
 
 class TokenRemover(Cog):
-    """Scans messages for potential discord.py bot tokens and removes them."""
+    """Scans messages for potential Discord bot tokens and removes them."""
 
     def __init__(self, bot: Bot):
         self.bot = bot

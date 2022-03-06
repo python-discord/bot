@@ -94,7 +94,7 @@ def update_wrapper_globals(
     """
     Update globals of `wrapper` with the globals from `wrapped`.
 
-    For forwardrefs in command annotations discordpy uses the __global__ attribute of the function
+    For forwardrefs in command annotations disnake uses the __global__ attribute of the function
     to resolve their values, with decorators that replace the function this breaks because they have
     their own globals.
 
@@ -103,7 +103,7 @@ def update_wrapper_globals(
 
     An exception will be raised in case `wrapper` and `wrapped` share a global name that is used by
     `wrapped`'s typehints and is not in `ignored_conflict_names`,
-    as this can cause incorrect objects being used by discordpy's converters.
+    as this can cause incorrect objects being used by disnake's converters.
     """
     annotation_global_names = (
         ann.split(".", maxsplit=1)[0] for ann in wrapped.__annotations__.values() if isinstance(ann, str)
@@ -136,7 +136,7 @@ def command_wraps(
         *,
         ignored_conflict_names: t.Set[str] = frozenset(),
 ) -> t.Callable[[types.FunctionType], types.FunctionType]:
-    """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
+    """Update the decorated function to look like `wrapped` and update globals for disnake forwardref evaluation."""
     def decorator(wrapper: types.FunctionType) -> types.FunctionType:
         return functools.update_wrapper(
             update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),

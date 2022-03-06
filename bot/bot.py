@@ -6,9 +6,9 @@ from contextlib import suppress
 from typing import Dict, List, Optional
 
 import aiohttp
-import discord
+import disnake
 from async_rediscache import RedisSession
-from discord.ext import commands
+from disnake.ext import commands
 from sentry_sdk import push_scope
 
 from bot import api, constants
@@ -28,7 +28,7 @@ class StartupError(Exception):
 
 
 class Bot(commands.Bot):
-    """A subclass of `discord.ext.commands.Bot` with an aiohttp session and an API client."""
+    """A subclass of `disnake.ext.commands.Bot` with an aiohttp session and an API client."""
 
     def __init__(self, *args, redis_session: RedisSession, **kwargs):
         if "connector" in kwargs:
@@ -109,9 +109,9 @@ class Bot(commands.Bot):
     def create(cls) -> "Bot":
         """Create and return an instance of a Bot."""
         loop = asyncio.get_event_loop()
-        allowed_roles = list({discord.Object(id_) for id_ in constants.MODERATION_ROLES})
+        allowed_roles = list({disnake.Object(id_) for id_ in constants.MODERATION_ROLES})
 
-        intents = discord.Intents.all()
+        intents = disnake.Intents.all()
         intents.presences = False
         intents.dm_typing = False
         intents.dm_reactions = False
@@ -123,10 +123,10 @@ class Bot(commands.Bot):
             redis_session=_create_redis_session(loop),
             loop=loop,
             command_prefix=commands.when_mentioned_or(constants.Bot.prefix),
-            activity=discord.Game(name=f"Commands: {constants.Bot.prefix}help"),
+            activity=disnake.Game(name=f"Commands: {constants.Bot.prefix}help"),
             case_insensitive=True,
             max_messages=10_000,
-            allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
+            allowed_mentions=disnake.AllowedMentions(everyone=False, roles=allowed_roles),
             intents=intents,
         )
 
@@ -258,7 +258,7 @@ class Bot(commands.Bot):
         await self.stats.create_socket()
         await super().login(*args, **kwargs)
 
-    async def on_guild_available(self, guild: discord.Guild) -> None:
+    async def on_guild_available(self, guild: disnake.Guild) -> None:
         """
         Set the internal guild available event when constants.Guild.id becomes available.
 
@@ -274,7 +274,7 @@ class Bot(commands.Bot):
 
             try:
                 webhook = await self.fetch_webhook(constants.Webhooks.dev_log)
-            except discord.HTTPException as e:
+            except disnake.HTTPException as e:
                 log.error(f"Failed to fetch webhook to send empty cache warning: status {e.status}")
             else:
                 await webhook.send(f"<@&{constants.Roles.admin}> {msg}")
@@ -283,7 +283,7 @@ class Bot(commands.Bot):
 
         self._guild_available.set()
 
-    async def on_guild_unavailable(self, guild: discord.Guild) -> None:
+    async def on_guild_unavailable(self, guild: disnake.Guild) -> None:
         """Clear the internal guild available event when constants.Guild.id becomes unavailable."""
         if guild.id != constants.Guild.id:
             return

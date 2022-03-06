@@ -3,8 +3,8 @@ from email.parser import HeaderParser
 from io import StringIO
 from typing import Dict, Optional, Tuple
 
-from discord import Colour, Embed
-from discord.ext.commands import Cog, Context, command
+from disnake import Colour, Embed
+from disnake.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Keys

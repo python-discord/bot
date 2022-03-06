@@ -1,6 +1,6 @@
 import unittest
 
-import discord
+import disnake
 
 from bot.exts.moderation.modlog import ModLog
 from tests.helpers import MockBot, MockTextChannel
@@ -19,7 +19,7 @@ class ModLogTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_channel.return_value = self.channel
         await self.cog.send_log_message(
             icon_url="foo",
-            colour=discord.Colour.blue(),
+            colour=disnake.Colour.blue(),
             title="bar",
             text="foo bar" * 3000
         )

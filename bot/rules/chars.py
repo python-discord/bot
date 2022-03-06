@@ -1,6 +1,6 @@
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from discord import Member, Message
+from disnake import Member, Message
 
 
 async def apply(

@@ -1,8 +1,8 @@
 import typing as t
 
-import discord
+import disnake
 from async_rediscache import RedisCache
-from discord.ext import commands
+from disnake.ext import commands
 
 from bot import constants
 from bot.bot import Bot
@@ -16,14 +16,14 @@ log = get_logger(__name__)
 class ThreadBumper(commands.Cog):
     """Cog that allow users to add the current thread to a list that get reopened on archive."""
 
-    # RedisCache[discord.Thread.id, "sentinel"]
+    # RedisCache[disnake.Thread.id, "sentinel"]
     threads_to_bump = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
         self.init_task = scheduling.create_task(self.ensure_bumped_threads_are_active(), event_loop=self.bot.loop)
 
-    async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
+    async def unarchive_threads_not_manually_archived(self, threads: list[disnake.Thread]) -> None:
         """
         Iterate through and unarchive any threads that weren't manually archived recently.
 
@@ -35,7 +35,7 @@ class ThreadBumper(commands.Cog):
         guild = self.bot.get_guild(constants.Guild.id)
 
         recent_manually_archived_thread_ids = []
-        async for thread_update in guild.audit_logs(limit=200, action=discord.AuditLogAction.thread_update):
+        async for thread_update in guild.audit_logs(limit=200, action=disnake.AuditLogAction.thread_update):
             if getattr(thread_update.after, "archived", False):
                 recent_manually_archived_thread_ids.append(thread_update.target.id)
 
@@ -58,7 +58,7 @@ class ThreadBumper(commands.Cog):
         for thread_id, _ in await self.threads_to_bump.items():
             try:
                 thread = await channel.get_or_fetch_channel(thread_id)
-            except discord.NotFound:
+            except disnake.NotFound:
                 log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
                 await self.threads_to_bump.delete(thread_id)
                 continue
@@ -75,12 +75,12 @@ class ThreadBumper(commands.Cog):
             await ctx.send_help(ctx.command)
 
     @thread_bump_group.command(name="add", aliases=("a",))
-    async def add_thread_to_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
+    async def add_thread_to_bump_list(self, ctx: commands.Context, thread: t.Optional[disnake.Thread]) -> None:
         """Add a thread to the bump list."""
         await self.init_task
 
         if not thread:
-            if isinstance(ctx.channel, discord.Thread):
+            if isinstance(ctx.channel, disnake.Thread):
                 thread = ctx.channel
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
@@ -92,12 +92,12 @@ class ThreadBumper(commands.Cog):
         await ctx.send(f":ok_hand:{thread.mention} has been added to the bump list.")
 
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
-    async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
+    async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: t.Optional[disnake.Thread]) -> None:
         """Remove a thread from the bump list."""
         await self.init_task
 
         if not thread:
-            if isinstance(ctx.channel, discord.Thread):
+            if isinstance(ctx.channel, disnake.Thread):
                 thread = ctx.channel
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
@@ -114,14 +114,14 @@ class ThreadBumper(commands.Cog):
         await self.init_task
 
         lines = [f"<#{k}>" for k, _ in await self.threads_to_bump.items()]
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title="Threads in the bump list",
             colour=constants.Colours.blue
         )
         await LinePaginator.paginate(lines, ctx, embed)
 
     @commands.Cog.listener()
-    async def on_thread_update(self, _: discord.Thread, after: discord.Thread) -> None:
+    async def on_thread_update(self, _: disnake.Thread, after: disnake.Thread) -> None:
         """
         Listen for thread updates and check if the thread has been archived.
 
