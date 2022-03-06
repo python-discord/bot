@@ -1,7 +1,7 @@
 import typing as t
 
-import discord
-from discord.ext.commands import Cog, Context, command, has_any_role
+import disnake
+from disnake.ext.commands import Cog, Context, command, has_any_role
 
 from bot import constants
 from bot.bot import Bot
@@ -51,7 +51,7 @@ async def safe_dm(coro: t.Coroutine) -> None:
     """
     try:
         await coro
-    except discord.HTTPException as discord_exc:
+    except disnake.HTTPException as discord_exc:
         log.trace(f"DM dispatch failed on status {discord_exc.status} with code: {discord_exc.code}")
         if discord_exc.code != 50_007:  # If any reason other than disabled DMs
             raise
@@ -72,7 +72,7 @@ class Verification(Cog):
     # region: listeners
 
     @Cog.listener()
-    async def on_member_join(self, member: discord.Member) -> None:
+    async def on_member_join(self, member: disnake.Member) -> None:
         """Attempt to send initial direct message to each new member."""
         if member.guild.id != constants.Guild.id:
             return  # Only listen for PyDis events
@@ -87,11 +87,11 @@ class Verification(Cog):
         log.trace(f"Sending on join message to new member: {member.id}")
         try:
             await safe_dm(member.send(ON_JOIN_MESSAGE))
-        except discord.HTTPException:
+        except disnake.HTTPException:
             log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+    async def on_member_update(self, before: disnake.Member, after: disnake.Member) -> None:
         """Check if we need to send a verification DM to a gated user."""
         if before.pending is True and after.pending is False:
             try:
@@ -100,7 +100,7 @@ class Verification(Cog):
                 # our alternate welcome DM which includes info such as our welcome
                 # video.
                 await safe_dm(after.send(VERIFIED_MESSAGE))
-            except discord.HTTPException:
+            except disnake.HTTPException:
                 log.exception("DM dispatch failed on unexpected error code")
 
     # endregion
@@ -108,7 +108,7 @@ class Verification(Cog):
 
     @command(name='verify')
     @has_any_role(*constants.MODERATION_ROLES)
-    async def perform_manual_verification(self, ctx: Context, user: discord.Member) -> None:
+    async def perform_manual_verification(self, ctx: Context, user: disnake.Member) -> None:
         """Command for moderators to verify any user."""
         log.trace(f'verify command called by {ctx.author} for {user.id}.')
 

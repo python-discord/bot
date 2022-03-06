@@ -10,8 +10,8 @@ from typing import List, Optional, Union
 
 import arrow
 from dateutil.parser import isoparse
-from discord import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
-from discord.ext.commands import Context
+from disnake import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
+from disnake.ext.commands import Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot

@@ -4,7 +4,7 @@ from datetime import MAXYEAR, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument
+from disnake.ext.commands import BadArgument
 
 from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName
 

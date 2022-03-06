@@ -7,10 +7,10 @@ from enum import Enum
 from operator import attrgetter
 
 import async_timeout
-import discord
+import disnake
 from arrow import Arrow
 from async_rediscache import RedisCache
-from discord.ext import commands, tasks
+from disnake.ext import commands, tasks
 
 from bot.bot import Bot
 from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, MODERATION_ROLES
@@ -42,7 +42,7 @@ def compound_hash(objects: t.Iterable[RemoteObject]) -> str:
     return "-".join(item.sha for item in objects)
 
 
-def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
+def make_embed(title: str, description: str, *, success: bool) -> disnake.Embed:
     """
     Construct simple response embed.
 
@@ -51,7 +51,7 @@ def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
     For both `title` and `description`, empty string are valid values ~ fields will be empty.
     """
     colour = Colours.soft_green if success else Colours.soft_red
-    return discord.Embed(title=title[:256], description=description[:4096], colour=colour)
+    return disnake.Embed(title=title[:256], description=description[:4096], colour=colour)
 
 
 def extract_event_duration(event: Event) -> str:
@@ -147,13 +147,13 @@ class Branding(commands.Cog):
             return False
 
         await self.bot.wait_until_guild_available()
-        pydis: discord.Guild = self.bot.get_guild(Guild.id)
+        pydis: disnake.Guild = self.bot.get_guild(Guild.id)
 
         timeout = 10  # Seconds.
         try:
             with async_timeout.timeout(timeout):  # Raise after `timeout` seconds.
                 await pydis.edit(**{asset_type.value: file})
-        except discord.HTTPException:
+        except disnake.HTTPException:
             log.exception("Asset upload to Discord failed.")
             return False
         except asyncio.TimeoutError:
@@ -277,7 +277,7 @@ class Branding(commands.Cog):
         log.debug(f"Sending event information event to channel: {channel_id} ({is_notification=}).")
 
         await self.bot.wait_until_guild_available()
-        channel: t.Optional[discord.TextChannel] = self.bot.get_channel(channel_id)
+        channel: t.Optional[disnake.TextChannel] = self.bot.get_channel(channel_id)
 
         if channel is None:
             log.warning(f"Cannot send event information: channel {channel_id} not found!")
@@ -294,7 +294,7 @@ class Branding(commands.Cog):
 
         else:
             content = "Python Discord is entering a new event!" if is_notification else None
-            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
+            embed = disnake.Embed(description=description[:4096], colour=disnake.Colour.og_blurple())
             embed.set_footer(text=duration[:4096])
 
         await channel.send(content=content, embed=embed)
@@ -573,7 +573,7 @@ class Branding(commands.Cog):
             await ctx.send(embed=resp)
             return
 
-        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.og_blurple())
+        embed = disnake.Embed(title="Current event calendar", colour=disnake.Colour.og_blurple())
 
         # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
         first_25 = list(available_events.items())[:25]

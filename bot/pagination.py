@@ -3,9 +3,9 @@ import typing as t
 from contextlib import suppress
 from functools import partial
 
-import discord
-from discord.abc import User
-from discord.ext.commands import Context, Paginator
+import disnake
+from disnake.abc import User
+from disnake.ext.commands import Context, Paginator
 
 from bot import constants
 from bot.log import get_logger
@@ -55,7 +55,7 @@ class LinePaginator(Paginator):
         linesep: str = "\n"
     ) -> None:
         """
-        This function overrides the Paginator.__init__ from inside discord.ext.commands.
+        This function overrides the Paginator.__init__ from inside disnake.ext.commands.
 
         It overrides in order to allow us to configure the maximum number of lines per page.
         """
@@ -99,7 +99,7 @@ class LinePaginator(Paginator):
         effort to avoid breaking up single lines across pages, while keeping the total length of the
         page at a reasonable size.
 
-        This function overrides the `Paginator.add_line` from inside `discord.ext.commands`.
+        This function overrides the `Paginator.add_line` from inside `disnake.ext.commands`.
 
         It overrides in order to allow us to configure the maximum number of lines per page.
         """
@@ -192,7 +192,7 @@ class LinePaginator(Paginator):
         cls,
         lines: t.List[str],
         ctx: Context,
-        embed: discord.Embed,
+        embed: disnake.Embed,
         prefix: str = "",
         suffix: str = "",
         max_lines: t.Optional[int] = None,
@@ -204,7 +204,7 @@ class LinePaginator(Paginator):
         footer_text: str = None,
         url: str = None,
         exception_on_empty_embed: bool = False,
-    ) -> t.Optional[discord.Message]:
+    ) -> t.Optional[disnake.Message]:
         """
         Use a paginator and set of reactions to provide pagination over a set of lines.
 
@@ -219,7 +219,7 @@ class LinePaginator(Paginator):
         to any user with a moderation role.
 
         Example:
-        >>> embed = discord.Embed()
+        >>> embed = disnake.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
         >>> await LinePaginator.paginate([line for line in lines], ctx, embed)
         """
@@ -367,5 +367,5 @@ class LinePaginator(Paginator):
                 await message.edit(embed=embed)
 
         log.debug("Ending pagination and clearing reactions.")
-        with suppress(discord.NotFound):
+        with suppress(disnake.NotFound):
             await message.clear_reactions()

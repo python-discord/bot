@@ -8,7 +8,7 @@ from collections import defaultdict
 from types import ModuleType
 from unittest import mock
 
-from discord.ext import commands
+from disnake.ext import commands
 
 from bot import exts
 
@@ -34,7 +34,7 @@ class CommandNameTests(unittest.TestCase):
             raise ImportError(name=name)  # pragma: no cover
 
         # The mock prevents asyncio.get_event_loop() from being called.
-        with mock.patch("discord.ext.tasks.loop"):
+        with mock.patch("disnake.ext.tasks.loop"):
             prefix = f"{exts.__name__}."
             for module in pkgutil.walk_packages(exts.__path__, prefix, onerror=on_error):
                 if not module.ispkg:

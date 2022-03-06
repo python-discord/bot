@@ -1,12 +1,13 @@
 import calendar
+import contextlib
 import operator
 import typing as t
 from dataclasses import dataclass
 
 import arrow
-import discord
-from discord.ext import commands
-from discord.interactions import Interaction
+import disnake
+from disnake.ext import commands
+from disnake.interactions import Interaction
 
 from bot import constants
 from bot.bot import Bot
@@ -58,10 +59,10 @@ DELETE_MESSAGE_AFTER = 300  # Seconds
 log = get_logger(__name__)
 
 
-class RoleButtonView(discord.ui.View):
+class RoleButtonView(disnake.ui.View):
     """A list of SingleRoleButtons to show to the member."""
 
-    def __init__(self, member: discord.Member):
+    def __init__(self, member: disnake.Member):
         super().__init__()
         self.interaction_owner = member
 
@@ -76,13 +77,13 @@ class RoleButtonView(discord.ui.View):
         return True
 
 
-class SingleRoleButton(discord.ui.Button):
+class SingleRoleButton(disnake.ui.Button):
     """A button that adds or removes a role from the member depending on it's current state."""
 
-    ADD_STYLE = discord.ButtonStyle.success
-    REMOVE_STYLE = discord.ButtonStyle.red
-    UNAVAILABLE_STYLE = discord.ButtonStyle.secondary
-    LABEL_FORMAT = "{action} role {role_name}."
+    ADD_STYLE = disnake.ButtonStyle.success
+    REMOVE_STYLE = disnake.ButtonStyle.red
+    UNAVAILABLE_STYLE = disnake.ButtonStyle.secondary
+    LABEL_FORMAT = "{action} role {role_name}"
     CUSTOM_ID_FORMAT = "subscribe-{role_id}"
 
     def __init__(self, role: AssignableRole, assigned: bool, row: int):
@@ -104,9 +105,10 @@ class SingleRoleButton(discord.ui.Button):
 
     async def callback(self, interaction: Interaction) -> None:
         """Update the member's role and change button text to reflect current text."""
-        if isinstance(interaction.user, discord.User):
+        if isinstance(interaction.user, disnake.User):
             log.trace("User %s is not a member", interaction.user)
-            await interaction.message.delete()
+            with contextlib.suppress(disnake.HTTPException):
+                await interaction.delete_original_message()
             self.view.stop()
             return
 
@@ -117,7 +119,7 @@ class SingleRoleButton(discord.ui.Button):
         await members.handle_role_change(
             interaction.user,
             interaction.user.remove_roles if self.assigned else interaction.user.add_roles,
-            discord.Object(self.role.role_id),
+            disnake.Object(self.role.role_id),
         )
 
         self.assigned = not self.assigned
@@ -132,8 +134,8 @@ class SingleRoleButton(discord.ui.Button):
         self.style = self.REMOVE_STYLE if self.assigned else self.ADD_STYLE
         self.label = self.LABEL_FORMAT.format(action="Remove" if self.assigned else "Add", role_name=self.role.name)
         try:
-            await interaction.message.edit(view=self.view)
-        except discord.NotFound:
+            await interaction.response.edit_message(view=self.view)
+        except disnake.HTTPException:
             log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
             self.view.stop()
 
@@ -145,7 +147,7 @@ class Subscribe(commands.Cog):
         self.bot = bot
         self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
         self.assignable_roles: list[AssignableRole] = []
-        self.guild: discord.Guild = None
+        self.guild: disnake.Guild = None
 
     async def init_cog(self) -> None:
         """Initialise the cog by resolving the role IDs in ASSIGNABLE_ROLES to role names."""

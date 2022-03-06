@@ -4,9 +4,9 @@ import textwrap
 import typing as t
 from pathlib import Path
 
-from discord import Embed, Member
-from discord.ext.commands import Cog, Context, command, has_any_role
-from discord.utils import escape_markdown
+from disnake import Embed, Member
+from disnake.ext.commands import Cog, Context, command, has_any_role
+from disnake.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot

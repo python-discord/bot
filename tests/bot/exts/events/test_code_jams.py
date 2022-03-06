@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, create_autospec, patch
 
-from discord import CategoryChannel
-from discord.ext.commands import BadArgument
+from disnake import CategoryChannel
+from disnake.ext.commands import BadArgument
 
 from bot.constants import Roles
 from bot.exts.events import code_jams

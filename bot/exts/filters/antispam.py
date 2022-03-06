@@ -8,8 +8,8 @@ from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
 import arrow
-from discord import Colour, Member, Message, NotFound, Object, TextChannel
-from discord.ext.commands import Cog
+from disnake import Colour, Member, Message, NotFound, Object, TextChannel
+from disnake.ext.commands import Cog
 
 from bot import rules
 from bot.bot import Bot
@@ -195,7 +195,7 @@ class AntiSpam(Cog):
             result = await rule_function(message, messages_for_rule, rule_config)
 
             # If the rule returns `None`, that means the message didn't violate it.
-            # If it doesn't, it returns a tuple in the form `(str, Iterable[discord.Member])`
+            # If it doesn't, it returns a tuple in the form `(str, Iterable[disnake.Member])`
             # which contains the reason for why the message violated the rule and
             # an iterable of all members that violated the rule.
             if result is not None:
@@ -265,7 +265,7 @@ class AntiSpam(Cog):
                         # In the rare case where we found messages matching the
                         # spam filter across multiple channels, it is possible
                         # that a single channel will only contain a single message
-                        # to delete. If that should be the case, discord.py will
+                        # to delete. If that should be the case, disnake will
                         # use the "delete single message" endpoint instead of the
                         # bulk delete endpoint, and the single message deletion
                         # endpoint will complain if you give it that does not exist.

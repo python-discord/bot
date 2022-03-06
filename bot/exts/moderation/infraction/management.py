@@ -1,10 +1,10 @@
 import textwrap
 import typing as t
 
-import discord
-from discord.ext import commands
-from discord.ext.commands import Context
-from discord.utils import escape_markdown
+import disnake
+from disnake.ext import commands
+from disnake.ext.commands import Context
+from disnake.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
@@ -53,9 +53,9 @@ class ModManagement(commands.Cog):
             await ctx.send_help(ctx.command)
             return
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title=f"Infraction #{infraction['id']}",
-            colour=discord.Colour.orange()
+            colour=disnake.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, [infraction])
 
@@ -199,7 +199,7 @@ class ModManagement(commands.Cog):
 
         await self.mod_log.send_log_message(
             icon_url=constants.Icons.pencil,
-            colour=discord.Colour.og_blurple(),
+            colour=disnake.Colour.og_blurple(),
             title="Infraction edited",
             thumbnail=thumbnail,
             text=textwrap.dedent(f"""
@@ -217,21 +217,21 @@ class ModManagement(commands.Cog):
     async def infraction_search_group(self, ctx: Context, query: t.Union[UnambiguousUser, Snowflake, str]) -> None:
         """Searches for infractions in the database."""
         if isinstance(query, int):
-            await self.search_user(ctx, discord.Object(query))
+            await self.search_user(ctx, disnake.Object(query))
         elif isinstance(query, str):
             await self.search_reason(ctx, query)
         else:
             await self.search_user(ctx, query)
 
     @infraction_search_group.command(name="user", aliases=("member", "userid"))
-    async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, discord.Object]) -> None:
+    async def search_user(self, ctx: Context, user: t.Union[MemberOrUser, disnake.Object]) -> None:
         """Search for infractions by member."""
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={'user__id': str(user.id)}
         )
 
-        if isinstance(user, (discord.Member, discord.User)):
+        if isinstance(user, (disnake.Member, disnake.User)):
             user_str = escape_markdown(str(user))
         else:
             if infraction_list:
@@ -241,9 +241,9 @@ class ModManagement(commands.Cog):
                 user_str = str(user.id)
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
-            colour=discord.Colour.orange()
+            colour=disnake.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
@@ -256,9 +256,9 @@ class ModManagement(commands.Cog):
         )
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title=f"Infractions matching `{reason}` ({formatted_infraction_count} total)",
-            colour=discord.Colour.orange()
+            colour=disnake.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, infraction_list)
 
@@ -296,9 +296,9 @@ class ModManagement(commands.Cog):
         )
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title=f"Infractions by {actor} ({formatted_infraction_count} total)",
-            colour=discord.Colour.orange()
+            colour=disnake.Colour.orange()
         )
 
         await self.send_infraction_list(ctx, embed, infraction_list)
@@ -321,7 +321,7 @@ class ModManagement(commands.Cog):
     async def send_infraction_list(
         self,
         ctx: Context,
-        embed: discord.Embed,
+        embed: disnake.Embed,
         infractions: t.Iterable[t.Dict[str, t.Any]]
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
@@ -410,7 +410,7 @@ class ModManagement(commands.Cog):
     async def cog_command_error(self, ctx: Context, error: commands.CommandError) -> None:
         """Handles errors for commands within this cog."""
         if isinstance(error, commands.BadUnionArgument):
-            if discord.User in error.converters:
+            if disnake.User in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 

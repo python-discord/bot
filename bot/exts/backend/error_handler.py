@@ -1,7 +1,7 @@
 import difflib
 
-from discord import Embed
-from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
+from disnake import Embed
+from disnake.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError

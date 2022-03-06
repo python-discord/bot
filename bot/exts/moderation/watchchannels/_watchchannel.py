@@ -6,9 +6,9 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-import discord
-from discord import Color, DMChannel, Embed, HTTPException, Message, errors
-from discord.ext.commands import Cog, Context
+import disnake
+from disnake import Color, DMChannel, Embed, HTTPException, Message, errors
+from disnake.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -104,7 +104,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
-        except discord.HTTPException:
+        except disnake.HTTPException:
             self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
         if self.channel is None or self.webhook is None:
@@ -217,7 +217,7 @@ class WatchChannel(metaclass=CogABCMeta):
         username = messages.sub_clyde(username)
         try:
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
-        except discord.HTTPException as exc:
+        except disnake.HTTPException as exc:
             self.log.exception(
                 "Failed to send a message to the webhook",
                 exc_info=exc
@@ -265,7 +265,7 @@ class WatchChannel(metaclass=CogABCMeta):
                     username=msg.author.display_name,
                     avatar_url=msg.author.display_avatar.url
                 )
-            except discord.HTTPException as exc:
+            except disnake.HTTPException as exc:
                 self.log.exception(
                     "Failed to send an attachment to the webhook",
                     exc_info=exc
