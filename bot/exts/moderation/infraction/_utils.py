@@ -181,17 +181,15 @@ async def notify_infraction(
         duration = "Permanent"
     else:
         expiry = arrow.get(infraction["expires_at"])
-        now = arrow.utcnow()
-
         expires_at = time.format_relative(expiry)
         duration = time.humanize_delta(infraction["inserted_at"], expiry, max_units=2)
 
-        if expiry < now:
-            expires_at += " (Expired)"
-        else:
-            remaining = time.humanize_delta(expiry, now, max_units=2)
+        if infraction["active"]:
+            remaining = time.humanize_delta(expiry, arrow.utcnow(), max_units=2)
             if duration != remaining:
                 duration += f" ({remaining} remaining)"
+        else:
+            expires_at += " (Inactive)"
 
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 
