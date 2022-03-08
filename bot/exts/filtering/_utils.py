@@ -4,7 +4,7 @@ import inspect
 import pkgutil
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Set
+from typing import Any, Iterable, Union
 
 import regex
 
@@ -13,7 +13,7 @@ INVISIBLE_RE = regex.compile(rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT
 ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIATION_SELECTORS}]]", regex.V1)
 
 
-def subclasses_in_package(package: str, prefix: str, parent: type) -> Set[type]:
+def subclasses_in_package(package: str, prefix: str, parent: type) -> set[type]:
     """Return all the subclasses of class `parent`, found in the top-level of `package`, given by absolute path."""
     subclasses = set()
 
@@ -48,6 +48,22 @@ def past_tense(word: str) -> str:
     if word.endswith("y") and len(word) > 1 and word[-2] not in "aeiou":
         return word[:-1] + "ied"
     return word + "ed"
+
+
+def to_serializable(item: Any) -> Union[bool, int, float, str, list, dict, None]:
+    """Convert the item into an object that can be converted to JSON."""
+    if isinstance(item, (bool, int, float, str, type(None))):
+        return item
+    if isinstance(item, dict):
+        result = {}
+        for key, value in item.items():
+            if not isinstance(key, (bool, int, float, str, type(None))):
+                key = str(key)
+            result[key] = to_serializable(value)
+        return result
+    if isinstance(item, Iterable):
+        return [to_serializable(subitem) for subitem in item]
+    return str(item)
 
 
 class FieldRequiring(ABC):

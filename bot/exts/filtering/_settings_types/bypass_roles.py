@@ -14,18 +14,18 @@ class RoleBypass(ValidationEntry):
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)
-        self.roles = set()
+        self.bypass_roles = set()
         for role in entry_data:
             if role.isdigit():
-                self.roles.add(int(role))
+                self.bypass_roles.add(int(role))
             else:
-                self.roles.add(role)
+                self.bypass_roles.add(role)
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """Return whether the filter should be triggered on this user given their roles."""
         if not isinstance(ctx.author, Member):
             return True
         return all(
-            member_role.id not in self.roles and member_role.name not in self.roles
+            member_role.id not in self.bypass_roles and member_role.name not in self.bypass_roles
             for member_role in ctx.author.roles
         )

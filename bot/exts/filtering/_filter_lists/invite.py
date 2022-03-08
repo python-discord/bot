@@ -84,7 +84,9 @@ class InviteList(FilterList):
         # Add the disallowed by default unless they're whitelisted.
         guilds_for_inspection = {invite.guild.id for invite in denied_by_default.values()}
         new_ctx = ctx.replace(content=guilds_for_inspection)
-        allowed = {filter_.content for filter_ in self.filter_lists[ListType.ALLOW] if filter_.triggered_on(new_ctx)}
+        allowed = {
+            filter_.content for filter_ in self.filter_lists[ListType.ALLOW].values() if filter_.triggered_on(new_ctx)
+        }
         disallowed_invites.update({
             invite_code: invite for invite_code, invite in denied_by_default.items() if invite.guild.id not in allowed
         })
@@ -105,7 +107,15 @@ class InviteList(FilterList):
 
         actions = None
         if len(disallowed_invites) > len(triggered):  # There are invites which weren't allowed but aren't blacklisted.
-            actions = reduce(or_, (filter_.actions for filter_ in triggered), self.defaults[ListType.ALLOW]["actions"])
+            deny_defaults = self.defaults[ListType.DENY]["actions"]
+            actions = reduce(
+                or_,
+                (
+                    filter_.actions.fallback_to(deny_defaults) if filter_.actions else deny_defaults
+                    for filter_ in triggered
+                ),
+                self.defaults[ListType.ALLOW]["actions"]
+            )
         elif triggered:
             actions = reduce(or_, (filter_.actions for filter_ in triggered))
         ctx.matches += {match[0] for match in matches if match.group("invite") in disallowed_invites}

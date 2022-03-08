@@ -1,8 +1,5 @@
-from typing import Optional
-
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
-from bot.exts.filtering._settings import ActionSettings
 
 
 class InviteFilter(Filter):
@@ -14,8 +11,8 @@ class InviteFilter(Filter):
 
     name = "invite"
 
-    def __init__(self, filter_data: dict, action_defaults: Optional[ActionSettings] = None):
-        super().__init__(filter_data, action_defaults)
+    def __init__(self, filter_data: dict):
+        super().__init__(filter_data)
         self.content = int(self.content)
 
     def triggered_on(self, ctx: FilterContext) -> bool:

@@ -34,6 +34,11 @@ class Infraction(Enum):
         """
         return self != Infraction.NONE
 
+    def __str__(self) -> str:
+        if self == Infraction.NONE:
+            return ""
+        return self.name
+
 
 superstar = namedtuple("superstar", ["reason", "duration"])
 

@@ -13,14 +13,20 @@ from bot.bot import Bot
 from bot.constants import Colours, MODERATION_ROLES, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
+from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui import ArgumentCompletionView
-from bot.exts.filtering._utils import past_tense
+from bot.exts.filtering._utils import past_tense, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import format_channel, format_user
 
 log = get_logger(__name__)
+
+# Max number of characters in a Discord embed field value, minus 6 characters for a placeholder.
+MAX_FIELD_SIZE = 1018
+# Max number of characters for an embed field's value before it should take its own line.
+MAX_INLINE_SIZE = 50
 
 
 class Filtering(Cog):
@@ -161,13 +167,11 @@ class Filtering(Cog):
     @blocklist.command(name="list", aliases=("get",))
     async def bl_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
         """List the contents of a specified blacklist."""
-        if list_name is None:
-            await ctx.send(
-                "The **list_name** argument is unspecified. Please pick a value from the options below:",
-                view=ArgumentCompletionView(ctx, [], "list_name", list(self.filter_lists), 1, None)
-            )
+        result = self._resolve_list_type_and_name(ctx, ListType.DENY, list_name)
+        if not result:
             return
-        await self._send_list(ctx, list_name, ListType.DENY)
+        list_type, filter_list = result
+        await self._send_list(ctx, filter_list, list_type)
 
     # endregion
     # region: whitelist commands
@@ -181,48 +185,83 @@ class Filtering(Cog):
     @allowlist.command(name="list", aliases=("get",))
     async def al_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
         """List the contents of a specified whitelist."""
-        if list_name is None:
-            await ctx.send(
-                "The **list_name** argument is unspecified. Please pick a value from the options below:",
-                view=ArgumentCompletionView(ctx, [], "list_name", list(self.filter_lists), 1, None)
-            )
+        result = self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name)
+        if not result:
             return
-        await self._send_list(ctx, list_name, ListType.ALLOW)
+        list_type, filter_list = result
+        await self._send_list(ctx, filter_list, list_type)
 
     # endregion
     # region: filter commands
 
-    @commands.group(aliases=("filters", "f"))
-    async def filter(self, ctx: Context) -> None:
-        """Group for managing filters."""
-        if not ctx.invoked_subcommand:
+    @commands.group(aliases=("filters", "f"), invoke_without_command=True)
+    async def filter(self, ctx: Context, id_: Optional[int] = None) -> None:
+        """
+        Group for managing filters.
+
+        If a valid filter ID is provided, an embed describing the filter will be posted.
+        """
+        if not ctx.invoked_subcommand and not id_:
             await ctx.send_help(ctx.command)
+            return
+
+        result = self._get_filter_by_id(id_)
+        if result is None:
+            await ctx.send(f":x: Could not find a filter with ID `{id_}`.")
+            return
+        filter_, filter_list, list_type = result
+
+        # Get filter list settings
+        default_setting_values = {}
+        for type_ in ("actions", "validations"):
+            for _, setting in filter_list.defaults[list_type][type_].items():
+                default_setting_values.update(to_serializable(setting.to_dict()))
+
+        # Get the filter's overridden settings
+        overrides_values = {}
+        for settings in (filter_.actions, filter_.validations):
+            if settings:
+                for _, setting in settings.items():
+                    overrides_values.update(to_serializable(setting.to_dict()))
+
+        # Combine them. It's done in this way to preserve field order, since the filter won't have all settings.
+        total_values = {}
+        for name, value in default_setting_values.items():
+            if name not in overrides_values:
+                total_values[name] = value
+            else:
+                total_values[f"{name}*"] = overrides_values[name]
+        # Add the filter-specific settings.
+        if hasattr(filter_.extra_fields, "dict"):
+            extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
+            for name, value in filter_.extra_fields.dict().items():
+                if name not in extra_fields_overrides:
+                    total_values[f"{filter_.name}/{name}"] = value
+                else:
+                    total_values[f"{filter_.name}/{name}*"] = value
+
+        embed = self._build_embed_from_dict(total_values)
+        embed.description = f"`{filter_.content}`"
+        if filter_.description:
+            embed.description += f" - {filter_.description}"
+        embed.set_author(name=f"Filter #{id_} - " + f"{past_tense(list_type.name.lower())} {filter_list.name}".title())
+        embed.set_footer(text=(
+            "Field names with an asterisk have values which override the defaults of the containing filter list. "
+            f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+        ))
+        await ctx.send(embed=embed)
 
     @filter.command(name="list", aliases=("get",))
     async def f_list(
             self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
     ) -> None:
         """List the contents of a specified list of filters."""
-        if list_name is None:
-            await ctx.send(
-                "The **list_name** argument is unspecified. Please pick a value from the options below:",
-                view=ArgumentCompletionView(ctx, [list_type], "list_name", list(self.filter_lists), 1, None)
-            )
+        result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
+        if result is None:
             return
+        list_type, filter_list = result
 
-        if list_type is None:
-            filter_list = self._get_list_by_name(list_name)
-            if len(filter_list.filter_lists) > 1:
-                await ctx.send(
-                    "The **list_type** argument is unspecified. Please pick a value from the options below:",
-                    view=ArgumentCompletionView(
-                        ctx, [list_name], "list_type", [option.name for option in ListType], 0, list_type_converter
-                    )
-                )
-                return
-            list_type = list(filter_list.filter_lists)[0]
-
-        await self._send_list(ctx, list_name, list_type)
+        await self._send_list(ctx, filter_list, list_type)
 
     @filter.command(name="describe", aliases=("explain", "manual"))
     async def f_describe(self, ctx: Context, filter_name: Optional[str]) -> None:
@@ -286,22 +325,34 @@ class Filtering(Cog):
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @filterlist.command(name="describe", aliases=("explain", "manual"))
-    async def fl_describe(self, ctx: Context, filterlist_name: Optional[str]) -> None:
-        """Show a description of the specified filter list, or a list of possible values if no name is specified."""
-        if not filterlist_name:
-            embed = Embed(description="\n".join(self.filter_lists))
+    @filterlist.command(name="describe", aliases=("explain", "manual", "id"))
+    async def fl_describe(
+            self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
+    ) -> None:
+        """Show a description of the specified filter list, or a list of possible values if no values are provided."""
+        if not list_type and not list_name:
+            embed = Embed(description="\n".join(f"\u2003 {fl}" for fl in self.filter_lists), colour=Colour.blue())
             embed.set_author(name="List of filter lists names")
-        else:
-            try:
-                filter_list = self._get_list_by_name(filterlist_name)
-            except BadArgument as e:
-                await ctx.send(f":x: {e}")
-                return
-            # Use the class's docstring, and ignore single newlines.
-            embed = Embed(description=re.sub(r"(?<!\n)\n(?!\n)", " ", filter_list.__doc__))
-            embed.set_author(name=f"Description of the {filterlist_name} filter list")
-        embed.colour = Colour.blue()
+            await ctx.send(embed=embed)
+            return
+
+        result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
+        if result is None:
+            return
+        list_type, filter_list = result
+
+        list_defaults = filter_list.defaults[list_type]
+        setting_values = {}
+        for type_ in ("actions", "validations"):
+            for _, setting in list_defaults[type_].items():
+                setting_values.update(to_serializable(setting.to_dict()))
+
+        embed = self._build_embed_from_dict(setting_values)
+        # Use the class's docstring, and ignore single newlines.
+        embed.description = re.sub(r"(?<!\n)\n(?!\n)", " ", filter_list.__doc__)
+        embed.set_author(
+            name=f"Description of the {past_tense(list_type.name.lower())} {list_name.title()} filter list"
+        )
         await ctx.send(embed=embed)
 
     # endregion
@@ -363,6 +414,30 @@ class Filtering(Cog):
 
         await self.webhook.send(username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10])
 
+    async def _resolve_list_type_and_name(
+        self, ctx: Context, list_type: Optional[ListType] = None, list_name: Optional[str] = None
+    ) -> Optional[tuple[ListType, FilterList]]:
+        """Prompt the user to complete the list type or list name if one of them is missing."""
+        if list_name is None:
+            await ctx.send(
+                "The **list_name** argument is unspecified. Please pick a value from the options below:",
+                view=ArgumentCompletionView(ctx, [list_type], "list_name", list(self.filter_lists), 1, None)
+            )
+            return None
+
+        filter_list = self._get_list_by_name(list_name)
+        if list_type is None:
+            if len(filter_list.filter_lists) > 1:
+                await ctx.send(
+                    "The **list_type** argument is unspecified. Please pick a value from the options below:",
+                    view=ArgumentCompletionView(
+                        ctx, [list_name], "list_type", [option.name for option in ListType], 0, list_type_converter
+                    )
+                )
+                return None
+            list_type = list(filter_list.filter_lists)[0]
+        return list_type, filter_list
+
     def _get_list_by_name(self, list_name: str) -> FilterList:
         """Get a filter list by its name, or raise an error if there's no such list."""
         log.trace(f"Getting the filter list matching the name {list_name}")
@@ -375,9 +450,9 @@ class Filtering(Cog):
         log.trace(f"Found list named {filter_list.name}")
         return filter_list
 
-    async def _send_list(self, ctx: Context, list_name: str, list_type: ListType) -> None:
+    @staticmethod
+    async def _send_list(ctx: Context, filter_list: FilterList, list_type: ListType) -> None:
         """Show the list of filters identified by the list name and type."""
-        filter_list = self._get_list_by_name(list_name)
         type_filters = filter_list.filter_lists.get(list_type)
         if type_filters is None:
             await ctx.send(f":x: There is no list of {past_tense(list_type.name.lower())} {filter_list.name}s.")
@@ -390,6 +465,26 @@ class Filtering(Cog):
         embed.set_author(name=f"List of {past_tense(list_type.name.lower())} {filter_list.name}s ({len(lines)} total)")
 
         await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False)
+
+    def _get_filter_by_id(self, id_: int) -> Optional[tuple[Filter, FilterList, ListType]]:
+        """Get the filter object corresponding to the provided ID, along with its containing list and list type."""
+        for filter_list in self.filter_lists.values():
+            for list_type, sublist in filter_list.filter_lists.items():
+                if id_ in sublist:
+                    return sublist[id_], filter_list, list_type
+
+    @staticmethod
+    def _build_embed_from_dict(data: dict) -> Embed:
+        """Build a Discord embed by populating fields from the given dict."""
+        embed = Embed(description="", colour=Colour.blue())
+        for setting, value in data.items():
+            if setting.startswith("_"):
+                continue
+            value = str(value) if value not in ("", None) else "-"
+            if len(value) > MAX_FIELD_SIZE:
+                value = value[:MAX_FIELD_SIZE] + " [...]"
+            embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
+        return embed
 
     # endregion
 

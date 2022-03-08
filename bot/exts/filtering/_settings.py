@@ -16,7 +16,9 @@ log = get_logger(__name__)
 _already_warned: set[str] = set()
 
 
-def create_settings(settings_data: dict) -> tuple[Optional[ActionSettings], Optional[ValidationSettings]]:
+def create_settings(
+        settings_data: dict, *, keep_empty: bool = False
+) -> tuple[Optional[ActionSettings], Optional[ValidationSettings]]:
     """
     Create and return instances of the Settings subclasses from the given data.
 
@@ -34,7 +36,10 @@ def create_settings(settings_data: dict) -> tuple[Optional[ActionSettings], Opti
                 f"A setting named {entry_name} was loaded from the database, but no matching class."
             )
             _already_warned.add(entry_name)
-    return ActionSettings.create(action_data), ValidationSettings.create(validation_data)
+    return (
+        ActionSettings.create(action_data, keep_empty=keep_empty),
+        ValidationSettings.create(validation_data, keep_empty=keep_empty)
+    )
 
 
 class Settings(FieldRequiring):
@@ -54,7 +59,7 @@ class Settings(FieldRequiring):
     _already_warned: set[str] = set()
 
     @abstractmethod
-    def __init__(self, settings_data: dict):
+    def __init__(self, settings_data: dict, *, keep_empty: bool = False):
         self._entries: dict[str, Settings.entry_type] = {}
 
         entry_classes = settings_types.get(self.entry_type.__name__)
@@ -70,7 +75,7 @@ class Settings(FieldRequiring):
                     self._already_warned.add(entry_name)
             else:
                 try:
-                    new_entry = entry_cls.create(entry_data)
+                    new_entry = entry_cls.create(entry_data, keep_empty=keep_empty)
                     if new_entry:
                         self._entries[entry_name] = new_entry
                 except TypeError as e:
@@ -103,17 +108,17 @@ class Settings(FieldRequiring):
         return self._entries.get(key, default)
 
     @classmethod
-    def create(cls, settings_data: dict) -> Optional[Settings]:
+    def create(cls, settings_data: dict, *, keep_empty: bool = False) -> Optional[Settings]:
         """
         Returns a Settings object from `settings_data` if it holds any value, None otherwise.
 
         Use this method to create Settings objects instead of the init.
         The None value is significant for how a filter list iterates over its filters.
         """
-        settings = cls(settings_data)
+        settings = cls(settings_data, keep_empty=keep_empty)
         # If an entry doesn't hold any values, its `create` method will return None.
         # If all entries are None, then the settings object holds no values.
-        if not any(settings._entries.values()):
+        if not keep_empty and not any(settings._entries.values()):
             return None
 
         return settings
@@ -129,8 +134,8 @@ class ValidationSettings(Settings):
 
     entry_type = ValidationEntry
 
-    def __init__(self, settings_data: dict):
-        super().__init__(settings_data)
+    def __init__(self, settings_data: dict, *, keep_empty: bool = False):
+        super().__init__(settings_data, keep_empty=keep_empty)
 
     def evaluate(self, ctx: FilterContext) -> tuple[set[str], set[str]]:
         """Evaluates for each setting whether the context is relevant to the filter."""
@@ -158,8 +163,8 @@ class ActionSettings(Settings):
 
     entry_type = ActionEntry
 
-    def __init__(self, settings_data: dict):
-        super().__init__(settings_data)
+    def __init__(self, settings_data: dict, *, keep_empty: bool = False):
+        super().__init__(settings_data, keep_empty=keep_empty)
 
     def __or__(self, other: ActionSettings) -> ActionSettings:
         """Combine the entries of two collections of settings into a new ActionsSettings."""
@@ -183,8 +188,10 @@ class ActionSettings(Settings):
         for entry in self._entries.values():
             await entry.action(ctx)
 
-    def fallback_to(self, fallback: ActionSettings) -> None:
+    def fallback_to(self, fallback: ActionSettings) -> ActionSettings:
         """Fill in missing entries from `fallback`."""
+        new_actions = self.copy()
         for entry_name, entry_value in fallback.items():
             if entry_name not in self._entries:
-                self._entries[entry_name] = entry_value
+                new_actions._entries[entry_name] = entry_value
+        return new_actions

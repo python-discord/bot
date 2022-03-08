@@ -58,7 +58,13 @@ class DomainsList(FilterList):
         actions = None
         message = ""
         if triggers:
-            actions = reduce(or_, (filter_.actions for filter_ in triggers))
+            action_defaults = self.defaults[ListType.DENY]["actions"]
+            actions = reduce(
+                or_,
+                (filter_.actions.fallback_to(action_defaults) if filter_.actions else action_defaults
+                 for filter_ in triggers
+                 )
+            )
             if len(triggers) == 1:
                 message = f"#{triggers[0].id} (`{triggers[0].content}`)"
                 if triggers[0].description:

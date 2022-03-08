@@ -46,7 +46,7 @@ class SettingsEntry(FieldRequiring):
         return self.__class__(self.to_dict())
 
     @classmethod
-    def create(cls, entry_data: Optional[dict[str, Any]]) -> Optional[SettingsEntry]:
+    def create(cls, entry_data: Optional[dict[str, Any]], *, keep_empty: bool = False) -> Optional[SettingsEntry]:
         """
         Returns a SettingsEntry object from `entry_data` if it holds any value, None otherwise.
 
@@ -55,7 +55,7 @@ class SettingsEntry(FieldRequiring):
         """
         if entry_data is None:
             return None
-        if hasattr(entry_data, "values") and not any(value for value in entry_data.values()):
+        if not keep_empty and hasattr(entry_data, "values") and not any(value for value in entry_data.values()):
             return None
 
         return cls(entry_data)

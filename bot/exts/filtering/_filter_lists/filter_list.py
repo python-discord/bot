@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import Dict, List, Optional, Type
+from typing import Optional, Type
 
 from discord.ext.commands import BadArgument
 
@@ -44,21 +44,21 @@ class FilterList(FieldRequiring):
     name = FieldRequiring.MUST_SET_UNIQUE
 
     def __init__(self, filter_type: Type[Filter]):
-        self.filter_lists: dict[ListType, list[Filter]] = {}
+        self.filter_lists: dict[ListType, dict[int, Filter]] = {}
         self.defaults = {}
 
         self.filter_type = filter_type
 
-    def add_list(self, list_data: Dict) -> None:
+    def add_list(self, list_data: dict) -> None:
         """Add a new type of list (such as a whitelist or a blacklist) this filter list."""
-        actions, validations = create_settings(list_data["settings"])
+        actions, validations = create_settings(list_data["settings"], keep_empty=True)
         list_type = ListType(list_data["list_type"])
         self.defaults[list_type] = {"actions": actions, "validations": validations}
 
-        filters = []
+        filters = {}
         for filter_data in list_data["filters"]:
             try:
-                filters.append(self.filter_type(filter_data, actions))
+                filters[filter_data["id"]] = self.filter_type(filter_data)
             except TypeError as e:
                 log.warning(e)
         self.filter_lists[list_type] = filters
@@ -73,7 +73,9 @@ class FilterList(FieldRequiring):
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
 
     @staticmethod
-    def filter_list_result(ctx: FilterContext, filters: List[Filter], defaults: ValidationSettings) -> list[Filter]:
+    def filter_list_result(
+            ctx: FilterContext, filters: dict[int, Filter], defaults: ValidationSettings
+    ) -> list[Filter]:
         """
         Sift through the list of filters, and return only the ones which apply to the given context.
 
@@ -91,7 +93,7 @@ class FilterList(FieldRequiring):
         default_answer = not bool(failed_by_default)
 
         relevant_filters = []
-        for filter_ in filters:
+        for filter_ in filters.values():
             if not filter_.validations:
                 if default_answer and filter_.triggered_on(ctx):
                     relevant_filters.append(filter_)

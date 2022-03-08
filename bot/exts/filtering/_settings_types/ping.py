@@ -12,11 +12,11 @@ class Ping(ActionEntry):
 
     name = "mentions"
     description = {
-        "ping_type": (
+        "guild_pings": (
             "A list of role IDs/role names/user IDs/user names/here/everyone. "
             "If a mod-alert is generated for a filter triggered in a public channel, these will be pinged."
         ),
-        "dm_ping_type": (
+        "dm_pings": (
             "A list of role IDs/role names/user IDs/user names/here/everyone. "
             "If a mod-alert is generated for a filter triggered in DMs, these will be pinged."
         )
@@ -24,12 +24,13 @@ class Ping(ActionEntry):
 
     def __init__(self, entry_data: Any):
         super().__init__(entry_data)
-        self.guild_mentions = set(entry_data["guild_pings"])
-        self.dm_mentions = set(entry_data["dm_pings"])
+
+        self.guild_pings = set(entry_data["guild_pings"]) if entry_data["guild_pings"] else set()
+        self.dm_pings = set(entry_data["dm_pings"]) if entry_data["dm_pings"] else set()
 
     async def action(self, ctx: FilterContext) -> None:
         """Add the stored pings to the alert message content."""
-        mentions = self.guild_mentions if ctx.channel.guild else self.dm_mentions
+        mentions = self.guild_pings if ctx.channel.guild else self.dm_pings
         new_content = " ".join([self._resolve_mention(mention, ctx.channel.guild) for mention in mentions])
         ctx.alert_content = f"{new_content} {ctx.alert_content}"
 
@@ -39,8 +40,8 @@ class Ping(ActionEntry):
             return NotImplemented
 
         return Ping({
-            "ping_type": self.guild_mentions | other.guild_mentions,
-            "dm_ping_type": self.dm_mentions | other.dm_mentions
+            "ping_type": self.guild_pings | other.guild_pings,
+            "dm_ping_type": self.dm_pings | other.dm_pings
         })
 
     @staticmethod

@@ -1,8 +1,7 @@
 from abc import abstractmethod
-from typing import Optional
 
 from bot.exts.filtering._filter_context import FilterContext
-from bot.exts.filtering._settings import ActionSettings, create_settings
+from bot.exts.filtering._settings import create_settings
 from bot.exts.filtering._utils import FieldRequiring
 
 
@@ -20,15 +19,11 @@ class Filter(FieldRequiring):
     # If a subclass uses extra fields, it should assign the pydantic model type to this variable.
     extra_fields_type = None
 
-    def __init__(self, filter_data: dict, action_defaults: Optional[ActionSettings] = None):
+    def __init__(self, filter_data: dict):
         self.id = filter_data["id"]
         self.content = filter_data["content"]
         self.description = filter_data["description"]
         self.actions, self.validations = create_settings(filter_data["settings"])
-        if not self.actions:
-            self.actions = action_defaults
-        elif action_defaults:
-            self.actions.fallback_to(action_defaults)
         self.extra_fields = filter_data["additional_field"] or "{}"  # noqa: P103
         if self.extra_fields_type:
             self.extra_fields = self.extra_fields_type.parse_raw(self.extra_fields)
