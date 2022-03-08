@@ -7,7 +7,7 @@ We can use regex to pull out all the numbers in a sentence:
 >>> import re
 >>> x = "On Oct 18 1963 a cat was launched aboard rocket #47"
 >>> regex_pattern = r"[0-9]{1,3}"  # Matches one-three digits
->>> re.findall(regex_pattern,  foo)
+>>> re.findall(regex_pattern, foo)
 ['18', '196', '3', '47']         # Notice the year is cut off
 ```
 **See Also**
