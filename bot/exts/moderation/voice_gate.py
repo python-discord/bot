@@ -10,7 +10,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf
+from bot.constants import Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -191,7 +191,6 @@ class VoiceGate(Cog):
                 await ctx.channel.send(ctx.author.mention, embed=embed)
             return
 
-        self.mod_log.ignore(Event.member_update, ctx.author.id)
         embed = discord.Embed(
             title="Voice gate passed",
             description="You have been granted permission to use voice channels in Python Discord.",
