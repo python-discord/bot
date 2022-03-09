@@ -4,8 +4,8 @@ import datetime
 import arrow
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse, parse as dateutil_parse
-from discord import Embed, Member
-from discord.ext.commands import Cog, Context, group, has_any_role
+from disnake import Embed, Member
+from disnake.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
@@ -22,12 +22,12 @@ MAXIMUM_WORK_LIMIT = 16
 class ModPings(Cog):
     """Commands for a moderator to turn moderator pings on and off."""
 
-    # RedisCache[discord.Member.id, 'Naïve ISO 8601 string']
+    # RedisCache[disnake.Member.id, 'Naïve ISO 8601 string']
     # The cache's keys are mods who have pings off.
     # The cache's values are the times when the role should be re-applied to them, stored in ISO format.
     pings_off_mods = RedisCache()
 
-    # RedisCache[discord.Member.id, 'start timestamp|total worktime in seconds']
+    # RedisCache[disnake.Member.id, 'start timestamp|total worktime in seconds']
     # The cache's keys are mod's ID
     # The cache's values are their pings on schedule timestamp and the total seconds (work time) until pings off
     modpings_schedule = RedisCache()

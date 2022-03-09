@@ -3,7 +3,7 @@ import unittest
 import unittest.mock
 from datetime import datetime
 
-import discord
+import disnake
 
 from bot import constants
 from bot.exts.info import information
@@ -43,7 +43,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         embed = kwargs.pop('embed')
 
         self.assertEqual(embed.title, "Role information (Total 1 role)")
-        self.assertEqual(embed.colour, discord.Colour.og_blurple())
+        self.assertEqual(embed.colour, disnake.Colour.og_blurple())
         self.assertEqual(embed.description, f"\n`{self.moderator_role.id}` - {self.moderator_role.mention}\n")
 
     async def test_role_info_command(self):
@@ -51,19 +51,19 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         dummy_role = helpers.MockRole(
             name="Dummy",
             id=112233445566778899,
-            colour=discord.Colour.og_blurple(),
+            colour=disnake.Colour.og_blurple(),
             position=10,
             members=[self.ctx.author],
-            permissions=discord.Permissions(0)
+            permissions=disnake.Permissions(0)
         )
 
         admin_role = helpers.MockRole(
             name="Admins",
             id=998877665544332211,
-            colour=discord.Colour.red(),
+            colour=disnake.Colour.red(),
             position=3,
             members=[self.ctx.author],
-            permissions=discord.Permissions(0),
+            permissions=disnake.Permissions(0),
         )
 
         self.ctx.guild.roles.extend([dummy_role, admin_role])
@@ -81,7 +81,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         admin_embed = admin_kwargs["embed"]
 
         self.assertEqual(dummy_embed.title, "Dummy info")
-        self.assertEqual(dummy_embed.colour, discord.Colour.og_blurple())
+        self.assertEqual(dummy_embed.colour, disnake.Colour.og_blurple())
 
         self.assertEqual(dummy_embed.fields[0].value, str(dummy_role.id))
         self.assertEqual(dummy_embed.fields[1].value, f"#{dummy_role.colour.value:0>6x}")
@@ -91,7 +91,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(dummy_embed.fields[5].value, "0")
 
         self.assertEqual(admin_embed.title, "Admins info")
-        self.assertEqual(admin_embed.colour, discord.Colour.red())
+        self.assertEqual(admin_embed.colour, disnake.Colour.red())
 
 
 class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
@@ -449,7 +449,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         user.created_at = user.joined_at = datetime.utcnow()
         embed = await self.cog.create_user_embed(ctx, user, False)
 
-        self.assertEqual(embed.colour, discord.Colour(100))
+        self.assertEqual(embed.colour, disnake.Colour(100))
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
@@ -463,11 +463,11 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """The embed should be created with the og blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
 
-        user = helpers.MockMember(id=217, colour=discord.Colour.default())
+        user = helpers.MockMember(id=217, colour=disnake.Colour.default())
         user.created_at = user.joined_at = datetime.utcnow()
         embed = await self.cog.create_user_embed(ctx, user, False)
 
-        self.assertEqual(embed.colour, discord.Colour.og_blurple())
+        self.assertEqual(embed.colour, disnake.Colour.og_blurple())
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",

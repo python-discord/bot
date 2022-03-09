@@ -4,9 +4,9 @@ import types
 import typing as t
 from contextlib import suppress
 
-from discord import Member, NotFound
-from discord.ext import commands
-from discord.ext.commands import Cog, Context
+from disnake import Member, NotFound
+from disnake.ext import commands
+from disnake.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger
@@ -179,7 +179,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     Ensure the highest role of the invoking member is greater than that of the target member.
 
     If the condition fails, a warning is sent to the invoking context. A target which is not an
-    instance of discord.Member will always pass.
+    instance of disnake.Member will always pass.
 
     `member_arg` is the keyword name or position index of the parameter of the decorated command
     whose value is the target member.
@@ -188,16 +188,15 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     """
     def decorator(func: types.FunctionType) -> types.FunctionType:
         @command_wraps(func)
-        async def wrapper(*args, **kwargs) -> None:
+        async def wrapper(*args, **kwargs) -> t.Any:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
             bound_args = function.get_bound_args(func, args, kwargs)
             target = function.get_arg_value(member_arg, bound_args)
 
             if not isinstance(target, Member):
-                log.trace("The target is not a discord.Member; skipping role hierarchy check.")
-                await func(*args, **kwargs)
-                return
+                log.trace("The target is not a disnake.Member; skipping role hierarchy check.")
+                return await func(*args, **kwargs)
 
             ctx = function.get_arg_value(1, bound_args)
             cmd = ctx.command.name
@@ -214,7 +213,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                 )
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
-                await func(*args, **kwargs)
+                return await func(*args, **kwargs)
         return wrapper
     return decorator
 

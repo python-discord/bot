@@ -3,9 +3,9 @@ import re
 import unicodedata
 from typing import Tuple, Union
 
-from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
-from discord.utils import snowflake_time
+from disnake import Colour, Embed, utils
+from disnake.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from disnake.utils import snowflake_time
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES

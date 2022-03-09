@@ -1,8 +1,8 @@
 from typing import Any, Dict
 
-from discord import Member, Role, User
-from discord.ext import commands
-from discord.ext.commands import Cog, Context
+from disnake import Member, Role, User
+from disnake.ext import commands
+from disnake.ext.commands import Cog, Context
 
 from bot import constants
 from bot.api import ResponseCodeError

@@ -4,9 +4,9 @@ import typing as t
 from datetime import datetime, timezone
 from operator import itemgetter
 
-import discord
+import disnake
 from dateutil.parser import isoparse
-from discord.ext.commands import Cog, Context, Greedy, group
+from disnake.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
@@ -26,8 +26,8 @@ LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
-Mentionable = t.Union[discord.Member, discord.Role]
-ReminderMention = t.Union[UnambiguousUser, discord.Role]
+Mentionable = t.Union[disnake.Member, disnake.Role]
+ReminderMention = t.Union[UnambiguousUser, disnake.Role]
 
 
 class Reminders(Cog):
@@ -66,20 +66,19 @@ class Reminders(Cog):
             else:
                 self.schedule_reminder(reminder)
 
-    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.User, discord.TextChannel]:
-        """Ensure reminder author and channel can be fetched otherwise delete the reminder."""
-        user = self.bot.get_user(reminder['author'])
+    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, disnake.TextChannel]:
+        """Ensure reminder channel can be fetched otherwise delete the reminder."""
         channel = self.bot.get_channel(reminder['channel_id'])
         is_valid = True
-        if not user or not channel:
+        if not channel:
             is_valid = False
             log.info(
                 f"Reminder {reminder['id']} invalid: "
-                f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
+                f"Channel {reminder['channel_id']}={channel}."
             )
             scheduling.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
 
-        return is_valid, user, channel
+        return is_valid, channel
 
     @staticmethod
     async def _send_confirmation(
@@ -88,9 +87,9 @@ class Reminders(Cog):
         reminder_id: t.Union[str, int]
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
-        embed = discord.Embed(
+        embed = disnake.Embed(
             description=on_success,
-            colour=discord.Colour.green(),
+            colour=disnake.Colour.green(),
             title=random.choice(POSITIVE_REPLIES)
         )
 
@@ -114,7 +113,7 @@ class Reminders(Cog):
         if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
-            return all(isinstance(mention, (discord.User, discord.Member)) for mention in mentions), "roles"
+            return all(isinstance(mention, (disnake.User, disnake.Member)) for mention in mentions), "roles"
         else:
             return True, ""
 
@@ -170,19 +169,19 @@ class Reminders(Cog):
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(self, reminder: dict, expected_time: t.Optional[time.Timestamp] = None) -> None:
         """Send the reminder."""
-        is_valid, user, channel = self.ensure_valid_reminder(reminder)
+        is_valid, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
             # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
-        embed = discord.Embed()
+        embed = disnake.Embed()
         if expected_time:
-            embed.colour = discord.Colour.red()
+            embed.colour = disnake.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
                 name="Sorry, your reminder should have arrived earlier!"
             )
         else:
-            embed.colour = discord.Colour.og_blurple()
+            embed.colour = disnake.Colour.og_blurple()
             embed.set_author(
                 icon_url=Icons.remind_blurple,
                 name="It has arrived!"
@@ -201,12 +200,12 @@ class Reminders(Cog):
         partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
         try:
             await partial_message.reply(content=f"{additional_mentions}", embed=embed)
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             log.info(
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
             )
-            await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
+            await channel.send(content=f"<@{reminder['author']}> {additional_mentions}", embed=embed)
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
@@ -285,7 +284,7 @@ class Reminders(Cog):
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
             if reference := ctx.message.reference:
-                if isinstance((resolved_message := reference.resolved), discord.Message):
+                if isinstance((resolved_message := reference.resolved), disnake.Message):
                     content = resolved_message.content
             # If we weren't able to get the content of a replied message
             if content is None:
@@ -362,8 +361,8 @@ class Reminders(Cog):
 
             lines.append(text)
 
-        embed = discord.Embed()
-        embed.colour = discord.Colour.og_blurple()
+        embed = disnake.Embed()
+        embed.colour = disnake.Colour.og_blurple()
         embed.title = f"Reminders for {ctx.author}"
 
         # Remind the user that they have no reminders :^)
@@ -373,7 +372,7 @@ class Reminders(Cog):
             return
 
         # Construct the embed and paginate it.
-        embed.colour = discord.Colour.og_blurple()
+        embed.colour = disnake.Colour.og_blurple()
 
         await LinePaginator.paginate(
             lines,

@@ -3,7 +3,7 @@ import typing as t
 from collections import deque
 from pathlib import Path
 
-import discord
+import disnake
 
 from bot import constants
 from bot.exts.help_channels._channel import MAX_CHANNELS_PER_CATEGORY, get_category_channels
@@ -12,7 +12,7 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 
-def create_name_queue(*categories: discord.CategoryChannel) -> deque:
+def create_name_queue(*categories: disnake.CategoryChannel) -> deque:
     """
     Return a queue of food names to use for creating new channels.
 
@@ -50,7 +50,7 @@ def _get_names() -> t.List[str]:
         return all_names[:count]
 
 
-def _get_used_names(*categories: discord.CategoryChannel) -> t.Set[str]:
+def _get_used_names(*categories: disnake.CategoryChannel) -> t.Set[str]:
     """Return names which are already being used by channels in `categories`."""
     log.trace("Getting channel names which are already being used.")
 

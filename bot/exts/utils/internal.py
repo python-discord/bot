@@ -9,8 +9,8 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import arrow
-import discord
-from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
+import disnake
+from disnake.ext.commands import Cog, Context, group, has_any_role, is_owner
 
 from bot.bot import Bot
 from bot.constants import DEBUG_MODE, Roles
@@ -42,7 +42,7 @@ class Internal(Cog):
         self.socket_event_total += 1
         self.socket_events[event_type] += 1
 
-    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
+    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[disnake.Embed]]:
         """Format the eval output into a string & attempt to format it into an Embed."""
         self._ = out
 
@@ -103,7 +103,7 @@ class Internal(Cog):
 
         res += f"Out[{self.ln}]: "
 
-        if isinstance(out, discord.Embed):
+        if isinstance(out, disnake.Embed):
             # We made an embed? Send that as embed
             res += "<Embed>"
             res = (res, out)
@@ -136,7 +136,7 @@ class Internal(Cog):
 
         return res  # Return (text, embed)
 
-    async def _eval(self, ctx: Context, code: str) -> Optional[discord.Message]:
+    async def _eval(self, ctx: Context, code: str) -> Optional[disnake.Message]:
         """Eval the input code string & send an embed to the invoking context."""
         self.ln += 1
 
@@ -154,7 +154,8 @@ class Internal(Cog):
             "self": self,
             "bot": self.bot,
             "inspect": inspect,
-            "discord": discord,
+            "discord": disnake,
+            "disnake": disnake,
             "contextlib": contextlib
         }
 
@@ -240,10 +241,10 @@ async def func():  # (None,) -> Any
 
         per_s = self.socket_event_total / running_s
 
-        stats_embed = discord.Embed(
+        stats_embed = disnake.Embed(
             title="WebSocket statistics",
             description=f"Receiving {per_s:0.2f} events per second.",
-            color=discord.Color.og_blurple()
+            color=disnake.Color.og_blurple()
         )
 
         for event_type, count in self.socket_events.most_common(25):

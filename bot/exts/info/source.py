@@ -2,8 +2,8 @@ import inspect
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
-from discord import Embed
-from discord.ext import commands
+from disnake import Embed
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import URLs

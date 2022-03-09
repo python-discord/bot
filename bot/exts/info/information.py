@@ -6,9 +6,9 @@ from textwrap import shorten
 from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
-from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
-from discord.utils import escape_markdown
+from disnake import AllowedMentions, Colour, Embed, Guild, Message, Role
+from disnake.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
+from disnake.utils import escape_markdown
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -180,8 +180,6 @@ class Information(Cog):
         if ctx.channel.id in (
             *constants.MODERATION_CHANNELS,
             constants.Channels.dev_core,
-            constants.Channels.dev_contrib,
-            constants.Channels.bot_commands
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
@@ -468,11 +466,11 @@ class Information(Cog):
 
     async def send_raw_content(self, ctx: Context, message: Message, json: bool = False) -> None:
         """
-        Send information about the raw API response for a `discord.Message`.
+        Send information about the raw API response for a `disnake.Message`.
 
         If `json` is True, send the information in a copy-pasteable Python format.
         """
-        if ctx.author not in message.channel.members:
+        if not message.channel.permissions_for(ctx.author).read_messages:
             await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
 

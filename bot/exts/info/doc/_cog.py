@@ -9,8 +9,8 @@ from types import SimpleNamespace
 from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -275,7 +275,7 @@ class DocCog(commands.Cog):
                 return "Unable to parse the requested symbol."
         return markdown
 
-    async def create_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
+    async def create_symbol_embed(self, symbol_name: str) -> Optional[disnake.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -304,8 +304,8 @@ class DocCog(commands.Cog):
             else:
                 footer_text = ""
 
-            embed = discord.Embed(
-                title=discord.utils.escape_markdown(symbol_name),
+            embed = disnake.Embed(
+                title=disnake.utils.escape_markdown(symbol_name),
                 url=f"{doc_item.url}#{doc_item.symbol_id}",
                 description=await self.get_symbol_markdown(doc_item)
             )
@@ -331,9 +331,9 @@ class DocCog(commands.Cog):
             !docs getdoc aiohttp.ClientSession
         """
         if not symbol_name:
-            inventory_embed = discord.Embed(
+            inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)",
-                colour=discord.Colour.blue()
+                colour=disnake.Colour.blue()
             )
 
             lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
@@ -355,7 +355,7 @@ class DocCog(commands.Cog):
 
                 # Make sure that we won't cause a ghost-ping by deleting the message
                 if not (ctx.message.mentions or ctx.message.role_mentions):
-                    with suppress(discord.NotFound):
+                    with suppress(disnake.NotFound):
                         await ctx.message.delete()
                         await error_message.delete()
 
@@ -449,7 +449,7 @@ class DocCog(commands.Cog):
         if removed := ", ".join(old_inventories - new_inventories):
             removed = "- " + removed
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title="Inventories refreshed",
             description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )

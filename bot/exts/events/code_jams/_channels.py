@@ -1,6 +1,6 @@
 import typing as t
 
-import discord
+import disnake
 
 from bot.constants import Categories, Channels, Roles
 from bot.log import get_logger
@@ -11,7 +11,7 @@ MAX_CHANNELS = 50
 CATEGORY_NAME = "Code Jam"
 
 
-async def _get_category(guild: discord.Guild) -> discord.CategoryChannel:
+async def _get_category(guild: disnake.Guild) -> disnake.CategoryChannel:
     """
     Return a code jam category.
 
@@ -24,13 +24,13 @@ async def _get_category(guild: discord.Guild) -> discord.CategoryChannel:
     return await _create_category(guild)
 
 
-async def _create_category(guild: discord.Guild) -> discord.CategoryChannel:
+async def _create_category(guild: disnake.Guild) -> disnake.CategoryChannel:
     """Create a new code jam category and return it."""
     log.info("Creating a new code jam category.")
 
     category_overwrites = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        guild.me: discord.PermissionOverwrite(read_messages=True)
+        guild.default_role: disnake.PermissionOverwrite(read_messages=False),
+        guild.me: disnake.PermissionOverwrite(read_messages=True)
     }
 
     category = await guild.create_category_channel(
@@ -47,17 +47,17 @@ async def _create_category(guild: discord.Guild) -> discord.CategoryChannel:
 
 
 def _get_overwrites(
-        members: list[tuple[discord.Member, bool]],
-        guild: discord.Guild,
-) -> dict[t.Union[discord.Member, discord.Role], discord.PermissionOverwrite]:
+        members: list[tuple[disnake.Member, bool]],
+        guild: disnake.Guild,
+) -> dict[t.Union[disnake.Member, disnake.Role], disnake.PermissionOverwrite]:
     """Get code jam team channels permission overwrites."""
     team_channel_overwrites = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        guild.get_role(Roles.code_jam_event_team): discord.PermissionOverwrite(read_messages=True)
+        guild.default_role: disnake.PermissionOverwrite(read_messages=False),
+        guild.get_role(Roles.code_jam_event_team): disnake.PermissionOverwrite(read_messages=True)
     }
 
     for member, _ in members:
-        team_channel_overwrites[member] = discord.PermissionOverwrite(
+        team_channel_overwrites[member] = disnake.PermissionOverwrite(
             read_messages=True
         )
 
@@ -65,10 +65,10 @@ def _get_overwrites(
 
 
 async def create_team_channel(
-        guild: discord.Guild,
+        guild: disnake.Guild,
         team_name: str,
-        members: list[tuple[discord.Member, bool]],
-        team_leaders: discord.Role
+        members: list[tuple[disnake.Member, bool]],
+        team_leaders: disnake.Role
 ) -> None:
     """Create the team's text channel."""
     await _add_team_leader_roles(members, team_leaders)
@@ -84,29 +84,29 @@ async def create_team_channel(
     )
 
 
-async def create_team_leader_channel(guild: discord.Guild, team_leaders: discord.Role) -> None:
+async def create_team_leader_channel(guild: disnake.Guild, team_leaders: disnake.Role) -> None:
     """Create the Team Leader Chat channel for the Code Jam team leaders."""
-    category: discord.CategoryChannel = guild.get_channel(Categories.summer_code_jam)
+    category: disnake.CategoryChannel = guild.get_channel(Categories.summer_code_jam)
 
     team_leaders_chat = await category.create_text_channel(
         name="team-leaders-chat",
         overwrites={
-            guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            team_leaders: discord.PermissionOverwrite(read_messages=True)
+            guild.default_role: disnake.PermissionOverwrite(read_messages=False),
+            team_leaders: disnake.PermissionOverwrite(read_messages=True)
         }
     )
 
     await _send_status_update(guild, f"Created {team_leaders_chat.mention} in the {category} category.")
 
 
-async def _send_status_update(guild: discord.Guild, message: str) -> None:
+async def _send_status_update(guild: disnake.Guild, message: str) -> None:
     """Inform the events lead with a status update when the command is ran."""
-    channel: discord.TextChannel = guild.get_channel(Channels.code_jam_planning)
+    channel: disnake.TextChannel = guild.get_channel(Channels.code_jam_planning)
 
     await channel.send(f"<@&{Roles.events_lead}>\n\n{message}")
 
 
-async def _add_team_leader_roles(members: list[tuple[discord.Member, bool]], team_leaders: discord.Role) -> None:
+async def _add_team_leader_roles(members: list[tuple[disnake.Member, bool]], team_leaders: disnake.Role) -> None:
     """Assign the team leader role to the team leaders."""
     for member, is_leader in members:
         if is_leader:

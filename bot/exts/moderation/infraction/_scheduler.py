@@ -5,8 +5,8 @@ from gettext import ngettext
 
 import arrow
 import dateutil.parser
-import discord
-from discord.ext.commands import Context
+import disnake
+from disnake.ext.commands import Context
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -101,7 +101,7 @@ class InfractionScheduler:
         # Allowing mod log since this is a passive action that should be logged.
         try:
             await apply_coro
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             # When user joined and then right after this left again before action completed, this can't apply roles
             if e.code == 10007 or e.status == 404:
                 log.info(
@@ -203,7 +203,7 @@ class InfractionScheduler:
                 if expiry:
                     # Schedule the expiration of the infraction.
                     self.schedule_expiration(infraction)
-            except discord.HTTPException as e:
+            except disnake.HTTPException as e:
                 # Accordingly display that applying the infraction failed.
                 # Don't use ctx.message.author; antispam only patches ctx.author.
                 confirm_msg = ":x: failed to apply"
@@ -212,7 +212,7 @@ class InfractionScheduler:
                 log_title = "failed to apply"
 
                 log_msg = f"Failed to apply {' '.join(infr_type.split('_'))} infraction #{id_} to {user}"
-                if isinstance(e, discord.Forbidden):
+                if isinstance(e, disnake.Forbidden):
                     log.warning(f"{log_msg}: bot lacks permissions.")
                 elif e.code == 10007 or e.status == 404:
                     log.info(
@@ -402,11 +402,11 @@ class InfractionScheduler:
                 raise ValueError(
                     f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
                 )
-        except discord.Forbidden:
+        except disnake.Forbidden:
             log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
             log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             if e.code == 10007 or e.status == 404:
                 log.info(
                     f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."

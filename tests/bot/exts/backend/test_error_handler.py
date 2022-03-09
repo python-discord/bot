@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
-from discord.ext.commands import errors
+from disnake.ext.commands import errors
 
 from bot.api import ResponseCodeError
 from bot.errors import InvalidInfractedUserError, LockedResourceError

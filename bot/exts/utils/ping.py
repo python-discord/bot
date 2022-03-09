@@ -1,7 +1,7 @@
 import arrow
 from aiohttp import client_exceptions
-from discord import Embed
-from discord.ext import commands
+from disnake import Embed
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES, URLs
