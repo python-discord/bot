@@ -166,15 +166,12 @@ class InfractionScheduler:
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
         if not infraction["hidden"] and infr_type in {"ban", "kick"}:
-            dm_result = f"{constants.Emojis.failmail} "
-            dm_log_text = "\nDM: **Failed**"
-
-            # Accordingly update whether the user was successfully notified via DM.
-            if await _utils.notify_infraction(
-                    self.bot, user, infraction["id"], infr_type.replace("_", " ").title(), expiry, user_reason, icon
-            ):
+            if await _utils.notify_infraction(infraction, user, user_reason):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
+            else:
+                dm_result = f"{constants.Emojis.failmail} "
+                dm_log_text = "\nDM: **Failed**"
 
         end_msg = ""
         if is_mod_channel(ctx.channel):
@@ -236,15 +233,12 @@ class InfractionScheduler:
 
             # If we need to DM and haven't already tried to
             if not infraction["hidden"] and infr_type not in {"ban", "kick"}:
-                dm_result = f"{constants.Emojis.failmail} "
-                dm_log_text = "\nDM: **Failed**"
-
-                # Accordingly update whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(
-                        self.bot, user, infraction["id"], infr_type.replace("_", " ").title(), expiry, user_reason, icon
-                ):
+                if await _utils.notify_infraction(infraction, user, user_reason):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
+                else:
+                    dm_result = f"{constants.Emojis.failmail} "
+                    dm_log_text = "\nDM: **Failed**"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")

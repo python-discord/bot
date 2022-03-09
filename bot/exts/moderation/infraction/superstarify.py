@@ -63,6 +63,12 @@ class Superstarify(InfractionScheduler, Cog):
         if after.display_name == forced_nick:
             return  # Nick change was triggered by this event. Ignore.
 
+        reason = (
+            "You have tried to change your nickname on the **Python Discord** server "
+            f"from **{before.display_name}** to **{after.display_name}**, but as you "
+            "are currently in superstar-prison, you do not have permission to do so."
+        )
+
         log.info(
             f"{after.display_name} ({after.id}) tried to escape superstar prison. "
             f"Changing the nick back to {before.display_name}."
@@ -72,21 +78,7 @@ class Superstarify(InfractionScheduler, Cog):
             reason=f"Superstarified member tried to escape the prison: {infr_id}"
         )
 
-        notified = await _utils.notify_infraction(
-            bot=self.bot,
-            user=after,
-            infr_id=infr_id,
-            infr_type="Superstarify",
-            expires_at=time.discord_timestamp(infraction["expires_at"]),
-            reason=(
-                "You have tried to change your nickname on the **Python Discord** server "
-                f"from **{before.display_name}** to **{after.display_name}**, but as you "
-                "are currently in superstar-prison, you do not have permission to do so."
-            ),
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0]
-        )
-
-        if not notified:
+        if not await _utils.notify_infraction(infraction, after, reason):
             log.info("Failed to DM user about why they cannot change their nickname.")
 
     @Cog.listener()
