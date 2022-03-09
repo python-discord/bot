@@ -172,7 +172,7 @@ class OffTopicNames(Cog):
 
         ot_channel_index: [0, 1, 2, ...]
         """
-        if ot_channel_index:
+        if ot_channel_index is not None:
             try:
                 channel = self.bot.get_channel(CHANNELS[ot_channel_index])
             except IndexError:
