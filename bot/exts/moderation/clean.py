@@ -7,10 +7,10 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
-from discord import Colour, Message, NotFound, TextChannel, User, errors
-from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
-from discord.ext.commands.converter import TextChannelConverter
-from discord.ext.commands.errors import BadArgument
+from disnake import Colour, Message, NotFound, TextChannel, User, errors
+from disnake.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
+from disnake.ext.commands.converter import TextChannelConverter
+from disnake.ext.commands.errors import BadArgument
 
 from bot.bot import Bot
 from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
@@ -459,7 +459,7 @@ class Clean(Cog):
         regex: Optional[Regex] = None,
         bots_only: Optional[bool] = False,
         *,
-        channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
+        channels: CleanChannels = None  # "Optional" with disnake silently ignores incorrect input.
     ) -> None:
         """
         Commands for cleaning messages in channels.

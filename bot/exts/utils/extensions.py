@@ -2,9 +2,9 @@ import functools
 import typing as t
 from enum import Enum
 
-from discord import Colour, Embed
-from discord.ext import commands
-from discord.ext.commands import Context, group
+from disnake import Colour, Embed
+from disnake.ext import commands
+from disnake.ext.commands import Context, group
 
 from bot import exts
 from bot.bot import Bot

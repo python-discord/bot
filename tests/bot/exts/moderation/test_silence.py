@@ -7,7 +7,7 @@ from unittest import mock
 from unittest.mock import AsyncMock, Mock
 
 from async_rediscache import RedisSession
-from discord import PermissionOverwrite
+from disnake import PermissionOverwrite
 
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.moderation import silence
@@ -152,7 +152,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         # It's too annoying to test cancel_all since it's a done callback and wrapped in a lambda.
         self.assertTrue(self.cog._init_task.cancelled())
 
-    @autospec("discord.ext.commands", "has_any_role")
+    @autospec("disnake.ext.commands", "has_any_role")
     @mock.patch.object(silence.constants, "MODERATION_ROLES", new=(1, 2, 3))
     async def test_cog_check(self, role_check):
         """Role check was called with `MODERATION_ROLES`"""

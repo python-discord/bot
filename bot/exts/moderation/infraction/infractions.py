@@ -1,10 +1,10 @@
 import textwrap
 import typing as t
 
-import discord
-from discord import Member
-from discord.ext import commands
-from discord.ext.commands import Context, command
+import disnake
+from disnake import Member
+from disnake.ext import commands
+from disnake.ext.commands import Context, command
 
 from bot import constants
 from bot.bot import Bot
@@ -35,8 +35,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_mute"})
 
         self.category = "Moderation"
-        self._muted_role = discord.Object(constants.Roles.muted)
-        self._voice_verified_role = discord.Object(constants.Roles.voice_verified)
+        self._muted_role = disnake.Object(constants.Roles.muted)
+        self._voice_verified_role = disnake.Object(constants.Roles.voice_verified)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member) -> None:
@@ -123,7 +123,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.error("Failed to apply ban to user %d", user.id)
             return
 
-        # Calling commands directly skips Discord.py's convertors, so we need to convert args manually.
+        # Calling commands directly skips disnake's convertors, so we need to convert args manually.
         clean_time = await Age().convert(ctx, "1h")
 
         log_url = await clean_cog._clean_messages(
@@ -494,7 +494,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def pardon_mute(
         self,
         user_id: int,
-        guild: discord.Guild,
+        guild: disnake.Guild,
         reason: t.Optional[str],
         *,
         notify: bool = True
@@ -525,16 +525,16 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def pardon_ban(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
+    async def pardon_ban(self, user_id: int, guild: disnake.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
         """Remove a user's ban on the Discord guild and return a log dict."""
-        user = discord.Object(user_id)
+        user = disnake.Object(user_id)
         log_text = {}
 
         self.mod_log.ignore(Event.member_unban, user_id)
 
         try:
             await guild.unban(user, reason=reason)
-        except discord.NotFound:
+        except disnake.NotFound:
             log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
             log_text["Note"] = "No active ban found on Discord."
 
@@ -543,7 +543,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def pardon_voice_mute(
         self,
         user_id: int,
-        guild: discord.Guild,
+        guild: disnake.Guild,
         *,
         notify: bool = True
     ) -> t.Dict[str, str]:
@@ -597,7 +597,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
         if isinstance(error, commands.BadUnionArgument):
-            if discord.User in error.converters or Member in error.converters:
+            if disnake.User in error.converters or Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 

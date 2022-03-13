@@ -1,9 +1,9 @@
 import time
 from typing import Optional
 
-import discord
-from discord import Message, RawMessageUpdateEvent
-from discord.ext.commands import Cog
+import disnake
+from disnake import Message, RawMessageUpdateEvent
+from disnake.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
@@ -62,9 +62,9 @@ class CodeBlockCog(Cog, name="Code Block"):
         self.codeblock_message_ids = {}
 
     @staticmethod
-    def create_embed(instructions: str) -> discord.Embed:
+    def create_embed(instructions: str) -> disnake.Embed:
         """Return an embed which displays code block formatting `instructions`."""
-        return discord.Embed(description=instructions)
+        return disnake.Embed(description=instructions)
 
     async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> Optional[Message]:
         """
@@ -78,11 +78,11 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         try:
             return await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
-        except discord.NotFound:
+        except disnake.NotFound:
             log.debug("Could not find instructions message; it was probably deleted.")
             return None
 
-    def is_on_cooldown(self, channel: discord.TextChannel) -> bool:
+    def is_on_cooldown(self, channel: disnake.TextChannel) -> bool:
         """
         Return True if an embed was sent too recently for `channel`.
 
@@ -93,7 +93,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         cooldown = constants.CodeBlock.cooldown_seconds
         return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < cooldown
 
-    def is_valid_channel(self, channel: discord.TextChannel) -> bool:
+    def is_valid_channel(self, channel: disnake.TextChannel) -> bool:
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
         return (
@@ -102,7 +102,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             or channel.id in constants.CodeBlock.channel_whitelist
         )
 
-    async def send_instructions(self, message: discord.Message, instructions: str) -> None:
+    async def send_instructions(self, message: disnake.Message, instructions: str) -> None:
         """
         Send an embed with `instructions` on fixing an incorrect code block in a `message`.
 
@@ -119,7 +119,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         # Increase amount of codeblock correction in stats
         self.bot.stats.incr("codeblock_corrections")
 
-    def should_parse(self, message: discord.Message) -> bool:
+    def should_parse(self, message: disnake.Message) -> bool:
         """
         Return True if `message` should be parsed.
 
@@ -185,5 +185,5 @@ class CodeBlockCog(Cog, name="Code Block"):
             else:
                 log.info("Message edited but still has invalid code blocks; editing instructions.")
                 await bot_message.edit(embed=self.create_embed(instructions))
-        except discord.NotFound:
+        except disnake.NotFound:
             log.debug("Could not find instructions message; it was probably deleted.")

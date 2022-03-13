@@ -5,8 +5,8 @@ from functools import partial
 from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
-import discord
-from discord.ext.commands import Context
+import disnake
+from disnake.ext.commands import Context
 
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
@@ -17,8 +17,8 @@ log = get_logger(__name__)
 
 
 def reaction_check(
-    reaction: discord.Reaction,
-    user: discord.abc.User,
+    reaction: disnake.Reaction,
+    user: disnake.abc.User,
     *,
     message_id: int,
     allowed_emoji: Sequence[str],
@@ -51,14 +51,14 @@ def reaction_check(
         log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
         scheduling.create_task(
             reaction.message.remove_reaction(reaction.emoji, user),
-            suppressed_exceptions=(discord.HTTPException,),
+            suppressed_exceptions=(disnake.HTTPException,),
             name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
         )
         return False
 
 
 async def wait_for_deletion(
-    message: discord.Message,
+    message: disnake.Message,
     user_ids: Sequence[int],
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
@@ -82,7 +82,7 @@ async def wait_for_deletion(
         for emoji in deletion_emojis:
             try:
                 await message.add_reaction(emoji)
-            except discord.NotFound:
+            except disnake.NotFound:
                 log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
                 return
 
@@ -101,13 +101,13 @@ async def wait_for_deletion(
             await message.clear_reactions()
         else:
             await message.delete()
-    except discord.NotFound:
+    except disnake.NotFound:
         log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
 
 
 async def send_attachments(
-    message: discord.Message,
-    destination: Union[discord.TextChannel, discord.Webhook],
+    message: disnake.Message,
+    destination: Union[disnake.TextChannel, disnake.Webhook],
     link_large: bool = True,
     use_cached: bool = False,
     **kwargs
@@ -140,9 +140,9 @@ async def send_attachments(
             if attachment.size <= destination.guild.filesize_limit - 512:
                 with BytesIO() as file:
                     await attachment.save(file, use_cached=use_cached)
-                    attachment_file = discord.File(file, filename=attachment.filename)
+                    attachment_file = disnake.File(file, filename=attachment.filename)
 
-                    if isinstance(destination, discord.TextChannel):
+                    if isinstance(destination, disnake.TextChannel):
                         msg = await destination.send(file=attachment_file, **kwargs)
                         urls.append(msg.attachments[0].url)
                     else:
@@ -151,7 +151,7 @@ async def send_attachments(
                 large.append(attachment)
             else:
                 log.info(f"{failure_msg} because it's too large.")
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
@@ -159,10 +159,10 @@ async def send_attachments(
 
     if link_large and large:
         desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
-        embed = discord.Embed(description=desc)
+        embed = disnake.Embed(description=desc)
         embed.set_footer(text="Attachments exceed upload size limit.")
 
-        if isinstance(destination, discord.TextChannel):
+        if isinstance(destination, disnake.TextChannel):
             await destination.send(embed=embed, **kwargs)
         else:
             await destination.send(embed=embed, **webhook_send_kwargs)
@@ -171,9 +171,9 @@ async def send_attachments(
 
 
 async def count_unique_users_reaction(
-    message: discord.Message,
-    reaction_predicate: Callable[[discord.Reaction], bool] = lambda _: True,
-    user_predicate: Callable[[discord.User], bool] = lambda _: True,
+    message: disnake.Message,
+    reaction_predicate: Callable[[disnake.Reaction], bool] = lambda _: True,
+    user_predicate: Callable[[disnake.User], bool] = lambda _: True,
     count_bots: bool = True
 ) -> int:
     """
@@ -193,7 +193,7 @@ async def count_unique_users_reaction(
     return len(unique_users)
 
 
-async def pin_no_system_message(message: discord.Message) -> bool:
+async def pin_no_system_message(message: disnake.Message) -> bool:
     """Pin the given message, wait a couple of seconds and try to delete the system message."""
     await message.pin()
 
@@ -201,7 +201,7 @@ async def pin_no_system_message(message: discord.Message) -> bool:
     await asyncio.sleep(2)
     # Search for the system message in the last 10 messages
     async for historical_message in message.channel.history(limit=10):
-        if historical_message.type == discord.MessageType.pins_add:
+        if historical_message.type == disnake.MessageType.pins_add:
             await historical_message.delete()
             return True
 
@@ -225,16 +225,16 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
         return username  # Empty string or None
 
 
-async def send_denial(ctx: Context, reason: str) -> discord.Message:
+async def send_denial(ctx: Context, reason: str) -> disnake.Message:
     """Send an embed denying the user with the given reason."""
-    embed = discord.Embed()
-    embed.colour = discord.Colour.red()
+    embed = disnake.Embed()
+    embed.colour = disnake.Colour.red()
     embed.title = random.choice(NEGATIVE_REPLIES)
     embed.description = reason
 
     return await ctx.send(embed=embed)
 
 
-def format_user(user: discord.abc.User) -> str:
+def format_user(user: disnake.abc.User) -> str:
     """Return a string for `user` which has their mention and ID."""
     return f"{user.mention} (`{user.id}`)"

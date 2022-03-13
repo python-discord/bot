@@ -1,7 +1,7 @@
 from typing import Optional
 
-import discord
-from discord import Embed
+import disnake
+from disnake import Embed
 
 from bot.log import get_logger
 from bot.utils.messages import sub_clyde
@@ -10,13 +10,13 @@ log = get_logger(__name__)
 
 
 async def send_webhook(
-        webhook: discord.Webhook,
+        webhook: disnake.Webhook,
         content: Optional[str] = None,
         username: Optional[str] = None,
         avatar_url: Optional[str] = None,
         embed: Optional[Embed] = None,
         wait: Optional[bool] = False
-) -> discord.Message:
+) -> disnake.Message:
     """
     Send a message using the provided webhook.
 
@@ -30,5 +30,5 @@ async def send_webhook(
             embed=embed,
             wait=wait,
         )
-    except discord.HTTPException:
+    except disnake.HTTPException:
         log.exception("Failed to send a message to the webhook!")

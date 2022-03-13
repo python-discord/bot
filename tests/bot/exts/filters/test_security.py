@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from discord.ext.commands import NoPrivateMessage
+from disnake.ext.commands import NoPrivateMessage
 
 from bot.exts.filters import security
 from tests.helpers import MockBot, MockContext

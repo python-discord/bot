@@ -3,8 +3,8 @@ import unittest
 from contextlib import contextmanager
 from typing import Dict
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from bot.log import get_logger
 from tests import helpers
@@ -80,7 +80,7 @@ class LoggingTestsMixin:
 
 
 class CommandTestCase(unittest.IsolatedAsyncioTestCase):
-    """TestCase with additional assertions that are useful for testing Discord commands."""
+    """TestCase with additional assertions that are useful for testing disnake commands."""
 
     async def assertHasPermissionsCheck(  # noqa: N802
         self,
@@ -98,7 +98,7 @@ class CommandTestCase(unittest.IsolatedAsyncioTestCase):
         permissions = {k: not v for k, v in permissions.items()}
 
         ctx = helpers.MockContext()
-        ctx.channel.permissions_for.return_value = discord.Permissions(**permissions)
+        ctx.channel.permissions_for.return_value = disnake.Permissions(**permissions)
 
         with self.assertRaises(commands.MissingPermissions) as cm:
             await cmd.can_run(ctx)

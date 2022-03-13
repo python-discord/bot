@@ -1,6 +1,6 @@
 from typing import Union
 
-import discord
+import disnake
 
 import bot
 from bot import constants
@@ -10,7 +10,7 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 
-def is_help_channel(channel: discord.TextChannel) -> bool:
+def is_help_channel(channel: disnake.TextChannel) -> bool:
     """Return True if `channel` is in one of the help categories (excluding dormant)."""
     log.trace(f"Checking if #{channel} is a help channel.")
     categories = (Categories.help_available, Categories.help_in_use)
@@ -18,9 +18,9 @@ def is_help_channel(channel: discord.TextChannel) -> bool:
     return any(is_in_category(channel, category) for category in categories)
 
 
-def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
+def is_mod_channel(channel: Union[disnake.TextChannel, disnake.Thread]) -> bool:
     """True if channel, or channel.parent for threads, is considered a mod channel."""
-    if isinstance(channel, discord.Thread):
+    if isinstance(channel, disnake.Thread):
         channel = channel.parent
 
     if channel.id in constants.MODERATION_CHANNELS:
@@ -36,11 +36,11 @@ def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
         return False
 
 
-def is_staff_channel(channel: discord.TextChannel) -> bool:
+def is_staff_channel(channel: disnake.TextChannel) -> bool:
     """True if `channel` is considered a staff channel."""
     guild = bot.instance.get_guild(constants.Guild.id)
 
-    if channel.type is discord.ChannelType.category:
+    if channel.type is disnake.ChannelType.category:
         return False
 
     # Channel is staff-only if staff have explicit read allow perms
@@ -52,12 +52,12 @@ def is_staff_channel(channel: discord.TextChannel) -> bool:
     )
 
 
-def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
+def is_in_category(channel: disnake.TextChannel, category_id: int) -> bool:
     """Return True if `channel` is within a category with `category_id`."""
     return getattr(channel, "category_id", None) == category_id
 
 
-async def get_or_fetch_channel(channel_id: int) -> discord.abc.GuildChannel:
+async def get_or_fetch_channel(channel_id: int) -> disnake.abc.GuildChannel:
     """Attempt to get or fetch a channel and return it."""
     log.trace(f"Getting the channel {channel_id}.")
 

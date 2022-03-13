@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Hashable, TYPE_CHECKING, Union
 
-from discord.ext.commands import ConversionError, Converter
+from disnake.ext.commands import ConversionError, Converter
 
 if TYPE_CHECKING:
     from bot.converters import MemberOrUser
