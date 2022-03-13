@@ -3,9 +3,9 @@ import re
 import unicodedata
 from typing import Tuple, Union
 
-from discord import Colour, Embed, utils
-from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
-from discord.utils import snowflake_time
+from disnake import Colour, Embed, utils
+from disnake.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from disnake.utils import snowflake_time
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
@@ -13,8 +13,7 @@ from bot.converters import Snowflake
 from bot.decorators import in_whitelist
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import messages
-from bot.utils.time import time_since
+from bot.utils import messages, time
 
 log = get_logger(__name__)
 
@@ -49,7 +48,7 @@ class Utils(Cog):
         self.bot = bot
 
     @command()
-    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_py), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_bots), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
@@ -173,7 +172,7 @@ class Utils(Cog):
         lines = []
         for snowflake in snowflakes:
             created_at = snowflake_time(snowflake)
-            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at)}).")
+            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time.format_relative(created_at)}).")
 
         await LinePaginator.paginate(
             lines,

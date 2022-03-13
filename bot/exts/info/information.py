@@ -2,12 +2,13 @@ import colorsys
 import pprint
 import textwrap
 from collections import defaultdict
+from textwrap import shorten
 from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
-from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
-from discord.utils import escape_markdown
+from disnake import AllowedMentions, Colour, Embed, Guild, Message, Role
+from disnake.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
+from disnake.utils import escape_markdown
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -17,10 +18,10 @@ from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import TimestampFormats, discord_timestamp, humanize_delta
 
 log = get_logger(__name__)
 
@@ -82,7 +83,7 @@ class Information(Cog):
 
         defcon_info = ""
         if cog := self.bot.get_cog("Defcon"):
-            threshold = humanize_delta(cog.threshold) if cog.threshold else "-"
+            threshold = time.humanize_delta(cog.threshold) if cog.threshold else "-"
             defcon_info = f"Defcon threshold: {threshold}\n"
 
         verification = f"Verification level: {ctx.guild.verification_level.name}\n"
@@ -172,16 +173,13 @@ class Information(Cog):
         """Returns an embed full of server information."""
         embed = Embed(colour=Colour.og_blurple(), title="Server Information")
 
-        created = discord_timestamp(ctx.guild.created_at, TimestampFormats.RELATIVE)
-        region = ctx.guild.region
+        created = time.format_relative(ctx.guild.created_at)
         num_roles = len(ctx.guild.roles) - 1  # Exclude @everyone
 
         # Server Features are only useful in certain channels
         if ctx.channel.id in (
             *constants.MODERATION_CHANNELS,
             constants.Channels.dev_core,
-            constants.Channels.dev_contrib,
-            constants.Channels.bot_commands
         ):
             features = f"\nFeatures: {', '.join(ctx.guild.features)}"
         else:
@@ -198,7 +196,6 @@ class Information(Cog):
 
         embed.description = (
             f"Created: {created}"
-            f"\nVoice region: {region}"
             f"{features}"
             f"\nRoles: {num_roles}"
             f"\nMember status: {member_status}"
@@ -228,7 +225,7 @@ class Information(Cog):
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
     async def user_info(self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None) -> None:
         """Returns info about a user."""
-        if isinstance(user_or_message, Message):
+        if passed_as_message := isinstance(user_or_message, Message):
             user = user_or_message.author
         else:
             user = user_or_message
@@ -243,19 +240,22 @@ class Information(Cog):
 
         # Will redirect to #bot-commands if it fails.
         if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
-            embed = await self.create_user_embed(ctx, user)
+            embed = await self.create_user_embed(ctx, user, passed_as_message)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: MemberOrUser) -> Embed:
+    async def create_user_embed(self, ctx: Context, user: MemberOrUser, passed_as_message: bool) -> Embed:
         """Creates an embed containing information on the `user`."""
         on_server = bool(await get_or_fetch_member(ctx.guild, user.id))
 
-        created = discord_timestamp(user.created_at, TimestampFormats.RELATIVE)
+        created = time.format_relative(user.created_at)
 
         name = str(user)
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
         name = escape_markdown(name)
+
+        if passed_as_message:
+            name += " - From Message"
 
         if user.public_flags.verified_bot:
             name += f" {constants.Emojis.verified_bot}"
@@ -270,7 +270,7 @@ class Information(Cog):
 
         if on_server:
             if user.joined_at:
-                joined = discord_timestamp(user.joined_at, TimestampFormats.RELATIVE)
+                joined = time.format_relative(user.joined_at)
             else:
                 joined = "Unable to get join date"
 
@@ -283,7 +283,6 @@ class Information(Cog):
 
             membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
-            roles = None
             membership = "The user is not a member of the server"
 
         fields = [
@@ -299,11 +298,11 @@ class Information(Cog):
                 "Member information",
                 membership
             ),
+            await self.user_messages(user),
         ]
 
         # Show more verbose output in moderation channels for infractions and nominations
         if is_mod_channel(ctx.channel):
-            fields.append(await self.user_messages(user))
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
         else:
@@ -421,13 +420,8 @@ class Information(Cog):
             if e.status == 404:
                 activity_output = "No activity"
         else:
-            activity_output.append(user_activity["total_messages"] or "No messages")
-
-            if (activity_blocks := user_activity.get("activity_blocks")) is not None:
-                # activity_blocks is not included in the response if the user has a lot of messages
-                activity_output.append(activity_blocks or "No activity")  # Special case when activity_blocks is 0.
-            else:
-                activity_output.append("Too many to count!")
+            activity_output.append(f"{user_activity['total_messages']:,}" or "No messages")
+            activity_output.append(f"{user_activity['activity_blocks']:,}" or "No activity")
 
             activity_output = "\n".join(
                 f"{name}: {metric}" for name, metric in zip(["Messages", "Activity blocks"], activity_output)
@@ -472,11 +466,11 @@ class Information(Cog):
 
     async def send_raw_content(self, ctx: Context, message: Message, json: bool = False) -> None:
         """
-        Send information about the raw API response for a `discord.Message`.
+        Send information about the raw API response for a `disnake.Message`.
 
         If `json` is True, send the information in a copy-pasteable Python format.
         """
-        if ctx.author not in message.channel.members:
+        if not message.channel.permissions_for(ctx.author).read_messages:
             await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
 
@@ -522,6 +516,40 @@ class Information(Cog):
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await self.send_raw_content(ctx, message, json=True)
+
+    @command(aliases=("rule",))
+    async def rules(self, ctx: Context, rules: Greedy[int]) -> None:
+        """Provides a link to all rules or, if specified, displays specific rule(s)."""
+        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
+
+        if not rules:
+            # Rules were not submitted. Return the default description.
+            rules_embed.description = (
+                "The rules and guidelines that apply to this community can be found on"
+                " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
+                " all members of the community to have read and understood these."
+            )
+
+            await ctx.send(embed=rules_embed)
+            return
+
+        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+
+        # Remove duplicates and sort the rule indices
+        rules = sorted(set(rules))
+
+        invalid = ", ".join(str(index) for index in rules if index < 1 or index > len(full_rules))
+
+        if invalid:
+            await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
+            return
+
+        for rule in rules:
+            self.bot.stats.incr(f"rule_uses.{rule}")
+
+        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
+
+        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
 def setup(bot: Bot) -> None:

@@ -1,8 +1,8 @@
 from typing import Optional
 
 from dateutil.relativedelta import relativedelta
-from discord import TextChannel
-from discord.ext.commands import Cog, Context, group, has_any_role
+from disnake import TextChannel
+from disnake.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, MODERATION_ROLES
@@ -16,7 +16,7 @@ SLOWMODE_MAX_DELAY = 21600  # seconds
 
 COMMONLY_SLOWMODED_CHANNELS = {
     Channels.python_general: "python_general",
-    Channels.discord_py: "discordpy",
+    Channels.discord_bots: "discord_bots",
     Channels.off_topic_0: "ot0",
 }
 
@@ -39,8 +39,7 @@ class Slowmode(Cog):
         if channel is None:
             channel = ctx.channel
 
-        delay = relativedelta(seconds=channel.slowmode_delay)
-        humanized_delay = time.humanize_delta(delay)
+        humanized_delay = time.humanize_delta(seconds=channel.slowmode_delay)
 
         await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 

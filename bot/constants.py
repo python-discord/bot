@@ -429,10 +429,8 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
 
-    black_formatter: int
-
     bot_commands: int
-    discord_py: int
+    discord_bots: int
     esoteric: int
     voice_gate: int
     code_jam_planning: int
@@ -445,6 +443,7 @@ class Channels(metaclass=YAMLGetter):
     incidents_archive: int
     mod_alerts: int
     mod_meta: int
+    mods: int
     nominations: int
     nomination_voting: int
     organisation: int
@@ -484,7 +483,12 @@ class Roles(metaclass=YAMLGetter):
     section = "guild"
     subsection = "roles"
 
+    # Self-assignable roles, see the Subscribe cog
+    advent_of_code: int
     announcements: int
+    lovefest: int
+    pyweek_announcements: int
+
     contributors: int
     help_cooldown: int
     muted: int
@@ -618,10 +622,12 @@ class HelpChannels(metaclass=YAMLGetter):
     max_available: int
     max_total_channels: int
     name_prefix: str
-    notify: bool
     notify_channel: int
     notify_minutes: int
-    notify_roles: List[int]
+    notify_none_remaining: bool
+    notify_none_remaining_roles: List[int]
+    notify_running_low: bool
+    notify_running_low_threshold: int
 
 
 class RedirectOutput(metaclass=YAMLGetter):
@@ -685,6 +691,13 @@ class VideoPermission(metaclass=YAMLGetter):
     section = "video_permission"
 
     default_permission_duration: int
+
+
+class ThreadArchiveTimes(Enum):
+    HOUR = 60
+    DAY = 1440
+    THREE_DAY = 4320
+    WEEK = 10080
 
 
 # Debug mode

@@ -2,9 +2,9 @@ import difflib
 from datetime import timedelta
 
 import arrow
-from discord import Colour, Embed
-from discord.ext.commands import Cog, Context, group, has_any_role
-from discord.utils import sleep_until
+from disnake import Colour, Embed
+from disnake.ext.commands import Cog, Context, group, has_any_role
+from disnake.utils import sleep_until
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot

@@ -2,8 +2,8 @@ import abc
 import typing as t
 from collections import namedtuple
 
-from discord import Guild
-from discord.ext.commands import Context
+from disnake import Guild
+from disnake.ext.commands import Context
 from more_itertools import chunked
 
 import bot

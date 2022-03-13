@@ -1,9 +1,9 @@
 import asyncio
 from typing import Union
 
-import discord
-from discord import Color, Embed, Message, RawReactionActionEvent, TextChannel, errors
-from discord.ext.commands import Cog, Context, command
+import disnake
+from disnake import Color, Embed, Message, RawReactionActionEvent, TextChannel, errors
+from disnake.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
@@ -34,7 +34,7 @@ class DuckPond(Cog):
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
-        except discord.HTTPException:
+        except disnake.HTTPException:
             log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
     @staticmethod
@@ -67,7 +67,7 @@ class DuckPond(Cog):
         return False
 
     @staticmethod
-    def _is_duck_emoji(emoji: Union[str, discord.PartialEmoji, discord.Emoji]) -> bool:
+    def _is_duck_emoji(emoji: Union[str, disnake.PartialEmoji, disnake.Emoji]) -> bool:
         """Check if the emoji is a valid duck emoji."""
         if isinstance(emoji, str):
             return emoji == "🦆"
@@ -111,7 +111,7 @@ class DuckPond(Cog):
                     username=message.author.display_name,
                     avatar_url=message.author.display_avatar.url
                 )
-            except discord.HTTPException:
+            except disnake.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
 
     async def locked_relay(self, message: Message) -> bool:
@@ -133,7 +133,7 @@ class DuckPond(Cog):
             await message.add_reaction("✅")
         return True
 
-    def _payload_has_duckpond_emoji(self, emoji: discord.PartialEmoji) -> bool:
+    def _payload_has_duckpond_emoji(self, emoji: disnake.PartialEmoji) -> bool:
         """Test if the RawReactionActionEvent payload contains a duckpond emoji."""
         if emoji.is_unicode_emoji():
             # For unicode PartialEmojis, the `name` attribute is just the string
@@ -165,7 +165,7 @@ class DuckPond(Cog):
         if not self._payload_has_duckpond_emoji(payload.emoji):
             return
 
-        channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        channel = disnake.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
         if channel is None:
             return
 
@@ -175,10 +175,10 @@ class DuckPond(Cog):
 
         try:
             message = await channel.fetch_message(payload.message_id)
-        except discord.NotFound:
+        except disnake.NotFound:
             return  # Message was deleted.
 
-        member = discord.utils.get(message.guild.members, id=payload.user_id)
+        member = disnake.utils.get(message.guild.members, id=payload.user_id)
         if not member:
             return  # Member left or wasn't in the cache.
 
@@ -205,7 +205,7 @@ class DuckPond(Cog):
         if payload.guild_id != constants.Guild.id:
             return
 
-        channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        channel = disnake.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
         if channel is None:
             return
 

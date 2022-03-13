@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from typing import Optional
 
-from discord.ext.commands import CogMeta
+from disnake.ext.commands import CogMeta
 
 
 class CogABCMeta(CogMeta, ABCMeta):

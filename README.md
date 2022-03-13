@@ -4,7 +4,6 @@
 [![Lint & Test][1]][2]
 [![Build][3]][4]
 [![Deploy][5]][6]
-[![Coverage Status](https://coveralls.io/repos/github/python-discord/bot/badge.svg)](https://coveralls.io/github/python-discord/bot)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 This project is a Discord bot specifically for use with the Python Discord server. It provides numerous utilities

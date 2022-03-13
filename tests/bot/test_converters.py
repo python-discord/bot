@@ -4,9 +4,9 @@ from datetime import MAXYEAR, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument
+from disnake.ext.commands import BadArgument
 
-from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName, TagNameConverter
+from bot.converters import Duration, HushDurationConverter, ISODateTime, PackageName
 
 
 class ConverterTests(unittest.IsolatedAsyncioTestCase):
@@ -18,21 +18,6 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
         cls.context.author = 'bob'
 
         cls.fixed_utc_now = datetime.fromisoformat('2019-01-01T00:00:00+00:00')
-
-    async def test_tag_name_converter_for_invalid(self):
-        """TagNameConverter should raise the correct exception for invalid tag names."""
-        test_values = (
-            ('👋', "Don't be ridiculous, you can't use that character!"),
-            ('', "Tag names should not be empty, or filled with whitespace."),
-            ('  ', "Tag names should not be empty, or filled with whitespace."),
-            ('42', "Tag names must contain at least one letter."),
-            ('x' * 128, "Are you insane? That's way too long!"),
-        )
-
-        for invalid_name, exception_message in test_values:
-            with self.subTest(invalid_name=invalid_name, exception_message=exception_message):
-                with self.assertRaisesRegex(BadArgument, re.escape(exception_message)):
-                    await TagNameConverter.convert(self.context, invalid_name)
 
     async def test_package_name_for_valid(self):
         """PackageName returns valid package names unchanged."""

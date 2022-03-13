@@ -1,9 +1,10 @@
+import re
 import typing as t
 from datetime import timedelta
 from enum import Enum
 
 import arrow
-import discord
+import disnake
 from arrow import Arrow
 
 import bot
@@ -16,20 +17,21 @@ log = get_logger(__name__)
 
 MAX_CHANNELS_PER_CATEGORY = 50
 EXCLUDED_CHANNELS = (constants.Channels.cooldown,)
+CLAIMED_BY_RE = re.compile(r"Channel claimed by <@!?(?P<user_id>\d{17,20})>\.$")
 
 
 class ClosingReason(Enum):
     """All possible closing reasons for help channels."""
 
     COMMAND = "command"
-    LATEST_MESSSAGE = "auto.latest_message"
+    LATEST_MESSAGE = "auto.latest_message"
     CLAIMANT_TIMEOUT = "auto.claimant_timeout"
     OTHER_TIMEOUT = "auto.other_timeout"
     DELETED = "auto.deleted"
     CLEANUP = "auto.cleanup"
 
 
-def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
+def get_category_channels(category: disnake.CategoryChannel) -> t.Iterable[disnake.TextChannel]:
     """Yield the text channels of the `category` in an unsorted manner."""
     log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
 
@@ -39,7 +41,7 @@ def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[disco
             yield channel
 
 
-async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[Arrow, ClosingReason]:
+async def get_closing_time(channel: disnake.TextChannel, init_done: bool) -> t.Tuple[Arrow, ClosingReason]:
     """
     Return the time at which the given help `channel` should be closed along with the reason.
 
@@ -75,7 +77,7 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
 
         # Use the greatest offset to avoid the possibility of prematurely closing the channel.
         time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
-        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSSAGE
+        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSAGE
         return time, reason
 
     claimant_time = Arrow.utcfromtimestamp(claimant_time)
@@ -114,12 +116,12 @@ async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
         return arrow.utcnow() - claimed
 
 
-def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
+def is_excluded_channel(channel: disnake.abc.GuildChannel) -> bool:
     """Check if a channel should be excluded from the help channel system."""
-    return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
+    return not isinstance(channel, disnake.TextChannel) or channel.id in EXCLUDED_CHANNELS
 
 
-async def move_to_bottom(channel: discord.TextChannel, category_id: int, **options) -> None:
+async def move_to_bottom(channel: disnake.TextChannel, category_id: int, **options) -> None:
     """
     Move the `channel` to the bottom position of `category` and edit channel attributes.
 
@@ -128,8 +130,8 @@ async def move_to_bottom(channel: discord.TextChannel, category_id: int, **optio
     really ends up at the bottom of the category.
 
     If `options` are provided, the channel will be edited after the move is completed. This is the
-    same order of operations that `discord.TextChannel.edit` uses. For information on available
-    options, see the documentation on `discord.TextChannel.edit`. While possible, position-related
+    same order of operations that `disnake.TextChannel.edit` uses. For information on available
+    options, see the documentation on `disnake.TextChannel.edit`. While possible, position-related
     options should be avoided, as it may interfere with the category move we perform.
     """
     # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
@@ -157,3 +159,36 @@ async def move_to_bottom(channel: discord.TextChannel, category_id: int, **optio
     # Now that the channel is moved, we can edit the other attributes
     if options:
         await channel.edit(**options)
+
+
+async def ensure_cached_claimant(channel: disnake.TextChannel) -> None:
+    """
+    Ensure there is a claimant cached for each help channel.
+
+    Check the redis cache first, return early if there is already a claimant cached.
+    If there isn't an entry in redis, search for the "Claimed by X." embed in channel history.
+        Stopping early if we discover a dormant message first.
+
+    If a claimant could not be found, send a warning to #helpers and set the claimant to the bot.
+    """
+    if await _caches.claimants.get(channel.id):
+        return
+
+    async for message in channel.history(limit=1000):
+        if message.author.id != bot.instance.user.id:
+            # We only care about bot messages
+            continue
+        if message.embeds:
+            if _message._match_bot_embed(message, _message.DORMANT_MSG):
+                log.info("Hit the dormant message embed before finding a claimant in %s (%d).", channel, channel.id)
+                break
+            # Only set the claimant if the first embed matches the claimed channel embed regex
+            if match := CLAIMED_BY_RE.match(message.embeds[0].description):
+                await _caches.claimants.set(channel.id, int(match.group("user_id")))
+                return
+
+    await bot.instance.get_channel(constants.Channels.helpers).send(
+        f"I couldn't find a claimant for {channel.mention} in that last 1000 messages. "
+        "Please use your helper powers to close the channel if/when appropriate."
+    )
+    await _caches.claimants.set(channel.id, bot.instance.user.id)

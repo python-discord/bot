@@ -3,8 +3,8 @@ from email.parser import HeaderParser
 from io import StringIO
 from typing import Dict, Optional, Tuple
 
-from discord import Colour, Embed
-from discord.ext.commands import Cog, Context, command
+from disnake import Colour, Embed
+from disnake.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Keys
@@ -16,7 +16,7 @@ log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
-PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=master"
+PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=main"
 
 pep_cache = AsyncCache()
 
@@ -97,9 +97,12 @@ class PythonEnhancementProposals(Cog):
 
     def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> Embed:
         """Generate PEP embed based on PEP headers data."""
+        # the parsed header can be wrapped to multiple lines, so we need to make sure that is removed
+        # for an example of a pep with this issue, see pep 500
+        title = " ".join(pep_header["Title"].split())
         # Assemble the embed
         pep_embed = Embed(
-            title=f"**PEP {pep_nr} - {pep_header['Title']}**",
+            title=f"**PEP {pep_nr} - {title}**",
             description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
         )
 

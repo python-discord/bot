@@ -6,9 +6,9 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-import discord
-from discord import Color, DMChannel, Embed, HTTPException, Message, errors
-from discord.ext.commands import Cog, Context
+import disnake
+from disnake import Color, DMChannel, Embed, HTTPException, Message, errors
+from disnake.ext.commands import Cog, Context
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -18,9 +18,8 @@ from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
 from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
-from bot.utils import CogABCMeta, messages, scheduling
+from bot.utils import CogABCMeta, messages, scheduling, time
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import get_time_delta
 
 log = get_logger(__name__)
 
@@ -105,7 +104,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
-        except discord.HTTPException:
+        except disnake.HTTPException:
             self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
         if self.channel is None or self.webhook is None:
@@ -218,7 +217,7 @@ class WatchChannel(metaclass=CogABCMeta):
         username = messages.sub_clyde(username)
         try:
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
-        except discord.HTTPException as exc:
+        except disnake.HTTPException as exc:
             self.log.exception(
                 "Failed to send a message to the webhook",
                 exc_info=exc
@@ -266,7 +265,7 @@ class WatchChannel(metaclass=CogABCMeta):
                     username=msg.author.display_name,
                     avatar_url=msg.author.display_avatar.url
                 )
-            except discord.HTTPException as exc:
+            except disnake.HTTPException as exc:
                 self.log.exception(
                     "Failed to send an attachment to the webhook",
                     exc_info=exc
@@ -286,7 +285,7 @@ class WatchChannel(metaclass=CogABCMeta):
         actor = actor.display_name if actor else self.watched_users[user_id]['actor']
 
         inserted_at = self.watched_users[user_id]['inserted_at']
-        time_delta = get_time_delta(inserted_at)
+        time_delta = time.format_relative(inserted_at)
 
         reason = self.watched_users[user_id]['reason']
 
@@ -360,7 +359,7 @@ class WatchChannel(metaclass=CogABCMeta):
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data['inserted_at']
-            line += f", added {get_time_delta(inserted_at)}"
+            line += f", added {time.format_relative(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"
             list_data["info"][user_id] = line

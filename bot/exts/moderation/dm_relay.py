@@ -1,5 +1,5 @@
-import discord
-from discord.ext.commands import Cog, Context, command, has_any_role
+import disnake
+from disnake.ext.commands import Cog, Context, command, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES
@@ -17,7 +17,7 @@ class DMRelay(Cog):
         self.bot = bot
 
     @command(aliases=("relay", "dr"))
-    async def dmrelay(self, ctx: Context, user: discord.User, limit: int = 100) -> None:
+    async def dmrelay(self, ctx: Context, user: disnake.User, limit: int = 100) -> None:
         """Relays the direct message history between the bot and given user."""
         log.trace(f"Relaying DMs with {user.name} ({user.id})")
 

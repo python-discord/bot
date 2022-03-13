@@ -3,9 +3,9 @@ import random
 import re
 from contextlib import suppress
 
-from discord import Embed, NotFound
-from discord.ext.commands import Cog, Context, command
-from discord.utils import escape_markdown
+from disnake import Embed, NotFound
+from disnake.ext.commands import Cog, Context, command
+from disnake.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput

@@ -1,13 +1,11 @@
 import typing as t
 
-import discord
-from discord.ext.commands import Cog, Context, command, has_any_role
+import disnake
+from disnake.ext.commands import Cog, Context, command, has_any_role
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist
 from bot.log import get_logger
-from bot.utils.checks import InWhitelistCheckFailure
 
 log = get_logger(__name__)
 
@@ -29,11 +27,11 @@ You can find a copy of our rules for reference at <https://pythondiscord.com/pag
 
 Additionally, if you'd like to receive notifications for the announcements \
 we post in <#{constants.Channels.announcements}>
-from time to time, you can send `!subscribe` to <#{constants.Channels.bot_commands}> at any time \
+from time to time, you can send `{constants.Bot.prefix}subscribe` to <#{constants.Channels.bot_commands}> at any time \
 to assign yourself the **Announcements** role. We'll mention this role every time we make an announcement.
 
-If you'd like to unsubscribe from the announcement notifications, simply send `!unsubscribe` to \
-<#{constants.Channels.bot_commands}>.
+If you'd like to unsubscribe from the announcement notifications, simply send `{constants.Bot.prefix}subscribe` to \
+<#{constants.Channels.bot_commands}> and click the role again!.
 
 To introduce you to our community, we've made the following video:
 https://youtu.be/ZH26PuX3re0
@@ -53,7 +51,7 @@ async def safe_dm(coro: t.Coroutine) -> None:
     """
     try:
         await coro
-    except discord.HTTPException as discord_exc:
+    except disnake.HTTPException as discord_exc:
         log.trace(f"DM dispatch failed on status {discord_exc.status} with code: {discord_exc.code}")
         if discord_exc.code != 50_007:  # If any reason other than disabled DMs
             raise
@@ -61,11 +59,9 @@ async def safe_dm(coro: t.Coroutine) -> None:
 
 class Verification(Cog):
     """
-    User verification and role management.
+    User verification.
 
     Statistics are collected in the 'verification.' namespace.
-
-    Additionally, this cog offers the !subscribe and !unsubscribe commands,
     """
 
     def __init__(self, bot: Bot) -> None:
@@ -76,7 +72,7 @@ class Verification(Cog):
     # region: listeners
 
     @Cog.listener()
-    async def on_member_join(self, member: discord.Member) -> None:
+    async def on_member_join(self, member: disnake.Member) -> None:
         """Attempt to send initial direct message to each new member."""
         if member.guild.id != constants.Guild.id:
             return  # Only listen for PyDis events
@@ -91,11 +87,11 @@ class Verification(Cog):
         log.trace(f"Sending on join message to new member: {member.id}")
         try:
             await safe_dm(member.send(ON_JOIN_MESSAGE))
-        except discord.HTTPException:
+        except disnake.HTTPException:
             log.exception("DM dispatch failed on unexpected error code")
 
     @Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+    async def on_member_update(self, before: disnake.Member, after: disnake.Member) -> None:
         """Check if we need to send a verification DM to a gated user."""
         if before.pending is True and after.pending is False:
             try:
@@ -104,74 +100,15 @@ class Verification(Cog):
                 # our alternate welcome DM which includes info such as our welcome
                 # video.
                 await safe_dm(after.send(VERIFIED_MESSAGE))
-            except discord.HTTPException:
+            except disnake.HTTPException:
                 log.exception("DM dispatch failed on unexpected error code")
-
-    # endregion
-    # region: subscribe commands
-
-    @command(name='subscribe')
-    @in_whitelist(channels=(constants.Channels.bot_commands,))
-    async def subscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
-        """Subscribe to announcement notifications by assigning yourself the role."""
-        has_role = False
-
-        for role in ctx.author.roles:
-            if role.id == constants.Roles.announcements:
-                has_role = True
-                break
-
-        if has_role:
-            await ctx.send(f"{ctx.author.mention} You're already subscribed!")
-            return
-
-        log.debug(f"{ctx.author} called !subscribe. Assigning the 'Announcements' role.")
-        await ctx.author.add_roles(discord.Object(constants.Roles.announcements), reason="Subscribed to announcements")
-
-        log.trace(f"Deleting the message posted by {ctx.author}.")
-
-        await ctx.send(
-            f"{ctx.author.mention} Subscribed to <#{constants.Channels.announcements}> notifications.",
-        )
-
-    @command(name='unsubscribe')
-    @in_whitelist(channels=(constants.Channels.bot_commands,))
-    async def unsubscribe_command(self, ctx: Context, *_) -> None:  # We don't actually care about the args
-        """Unsubscribe from announcement notifications by removing the role from yourself."""
-        has_role = False
-
-        for role in ctx.author.roles:
-            if role.id == constants.Roles.announcements:
-                has_role = True
-                break
-
-        if not has_role:
-            await ctx.send(f"{ctx.author.mention} You're already unsubscribed!")
-            return
-
-        log.debug(f"{ctx.author} called !unsubscribe. Removing the 'Announcements' role.")
-        await ctx.author.remove_roles(
-            discord.Object(constants.Roles.announcements), reason="Unsubscribed from announcements"
-        )
-
-        log.trace(f"Deleting the message posted by {ctx.author}.")
-
-        await ctx.send(
-            f"{ctx.author.mention} Unsubscribed from <#{constants.Channels.announcements}> notifications."
-        )
 
     # endregion
     # region: miscellaneous
 
-    # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
-        """Check for & ignore any InWhitelistCheckFailure."""
-        if isinstance(error, InWhitelistCheckFailure):
-            error.handled = True
-
     @command(name='verify')
     @has_any_role(*constants.MODERATION_ROLES)
-    async def perform_manual_verification(self, ctx: Context, user: discord.Member) -> None:
+    async def perform_manual_verification(self, ctx: Context, user: disnake.Member) -> None:
         """Command for moderators to verify any user."""
         log.trace(f'verify command called by {ctx.author} for {user.id}.')
 

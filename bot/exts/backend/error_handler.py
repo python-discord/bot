@@ -1,14 +1,12 @@
 import difflib
-import typing as t
 
-from discord import Embed
-from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
+from disnake import Embed
+from disnake.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from sentry_sdk import push_scope
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
-from bot.converters import TagNameConverter
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.log import get_logger
 from bot.utils.checks import ContextCheckFailure
@@ -97,13 +95,14 @@ class ErrorHandler(Cog):
             # MaxConcurrencyReached, ExtensionError
             await self.handle_unexpected_error(ctx, e)
 
-    @staticmethod
-    def get_help_command(ctx: Context) -> t.Coroutine:
+    async def send_command_help(self, ctx: Context) -> None:
         """Return a prepared `help` command invocation coroutine."""
         if ctx.command:
-            return ctx.send_help(ctx.command)
+            self.bot.help_command.context = ctx
+            await ctx.send_help(ctx.command)
+            return
 
-        return ctx.send_help()
+        await ctx.send_help()
 
     async def try_silence(self, ctx: Context) -> bool:
         """
@@ -174,16 +173,8 @@ class ErrorHandler(Cog):
             await self.on_command_error(ctx, tag_error)
             return
 
-        try:
-            tag_name = await TagNameConverter.convert(ctx, ctx.invoked_with)
-        except errors.BadArgument:
-            log.debug(
-                f"{ctx.author} tried to use an invalid command "
-                f"and the fallback tag failed validation in TagNameConverter."
-            )
-        else:
-            if await ctx.invoke(tags_get_command, tag_name=tag_name):
-                return
+        if await ctx.invoke(tags_get_command, argument_string=ctx.message.content):
+            return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
@@ -245,7 +236,6 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.ArgumentParsingError):
             embed = self._get_error_embed("Argument parsing error", str(e))
             await ctx.send(embed=embed)
-            self.get_help_command(ctx).close()
             self.bot.stats.incr("errors.argument_parsing_error")
             return
         else:
@@ -256,7 +246,7 @@ class ErrorHandler(Cog):
             self.bot.stats.incr("errors.other_user_input_error")
 
         await ctx.send(embed=embed)
-        await self.get_help_command(ctx)
+        await self.send_command_help(ctx)
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:

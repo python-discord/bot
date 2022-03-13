@@ -3,9 +3,9 @@ import csv
 import typing as t
 from collections import defaultdict
 
-import discord
-from discord import Colour, Embed, Guild, Member
-from discord.ext import commands
+import disnake
+from disnake import Colour, Embed, Guild, Member
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import Emojis, Roles
@@ -85,7 +85,7 @@ class CodeJams(commands.Cog):
         A confirmation message is displayed with the categories and channels to be deleted.. Pressing the added reaction
         deletes those channels.
         """
-        def predicate_deletion_emoji_reaction(reaction: discord.Reaction, user: discord.User) -> bool:
+        def predicate_deletion_emoji_reaction(reaction: disnake.Reaction, user: disnake.User) -> bool:
             """Return True if the reaction :boom: was added by the context message author on this message."""
             return (
                 reaction.message.id == message.id
@@ -124,14 +124,14 @@ class CodeJams(commands.Cog):
 
     @staticmethod
     async def _build_confirmation_message(
-        categories: dict[discord.CategoryChannel, list[discord.abc.GuildChannel]]
+        categories: dict[disnake.CategoryChannel, list[disnake.abc.GuildChannel]]
     ) -> str:
         """Sends details of the channels to be deleted to the pasting service, and formats the confirmation message."""
-        def channel_repr(channel: discord.abc.GuildChannel) -> str:
+        def channel_repr(channel: disnake.abc.GuildChannel) -> str:
             """Formats the channel name and ID and a readable format."""
             return f"{channel.name} ({channel.id})"
 
-        def format_category_info(category: discord.CategoryChannel, channels: list[discord.abc.GuildChannel]) -> str:
+        def format_category_info(category: disnake.CategoryChannel, channels: list[disnake.abc.GuildChannel]) -> str:
             """Displays the category and the channels within it in a readable format."""
             return f"{channel_repr(category)}:\n" + "\n".join("  - " + channel_repr(channel) for channel in channels)
 
@@ -187,7 +187,7 @@ class CodeJams(commands.Cog):
         await old_team_channel.set_permissions(member, overwrite=None, reason=f"Participant moved to {new_team_name}")
         await new_team_channel.set_permissions(
             member,
-            overwrite=discord.PermissionOverwrite(read_messages=True),
+            overwrite=disnake.PermissionOverwrite(read_messages=True),
             reason=f"Participant moved from {old_team_channel.name}"
         )
 
@@ -212,16 +212,16 @@ class CodeJams(commands.Cog):
         await ctx.send(f"Removed the participant from `{self.team_name(channel)}`.")
 
     @staticmethod
-    def jam_categories(guild: Guild) -> list[discord.CategoryChannel]:
+    def jam_categories(guild: Guild) -> list[disnake.CategoryChannel]:
         """Get all the code jam team categories."""
         return [category for category in guild.categories if category.name == _channels.CATEGORY_NAME]
 
     @staticmethod
-    def team_channel(guild: Guild, criterion: t.Union[str, Member]) -> t.Optional[discord.TextChannel]:
+    def team_channel(guild: Guild, criterion: t.Union[str, Member]) -> t.Optional[disnake.TextChannel]:
         """Get a team channel through either a participant or the team name."""
         for category in CodeJams.jam_categories(guild):
             for channel in category.channels:
-                if isinstance(channel, discord.TextChannel):
+                if isinstance(channel, disnake.TextChannel):
                     if (
                         # If it's a string.
                         criterion == channel.name or criterion == CodeJams.team_name(channel)
@@ -231,6 +231,6 @@ class CodeJams(commands.Cog):
                         return channel
 
     @staticmethod
-    def team_name(channel: discord.TextChannel) -> str:
+    def team_name(channel: disnake.TextChannel) -> str:
         """Retrieves the team name from the given channel."""
         return channel.name.replace("-", " ").title()

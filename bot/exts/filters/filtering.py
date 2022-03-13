@@ -1,17 +1,20 @@
 import asyncio
 import re
+import unicodedata
 from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
 import dateutil.parser
-import discord.errors
+import disnake.errors
 import regex
+import tldextract
 from async_rediscache import RedisCache
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
-from discord.ext.commands import Cog
-from discord.utils import escape_markdown
+from disnake import Colour, HTTPException, Member, Message, NotFound, TextChannel
+from disnake.ext.commands import Cog
+from disnake.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -21,7 +24,6 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.messages import format_user
-from bot.utils.regex import INVITE_RE
 
 log = get_logger(__name__)
 
@@ -61,14 +63,14 @@ AUTO_BAN_REASON = (
 )
 AUTO_BAN_DURATION = timedelta(days=4)
 
-FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
+FilterMatch = Union[re.Match, dict, bool, List[disnake.Embed]]
 
 
 class Stats(NamedTuple):
     """Additional stats on a triggered filter to append to a mod log."""
 
     message_content: str
-    additional_embeds: Optional[List[discord.Embed]]
+    additional_embeds: Optional[List[disnake.Embed]]
 
 
 class Filtering(Cog):
@@ -205,15 +207,21 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
-    def get_name_matches(self, name: str) -> List[re.Match]:
-        """Check bad words from passed string (name). Return list of matches."""
-        name = self.clean_input(name)
-        matches = []
+    def get_name_match(self, name: str) -> Optional[re.Match]:
+        """Check bad words from passed string (name). Return the first match found."""
+        normalised_name = unicodedata.normalize("NFKC", name)
+        cleaned_normalised_name = "".join([c for c in normalised_name if not unicodedata.combining(c)])
+
+        # Run filters against normalised, cleaned normalised and the original name,
+        # in case we have filters for one but not the other.
+        names_to_check = (name, normalised_name, cleaned_normalised_name)
+
         watchlist_patterns = self._get_filterlist_items('filter_token', allowed=False)
         for pattern in watchlist_patterns:
-            if match := re.search(pattern, name, flags=re.IGNORECASE):
-                matches.append(match)
-        return matches
+            for name in names_to_check:
+                if match := re.search(pattern, name, flags=re.IGNORECASE):
+                    return match
+        return None
 
     async def check_send_alert(self, member: Member) -> bool:
         """When there is less than 3 days after last alert, return `False`, otherwise `True`."""
@@ -229,10 +237,14 @@ class Filtering(Cog):
         """Send a mod alert every 3 days if a username still matches a watchlist pattern."""
         # Use lock to avoid race conditions
         async with self.name_lock:
-            # Check whether the users display name contains any words in our blacklist
-            matches = self.get_name_matches(member.display_name)
+            # Check if we recently alerted about this user first,
+            # to avoid running all the filter tokens against their name again.
+            if not await self.check_send_alert(member):
+                return
 
-            if not matches or not await self.check_send_alert(member):
+            # Check whether the users display name contains any words in our blacklist
+            match = self.get_name_match(member.display_name)
+            if not match:
                 return
 
             log.info(f"Sending bad nickname alert for '{member.display_name}' ({member.id}).")
@@ -240,10 +252,11 @@ class Filtering(Cog):
             log_string = (
                 f"**User:** {format_user(member)}\n"
                 f"**Display Name:** {escape_markdown(member.display_name)}\n"
-                f"**Bad Matches:** {', '.join(match.group() for match in matches)}"
+                f"**Bad Match:** {match.group()}"
             )
 
             await self.mod_log.send_log_message(
+                content=str(member.id),  # quality-of-life improvement for mobile moderators
                 icon_url=Icons.token_removed,
                 colour=Colours.soft_red,
                 title="Username filtering alert",
@@ -326,7 +339,7 @@ class Filtering(Cog):
                         match = result
 
                     if match:
-                        is_private = msg.channel.type is discord.ChannelType.private
+                        is_private = msg.channel.type is disnake.ChannelType.private
 
                         # If this is a filter (not a watchlist) and not in a DM, delete the message.
                         if _filter["type"] == "filter" and not is_private:
@@ -341,7 +354,7 @@ class Filtering(Cog):
                                 # In addition, to avoid sending two notifications to the user, the
                                 # logs, and mod_alert, we return if the message no longer exists.
                                 await msg.delete()
-                            except discord.errors.NotFound:
+                            except disnake.errors.NotFound:
                                 return
 
                             # Notify the user if the filter specifies
@@ -396,14 +409,14 @@ class Filtering(Cog):
         self,
         filter_name: str,
         _filter: Dict[str, Any],
-        msg: discord.Message,
+        msg: disnake.Message,
         stats: Stats,
         reason: Optional[str] = None,
         *,
         is_eval: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
-        if msg.channel.type is discord.ChannelType.private:
+        if msg.channel.type is disnake.ChannelType.private:
             channel_str = "via DM"
             ping_everyone = False
         else:
@@ -411,9 +424,12 @@ class Filtering(Cog):
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
-        # If we are going to autoban, we don't want to ping
+        content = str(msg.author.id)  # quality-of-life improvement for mobile moderators
+
+        # If we are going to autoban, we don't want to ping and don't need the user ID
         if reason and "[autoban]" in reason:
             ping_everyone = False
+            content = None
 
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
@@ -427,6 +443,7 @@ class Filtering(Cog):
 
         # Send pretty mod log embed to mod-alerts
         await self.mod_log.send_log_message(
+            content=content,
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
@@ -461,7 +478,7 @@ class Filtering(Cog):
             additional_embeds = []
             for _, data in match.items():
                 reason = f"Reason: {data['reason']} | " if data.get('reason') else ""
-                embed = discord.Embed(description=(
+                embed = disnake.Embed(description=(
                     f"**Members:**\n{data['members']}\n"
                     f"**Active:**\n{data['active']}"
                 ))
@@ -524,7 +541,10 @@ class Filtering(Cog):
         for match in URL_RE.finditer(text):
             for url in domain_blacklist:
                 if url.lower() in match.group(1).lower():
-                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
+                    blacklisted_parsed = tldextract.extract(url.lower())
+                    url_parsed = tldextract.extract(match.group(1).lower())
+                    if blacklisted_parsed.registered_domain == url_parsed.registered_domain:
+                        return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod
@@ -551,7 +571,7 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
+        invites = [m.group("invite") for m in DISCORD_INVITE.finditer(text)]
         invite_data = dict()
         for invite in invites:
             if invite in invite_data:
@@ -606,7 +626,7 @@ class Filtering(Cog):
         return invite_data if invite_data else False
 
     @staticmethod
-    async def _has_rich_embed(msg: Message) -> Union[bool, List[discord.Embed]]:
+    async def _has_rich_embed(msg: Message) -> Union[bool, List[disnake.Embed]]:
         """Determines if `msg` contains any rich embeds not auto-generated from a URL."""
         if msg.embeds:
             for embed in msg.embeds:
@@ -642,7 +662,7 @@ class Filtering(Cog):
         """
         try:
             await filtered_member.send(reason)
-        except discord.errors.Forbidden:
+        except disnake.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
     def schedule_msg_delete(self, msg: dict) -> None:

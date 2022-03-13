@@ -5,10 +5,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, OrderedDict, Union
 
 from async_rediscache import RedisCache
-from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
-from discord.ext import commands, tasks
-from discord.ext.commands import Context
-from discord.utils import MISSING
+from disnake import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
+from disnake.ext import commands, tasks
+from disnake.ext.commands import Context
+from disnake.utils import MISSING
 
 from bot import constants
 from bot.bot import Bot

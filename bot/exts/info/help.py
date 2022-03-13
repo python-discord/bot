@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import itertools
 import re
 from collections import namedtuple
 from contextlib import suppress
-from typing import List, Union
+from typing import List, Optional, Union
 
-from discord import Colour, Embed
-from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
+from disnake import ButtonStyle, Colour, Embed, Emoji, HTTPException, Interaction, PartialEmoji, ui
+from disnake.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
 from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
 
@@ -24,6 +26,129 @@ PREFIX = constants.Bot.prefix
 NOT_ALLOWED_TO_RUN_MESSAGE = "***You cannot run this command.***\n\n"
 
 Category = namedtuple("Category", ["name", "description", "cogs"])
+
+
+class SubcommandButton(ui.Button):
+    """
+    A button shown in a group's help embed.
+
+    The button represents a subcommand, and pressing it will edit the help embed to that of the subcommand.
+    """
+
+    def __init__(
+        self,
+        help_command: CustomHelpCommand,
+        command: Command,
+        *,
+        style: ButtonStyle = ButtonStyle.primary,
+        label: Optional[str] = None,
+        disabled: bool = False,
+        custom_id: Optional[str] = None,
+        url: Optional[str] = None,
+        emoji: Optional[Union[str, Emoji, PartialEmoji]] = None,
+        row: Optional[int] = None
+    ):
+        super().__init__(
+            style=style, label=label, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, row=row
+        )
+
+        self.help_command = help_command
+        self.command = command
+
+    async def callback(self, interaction: Interaction) -> None:
+        """Edits the help embed to that of the subcommand."""
+        subcommand = self.command
+        if isinstance(subcommand, Group):
+            embed, subcommand_view = await self.help_command.format_group_help(subcommand)
+        else:
+            embed, subcommand_view = await self.help_command.command_formatting(subcommand)
+        with suppress(HTTPException):
+            await interaction.response.edit_message(embed=embed, view=subcommand_view)
+
+
+class GroupButton(ui.Button):
+    """
+    A button shown in a subcommand's help embed.
+
+    The button represents the parent command, and pressing it will edit the help embed to that of the parent.
+    """
+
+    def __init__(
+        self,
+        help_command: CustomHelpCommand,
+        command: Command,
+        *,
+        style: ButtonStyle = ButtonStyle.secondary,
+        label: Optional[str] = None,
+        disabled: bool = False,
+        custom_id: Optional[str] = None,
+        url: Optional[str] = None,
+        emoji: Optional[Union[str, Emoji, PartialEmoji]] = None,
+        row: Optional[int] = None
+    ):
+        super().__init__(
+            style=style, label=label, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, row=row
+        )
+
+        self.help_command = help_command
+        self.command = command
+
+    async def callback(self, interaction: Interaction) -> None:
+        """Edits the help embed to that of the parent."""
+        embed, group_view = await self.help_command.format_group_help(self.command.parent)
+        with suppress(HTTPException):
+            await interaction.response.edit_message(embed=embed, view=group_view)
+
+
+class CommandView(ui.View):
+    """
+    The view added to any command's help embed.
+
+    If the command has a parent, a button is added to the view to show that parent's help embed.
+    """
+
+    def __init__(self, help_command: CustomHelpCommand, command: Command, context: Context):
+        self.context = context
+        super().__init__()
+
+        if command.parent:
+            self.children.append(GroupButton(help_command, command, emoji="↩️"))
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """
+        Ensures that the button only works for the user who spawned the help command.
+
+        Also allows moderators to access buttons even when not the author of message.
+        """
+        if interaction.user is not None:
+            if any(role.id in constants.MODERATION_ROLES for role in interaction.user.roles):
+                return True
+
+            elif interaction.user.id == self.context.author.id:
+                return True
+
+        return False
+
+
+class GroupView(CommandView):
+    """
+    The view added to a group's help embed.
+
+    The view generates a SubcommandButton for every subcommand the group has.
+    """
+
+    MAX_BUTTONS_IN_ROW = 5
+    MAX_ROWS = 5
+
+    def __init__(self, help_command: CustomHelpCommand, group: Group, subcommands: list[Command], context: Context):
+        super().__init__(help_command, group, context)
+        # Don't add buttons if only a portion of the subcommands can be shown.
+        if len(subcommands) + len(self.children) > self.MAX_ROWS * self.MAX_BUTTONS_IN_ROW:
+            log.trace(f"Attempted to add navigation buttons for `{group.qualified_name}`, but there was no space.")
+            return
+
+        for subcommand in subcommands:
+            self.add_item(SubcommandButton(help_command, subcommand, label=subcommand.name))
 
 
 class HelpQueryNotFound(ValueError):
@@ -148,7 +273,7 @@ class CustomHelpCommand(HelpCommand):
 
         await self.context.send(embed=embed)
 
-    async def command_formatting(self, command: Command) -> Embed:
+    async def command_formatting(self, command: Command) -> tuple[Embed, Optional[CommandView]]:
         """
         Takes a command and turns it into an embed.
 
@@ -186,12 +311,14 @@ class CustomHelpCommand(HelpCommand):
         command_details += f"*{formatted_doc or 'No details provided.'}*\n"
         embed.description = command_details
 
-        return embed
+        # If the help is invoked in the context of an error, don't show subcommand navigation.
+        view = CommandView(self, command, self.context) if not self.context.command_failed else None
+        return embed, view
 
     async def send_command_help(self, command: Command) -> None:
         """Send help for a single command."""
-        embed = await self.command_formatting(command)
-        message = await self.context.send(embed=embed)
+        embed, view = await self.command_formatting(command)
+        message = await self.context.send(embed=embed, view=view)
         await wait_for_deletion(message, (self.context.author.id,))
 
     @staticmethod
@@ -212,25 +339,31 @@ class CustomHelpCommand(HelpCommand):
         else:
             return "".join(details)
 
-    async def send_group_help(self, group: Group) -> None:
-        """Sends help for a group command."""
+    async def format_group_help(self, group: Group) -> tuple[Embed, Optional[CommandView]]:
+        """Formats help for a group command."""
         subcommands = group.commands
 
         if len(subcommands) == 0:
             # no subcommands, just treat it like a regular command
-            await self.send_command_help(group)
-            return
+            return await self.command_formatting(group)
 
         # remove commands that the user can't run and are hidden, and sort by name
         commands_ = await self.filter_commands(subcommands, sort=True)
 
-        embed = await self.command_formatting(group)
+        embed, _ = await self.command_formatting(group)
 
         command_details = self.get_commands_brief_details(commands_)
         if command_details:
             embed.description += f"\n**Subcommands:**\n{command_details}"
 
-        message = await self.context.send(embed=embed)
+        # If the help is invoked in the context of an error, don't show subcommand navigation.
+        view = GroupView(self, group, commands_, self.context) if not self.context.command_failed else None
+        return embed, view
+
+    async def send_group_help(self, group: Group) -> None:
+        """Sends help for a group command."""
+        embed, view = await self.format_group_help(group)
+        message = await self.context.send(embed=embed, view=view)
         await wait_for_deletion(message, (self.context.author.id,))
 
     async def send_cog_help(self, cog: Cog) -> None:

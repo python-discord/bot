@@ -8,7 +8,7 @@ import arrow
 from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
-from discord.ext.commands import Cog, Context, group, has_any_role
+from disnake.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Metabase as MetabaseConfig, Roles

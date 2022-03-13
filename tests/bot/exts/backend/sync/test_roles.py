@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-import discord
+import disnake
 
 from bot.exts.backend.sync._syncers import RoleSyncer, _Diff, _Role
 from tests import helpers
@@ -34,8 +34,8 @@ class RoleSyncerDiffTests(unittest.IsolatedAsyncioTestCase):
 
         for role in roles:
             mock_role = helpers.MockRole(**role)
-            mock_role.colour = discord.Colour(role["colour"])
-            mock_role.permissions = discord.Permissions(role["permissions"])
+            mock_role.colour = disnake.Colour(role["colour"])
+            mock_role.permissions = disnake.Permissions(role["permissions"])
             guild.roles.append(mock_role)
 
         return guild
