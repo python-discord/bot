@@ -353,8 +353,16 @@ class WatchChannel(metaclass=CogABCMeta):
             watched_iter = reversed(watched_iter)
 
         list_data["info"] = {}
+
+        # Pre-fetch all watched users to avoid sequential API calls
+        members = await asyncio.gather(*[
+            get_or_fetch_member(ctx.guild, user_id)
+            for user_id, _ in watched_iter
+        ])
+        members = {member.id: member for member in members if member is not None}
+
         for user_id, user_data in watched_iter:
-            member = await get_or_fetch_member(ctx.guild, user_id)
+            member = members.get(user_id)
             line = f"• `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
