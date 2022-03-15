@@ -188,7 +188,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     """
     def decorator(func: types.FunctionType) -> types.FunctionType:
         @command_wraps(func)
-        async def wrapper(*args, **kwargs) -> None:
+        async def wrapper(*args, **kwargs) -> t.Any:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
             bound_args = function.get_bound_args(func, args, kwargs)
@@ -196,8 +196,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
             if not isinstance(target, Member):
                 log.trace("The target is not a discord.Member; skipping role hierarchy check.")
-                await func(*args, **kwargs)
-                return
+                return await func(*args, **kwargs)
 
             ctx = function.get_arg_value(1, bound_args)
             cmd = ctx.command.name
@@ -214,7 +213,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                 )
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
-                await func(*args, **kwargs)
+                return await func(*args, **kwargs)
         return wrapper
     return decorator
 
