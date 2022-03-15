@@ -6,15 +6,15 @@ from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
 import dateutil.parser
-import disnake.errors
+import discord.errors
 import regex
 import tldextract
 from async_rediscache import RedisCache
-from botcore.utils.regex import DISCORD_INVITE
+from botcore.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from disnake import Colour, HTTPException, Member, Message, NotFound, TextChannel
-from disnake.ext.commands import Cog
-from disnake.utils import escape_markdown
+from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
+from discord.ext.commands import Cog
+from discord.utils import escape_markdown
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot
@@ -63,14 +63,14 @@ AUTO_BAN_REASON = (
 )
 AUTO_BAN_DURATION = timedelta(days=4)
 
-FilterMatch = Union[re.Match, dict, bool, List[disnake.Embed]]
+FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
 
 
 class Stats(NamedTuple):
     """Additional stats on a triggered filter to append to a mod log."""
 
     message_content: str
-    additional_embeds: Optional[List[disnake.Embed]]
+    additional_embeds: Optional[List[discord.Embed]]
 
 
 class Filtering(Cog):
@@ -339,7 +339,7 @@ class Filtering(Cog):
                         match = result
 
                     if match:
-                        is_private = msg.channel.type is disnake.ChannelType.private
+                        is_private = msg.channel.type is discord.ChannelType.private
 
                         # If this is a filter (not a watchlist) and not in a DM, delete the message.
                         if _filter["type"] == "filter" and not is_private:
@@ -354,7 +354,7 @@ class Filtering(Cog):
                                 # In addition, to avoid sending two notifications to the user, the
                                 # logs, and mod_alert, we return if the message no longer exists.
                                 await msg.delete()
-                            except disnake.errors.NotFound:
+                            except discord.errors.NotFound:
                                 return
 
                             # Notify the user if the filter specifies
@@ -409,14 +409,14 @@ class Filtering(Cog):
         self,
         filter_name: str,
         _filter: Dict[str, Any],
-        msg: disnake.Message,
+        msg: discord.Message,
         stats: Stats,
         reason: Optional[str] = None,
         *,
         is_eval: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
-        if msg.channel.type is disnake.ChannelType.private:
+        if msg.channel.type is discord.ChannelType.private:
             channel_str = "via DM"
             ping_everyone = False
         else:
@@ -478,7 +478,7 @@ class Filtering(Cog):
             additional_embeds = []
             for _, data in match.items():
                 reason = f"Reason: {data['reason']} | " if data.get('reason') else ""
-                embed = disnake.Embed(description=(
+                embed = discord.Embed(description=(
                     f"**Members:**\n{data['members']}\n"
                     f"**Active:**\n{data['active']}"
                 ))
@@ -626,7 +626,7 @@ class Filtering(Cog):
         return invite_data if invite_data else False
 
     @staticmethod
-    async def _has_rich_embed(msg: Message) -> Union[bool, List[disnake.Embed]]:
+    async def _has_rich_embed(msg: Message) -> Union[bool, List[discord.Embed]]:
         """Determines if `msg` contains any rich embeds not auto-generated from a URL."""
         if msg.embeds:
             for embed in msg.embeds:
@@ -662,7 +662,7 @@ class Filtering(Cog):
         """
         try:
             await filtered_member.send(reason)
-        except disnake.errors.Forbidden:
+        except discord.errors.Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
     def schedule_msg_delete(self, msg: dict) -> None:

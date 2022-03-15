@@ -1,4 +1,4 @@
-from disnake.ext.commands import Cog
+from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
