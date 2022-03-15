@@ -215,10 +215,7 @@ class OffTopicNames(Cog):
             )
 
         try:
-            await asyncio.wait_for(
-                rename_channel(),
-                3
-            )
+            await asyncio.wait_for(rename_channel(), 3)
         except asyncio.TimeoutError:
             # Channel rename endpoint rate limited. The task was cancelled by asyncio.
             btn_yes = Button(label="Yes", style=ButtonStyle.success)
