@@ -7,10 +7,10 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "3.9.*"
-"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/45d498c1b76deaf3b394d17ccf56112fa691d160.zip"}
+"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/beafaa8a8b8006357c2a1ca6802ed80e000f4cda.zip"}
 # See https://bot-core.pythondiscord.com/ for docs.
-bot-core = {url = "https://github.com/python-discord/bot-core/archive/511bcba1b0196cd498c707a525ea56921bd971db.zip"}
-aio-pika = "~=6.1"
+bot-core = {url = "https://github.com/python-discord/bot-core/archive/refs/tags/v4.0.0.zip"}
+
 aiodns = "~=2.0"
 aiohttp = "~=3.7"
 aioredis = "~=1.3.1"
@@ -51,7 +51,7 @@ pip-licenses = "~=3.5.3"
 python-dotenv = "~=0.17.1"
 pytest = "~=6.2.4"
 pytest-cov = "~=2.12.1"
-pytest-xdist = { version = "~=2.3.0", extras = ["psutil"] }
+pytest-xdist = "~=2.3.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -63,9 +63,9 @@ lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
 push = "docker push ghcr.io/python-discord/bot:latest"
-test-nocov = "pytest -n auto"
-test = "pytest -n auto --cov-report= --cov --ff"
-retest = "pytest -n auto --cov-report= --cov --lf"
+test-nocov = "pytest -n 8"
+test = "pytest -n 8 --cov-report= --cov --ff"
+retest = "pytest -n 8 --cov-report= --cov --lf"
 html = "coverage html"
 report = "coverage report"
 isort = "isort ."
