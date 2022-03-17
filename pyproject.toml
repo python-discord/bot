@@ -8,9 +8,9 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "3.9.*"
 
-"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/beafaa8a8b8006357c2a1ca6802ed80e000f4cda.zip"}
+"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/414759f3723a3fe632ecfc1343a4164a51cd2940.zip"}
 # See https://bot-core.pythondiscord.com/ for docs.
-bot-core = {url = "https://github.com/python-discord/bot-core/archive/refs/tags/v4.0.0.zip"}
+bot-core = {url = "https://github.com/python-discord/bot-core/archive/refs/tags/v5.0.1.zip", extras = ["async-rediscache"]}
 
 aiodns = "3.0.0"
 aiohttp = "3.8.1"
