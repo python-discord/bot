@@ -3,7 +3,6 @@ import functools
 import types
 import typing as t
 from contextlib import suppress
-from datetime import datetime
 
 import arrow
 from discord import Member, NotFound
@@ -259,7 +258,11 @@ def ensure_future_timestamp(timestamp_arg: function.Argument) -> t.Callable:
 
             ctx = function.get_arg_value(1, bound_args)
 
-            if isinstance(target, datetime) and target < arrow.utcnow():
+            try:
+                is_future = target > arrow.utcnow()
+            except TypeError:
+                is_future = True
+            if not is_future:
                 await ctx.send(":x: Provided timestamp is in the past.")
                 return
 
