@@ -11,6 +11,7 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Duration, Expiry
+from bot.decorators import ensure_future_timestamp
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -103,6 +104,7 @@ class Superstarify(InfractionScheduler, Cog):
             await self.reapply_infraction(infraction, action)
 
     @command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def superstarify(
         self,
         ctx: Context,

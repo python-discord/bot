@@ -9,6 +9,7 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
@@ -122,6 +123,7 @@ class ModManagement(commands.Cog):
         await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
     @infraction_group.command(name='edit', aliases=('e',))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def infraction_edit(
         self,
         ctx: Context,
