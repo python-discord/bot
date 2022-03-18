@@ -429,8 +429,6 @@ class Channels(metaclass=YAMLGetter):
     off_topic_1: int
     off_topic_2: int
 
-    black_formatter: int
-
     bot_commands: int
     discord_bots: int
     esoteric: int
@@ -620,10 +618,12 @@ class HelpChannels(metaclass=YAMLGetter):
     max_available: int
     max_total_channels: int
     name_prefix: str
-    notify: bool
     notify_channel: int
     notify_minutes: int
-    notify_roles: List[int]
+    notify_none_remaining: bool
+    notify_none_remaining_roles: List[int]
+    notify_running_low: bool
+    notify_running_low_threshold: int
 
 
 class RedirectOutput(metaclass=YAMLGetter):

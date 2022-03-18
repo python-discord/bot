@@ -24,7 +24,7 @@ class ClosingReason(Enum):
     """All possible closing reasons for help channels."""
 
     COMMAND = "command"
-    LATEST_MESSSAGE = "auto.latest_message"
+    LATEST_MESSAGE = "auto.latest_message"
     CLAIMANT_TIMEOUT = "auto.claimant_timeout"
     OTHER_TIMEOUT = "auto.other_timeout"
     DELETED = "auto.deleted"
@@ -77,7 +77,7 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
 
         # Use the greatest offset to avoid the possibility of prematurely closing the channel.
         time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
-        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSSAGE
+        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSAGE
         return time, reason
 
     claimant_time = Arrow.utcfromtimestamp(claimant_time)
@@ -182,9 +182,10 @@ async def ensure_cached_claimant(channel: discord.TextChannel) -> None:
             if _message._match_bot_embed(message, _message.DORMANT_MSG):
                 log.info("Hit the dormant message embed before finding a claimant in %s (%d).", channel, channel.id)
                 break
-            user_id = CLAIMED_BY_RE.match(message.embeds[0].description).group("user_id")
-            await _caches.claimants.set(channel.id, int(user_id))
-            return
+            # Only set the claimant if the first embed matches the claimed channel embed regex
+            if match := CLAIMED_BY_RE.match(message.embeds[0].description):
+                await _caches.claimants.set(channel.id, int(match.group("user_id")))
+                return
 
     await bot.instance.get_channel(constants.Channels.helpers).send(
         f"I couldn't find a claimant for {channel.mention} in that last 1000 messages. "

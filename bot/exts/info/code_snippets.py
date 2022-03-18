@@ -246,6 +246,9 @@ class CodeSnippets(Cog):
         if message.author.bot:
             return
 
+        if message.guild is None:
+            return
+
         message_to_send = await self._parse_snippets(message.content)
         destination = message.channel
 
