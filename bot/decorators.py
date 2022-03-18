@@ -240,14 +240,14 @@ def mock_in_debug(return_value: t.Any) -> t.Callable:
     return decorator
 
 
-def ensure_duration_in_future(duration_arg: function.Argument) -> t.Callable:
+def ensure_future_timestamp(timestamp_arg: function.Argument) -> t.Callable:
     """
-    Ensure the duration argument is in the future.
+    Ensure the timestamp argument is in the future.
 
-    If the condition fails, a warning is sent to the invoking context.
+    If the condition fails, send a warning to the invoking context.
 
-    `duration_arg` is the keyword name or position index of the parameter of the decorated command
-    whose value is the target duration.
+    `timestamp_arg` is the keyword name or position index of the parameter of the decorated command
+    whose value is the target timestamp.
 
     This decorator must go before (below) the `command` decorator.
     """
@@ -255,12 +255,12 @@ def ensure_duration_in_future(duration_arg: function.Argument) -> t.Callable:
         @command_wraps(func)
         async def wrapper(*args, **kwargs) -> t.Any:
             bound_args = function.get_bound_args(func, args, kwargs)
-            target = function.get_arg_value(duration_arg, bound_args)
+            target = function.get_arg_value(timestamp_arg, bound_args)
 
             ctx = function.get_arg_value(1, bound_args)
 
             if isinstance(target, datetime) and target < arrow.utcnow():
-                await ctx.send(":x: Expiration is in the past.")
+                await ctx.send(":x: Provided timestamp is in the past.")
                 return
 
             return await func(*args, **kwargs)
