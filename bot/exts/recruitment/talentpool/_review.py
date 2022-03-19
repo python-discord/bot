@@ -11,7 +11,7 @@ from typing import List, Optional, Union
 import arrow
 from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
-from discord import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
+from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
 from bot.api import ResponseCodeError
@@ -151,7 +151,7 @@ class Reviewer:
         # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
         if not NOMINATION_MESSAGE_REGEX.search(message.content):
-            with contextlib.suppress(NoMoreItems):
+            with contextlib.suppress(StopAsyncIteration):
                 async for new_message in message.channel.history(before=message.created_at):
                     messages.append(new_message)
 

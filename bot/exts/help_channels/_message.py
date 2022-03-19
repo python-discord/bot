@@ -68,7 +68,7 @@ async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.M
 
     try:
         return await channel.history(limit=1).next()  # noqa: B305
-    except discord.NoMoreItems:
+    except StopAsyncIteration:
         log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
         return None
 
