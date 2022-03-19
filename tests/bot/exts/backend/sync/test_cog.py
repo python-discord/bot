@@ -60,7 +60,7 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
 class SyncCogTests(SyncCogTestCase):
     """Tests for the Sync cog."""
 
-    @mock.patch("bot.utils.scheduling.create_task")
+    @mock.patch("botcore.utils.scheduling.create_task")
     @mock.patch.object(Sync, "sync_guild", new_callable=mock.MagicMock)
     def test_sync_cog_init(self, sync_guild, create_task):
         """Should instantiate syncers and run a sync for the guild."""

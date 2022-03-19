@@ -7,6 +7,7 @@ from operator import attrgetter
 import arrow
 import discord
 import discord.abc
+from botcore.utils import members, scheduling
 from discord.ext import commands
 
 from bot import constants
@@ -14,7 +15,7 @@ from bot.bot import Bot
 from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.log import get_logger
-from bot.utils import channel as channel_utils, lock, members, scheduling
+from bot.utils import channel as channel_utils, lock
 
 log = get_logger(__name__)
 

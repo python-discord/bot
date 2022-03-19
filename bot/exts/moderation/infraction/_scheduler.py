@@ -6,6 +6,7 @@ from gettext import ngettext
 import arrow
 import dateutil.parser
 import discord
+from botcore.utils import scheduling
 from discord.ext.commands import Context
 
 from bot import constants
@@ -16,7 +17,7 @@ from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import messages, scheduling, time
+from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 
 log = get_logger(__name__)

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from operator import itemgetter
 
 import discord
+from botcore.utils import scheduling
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
@@ -13,12 +15,11 @@ from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Role
 from bot.converters import Duration, UnambiguousUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
-from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 

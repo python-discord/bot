@@ -5,6 +5,7 @@ from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
@@ -15,7 +16,7 @@ from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"

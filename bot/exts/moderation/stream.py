@@ -5,6 +5,7 @@ import arrow
 import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
 from discord.ext import commands
 
 from bot.bot import Bot
@@ -14,7 +15,7 @@ from bot.constants import (
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)

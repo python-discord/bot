@@ -9,7 +9,8 @@ import dateutil.parser
 import regex
 import tldextract
 from async_rediscache import RedisCache
-from botcore.regex import DISCORD_INVITE
+from botcore.utils import scheduling
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord import ChannelType, Colour, Embed, Forbidden, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
@@ -21,7 +22,6 @@ from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)

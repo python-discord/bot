@@ -8,6 +8,7 @@ from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
 import arrow
+from botcore.utils import scheduling
 from discord import Colour, Member, Message, NotFound, Object, TextChannel
 from discord.ext.commands import Cog
 
@@ -20,7 +21,7 @@ from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import lock, scheduling
+from bot.utils import lock
 from bot.utils.message_cache import MessageCache
 from bot.utils.messages import format_user, send_attachments
 

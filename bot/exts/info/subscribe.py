@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import arrow
 import discord
+from botcore.utils import members, scheduling
 from discord.ext import commands
 from discord.interactions import Interaction
 
@@ -12,7 +13,6 @@ from bot import constants
 from bot.bot import Bot
 from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.utils import members, scheduling
 
 
 @dataclass(frozen=True)

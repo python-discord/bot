@@ -6,12 +6,12 @@ from typing import Optional
 
 import discord
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
 from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.messages import format_user, sub_clyde
 
 log = get_logger(__name__)

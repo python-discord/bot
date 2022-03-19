@@ -10,6 +10,8 @@ from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
 import discord
+from botcore.utils import scheduling
+from botcore.utils.scheduling import Scheduler
 from discord.ext import commands
 
 from bot.api import ResponseCodeError
@@ -18,10 +20,8 @@ from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
-from bot.utils.scheduling import Scheduler
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 from ._inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory

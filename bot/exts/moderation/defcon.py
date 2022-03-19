@@ -7,6 +7,8 @@ from typing import Optional, Union
 import arrow
 from aioredis import RedisError
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
+from botcore.utils.scheduling import Scheduler
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Forbidden, Member, TextChannel, User
 from discord.ext import tasks
@@ -17,9 +19,8 @@ from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_RO
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.messages import format_user
-from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 

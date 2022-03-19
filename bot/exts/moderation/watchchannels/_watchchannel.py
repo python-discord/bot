@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import discord
+from botcore.utils import scheduling
 from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
 
@@ -18,7 +19,7 @@ from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
 from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
-from bot.utils import CogABCMeta, messages, scheduling, time
+from bot.utils import CogABCMeta, messages, time
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)

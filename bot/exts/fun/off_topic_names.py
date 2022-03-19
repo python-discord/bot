@@ -2,6 +2,7 @@ import difflib
 from datetime import timedelta
 
 import arrow
+from botcore.utils import scheduling
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.utils import sleep_until
@@ -12,7 +13,6 @@ from bot.constants import Channels, MODERATION_ROLES
 from bot.converters import OffTopicName
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 log = get_logger(__name__)

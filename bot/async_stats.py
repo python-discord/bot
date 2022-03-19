@@ -1,9 +1,8 @@
 import asyncio
 import socket
 
+from botcore.utils import scheduling
 from statsd.client.base import StatsClientBase
-
-from bot.utils import scheduling
 
 
 class AsyncStatsClient(StatsClientBase):

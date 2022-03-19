@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
 import arrow
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
 from discord.ext.commands import Context
@@ -20,7 +21,6 @@ from bot.log import get_logger
 from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
-from bot.utils.scheduling import Scheduler
 
 if typing.TYPE_CHECKING:
     from bot.exts.recruitment.talentpool._cog import TalentPool

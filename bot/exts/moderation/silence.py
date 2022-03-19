@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, OrderedDict, Union
 
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
+from botcore.utils.scheduling import Scheduler
 from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
@@ -14,9 +16,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.converters import HushDurationConverter
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.lock import LockedResourceError, lock, lock_arg
-from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 
