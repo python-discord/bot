@@ -238,10 +238,6 @@ class VoiceGate(Cog):
             log.trace(f"Excluding moderator message {message.id} from deletion in #{message.channel}.")
             return
 
-        # Ignore deleted voice verification messages
-        if ctx.command is not None and ctx.command.name == "voice_verify":
-            self.mod_log.ignore(Event.message_delete, message.id)
-
         with suppress(discord.NotFound):
             await message.delete()
 
