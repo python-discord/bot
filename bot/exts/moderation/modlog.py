@@ -11,7 +11,7 @@ from deepdiff import DeepDiff
 from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
-from discord.utils import escape_markdown
+from discord.utils import escape_markdown, format_dt
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
@@ -573,6 +573,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"**Sent at:** {format_dt(message.created_at, style='F')}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
@@ -581,6 +582,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"**Sent at:** {format_dt(message.created_at, style='F')}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
