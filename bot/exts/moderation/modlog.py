@@ -573,7 +573,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
-                f"**Sent at:** {format_dt(message.created_at, style='F')}\n"
+                f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
@@ -582,7 +582,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
-                f"**Sent at:** {format_dt(message.created_at, style='F')}\n"
+                f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
@@ -631,7 +631,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
-                f"**Sent at:** `{format_dt(snowflake_time(event.message_id), style='f')}`\n"
+                f"**Sent at:** {format_dt(snowflake_time(event.message_id))}\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
@@ -639,7 +639,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
-                f"**Sent at:** `{format_dt(snowflake_time(event.message_id), style='F')}`\n"
+                f"**Sent at:** {format_dt(snowflake_time(event.message_id))}\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
