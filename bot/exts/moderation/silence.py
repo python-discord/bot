@@ -55,7 +55,6 @@ class SilenceNotifier(tasks.Loop):
             hours=0,
             count=None,
             reconnect=True,
-            loop=None,
             time=MISSING
         )
         self._silenced_channels = {}

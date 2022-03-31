@@ -9,6 +9,7 @@ import discord
 import discord.abc
 from botcore.utils import members, scheduling
 from discord.ext import commands
+from discord.http import handle_message_parameters
 
 from bot import constants
 from bot.bot import Bot
@@ -563,18 +564,20 @@ class HelpChannels(commands.Cog):
         if self.dynamic_message is not None:
             try:
                 log.trace("Help channels have changed, dynamic message has been edited.")
-                await self.bot.http.edit_message(
-                    constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels
-                )
+                with handle_message_parameters(available_channels) as params:
+                    await self.bot.http.edit_message(
+                        constants.Channels.how_to_get_help,
+                        self.dynamic_message,
+                        params=params,
+                    )
             except discord.NotFound:
                 pass
             else:
                 return
 
         log.trace("Dynamic message could not be edited or found. Creating a new one.")
-        new_dynamic_message = await self.bot.http.send_message(
-            constants.Channels.how_to_get_help, available_channels
-        )
+        with handle_message_parameters(available_channels) as params:
+            new_dynamic_message = await self.bot.http.send_message(constants.Channels.how_to_get_help, params=params)
         self.dynamic_message = new_dynamic_message["id"]
         await _caches.dynamic_message.set("message_id", self.dynamic_message)
 
