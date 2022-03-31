@@ -1,19 +1,19 @@
 **Type Hints**
 
-A type hint indicates what type something is expected to be. For example,
+A type hint indicates what type a variable is expected to be.
 ```python
 def add(a: int, b: int) -> int:
     return a + b
 ```
-In this case, we have a function,`add`, with parameters `a` and `b`. The type hints indicate that the parameters and return type are all integers.
+The type hints indicate that for our `add` function the parameters `a` and `b` should be integers, and the function should return an integer when called.
 
-It's important to note these are just hints and have no runtime effect. For example,
+It's important to note these are just hints and are not enforced at runtime.
+
 ```python
-# Uh oh
 add("hello ", "world")
 ```
-This code won't error even though it doesn't follow the function's type hints. It will just concatenate the two strings.
+The above code won't error even though it doesn't follow the function's type hints; the two strings will be concatenated as normal.
 
-Third party tools like [mypy](http://mypy-lang.org/) can enforce your type hints. Mypy would error in the second example.
+Third party tools like [mypy](https://mypy.readthedocs.io/en/stable/introduction.html) can validate your code to ensure it is type hinted correctly. This can help you identify potentially buggy code, for example it would error on the second example as our `add` function is not intended to concatenate strings.
 
-For more info about type hints, check out [PEP 484](https://www.python.org/dev/peps/pep-0484/).
+[`mypy`s documentation](https://mypy.readthedocs.io/en/stable/builtin_types.html) contains useful information on type hinting, and for more information check out [this documentation page](https://typing.readthedocs.io/en/latest/index.html).
