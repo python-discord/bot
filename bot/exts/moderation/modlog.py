@@ -631,7 +631,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
-                f"**Sent at:** `{format_dt(snowflake_time(event.message_id))}`\n"
+                f"**Sent at:** `{format_dt(snowflake_time(event.message_id), style='f')}`\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
@@ -639,7 +639,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
-                f"**Sent at:** `{format_dt(snowflake_time(event.message_id))}`\n"
+                f"**Sent at:** `{format_dt(snowflake_time(event.message_id), style='F')}`\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
