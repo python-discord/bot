@@ -603,7 +603,6 @@ class TalentPool(Cog, name="Talentpool"):
 
         return lines.strip()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancels all review tasks on cog unload."""
-        super().cog_unload()
         self.reviewer.cancel_all()

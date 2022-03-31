@@ -149,9 +149,7 @@ class Filtering(Cog):
             },
         }
 
-        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
@@ -675,7 +673,7 @@ class Filtering(Cog):
         delete_at = dateutil.parser.isoparse(msg['delete_date'])
         self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
-    async def reschedule_offensive_msg_deletion(self) -> None:
+    async def cog_load(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
         await self.bot.wait_until_ready()
         response = await self.bot.api_client.get('bot/offensive-messages',)
@@ -718,6 +716,6 @@ class Filtering(Cog):
         return INVISIBLE_RE.sub("", no_zalgo)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Filtering cog."""
-    bot.add_cog(Filtering(bot))
+    await bot.add_cog(Filtering(bot))

@@ -52,14 +52,12 @@ class OffTopicNames(Cog):
         self.bot = bot
         self.updater_task = None
 
-        scheduling.create_task(self.init_offtopic_updater(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel any running updater tasks on cog unload."""
         if self.updater_task is not None:
             self.updater_task.cancel()
 
-    async def init_offtopic_updater(self) -> None:
+    async def cog_load(self) -> None:
         """Start off-topic channel updating event loop if it hasn't already started."""
         await self.bot.wait_until_guild_available()
         if self.updater_task is None:
@@ -167,6 +165,6 @@ class OffTopicNames(Cog):
             await ctx.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the OffTopicNames cog."""
-    bot.add_cog(OffTopicNames(bot))
+    await bot.add_cog(OffTopicNames(bot))

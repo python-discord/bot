@@ -375,7 +375,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_queue.pop(user_id, None)
         self.consumption_queue.pop(user_id, None)
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace("Unloading the cog")
         if self._consume_task and not self._consume_task.done():

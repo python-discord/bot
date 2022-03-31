@@ -89,12 +89,11 @@ class HelpChannels(commands.Cog):
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
-        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
+        self.init_done = False
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
         log.trace("Cog unload: cancelling the init_cog task")
-        self.init_task.cancel()
 
         log.trace("Cog unload: cancelling the channel queue tasks")
         for task in self.queue_tasks:
@@ -318,7 +317,7 @@ class HelpChannels(commands.Cog):
             log.exception("Failed to get a category; cog will be removed")
             self.bot.remove_cog(self.qualified_name)
 
-    async def init_cog(self) -> None:
+    async def cog_load(self) -> None:
         """Initialise the help channel system."""
         log.trace("Waiting for the guild to be available before initialisation.")
         await self.bot.wait_until_guild_available()
@@ -354,6 +353,7 @@ class HelpChannels(commands.Cog):
         await self.init_available()
         _stats.report_counts()
 
+        self.init_done = True
         log.info("Cog is ready!")
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
@@ -365,7 +365,7 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        closing_time, closed_on = await _channel.get_closing_time(channel, self.init_task.done())
+        closing_time, closed_on = await _channel.get_closing_time(channel, self.init_done)
 
         # Closing time is in the past.
         # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
@@ -510,8 +510,6 @@ class HelpChannels(commands.Cog):
         if message.author.bot:
             return  # Ignore messages sent by bots.
 
-        await self.init_task
-
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
@@ -527,8 +525,6 @@ class HelpChannels(commands.Cog):
 
         The new time for the dormant task is configured with `HelpChannels.deleted_idle_minutes`.
         """
-        await self.init_task
-
         if not channel_utils.is_in_category(msg.channel, constants.Categories.help_in_use):
             return
 

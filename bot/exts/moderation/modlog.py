@@ -936,6 +936,6 @@ class ModLog(Cog, name="ModLog"):
         )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModLog cog."""
-    bot.add_cog(ModLog(bot))
+    await bot.add_cog(ModLog(bot))

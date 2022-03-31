@@ -222,6 +222,6 @@ class Extensions(commands.Cog):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Extensions cog."""
-    bot.add_cog(Extensions(bot))
+    await bot.add_cog(Extensions(bot))

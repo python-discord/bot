@@ -9,7 +9,6 @@ from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.exts.backend.sync import _syncers
 from bot.log import get_logger
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 
@@ -19,9 +18,8 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        scheduling.create_task(self.sync_guild(), event_loop=self.bot.loop)
 
-    async def sync_guild(self) -> None:
+    async def cog_load(self) -> None:
         """Syncs the roles/users of the guild with the database."""
         await self.bot.wait_until_guild_available()
 

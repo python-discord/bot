@@ -29,10 +29,9 @@ class InfractionScheduler:
     def __init__(self, bot: Bot, supported_infractions: t.Container[str]):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
+        self.supported_infractions = supported_infractions
 
-        scheduling.create_task(self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
@@ -41,9 +40,10 @@ class InfractionScheduler:
         """Get the currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
+    async def cog_load(self) -> None:
         """Schedule expiration for previous infractions."""
         await self.bot.wait_until_guild_available()
+        supported_infractions = self.supported_infractions
 
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
@@ -72,7 +72,7 @@ class InfractionScheduler:
             )
             log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
 
-            self.scheduler.schedule_at(next_reschedule_point, -1, self.reschedule_infractions(supported_infractions))
+            self.scheduler.schedule_at(next_reschedule_point, -1, self.cog_load(supported_infractions))
 
         log.trace("Done rescheduling")
 

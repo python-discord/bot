@@ -244,7 +244,7 @@ class ModPings(Cog):
         await self.modpings_schedule.delete(ctx.author.id)
         await ctx.send(f"{Emojis.ok_hand} {ctx.author.mention} Deleted your modpings schedule!")
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
         log.trace("Cog unload: canceling role tasks.")
         self.reschedule_task.cancel()
@@ -254,6 +254,6 @@ class ModPings(Cog):
         self._modpings_scheduler.cancel_all()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModPings cog."""
-    bot.add_cog(ModPings(bot))
+    await bot.add_cog(ModPings(bot))

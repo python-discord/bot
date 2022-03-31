@@ -169,6 +169,6 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await ctx.send(message)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the BigBrother cog."""
-    bot.add_cog(BigBrother(bot))
+    await bot.add_cog(BigBrother(bot))

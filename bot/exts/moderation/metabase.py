@@ -8,7 +8,6 @@ import arrow
 from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
-from botcore.utils import scheduling
 from botcore.utils.scheduling import Scheduler
 from discord.ext.commands import Cog, Context, group, has_any_role
 
@@ -41,8 +40,6 @@ class Metabase(Cog):
 
         self.exports: Dict[int, List[Dict]] = {}  # Saves the output of each question, so internal eval can access it
 
-        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
-
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Handle ClientResponseError errors locally to invalidate token if needed."""
         if not isinstance(error.original, ClientResponseError):
@@ -62,7 +59,7 @@ class Metabase(Cog):
             await ctx.send(f":x: {ctx.author.mention} Session token is invalid or refresh failed.")
         error.handled = True
 
-    async def init_cog(self) -> None:
+    async def cog_load(self) -> None:
         """Initialise the metabase session."""
         expiry_time = await self.session_info.get("session_expiry")
         if expiry_time:
@@ -128,9 +125,6 @@ class Metabase(Cog):
         """
         await ctx.trigger_typing()
 
-        # Make sure we have a session token before running anything
-        await self.init_task
-
         url = f"{MetabaseConfig.base_url}/api/card/{question_id}/query/{extension}"
 
         async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
@@ -161,8 +155,6 @@ class Metabase(Cog):
     async def metabase_publish(self, ctx: Context, question_id: int) -> None:
         """Publically shares the given question and posts the link."""
         await ctx.trigger_typing()
-        # Make sure we have a session token before running anything
-        await self.init_task
 
         url = f"{MetabaseConfig.base_url}/api/card/{question_id}/public_link"
 
@@ -180,22 +172,10 @@ class Metabase(Cog):
         ]
         return all(checks)
 
-    def cog_unload(self) -> None:
-        """
-        Cancel the init task and scheduled tasks.
 
-        It's important to wait for init_task to be cancelled before cancelling scheduled
-        tasks. Otherwise, it's possible for _session_scheduler to schedule another task
-        after cancel_all has finished, despite _init_task.cancel being called first.
-        This is cause cancel() on its own doesn't block until the task is cancelled.
-        """
-        self.init_task.cancel()
-        self.init_task.add_done_callback(lambda _: self._session_scheduler.cancel_all())
-
-
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Metabase cog."""
     if not all((MetabaseConfig.username, MetabaseConfig.password)):
         log.error("Credentials not provided, cog not loaded.")
         return
-    bot.add_cog(Metabase(bot))
+    await bot.add_cog(Metabase(bot))

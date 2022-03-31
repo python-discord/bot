@@ -609,6 +609,6 @@ class Infractions(InfractionScheduler, commands.Cog):
                 error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Infractions cog."""
-    bot.add_cog(Infractions(bot))
+    await bot.add_cog(Infractions(bot))

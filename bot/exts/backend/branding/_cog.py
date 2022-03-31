@@ -17,7 +17,6 @@ from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, 
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
 from bot.log import get_logger
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 
@@ -127,7 +126,9 @@ class Branding(commands.Cog):
         self.bot = bot
         self.repository = BrandingRepository(bot)
 
-        scheduling.create_task(self.maybe_start_daemon(), event_loop=self.bot.loop)  # Start depending on cache.
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self.maybe_start_daemon()  # Start depending on cache.
 
     # region: Internal logic & state management
 
@@ -413,7 +414,7 @@ class Branding(commands.Cog):
         if should_begin:
             self.daemon_loop.start()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """
         Cancel the daemon in case of cog unload.
 

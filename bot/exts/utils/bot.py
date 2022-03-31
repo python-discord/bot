@@ -61,6 +61,6 @@ class BotCog(Cog, name="Bot"):
             await channel.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Bot cog."""
-    bot.add_cog(BotCog(bot))
+    await bot.add_cog(BotCog(bot))

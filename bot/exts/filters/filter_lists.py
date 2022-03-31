@@ -11,7 +11,6 @@ from bot.constants import Channels
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 
@@ -30,9 +29,8 @@ class FilterLists(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        scheduling.create_task(self._amend_docstrings(), event_loop=self.bot.loop)
 
-    async def _amend_docstrings(self) -> None:
+    async def cog_load(self) -> None:
         """Add the valid FilterList types to the docstrings, so they'll appear in !help invocations."""
         await self.bot.wait_until_guild_available()
 
@@ -288,6 +286,6 @@ class FilterLists(Cog):
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the FilterLists cog."""
-    bot.add_cog(FilterLists(bot))
+    await bot.add_cog(FilterLists(bot))

@@ -272,6 +272,6 @@ class VoiceGate(Cog):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Loads the VoiceGate cog."""
-    bot.add_cog(VoiceGate(bot))
+    await bot.add_cog(VoiceGate(bot))

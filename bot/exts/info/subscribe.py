@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import arrow
 import discord
-from botcore.utils import members, scheduling
+from botcore.utils import members
 from discord.ext import commands
 from discord.interactions import Interaction
 
@@ -26,7 +26,7 @@ class AssignableRole:
 
     role_id: int
     months_available: t.Optional[tuple[int]]
-    name: t.Optional[str] = None  # This gets populated within Subscribe.init_cog()
+    name: t.Optional[str] = None  # This gets populated within Subscribe.cog_load()
 
     def is_currently_available(self) -> bool:
         """Check if the role is available for the current month."""
@@ -143,11 +143,10 @@ class Subscribe(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
         self.assignable_roles: list[AssignableRole] = []
         self.guild: discord.Guild = None
 
-    async def init_cog(self) -> None:
+    async def cog_load(self) -> None:
         """Initialise the cog by resolving the role IDs in ASSIGNABLE_ROLES to role names."""
         await self.bot.wait_until_guild_available()
 
@@ -178,8 +177,6 @@ class Subscribe(commands.Cog):
     )
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
         """Display the member's current state for each role, and allow them to add/remove the roles."""
-        await self.init_task
-
         button_view = RoleButtonView(ctx.author)
         author_roles = [role.id for role in ctx.author.roles]
         for index, role in enumerate(self.assignable_roles):
@@ -193,9 +190,9 @@ class Subscribe(commands.Cog):
         )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Subscribe cog."""
     if len(ASSIGNABLE_ROLES) > ITEMS_PER_ROW*5:  # Discord limits views to 5 rows of buttons.
         log.error("Too many roles for 5 rows, not loading the Subscribe cog.")
     else:
-        bot.add_cog(Subscribe(bot))
+        await bot.add_cog(Subscribe(bot))

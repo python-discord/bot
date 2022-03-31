@@ -458,6 +458,6 @@ def predicate_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bo
     return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REDO_EMOJI
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Snekbox cog."""
-    bot.add_cog(Snekbox(bot))
+    await bot.add_cog(Snekbox(bot))

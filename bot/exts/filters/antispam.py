@@ -135,18 +135,12 @@ class AntiSpam(Cog):
         self.max_interval = max_interval_config['interval']
         self.cache = MessageCache(AntiSpamConfig.cache_size, newest_first=True)
 
-        scheduling.create_task(
-            self.alert_on_validation_error(),
-            name="AntiSpam.alert_on_validation_error",
-            event_loop=self.bot.loop,
-        )
-
     @property
     def mod_log(self) -> ModLog:
         """Allows for easy access of the ModLog cog."""
         return self.bot.get_cog("ModLog")
 
-    async def alert_on_validation_error(self) -> None:
+    async def cog_load(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
         await self.bot.wait_until_guild_available()
         if self.validation_errors:
@@ -323,7 +317,7 @@ def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     return validation_errors
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Validate the AntiSpam configs and load the AntiSpam cog."""
     validation_errors = validate_config()
-    bot.add_cog(AntiSpam(bot, validation_errors))
+    await bot.add_cog(AntiSpam(bot, validation_errors))

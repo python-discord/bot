@@ -89,6 +89,6 @@ class Slowmode(Cog):
         return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Slowmode cog."""
-    bot.add_cog(Slowmode(bot))
+    await bot.add_cog(Slowmode(bot))

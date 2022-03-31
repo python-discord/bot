@@ -228,6 +228,6 @@ class TokenRemover(Cog):
             return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the TokenRemover cog."""
-    bot.add_cog(TokenRemover(bot))
+    await bot.add_cog(TokenRemover(bot))

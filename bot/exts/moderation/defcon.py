@@ -319,13 +319,13 @@ class Defcon(Cog):
         """Routinely notify moderators that DEFCON is active."""
         await self.channel.send(f"Defcon is on and is set to {time.humanize_delta(self.threshold)}.")
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel the notifer and threshold removal tasks when the cog unloads."""
         log.trace("Cog unload: canceling defcon notifier task.")
         self.defcon_notifier.cancel()
         self.scheduler.cancel_all()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Defcon cog."""
-    bot.add_cog(Defcon(bot))
+    await bot.add_cog(Defcon(bot))

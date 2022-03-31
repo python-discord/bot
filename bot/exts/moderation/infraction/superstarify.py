@@ -239,6 +239,6 @@ class Superstarify(InfractionScheduler, Cog):
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Superstarify cog."""
-    bot.add_cog(Superstarify(bot))
+    await bot.add_cog(Superstarify(bot))

@@ -658,6 +658,6 @@ class Incidents(Cog):
         log.trace("Successfully deleted discord links webhook message.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Incidents cog."""
-    bot.add_cog(Incidents(bot))
+    await bot.add_cog(Incidents(bot))

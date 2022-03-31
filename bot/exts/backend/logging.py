@@ -36,6 +36,6 @@ class Logging(Cog):
             await self.bot.get_channel(Channels.dev_log).send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Logging cog."""
-    bot.add_cog(Logging(bot))
+    await bot.add_cog(Logging(bot))

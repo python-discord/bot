@@ -552,6 +552,6 @@ class Information(Cog):
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Information cog."""
-    bot.add_cog(Information(bot))
+    await bot.add_cog(Information(bot))

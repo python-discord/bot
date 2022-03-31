@@ -8,7 +8,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import channel, scheduling
+from bot.utils import channel
 
 log = get_logger(__name__)
 
@@ -21,7 +21,6 @@ class ThreadBumper(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.init_task = scheduling.create_task(self.ensure_bumped_threads_are_active(), event_loop=self.bot.loop)
 
     async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
         """
@@ -50,7 +49,7 @@ class ThreadBumper(commands.Cog):
             else:
                 await thread.edit(archived=False)
 
-    async def ensure_bumped_threads_are_active(self) -> None:
+    async def cog_load(self) -> None:
         """Ensure bumped threads are active, since threads could have been archived while the bot was down."""
         await self.bot.wait_until_guild_available()
 
@@ -142,6 +141,6 @@ class ThreadBumper(commands.Cog):
         ).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ThreadBumper cog."""
-    bot.add_cog(ThreadBumper(bot))
+    await bot.add_cog(ThreadBumper(bot))

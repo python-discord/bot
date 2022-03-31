@@ -31,19 +31,13 @@ class Stream(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
-        self.reload_task = scheduling.create_task(self._reload_tasks_from_redis(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
-        """Cancel all scheduled tasks."""
-        self.reload_task.cancel()
-        self.reload_task.add_done_callback(lambda _: self.scheduler.cancel_all())
 
     async def _revoke_streaming_permission(self, member: discord.Member) -> None:
         """Remove the streaming permission from the given Member."""
         await self.task_cache.delete(member.id)
         await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
-    async def _reload_tasks_from_redis(self) -> None:
+    async def cog_load(self) -> None:
         """Reload outstanding tasks from redis on startup, delete the task if the member has since left the server."""
         await self.bot.wait_until_guild_available()
         items = await self.task_cache.items()
@@ -232,6 +226,6 @@ class Stream(commands.Cog):
             await ctx.send("No members with stream permissions found.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Loads the Stream cog."""
-    bot.add_cog(Stream(bot))
+    await bot.add_cog(Stream(bot))
