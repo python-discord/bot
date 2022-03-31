@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
+from botcore.site_api import ResponseCodeError
 from discord.ext.commands import errors
 
-from bot.api import ResponseCodeError
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.exts.backend.error_handler import ErrorHandler, setup
 from bot.exts.info.tags import Tags

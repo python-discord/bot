@@ -9,12 +9,12 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
 import arrow
+from botcore.site_api import ResponseCodeError
 from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.log import get_logger

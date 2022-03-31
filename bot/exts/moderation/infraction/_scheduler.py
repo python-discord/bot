@@ -6,11 +6,11 @@ from gettext import ngettext
 import arrow
 import dateutil.parser
 import discord
+from botcore.site_api import ResponseCodeError
 from botcore.utils import scheduling
 from discord.ext.commands import Context
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours
 from bot.converters import MemberOrUser

@@ -1,11 +1,11 @@
 from typing import Any, Dict
 
+from botcore.site_api import ResponseCodeError
 from discord import Member, Role, User
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.exts.backend.sync import _syncers
 from bot.log import get_logger

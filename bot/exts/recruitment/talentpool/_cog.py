@@ -5,11 +5,11 @@ from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
 from botcore.utils import scheduling
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser

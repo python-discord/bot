@@ -9,10 +9,10 @@ from typing import Iterable, Optional
 
 import discord
 from aiohttp import ClientSession
+from botcore.async_stats import AsyncStatsClient
+from botcore.site_api import APIClient
 from discord.ext.commands import Context
 
-from bot.api import APIClient
-from bot.async_stats import AsyncStatsClient
 from bot.bot import Bot
 from tests._autospec import autospec  # noqa: F401 other modules import it via this module
 

@@ -2,12 +2,12 @@ import difflib
 from datetime import timedelta
 
 import arrow
+from botcore.site_api import ResponseCodeError
 from botcore.utils import scheduling
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.utils import sleep_until
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES
 from bot.converters import OffTopicName

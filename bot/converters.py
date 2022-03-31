@@ -8,13 +8,13 @@ from ssl import CertificateError
 import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
+from botcore.site_api import ResponseCodeError
 from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
 
 from bot import exts
-from bot.api import ResponseCodeError
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser

@@ -10,11 +10,11 @@ from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
 import discord
+from botcore.site_api import ResponseCodeError
 from botcore.utils import scheduling
 from botcore.utils.scheduling import Scheduler
 from discord.ext import commands
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL, allowed_strings

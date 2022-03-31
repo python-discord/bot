@@ -1,11 +1,11 @@
 import re
 from typing import Optional
 
+from botcore.site_api import ResponseCodeError
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType

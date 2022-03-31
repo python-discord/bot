@@ -2,9 +2,9 @@ import unittest
 from unittest import mock
 
 import discord
+from botcore.site_api import ResponseCodeError
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.exts.backend import sync
 from bot.exts.backend.sync._cog import Sync
 from bot.exts.backend.sync._syncers import Syncer

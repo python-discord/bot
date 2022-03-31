@@ -1,10 +1,10 @@
 import difflib
 
+from botcore.site_api import ResponseCodeError
 from discord import Embed
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from sentry_sdk import push_scope
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.errors import InvalidInfractedUserError, LockedResourceError
