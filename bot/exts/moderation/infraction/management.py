@@ -9,7 +9,9 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfraction
+from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -39,12 +41,10 @@ class ModManagement(commands.Cog):
         """Get currently loaded Infractions cog instance."""
         return self.bot.get_cog("Infractions")
 
-    # region: Edit infraction commands
-
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
         """
-        Infraction manipulation commands.
+        Infraction management commands.
 
         If `infraction` is passed then this command fetches that infraction. The `Infraction` converter
         supports 'l', 'last' and 'recent' to get the most recent infraction made by `ctx.author`.
@@ -58,6 +58,30 @@ class ModManagement(commands.Cog):
             colour=discord.Colour.orange()
         )
         await self.send_infraction_list(ctx, embed, [infraction])
+
+    @infraction_group.command(name="resend", aliases=("send", "rs", "dm"))
+    async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
+        """Resend a DM to a user about a given infraction of theirs."""
+        if infraction["hidden"]:
+            await ctx.send(f"{constants.Emojis.failmail} You may not resend hidden infractions.")
+            return
+
+        member_id = infraction["user"]["id"]
+        member = await get_or_fetch_member(ctx.guild, member_id)
+        if not member:
+            await ctx.send(f"{constants.Emojis.failmail} Cannot find member `{member_id}` in the guild.")
+            return
+
+        id_ = infraction["id"]
+        reason = infraction["reason"] or "No reason provided."
+        reason += "\n\n**This is a re-sent message for a previously applied infraction which may have been edited.**"
+
+        if await _utils.notify_infraction(infraction, member, reason):
+            await ctx.send(f":incoming_envelope: Resent DM for infraction `{id_}`.")
+        else:
+            await ctx.send(f"{constants.Emojis.failmail} Failed to resend DM for infraction `{id_}`.")
+
+    # region: Edit infraction commands
 
     @infraction_group.command(name="append", aliases=("amend", "add", "a"))
     async def infraction_append(
@@ -99,6 +123,7 @@ class ModManagement(commands.Cog):
         await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
     @infraction_group.command(name='edit', aliases=('e',))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def infraction_edit(
         self,
         ctx: Context,

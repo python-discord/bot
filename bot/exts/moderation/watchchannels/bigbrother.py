@@ -22,7 +22,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             destination=Channels.big_brother_logs,
             webhook_id=Webhooks.big_brother,
             api_endpoint='bot/infractions',
-            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at'},
+            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at', 'limit': 10_000},
             logger=log
         )
 
