@@ -544,11 +544,11 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 push_scope_mock.set_extra.has_calls(set_extra_calls)
 
 
-class ErrorHandlerSetupTests(unittest.TestCase):
+class ErrorHandlerSetupTests(unittest.IsolatedAsyncioTestCase):
     """Tests for `ErrorHandler` `setup` function."""
 
-    def test_setup(self):
+    async def test_setup(self):
         """Should call `bot.add_cog` with `ErrorHandler`."""
         bot = MockBot()
-        setup(bot)
-        bot.add_cog.assert_called_once()
+        await setup(bot)
+        bot.add_cog.assert_awaited_once()

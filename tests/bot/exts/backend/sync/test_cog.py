@@ -16,11 +16,11 @@ class SyncExtensionTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the sync extension."""
 
     @staticmethod
-    def test_extension_setup():
+    async def test_extension_setup():
         """The Sync cog should be added."""
         bot = helpers.MockBot()
-        sync.setup(bot)
-        bot.add_cog.assert_called_once()
+        await sync.setup(bot)
+        bot.add_cog.assert_awaited_once()
 
 
 class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):

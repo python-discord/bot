@@ -403,11 +403,11 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(actual, expected)
 
 
-class SnekboxSetupTests(unittest.TestCase):
+class SnekboxSetupTests(unittest.IsolatedAsyncioTestCase):
     """Tests setup of the `Snekbox` cog."""
 
-    def test_setup(self):
+    async def test_setup(self):
         """Setup of the extension should call add_cog."""
         bot = MockBot()
-        snekbox.setup(bot)
-        bot.add_cog.assert_called_once()
+        await snekbox.setup(bot)
+        bot.add_cog.assert_awaited_once()

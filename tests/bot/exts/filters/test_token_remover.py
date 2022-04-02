@@ -395,15 +395,15 @@ class TokenRemoverTests(unittest.IsolatedAsyncioTestCase):
         self.msg.channel.send.assert_not_awaited()
 
 
-class TokenRemoverExtensionTests(unittest.TestCase):
+class TokenRemoverExtensionTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the token_remover extension."""
 
     @autospec("bot.exts.filters.token_remover", "TokenRemover")
-    def test_extension_setup(self, cog):
+    async def test_extension_setup(self, cog):
         """The TokenRemover cog should be added."""
         bot = MockBot()
-        token_remover.setup(bot)
+        await token_remover.setup(bot)
 
         cog.assert_called_once_with(bot)
-        bot.add_cog.assert_called_once()
+        bot.add_cog.assert_awaited_once()
         self.assertTrue(isinstance(bot.add_cog.call_args.args[0], TokenRemover))
