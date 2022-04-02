@@ -312,6 +312,9 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
         command_prefix=unittest.mock.MagicMock(),
         loop=_get_mock_loop(),
         redis_session=unittest.mock.MagicMock(),
+        http_session=unittest.mock.MagicMock(),
+        allowed_roles=[1],
+        guild_id=1,
     )
     additional_spec_asyncs = ("wait_for", "redis_ready")
 
