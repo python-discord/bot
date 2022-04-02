@@ -325,6 +325,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
         self.api_client = MockAPIClient(loop=self.loop)
         self.http_session = unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
         self.stats = unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
+        self.add_cog = unittest.mock.AsyncMock()
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
@@ -337,6 +338,8 @@ channel_data = {
     'position': 1,
     'nsfw': False,
     'last_message_id': 1,
+    'bitrate': 1337,
+    'user_limit': 25,
 }
 state = unittest.mock.MagicMock()
 guild = unittest.mock.MagicMock()
@@ -441,6 +444,7 @@ message_data = {
 }
 state = unittest.mock.MagicMock()
 channel = unittest.mock.MagicMock()
+channel.type = discord.ChannelType.text
 message_instance = discord.Message(state=state, channel=channel, data=message_data)
 
 
