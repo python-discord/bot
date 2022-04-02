@@ -87,7 +87,7 @@ class SyncCogTests(SyncCogTestCase):
 
                 self.bot.get_guild = mock.MagicMock(return_value=guild)
 
-                await self.cog.sync_guild()
+                await self.cog.cog_load()
 
                 self.bot.wait_until_guild_available.assert_called_once()
                 self.bot.get_guild.assert_called_once_with(constants.Guild.id)
