@@ -16,4 +16,4 @@ The above code won't error even though it doesn't follow the function's type hin
 
 Third party tools like [mypy](https://mypy.readthedocs.io/en/stable/introduction.html) can validate your code to ensure it is type hinted correctly. This can help you identify potentially buggy code, for example it would error on the second example as our `add` function is not intended to concatenate strings.
 
-[`mypy`s documentation](https://mypy.readthedocs.io/en/stable/builtin_types.html) contains useful information on type hinting, and for more information check out [this documentation page](https://typing.readthedocs.io/en/latest/index.html).
+[mypy's documentation](https://mypy.readthedocs.io/en/stable/builtin_types.html) contains useful information on type hinting, and for more information check out [this documentation page](https://typing.readthedocs.io/en/latest/index.html).
