@@ -14,7 +14,7 @@ from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.webhooks import send_webhook
 
-PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
+PEPS_RSS_URL = "https://peps.python.org/peps.rss"
 
 RECENT_THREADS_TEMPLATE = "https://mail.python.org/archives/list/{name}@python.org/recent-threads"
 THREAD_TEMPLATE_URL = "https://mail.python.org/archives/api/list/{name}@python.org/thread/{id}/"

@@ -15,7 +15,7 @@ from bot.utils.caching import AsyncCache
 log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
-BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
+BASE_PEP_URL = "https://peps.python.org/pep-"
 PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=main"
 
 pep_cache = AsyncCache()
@@ -67,7 +67,7 @@ class PythonEnhancementProposals(Cog):
         """Get information embed about PEP 0."""
         pep_embed = Embed(
             title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            url="https://www.python.org/dev/peps/"
+            url="https://peps.python.org/"
         )
         pep_embed.set_thumbnail(url=ICON_URL)
         pep_embed.add_field(name="Status", value="Active")
