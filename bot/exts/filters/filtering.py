@@ -260,6 +260,7 @@ class Filtering(Cog):
             )
 
             await self.mod_log.send_log_message(
+                content=str(member.id),  # quality-of-life improvement for mobile moderators
                 icon_url=Icons.token_removed,
                 colour=Colours.soft_red,
                 title="Username filtering alert",
@@ -272,9 +273,9 @@ class Filtering(Cog):
             # Update time when alert sent
             await self.name_alerts.set(member.id, arrow.utcnow().timestamp())
 
-    async def filter_eval(self, result: str, msg: Message) -> bool:
+    async def filter_snekbox_output(self, result: str, msg: Message) -> bool:
         """
-        Filter the result of an !eval to see if it violates any of our rules, and then respond accordingly.
+        Filter the result of a snekbox command to see if it violates any of our rules, and then respond accordingly.
 
         Also requires the original message, to check whether to filter and for mod logs.
         Returns whether a filter was triggered or not.
@@ -428,9 +429,12 @@ class Filtering(Cog):
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
-        # If we are going to autoban, we don't want to ping
+        content = str(msg.author.id)  # quality-of-life improvement for mobile moderators
+
+        # If we are going to autoban, we don't want to ping and don't need the user ID
         if reason and "[autoban]" in reason:
             ping_everyone = False
+            content = None
 
         eval_msg = "using !eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
@@ -444,6 +448,7 @@ class Filtering(Cog):
 
         # Send pretty mod log embed to mod-alerts
         await self.mod_log.send_log_message(
+            content=content,
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
