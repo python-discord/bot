@@ -13,13 +13,12 @@ from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Role
 from bot.converters import Duration, UnambiguousUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
+from bot.utils import scheduling, time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
 from bot.utils.scheduling import Scheduler
-from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
@@ -67,20 +66,19 @@ class Reminders(Cog):
             else:
                 self.schedule_reminder(reminder)
 
-    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.User, discord.TextChannel]:
-        """Ensure reminder author and channel can be fetched otherwise delete the reminder."""
-        user = self.bot.get_user(reminder['author'])
+    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.TextChannel]:
+        """Ensure reminder channel can be fetched otherwise delete the reminder."""
         channel = self.bot.get_channel(reminder['channel_id'])
         is_valid = True
-        if not user or not channel:
+        if not channel:
             is_valid = False
             log.info(
                 f"Reminder {reminder['id']} invalid: "
-                f"User {reminder['author']}={user}, Channel {reminder['channel_id']}={channel}."
+                f"Channel {reminder['channel_id']}={channel}."
             )
             scheduling.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
 
-        return is_valid, user, channel
+        return is_valid, channel
 
     @staticmethod
     async def _send_confirmation(
@@ -169,9 +167,9 @@ class Reminders(Cog):
         self.schedule_reminder(reminder)
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
-    async def send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
+    async def send_reminder(self, reminder: dict, expected_time: t.Optional[time.Timestamp] = None) -> None:
         """Send the reminder."""
-        is_valid, user, channel = self.ensure_valid_reminder(reminder)
+        is_valid, channel = self.ensure_valid_reminder(reminder)
         if not is_valid:
             # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
@@ -207,14 +205,14 @@ class Reminders(Cog):
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
             )
-            await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
+            await channel.send(content=f"<@{reminder['author']}> {additional_mentions}", embed=embed)
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
     ) -> None:
         """
         Commands for managing your reminders.
@@ -234,7 +232,7 @@ class Reminders(Cog):
 
     @remind_group.command(name="new", aliases=("add", "create"))
     async def new_reminder(
-        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
+        self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
     ) -> None:
         """
         Set yourself a simple reminder.
@@ -283,6 +281,20 @@ class Reminders(Cog):
 
         mention_ids = [mention.id for mention in mentions]
 
+        # If `content` isn't provided then we try to get message content of a replied message
+        if not content:
+            if reference := ctx.message.reference:
+                if isinstance((resolved_message := reference.resolved), discord.Message):
+                    content = resolved_message.content
+            # If we weren't able to get the content of a replied message
+            if content is None:
+                await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
+                return
+
+            # If the replied message has no content (e.g. only attachments/embeds)
+            if content == "":
+                content = "See referenced message."
+
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
             'bot/reminders',
@@ -296,7 +308,8 @@ class Reminders(Cog):
             }
         )
 
-        mention_string = f"Your reminder will arrive on {discord_timestamp(expiration, TimestampFormats.DAY_TIME)}"
+        formatted_time = time.discord_timestamp(expiration, time.TimestampFormats.DAY_TIME)
+        mention_string = f"Your reminder will arrive on {formatted_time}"
 
         if mentions:
             mention_string += f" and will mention {len(mentions)} other(s)"
@@ -333,8 +346,7 @@ class Reminders(Cog):
 
         for content, remind_at, id_, mentions in reminders:
             # Parse and humanize the time, make it pretty :D
-            remind_datetime = isoparse(remind_at)
-            time = discord_timestamp(remind_datetime, TimestampFormats.RELATIVE)
+            expiry = time.format_relative(remind_at)
 
             mentions = ", ".join([
                 # Both Role and User objects have the `name` attribute
@@ -343,7 +355,7 @@ class Reminders(Cog):
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
             text = textwrap.dedent(f"""
-            **Reminder #{id_}:** *expires {time}* (ID: {id_}){mention_string}
+            **Reminder #{id_}:** *expires {expiry}* (ID: {id_}){mention_string}
             {content}
             """).strip()
 

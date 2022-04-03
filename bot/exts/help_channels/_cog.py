@@ -66,6 +66,9 @@ class HelpChannels(commands.Cog):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
 
+        self.guild: discord.Guild = None
+        self.cooldown_role: discord.Role = None
+
         # Categories
         self.available_category: discord.CategoryChannel = None
         self.in_use_category: discord.CategoryChannel = None
@@ -75,7 +78,10 @@ class HelpChannels(commands.Cog):
         self.channel_queue: asyncio.Queue[discord.TextChannel] = None
         self.name_queue: t.Deque[str] = None
 
-        self.last_notification: t.Optional[arrow.Arrow] = None
+        # Notifications
+        # Using a very old date so that we don't have to use Optional typing.
+        self.last_none_remaining_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
+        self.last_running_low_notification = arrow.get('1815-12-10T18:00:00.00000+00:00')
 
         self.dynamic_message: t.Optional[int] = None
         self.available_help_channels: t.Set[discord.TextChannel] = set()
@@ -95,24 +101,6 @@ class HelpChannels(commands.Cog):
 
         self.scheduler.cancel_all()
 
-    async def _handle_role_change(self, member: discord.Member, coro: t.Callable[..., t.Coroutine]) -> None:
-        """
-        Change `member`'s cooldown role via awaiting `coro` and handle errors.
-
-        `coro` is intended to be `discord.Member.add_roles` or `discord.Member.remove_roles`.
-        """
-        try:
-            await coro(self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.help_cooldown))
-        except discord.NotFound:
-            log.debug(f"Failed to change role for {member} ({member.id}): member not found")
-        except discord.Forbidden:
-            log.debug(
-                f"Forbidden to change role for {member} ({member.id}); "
-                f"possibly due to role hierarchy"
-            )
-        except discord.HTTPException as e:
-            log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
-
     @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
     @lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
     @lock.lock_arg(f"{NAMESPACE}.unclaim", "message", attrgetter("author.id"), wait=True)
@@ -120,19 +108,42 @@ class HelpChannels(commands.Cog):
         """
         Claim the channel in which the question `message` was sent.
 
-        Move the channel to the In Use category and pin the `message`. Add a cooldown to the
-        claimant to prevent them from asking another question. Lastly, make a new channel available.
+        Send an embed stating the claimant, move the channel to the In Use category, and pin the `message`.
+        Add a cooldown to the claimant to prevent them from asking another question.
+        Lastly, make a new channel available.
         """
         log.info(f"Channel #{message.channel} was claimed by `{message.author.id}`.")
-        await self.move_to_in_use(message.channel)
+
+        try:
+            await self.move_to_in_use(message.channel)
+        except discord.DiscordServerError:
+            try:
+                await message.channel.send(
+                    "The bot encountered a Discord API error while trying to move this channel, please try again later."
+                )
+            except Exception as e:
+                log.warning("Error occurred while sending fail claim message:", exc_info=e)
+            log.info(
+                "500 error from Discord when moving #%s (%d) to in-use for %s (%d). Cancelling claim.",
+                message.channel.name,
+                message.channel.id,
+                message.author.name,
+                message.author.id,
+            )
+            self.bot.stats.incr("help.failed_claims.500_on_move")
+            return
+
+        embed = discord.Embed(
+            description=f"Channel claimed by {message.author.mention}.",
+            color=constants.Colours.bright_green,
+        )
+        await message.channel.send(embed=embed)
 
         # Handle odd edge case of `message.author` not being a `discord.Member` (see bot#1839)
         if not isinstance(message.author, discord.Member):
-            log.warning(
-                f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM."
-            )
+            log.debug(f"{message.author} ({message.author.id}) isn't a member. Not giving cooldown role or sending DM.")
         else:
-            await self._handle_role_change(message.author, message.author.add_roles)
+            await members.handle_role_change(message.author, message.author.add_roles, self.cooldown_role)
 
             try:
                 await _message.dm_on_open(message)
@@ -244,13 +255,21 @@ class HelpChannels(commands.Cog):
 
             if not channel:
                 log.info("Couldn't create a candidate channel; waiting to get one from the queue.")
-                notify_channel = self.bot.get_channel(constants.HelpChannels.notify_channel)
-                last_notification = await _message.notify(notify_channel, self.last_notification)
-                if last_notification:
-                    self.last_notification = last_notification
-                    self.bot.stats.incr("help.out_of_channel_alerts")
+                last_notification = await _message.notify_none_remaining(self.last_none_remaining_notification)
 
-                channel = await self.wait_for_dormant_channel()
+                if last_notification:
+                    self.last_none_remaining_notification = last_notification
+
+                channel = await self.wait_for_dormant_channel()  # Blocks until a new channel is available
+
+        else:
+            last_notification = await _message.notify_running_low(
+                self.channel_queue.qsize(),
+                self.last_running_low_notification
+            )
+
+            if last_notification:
+                self.last_running_low_notification = last_notification
 
         return channel
 
@@ -304,6 +323,9 @@ class HelpChannels(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         log.trace("Initialising the cog.")
+        self.guild = self.bot.get_guild(constants.Guild.id)
+        self.cooldown_role = self.guild.get_role(constants.Roles.help_cooldown)
+
         await self.init_categories()
 
         self.channel_queue = self.create_channel_queue()
@@ -315,6 +337,7 @@ class HelpChannels(commands.Cog):
 
         log.trace("Moving or rescheduling in-use channels.")
         for channel in _channel.get_category_channels(self.in_use_category):
+            await _channel.ensure_cached_claimant(channel)
             await self.move_idle_channel(channel, has_task=False)
 
         # Prevent the command from being used until ready.
@@ -440,18 +463,21 @@ class HelpChannels(commands.Cog):
     async def _unclaim_channel(
         self,
         channel: discord.TextChannel,
-        claimant_id: int,
+        claimant_id: t.Optional[int],
         closed_on: _channel.ClosingReason
     ) -> None:
         """Actual implementation of `unclaim_channel`. See that for full documentation."""
         await _caches.claimants.delete(channel.id)
         await _caches.session_participants.delete(channel.id)
 
-        claimant = await members.get_or_fetch_member(self.bot.get_guild(constants.Guild.id), claimant_id)
-        if claimant is None:
-            log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+        if not claimant_id:
+            log.info("No claimant given when un-claiming %s (%d). Skipping role removal.", channel, channel.id)
         else:
-            await self._handle_role_change(claimant, claimant.remove_roles)
+            claimant = await members.get_or_fetch_member(self.guild, claimant_id)
+            if claimant is None:
+                log.info(f"{claimant_id} left the guild during their help session; the cooldown role won't be removed")
+            else:
+                await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
 
         await _message.unpin(channel)
         await _stats.report_complete_session(channel.id, closed_on)
@@ -592,7 +618,7 @@ class HelpChannels(commands.Cog):
             embed = discord.Embed(
                 title="Currently Helping",
                 description=f"You're currently helping in {message.channel.mention}",
-                color=constants.Colours.soft_green,
+                color=constants.Colours.bright_green,
                 timestamp=message.created_at
             )
             embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")

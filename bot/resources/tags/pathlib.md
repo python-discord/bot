@@ -18,4 +18,4 @@ Python 3 comes with a new module named `Pathlib`. Since Python 3.6, `pathlib.Pat
 • [**Why you should use pathlib** - Trey Hunner](https://treyhunner.com/2018/12/why-you-should-be-using-pathlib/)  
 • [**Answering concerns about pathlib** - Trey Hunner](https://treyhunner.com/2019/01/no-really-pathlib-is-great/)  
 • [**Official Documentation**](https://docs.python.org/3/library/pathlib.html)  
-• [**PEP 519** - Adding a file system path protocol](https://www.python.org/dev/peps/pep-0519/)  
+• [**PEP 519** - Adding a file system path protocol](https://peps.python.org/pep-0519/)  

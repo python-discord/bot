@@ -10,4 +10,4 @@ into beautiful, _pythonic_ code:
 for index, item in enumerate(my_list):
     print(f"{index}: {item}")
 ```
-For more information, check out [the official docs](https://docs.python.org/3/library/functions.html#enumerate), or [PEP 279](https://www.python.org/dev/peps/pep-0279/).
+For more information, check out [the official docs](https://docs.python.org/3/library/functions.html#enumerate), or [PEP 279](https://peps.python.org/pep-0279/).

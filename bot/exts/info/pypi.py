@@ -29,7 +29,7 @@ class PyPi(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(name="pypi", aliases=("package", "pack"))
+    @command(name="pypi", aliases=("package", "pack", "pip"))
     async def get_package_info(self, ctx: Context, package: str) -> None:
         """Provide information about a specific package from PyPI."""
         embed = Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
