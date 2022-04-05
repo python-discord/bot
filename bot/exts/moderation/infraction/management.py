@@ -1,3 +1,4 @@
+import re
 import textwrap
 import typing as t
 
@@ -275,6 +276,11 @@ class ModManagement(commands.Cog):
     @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
     async def search_reason(self, ctx: Context, reason: str) -> None:
         """Search for infractions by their reason. Use Re2 for matching."""
+        try:
+            re.compile(reason)
+        except re.error as e:
+            raise commands.BadArgument(f"Invalid regular expression in `reason`: {e}")
+
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={'search': reason}
