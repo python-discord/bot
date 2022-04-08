@@ -1,7 +1,7 @@
 import typing as t
 from math import ceil
 
-from disnake import Message
+from discord import Message
 
 
 class MessageCache:

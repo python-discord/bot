@@ -36,4 +36,4 @@ Conclusion: Namespaces are one honking great idea -- let's do more of those! *[3
 
 **[1]** If the module defines the variable `__all__`, the names defined in `__all__` will get imported by the wildcard import, otherwise all the names in the module get imported (except for names with a leading underscore)
 **[2]** [Namespaces and scopes](https://www.programiz.com/python-programming/namespace)
-**[3]** [Zen of Python](https://www.python.org/dev/peps/pep-0020/)
+**[3]** [Zen of Python](https://peps.python.org/pep-0020/)

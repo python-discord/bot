@@ -7,10 +7,10 @@ from functools import partial
 from typing import Optional
 
 import arrow
-from disnake import ButtonStyle, Colour, Embed, Interaction
-from disnake.ext.commands import Cog, Context, group, has_any_role
-from disnake.ui import Button, View
-from disnake.utils import sleep_until
+from discord import ButtonStyle, Colour, Embed, Interaction
+from discord.ext.commands import Cog, Context, group, has_any_role
+from discord.ui import Button, View
+from discord.utils import sleep_until
 
 from bot.api import ResponseCodeError
 from bot.bot import Bot

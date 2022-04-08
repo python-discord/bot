@@ -1,16 +1,16 @@
 import textwrap
 import typing as t
 
-import disnake
-from disnake import Member
-from disnake.ext import commands
-from disnake.ext.commands import Context, command
+import discord
+from discord import Member
+from discord.ext import commands
+from discord.ext.commands import Context, command
 
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
 from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
-from bot.decorators import respect_role_hierarchy
+from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -35,8 +35,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_mute"})
 
         self.category = "Moderation"
-        self._muted_role = disnake.Object(constants.Roles.muted)
-        self._voice_verified_role = disnake.Object(constants.Roles.voice_verified)
+        self._muted_role = discord.Object(constants.Roles.muted)
+        self._voice_verified_role = discord.Object(constants.Roles.voice_verified)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: Member) -> None:
@@ -81,6 +81,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_kick(ctx, user, reason)
 
     @command()
+    @ensure_future_timestamp(timestamp_arg=3)
     async def ban(
         self,
         ctx: Context,
@@ -97,6 +98,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
     @command(aliases=("cban", "purgeban", "pban"))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def cleanban(
         self,
         ctx: Context,
@@ -123,7 +125,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.error("Failed to apply ban to user %d", user.id)
             return
 
-        # Calling commands directly skips disnake's convertors, so we need to convert args manually.
+        # Calling commands directly skips Discord.py's convertors, so we need to convert args manually.
         clean_time = await Age().convert(ctx, "1h")
 
         log_url = await clean_cog._clean_messages(
@@ -161,6 +163,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `voicemute`?")
 
     @command(aliases=("vmute",))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def voicemute(
         self,
         ctx: Context,
@@ -180,6 +183,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempmute(
         self, ctx: Context,
         user: UnambiguousMemberOrUser,
@@ -213,6 +217,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command(aliases=("tban",))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempban(
         self,
         ctx: Context,
@@ -248,6 +253,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `tempvoicemute`?")
 
     @command(aliases=("tempvmute", "tvmute"))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempvoicemute(
         self,
         ctx: Context,
@@ -294,6 +300,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
+    @ensure_future_timestamp(timestamp_arg=3)
     async def shadow_tempban(
         self,
         ctx: Context,
@@ -494,7 +501,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def pardon_mute(
         self,
         user_id: int,
-        guild: disnake.Guild,
+        guild: discord.Guild,
         reason: t.Optional[str],
         *,
         notify: bool = True
@@ -525,16 +532,16 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def pardon_ban(self, user_id: int, guild: disnake.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
+    async def pardon_ban(self, user_id: int, guild: discord.Guild, reason: t.Optional[str]) -> t.Dict[str, str]:
         """Remove a user's ban on the Discord guild and return a log dict."""
-        user = disnake.Object(user_id)
+        user = discord.Object(user_id)
         log_text = {}
 
         self.mod_log.ignore(Event.member_unban, user_id)
 
         try:
             await guild.unban(user, reason=reason)
-        except disnake.NotFound:
+        except discord.NotFound:
             log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
             log_text["Note"] = "No active ban found on Discord."
 
@@ -543,7 +550,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def pardon_voice_mute(
         self,
         user_id: int,
-        guild: disnake.Guild,
+        guild: discord.Guild,
         *,
         notify: bool = True
     ) -> t.Dict[str, str]:
@@ -597,7 +604,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Send a notification to the invoking context on a Union failure."""
         if isinstance(error, commands.BadUnionArgument):
-            if disnake.User in error.converters or Member in error.converters:
+            if discord.User in error.converters or Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
 

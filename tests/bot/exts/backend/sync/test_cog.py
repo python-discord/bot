@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-import disnake
+import discord
 
 from bot import constants
 from bot.api import ResponseCodeError
@@ -257,9 +257,9 @@ class SyncCogListenerTests(SyncCogTestCase):
         self.assertTrue(self.cog.on_member_update.__cog_listener__)
 
         subtests = (
-            ("activities", disnake.Game("Pong"), disnake.Game("Frogger")),
+            ("activities", discord.Game("Pong"), discord.Game("Frogger")),
             ("nick", "old nick", "new nick"),
-            ("status", disnake.Status.online, disnake.Status.offline),
+            ("status", discord.Status.online, discord.Status.offline),
         )
 
         for attribute, old_value, new_value in subtests:

@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from disnake.errors import NotFound
+from discord.errors import NotFound
 
 from bot.exts.backend.sync._syncers import UserSyncer, _Diff
 from tests import helpers
