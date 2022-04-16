@@ -71,7 +71,8 @@ class ThreadBumper(commands.Cog):
             if thread.archived:
                 threads_to_maybe_bump.append(thread)
 
-        await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
+        if threads_to_maybe_bump:
+            await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
 
     @commands.group(name="bump")
     async def thread_bump_group(self, ctx: commands.Context) -> None:
