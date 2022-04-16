@@ -76,8 +76,6 @@ class ThreadBumper(commands.Cog):
     @thread_bump_group.command(name="add", aliases=("a",))
     async def add_thread_to_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
         """Add a thread to the bump list."""
-        await self.init_task
-
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
                 thread = ctx.channel
@@ -93,8 +91,6 @@ class ThreadBumper(commands.Cog):
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
     async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
         """Remove a thread from the bump list."""
-        await self.init_task
-
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
                 thread = ctx.channel
@@ -110,8 +106,6 @@ class ThreadBumper(commands.Cog):
     @thread_bump_group.command(name="list", aliases=("get",))
     async def list_all_threads_in_bump_list(self, ctx: commands.Context) -> None:
         """List all the threads in the bump list."""
-        await self.init_task
-
         lines = [f"<#{k}>" for k, _ in await self.threads_to_bump.items()]
         embed = discord.Embed(
             title="Threads in the bump list",
@@ -126,8 +120,6 @@ class ThreadBumper(commands.Cog):
 
         If the thread has been archived, and is in the bump list, un-archive it.
         """
-        await self.init_task
-
         if not after.archived:
             return
 
