@@ -2,6 +2,7 @@ import typing as t
 
 import discord
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
 from discord.ext import commands
 
 from bot import constants
@@ -11,6 +12,7 @@ from bot.pagination import LinePaginator
 from bot.utils import channel
 
 log = get_logger(__name__)
+THREAD_BUMP_ENDPOINT = "bot/bumped-threads"
 
 
 class ThreadBumper(commands.Cog):
@@ -45,7 +47,7 @@ class ThreadBumper(commands.Cog):
                     thread.name,
                     thread.id
                 )
-                await self.threads_to_bump.delete(thread.id)
+                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
             else:
                 await thread.edit(archived=False)
 
@@ -54,12 +56,16 @@ class ThreadBumper(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         threads_to_maybe_bump = []
-        for thread_id, _ in await self.threads_to_bump.items():
+        for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT):
             try:
                 thread = await channel.get_or_fetch_channel(thread_id)
             except discord.NotFound:
                 log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
-                await self.threads_to_bump.delete(thread_id)
+                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
+                continue
+
+            if not isinstance(thread, discord.Thread):
+                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
                 continue
 
             if thread.archived:
@@ -82,10 +88,14 @@ class ThreadBumper(commands.Cog):
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
 
-        if await self.threads_to_bump.contains(thread.id):
+        try:
+            await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
+        except ResponseCodeError:
+            pass
+        else:
             raise commands.BadArgument("This thread is already in the bump list.")
 
-        await self.threads_to_bump.set(thread.id, "sentinel")
+        await self.bot.api_client.post(THREAD_BUMP_ENDPOINT, data={"thread_id": thread.id})
         await ctx.send(f":ok_hand:{thread.mention} has been added to the bump list.")
 
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
@@ -97,16 +107,18 @@ class ThreadBumper(commands.Cog):
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
 
-        if not await self.threads_to_bump.contains(thread.id):
+        try:
+            await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
+        except ResponseCodeError:
             raise commands.BadArgument("This thread is not in the bump list.")
 
-        await self.threads_to_bump.delete(thread.id)
+        await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
         await ctx.send(f":ok_hand: {thread.mention} has been removed from the bump list.")
 
     @thread_bump_group.command(name="list", aliases=("get",))
     async def list_all_threads_in_bump_list(self, ctx: commands.Context) -> None:
         """List all the threads in the bump list."""
-        lines = [f"<#{k}>" for k, _ in await self.threads_to_bump.items()]
+        lines = [f"<#{thread_id}>" for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT)]
         embed = discord.Embed(
             title="Threads in the bump list",
             colour=constants.Colours.blue
@@ -123,7 +135,11 @@ class ThreadBumper(commands.Cog):
         if not after.archived:
             return
 
-        if await self.threads_to_bump.contains(after.id):
+        try:
+            await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{after.id}")
+        except ResponseCodeError:
+            pass
+        else:
             await self.unarchive_threads_not_manually_archived([after])
 
     async def cog_check(self, ctx: commands.Context) -> bool:
