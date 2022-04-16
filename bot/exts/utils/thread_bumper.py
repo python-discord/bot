@@ -111,7 +111,7 @@ class ThreadBumper(commands.Cog):
             title="Threads in the bump list",
             colour=constants.Colours.blue
         )
-        await LinePaginator.paginate(lines, ctx, embed)
+        await LinePaginator.paginate(lines, ctx, embed, max_lines=10)
 
     @commands.Cog.listener()
     async def on_thread_update(self, _: discord.Thread, after: discord.Thread) -> None:
