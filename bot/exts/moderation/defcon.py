@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from collections import namedtuple
 from datetime import datetime
@@ -80,6 +81,21 @@ class Defcon(Cog):
         """On cog load, try to synchronize DEFCON settings to the API."""
         log.trace("Waiting for the guild to become available before syncing.")
         await self.bot.wait_until_guild_available()
+
+        # Load order isn't guaranteed, attempt to check mod log load status 3 times before erroring.
+        for _ in range(3):
+            if self.mod_log:
+                break
+            else:
+                await asyncio.sleep(5)
+        else:
+            log.exception("Modlog cog not loaded, aborting sync.")
+            await self.channel.send(
+                f"<@&{Roles.moderators}> <@&{Roles.devops}> **WARNING**: Unable to get DEFCON settings!"
+                f"\n\nmod log cog could not be found after 3 tries."
+            )
+            return
+
         self.channel = await self.bot.fetch_channel(Channels.defcon)
 
         log.trace("Syncing settings.")
