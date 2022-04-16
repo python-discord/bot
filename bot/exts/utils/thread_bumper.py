@@ -91,8 +91,9 @@ class ThreadBumper(commands.Cog):
 
         try:
             await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
-        except ResponseCodeError:
-            pass
+        except ResponseCodeError as e:
+            if e.status != 404:
+                raise
         else:
             raise commands.BadArgument("This thread is already in the bump list.")
 
@@ -138,8 +139,9 @@ class ThreadBumper(commands.Cog):
 
         try:
             await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{after.id}")
-        except ResponseCodeError:
-            pass
+        except ResponseCodeError as e:
+            if e.status != 404:
+                raise
         else:
             await self.unarchive_threads_not_manually_archived([after])
 
