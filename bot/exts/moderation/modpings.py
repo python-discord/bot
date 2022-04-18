@@ -240,11 +240,8 @@ class ModPings(Cog):
 
     async def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
-        log.trace("Cog unload: canceling role tasks.")
-        self.reschedule_task.cancel()
+        log.trace("Cog unload: cancelling all scheduled tasks.")
         self._role_scheduler.cancel_all()
-
-        self.modpings_schedule_task.cancel()
         self._modpings_scheduler.cancel_all()
 
 
