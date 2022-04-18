@@ -60,6 +60,19 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
 class SyncCogTests(SyncCogTestCase):
     """Tests for the Sync cog."""
 
+    async def test_sync_cog_sync_on_load(self):
+        """Roles and users should be synced on cog load."""
+        guild = helpers.MockGuild()
+        self.bot.get_guild = mock.MagicMock(return_value=guild)
+
+        self.RoleSyncer.reset_mock()
+        self.UserSyncer.reset_mock()
+
+        await self.cog.cog_load()
+
+        self.RoleSyncer.sync.assert_called_once_with(guild)
+        self.UserSyncer.sync.assert_called_once_with(guild)
+
     async def test_sync_cog_sync_guild(self):
         """Roles and users should be synced only if a guild is successfully retrieved."""
         for guild in (helpers.MockGuild(), None):
