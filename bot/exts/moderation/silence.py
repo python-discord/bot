@@ -466,6 +466,10 @@ class Silence(commands.Cog):
         """Only allow moderators to invoke the commands in this cog."""
         return await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks."""
+        self.scheduler.cancel_all()
+
 
 async def setup(bot: Bot) -> None:
     """Load the Silence cog."""

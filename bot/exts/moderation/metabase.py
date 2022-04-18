@@ -172,6 +172,10 @@ class Metabase(Cog):
         ]
         return all(checks)
 
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks."""
+        self._session_scheduler.cancel_all()
+
 
 async def setup(bot: Bot) -> None:
     """Load the Metabase cog."""

@@ -225,6 +225,10 @@ class Stream(commands.Cog):
         else:
             await ctx.send("No members with stream permissions found.")
 
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks."""
+        self.scheduler.cancel_all()
+
 
 async def setup(bot: Bot) -> None:
     """Loads the Stream cog."""
