@@ -21,7 +21,6 @@ class OffTopicNames(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.updater_task = None
 
         # What errors to handle and restart the task using an exponential back-off algorithm
         self.update_names.add_exception_type(ResponseCodeError)
