@@ -70,8 +70,6 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_history = MessageHistory()
         self.disable_header = disable_header
 
-        self._start = scheduling.create_task(self.start_watchchannel(), event_loop=self.bot.loop)
-
     @property
     def modlog(self) -> ModLog:
         """Provides access to the ModLog cog for alert purposes."""
@@ -94,7 +92,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         return True
 
-    async def start_watchchannel(self) -> None:
+    async def cog_load(self) -> None:
         """Starts the watch channel by getting the channel, webhook, and user cache ready."""
         await self.bot.wait_until_guild_available()
 

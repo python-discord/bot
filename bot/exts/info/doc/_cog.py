@@ -84,8 +84,7 @@ class DocCog(commands.Cog):
             event_loop=self.bot.loop,
         )
 
-    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
-    async def init_refresh_inventory(self) -> None:
+    async def cog_load(self) -> None:
         """Refresh documentation inventory on cog initialization."""
         await self.bot.wait_until_guild_available()
         await self.refresh_inventories()

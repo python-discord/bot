@@ -3,7 +3,6 @@ import datetime
 
 import arrow
 from async_rediscache import RedisCache
-from botcore.utils import scheduling
 from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse, parse as dateutil_parse
 from discord import Embed, Member
@@ -41,15 +40,10 @@ class ModPings(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.modpings_schedule_task = scheduling.create_task(
-            self.reschedule_modpings_schedule(),
-            event_loop=self.bot.loop
-        )
-        self.reschedule_task = scheduling.create_task(
-            self.reschedule_roles(),
-            name="mod-pings-reschedule",
-            event_loop=self.bot.loop,
-        )
+    async def cog_load(self) -> None:
+        """Schedule both when to reapply role and all mod ping schedules."""
+        await self.reschedule_modpings_schedule()
+        await self.reschedule_roles()
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
