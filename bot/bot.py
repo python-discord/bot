@@ -69,14 +69,11 @@ class Bot(BotBase):
         """Default async initialisation method for discord.py."""
         await super().setup_hook()
 
-        if self.redis_session.closed:
-            # If the RedisSession was somehow closed, we try to reconnect it
-            # here. Normally, this shouldn't happen.
-            await self.redis_session.connect()
-
         # Build the FilterList cache
         await self.cache_filter_list_data()
 
+        # This is not awaited to avoid a deadlock with any cogs that have
+        # wait_until_guild_available in their cog_load method.
         scheduling.create_task(self.load_extensions(exts))
 
     async def on_error(self, event: str, *args, **kwargs) -> None:
