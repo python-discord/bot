@@ -66,7 +66,7 @@ class Bot(BotBase):
             self.insert_item_into_filter_list_cache(item)
 
     async def setup_hook(self) -> None:
-        """Default Async initialisation method for Discord.py."""
+        """Default async initialisation method for discord.py."""
         await super().setup_hook()
 
         if self.redis_session.closed:
