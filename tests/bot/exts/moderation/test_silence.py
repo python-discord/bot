@@ -114,14 +114,14 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog = silence.Silence(self.bot)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def testcog_load_got_guild(self):
+    async def test_cog_load_got_guild(self):
         """Bot got guild after it became available."""
         await self.cog.cog_load()
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def testcog_load_got_channels(self):
+    async def test_cog_load_got_channels(self):
         """Got channels from bot."""
         self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
 
@@ -129,7 +129,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.cog._mod_alerts_channel.id, Channels.mod_alerts)
 
     @autospec(silence, "SilenceNotifier")
-    async def testcog_load_got_notifier(self, notifier):
+    async def test_cog_load_got_notifier(self, notifier):
         """Notifier was started with channel."""
         self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
 
