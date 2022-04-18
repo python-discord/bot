@@ -125,7 +125,7 @@ jobs:
         [flake8] %(code)s: %(text)s'"
 
       - name: Run tests and generate coverage report
-        run: pytest -n auto --cov --disable-warnings -q
+        run: pytest -n 8 --cov --disable-warnings -q
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's
