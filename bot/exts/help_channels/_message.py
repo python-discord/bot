@@ -256,7 +256,7 @@ def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> 
         return False
 
     bot_msg_desc = message.embeds[0].description
-    if bot_msg_desc is discord.Embed.Empty:
+    if bot_msg_desc is None:
         log.trace("Last message was a bot embed but it was empty.")
         return False
     return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
