@@ -11,7 +11,6 @@ from typing import Dict, NamedTuple, Optional, Tuple, Union
 import aiohttp
 import discord
 from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
 from botcore.utils.scheduling import Scheduler
 from discord.ext import commands
 
@@ -77,12 +76,6 @@ class DocCog(commands.Cog):
         self.refresh_event = asyncio.Event()
         self.refresh_event.set()
         self.symbol_get_event = SharedEvent()
-
-        self.init_refresh_task = scheduling.create_task(
-            self.init_refresh_inventory(),
-            name="Doc inventory init",
-            event_loop=self.bot.loop,
-        )
 
     async def cog_load(self) -> None:
         """Refresh documentation inventory on cog initialization."""
