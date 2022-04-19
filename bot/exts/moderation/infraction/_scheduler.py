@@ -72,7 +72,7 @@ class InfractionScheduler:
             )
             log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
 
-            self.scheduler.schedule_at(next_reschedule_point, -1, self.cog_load(supported_infractions))
+            self.scheduler.schedule_at(next_reschedule_point, -1, self.cog_load())
 
         log.trace("Done rescheduling")
 
