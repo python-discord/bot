@@ -125,7 +125,7 @@ lxml = ["lxml"]
 
 [[package]]
 name = "bot-core"
-version = "5.0.4"
+version = "6.0.0"
 description = "Bot-Core provides the core functionality and utilities for the bots of the Python Discord community."
 category = "main"
 optional = false
@@ -133,7 +133,7 @@ python-versions = "3.9.*"
 
 [package.dependencies]
 async-rediscache = {version = "0.2.0", extras = ["fakeredis"], optional = true, markers = "extra == \"async-rediscache\""}
-"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/414759f3723a3fe632ecfc1343a4164a51cd2940.zip"}
+"discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/987235d5649e7c2b1a927637bab6547244ecb2cf.zip"}
 statsd = "3.3.0"
 
 [package.extras]
@@ -141,7 +141,7 @@ async-rediscache = ["async-rediscache[fakeredis] (==0.2.0)"]
 
 [package.source]
 type = "url"
-url = "https://github.com/python-discord/bot-core/archive/refs/tags/v5.0.4.zip"
+url = "https://github.com/python-discord/bot-core/archive/refs/tags/v6.0.0.zip"
 [[package]]
 name = "certifi"
 version = "2021.10.8"
@@ -263,7 +263,7 @@ voice = ["PyNaCl (>=1.3.0,<1.6)"]
 
 [package.source]
 type = "url"
-url = "https://github.com/Rapptz/discord.py/archive/414759f3723a3fe632ecfc1343a4164a51cd2940.zip"
+url = "https://github.com/Rapptz/discord.py/archive/987235d5649e7c2b1a927637bab6547244ecb2cf.zip"
 
 [[package]]
 name = "distlib"
@@ -1150,7 +1150,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.*"
-content-hash = "c1b8132c568892af042b4b561bd4053a9ba05b50e51b350f3e885d89cc7bfa17"
+content-hash = "3a9451cdbafd9880f794fe5ea4ece75663a778708707e7b5fb5e9aaffc2bbbc8"
 
 [metadata.files]
 aiodns = [
