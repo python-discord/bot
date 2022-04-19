@@ -42,7 +42,7 @@ class Metabase(Cog):
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Handle ClientResponseError errors locally to invalidate token if needed."""
-        if not isinstance(error.original, ClientResponseError):
+        if not hasattr(error, "original") or not isinstance(error.original, ClientResponseError):
             return
 
         if error.original.status == 403:
