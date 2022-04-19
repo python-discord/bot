@@ -125,7 +125,7 @@ lxml = ["lxml"]
 
 [[package]]
 name = "bot-core"
-version = "5.0.3"
+version = "5.0.4"
 description = "Bot-Core provides the core functionality and utilities for the bots of the Python Discord community."
 category = "main"
 optional = false
@@ -141,7 +141,7 @@ async-rediscache = ["async-rediscache[fakeredis] (==0.2.0)"]
 
 [package.source]
 type = "url"
-url = "https://github.com/python-discord/bot-core/archive/refs/tags/v5.0.3.zip"
+url = "https://github.com/python-discord/bot-core/archive/refs/tags/v5.0.4.zip"
 [[package]]
 name = "certifi"
 version = "2021.10.8"
@@ -1150,7 +1150,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.*"
-content-hash = "03783c24aeb9728b08e829c112709a7110042ecda28cdad983ceb0c7c62c1747"
+content-hash = "c1b8132c568892af042b4b561bd4053a9ba05b50e51b350f3e885d89cc7bfa17"
 
 [metadata.files]
 aiodns = [

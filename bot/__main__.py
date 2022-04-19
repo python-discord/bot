@@ -64,12 +64,12 @@ async def main() -> None:
             allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles),
             intents=intents,
             allowed_roles=list({discord.Object(id_) for id_ in constants.MODERATION_ROLES}),
-        )
-        async with bot.instance as _bot:
-            _bot.api_client = APIClient(
+            api_client=APIClient(
                 site_api_url=f"{constants.URLs.site_api_schema}{constants.URLs.site_api}",
                 site_api_token=constants.Keys.site_api,
-            )
+            ),
+        )
+        async with bot.instance as _bot:
             await _bot.start(constants.Bot.token)
 
 
