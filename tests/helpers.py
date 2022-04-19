@@ -315,6 +315,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
         http_session=unittest.mock.MagicMock(),
         allowed_roles=[1],
         guild_id=1,
+        intents=discord.Intents.all(),
     )
     additional_spec_asyncs = ("wait_for", "redis_ready")
 
