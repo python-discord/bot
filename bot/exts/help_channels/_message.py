@@ -67,7 +67,8 @@ async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.M
     log.trace(f"Getting the last message in #{channel} ({channel.id}).")
 
     try:
-        return await channel.history(limit=1).next()  # noqa: B305
+        async for message in channel.history(limit=1):
+            return message
     except StopAsyncIteration:
         log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
         return None
