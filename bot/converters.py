@@ -9,7 +9,7 @@ import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
 from botcore.site_api import ResponseCodeError
-from botcore.utils._extensions import unqualify
+from botcore.utils import unqualify
 from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
