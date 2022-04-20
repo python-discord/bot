@@ -66,12 +66,11 @@ async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.M
     """Return the last message sent in the channel or None if no messages exist."""
     log.trace(f"Getting the last message in #{channel} ({channel.id}).")
 
-    try:
-        async for message in channel.history(limit=1):
-            return message
-    except StopAsyncIteration:
-        log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
-        return None
+    async for message in channel.history(limit=1):
+        return message
+
+    log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
+    return None
 
 
 async def is_empty(channel: discord.TextChannel) -> bool:
