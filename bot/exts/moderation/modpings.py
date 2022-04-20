@@ -3,6 +3,7 @@ import datetime
 
 import arrow
 from async_rediscache import RedisCache
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse, parse as dateutil_parse
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, group, has_any_role
@@ -11,8 +12,7 @@ from bot.bot import Bot
 from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
-from bot.utils import scheduling, time
-from bot.utils.scheduling import Scheduler
+from bot.utils import time
 
 log = get_logger(__name__)
 
@@ -40,15 +40,10 @@ class ModPings(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.modpings_schedule_task = scheduling.create_task(
-            self.reschedule_modpings_schedule(),
-            event_loop=self.bot.loop
-        )
-        self.reschedule_task = scheduling.create_task(
-            self.reschedule_roles(),
-            name="mod-pings-reschedule",
-            event_loop=self.bot.loop,
-        )
+    async def cog_load(self) -> None:
+        """Schedule both when to reapply role and all mod ping schedules."""
+        await self.reschedule_modpings_schedule()
+        await self.reschedule_roles()
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -243,16 +238,13 @@ class ModPings(Cog):
         await self.modpings_schedule.delete(ctx.author.id)
         await ctx.send(f"{Emojis.ok_hand} {ctx.author.mention} Deleted your modpings schedule!")
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
-        log.trace("Cog unload: canceling role tasks.")
-        self.reschedule_task.cancel()
+        log.trace("Cog unload: cancelling all scheduled tasks.")
         self._role_scheduler.cancel_all()
-
-        self.modpings_schedule_task.cancel()
         self._modpings_scheduler.cancel_all()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModPings cog."""
-    bot.add_cog(ModPings(bot))
+    await bot.add_cog(ModPings(bot))

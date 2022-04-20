@@ -6,12 +6,12 @@ from textwrap import shorten
 from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
+from botcore.site_api import ResponseCodeError
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
@@ -552,6 +552,6 @@ class Information(Cog):
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Information cog."""
-    bot.add_cog(Information(bot))
+    await bot.add_cog(Information(bot))

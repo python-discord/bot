@@ -453,6 +453,6 @@ class ModManagement(commands.Cog):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModManagement cog."""
-    bot.add_cog(ModManagement(bot))
+    await bot.add_cog(ModManagement(bot))

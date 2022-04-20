@@ -602,6 +602,6 @@ class Clean(Cog):
         self.cleaning = False
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Clean cog."""
-    bot.add_cog(Clean(bot))
+    await bot.add_cog(Clean(bot))

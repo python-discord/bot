@@ -5,13 +5,14 @@ import typing as t
 from contextlib import suppress
 
 import arrow
+from botcore.utils import scheduling
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger
-from bot.utils import function, scheduling
+from bot.utils import function
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
 from bot.utils.function import command_wraps
 

@@ -8,7 +8,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import channel, scheduling
+from bot.utils import channel
 
 log = get_logger(__name__)
 
@@ -21,7 +21,6 @@ class ThreadBumper(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.init_task = scheduling.create_task(self.ensure_bumped_threads_are_active(), event_loop=self.bot.loop)
 
     async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
         """
@@ -50,7 +49,7 @@ class ThreadBumper(commands.Cog):
             else:
                 await thread.edit(archived=False)
 
-    async def ensure_bumped_threads_are_active(self) -> None:
+    async def cog_load(self) -> None:
         """Ensure bumped threads are active, since threads could have been archived while the bot was down."""
         await self.bot.wait_until_guild_available()
 
@@ -77,8 +76,6 @@ class ThreadBumper(commands.Cog):
     @thread_bump_group.command(name="add", aliases=("a",))
     async def add_thread_to_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
         """Add a thread to the bump list."""
-        await self.init_task
-
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
                 thread = ctx.channel
@@ -94,8 +91,6 @@ class ThreadBumper(commands.Cog):
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
     async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
         """Remove a thread from the bump list."""
-        await self.init_task
-
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
                 thread = ctx.channel
@@ -111,8 +106,6 @@ class ThreadBumper(commands.Cog):
     @thread_bump_group.command(name="list", aliases=("get",))
     async def list_all_threads_in_bump_list(self, ctx: commands.Context) -> None:
         """List all the threads in the bump list."""
-        await self.init_task
-
         lines = [f"<#{k}>" for k, _ in await self.threads_to_bump.items()]
         embed = discord.Embed(
             title="Threads in the bump list",
@@ -127,8 +120,6 @@ class ThreadBumper(commands.Cog):
 
         If the thread has been archived, and is in the bump list, un-archive it.
         """
-        await self.init_task
-
         if not after.archived:
             return
 
@@ -142,6 +133,6 @@ class ThreadBumper(commands.Cog):
         ).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ThreadBumper cog."""
-    bot.add_cog(ThreadBumper(bot))
+    await bot.add_cog(ThreadBumper(bot))
