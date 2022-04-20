@@ -151,12 +151,11 @@ class Reviewer:
         # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
         if not NOMINATION_MESSAGE_REGEX.search(message.content):
-            with contextlib.suppress(StopAsyncIteration):
-                async for new_message in message.channel.history(before=message.created_at):
-                    messages.append(new_message)
+            async for new_message in message.channel.history(before=message.created_at):
+                messages.append(new_message)
 
-                    if NOMINATION_MESSAGE_REGEX.search(new_message.content):
-                        break
+                if NOMINATION_MESSAGE_REGEX.search(new_message.content):
+                    break
 
         log.debug(f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}")
 
