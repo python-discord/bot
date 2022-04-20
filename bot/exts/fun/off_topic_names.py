@@ -7,7 +7,7 @@ from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES
+from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES
 from bot.converters import OffTopicName
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -82,7 +82,7 @@ class OffTopicNames(Cog):
             )
             await ctx.send(
                 f":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. "
-                "Use `!otn forceadd` to override this check."
+                f"Use `{BotConfig.prefix}otn forceadd` to override this check."
             )
         else:
             await self._add_name(ctx, name)

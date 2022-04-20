@@ -11,7 +11,7 @@ from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
@@ -237,7 +237,7 @@ class TalentPool(Cog, name="Talentpool"):
             if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
                 await ctx.send(
                     f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
-                    "Use `!tp forcenominate` to override this check."
+                    f"Use `{BotConfig.prefix}tp forcenominate` to override this check."
                 )
             else:
                 await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")

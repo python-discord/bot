@@ -27,7 +27,7 @@ For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}
 
 AVAILABLE_TITLE = "Available help channel"
 
-AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
+AVAILABLE_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **{{dormant}}** \

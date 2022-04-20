@@ -18,7 +18,7 @@ from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
+from bot.constants import Bot as BotConfig, Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -434,7 +434,7 @@ class Filtering(Cog):
             ping_everyone = False
             content = None
 
-        eval_msg = "using !eval " if is_eval else ""
+        eval_msg = f"using {BotConfig.prefix}eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
         message = (
             f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)} "
