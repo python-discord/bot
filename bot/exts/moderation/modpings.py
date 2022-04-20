@@ -42,7 +42,7 @@ class ModPings(Cog):
 
     async def cog_load(self) -> None:
         """Schedule both when to reapply role and all mod ping schedules."""
-        await self.reschedule_modpings_schedule()
+        # await self.reschedule_modpings_schedule()
         await self.reschedule_roles()
 
     async def reschedule_roles(self) -> None:
