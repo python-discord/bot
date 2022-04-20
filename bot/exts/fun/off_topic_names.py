@@ -1,5 +1,5 @@
+import datetime
 import difflib
-from datetime import time
 
 from botcore.site_api import ResponseCodeError
 from discord import Colour, Embed
@@ -35,7 +35,7 @@ class OffTopicNames(Cog):
         self.update_names.clear_exception_types()
         self.update_names.stop()
 
-    @tasks.loop(time=time(), reconnect=True)
+    @tasks.loop(time=datetime.time(), reconnect=True)
     async def update_names(self) -> None:
         """Background updater task that performs the daily channel name update."""
         await self.bot.wait_until_guild_available()
