@@ -12,7 +12,6 @@ from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.converters import Extension
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.extensions import EXTENSIONS
 
 log = get_logger(__name__)
 
@@ -53,7 +52,7 @@ class Extensions(commands.Cog):
             return
 
         if "*" in extensions or "**" in extensions:
-            extensions = set(EXTENSIONS) - set(self.bot.extensions.keys())
+            extensions = set(self.bot.all_extensions) - set(self.bot.extensions.keys())
 
         msg = self.batch_manage(Action.LOAD, *extensions)
         await ctx.send(msg)
@@ -96,7 +95,7 @@ class Extensions(commands.Cog):
             return
 
         if "**" in extensions:
-            extensions = EXTENSIONS
+            extensions = self.bot.all_extensions
         elif "*" in extensions:
             extensions = set(self.bot.extensions.keys()) | set(extensions)
             extensions.remove("*")
@@ -136,7 +135,7 @@ class Extensions(commands.Cog):
         """Return a mapping of extension names and statuses to their categories."""
         categories = {}
 
-        for ext in EXTENSIONS:
+        for ext in self.bot.all_extensions:
             if ext in self.bot.extensions:
                 status = Emojis.status_online
             else:
