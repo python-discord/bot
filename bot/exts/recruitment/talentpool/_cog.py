@@ -5,17 +5,18 @@ from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
@@ -236,7 +237,7 @@ class TalentPool(Cog, name="Talentpool"):
             if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
                 await ctx.send(
                     f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
-                    "Use `!tp forcenominate` to override this check."
+                    f"Use `{BotConfig.prefix}tp forcenominate` to override this check."
                 )
             else:
                 await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")
@@ -602,7 +603,6 @@ class TalentPool(Cog, name="Talentpool"):
 
         return lines.strip()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancels all review tasks on cog unload."""
-        super().cog_unload()
         self.reviewer.cancel_all()

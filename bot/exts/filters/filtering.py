@@ -9,19 +9,19 @@ import dateutil.parser
 import regex
 import tldextract
 from async_rediscache import RedisCache
-from botcore.regex import DISCORD_INVITE
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord import ChannelType, Colour, Embed, Forbidden, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
+from bot.constants import Bot as BotConfig, Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
@@ -149,9 +149,7 @@ class Filtering(Cog):
             },
         }
 
-        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
@@ -436,7 +434,7 @@ class Filtering(Cog):
             ping_everyone = False
             content = None
 
-        eval_msg = "using !eval " if is_eval else ""
+        eval_msg = f"using {BotConfig.prefix}eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
         message = (
             f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)} "
@@ -675,7 +673,7 @@ class Filtering(Cog):
         delete_at = dateutil.parser.isoparse(msg['delete_date'])
         self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
-    async def reschedule_offensive_msg_deletion(self) -> None:
+    async def cog_load(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
         await self.bot.wait_until_ready()
         response = await self.bot.api_client.get('bot/offensive-messages',)
@@ -718,6 +716,6 @@ class Filtering(Cog):
         return INVISIBLE_RE.sub("", no_zalgo)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Filtering cog."""
-    bot.add_cog(Filtering(bot))
+    await bot.add_cog(Filtering(bot))

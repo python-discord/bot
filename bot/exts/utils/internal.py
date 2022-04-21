@@ -252,6 +252,6 @@ async def func():  # (None,) -> Any
         await ctx.send(embed=stats_embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Internal cog."""
-    bot.add_cog(Internal(bot))
+    await bot.add_cog(Internal(bot))

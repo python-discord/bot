@@ -840,13 +840,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_thread_join(self, thread: Thread) -> None:
+    async def on_thread_create(self, thread: Thread) -> None:
         """Log thread creation."""
-        # If we are in the thread already we can most probably assume we already logged it?
-        # We don't really have a better way of doing this since the API doesn't make any difference between the two
-        if thread.me:
-            return
-
         if self.is_channel_ignored(thread.id):
             log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
             return
@@ -936,6 +931,6 @@ class ModLog(Cog, name="ModLog"):
         )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModLog cog."""
-    bot.add_cog(ModLog(bot))
+    await bot.add_cog(ModLog(bot))

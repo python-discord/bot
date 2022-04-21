@@ -27,7 +27,7 @@ For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}
 
 AVAILABLE_TITLE = "Available help channel"
 
-AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
+AVAILABLE_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **{{dormant}}** \
@@ -66,11 +66,11 @@ async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.M
     """Return the last message sent in the channel or None if no messages exist."""
     log.trace(f"Getting the last message in #{channel} ({channel.id}).")
 
-    try:
-        return await channel.history(limit=1).next()  # noqa: B305
-    except discord.NoMoreItems:
-        log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
-        return None
+    async for message in channel.history(limit=1):
+        return message
+
+    log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
+    return None
 
 
 async def is_empty(channel: discord.TextChannel) -> bool:
@@ -255,7 +255,7 @@ def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> 
         return False
 
     bot_msg_desc = message.embeds[0].description
-    if bot_msg_desc is discord.Embed.Empty:
+    if bot_msg_desc is None:
         log.trace("Last message was a bot embed but it was empty.")
         return False
     return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()

@@ -11,7 +11,6 @@ from discord.ext.tasks import loop
 from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.webhooks import send_webhook
 
 PEPS_RSS_URL = "https://peps.python.org/peps.rss"
@@ -42,8 +41,10 @@ class PythonNews(Cog):
         self.webhook_names = {}
         self.webhook: t.Optional[discord.Webhook] = None
 
-        scheduling.create_task(self.get_webhook_names(), event_loop=self.bot.loop)
-        scheduling.create_task(self.get_webhook_and_channel(), event_loop=self.bot.loop)
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self.get_webhook_names()
+        await self.get_webhook_and_channel()
 
     async def start_tasks(self) -> None:
         """Start the tasks for fetching new PEPs and mailing list messages."""
@@ -240,11 +241,11 @@ class PythonNews(Cog):
 
         await self.start_tasks()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Stop news posting tasks on cog unload."""
         self.fetch_new_media.cancel()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Add `News` cog."""
-    bot.add_cog(PythonNews(bot))
+    await bot.add_cog(PythonNews(bot))

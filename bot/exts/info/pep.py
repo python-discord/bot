@@ -9,7 +9,6 @@ from discord.ext.commands import Cog, Context, command
 from bot.bot import Bot
 from bot.constants import Keys
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.caching import AsyncCache
 
 log = get_logger(__name__)
@@ -33,7 +32,10 @@ class PythonEnhancementProposals(Cog):
         self.peps: Dict[int, str] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
-        scheduling.create_task(self.refresh_peps_urls(), event_loop=self.bot.loop)
+
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self.refresh_peps_urls()
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
@@ -163,6 +165,6 @@ class PythonEnhancementProposals(Cog):
             log.trace(f"Getting PEP {pep_number} failed. Error embed sent.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the PEP cog."""
-    bot.add_cog(PythonEnhancementProposals(bot))
+    await bot.add_cog(PythonEnhancementProposals(bot))

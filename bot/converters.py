@@ -8,20 +8,20 @@ from ssl import CertificateError
 import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
-from botcore.regex import DISCORD_INVITE
+from botcore.site_api import ResponseCodeError
+from botcore.utils import unqualify
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
 
-from bot import exts
-from bot.api import ResponseCodeError
+from bot import exts, instance as bot_instance
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
 from bot.exts.info.tags import TagIdentifier
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.extensions import EXTENSIONS, unqualify
 
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
@@ -150,13 +150,13 @@ class Extension(Converter):
 
         argument = argument.lower()
 
-        if argument in EXTENSIONS:
+        if argument in bot_instance.all_extensions:
             return argument
-        elif (qualified_arg := f"{exts.__name__}.{argument}") in EXTENSIONS:
+        elif (qualified_arg := f"{exts.__name__}.{argument}") in bot_instance.all_extensions:
             return qualified_arg
 
         matches = []
-        for ext in EXTENSIONS:
+        for ext in bot_instance.all_extensions:
             if argument == unqualify(ext):
                 matches.append(ext)
 

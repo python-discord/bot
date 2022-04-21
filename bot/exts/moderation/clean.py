@@ -441,7 +441,10 @@ class Clean(Cog):
             f"A log of the deleted messages can be found here {log_url}."
         )
         if log_url and is_mod_channel(ctx.channel):
-            await ctx.reply(success_message)
+            try:
+                await ctx.reply(success_message)
+            except errors.NotFound:
+                await ctx.send(success_message)
         elif log_url:
             if mods := self.bot.get_channel(Channels.mods):
                 await mods.send(f"{ctx.author.mention} {success_message}")
@@ -602,6 +605,6 @@ class Clean(Cog):
         self.cleaning = False
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Clean cog."""
-    bot.add_cog(Clean(bot))
+    await bot.add_cog(Clean(bot))
