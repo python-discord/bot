@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from dateutil.relativedelta import relativedelta
 from discord import TextChannel
@@ -44,7 +44,12 @@ class Slowmode(Cog):
         await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 
     @slowmode_group.command(name='set', aliases=['s'])
-    async def set_slowmode(self, ctx: Context, channel: Optional[TextChannel], delay: DurationDelta) -> None:
+    async def set_slowmode(
+        self,
+        ctx: Context,
+        channel: Optional[TextChannel],
+        delay: Union[DurationDelta, Literal["0s", "0seconds"]],
+    ) -> None:
         """Set the slowmode delay for a text channel."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
@@ -52,8 +57,10 @@ class Slowmode(Cog):
 
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
         # Must do this to get the delta in a particular unit of time
-        slowmode_delay = time.relativedelta_to_timedelta(delay).total_seconds()
+        if isinstance(delay, str):
+            delay = relativedelta(seconds=0)
 
+        slowmode_delay = time.relativedelta_to_timedelta(delay).total_seconds()
         humanized_delay = time.humanize_delta(delay)
 
         # Ensure the delay is within discord's limits
