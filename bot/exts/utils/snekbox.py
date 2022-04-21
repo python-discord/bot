@@ -7,7 +7,8 @@ from signal import Signals
 from textwrap import dedent
 from typing import Optional, Tuple
 
-from botcore.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
+from botcore.utils import scheduling
+from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from discord import AllowedMentions, HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 
@@ -15,7 +16,7 @@ from bot.bot import Bot
 from bot.constants import Categories, Channels, Roles, URLs
 from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.utils import scheduling, send_to_paste_service
+from bot.utils import send_to_paste_service
 from bot.utils.messages import wait_for_deletion
 
 log = get_logger(__name__)
@@ -457,6 +458,6 @@ def predicate_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bo
     return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REDO_EMOJI
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Snekbox cog."""
-    bot.add_cog(Snekbox(bot))
+    await bot.add_cog(Snekbox(bot))

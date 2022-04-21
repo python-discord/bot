@@ -2,12 +2,12 @@ import abc
 import typing as t
 from collections import namedtuple
 
+from botcore.site_api import ResponseCodeError
 from discord import Guild
 from discord.ext.commands import Context
 from more_itertools import chunked
 
 import bot
-from bot.api import ResponseCodeError
 from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
 

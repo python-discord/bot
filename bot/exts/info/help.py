@@ -489,12 +489,12 @@ class Help(Cog):
         bot.help_command = CustomHelpCommand()
         bot.help_command.cog = self
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Reset the help command when the cog is unloaded."""
         self.bot.help_command = self.old_help_command
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Help cog."""
-    bot.add_cog(Help(bot))
+    await bot.add_cog(Help(bot))
     log.info("Cog loaded: Help")

@@ -5,12 +5,12 @@ from datetime import timedelta
 import arrow
 import discord
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
+from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -37,14 +37,14 @@ MESSAGE_FIELD_MAP = {
 
 VOICE_PING = (
     "Wondering why you can't talk in the voice channels? "
-    "Use the `!voiceverify` command in here to verify. "
+    f"Use the `{BotConfig.prefix}voiceverify` command in here to verify. "
     "If you don't yet qualify, you'll be told why!"
 )
 
 VOICE_PING_DM = (
     "Wondering why you can't talk in the voice channels? "
-    "Use the `!voiceverify` command in {channel_mention} to verify. "
-    "If you don't yet qualify, you'll be told why!"
+    f"Use the `{BotConfig.prefix}voiceverify` command in "
+    "{channel_mention} to verify. If you don't yet qualify, you'll be told why!"
 )
 
 
@@ -272,6 +272,6 @@ class VoiceGate(Cog):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Loads the VoiceGate cog."""
-    bot.add_cog(VoiceGate(bot))
+    await bot.add_cog(VoiceGate(bot))

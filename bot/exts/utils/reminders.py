@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from operator import itemgetter
 
 import discord
+from botcore.utils import scheduling
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
@@ -13,12 +15,11 @@ from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Role
 from bot.converters import Duration, UnambiguousUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
-from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 
@@ -37,13 +38,11 @@ class Reminders(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        scheduling.create_task(self.reschedule_reminders(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
-    async def reschedule_reminders(self) -> None:
+    async def cog_load(self) -> None:
         """Get all current reminders from the API and reschedule them."""
         await self.bot.wait_until_guild_available()
         response = await self.bot.api_client.get(
@@ -486,6 +485,6 @@ class Reminders(Cog):
         return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Reminders cog."""
-    bot.add_cog(Reminders(bot))
+    await bot.add_cog(Reminders(bot))

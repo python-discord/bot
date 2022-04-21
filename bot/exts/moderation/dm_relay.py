@@ -68,6 +68,6 @@ class DMRelay(Cog):
                 and is_mod_channel(ctx.channel))
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the DMRelay cog."""
-    bot.add_cog(DMRelay(bot))
+    await bot.add_cog(DMRelay(bot))
