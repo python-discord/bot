@@ -1,7 +1,7 @@
 from typing import Literal, Optional, Union
 
 from dateutil.relativedelta import relativedelta
-from discord import TextChannel
+from discord import TextChannel, Thread
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
@@ -20,6 +20,8 @@ COMMONLY_SLOWMODED_CHANNELS = {
     Channels.off_topic_0: "ot0",
 }
 
+MessageHolder = Optional[Union[TextChannel, Thread]]
+
 
 class Slowmode(Cog):
     """Commands for getting and setting slowmode delays of text channels."""
@@ -33,7 +35,7 @@ class Slowmode(Cog):
         await ctx.send_help(ctx.command)
 
     @slowmode_group.command(name='get', aliases=['g'])
-    async def get_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
+    async def get_slowmode(self, ctx: Context, channel: MessageHolder) -> None:
         """Get the slowmode delay for a text channel."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
@@ -47,7 +49,7 @@ class Slowmode(Cog):
     async def set_slowmode(
         self,
         ctx: Context,
-        channel: Optional[TextChannel],
+        channel: MessageHolder,
         delay: Union[DurationDelta, Literal["0s", "0seconds"]],
     ) -> None:
         """Set the slowmode delay for a text channel."""
@@ -87,7 +89,7 @@ class Slowmode(Cog):
             )
 
     @slowmode_group.command(name='reset', aliases=['r'])
-    async def reset_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
+    async def reset_slowmode(self, ctx: Context, channel: MessageHolder) -> None:
         """Reset the slowmode delay for a text channel to 0 seconds."""
         await self.set_slowmode(ctx, channel, relativedelta(seconds=0))
 
