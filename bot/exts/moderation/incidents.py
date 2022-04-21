@@ -404,7 +404,7 @@ class Incidents(Cog):
         def check(payload: discord.RawReactionActionEvent) -> bool:
             return payload.message_id == incident.id
 
-        coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
+        coroutine = self.bot.wait_for("raw_message_delete", check=check, timeout=timeout)
         return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
