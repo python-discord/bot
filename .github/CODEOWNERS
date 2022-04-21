@@ -18,10 +18,8 @@ bot/exts/recruitment/**                 @wookie184
 bot/rules/**                            @mbaruh
 
 # Utils
-bot/utils/extensions.py                 @MarkKoz
 bot/utils/function.py                   @MarkKoz
 bot/utils/lock.py                       @MarkKoz
-bot/utils/scheduling.py                 @MarkKoz
 
 # Tests
 tests/_autospec.py                      @MarkKoz
