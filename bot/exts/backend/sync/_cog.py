@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Dict
 
 from botcore.site_api import ResponseCodeError
@@ -26,6 +27,11 @@ class Sync(Cog):
         guild = self.bot.get_guild(constants.Guild.id)
         if guild is None:
             return
+
+        log.info("Waiting for guild to be chunked to start syncers.")
+        while not guild.chunked:
+            await asyncio.sleep(10)
+        log.info("Starting syncers.")
 
         for syncer in (_syncers.RoleSyncer, _syncers.UserSyncer):
             await syncer.sync(guild)
