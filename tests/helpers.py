@@ -171,7 +171,7 @@ class MockGuild(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     spec_set = guild_instance
 
     def __init__(self, roles: Optional[Iterable[MockRole]] = None, **kwargs) -> None:
-        default_kwargs = {'id': next(self.discord_id), 'members': []}
+        default_kwargs = {'id': next(self.discord_id), 'members': [], "chunked": True}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
         self.roles = [MockRole(name="@everyone", position=1, id=0)]
