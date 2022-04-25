@@ -1,10 +1,11 @@
 import asyncio
+import datetime
 from typing import Any, Dict
 
 from botcore.site_api import ResponseCodeError
 from discord import Member, Role, User
 from discord.ext import commands
-from discord.ext.commands import Cog, Context
+from discord.ext.commands import Cog, Context, errors
 
 from bot import constants
 from bot.bot import Bot
@@ -29,10 +30,17 @@ class Sync(Cog):
             return
 
         log.info("Waiting for guild to be chunked to start syncers.")
+        end = datetime.datetime.now() + datetime.timedelta(minutes=30)
         while not guild.chunked:
             await asyncio.sleep(10)
-        log.info("Starting syncers.")
+            if datetime.datetime.now() > end:
+                # More than 30 minutes have passed while trying, abort
+                raise errors.ExtensionFailed(
+                    self.__class__.__name__,
+                    RuntimeError("The guild was not chunked in time, not loading sync cog.")
+                )
 
+        log.info("Starting syncers.")
         for syncer in (_syncers.RoleSyncer, _syncers.UserSyncer):
             await syncer.sync(guild)
 
