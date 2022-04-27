@@ -64,8 +64,8 @@ class Event(t.NamedTuple):
 
     path: str  # Path from repo root where event lives. This is the event's identity.
     meta: MetaFile
-    banner: RemoteObject
-    icons: t.List[RemoteObject]
+    banners: list[RemoteObject]
+    icons: list[RemoteObject]
 
     def __str__(self) -> str:
         return f"<Event at '{self.path}'>"
@@ -163,7 +163,9 @@ class BrandingRepository:
         """
         contents = await self.fetch_directory(directory.path)
 
-        missing_assets = {"meta.md", "banner.png", "server_icons"} - contents.keys()
+        missing_assets = {"meta.md", "server_icons"} - contents.keys()
+        if "banners" not in contents.keys() and "banner.png" not in contents.keys():
+            missing_assets.add("banner.png")
 
         if missing_assets:
             raise BrandingMisconfiguration(f"Directory is missing following assets: {missing_assets}")
@@ -173,11 +175,17 @@ class BrandingRepository:
         if len(server_icons) == 0:
             raise BrandingMisconfiguration("Found no server icons!")
 
+        if contents.get("banner.png"):
+            banners = [contents["banner.png"]]
+        else:
+            banners = await self.fetch_directory(contents["banners"].path, types=("file",))
+            banners = list(banners.values())
+
         meta_bytes = await self.fetch_file(contents["meta.md"].download_url)
 
         meta_file = self.parse_meta_file(meta_bytes)
 
-        return Event(directory.path, meta_file, contents["banner.png"], list(server_icons.values()))
+        return Event(directory.path, meta_file, banners, list(server_icons.values()))
 
     async def get_events(self) -> t.List[Event]:
         """
