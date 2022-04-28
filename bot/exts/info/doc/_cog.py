@@ -431,7 +431,7 @@ class DocCog(commands.Cog):
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
-        with ctx.typing():
+        async with ctx.typing():
             await self.refresh_inventories()
         new_inventories = set(self.base_urls)
 
