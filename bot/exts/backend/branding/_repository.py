@@ -163,29 +163,24 @@ class BrandingRepository:
         """
         contents = await self.fetch_directory(directory.path)
 
-        missing_assets = {"meta.md", "server_icons"} - contents.keys()
-        if "banners" not in contents.keys() and "banner.png" not in contents.keys():
-            missing_assets.add("banner.png")
+        missing_assets = {"meta.md", "server_icons", "banners"} - contents.keys()
 
         if missing_assets:
             raise BrandingMisconfiguration(f"Directory is missing following assets: {missing_assets}")
 
         server_icons = await self.fetch_directory(contents["server_icons"].path, types=("file",))
+        banners = await self.fetch_directory(contents["banners"].path, types=("file",))
 
         if len(server_icons) == 0:
             raise BrandingMisconfiguration("Found no server icons!")
-
-        if contents.get("banner.png"):
-            banners = [contents["banner.png"]]
-        else:
-            banners = await self.fetch_directory(contents["banners"].path, types=("file",))
-            banners = list(banners.values())
+        if len(banners) == 0:
+            raise BrandingMisconfiguration("Found no server banners!")
 
         meta_bytes = await self.fetch_file(contents["meta.md"].download_url)
 
         meta_file = self.parse_meta_file(meta_bytes)
 
-        return Event(directory.path, meta_file, banners, list(server_icons.values()))
+        return Event(directory.path, meta_file, list(banners.values()), list(server_icons.values()))
 
     async def get_events(self) -> t.List[Event]:
         """
