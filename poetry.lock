@@ -142,6 +142,7 @@ async-rediscache = ["async-rediscache[fakeredis] (==0.2.0)"]
 [package.source]
 type = "url"
 url = "https://github.com/python-discord/bot-core/archive/refs/tags/v6.4.0.zip"
+
 [[package]]
 name = "certifi"
 version = "2021.10.8"
@@ -549,15 +550,15 @@ source = ["Cython (>=0.29.7)"]
 
 [[package]]
 name = "markdownify"
-version = "0.10.3"
+version = "0.6.1"
 description = "Convert HTML to markdown."
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
-beautifulsoup4 = ">=4.9,<5"
-six = ">=1.15,<2"
+beautifulsoup4 = "*"
+six = "*"
 
 [[package]]
 name = "mccabe"
@@ -1150,7 +1151,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.*"
-content-hash = "a07f619c75f8133982984eb506ad350144829f10c704421f09b3dbe72cd037d8"
+content-hash = "6eae4e6ee707059b32bf170c4be9abc7e8b6774558d93cbf46cacbde2108c878"
 
 [metadata.files]
 aiodns = [
@@ -1784,8 +1785,8 @@ lxml = [
     {file = "lxml-4.8.0.tar.gz", hash = "sha256:f63f62fc60e6228a4ca9abae28228f35e1bd3ce675013d1dfb828688d50c6e23"},
 ]
 markdownify = [
-    {file = "markdownify-0.10.3-py3-none-any.whl", hash = "sha256:edad0ad3896ec7460d05537ad804bbb3614877c6cd0df27b56dee218236d9ce2"},
-    {file = "markdownify-0.10.3.tar.gz", hash = "sha256:782e310390cd5e4bde7543ceb644598c78b9824ee9f8d7ef9f9f4f8782e46974"},
+    {file = "markdownify-0.6.1-py3-none-any.whl", hash = "sha256:7489fd5c601536996a376c4afbcd1dd034db7690af807120681461e82fbc0acc"},
+    {file = "markdownify-0.6.1.tar.gz", hash = "sha256:31d7c13ac2ada8bfc7535a25fee6622ca720e1b5f2d4a9cbc429d167c21f886d"},
 ]
 mccabe = [
     {file = "mccabe-0.6.1-py2.py3-none-any.whl", hash = "sha256:ab8a6258860da4b6677da4bd2fe5dc2c659cff31b3ee4f7f5d64e79735b80d42"},
@@ -1903,11 +1904,6 @@ psutil = [
     {file = "psutil-5.9.0-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:742c34fff804f34f62659279ed5c5b723bb0195e9d7bd9907591de9f8f6558e2"},
     {file = "psutil-5.9.0-cp310-cp310-win32.whl", hash = "sha256:8293942e4ce0c5689821f65ce6522ce4786d02af57f13c0195b40e1edb1db61d"},
     {file = "psutil-5.9.0-cp310-cp310-win_amd64.whl", hash = "sha256:9b51917c1af3fa35a3f2dabd7ba96a2a4f19df3dec911da73875e1edaf22a40b"},
-    {file = "psutil-5.9.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:e9805fed4f2a81de98ae5fe38b75a74c6e6ad2df8a5c479594c7629a1fe35f56"},
-    {file = "psutil-5.9.0-cp36-cp36m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:c51f1af02334e4b516ec221ee26b8fdf105032418ca5a5ab9737e8c87dafe203"},
-    {file = "psutil-5.9.0-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:32acf55cb9a8cbfb29167cd005951df81b567099295291bcfd1027365b36591d"},
-    {file = "psutil-5.9.0-cp36-cp36m-win32.whl", hash = "sha256:e5c783d0b1ad6ca8a5d3e7b680468c9c926b804be83a3a8e95141b05c39c9f64"},
-    {file = "psutil-5.9.0-cp36-cp36m-win_amd64.whl", hash = "sha256:d62a2796e08dd024b8179bd441cb714e0f81226c352c802fca0fd3f89eeacd94"},
     {file = "psutil-5.9.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:3d00a664e31921009a84367266b35ba0aac04a2a6cad09c550a89041034d19a0"},
     {file = "psutil-5.9.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7779be4025c540d1d65a2de3f30caeacc49ae7a2152108adeaf42c7534a115ce"},
     {file = "psutil-5.9.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:072664401ae6e7c1bfb878c65d7282d4b4391f1bc9a56d5e03b5a490403271b5"},
