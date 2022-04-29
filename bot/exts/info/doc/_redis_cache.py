@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import fnmatch
+import time
 from typing import Optional, TYPE_CHECKING
 
 from async_rediscache.types.base import RedisObject, namespace_lock
@@ -17,7 +18,7 @@ class DocRedisCache(RedisObject):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._set_expires = set()
+        self._set_expires = dict[str, float]()
 
     @namespace_lock
     async def set(self, item: DocItem, value: str) -> None:
@@ -30,12 +31,19 @@ class DocRedisCache(RedisObject):
         needs_expire = False
 
         with await self._get_pool_connection() as connection:
-            if redis_key not in self._set_expires:
+            set_expire = self._set_expires.get(redis_key)
+            if set_expire is None:
                 # An expire is only set if the key didn't exist before.
                 # If this is the first time setting values for this key check if it exists and add it to
                 # `_set_expires` to prevent redundant checks for subsequent uses with items from the same page.
-                self._set_expires.add(redis_key)
                 needs_expire = not await connection.exists(redis_key)
+
+            elif time.monotonic() - set_expire > WEEK_SECONDS:
+                # If we got here the key expired in redis and we can be sure it doesn't exist.
+                needs_expire = True
+                del self._set_expires[redis_key]
+
+            self._set_expires[redis_key] = time.monotonic()
 
             await connection.hset(redis_key, item.symbol_id, value)
             if needs_expire:
