@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import fnmatch
 from typing import Optional, TYPE_CHECKING
 
 from async_rediscache.types.base import RedisObject, namespace_lock
@@ -49,12 +50,15 @@ class DocRedisCache(RedisObject):
     @namespace_lock
     async def delete(self, package: str) -> bool:
         """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
+        pattern = f"{self.namespace}:{package}:*"
+
         with await self._get_pool_connection() as connection:
             package_keys = [
-                package_key async for package_key in connection.iscan(match=f"{self.namespace}:{package}:*")
+                package_key async for package_key in connection.iscan(match=pattern)
             ]
             if package_keys:
                 await connection.delete(*package_keys)
+                self._set_expires = {key for key in self._set_expires if not fnmatch.fnmatchcase(key, pattern)}
                 return True
             return False
 
