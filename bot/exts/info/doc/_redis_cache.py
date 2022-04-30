@@ -7,10 +7,14 @@ from typing import Optional, TYPE_CHECKING
 
 from async_rediscache.types.base import RedisObject, namespace_lock
 
+from bot.log import get_logger
+
 if TYPE_CHECKING:
     from ._cog import DocItem
 
 WEEK_SECONDS = datetime.timedelta(weeks=1).total_seconds()
+
+log = get_logger(__name__)
 
 
 class DocRedisCache(RedisObject):
@@ -34,19 +38,22 @@ class DocRedisCache(RedisObject):
             set_expire = self._set_expires.get(redis_key)
             if set_expire is None:
                 # An expire is only set if the key didn't exist before.
-                # If this is the first time setting values for this key check if it exists and add it to
-                # `_set_expires` to prevent redundant checks for subsequent uses with items from the same page.
-                needs_expire = not await connection.exists(redis_key)
+                ttl = await connection.ttl(redis_key)
 
-            elif time.monotonic() - set_expire > WEEK_SECONDS:
+                if ttl == -1:
+                    log.warning(f"Key `{redis_key}` had no expire set.")
+                if ttl < 0:  # not set or didn't exist
+                    needs_expire = True
+                else:
+                    self._set_expires[redis_key] = time.monotonic() + ttl - .1  # we need this to expire before redis
+
+            elif time.monotonic() > set_expire:
                 # If we got here the key expired in redis and we can be sure it doesn't exist.
                 needs_expire = True
-                del self._set_expires[redis_key]
-
-            self._set_expires[redis_key] = time.monotonic()
 
             await connection.hset(redis_key, item.symbol_id, value)
             if needs_expire:
+                self._set_expires[redis_key] = time.monotonic() + WEEK_SECONDS
                 await connection.expire(redis_key, WEEK_SECONDS)
 
     @namespace_lock
