@@ -73,7 +73,9 @@ class DocRedisCache(RedisObject):
             ]
             if package_keys:
                 await connection.delete(*package_keys)
-                self._set_expires = {key for key in self._set_expires if not fnmatch.fnmatchcase(key, pattern)}
+                self._set_expires = {
+                    key: expire for key, expire in self._set_expires.items() if not fnmatch.fnmatchcase(key, pattern)
+                }
                 return True
             return False
 
