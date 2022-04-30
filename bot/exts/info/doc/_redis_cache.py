@@ -39,22 +39,26 @@ class DocRedisCache(RedisObject):
             if set_expire is None:
                 # An expire is only set if the key didn't exist before.
                 ttl = await connection.ttl(redis_key)
+                log.debug(f"Checked TTL for `{redis_key}`.")
 
                 if ttl == -1:
                     log.warning(f"Key `{redis_key}` had no expire set.")
                 if ttl < 0:  # not set or didn't exist
                     needs_expire = True
                 else:
+                    log.debug(f"Key `{redis_key}` has a {ttl} TTL.")
                     self._set_expires[redis_key] = time.monotonic() + ttl - .1  # we need this to expire before redis
 
             elif time.monotonic() > set_expire:
                 # If we got here the key expired in redis and we can be sure it doesn't exist.
                 needs_expire = True
+                log.debug(f"Key `{redis_key}` expired in internal key cache.")
 
             await connection.hset(redis_key, item.symbol_id, value)
             if needs_expire:
                 self._set_expires[redis_key] = time.monotonic() + WEEK_SECONDS
                 await connection.expire(redis_key, WEEK_SECONDS)
+                log.info(f"Set {redis_key} to expire in a week.")
 
     @namespace_lock
     async def get(self, item: DocItem) -> Optional[str]:
@@ -73,6 +77,7 @@ class DocRedisCache(RedisObject):
             ]
             if package_keys:
                 await connection.delete(*package_keys)
+                log.info(f"Deleted keys from redis: {package_keys}.")
                 self._set_expires = {
                     key: expire for key, expire in self._set_expires.items() if not fnmatch.fnmatchcase(key, pattern)
                 }
