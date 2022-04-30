@@ -1,7 +1,6 @@
 import typing as t
 
 import discord
-from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
 from discord.ext import commands
 
@@ -17,9 +16,6 @@ THREAD_BUMP_ENDPOINT = "bot/bumped-threads"
 
 class ThreadBumper(commands.Cog):
     """Cog that allow users to add the current thread to a list that get reopened on archive."""
-
-    # RedisCache[discord.Thread.id, "sentinel"]
-    threads_to_bump = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
