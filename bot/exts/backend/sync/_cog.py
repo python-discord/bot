@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, Dict
 
 from botcore.site_api import ResponseCodeError
@@ -11,6 +12,7 @@ from bot.exts.backend.sync import _syncers
 from bot.log import get_logger
 
 log = get_logger(__name__)
+MAX_ATTEMPTS = 3
 
 
 class Sync(Cog):
@@ -27,6 +29,22 @@ class Sync(Cog):
         if guild is None:
             return
 
+        attempts = 0
+        while True:
+            attempts += 1
+            if guild.chunked:
+                log.info("Guild was found to be chunked after %d attempt(s).", attempts)
+                break
+
+            if attempts == MAX_ATTEMPTS:
+                log.info("Guild not chunked after %d attempts, calling chunk manually.", MAX_ATTEMPTS)
+                await guild.chunk()
+                break
+
+            log.info("Attempt %d/%d: Guild not yet chunked, checking again in 10s.", attempts, MAX_ATTEMPTS)
+            await asyncio.sleep(10)
+
+        log.info("Starting syncers.")
         for syncer in (_syncers.RoleSyncer, _syncers.UserSyncer):
             await syncer.sync(guild)
 
