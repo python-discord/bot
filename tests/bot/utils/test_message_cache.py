@@ -6,7 +6,7 @@ from tests.helpers import MockMessage
 
 # noinspection SpellCheckingInspection
 class TestMessageCache(unittest.TestCase):
-    """Tests for the MessageCache class in the `bot.utils.caching` module."""
+    """Tests for the MessageCache class in the `bot.utils.message_cache` module."""
 
     def test_first_append_sets_the_first_value(self):
         """Test if the first append adds the message to the first cell."""
