@@ -20,11 +20,7 @@ class PythonEnhancementProposals(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: dict[int, dict[str, Optional[str]]] = {}
-        self.last_refreshed_peps = datetime.now()
-
-    async def cog_load(self) -> None:
-        """Carry out cog asynchronous initialisation."""
-        await self.refresh_pep_data()
+        self.last_refreshed_peps: Optional[datetime] = None
 
     async def refresh_pep_data(self) -> None:
         """Refresh PEP data."""
@@ -34,7 +30,7 @@ class PythonEnhancementProposals(Cog):
         # Wait until HTTP client is available
         await self.bot.wait_until_ready()
 
-        log.trace("Started refreshing PEPs data.")
+        log.trace("Started refreshing PEP data.")
         async with self.bot.http_session.get(PEP_API_URL) as resp:
             if resp.status != 200:
                 log.warning(
@@ -69,11 +65,13 @@ class PythonEnhancementProposals(Cog):
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
         if (
-            pep_number not in self.peps
-            and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now()
-            and len(str(pep_number)) < 5
+            self.last_refreshed_peps is None or (
+                pep_number not in self.peps
+                and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now()
+                and len(str(pep_number)) < 5
+            )
         ):
-            await self.refresh_peps_urls()
+            await self.refresh_pep_data()
 
         if pep_number not in self.peps:
             log.trace(f"PEP {pep_number} was not found")
