@@ -579,7 +579,7 @@ class Filtering(Cog):
         invites = [m.group("invite") for m in DISCORD_INVITE.finditer(text)]
         invite_data = dict()
         for invite in invites:
-            invite = urllib.parse.quote_plus(invite)
+            invite = urllib.parse.quote_plus(invite.rstrip("/"))
             if invite in invite_data:
                 continue
 
