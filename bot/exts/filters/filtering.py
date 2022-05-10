@@ -1,6 +1,7 @@
 import asyncio
 import re
 import unicodedata
+import urllib.parse
 from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
@@ -565,6 +566,7 @@ class Filtering(Cog):
 
         If any are detected, a dictionary of invite data is returned, with a key per invite.
         If none are detected, False is returned.
+        If we are unable to process an invite, True is returned.
 
         Attempts to catch some of common ways to try to cheat the system.
         """
@@ -577,6 +579,7 @@ class Filtering(Cog):
         invites = [m.group("invite") for m in DISCORD_INVITE.finditer(text)]
         invite_data = dict()
         for invite in invites:
+            invite = urllib.parse.quote_plus(invite)
             if invite in invite_data:
                 continue
 

@@ -10,7 +10,7 @@ python = "3.9.*"
 
 "discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/5a06fa5f3e28d2b7191722e1a84c541560008aea.zip"}
 # See https://bot-core.pythondiscord.com/ for docs.
-bot-core = {url = "https://github.com/python-discord/bot-core/archive/refs/tags/v6.4.0.zip", extras = ["async-rediscache"]}
+bot-core = {url = "https://github.com/python-discord/bot-core/archive/refs/tags/v7.0.0.zip", extras = ["async-rediscache"]}
 
 aiodns = "3.0.0"
 aiohttp = "3.8.1"
