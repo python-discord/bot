@@ -13,6 +13,7 @@ from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 
@@ -57,17 +58,28 @@ class ModPings(Cog):
 
         log.trace("Applying the moderators role to the mod team where necessary.")
         for mod in mod_team.members:
-            if mod in pings_on:  # Make sure that on-duty mods aren't in the cache.
+            if mod in pings_on:  # Make sure that on-duty mods aren't in the redis cache.
                 if mod.id in pings_off:
                     await self.pings_off_mods.delete(mod.id)
                 continue
 
-            # Keep the role off only for those in the cache.
+            # Keep the role off only for those in the redis cache.
             if mod.id not in pings_off:
                 await self.reapply_role(mod)
             else:
                 expiry = isoparse(pings_off[mod.id])
                 self._role_scheduler.schedule_at(expiry, mod.id, self.reapply_role(mod))
+
+        # At this stage every entry in `pings_off` is expected to have a scheduled task, but that might not be the case
+        # if the discord.py cache is missing members, or if the ID belongs to a former moderator.
+        for mod_id, expiry_iso in pings_off.items():
+            if mod_id not in self._role_scheduler:
+                mod = await get_or_fetch_member(self.guild, mod_id)
+                # Make sure the member is still a moderator and doesn't have the pingable role.
+                if mod is None or mod.get_role(Roles.mod_team) is None or mod.get_role(Roles.moderators) is not None:
+                    await self.pings_off_mods.delete(mod_id)
+                else:
+                    self._role_scheduler.schedule_at(isoparse(expiry_iso), mod_id, self.reapply_role(mod))
 
     async def reschedule_modpings_schedule(self) -> None:
         """Reschedule moderators schedule ping."""
