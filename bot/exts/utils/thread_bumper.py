@@ -2,6 +2,7 @@ import typing as t
 
 import discord
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
 from discord.ext import commands
 
 from bot import constants
@@ -11,6 +12,7 @@ from bot.pagination import LinePaginator
 from bot.utils import channel
 
 log = get_logger(__name__)
+THREAD_BUMP_ENDPOINT = "bot/bumped-threads"
 
 
 class ThreadBumper(commands.Cog):
@@ -21,6 +23,23 @@ class ThreadBumper(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    async def thread_exists_in_site(self, thread_id: int) -> bool:
+        """Return whether the given thread_id exists in the site api's bump list."""
+        # If the thread exists, site returns a 204 with no content.
+        # Due to this, `api_client.request()` cannot be used, as it always attempts to decode the response as json.
+        # Instead, call the site manually using the api_client's session, to use the auth token logic in the wrapper.
+
+        async with self.bot.api_client.session.get(
+            f"{self.bot.api_client._url_for(THREAD_BUMP_ENDPOINT)}/{thread_id}"
+        ) as response:
+            if response.status == 204:
+                return True
+            elif response.status == 404:
+                return False
+            else:
+                # A status other than 204/404 is undefined behaviour from site. Raise error for investigation.
+                raise ResponseCodeError(response, response.text())
 
     async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
         """
@@ -45,7 +64,7 @@ class ThreadBumper(commands.Cog):
                     thread.name,
                     thread.id
                 )
-                await self.threads_to_bump.delete(thread.id)
+                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
             else:
                 await thread.edit(archived=False)
 
@@ -54,18 +73,23 @@ class ThreadBumper(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         threads_to_maybe_bump = []
-        for thread_id, _ in await self.threads_to_bump.items():
+        for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT):
             try:
                 thread = await channel.get_or_fetch_channel(thread_id)
             except discord.NotFound:
                 log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
-                await self.threads_to_bump.delete(thread_id)
+                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
+                continue
+
+            if not isinstance(thread, discord.Thread):
+                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
                 continue
 
             if thread.archived:
                 threads_to_maybe_bump.append(thread)
 
-        await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
+        if threads_to_maybe_bump:
+            await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
 
     @commands.group(name="bump")
     async def thread_bump_group(self, ctx: commands.Context) -> None:
@@ -82,10 +106,10 @@ class ThreadBumper(commands.Cog):
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
 
-        if await self.threads_to_bump.contains(thread.id):
+        if await self.thread_exists_in_site(thread.id):
             raise commands.BadArgument("This thread is already in the bump list.")
 
-        await self.threads_to_bump.set(thread.id, "sentinel")
+        await self.bot.api_client.post(THREAD_BUMP_ENDPOINT, data={"thread_id": thread.id})
         await ctx.send(f":ok_hand:{thread.mention} has been added to the bump list.")
 
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
@@ -97,21 +121,21 @@ class ThreadBumper(commands.Cog):
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
 
-        if not await self.threads_to_bump.contains(thread.id):
+        if not await self.thread_exists_in_site(thread.id):
             raise commands.BadArgument("This thread is not in the bump list.")
 
-        await self.threads_to_bump.delete(thread.id)
+        await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
         await ctx.send(f":ok_hand: {thread.mention} has been removed from the bump list.")
 
     @thread_bump_group.command(name="list", aliases=("get",))
     async def list_all_threads_in_bump_list(self, ctx: commands.Context) -> None:
         """List all the threads in the bump list."""
-        lines = [f"<#{k}>" for k, _ in await self.threads_to_bump.items()]
+        lines = [f"<#{thread_id}>" for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT)]
         embed = discord.Embed(
             title="Threads in the bump list",
             colour=constants.Colours.blue
         )
-        await LinePaginator.paginate(lines, ctx, embed)
+        await LinePaginator.paginate(lines, ctx, embed, max_lines=10)
 
     @commands.Cog.listener()
     async def on_thread_update(self, _: discord.Thread, after: discord.Thread) -> None:
@@ -123,7 +147,7 @@ class ThreadBumper(commands.Cog):
         if not after.archived:
             return
 
-        if await self.threads_to_bump.contains(after.id):
+        if await self.thread_exists_in_site(after.id):
             await self.unarchive_threads_not_manually_archived([after])
 
     async def cog_check(self, ctx: commands.Context) -> bool:
