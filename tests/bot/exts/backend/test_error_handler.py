@@ -477,11 +477,11 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.exts.backend.error_handler.log")
     async def test_handle_api_error(self, log_mock):
-        """Should `ctx.send` on HTTP error codes, `log.debug|warning` depends on code."""
+        """Should `ctx.send` on HTTP error codes, and log at correct level."""
         test_cases = (
             {
                 "error": ResponseCodeError(AsyncMock(status=400)),
-                "log_level": "debug"
+                "log_level": "error"
             },
             {
                 "error": ResponseCodeError(AsyncMock(status=404)),
@@ -505,6 +505,8 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.send.assert_awaited_once()
                 if case["log_level"] == "warning":
                     log_mock.warning.assert_called_once()
+                elif case["log_level"] == "error":
+                    log_mock.error.assert_called_once()
                 else:
                     log_mock.debug.assert_called_once()
 
