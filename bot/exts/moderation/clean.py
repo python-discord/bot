@@ -486,8 +486,8 @@ class Clean(Cog):
 
         await self._clean_messages(ctx, channels, bots_only, users, regex, first_limit, second_limit)
 
-    @clean_group.command(name="user", aliases=["users"])
-    async def clean_user(
+    @clean_group.command(name="users", aliases=["user"])
+    async def clean_users(
         self,
         ctx: Context,
         users: Greedy[User],
@@ -496,7 +496,7 @@ class Clean(Cog):
         channels: CleanChannels = None
     ) -> None:
         """
-        Delete messages posted by the provided user, stop cleaning after reaching `message_or_time`.
+        Delete messages posted by the provided users, stop cleaning after reaching `message_or_time`.
 
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
