@@ -501,19 +501,25 @@ class Clean(Cog):
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
 
-        If a message is specified, `channels` cannot be specified.
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
         await self._clean_messages(ctx, users=[user], channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
     async def clean_bots(self, ctx: Context, message_or_time: CleanLimit, *, channels: CleanChannels = None) -> None:
         """
-        Delete all messages posted by a bot, stop cleaning after traversing `traverse` messages.
+        Delete all messages posted by a bot, stop cleaning after reaching `message_or_time`.
 
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
 
-        If a message is specified, `channels` cannot be specified.
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
         await self._clean_messages(ctx, bots_only=True, channels=channels, first_limit=message_or_time)
 
@@ -531,11 +537,21 @@ class Clean(Cog):
 
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
-        If a message is specified, `channels` cannot be specified.
 
-        The pattern must be provided enclosed in backticks.
-        If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
-        For example: `[0-9]`
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
+
+        The `regex` pattern must be provided enclosed in backticks, that will make it appear as a code section.
+
+        For example: \u02CB[0-9]\u02CB, which should appear as `[0-9]`.
+
+        If the `regex` pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
+
+        For example: "\u02CB[0-9]\u02CB", which should appear as "`[0-9]`".
+
+        Do not copy and paste the backticks from the examples, they are special unicode characters that will not work.
         """
         await self._clean_messages(ctx, regex=regex, channels=channels, first_limit=message_or_time)
 
@@ -550,7 +566,11 @@ class Clean(Cog):
         Delete all messages until a certain limit.
 
         A limit can be either a message, and ISO date-time string, or a time delta.
-        If a message is specified, `channel` cannot be specified.
+
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
         await self._clean_messages(
             ctx,
@@ -573,7 +593,10 @@ class Clean(Cog):
         A limit can be either a message, and ISO date-time string, or a time delta.
 
         If two messages are specified, they both must be in the same channel.
-        If a message is specified, `channel` cannot be specified.
+        The cleanup will be limited to the channel the messages are in.
+
+        If two timedeltas or ISO datetimes are specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
         await self._clean_messages(
             ctx,
