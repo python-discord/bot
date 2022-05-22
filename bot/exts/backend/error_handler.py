@@ -284,8 +284,11 @@ class ErrorHandler(Cog):
             await ctx.send("There does not seem to be anything matching your query.")
             ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
-            content = await e.response.json()
-            log.error(f"API responded with 400 for command {ctx.command}: %r.", content)
+            log.error(
+                "API responded with 400 for command %s: %r.",
+                ctx.command,
+                e.response_json or e.response_text,
+            )
             await ctx.send("According to the API, your request is malformed.")
             ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
