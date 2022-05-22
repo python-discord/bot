@@ -31,10 +31,11 @@ async def send_to_paste_service(contents: str, *, extension: str = "", max_lengt
     """
     extension = extension and f".{extension}"
 
+    max_size = min(max_length, MAX_PASTE_LENGTH)
     contents_size = len(contents.encode())
-    if contents_size > min(max_length, MAX_PASTE_LENGTH):
-        log.info("Contents too large to send to paste service. ")
-        raise PasteTooLongError(f"Contents of size {contents_size} greater than maximum size {MAX_PASTE_LENGTH}")
+    if contents_size > max_size:
+        log.info("Contents too large to send to paste service.")
+        raise PasteTooLongError(f"Contents of size {contents_size} greater than maximum size {max_size}")
 
     log.debug(f"Sending contents of size {contents_size} bytes to paste service.")
     paste_url = URLs.paste_service.format(key="documents")
