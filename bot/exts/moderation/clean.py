@@ -490,7 +490,7 @@ class Clean(Cog):
     async def clean_user(
         self,
         ctx: Context,
-        user: User,
+        users: Greedy[User],
         message_or_time: CleanLimit,
         *,
         channels: CleanChannels = None
@@ -503,7 +503,7 @@ class Clean(Cog):
 
         If a message is specified, `channels` cannot be specified.
         """
-        await self._clean_messages(ctx, users=[user], channels=channels, first_limit=message_or_time)
+        await self._clean_messages(ctx, users=users, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
     async def clean_bots(self, ctx: Context, message_or_time: CleanLimit, *, channels: CleanChannels = None) -> None:
