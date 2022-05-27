@@ -443,7 +443,7 @@ class Clean(Cog):
         if log_url and is_mod_channel(ctx.channel):
             try:
                 await ctx.reply(success_message)
-            except errors.NotFound:
+            except errors.HTTPException:
                 await ctx.send(success_message)
         elif log_url:
             if mods := self.bot.get_channel(Channels.mods):
