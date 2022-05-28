@@ -149,7 +149,13 @@ class Reminders(Cog):
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def try_send_reminder(self, reminder: dict, *, late: bool = False) -> None:
-        """Validate reminder, and call sender."""
+        """
+        Try multiple times to validate the reminder and then send it.
+
+        A reminder is valid if its author and destination channel can be fetched. If the channel is
+        not found, abort immediately without retrying. If the author is not found, retry in an hour.
+        After 3 tries, give up and delete the reminder.
+        """
         while True:
             channel = self.bot.get_channel(reminder['channel_id'])
             if not channel:
@@ -188,7 +194,11 @@ class Reminders(Cog):
                 await asyncio.sleep(60 * 60)
 
     async def send_reminder(self, reminder: dict, channel: discord.TextChannel, *, late: bool = False) -> None:
-        """Build the reminder embed, and send it to discord."""
+        """
+        Send the `reminder` to `channel` and delete it from the database.
+
+        Apologise if the reminder is late.
+        """
         embed = discord.Embed()
         if late:
             embed.colour = discord.Colour.red()
