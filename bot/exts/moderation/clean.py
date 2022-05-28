@@ -7,7 +7,7 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
-from discord import Colour, Message, NotFound, TextChannel, User, errors
+from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument
@@ -130,8 +130,8 @@ class Clean(Cog):
         else:
             if channels == "*":
                 channels = {
-                    channel for channel in ctx.guild.channels
-                    if isinstance(channel, TextChannel)
+                    channel for channel in ctx.guild.channels + ctx.guild.threads
+                    if isinstance(channel, (TextChannel, Thread))
                     # Assume that non-public channels are not needed to optimize for speed.
                     and channel.permissions_for(ctx.guild.default_role).view_channel
                 }
