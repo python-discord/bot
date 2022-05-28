@@ -60,7 +60,7 @@ class Reminders(Cog):
 
             # If the reminder is already overdue ...
             if remind_at < now:
-                self.scheduler.schedule(reminder["id"], self.send_reminder(reminder, remind_at))
+                self.scheduler.schedule(reminder["id"], self.try_send_reminder(reminder, remind_at))
             else:
                 self.schedule_reminder(reminder)
 
@@ -127,7 +127,7 @@ class Reminders(Cog):
     def schedule_reminder(self, reminder: dict) -> None:
         """A coroutine which sends the reminder once the time is reached, and cancels the running task."""
         reminder_datetime = isoparse(reminder['expiration'])
-        self.scheduler.schedule_at(reminder_datetime, reminder["id"], self.send_reminder(reminder))
+        self.scheduler.schedule_at(reminder_datetime, reminder["id"], self.try_send_reminder(reminder))
 
     async def _edit_reminder(self, reminder_id: int, payload: dict) -> dict:
         """
@@ -150,7 +150,7 @@ class Reminders(Cog):
         log.trace(f"Scheduling new task #{reminder['id']}")
         self.schedule_reminder(reminder)
 
-    async def send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
+    async def try_send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
         """Validate reminder, and call sender."""
         while True:
             channel = self.bot.get_channel(reminder['channel_id'])
@@ -167,7 +167,7 @@ class Reminders(Cog):
 
             user = await get_or_fetch_user(reminder["author"])
             if user:
-                await self._format_send_reminder(reminder, expected_time, user, channel)
+                await self.send_reminder(reminder, expected_time, user, channel)
                 return
 
             reminder["failures"] += 1
@@ -190,7 +190,7 @@ class Reminders(Cog):
                 await asyncio.sleep(60 * 60)
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
-    async def _format_send_reminder(
+    async def send_reminder(
         self,
         reminder: dict,
         expected_time: t.Optional[datetime],
