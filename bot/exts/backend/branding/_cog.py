@@ -17,7 +17,6 @@ from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, 
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
 from bot.log import get_logger
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 
@@ -127,7 +126,9 @@ class Branding(commands.Cog):
         self.bot = bot
         self.repository = BrandingRepository(bot)
 
-        scheduling.create_task(self.maybe_start_daemon(), event_loop=self.bot.loop)  # Start depending on cache.
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self.maybe_start_daemon()  # Start depending on cache.
 
     # region: Internal logic & state management
 
@@ -294,7 +295,7 @@ class Branding(commands.Cog):
 
         else:
             content = "Python Discord is entering a new event!" if is_notification else None
-            embed = discord.Embed(description=description[:4096], colour=discord.Colour.blurple())
+            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
             embed.set_footer(text=duration[:4096])
 
         await channel.send(content=content, embed=embed)
@@ -413,7 +414,7 @@ class Branding(commands.Cog):
         if should_begin:
             self.daemon_loop.start()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """
         Cancel the daemon in case of cog unload.
 
@@ -573,7 +574,7 @@ class Branding(commands.Cog):
             await ctx.send(embed=resp)
             return
 
-        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.blurple())
+        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.og_blurple())
 
         # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
         first_25 = list(available_events.items())[:25]

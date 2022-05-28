@@ -12,7 +12,6 @@ class HelpCogTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.cog = help.Help(self.bot)
         self.ctx = MockContext(bot=self.bot)
-        self.bot.help_command.context = self.ctx
 
     @autospec(help.CustomHelpCommand, "get_all_help_choices", return_value={"help"}, pass_mocks=False)
     async def test_help_fuzzy_matching(self):

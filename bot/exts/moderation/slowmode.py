@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from dateutil.relativedelta import relativedelta
-from discord import TextChannel
+from discord import TextChannel, Thread
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
@@ -16,9 +16,11 @@ SLOWMODE_MAX_DELAY = 21600  # seconds
 
 COMMONLY_SLOWMODED_CHANNELS = {
     Channels.python_general: "python_general",
-    Channels.discord_py: "discordpy",
+    Channels.discord_bots: "discord_bots",
     Channels.off_topic_0: "ot0",
 }
+
+MessageHolder = Optional[Union[TextChannel, Thread]]
 
 
 class Slowmode(Cog):
@@ -33,19 +35,23 @@ class Slowmode(Cog):
         await ctx.send_help(ctx.command)
 
     @slowmode_group.command(name='get', aliases=['g'])
-    async def get_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
+    async def get_slowmode(self, ctx: Context, channel: MessageHolder) -> None:
         """Get the slowmode delay for a text channel."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
             channel = ctx.channel
 
-        delay = relativedelta(seconds=channel.slowmode_delay)
-        humanized_delay = time.humanize_delta(delay)
+        humanized_delay = time.humanize_delta(seconds=channel.slowmode_delay)
 
         await ctx.send(f'The slowmode delay for {channel.mention} is {humanized_delay}.')
 
     @slowmode_group.command(name='set', aliases=['s'])
-    async def set_slowmode(self, ctx: Context, channel: Optional[TextChannel], delay: DurationDelta) -> None:
+    async def set_slowmode(
+        self,
+        ctx: Context,
+        channel: MessageHolder,
+        delay: Union[DurationDelta, Literal["0s", "0seconds"]],
+    ) -> None:
         """Set the slowmode delay for a text channel."""
         # Use the channel this command was invoked in if one was not given
         if channel is None:
@@ -53,8 +59,10 @@ class Slowmode(Cog):
 
         # Convert `dateutil.relativedelta.relativedelta` to `datetime.timedelta`
         # Must do this to get the delta in a particular unit of time
-        slowmode_delay = time.relativedelta_to_timedelta(delay).total_seconds()
+        if isinstance(delay, str):
+            delay = relativedelta(seconds=0)
 
+        slowmode_delay = time.relativedelta_to_timedelta(delay).total_seconds()
         humanized_delay = time.humanize_delta(delay)
 
         # Ensure the delay is within discord's limits
@@ -81,7 +89,7 @@ class Slowmode(Cog):
             )
 
     @slowmode_group.command(name='reset', aliases=['r'])
-    async def reset_slowmode(self, ctx: Context, channel: Optional[TextChannel]) -> None:
+    async def reset_slowmode(self, ctx: Context, channel: MessageHolder) -> None:
         """Reset the slowmode delay for a text channel to 0 seconds."""
         await self.set_slowmode(ctx, channel, relativedelta(seconds=0))
 
@@ -90,6 +98,6 @@ class Slowmode(Cog):
         return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Slowmode cog."""
-    bot.add_cog(Slowmode(bot))
+    await bot.add_cog(Slowmode(bot))

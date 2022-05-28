@@ -11,13 +11,13 @@ from deepdiff import DeepDiff
 from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
-from discord.utils import escape_markdown
+from discord.utils import escape_markdown, format_dt, snowflake_time
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.messages import format_user
-from bot.utils.time import humanize_delta
 
 log = get_logger(__name__)
 
@@ -41,7 +41,6 @@ class ModLog(Cog, name="ModLog"):
         self.bot = bot
         self._ignored = {event: [] for event in Event}
 
-        self._cached_deletes = []
         self._cached_edits = []
 
     async def upload_log(
@@ -97,6 +96,7 @@ class ModLog(Cog, name="ModLog"):
         footer: t.Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
+        await self.bot.wait_until_guild_available()
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
             description=text[:4093] + "..." if len(text) > 4096 else text
@@ -116,7 +116,7 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"<@&{Roles.moderators}>\n{content}"
+                content = f"<@&{Roles.moderators}> {content}"
             else:
                 content = f"<@&{Roles.moderators}>"
 
@@ -251,7 +251,7 @@ class ModLog(Cog, name="ModLog"):
             message = f"**#{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.hash_blurple, Colour.blurple(),
+            Icons.hash_blurple, Colour.og_blurple(),
             "Channel updated", message
         )
 
@@ -326,7 +326,7 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.crown_blurple, Colour.blurple(),
+            Icons.crown_blurple, Colour.og_blurple(),
             "Role updated", message
         )
 
@@ -376,7 +376,7 @@ class ModLog(Cog, name="ModLog"):
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
-            Icons.guild_update, Colour.blurple(),
+            Icons.guild_update, Colour.og_blurple(),
             "Guild updated", message,
             thumbnail=after.icon.with_static_format("png")
         )
@@ -407,7 +407,7 @@ class ModLog(Cog, name="ModLog"):
         now = datetime.now(timezone.utc)
         difference = abs(relativedelta(now, member.created_at))
 
-        message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
+        message = format_user(member) + "\n\n**Account age:** " + time.humanize_delta(difference)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
@@ -447,7 +447,7 @@ class ModLog(Cog, name="ModLog"):
             return
 
         await self.send_log_message(
-            Icons.user_unban, Colour.blurple(),
+            Icons.user_unban, Colour.og_blurple(),
             "User unbanned", format_user(member),
             thumbnail=member.display_avatar.url,
             channel_id=Channels.mod_log
@@ -512,7 +512,7 @@ class ModLog(Cog, name="ModLog"):
 
         await self.send_log_message(
             icon_url=Icons.user_update,
-            colour=Colour.blurple(),
+            colour=Colour.og_blurple(),
             title="Member updated",
             text=message,
             thumbnail=after.display_avatar.url,
@@ -552,22 +552,20 @@ class ModLog(Cog, name="ModLog"):
 
         return channel.id in GuildConstant.modlog_blacklist
 
-    @Cog.listener()
-    async def on_message_delete(self, message: discord.Message) -> None:
-        """Log message delete event to message change log."""
+    async def log_cached_deleted_message(self, message: discord.Message) -> None:
+        """
+        Log the message's details to message change log.
+
+        This is called when a cached message is deleted.
+        """
         channel = message.channel
         author = message.author
 
         if self.is_message_blacklisted(message):
             return
 
-        self._cached_deletes.append(message.id)
-
         if message.id in self._ignored[Event.message_delete]:
             self._ignored[Event.message_delete].remove(message.id)
-            return
-
-        if author.bot:
             return
 
         if channel.category:
@@ -575,6 +573,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
@@ -583,6 +582,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
@@ -610,17 +610,15 @@ class ModLog(Cog, name="ModLog"):
             channel_id=Channels.message_log
         )
 
-    @Cog.listener()
-    async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
-        """Log raw message delete event to message change log."""
+    async def log_uncached_deleted_message(self, event: discord.RawMessageDeleteEvent) -> None:
+        """
+        Log the message's details to message change log.
+
+        This is called when a message absent from the cache is deleted.
+        Hence, the message contents aren't logged.
+        """
+        await self.bot.wait_until_guild_available()
         if self.is_channel_ignored(event.channel_id):
-            return
-
-        await asyncio.sleep(1)  # Wait here in case the normal event was fired
-
-        if event.message_id in self._cached_deletes:
-            # It was in the cache and the normal event was fired, so we can just ignore it
-            self._cached_deletes.remove(event.message_id)
             return
 
         if event.message_id in self._ignored[Event.message_delete]:
@@ -633,6 +631,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
+                f"**Sent at:** {format_dt(snowflake_time(event.message_id))}\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
@@ -640,6 +639,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
+                f"**Sent at:** {format_dt(snowflake_time(event.message_id))}\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
@@ -650,6 +650,14 @@ class ModLog(Cog, name="ModLog"):
             response,
             channel_id=Channels.message_log
         )
+
+    @Cog.listener()
+    async def on_raw_message_delete(self, event: discord.RawMessageDeleteEvent) -> None:
+        """Log message deletions to message change log."""
+        if event.cached_message is not None:
+            await self.log_cached_deleted_message(event.cached_message)
+        else:
+            await self.log_uncached_deleted_message(event)
 
     @Cog.listener()
     async def on_message_edit(self, msg_before: discord.Message, msg_after: discord.Message) -> None:
@@ -709,7 +717,7 @@ class ModLog(Cog, name="ModLog"):
             # datetime as the baseline and create a human-readable delta between this edit event
             # and the last time the message was edited
             timestamp = msg_before.edited_at
-            delta = humanize_delta(relativedelta(msg_after.edited_at, msg_before.edited_at))
+            delta = time.humanize_delta(msg_after.edited_at, msg_before.edited_at)
             footer = f"Last edited {delta} ago"
         else:
             # Message was not previously edited, use the created_at datetime as the baseline, no
@@ -718,13 +726,17 @@ class ModLog(Cog, name="ModLog"):
             footer = None
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited", response,
+            Icons.message_edit, Colour.og_blurple(), "Message edited", response,
             channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
         )
 
     @Cog.listener()
     async def on_raw_message_edit(self, event: discord.RawMessageUpdateEvent) -> None:
         """Log raw message edit event to message change log."""
+        if event.guild_id is None:
+            return  # ignore DM edits
+
+        await self.bot.wait_until_guild_available()
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))
             message = await channel.fetch_message(event.message_id)
@@ -761,22 +773,26 @@ class ModLog(Cog, name="ModLog"):
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (Before)",
+            Icons.message_edit, Colour.og_blurple(), "Message edited (Before)",
             before_response, channel_id=Channels.message_log
         )
 
         await self.send_log_message(
-            Icons.message_edit, Colour.blurple(), "Message edited (After)",
+            Icons.message_edit, Colour.og_blurple(), "Message edited (After)",
             after_response, channel_id=Channels.message_log
         )
 
     @Cog.listener()
     async def on_thread_update(self, before: Thread, after: Thread) -> None:
         """Log thread archiving, un-archiving and name edits."""
+        if self.is_channel_ignored(after.id):
+            log.trace("Ignoring update of thread %s (%d)", after.mention, after.id)
+            return
+
         if before.name != after.name:
             await self.send_log_message(
                 Icons.hash_blurple,
-                Colour.blurple(),
+                Colour.og_blurple(),
                 "Thread name edited",
                 (
                     f"Thread {after.mention} (`{after.id}`) from {after.parent.mention} (`{after.parent.id}`): "
@@ -809,6 +825,10 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_thread_delete(self, thread: Thread) -> None:
         """Log thread deletion."""
+        if self.is_channel_ignored(thread.id):
+            log.trace("Ignoring deletion of thread %s (%d)", thread.mention, thread.id)
+            return
+
         await self.send_log_message(
             Icons.hash_red,
             Colours.soft_red,
@@ -820,11 +840,10 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_thread_join(self, thread: Thread) -> None:
+    async def on_thread_create(self, thread: Thread) -> None:
         """Log thread creation."""
-        # If we are in the thread already we can most probably assume we already logged it?
-        # We don't really have a better way of doing this since the API doesn't make any difference between the two
-        if thread.me:
+        if self.is_channel_ignored(thread.id):
+            log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
             return
 
         await self.send_log_message(
@@ -870,7 +889,7 @@ class ModLog(Cog, name="ModLog"):
         diff_values = {**diff.get("values_changed", {}), **diff.get("type_changes", {})}
 
         icon = Icons.voice_state_blue
-        colour = Colour.blurple()
+        colour = Colour.og_blurple()
         changes = []
 
         for attr, values in diff_values.items():
@@ -912,6 +931,6 @@ class ModLog(Cog, name="ModLog"):
         )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModLog cog."""
-    bot.add_cog(ModLog(bot))
+    await bot.add_cog(ModLog(bot))

@@ -4,13 +4,15 @@ import types
 import typing as t
 from contextlib import suppress
 
+import arrow
+from botcore.utils import scheduling
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger
-from bot.utils import function, scheduling
+from bot.utils import function
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
 from bot.utils.function import command_wraps
 
@@ -188,7 +190,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
     """
     def decorator(func: types.FunctionType) -> types.FunctionType:
         @command_wraps(func)
-        async def wrapper(*args, **kwargs) -> None:
+        async def wrapper(*args, **kwargs) -> t.Any:
             log.trace(f"{func.__name__}: respect role hierarchy decorator called")
 
             bound_args = function.get_bound_args(func, args, kwargs)
@@ -196,8 +198,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
             if not isinstance(target, Member):
                 log.trace("The target is not a discord.Member; skipping role hierarchy check.")
-                await func(*args, **kwargs)
-                return
+                return await func(*args, **kwargs)
 
             ctx = function.get_arg_value(1, bound_args)
             cmd = ctx.command.name
@@ -214,7 +215,7 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                 )
             else:
                 log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
-                await func(*args, **kwargs)
+                return await func(*args, **kwargs)
         return wrapper
     return decorator
 
@@ -236,4 +237,36 @@ def mock_in_debug(return_value: t.Any) -> t.Callable:
                 return return_value
             return await func(*args, **kwargs)
         return wrapped
+    return decorator
+
+
+def ensure_future_timestamp(timestamp_arg: function.Argument) -> t.Callable:
+    """
+    Ensure the timestamp argument is in the future.
+
+    If the condition fails, send a warning to the invoking context.
+
+    `timestamp_arg` is the keyword name or position index of the parameter of the decorated command
+    whose value is the target timestamp.
+
+    This decorator must go before (below) the `command` decorator.
+    """
+    def decorator(func: types.FunctionType) -> types.FunctionType:
+        @command_wraps(func)
+        async def wrapper(*args, **kwargs) -> t.Any:
+            bound_args = function.get_bound_args(func, args, kwargs)
+            target = function.get_arg_value(timestamp_arg, bound_args)
+
+            ctx = function.get_arg_value(1, bound_args)
+
+            try:
+                is_future = target > arrow.utcnow()
+            except TypeError:
+                is_future = True
+            if not is_future:
+                await ctx.send(":x: Provided timestamp is in the past.")
+                return
+
+            return await func(*args, **kwargs)
+        return wrapper
     return decorator

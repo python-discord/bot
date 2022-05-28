@@ -5,19 +5,19 @@ from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import get_time_delta
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
@@ -181,7 +181,7 @@ class TalentPool(Cog, name="Talentpool"):
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data['inserted_at']
-            line += f", added {get_time_delta(inserted_at)}"
+            line += f", added {time.format_relative(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"
             if user_data['reviewed']:
@@ -237,7 +237,7 @@ class TalentPool(Cog, name="Talentpool"):
             if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
                 await ctx.send(
                     f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
-                    "Use `!tp forcenominate` to override this check."
+                    f"Use `{BotConfig.prefix}tp forcenominate` to override this check."
                 )
             else:
                 await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")
@@ -260,7 +260,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response
@@ -445,7 +445,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """Edits the unnominate reason for the nomination with the given `id`."""
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the end reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the end reason is {REASON_MAX_CHARS}.")
             return
 
         try:
@@ -483,12 +483,9 @@ class TalentPool(Cog, name="Talentpool"):
     @has_any_role(*MODERATION_ROLES)
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
-        review = (await self.reviewer.make_review(user_id))[0]
-        if review:
-            file = discord.File(StringIO(review), f"{user_id}_review.md")
-            await ctx.send(file=file)
-        else:
-            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
+        review, _, _ = await self.reviewer.make_review(user_id)
+        file = discord.File(StringIO(review), f"{user_id}_review.md")
+        await ctx.send(file=file)
 
     @nomination_group.command(aliases=('review',))
     @has_any_role(*MODERATION_ROLES)
@@ -501,7 +498,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
-    async def on_member_ban(self, guild: Guild, user: Union[MemberOrUser]) -> None:
+    async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
         """Remove `user` from the talent pool after they are banned."""
         await self.end_nomination(user.id, "User was banned.")
 
@@ -514,6 +511,9 @@ class TalentPool(Cog, name="Talentpool"):
         Adding an incident reaction will archive the message.
         """
         if payload.channel_id != Channels.nomination_voting:
+            return
+
+        if payload.user_id == self.bot.user.id:
             return
 
         message: PartialMessage = self.bot.get_channel(payload.channel_id).get_partial_message(payload.message_id)
@@ -562,7 +562,7 @@ class TalentPool(Cog, name="Talentpool"):
             actor = await get_or_fetch_member(guild, actor_id)
 
             reason = site_entry["reason"] or "*None*"
-            created = time.format_infraction(site_entry["inserted_at"])
+            created = time.discord_timestamp(site_entry["inserted_at"])
             entries.append(
                 f"Actor: {actor.mention if actor else actor_id}\nCreated: {created}\nReason: {reason}"
             )
@@ -571,7 +571,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         active = nomination_object["active"]
 
-        start_date = time.format_infraction(nomination_object["inserted_at"])
+        start_date = time.discord_timestamp(nomination_object["inserted_at"])
         if active:
             lines = textwrap.dedent(
                 f"""
@@ -585,7 +585,7 @@ class TalentPool(Cog, name="Talentpool"):
                 """
             )
         else:
-            end_date = time.format_infraction(nomination_object["ended_at"])
+            end_date = time.discord_timestamp(nomination_object["ended_at"])
             lines = textwrap.dedent(
                 f"""
                 ===============
@@ -603,7 +603,6 @@ class TalentPool(Cog, name="Talentpool"):
 
         return lines.strip()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancels all review tasks on cog unload."""
-        super().cog_unload()
         self.reviewer.cancel_all()
