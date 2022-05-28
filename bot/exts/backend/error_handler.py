@@ -1,3 +1,4 @@
+import copy
 import difflib
 
 from botcore.site_api import ResponseCodeError
@@ -189,15 +190,14 @@ class ErrorHandler(Cog):
 
         Return True if command was invoked, else False
         """
-        old_message_content = ctx.message.content
+        msg = copy.copy(ctx.message)
 
-        command, sep, end = ctx.message.content.partition("```")
-        ctx.message.content = command + " " + sep + end
-        new_ctx = await self.bot.get_context(ctx.message)
+        command, sep, end = msg.content.partition("```")
+        msg.content = command + " " + sep + end
+        new_ctx = await self.bot.get_context(msg)
 
         eval_command = self.bot.get_command("eval")
         if eval_command is None or new_ctx.command != eval_command:
-            ctx.message.content = old_message_content
             return False
 
         log.debug("Running fixed eval command.")
