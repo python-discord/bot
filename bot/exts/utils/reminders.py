@@ -150,6 +150,7 @@ class Reminders(Cog):
         log.trace(f"Scheduling new task #{reminder['id']}")
         self.schedule_reminder(reminder)
 
+    @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def try_send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
         """Validate reminder, and call sender."""
         while True:
@@ -189,7 +190,6 @@ class Reminders(Cog):
 
                 await asyncio.sleep(60 * 60)
 
-    @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(
         self,
         reminder: dict,
