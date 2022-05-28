@@ -232,8 +232,8 @@ class Reminders(Cog):
             )
             await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
 
-        log.debug(f"Marking reminder #{reminder['id']} as inactive (the user has been reminded).")
-        await self.bot.api_client.patch(f"bot/reminders/{reminder['id']}", json={"active": False})
+        log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
+        await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
