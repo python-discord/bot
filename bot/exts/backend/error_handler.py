@@ -65,6 +65,8 @@ class ErrorHandler(Cog):
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
             if await self.try_silence(ctx):
                 return
+            if await self.try_run_eval(ctx):
+                return
             await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
         elif isinstance(e, errors.UserInputError):
             log.debug(debug_message)
@@ -178,6 +180,31 @@ class ErrorHandler(Cog):
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
+
+    async def try_run_eval(self, ctx: Context) -> bool:
+        """
+        Attempt to run eval command with backticks directly after command.
+
+        For example: !eval```print("hi")```
+
+        Return True if command was invoked, else False
+        """
+        old_message_content = ctx.message.content
+
+        command, sep, end = ctx.message.content.partition("```")
+        ctx.message.content = command + " " + sep + end
+        new_ctx = await self.bot.get_context(ctx.message)
+
+        eval_command = self.bot.get_command("eval")
+        if eval_command is None or new_ctx.command != eval_command:
+            ctx.message.content = old_message_content
+            return False
+
+        log.debug("Running fixed eval command.")
+        new_ctx.invoked_from_error_handler = True
+        await self.bot.invoke(new_ctx)
+
+        return True
 
     async def send_command_suggestion(self, ctx: Context, command_name: str) -> None:
         """Sends user similar commands if any can be found."""
