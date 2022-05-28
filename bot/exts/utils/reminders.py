@@ -64,52 +64,6 @@ class Reminders(Cog):
             else:
                 self.schedule_reminder(reminder)
 
-    async def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, bool, discord.User, discord.TextChannel]:
-        """
-        Ensure reminder author and channel can be fetched otherwise delete the reminder.
-
-        If more than 3 failed attempts at validating this reminder occur, it is deactivated,
-        and the second return value is set to True.
-        """
-        user = await get_or_fetch_user(self.bot, reminder["author"], reminder["failures"])
-        channel = self.bot.get_channel(reminder['channel_id'])
-        is_valid = True
-        abort = False
-        payload = {}
-
-        if not channel:
-            # This is only likely to happen if the channel was deleted.
-            log.warning(
-                f"Deactivating reminder from channel `{reminder['channel_id']}`, as the channel could not be found."
-            )
-
-            is_valid = False
-            abort = True
-            payload = {"active": False, "failures": reminder["failures"] + 1}
-
-        elif not user:
-            is_valid = False
-            failure_info = (
-                f"ID: {reminder['id']} Channel: {reminder['channel_id']} "
-                f"User: {reminder['author']} URL: {reminder['jump_url']}"
-            )
-
-            if reminder["failures"] + 1 >= 3:
-                # Send a warning, and deactivate reminder
-                log.warning(f"Reached maximum attempts for sending the following reminder:\n{failure_info}")
-                payload = {"active": False, "failures": reminder["failures"] + 1}
-                abort = True
-
-            else:
-                # Increment failures and skip
-                log.info(f"Could not fetch the user for the following reminder:\n{failure_info}")
-                payload = {"failures": reminder["failures"] + 1}
-
-        if payload:
-            scheduling.create_task(self.bot.api_client.patch(f"bot/reminders/{reminder['id']}", json=payload))
-
-        return is_valid, abort, user, channel
-
     @staticmethod
     async def _send_confirmation(
         ctx: Context,
@@ -199,22 +153,41 @@ class Reminders(Cog):
     async def send_reminder(self, reminder: dict, expected_time: datetime = None) -> None:
         """Validate reminder, and call sender."""
         while True:
-            is_valid, abort, user, channel = await self.ensure_valid_reminder(reminder)
+            channel = self.bot.get_channel(reminder['channel_id'])
+            if not channel:
+                # This is only likely to happen if the channel was deleted.
+                log.warning(
+                    f"Deleting invalid reminder {reminder['id']}: "
+                    f"channel {reminder['channel_id']} could not be found",
+                    extra=reminder
+                )
 
-            if not is_valid and not abort:
-                # Failed to validate reminder's user, try again in an hour
-                reminder["failures"] += 1
-                await asyncio.sleep(60 * 60)
+                await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
+                return
 
-            elif abort:
-                # Reminder could not be validated after multiple attempts, giving up.
-                # No need to cancel the task too; it'll simply be done once this coroutine returns.
+            user = await get_or_fetch_user(self.bot, reminder["author"])
+            if user:
+                await self._format_send_reminder(reminder, expected_time, user, channel)
+                return
+
+            reminder["failures"] += 1
+            if reminder["failures"] >= 3:
+                # Warn and delete.
+                log.warning(
+                    f"Deleting invalid reminder {reminder['id']}: reached max send attempts",
+                    extra=reminder
+                )
+
+                await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
                 return
             else:
-                # Reminder is valid, continue.
-                break
+                # Increment failures and skip.
+                log.info(f"Couldn't fetch user for reminder {reminder['id']}; trying again in 1 hour")
 
-        await self._format_send_reminder(reminder, expected_time, user, channel)
+                payload = {"failures": reminder["failures"]}
+                await self.bot.api_client.patch(f"bot/reminders/{reminder['id']}", json=payload)
+
+                await asyncio.sleep(60 * 60)
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def _format_send_reminder(
