@@ -57,7 +57,7 @@ class Reminders(Cog):
 
             # If the reminder is already overdue ...
             if remind_at < now:
-                self.scheduler.schedule(reminder["id"], self.try_send_reminder(reminder, remind_at))
+                self.scheduler.schedule(reminder["id"], self.try_send_reminder(reminder, late=True))
             else:
                 self.schedule_reminder(reminder)
 
@@ -148,7 +148,7 @@ class Reminders(Cog):
         self.schedule_reminder(reminder)
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
-    async def try_send_reminder(self, reminder: dict, expected_time: t.Optional[time.Timestamp] = None) -> None:
+    async def try_send_reminder(self, reminder: dict, *, late: bool = False) -> None:
         """Validate reminder, and call sender."""
         while True:
             channel = self.bot.get_channel(reminder['channel_id'])
@@ -165,7 +165,7 @@ class Reminders(Cog):
 
             user = await get_or_fetch_user(reminder["author"])
             if user:
-                await self.send_reminder(reminder, expected_time, channel)
+                await self.send_reminder(reminder, channel, late=late)
                 return
 
             reminder["failures"] += 1
@@ -187,15 +187,10 @@ class Reminders(Cog):
 
                 await asyncio.sleep(60 * 60)
 
-    async def send_reminder(
-        self,
-        reminder: dict,
-        expected_time: t.Optional[time.Timestamp],
-        channel: discord.TextChannel
-    ) -> None:
+    async def send_reminder(self, reminder: dict, channel: discord.TextChannel, *, late: bool = False) -> None:
         """Build the reminder embed, and send it to discord."""
         embed = discord.Embed()
-        if expected_time:
+        if late:
             embed.colour = discord.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
