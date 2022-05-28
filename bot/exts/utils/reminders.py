@@ -165,7 +165,7 @@ class Reminders(Cog):
                 await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
                 return
 
-            user = await get_or_fetch_user(self.bot, reminder["author"])
+            user = await get_or_fetch_user(reminder["author"])
             if user:
                 await self._format_send_reminder(reminder, expected_time, user, channel)
                 return
