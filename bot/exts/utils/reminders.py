@@ -167,7 +167,7 @@ class Reminders(Cog):
 
             user = await get_or_fetch_user(reminder["author"])
             if user:
-                await self.send_reminder(reminder, expected_time, user, channel)
+                await self.send_reminder(reminder, expected_time, channel)
                 return
 
             reminder["failures"] += 1
@@ -194,7 +194,6 @@ class Reminders(Cog):
         self,
         reminder: dict,
         expected_time: t.Optional[datetime],
-        user: discord.User,
         channel: discord.TextChannel
     ) -> None:
         """Build the reminder embed, and send it to discord."""
@@ -230,7 +229,7 @@ class Reminders(Cog):
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
             )
-            await channel.send(content=f"{user.mention} {additional_mentions}", embed=embed)
+            await channel.send(content=f"<@{reminder['author']}> {additional_mentions}", embed=embed)
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
