@@ -7,7 +7,7 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
-from discord import Colour, Message, NotFound, TextChannel, User, errors
+from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument
@@ -130,8 +130,8 @@ class Clean(Cog):
         else:
             if channels == "*":
                 channels = {
-                    channel for channel in ctx.guild.channels
-                    if isinstance(channel, TextChannel)
+                    channel for channel in ctx.guild.channels + ctx.guild.threads
+                    if isinstance(channel, (TextChannel, Thread))
                     # Assume that non-public channels are not needed to optimize for speed.
                     and channel.permissions_for(ctx.guild.default_role).view_channel
                 }
@@ -443,7 +443,7 @@ class Clean(Cog):
         if log_url and is_mod_channel(ctx.channel):
             try:
                 await ctx.reply(success_message)
-            except errors.NotFound:
+            except errors.HTTPException:
                 await ctx.send(success_message)
         elif log_url:
             if mods := self.bot.get_channel(Channels.mods):
@@ -486,24 +486,24 @@ class Clean(Cog):
 
         await self._clean_messages(ctx, channels, bots_only, users, regex, first_limit, second_limit)
 
-    @clean_group.command(name="user", aliases=["users"])
-    async def clean_user(
+    @clean_group.command(name="users", aliases=["user"])
+    async def clean_users(
         self,
         ctx: Context,
-        user: User,
+        users: Greedy[User],
         message_or_time: CleanLimit,
         *,
         channels: CleanChannels = None
     ) -> None:
         """
-        Delete messages posted by the provided user, stop cleaning after reaching `message_or_time`.
+        Delete messages posted by the provided users, stop cleaning after reaching `message_or_time`.
 
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
 
         If a message is specified, `channels` cannot be specified.
         """
-        await self._clean_messages(ctx, users=[user], channels=channels, first_limit=message_or_time)
+        await self._clean_messages(ctx, users=users, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
     async def clean_bots(self, ctx: Context, message_or_time: CleanLimit, *, channels: CleanChannels = None) -> None:
