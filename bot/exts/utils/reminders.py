@@ -173,7 +173,7 @@ class Reminders(Cog):
 
             user = await get_or_fetch_user(reminder["author"])
             if user:
-                await self.send_reminder(reminder, channel, late=late)
+                await self.send_reminder(reminder, channel, late=late or reminder["failures"] > 0)
                 return
 
             reminder["failures"] += 1
