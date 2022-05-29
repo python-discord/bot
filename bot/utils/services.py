@@ -22,13 +22,13 @@ async def send_to_paste_service(contents: str, *, extension: str = "", max_lengt
     """
     Upload `contents` to the paste service.
 
-    `extension` is added to the output URL. `max_length` can be used to limit the allowed contents length
+    Add `extension` to the output URL. Use `max_length` to limit the allowed contents length
     to lower than the maximum allowed by the paste service.
 
-    Raises `ValueError` if `max_length` is greater than the maximum allowed by the paste service.
-    Raises `PasteTooLongError` if contents is too long to upload, and `PasteUploadError` if uploading fails.
+    Raise `ValueError` if `max_length` is greater than the maximum allowed by the paste service.
+    Raise `PasteTooLongError` if `contents` is too long to upload, and `PasteUploadError` if uploading fails.
 
-    Returns the generated URL with the extension.
+    Return the generated URL with the extension.
     """
     if max_length > MAX_PASTE_LENGTH:
         raise ValueError(f"`max_length` must not be greater than {MAX_PASTE_LENGTH}")
@@ -80,4 +80,4 @@ async def send_to_paste_service(contents: str, *, extension: str = "", max_lengt
             f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
         )
 
-    raise PasteUploadError("Failed to upload contents to pastebin")
+    raise PasteUploadError("Failed to upload contents to paste service")

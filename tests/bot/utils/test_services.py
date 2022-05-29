@@ -79,11 +79,12 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
         self.assertLogs("bot.utils", logging.ERROR)
 
     async def test_raises_error_on_too_long_input(self):
-        contents = "a" * (MAX_PASTE_LENGTH+1)
+        """Ensure PasteTooLongError is raised if `contents` is longer than `MAX_PASTE_LENGTH`."""
+        contents = "a" * (MAX_PASTE_LENGTH + 1)
         with self.assertRaises(PasteTooLongError):
             await send_to_paste_service(contents)
 
     async def test_raises_on_too_large_max_length(self):
         """Ensure ValueError is raised if `max_length` passed is greater than `MAX_PASTE_LENGTH`."""
         with self.assertRaises(ValueError):
-            await send_to_paste_service("Hello World!", max_length=MAX_PASTE_LENGTH+1)
+            await send_to_paste_service("Hello World!", max_length=MAX_PASTE_LENGTH + 1)
