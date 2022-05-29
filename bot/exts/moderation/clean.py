@@ -543,15 +543,13 @@ class Clean(Cog):
         If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
         An asterisk can also be used to designate cleanup across all channels.
 
-        The `regex` pattern must be provided enclosed in backticks, that will make it appear as a code section.
+        The `regex` pattern must be provided enclosed in backticks.
 
-        For example: \u02CB[0-9]\u02CB, which should appear as `[0-9]`.
+        For example: \\`[0-9]\\`.
 
         If the `regex` pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
 
-        For example: "\u02CB[0-9]\u02CB", which should appear as "`[0-9]`".
-
-        Do not copy and paste the backticks from the examples, they are special unicode characters that will not work.
+        For example: "\\`[0-9]\\`".
         """
         await self._clean_messages(ctx, regex=regex, channels=channels, first_limit=message_or_time)
 
