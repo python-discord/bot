@@ -26,6 +26,8 @@ log = get_logger(__name__)
 LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
+MAX_SEND_FAILURES = 3
+SEND_RETRY_SECS = 60 * 60  # 1 hour
 
 Mentionable = t.Union[discord.Member, discord.Role]
 ReminderMention = t.Union[UnambiguousUser, discord.Role]
@@ -153,8 +155,8 @@ class Reminders(Cog):
         Try multiple times to validate the reminder and then send it.
 
         A reminder is valid if its author and destination channel can be fetched. If the channel is
-        not found, abort immediately without retrying. If the author is not found, retry in an hour.
-        After 3 tries, give up and delete the reminder.
+        not found, abort immediately without retrying. If the author is not found, retry after
+        SEND_RETRY_SECS seconds. After MAX_SEND_FAILURES tries, give up and delete the reminder.
         """
         while True:
             channel = self.bot.get_channel(reminder['channel_id'])
@@ -175,7 +177,7 @@ class Reminders(Cog):
                 return
 
             reminder["failures"] += 1
-            if reminder["failures"] >= 3:
+            if reminder["failures"] >= MAX_SEND_FAILURES:
                 # Warn and delete.
                 log.warning(
                     f"Deleting invalid reminder {reminder['id']}: reached max send attempts",
@@ -186,12 +188,16 @@ class Reminders(Cog):
                 return
             else:
                 # Increment failures and skip.
-                log.info(f"Couldn't fetch user for reminder {reminder['id']}; trying again in 1 hour")
+                log.info(
+                    f"Couldn't fetch user for reminder {reminder['id']}; "
+                    f"trying again in {SEND_RETRY_SECS} seconds "
+                    f"({reminder['failures']}/{MAX_SEND_FAILURES} attempts)"
+                )
 
                 payload = {"failures": reminder["failures"]}
                 await self.bot.api_client.patch(f"bot/reminders/{reminder['id']}", json=payload)
 
-                await asyncio.sleep(60 * 60)
+                await asyncio.sleep(SEND_RETRY_SECS)
 
     async def send_reminder(self, reminder: dict, channel: discord.TextChannel, *, late: bool = False) -> None:
         """
