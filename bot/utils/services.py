@@ -25,17 +25,20 @@ async def send_to_paste_service(contents: str, *, extension: str = "", max_lengt
     `extension` is added to the output URL. `max_length` can be used to limit the allowed contents length
     to lower than the maximum allowed by the paste service.
 
+    Raises `ValueError` if `max_length` is greater than the maximum allowed by the paste service.
     Raises `PasteTooLongError` if contents is too long to upload, and `PasteUploadError` if uploading fails.
 
     Returns the generated URL with the extension.
     """
+    if max_length > MAX_PASTE_LENGTH:
+        raise ValueError(f"`max_length` must not be greater than {MAX_PASTE_LENGTH}")
+
     extension = extension and f".{extension}"
 
-    max_size = min(max_length, MAX_PASTE_LENGTH)
     contents_size = len(contents.encode())
-    if contents_size > max_size:
+    if contents_size > max_length:
         log.info("Contents too large to send to paste service.")
-        raise PasteTooLongError(f"Contents of size {contents_size} greater than maximum size {max_size}")
+        raise PasteTooLongError(f"Contents of size {contents_size} greater than maximum size {max_length}")
 
     log.debug(f"Sending contents of size {contents_size} bytes to paste service.")
     paste_url = URLs.paste_service.format(key="documents")
