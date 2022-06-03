@@ -119,11 +119,9 @@ class Branding(commands.Cog):
     # Icons and banners in current rotation.
     # Keys (str) are download URLs, values (int) track the amount of times each
     # asset has been used in the current rotation.
-    _cache_icons = RedisCache()
-    _cache_banners = RedisCache()
     asset_caches = types.MappingProxyType({
-        AssetType.ICON: _cache_icons,
-        AssetType.BANNER: _cache_banners
+        AssetType.ICON: RedisCache(namespace="Branding.icon_cache"),
+        AssetType.BANNER: RedisCache(namespace="Branding.banner_cache")
     })
 
     # All available event names & durations. Cached by the daemon nightly; read by the calendar command.
