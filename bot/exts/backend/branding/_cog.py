@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import random
+import types
 import typing as t
 from datetime import timedelta
 from enum import Enum
@@ -120,10 +121,10 @@ class Branding(commands.Cog):
     # asset has been used in the current rotation.
     _cache_icons = RedisCache()
     _cache_banners = RedisCache()
-    asset_caches = {
+    asset_caches = types.MappingProxyType({
         AssetType.ICON: _cache_icons,
         AssetType.BANNER: _cache_banners
-    }
+    })
 
     # All available event names & durations. Cached by the daemon nightly; read by the calendar command.
     cache_events = RedisCache()
