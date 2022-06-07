@@ -13,4 +13,4 @@ Note: Different database libraries support different placeholder styles, e.g. `%
 
 **See Also**
 • [Extended Example with SQLite](https://docs.python.org/3/library/sqlite3.html) (search for "Instead, use the DB-API's parameter substitution")
-• [PEP-249](https://www.python.org/dev/peps/pep-0249) - A specification of how database libraries in Python should work
+• [PEP-249](https://peps.python.org/pep-0249/) - A specification of how database libraries in Python should work

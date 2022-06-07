@@ -6,22 +6,22 @@ from datetime import datetime, timezone
 from ssl import CertificateError
 
 import dateutil.parser
-import dateutil.tz
 import discord
 from aiohttp import ClientConnectorError
+from botcore.site_api import ResponseCodeError
+from botcore.utils import unqualify
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
 
-from bot import exts
-from bot.api import ResponseCodeError
+from bot import exts, instance as bot_instance
 from bot.constants import URLs
 from bot.errors import InvalidInfraction
 from bot.exts.info.doc import _inventory_parser
+from bot.exts.info.tags import TagIdentifier
 from bot.log import get_logger
-from bot.utils.extensions import EXTENSIONS, unqualify
-from bot.utils.regex import INVITE_RE
-from bot.utils.time import parse_duration_string
+from bot.utils import time
 
 if t.TYPE_CHECKING:
     from bot.exts.info.source import SourceType
@@ -71,7 +71,7 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
-        invite_code = INVITE_RE.match(server_invite)
+        invite_code = DISCORD_INVITE.match(server_invite)
         if invite_code:
             response = await ctx.bot.http_session.get(
                 f"{URLs.discord_invite_api}/{invite_code.group('invite')}"
@@ -150,13 +150,13 @@ class Extension(Converter):
 
         argument = argument.lower()
 
-        if argument in EXTENSIONS:
+        if argument in bot_instance.all_extensions:
             return argument
-        elif (qualified_arg := f"{exts.__name__}.{argument}") in EXTENSIONS:
+        elif (qualified_arg := f"{exts.__name__}.{argument}") in bot_instance.all_extensions:
             return qualified_arg
 
         matches = []
-        for ext in EXTENSIONS:
+        for ext in bot_instance.all_extensions:
             if argument == unqualify(ext):
                 matches.append(ext)
 
@@ -286,41 +286,6 @@ class Snowflake(IDConverter):
         return snowflake
 
 
-class TagNameConverter(Converter):
-    """
-    Ensure that a proposed tag name is valid.
-
-    Valid tag names meet the following conditions:
-        * All ASCII characters
-        * Has at least one non-whitespace character
-        * Not solely numeric
-        * Shorter than 127 characters
-    """
-
-    @staticmethod
-    async def convert(ctx: Context, tag_name: str) -> str:
-        """Lowercase & strip whitespace from proposed tag_name & ensure it's valid."""
-        tag_name = tag_name.lower().strip()
-
-        # The tag name has at least one invalid character.
-        if ascii(tag_name)[1:-1] != tag_name:
-            raise BadArgument("Don't be ridiculous, you can't use that character!")
-
-        # The tag name is either empty, or consists of nothing but whitespace.
-        elif not tag_name:
-            raise BadArgument("Tag names should not be empty, or filled with whitespace.")
-
-        # The tag name is longer than 127 characters.
-        elif len(tag_name) > 127:
-            raise BadArgument("Are you insane? That's way too long!")
-
-        # The tag name is ascii but does not contain any letters.
-        elif not any(character.isalpha() for character in tag_name):
-            raise BadArgument("Tag names must contain at least one letter.")
-
-        return tag_name
-
-
 class SourceConverter(Converter):
     """Convert an argument into a help command, tag, command, or cog."""
 
@@ -343,9 +308,10 @@ class SourceConverter(Converter):
 
         if not tags_cog:
             show_tag = False
-        elif argument.lower() in tags_cog._cache:
-            return argument.lower()
-
+        else:
+            identifier = TagIdentifier.from_string(argument.lower())
+            if identifier in tags_cog.tags:
+                return identifier
         escaped_arg = escape_markdown(argument)
 
         raise BadArgument(
@@ -371,7 +337,7 @@ class DurationDelta(Converter):
 
         The units need to be provided in descending order of magnitude.
         """
-        if not (delta := parse_duration_string(duration)):
+        if not (delta := time.parse_duration_string(duration)):
             raise BadArgument(f"`{duration}` is not a valid duration string.")
 
         return delta
@@ -416,8 +382,8 @@ class Age(DurationDelta):
 class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
-    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-<>"
-    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞"
+    ALLOWED_CHARACTERS = r"ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-<>\/"
+    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞⧹⧸"
 
     @classmethod
     def translate_name(cls, name: str, *, from_unicode: bool = True) -> str:
@@ -487,9 +453,9 @@ class ISODateTime(Converter):
             raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
 
         if dt.tzinfo:
-            dt = dt.astimezone(dateutil.tz.UTC)
+            dt = dt.astimezone(timezone.utc)
         else:  # Without a timezone, assume it represents UTC.
-            dt = dt.replace(tzinfo=dateutil.tz.UTC)
+            dt = dt.replace(tzinfo=timezone.utc)
 
         return dt
 
@@ -615,7 +581,6 @@ if t.TYPE_CHECKING:
     ValidURL = str  # noqa: F811
     Inventory = t.Tuple[str, _inventory_parser.InventoryDict]  # noqa: F811
     Snowflake = int  # noqa: F811
-    TagNameConverter = str  # noqa: F811
     SourceConverter = SourceType  # noqa: F811
     DurationDelta = relativedelta  # noqa: F811
     Duration = datetime  # noqa: F811

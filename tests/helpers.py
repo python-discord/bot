@@ -9,10 +9,10 @@ from typing import Iterable, Optional
 
 import discord
 from aiohttp import ClientSession
+from botcore.async_stats import AsyncStatsClient
+from botcore.site_api import APIClient
 from discord.ext.commands import Context
 
-from bot.api import APIClient
-from bot.async_stats import AsyncStatsClient
 from bot.bot import Bot
 from tests._autospec import autospec  # noqa: F401 other modules import it via this module
 
@@ -171,7 +171,7 @@ class MockGuild(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     spec_set = guild_instance
 
     def __init__(self, roles: Optional[Iterable[MockRole]] = None, **kwargs) -> None:
-        default_kwargs = {'id': next(self.discord_id), 'members': []}
+        default_kwargs = {'id': next(self.discord_id), 'members': [], "chunked": True}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
         self.roles = [MockRole(name="@everyone", position=1, id=0)]
@@ -312,6 +312,10 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
         command_prefix=unittest.mock.MagicMock(),
         loop=_get_mock_loop(),
         redis_session=unittest.mock.MagicMock(),
+        http_session=unittest.mock.MagicMock(),
+        allowed_roles=[1],
+        guild_id=1,
+        intents=discord.Intents.all(),
     )
     additional_spec_asyncs = ("wait_for", "redis_ready")
 
@@ -322,6 +326,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
         self.api_client = MockAPIClient(loop=self.loop)
         self.http_session = unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
         self.stats = unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
+        self.add_cog = unittest.mock.AsyncMock()
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
@@ -334,6 +339,8 @@ channel_data = {
     'position': 1,
     'nsfw': False,
     'last_message_id': 1,
+    'bitrate': 1337,
+    'user_limit': 25,
 }
 state = unittest.mock.MagicMock()
 guild = unittest.mock.MagicMock()
@@ -438,6 +445,7 @@ message_data = {
 }
 state = unittest.mock.MagicMock()
 channel = unittest.mock.MagicMock()
+channel.type = discord.ChannelType.text
 message_instance = discord.Message(state=state, channel=channel, data=message_data)
 
 

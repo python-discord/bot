@@ -5,14 +5,14 @@ from dataclasses import dataclass
 
 import arrow
 import discord
+from botcore.utils import members
 from discord.ext import commands
 from discord.interactions import Interaction
 
 from bot import constants
 from bot.bot import Bot
-from bot.decorators import in_whitelist
+from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.utils import checks, members, scheduling
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,7 @@ class AssignableRole:
 
     role_id: int
     months_available: t.Optional[tuple[int]]
-    name: t.Optional[str] = None  # This gets populated within Subscribe.init_cog()
+    name: t.Optional[str] = None  # This gets populated within Subscribe.cog_load()
 
     def is_currently_available(self) -> bool:
         """Check if the role is available for the current month."""
@@ -143,11 +143,10 @@ class Subscribe(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
         self.assignable_roles: list[AssignableRole] = []
         self.guild: discord.Guild = None
 
-    async def init_cog(self) -> None:
+    async def cog_load(self) -> None:
         """Initialise the cog by resolving the role IDs in ASSIGNABLE_ROLES to role names."""
         await self.bot.wait_until_guild_available()
 
@@ -165,38 +164,35 @@ class Subscribe(commands.Cog):
                     name=discord_role.name,
                 )
             )
-        # Sort unavailable roles to the end of the list
+
+        # Sort by role name, then shift unavailable roles to the end of the list
+        self.assignable_roles.sort(key=operator.attrgetter("name"))
         self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
-    @commands.command(name="subscribe")
-    @in_whitelist(channels=(constants.Channels.bot_commands,))
+    @commands.command(name="subscribe", aliases=("unsubscribe",))
+    @redirect_output(
+        destination_channel=constants.Channels.bot_commands,
+        bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES,
+    )
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
         """Display the member's current state for each role, and allow them to add/remove the roles."""
-        await self.init_task
-
         button_view = RoleButtonView(ctx.author)
         author_roles = [role.id for role in ctx.author.roles]
         for index, role in enumerate(self.assignable_roles):
             row = index // ITEMS_PER_ROW
             button_view.add_item(SingleRoleButton(role, role.role_id in author_roles, row))
 
-        await ctx.reply(
+        await ctx.send(
             "Click the buttons below to add or remove your roles!",
             view=button_view,
             delete_after=DELETE_MESSAGE_AFTER,
         )
 
-    # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
-        """Check for & ignore any InWhitelistCheckFailure."""
-        if isinstance(error, checks.InWhitelistCheckFailure):
-            error.handled = True
 
-
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Subscribe cog."""
     if len(ASSIGNABLE_ROLES) > ITEMS_PER_ROW*5:  # Discord limits views to 5 rows of buttons.
         log.error("Too many roles for 5 rows, not loading the Subscribe cog.")
     else:
-        bot.add_cog(Subscribe(bot))
+        await bot.add_cog(Subscribe(bot))

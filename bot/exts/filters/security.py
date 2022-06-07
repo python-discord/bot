@@ -25,6 +25,6 @@ class Security(Cog):
         return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Security cog."""
-    bot.add_cog(Security(bot))
+    await bot.add_cog(Security(bot))
