@@ -173,8 +173,8 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arr
 
 
 async def pin(message: discord.Message) -> None:
-    """Pin an initial question `message` and store it in a cache."""
-    await pin_wrapper(message, pin=True)
+    """Pin an initial question `message`."""
+    await _pin_wrapper(message, pin=True)
 
 
 async def send_available_message(channel: discord.TextChannel) -> None:
@@ -198,10 +198,14 @@ async def send_available_message(channel: discord.TextChannel) -> None:
         await channel.send(embed=embed)
 
 
-async def unpin(channel: discord.TextChannel) -> None:
-    """Unpin the initial question message sent in `channel`."""
+async def unpin_all(channel: discord.TextChannel) -> int:
+    """Unpin all pinned messages in `channel` and return the amount of unpinned messages."""
+    count = 0
     for message in await channel.pins():
-        await pin_wrapper(message, pin=False)
+        if await _pin_wrapper(message, pin=False):
+            count += 1
+
+    return count
 
 
 def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> bool:
@@ -216,7 +220,7 @@ def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> 
     return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
 
 
-async def pin_wrapper(message: discord.Message, *, pin: bool) -> bool:
+async def _pin_wrapper(message: discord.Message, *, pin: bool) -> bool:
     """
     Pin `message` if `pin` is True or unpin if it's False.
 
