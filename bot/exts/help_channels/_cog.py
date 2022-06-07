@@ -394,17 +394,17 @@ class HelpChannels(commands.Cog):
         log.trace("Making a channel available.")
 
         channel = await self.get_available_candidate()
-        log.info(f"Making #{channel} ({channel.id}) available.")
+        channel_str = f"#{channel} ({channel.id})"
+        log.info(f"Making {channel_str} available.")
 
         await _message.send_available_message(channel)
 
-        log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
+        log.trace(f"Moving {channel_str} to the Available category.")
 
         # Unpin any previously stuck pins
-        log.trace(f"Looking for pins stuck in #{channel} ({channel.id}).")
-        for message in await channel.pins():
-            await _message.pin_wrapper(message.id, channel, pin=False)
-            log.debug(f"Removed a stuck pin from #{channel} ({channel.id}). ID: {message.id}")
+        log.trace(f"Looking for pins stuck in {channel_str}.")
+        if stuck_pins := await _message.unpin_all(channel):
+            log.debug(f"Removed {stuck_pins} stuck pins from {channel_str}.")
 
         await _channel.move_to_bottom(
             channel=channel,
@@ -480,7 +480,7 @@ class HelpChannels(commands.Cog):
             else:
                 await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
 
-        await _message.unpin(channel)
+        await _message.unpin_all(channel)
         await _stats.report_complete_session(channel.id, closed_on)
         await self.move_to_dormant(channel)
 
