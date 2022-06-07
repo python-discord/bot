@@ -129,6 +129,9 @@ def get_signatures(start_signature: PageElement) -> List[str]:
             start_signature,
             *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
     )[-MAX_SIGNATURE_AMOUNT:]:
+        for tag in element.find_all("a", class_="headerlink", recursive=False):
+            tag.decompose()
+
         signature = _UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
 
         if signature:
