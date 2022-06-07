@@ -1,7 +1,6 @@
 import typing as t
 
 import discord
-from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
 from discord.ext import commands
 
@@ -18,11 +17,25 @@ THREAD_BUMP_ENDPOINT = "bot/bumped-threads"
 class ThreadBumper(commands.Cog):
     """Cog that allow users to add the current thread to a list that get reopened on archive."""
 
-    # RedisCache[discord.Thread.id, "sentinel"]
-    threads_to_bump = RedisCache()
-
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    async def thread_exists_in_site(self, thread_id: int) -> bool:
+        """Return whether the given thread_id exists in the site api's bump list."""
+        # If the thread exists, site returns a 204 with no content.
+        # Due to this, `api_client.request()` cannot be used, as it always attempts to decode the response as json.
+        # Instead, call the site manually using the api_client's session, to use the auth token logic in the wrapper.
+
+        async with self.bot.api_client.session.get(
+            f"{self.bot.api_client._url_for(THREAD_BUMP_ENDPOINT)}/{thread_id}"
+        ) as response:
+            if response.status == 204:
+                return True
+            elif response.status == 404:
+                return False
+            else:
+                # A status other than 204/404 is undefined behaviour from site. Raise error for investigation.
+                raise ResponseCodeError(response, response.text())
 
     async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
         """
@@ -89,12 +102,7 @@ class ThreadBumper(commands.Cog):
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
 
-        try:
-            await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
-        except ResponseCodeError as e:
-            if e.status != 404:
-                raise
-        else:
+        if await self.thread_exists_in_site(thread.id):
             raise commands.BadArgument("This thread is already in the bump list.")
 
         await self.bot.api_client.post(THREAD_BUMP_ENDPOINT, data={"thread_id": thread.id})
@@ -109,9 +117,7 @@ class ThreadBumper(commands.Cog):
             else:
                 raise commands.BadArgument("You must provide a thread, or run this command within a thread.")
 
-        try:
-            await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
-        except ResponseCodeError:
+        if not await self.thread_exists_in_site(thread.id):
             raise commands.BadArgument("This thread is not in the bump list.")
 
         await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread.id}")
@@ -137,12 +143,7 @@ class ThreadBumper(commands.Cog):
         if not after.archived:
             return
 
-        try:
-            await self.bot.api_client.get(f"{THREAD_BUMP_ENDPOINT}/{after.id}")
-        except ResponseCodeError as e:
-            if e.status != 404:
-                raise
-        else:
+        if await self.thread_exists_in_site(after.id):
             await self.unarchive_threads_not_manually_archived([after])
 
     async def cog_check(self, ctx: commands.Context) -> bool:

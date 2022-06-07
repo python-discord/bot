@@ -464,5 +464,4 @@ class DocCog(commands.Cog):
     async def cog_unload(self) -> None:
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
-        self.init_refresh_task.cancel()
         await self.item_fetcher.clear()
