@@ -174,7 +174,7 @@ async def notify(channel: discord.TextChannel, last_notification: t.Optional[Arr
 
 async def pin(message: discord.Message) -> None:
     """Pin an initial question `message` and store it in a cache."""
-    await pin_wrapper(message.id, message.channel, pin=True)
+    await pin_wrapper(message, pin=True)
 
 
 async def send_available_message(channel: discord.TextChannel) -> None:
@@ -201,7 +201,7 @@ async def send_available_message(channel: discord.TextChannel) -> None:
 async def unpin(channel: discord.TextChannel) -> None:
     """Unpin the initial question message sent in `channel`."""
     for message in await channel.pins():
-        await pin_wrapper(message.id, channel, pin=False)
+        await pin_wrapper(message, pin=False)
 
 
 def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> bool:
@@ -216,30 +216,26 @@ def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> 
     return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
 
 
-async def pin_wrapper(msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
+async def pin_wrapper(message: discord.Message, *, pin: bool) -> bool:
     """
-    Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
+    Pin `message` if `pin` is True or unpin if it's False.
 
     Return True if successful and False otherwise.
     """
-    channel_str = f"#{channel} ({channel.id})"
-    if pin:
-        func = bot.instance.http.pin_message
-        verb = "pin"
-    else:
-        func = bot.instance.http.unpin_message
-        verb = "unpin"
+    channel_str = f"#{message.channel} ({message.channel.id})"
+    func = message.pin if pin else message.unpin
 
     try:
-        await func(channel.id, msg_id)
+        await func()
     except discord.HTTPException as e:
         if e.code == 10008:
-            log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't {verb}.")
+            log.debug(f"Message {message.id} in {channel_str} doesn't exist; can't {func.__name__}.")
         else:
             log.exception(
-                f"Error {verb}ning message {msg_id} in {channel_str}: {e.status} ({e.code})"
+                f"Error {func.__name__}ning message {message.id} in {channel_str}: "
+                f"{e.status} ({e.code})"
             )
         return False
     else:
-        log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
+        log.trace(f"{func.__name__.capitalize()}ned message {message.id} in {channel_str}.")
         return True
