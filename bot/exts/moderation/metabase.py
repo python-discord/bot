@@ -16,6 +16,7 @@ from bot.constants import Metabase as MetabaseConfig, Roles
 from bot.log import get_logger
 from bot.utils import send_to_paste_service
 from bot.utils.channel import is_mod_channel
+from bot.utils.services import PasteTooLongError, PasteUploadError
 
 log = get_logger(__name__)
 
@@ -140,11 +141,15 @@ class Metabase(Cog):
                 # Format it nicely for human eyes
                 out = json.dumps(out, indent=4, sort_keys=True)
 
-        paste_link = await send_to_paste_service(out, extension=extension)
-        if paste_link:
-            message = f":+1: {ctx.author.mention} Here's your link: {paste_link}"
+        try:
+            paste_link = await send_to_paste_service(out, extension=extension)
+        except PasteTooLongError:
+            message = f":x: {ctx.author.mention} Too long to upload to paste service."
+        except PasteUploadError:
+            message = f":x: {ctx.author.mention} Failed to upload to paste service."
         else:
-            message = f":x: {ctx.author.mention} Link service is unavailible."
+            message = f":+1: {ctx.author.mention} Here's your link: {paste_link}"
+
         await ctx.send(
             f"{message}\nYou can also access this data within internal eval by doing: "
             f"`bot.get_cog('Metabase').exports[{question_id}]`"

@@ -18,6 +18,7 @@ from bot.decorators import redirect_output
 from bot.log import get_logger
 from bot.utils import send_to_paste_service
 from bot.utils.messages import wait_for_deletion
+from bot.utils.services import PasteTooLongError, PasteUploadError
 
 log = get_logger(__name__)
 
@@ -65,7 +66,7 @@ if not hasattr(sys, "_setup_finished"):
 {setup}
 """
 
-MAX_PASTE_LEN = 10000
+MAX_PASTE_LENGTH = 10_000
 
 # The Snekbox commands' whitelists and blacklists.
 NO_SNEKBOX_CHANNELS = (Channels.python_general,)
@@ -137,10 +138,12 @@ class Snekbox(Cog):
         """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
-        if len(output) > MAX_PASTE_LEN:
-            log.info("Full output is too long to upload")
+        try:
+            return await send_to_paste_service(output, extension="txt", max_length=MAX_PASTE_LENGTH)
+        except PasteTooLongError:
             return "too long to upload"
-        return await send_to_paste_service(output, extension="txt")
+        except PasteUploadError:
+            return "unable to upload"
 
     @staticmethod
     def prepare_timeit_input(codeblocks: list[str]) -> tuple[str, list[str]]:
