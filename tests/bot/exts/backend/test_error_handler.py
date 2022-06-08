@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
+from botcore.site_api import ResponseCodeError
 from discord.ext.commands import errors
 
-from bot.api import ResponseCodeError
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.exts.backend.error_handler import ErrorHandler, setup
 from bot.exts.info.tags import Tags
@@ -48,6 +48,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         cog = ErrorHandler(self.bot)
         cog.try_silence = AsyncMock()
         cog.try_get_tag = AsyncMock()
+        cog.try_run_eval = AsyncMock(return_value=False)
 
         for case in test_cases:
             with self.subTest(try_silence_return=case["try_silence_return"], try_get_tag=case["called_try_get_tag"]):
@@ -76,6 +77,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         cog = ErrorHandler(self.bot)
         cog.try_silence = AsyncMock()
         cog.try_get_tag = AsyncMock()
+        cog.try_run_eval = AsyncMock()
 
         error = errors.CommandNotFound()
 
@@ -83,6 +85,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
         cog.try_silence.assert_not_awaited()
         cog.try_get_tag.assert_not_awaited()
+        cog.try_run_eval.assert_not_awaited()
         self.ctx.send.assert_not_awaited()
 
     async def test_error_handler_user_input_error(self):
@@ -477,11 +480,11 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.exts.backend.error_handler.log")
     async def test_handle_api_error(self, log_mock):
-        """Should `ctx.send` on HTTP error codes, `log.debug|warning` depends on code."""
+        """Should `ctx.send` on HTTP error codes, and log at correct level."""
         test_cases = (
             {
                 "error": ResponseCodeError(AsyncMock(status=400)),
-                "log_level": "debug"
+                "log_level": "error"
             },
             {
                 "error": ResponseCodeError(AsyncMock(status=404)),
@@ -505,6 +508,8 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.send.assert_awaited_once()
                 if case["log_level"] == "warning":
                     log_mock.warning.assert_called_once()
+                elif case["log_level"] == "error":
+                    log_mock.error.assert_called_once()
                 else:
                     log_mock.debug.assert_called_once()
 
@@ -544,11 +549,11 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 push_scope_mock.set_extra.has_calls(set_extra_calls)
 
 
-class ErrorHandlerSetupTests(unittest.TestCase):
+class ErrorHandlerSetupTests(unittest.IsolatedAsyncioTestCase):
     """Tests for `ErrorHandler` `setup` function."""
 
-    def test_setup(self):
+    async def test_setup(self):
         """Should call `bot.add_cog` with `ErrorHandler`."""
         bot = MockBot()
-        setup(bot)
-        bot.add_cog.assert_called_once()
+        await setup(bot)
+        bot.add_cog.assert_awaited_once()

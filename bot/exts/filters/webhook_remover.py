@@ -89,6 +89,6 @@ class WebhookRemover(Cog):
         await self.on_message(after)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load `WebhookRemover` cog."""
-    bot.add_cog(WebhookRemover(bot))
+    await bot.add_cog(WebhookRemover(bot))

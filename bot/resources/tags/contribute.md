@@ -7,6 +7,6 @@ Looking to contribute to Open Source Projects for the first time? Want to add a 
 • [Site](https://github.com/python-discord/site) - resources, guides, and more
 
 **Where to start**
-1. Read our [contributing guidelines](https://pythondiscord.com/pages/guides/pydis-guides/contributing/)
+1. Read our [contribution guide](https://pythondiscord.com/pages/guides/pydis-guides/contributing/)
 2. Chat with us in <#635950537262759947> if you're ready to jump in or have any questions
 3. Open an issue or ask to be assigned to an issue to work on

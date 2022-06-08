@@ -3,7 +3,6 @@ from discord.ext.commands import Cog
 from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 
@@ -13,9 +12,8 @@ class ConfigVerifier(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.channel_verify_task = scheduling.create_task(self.verify_channels(), event_loop=self.bot.loop)
 
-    async def verify_channels(self) -> None:
+    async def cog_load(self) -> None:
         """
         Verify channels.
 
@@ -34,6 +32,6 @@ class ConfigVerifier(Cog):
             log.warning(f"Configured channels do not exist in server: {', '.join(invalid_channels)}.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ConfigVerifier cog."""
-    bot.add_cog(ConfigVerifier(bot))
+    await bot.add_cog(ConfigVerifier(bot))

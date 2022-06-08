@@ -4,10 +4,10 @@
 **/bot/exts/moderation/*silence.py      @MarkKoz
 bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
-bot/exts/utils/snekbox.py               @MarkKoz @Akarys42 @jb3
-bot/exts/help_channels/**               @MarkKoz @Akarys42
-bot/exts/moderation/**                  @Akarys42 @mbaruh @Den4200 @ks129 @jb3
-bot/exts/info/**                        @Akarys42 @Den4200 @jb3
+bot/exts/utils/snekbox.py               @MarkKoz @jb3
+bot/exts/help_channels/**               @MarkKoz
+bot/exts/moderation/**                  @mbaruh @Den4200 @ks129 @jb3
+bot/exts/info/**                        @Den4200 @jb3
 bot/exts/info/information.py            @mbaruh @jb3
 bot/exts/filters/**                     @mbaruh @jb3
 bot/exts/fun/**                         @ks129
@@ -18,25 +18,17 @@ bot/exts/recruitment/**                 @wookie184
 bot/rules/**                            @mbaruh
 
 # Utils
-bot/utils/extensions.py                 @MarkKoz
 bot/utils/function.py                   @MarkKoz
 bot/utils/lock.py                       @MarkKoz
-bot/utils/regex.py                      @Akarys42
-bot/utils/scheduling.py                 @MarkKoz
 
 # Tests
 tests/_autospec.py                      @MarkKoz
 tests/bot/exts/test_cogs.py             @MarkKoz
-tests/**                                @Akarys42
 
 # CI & Docker
-.github/workflows/**                    @MarkKoz @Akarys42 @SebastiaanZ @Den4200 @jb3
-Dockerfile                              @MarkKoz @Akarys42 @Den4200 @jb3
-docker-compose.yml                      @MarkKoz @Akarys42 @Den4200 @jb3
-
-# Tools
-poetry.lock                             @Akarys42
-pyproject.toml                          @Akarys42
+.github/workflows/**                    @MarkKoz @SebastiaanZ @Den4200 @jb3
+Dockerfile                              @MarkKoz @Den4200 @jb3
+docker-compose.yml                      @MarkKoz @Den4200 @jb3
 
 # Statistics
 bot/async_stats.py                      @jb3

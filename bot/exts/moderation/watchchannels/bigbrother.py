@@ -22,7 +22,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             destination=Channels.big_brother_logs,
             webhook_id=Webhooks.big_brother,
             api_endpoint='bot/infractions',
-            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at'},
+            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at', 'limit': 10_000},
             logger=log
         )
 
@@ -169,6 +169,6 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await ctx.send(message)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the BigBrother cog."""
-    bot.add_cog(BigBrother(bot))
+    await bot.add_cog(BigBrother(bot))

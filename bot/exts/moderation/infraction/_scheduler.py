@@ -6,17 +6,18 @@ from gettext import ngettext
 import arrow
 import dateutil.parser
 import discord
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
 from discord.ext.commands import Context
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import messages, scheduling, time
+from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 
 log = get_logger(__name__)
@@ -28,10 +29,9 @@ class InfractionScheduler:
     def __init__(self, bot: Bot, supported_infractions: t.Container[str]):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
+        self.supported_infractions = supported_infractions
 
-        scheduling.create_task(self.reschedule_infractions(supported_infractions), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
@@ -40,9 +40,10 @@ class InfractionScheduler:
         """Get the currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    async def reschedule_infractions(self, supported_infractions: t.Container[str]) -> None:
+    async def cog_load(self) -> None:
         """Schedule expiration for previous infractions."""
         await self.bot.wait_until_guild_available()
+        supported_infractions = self.supported_infractions
 
         log.trace(f"Rescheduling infractions for {self.__class__.__name__}.")
 
@@ -71,7 +72,7 @@ class InfractionScheduler:
             )
             log.trace("Will reschedule remaining infractions at %s", next_reschedule_point)
 
-            self.scheduler.schedule_at(next_reschedule_point, -1, self.reschedule_infractions(supported_infractions))
+            self.scheduler.schedule_at(next_reschedule_point, -1, self.cog_load())
 
         log.trace("Done rescheduling")
 
@@ -136,7 +137,7 @@ class InfractionScheduler:
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = time.format_infraction_with_duration(infraction["expires_at"])
+        expiry = time.format_with_duration(infraction["expires_at"])
         id_ = infraction['id']
 
         if user_reason is None:
@@ -166,13 +167,12 @@ class InfractionScheduler:
         # apply kick/ban infractions first, this would mean that we'd make it
         # impossible for us to deliver a DM. See python-discord/bot#982.
         if not infraction["hidden"] and infr_type in {"ban", "kick"}:
-            dm_result = f"{constants.Emojis.failmail} "
-            dm_log_text = "\nDM: **Failed**"
-
-            # Accordingly update whether the user was successfully notified via DM.
-            if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+            if await _utils.notify_infraction(infraction, user, user_reason):
                 dm_result = ":incoming_envelope: "
                 dm_log_text = "\nDM: Sent"
+            else:
+                dm_result = f"{constants.Emojis.failmail} "
+                dm_log_text = "\nDM: **Failed**"
 
         end_msg = ""
         if is_mod_channel(ctx.channel):
@@ -221,7 +221,7 @@ class InfractionScheduler:
                 failed = True
 
         if failed:
-            log.trace(f"Deleted infraction {infraction['id']} from database because applying infraction failed.")
+            log.trace(f"Trying to delete infraction {id_} from database because applying infraction failed.")
             try:
                 await self.bot.api_client.delete(f"bot/infractions/{id_}")
             except ResponseCodeError as e:
@@ -234,13 +234,12 @@ class InfractionScheduler:
 
             # If we need to DM and haven't already tried to
             if not infraction["hidden"] and infr_type not in {"ban", "kick"}:
-                dm_result = f"{constants.Emojis.failmail} "
-                dm_log_text = "\nDM: **Failed**"
-
-                # Accordingly update whether the user was successfully notified via DM.
-                if await _utils.notify_infraction(user, infr_type.replace("_", " ").title(), expiry, user_reason, icon):
+                if await _utils.notify_infraction(infraction, user, user_reason):
                     dm_result = ":incoming_envelope: "
                     dm_log_text = "\nDM: Sent"
+                else:
+                    dm_result = f"{constants.Emojis.failmail} "
+                    dm_log_text = "\nDM: **Failed**"
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -261,7 +260,7 @@ class InfractionScheduler:
                 {additional_info}
             """),
             content=log_content,
-            footer=f"ID {infraction['id']}"
+            footer=f"ID: {id_}"
         )
 
         log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
@@ -377,20 +376,15 @@ class InfractionScheduler:
         actor = infraction["actor"]
         type_ = infraction["type"]
         id_ = infraction["id"]
-        inserted_at = infraction["inserted_at"]
-        expiry = infraction["expires_at"]
 
         log.info(f"Marking infraction #{id_} as inactive (expired).")
-
-        expiry = dateutil.parser.isoparse(expiry) if expiry else None
-        created = time.format_infraction_with_duration(inserted_at, expiry)
 
         log_content = None
         log_text = {
             "Member": f"<@{user_id}>",
             "Actor": f"<@{actor}>",
             "Reason": infraction["reason"],
-            "Created": created,
+            "Created": time.format_with_duration(infraction["inserted_at"], infraction["expires_at"]),
         }
 
         try:

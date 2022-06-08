@@ -12,7 +12,7 @@ from bot.constants import Emojis, Roles
 from bot.exts.events.code_jams import _channels
 from bot.log import get_logger
 from bot.utils.members import get_or_fetch_member
-from bot.utils.services import send_to_paste_service
+from bot.utils.services import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 log = get_logger(__name__)
 
@@ -139,11 +139,14 @@ class CodeJams(commands.Cog):
             format_category_info(category, channels) for category, channels in categories.items()
         )
 
-        url = await send_to_paste_service(deletion_details)
-        if url is None:
-            url = "**Unable to send deletion details to the pasting service.**"
+        try:
+            message = await send_to_paste_service(deletion_details)
+        except PasteTooLongError:
+            message = "**Too long to upload to paste service.**"
+        except PasteUploadError:
+            message = "**Failed to upload to paste service.**"
 
-        return f"Are you sure you want to delete all code jam channels?\n\nThe channels to be deleted: {url}"
+        return f"Are you sure you want to delete all code jam channels?\n\nThe channels to be deleted: {message}"
 
     @codejam.command()
     @commands.has_any_role(Roles.admins, Roles.code_jam_event_team)

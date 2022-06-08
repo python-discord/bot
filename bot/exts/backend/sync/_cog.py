@@ -1,17 +1,18 @@
+import asyncio
 from typing import Any, Dict
 
+from botcore.site_api import ResponseCodeError
 from discord import Member, Role, User
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.exts.backend.sync import _syncers
 from bot.log import get_logger
-from bot.utils import scheduling
 
 log = get_logger(__name__)
+MAX_ATTEMPTS = 3
 
 
 class Sync(Cog):
@@ -19,9 +20,8 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        scheduling.create_task(self.sync_guild(), event_loop=self.bot.loop)
 
-    async def sync_guild(self) -> None:
+    async def cog_load(self) -> None:
         """Syncs the roles/users of the guild with the database."""
         await self.bot.wait_until_guild_available()
 
@@ -29,6 +29,22 @@ class Sync(Cog):
         if guild is None:
             return
 
+        attempts = 0
+        while True:
+            attempts += 1
+            if guild.chunked:
+                log.info("Guild was found to be chunked after %d attempt(s).", attempts)
+                break
+
+            if attempts == MAX_ATTEMPTS:
+                log.info("Guild not chunked after %d attempts, calling chunk manually.", MAX_ATTEMPTS)
+                await guild.chunk()
+                break
+
+            log.info("Attempt %d/%d: Guild not yet chunked, checking again in 10s.", attempts, MAX_ATTEMPTS)
+            await asyncio.sleep(10)
+
+        log.info("Starting syncers.")
         for syncer in (_syncers.RoleSyncer, _syncers.UserSyncer):
             await syncer.sync(guild)
 

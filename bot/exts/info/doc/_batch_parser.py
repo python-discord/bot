@@ -8,12 +8,12 @@ from operator import attrgetter
 from typing import Deque, Dict, List, NamedTuple, Optional, Union
 
 import discord
+from botcore.utils import scheduling
 from bs4 import BeautifulSoup
 
 import bot
 from bot.constants import Channels
 from bot.log import get_logger
-from bot.utils import scheduling
 
 from . import _cog, doc_cache
 from ._parsing import get_symbol_markdown
