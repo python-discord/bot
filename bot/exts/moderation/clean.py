@@ -179,7 +179,7 @@ class Clean(Cog):
 
         def predicate_range(message: Message) -> bool:
             """Check if the message age is between the two limits."""
-            return first_limit <= message.created_at <= second_limit
+            return first_limit < message.created_at < second_limit
 
         def predicate_after(message: Message) -> bool:
             """Check if the message is older than the first limit."""
@@ -471,7 +471,7 @@ class Clean(Cog):
 
         \u2003• `users`: A series of user mentions, ID's, or names.
         \u2003• `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
-        At least one limit is required.
+        At least one limit is required. The limits are *exclusive*.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
         If only one of them is provided, acts as `clean until`. If both are provided, acts as `clean between`.
         \u2003• `regex`: A regex pattern the message must contain to be deleted.
@@ -565,6 +565,8 @@ class Clean(Cog):
 
         A limit can be either a message, and ISO date-time string, or a time delta.
 
+        The limit is *exclusive*.
+
         If a message is specified the cleanup will be limited to the channel the message is in.
 
         If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
@@ -589,6 +591,8 @@ class Clean(Cog):
 
         The range is specified through two limits.
         A limit can be either a message, and ISO date-time string, or a time delta.
+
+        The limits are *exclusive*.
 
         If two messages are specified, they both must be in the same channel.
         The cleanup will be limited to the channel the messages are in.
