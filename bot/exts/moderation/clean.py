@@ -8,7 +8,7 @@ from itertools import takewhile
 from typing import Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
 from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
-from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
+from discord.ext.commands import Cog, Context, Converter, Greedy, command, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument
 
@@ -452,7 +452,7 @@ class Clean(Cog):
 
     # region: Commands
 
-    @group(invoke_without_command=True, name="clean", aliases=["clear", "purge"])
+    @group(invoke_without_command=True, name="clean", aliases=("clear",))
     async def clean_group(
         self,
         ctx: Context,
@@ -618,6 +618,13 @@ class Clean(Cog):
 
         await self._send_expiring_message(ctx, message)
         await self._delete_invocation(ctx)
+
+    @command()
+    async def purge(self, ctx: Context, users: Greedy[User], age: Optional[Union[Age, ISODateTime]] = None) -> None:
+        """Clean messages of users from all public channels up to a certain message age (10 minutes by default)."""
+        if age is None:
+            age = await Age().convert(ctx, "10M")
+        await self._clean_messages(ctx, channels="*", users=users, first_limit=age)
 
     # endregion
 
