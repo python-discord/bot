@@ -27,7 +27,7 @@ For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}
 
 AVAILABLE_TITLE = "Available help channel"
 
-AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
+AVAILABLE_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **{{dormant}}** \
@@ -66,11 +66,11 @@ async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.M
     """Return the last message sent in the channel or None if no messages exist."""
     log.trace(f"Getting the last message in #{channel} ({channel.id}).")
 
-    try:
-        return await channel.history(limit=1).next()  # noqa: B305
-    except discord.NoMoreItems:
-        log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
-        return None
+    async for message in channel.history(limit=1):
+        return message
+
+    log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
+    return None
 
 
 async def is_empty(channel: discord.TextChannel) -> bool:
@@ -214,9 +214,8 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
 
 
 async def pin(message: discord.Message) -> None:
-    """Pin an initial question `message` and store it in a cache."""
-    if await pin_wrapper(message.id, message.channel, pin=True):
-        await _caches.question_messages.set(message.channel.id, message.id)
+    """Pin an initial question `message`."""
+    await _pin_wrapper(message, pin=True)
 
 
 async def send_available_message(channel: discord.TextChannel) -> None:
@@ -240,13 +239,14 @@ async def send_available_message(channel: discord.TextChannel) -> None:
         await channel.send(embed=embed)
 
 
-async def unpin(channel: discord.TextChannel) -> None:
-    """Unpin the initial question message sent in `channel`."""
-    msg_id = await _caches.question_messages.pop(channel.id)
-    if msg_id is None:
-        log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
-    else:
-        await pin_wrapper(msg_id, channel, pin=False)
+async def unpin_all(channel: discord.TextChannel) -> int:
+    """Unpin all pinned messages in `channel` and return the amount of unpinned messages."""
+    count = 0
+    for message in await channel.pins():
+        if await _pin_wrapper(message, pin=False):
+            count += 1
+
+    return count
 
 
 def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> bool:
@@ -255,36 +255,32 @@ def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> 
         return False
 
     bot_msg_desc = message.embeds[0].description
-    if bot_msg_desc is discord.Embed.Empty:
+    if bot_msg_desc is None:
         log.trace("Last message was a bot embed but it was empty.")
         return False
     return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
 
 
-async def pin_wrapper(msg_id: int, channel: discord.TextChannel, *, pin: bool) -> bool:
+async def _pin_wrapper(message: discord.Message, *, pin: bool) -> bool:
     """
-    Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
+    Pin `message` if `pin` is True or unpin if it's False.
 
     Return True if successful and False otherwise.
     """
-    channel_str = f"#{channel} ({channel.id})"
-    if pin:
-        func = bot.instance.http.pin_message
-        verb = "pin"
-    else:
-        func = bot.instance.http.unpin_message
-        verb = "unpin"
+    channel_str = f"#{message.channel} ({message.channel.id})"
+    func = message.pin if pin else message.unpin
 
     try:
-        await func(channel.id, msg_id)
+        await func()
     except discord.HTTPException as e:
         if e.code == 10008:
-            log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't {verb}.")
+            log.debug(f"Message {message.id} in {channel_str} doesn't exist; can't {func.__name__}.")
         else:
             log.exception(
-                f"Error {verb}ning message {msg_id} in {channel_str}: {e.status} ({e.code})"
+                f"Error {func.__name__}ning message {message.id} in {channel_str}: "
+                f"{e.status} ({e.code})"
             )
         return False
     else:
-        log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
+        log.trace(f"{func.__name__.capitalize()}ned message {message.id} in {channel_str}.")
         return True

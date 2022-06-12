@@ -5,6 +5,7 @@ import arrow
 import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
 from discord.ext import commands
 
 from bot.bot import Bot
@@ -14,7 +15,7 @@ from bot.constants import (
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
@@ -30,19 +31,13 @@ class Stream(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
-        self.reload_task = scheduling.create_task(self._reload_tasks_from_redis(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
-        """Cancel all scheduled tasks."""
-        self.reload_task.cancel()
-        self.reload_task.add_done_callback(lambda _: self.scheduler.cancel_all())
 
     async def _revoke_streaming_permission(self, member: discord.Member) -> None:
         """Remove the streaming permission from the given Member."""
         await self.task_cache.delete(member.id)
         await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
-    async def _reload_tasks_from_redis(self) -> None:
+    async def cog_load(self) -> None:
         """Reload outstanding tasks from redis on startup, delete the task if the member has since left the server."""
         await self.bot.wait_until_guild_available()
         items = await self.task_cache.items()
@@ -230,7 +225,11 @@ class Stream(commands.Cog):
         else:
             await ctx.send("No members with stream permissions found.")
 
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks."""
+        self.scheduler.cancel_all()
 
-def setup(bot: Bot) -> None:
+
+async def setup(bot: Bot) -> None:
     """Loads the Stream cog."""
-    bot.add_cog(Stream(bot))
+    await bot.add_cog(Stream(bot))

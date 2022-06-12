@@ -1,15 +1,17 @@
 import typing as t
 from datetime import datetime
 
+import arrow
 import discord
+from botcore.site_api import ResponseCodeError
 from discord.ext.commands import Context
 
-from bot.api import ResponseCodeError
-from bot.bot import Bot
+import bot
 from bot.constants import Colours, Icons
 from bot.converters import MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
+from bot.utils import time
 
 log = get_logger(__name__)
 
@@ -43,6 +45,7 @@ LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL
 INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Type:** {type}\n"
     "**Expires:** {expires}\n"
+    "**Duration:** {duration}\n"
     "**Reason:** {reason}\n"
 )
 
@@ -159,20 +162,44 @@ async def send_active_infraction_message(ctx: Context, infraction: Infraction) -
 
 
 async def notify_infraction(
-        bot: Bot,
+        infraction: Infraction,
         user: MemberOrUser,
-        infr_id: id,
-        infr_type: str,
-        expires_at: t.Optional[str] = None,
-        reason: t.Optional[str] = None,
-        icon_url: str = Icons.token_removed
+        reason: t.Optional[str] = None
 ) -> bool:
-    """DM a user about their new infraction and return True if the DM is successful."""
+    """
+    DM a user about their new infraction and return True if the DM is successful.
+
+    `reason` can be used to override what is in `infraction`. Otherwise, this data will
+    be retrieved from `infraction`.
+    """
+    infr_id = infraction["id"]
+    infr_type = infraction["type"].replace("_", " ").title()
+    icon_url = INFRACTION_ICONS[infraction["type"]][0]
+
+    if infraction["expires_at"] is None:
+        expires_at = "Never"
+        duration = "Permanent"
+    else:
+        expiry = arrow.get(infraction["expires_at"])
+        expires_at = time.format_relative(expiry)
+        duration = time.humanize_delta(infraction["inserted_at"], expiry, max_units=2)
+
+        if infraction["active"]:
+            remaining = time.humanize_delta(expiry, arrow.utcnow(), max_units=2)
+            if duration != remaining:
+                duration += f" ({remaining} remaining)"
+        else:
+            expires_at += " (Inactive)"
+
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
+
+    if reason is None:
+        reason = infraction["reason"]
 
     text = INFRACTION_DESCRIPTION_TEMPLATE.format(
         type=infr_type.title(),
-        expires=expires_at or "N/A",
+        expires=expires_at,
+        duration=duration,
         reason=reason or "No reason provided."
     )
 
@@ -180,7 +207,7 @@ async def notify_infraction(
     if len(text) > 4096 - LONGEST_EXTRAS:
         text = f"{text[:4093-LONGEST_EXTRAS]}..."
 
-    text += INFRACTION_APPEAL_SERVER_FOOTER if infr_type.lower() == 'ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
+    text += INFRACTION_APPEAL_SERVER_FOOTER if infraction["type"] == 'ban' else INFRACTION_APPEAL_MODMAIL_FOOTER
 
     embed = discord.Embed(
         description=text,
@@ -193,7 +220,7 @@ async def notify_infraction(
 
     dm_sent = await send_private_embed(user, embed)
     if dm_sent:
-        await bot.api_client.patch(
+        await bot.instance.api_client.patch(
             f"bot/infractions/{infr_id}",
             json={"dm_sent": True}
         )

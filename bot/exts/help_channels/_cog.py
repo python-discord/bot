@@ -7,6 +7,7 @@ from operator import attrgetter
 import arrow
 import discord
 import discord.abc
+from botcore.utils import members, scheduling
 from discord.ext import commands
 
 from bot import constants
@@ -14,7 +15,7 @@ from bot.bot import Bot
 from bot.constants import Channels, RedirectOutput
 from bot.exts.help_channels import _caches, _channel, _message, _name, _stats
 from bot.log import get_logger
-from bot.utils import channel as channel_utils, lock, members, scheduling
+from bot.utils import channel as channel_utils, lock
 
 log = get_logger(__name__)
 
@@ -88,12 +89,11 @@ class HelpChannels(commands.Cog):
 
         # Asyncio stuff
         self.queue_tasks: t.List[asyncio.Task] = []
-        self.init_task = scheduling.create_task(self.init_cog(), event_loop=self.bot.loop)
+        self.init_done = False
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel the init task and scheduled tasks when the cog unloads."""
         log.trace("Cog unload: cancelling the init_cog task")
-        self.init_task.cancel()
 
         log.trace("Cog unload: cancelling the channel queue tasks")
         for task in self.queue_tasks:
@@ -317,7 +317,7 @@ class HelpChannels(commands.Cog):
             log.exception("Failed to get a category; cog will be removed")
             self.bot.remove_cog(self.qualified_name)
 
-    async def init_cog(self) -> None:
+    async def cog_load(self) -> None:
         """Initialise the help channel system."""
         log.trace("Waiting for the guild to be available before initialisation.")
         await self.bot.wait_until_guild_available()
@@ -353,6 +353,7 @@ class HelpChannels(commands.Cog):
         await self.init_available()
         _stats.report_counts()
 
+        self.init_done = True
         log.info("Cog is ready!")
 
     async def move_idle_channel(self, channel: discord.TextChannel, has_task: bool = True) -> None:
@@ -364,7 +365,7 @@ class HelpChannels(commands.Cog):
         """
         log.trace(f"Handling in-use channel #{channel} ({channel.id}).")
 
-        closing_time, closed_on = await _channel.get_closing_time(channel, self.init_task.done())
+        closing_time, closed_on = await _channel.get_closing_time(channel, self.init_done)
 
         # Closing time is in the past.
         # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
@@ -393,17 +394,17 @@ class HelpChannels(commands.Cog):
         log.trace("Making a channel available.")
 
         channel = await self.get_available_candidate()
-        log.info(f"Making #{channel} ({channel.id}) available.")
+        channel_str = f"#{channel} ({channel.id})"
+        log.info(f"Making {channel_str} available.")
 
         await _message.send_available_message(channel)
 
-        log.trace(f"Moving #{channel} ({channel.id}) to the Available category.")
+        log.trace(f"Moving {channel_str} to the Available category.")
 
         # Unpin any previously stuck pins
-        log.trace(f"Looking for pins stuck in #{channel} ({channel.id}).")
-        for message in await channel.pins():
-            await _message.pin_wrapper(message.id, channel, pin=False)
-            log.debug(f"Removed a stuck pin from #{channel} ({channel.id}). ID: {message.id}")
+        log.trace(f"Looking for pins stuck in {channel_str}.")
+        if stuck_pins := await _message.unpin_all(channel):
+            log.debug(f"Removed {stuck_pins} stuck pins from {channel_str}.")
 
         await _channel.move_to_bottom(
             channel=channel,
@@ -479,7 +480,7 @@ class HelpChannels(commands.Cog):
             else:
                 await members.handle_role_change(claimant, claimant.remove_roles, self.cooldown_role)
 
-        await _message.unpin(channel)
+        await _message.unpin_all(channel)
         await _stats.report_complete_session(channel.id, closed_on)
         await self.move_to_dormant(channel)
 
@@ -509,8 +510,6 @@ class HelpChannels(commands.Cog):
         if message.author.bot:
             return  # Ignore messages sent by bots.
 
-        await self.init_task
-
         if channel_utils.is_in_category(message.channel, constants.Categories.help_available):
             if not _channel.is_excluded_channel(message.channel):
                 await self.claim_channel(message)
@@ -526,8 +525,6 @@ class HelpChannels(commands.Cog):
 
         The new time for the dormant task is configured with `HelpChannels.deleted_idle_minutes`.
         """
-        await self.init_task
-
         if not channel_utils.is_in_category(msg.channel, constants.Categories.help_in_use):
             return
 
@@ -566,19 +563,18 @@ class HelpChannels(commands.Cog):
         if self.dynamic_message is not None:
             try:
                 log.trace("Help channels have changed, dynamic message has been edited.")
-                await self.bot.http.edit_message(
-                    constants.Channels.how_to_get_help, self.dynamic_message, content=available_channels
-                )
+                await discord.PartialMessage(
+                    channel=self.bot.get_channel(constants.Channels.how_to_get_help),
+                    id=self.dynamic_message,
+                ).edit(content=available_channels)
             except discord.NotFound:
                 pass
             else:
                 return
 
         log.trace("Dynamic message could not be edited or found. Creating a new one.")
-        new_dynamic_message = await self.bot.http.send_message(
-            constants.Channels.how_to_get_help, available_channels
-        )
-        self.dynamic_message = new_dynamic_message["id"]
+        new_dynamic_message = await self.bot.get_channel(constants.Channels.how_to_get_help).send(available_channels)
+        self.dynamic_message = new_dynamic_message.id
         await _caches.dynamic_message.set("message_id", self.dynamic_message)
 
     @staticmethod

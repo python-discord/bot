@@ -278,7 +278,11 @@ class Tags(Cog):
 
         if tag is None and tag_identifier.group is not None:
             # Try exact match with only the name
-            tag = self.tags.get(TagIdentifier(None, tag_identifier.group))
+            name_only_identifier = TagIdentifier(None, tag_identifier.group)
+            tag = self.tags.get(name_only_identifier)
+            if tag:
+                # Ensure the correct tag information is sent to statsd
+                tag_identifier = name_only_identifier
 
         if tag is None and len(filtered_tags) == 1:
             tag_identifier = filtered_tags[0][0]
@@ -395,6 +399,6 @@ class Tags(Cog):
         return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Tags cog."""
-    bot.add_cog(Tags(bot))
+    await bot.add_cog(Tags(bot))

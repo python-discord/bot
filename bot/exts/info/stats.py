@@ -85,11 +85,11 @@ class Stats(Cog):
         self.bot.stats.gauge("boost.amount", g.premium_subscription_count)
         self.bot.stats.gauge("boost.tier", g.premium_tier)
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Stop the boost statistic task on unload of the Cog."""
         self.update_guild_boost.stop()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the stats cog."""
-    bot.add_cog(Stats(bot))
+    await bot.add_cog(Stats(bot))

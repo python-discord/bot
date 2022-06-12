@@ -19,7 +19,7 @@ def sum(a, b=1):
 sum(1, b=5)
 sum(1, 5) # same as above
 ```
-[Somtimes this is forced](https://www.python.org/dev/peps/pep-0570/#history-of-positional-only-parameter-semantics-in-python), in the case of the `pow()` function.
+[Somtimes this is forced](https://peps.python.org/pep-0570/#history-of-positional-only-parameter-semantics-in-python), in the case of the `pow()` function.
 
 The reverse is also true:
 ```py
@@ -33,6 +33,6 @@ The reverse is also true:
 ```
 
 **More info**  
-• [Keyword only arguments](https://www.python.org/dev/peps/pep-3102/)  
-• [Positional only arguments](https://www.python.org/dev/peps/pep-0570/)  
+• [Keyword only arguments](https://peps.python.org/pep-3102/)  
+• [Positional only arguments](https://peps.python.org/pep-0570/)  
 • `!tags param-arg` (Parameters vs. Arguments)  

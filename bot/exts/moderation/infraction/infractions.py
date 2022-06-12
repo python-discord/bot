@@ -10,7 +10,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
 from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
-from bot.decorators import respect_role_hierarchy
+from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -81,6 +81,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_kick(ctx, user, reason)
 
     @command()
+    @ensure_future_timestamp(timestamp_arg=3)
     async def ban(
         self,
         ctx: Context,
@@ -97,6 +98,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
     @command(aliases=("cban", "purgeban", "pban"))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def cleanban(
         self,
         ctx: Context,
@@ -123,7 +125,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.error("Failed to apply ban to user %d", user.id)
             return
 
-        # Calling commands directly skips Discord.py's convertors, so we need to convert args manually.
+        # Calling commands directly skips discord.py's convertors, so we need to convert args manually.
         clean_time = await Age().convert(ctx, "1h")
 
         log_url = await clean_cog._clean_messages(
@@ -161,6 +163,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `voicemute`?")
 
     @command(aliases=("vmute",))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def voicemute(
         self,
         ctx: Context,
@@ -180,6 +183,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary infractions
 
     @command(aliases=["mute"])
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempmute(
         self, ctx: Context,
         user: UnambiguousMemberOrUser,
@@ -213,6 +217,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command(aliases=("tban",))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempban(
         self,
         ctx: Context,
@@ -248,6 +253,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `tempvoicemute`?")
 
     @command(aliases=("tempvmute", "tvmute"))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempvoicemute(
         self,
         ctx: Context,
@@ -294,6 +300,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
+    @ensure_future_timestamp(timestamp_arg=3)
     async def shadow_tempban(
         self,
         ctx: Context,
@@ -602,6 +609,6 @@ class Infractions(InfractionScheduler, commands.Cog):
                 error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Infractions cog."""
-    bot.add_cog(Infractions(bot))
+    await bot.add_cog(Infractions(bot))

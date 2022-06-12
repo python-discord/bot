@@ -11,4 +11,4 @@ One can use a dict comp to change an existing dictionary using its `items` metho
 >>> {key.upper(): value * 2 for key, value in first_dict.items()}
 {'I': 2, 'LOVE': 8, 'PYTHON': 12}
 ```
-For more information and examples, check out [PEP 274](https://www.python.org/dev/peps/pep-0274/)
+For more information and examples, check out [PEP 274](https://peps.python.org/pep-0274/)

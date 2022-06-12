@@ -5,4 +5,4 @@ with open("test.txt", "r") as file:
 ```
 The above code automatically closes `file` when the `with` block exits, so you never have to manually do a `file.close()`. Most connection types, including file readers and database connections, support this.
 
-For more information, read [the official docs](https://docs.python.org/3/reference/compound_stmts.html#with), watch [Corey Schafer\'s context manager video](https://www.youtube.com/watch?v=-aKFBoZpiqA), or see [PEP 343](https://www.python.org/dev/peps/pep-0343/).
+For more information, read [the official docs](https://docs.python.org/3/reference/compound_stmts.html#with), watch [Corey Schafer\'s context manager video](https://www.youtube.com/watch?v=-aKFBoZpiqA), or see [PEP 343](https://peps.python.org/pep-0343/).

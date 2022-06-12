@@ -11,6 +11,7 @@ from discord.utils import escape_markdown
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Duration, Expiry
+from bot.decorators import ensure_future_timestamp
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -63,6 +64,12 @@ class Superstarify(InfractionScheduler, Cog):
         if after.display_name == forced_nick:
             return  # Nick change was triggered by this event. Ignore.
 
+        reason = (
+            "You have tried to change your nickname on the **Python Discord** server "
+            f"from **{before.display_name}** to **{after.display_name}**, but as you "
+            "are currently in superstar-prison, you do not have permission to do so."
+        )
+
         log.info(
             f"{after.display_name} ({after.id}) tried to escape superstar prison. "
             f"Changing the nick back to {before.display_name}."
@@ -72,21 +79,7 @@ class Superstarify(InfractionScheduler, Cog):
             reason=f"Superstarified member tried to escape the prison: {infr_id}"
         )
 
-        notified = await _utils.notify_infraction(
-            bot=self.bot,
-            user=after,
-            infr_id=infr_id,
-            infr_type="Superstarify",
-            expires_at=time.discord_timestamp(infraction["expires_at"]),
-            reason=(
-                "You have tried to change your nickname on the **Python Discord** server "
-                f"from **{before.display_name}** to **{after.display_name}**, but as you "
-                "are currently in superstar-prison, you do not have permission to do so."
-            ),
-            icon_url=_utils.INFRACTION_ICONS["superstar"][0]
-        )
-
-        if not notified:
+        if not await _utils.notify_infraction(infraction, after, reason):
             log.info("Failed to DM user about why they cannot change their nickname.")
 
     @Cog.listener()
@@ -111,6 +104,7 @@ class Superstarify(InfractionScheduler, Cog):
             await self.reapply_infraction(infraction, action)
 
     @command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def superstarify(
         self,
         ctx: Context,
@@ -245,6 +239,6 @@ class Superstarify(InfractionScheduler, Cog):
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Superstarify cog."""
-    bot.add_cog(Superstarify(bot))
+    await bot.add_cog(Superstarify(bot))

@@ -6,12 +6,12 @@ from typing import Optional
 
 import discord
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
 from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.messages import format_user, sub_clyde
 
 log = get_logger(__name__)
@@ -183,7 +183,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
     except MessageNotFound:
         mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
 
-        last_100_logs: list[discord.Message] = await mod_logs_channel.history(limit=100).flatten()
+        last_100_logs: list[discord.Message] = [message async for message in mod_logs_channel.history(limit=100)]
 
         for log_entry in last_100_logs:
             if not log_entry.embeds:
@@ -404,7 +404,7 @@ class Incidents(Cog):
         def check(payload: discord.RawReactionActionEvent) -> bool:
             return payload.message_id == incident.id
 
-        coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
+        coroutine = self.bot.wait_for("raw_message_delete", check=check, timeout=timeout)
         return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
@@ -658,6 +658,6 @@ class Incidents(Cog):
         log.trace("Successfully deleted discord links webhook message.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Incidents cog."""
-    bot.add_cog(Incidents(bot))
+    await bot.add_cog(Incidents(bot))
