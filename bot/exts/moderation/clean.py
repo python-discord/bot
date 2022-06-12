@@ -182,7 +182,7 @@ class Clean(Cog):
             return first_limit < message.created_at < second_limit
 
         def predicate_after(message: Message) -> bool:
-            """Check if the message is older than the first limit."""
+            """Check if the message is younger than the first limit."""
             return message.created_at > first_limit
 
         predicates = []
