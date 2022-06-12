@@ -8,7 +8,7 @@ from itertools import takewhile
 from typing import Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
 from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
-from discord.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
+from discord.ext.commands import Cog, Context, Converter, Greedy, command, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument
 
@@ -179,11 +179,11 @@ class Clean(Cog):
 
         def predicate_range(message: Message) -> bool:
             """Check if the message age is between the two limits."""
-            return first_limit <= message.created_at <= second_limit
+            return first_limit < message.created_at < second_limit
 
         def predicate_after(message: Message) -> bool:
-            """Check if the message is older than the first limit."""
-            return message.created_at >= first_limit
+            """Check if the message is younger than the first limit."""
+            return message.created_at > first_limit
 
         predicates = []
         # Set up the correct predicate
@@ -241,9 +241,14 @@ class Clean(Cog):
         self,
         channels: Iterable[TextChannel],
         to_delete: Predicate,
-        before: datetime,
-        after: Optional[datetime] = None
+        after: datetime,
+        before: Optional[datetime] = None
     ) -> tuple[defaultdict[TextChannel, list], list]:
+        """
+        Collect the messages for deletion by iterating over the histories of the appropriate channels.
+
+        The clean cog enforces an upper limit on message age through `_validate_input`.
+        """
         message_mappings = defaultdict(list)
         message_ids = []
 
@@ -419,8 +424,8 @@ class Clean(Cog):
             message_mappings, message_ids = await self._get_messages_from_channels(
                 channels=deletion_channels,
                 to_delete=predicate,
-                before=second_limit,
-                after=first_limit  # Remember first is the earlier datetime.
+                after=first_limit,  # Remember first is the earlier datetime (the "older" time).
+                before=second_limit
             )
 
         if not self.cleaning:
@@ -452,7 +457,7 @@ class Clean(Cog):
 
     # region: Commands
 
-    @group(invoke_without_command=True, name="clean", aliases=["clear", "purge"])
+    @group(invoke_without_command=True, name="clean", aliases=("clear",))
     async def clean_group(
         self,
         ctx: Context,
@@ -471,7 +476,7 @@ class Clean(Cog):
 
         \u2003• `users`: A series of user mentions, ID's, or names.
         \u2003• `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
-        At least one limit is required.
+        At least one limit is required. The limits are *exclusive*.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
         If only one of them is provided, acts as `clean until`. If both are provided, acts as `clean between`.
         \u2003• `regex`: A regex pattern the message must contain to be deleted.
@@ -565,6 +570,8 @@ class Clean(Cog):
 
         A limit can be either a message, and ISO date-time string, or a time delta.
 
+        The limit is *exclusive*.
+
         If a message is specified the cleanup will be limited to the channel the message is in.
 
         If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
@@ -590,6 +597,8 @@ class Clean(Cog):
         The range is specified through two limits.
         A limit can be either a message, and ISO date-time string, or a time delta.
 
+        The limits are *exclusive*.
+
         If two messages are specified, they both must be in the same channel.
         The cleanup will be limited to the channel the messages are in.
 
@@ -614,6 +623,17 @@ class Clean(Cog):
 
         await self._send_expiring_message(ctx, message)
         await self._delete_invocation(ctx)
+
+    @command()
+    async def purge(self, ctx: Context, users: Greedy[User], age: Optional[Union[Age, ISODateTime]] = None) -> None:
+        """
+        Clean messages of users from all public channels up to a certain message age (10 minutes by default).
+
+        The age is *exclusive*, meaning that `10s` won't delete a message exactly 10 seconds old.
+        """
+        if age is None:
+            age = await Age().convert(ctx, "10M")
+        await self._clean_messages(ctx, channels="*", users=users, first_limit=age)
 
     # endregion
 
