@@ -621,7 +621,11 @@ class Clean(Cog):
 
     @command()
     async def purge(self, ctx: Context, users: Greedy[User], age: Optional[Union[Age, ISODateTime]] = None) -> None:
-        """Clean messages of users from all public channels up to a certain message age (10 minutes by default)."""
+        """
+        Clean messages of users from all public channels up to a certain message age (10 minutes by default).
+
+        The age is *exclusive*, meaning that `10s` won't delete a message exactly 10 seconds old.
+        """
         if age is None:
             age = await Age().convert(ctx, "10M")
         await self._clean_messages(ctx, channels="*", users=users, first_limit=age)
