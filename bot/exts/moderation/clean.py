@@ -241,9 +241,14 @@ class Clean(Cog):
         self,
         channels: Iterable[TextChannel],
         to_delete: Predicate,
-        before: datetime,
-        after: Optional[datetime] = None
+        after: datetime,
+        before: Optional[datetime] = None
     ) -> tuple[defaultdict[TextChannel, list], list]:
+        """
+        Collect the messages for deletion by iterating over the histories of the appropriate channels.
+
+        The clean cog enforces an upper limit on message age through `_validate_input`.
+        """
         message_mappings = defaultdict(list)
         message_ids = []
 
@@ -419,8 +424,8 @@ class Clean(Cog):
             message_mappings, message_ids = await self._get_messages_from_channels(
                 channels=deletion_channels,
                 to_delete=predicate,
-                before=second_limit,
-                after=first_limit  # Remember first is the earlier datetime.
+                after=first_limit,  # Remember first is the earlier datetime (the "older" time).
+                before=second_limit
             )
 
         if not self.cleaning:
