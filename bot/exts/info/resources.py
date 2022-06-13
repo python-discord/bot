@@ -65,6 +65,6 @@ class Resources(commands.Cog):
         await ctx.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Resources cog."""
-    bot.add_cog(Resources(bot))
+    await bot.add_cog(Resources(bot))

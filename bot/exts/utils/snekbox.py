@@ -7,7 +7,8 @@ from signal import Signals
 from textwrap import dedent
 from typing import Optional, Tuple
 
-from botcore.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
+from botcore.utils import scheduling
+from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from discord import AllowedMentions, HTTPException, Message, NotFound, Reaction, User
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 
@@ -15,8 +16,9 @@ from bot.bot import Bot
 from bot.constants import Categories, Channels, Roles, URLs
 from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.utils import scheduling, send_to_paste_service
+from bot.utils import send_to_paste_service
 from bot.utils.messages import wait_for_deletion
+from bot.utils.services import PasteTooLongError, PasteUploadError
 
 log = get_logger(__name__)
 
@@ -64,7 +66,7 @@ if not hasattr(sys, "_setup_finished"):
 {setup}
 """
 
-MAX_PASTE_LEN = 10000
+MAX_PASTE_LENGTH = 10_000
 
 # The Snekbox commands' whitelists and blacklists.
 NO_SNEKBOX_CHANNELS = (Channels.python_general,)
@@ -136,10 +138,12 @@ class Snekbox(Cog):
         """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
-        if len(output) > MAX_PASTE_LEN:
-            log.info("Full output is too long to upload")
+        try:
+            return await send_to_paste_service(output, extension="txt", max_length=MAX_PASTE_LENGTH)
+        except PasteTooLongError:
             return "too long to upload"
-        return await send_to_paste_service(output, extension="txt")
+        except PasteUploadError:
+            return "unable to upload"
 
     @staticmethod
     def prepare_timeit_input(codeblocks: list[str]) -> tuple[str, list[str]]:
@@ -457,6 +461,6 @@ def predicate_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bo
     return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REDO_EMOJI
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Snekbox cog."""
-    bot.add_cog(Snekbox(bot))
+    await bot.add_cog(Snekbox(bot))

@@ -114,43 +114,35 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
         self.cog = silence.Silence(self.bot)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_async_init_got_guild(self):
+    async def test_cog_load_got_guild(self):
         """Bot got guild after it became available."""
-        await self.cog._async_init()
+        await self.cog.cog_load()
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_async_init_got_channels(self):
+    async def test_cog_load_got_channels(self):
         """Got channels from bot."""
         self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
 
-        await self.cog._async_init()
+        await self.cog.cog_load()
         self.assertEqual(self.cog._mod_alerts_channel.id, Channels.mod_alerts)
 
     @autospec(silence, "SilenceNotifier")
-    async def test_async_init_got_notifier(self, notifier):
+    async def test_cog_load_got_notifier(self, notifier):
         """Notifier was started with channel."""
         self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
 
-        await self.cog._async_init()
+        await self.cog.cog_load()
         notifier.assert_called_once_with(MockTextChannel(id=Channels.mod_log))
         self.assertEqual(self.cog.notifier, notifier.return_value)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
-    async def test_async_init_rescheduled(self):
+    async def testcog_load_rescheduled(self):
         """`_reschedule_` coroutine was awaited."""
         self.cog._reschedule = mock.create_autospec(self.cog._reschedule)
-        await self.cog._async_init()
+        await self.cog.cog_load()
         self.cog._reschedule.assert_awaited_once_with()
-
-    def test_cog_unload_cancelled_tasks(self):
-        """The init task was cancelled."""
-        self.cog._init_task = asyncio.Future()
-        self.cog.cog_unload()
-
-        # It's too annoying to test cancel_all since it's a done callback and wrapped in a lambda.
-        self.assertTrue(self.cog._init_task.cancelled())
 
     @autospec("discord.ext.commands", "has_any_role")
     @mock.patch.object(silence.constants, "MODERATION_ROLES", new=(1, 2, 3))
@@ -165,7 +157,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_force_voice_sync(self):
         """Tests the _force_voice_sync helper function."""
-        await self.cog._async_init()
+        await self.cog.cog_load()
 
         # Create a regular member, and one member for each of the moderation roles
         moderation_members = [MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES]
@@ -187,7 +179,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_force_voice_sync_no_channel(self):
         """Test to ensure _force_voice_sync can create its own voice channel if one is not available."""
-        await self.cog._async_init()
+        await self.cog.cog_load()
 
         channel = MockVoiceChannel(guild=MockGuild(afk_channel=None))
         new_channel = MockVoiceChannel(delete=AsyncMock())
@@ -206,7 +198,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_voice_kick(self):
         """Test to ensure kick function can remove all members from a voice channel."""
-        await self.cog._async_init()
+        await self.cog.cog_load()
 
         # Create a regular member, and one member for each of the moderation roles
         moderation_members = [MockMember(roles=[MockRole(id=role)]) for role in MODERATION_ROLES]
@@ -236,7 +228,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_kick_move_to_error(self):
         """Test to ensure move_to gets called on all members during kick, even if some fail."""
-        await self.cog._async_init()
+        await self.cog.cog_load()
         _, members = self.create_erroneous_members()
 
         await self.cog._kick_voice_members(MockVoiceChannel(members=members))
@@ -245,7 +237,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_sync_move_to_error(self):
         """Test to ensure move_to gets called on all members during sync, even if some fail."""
-        await self.cog._async_init()
+        await self.cog.cog_load()
         failing_member, members = self.create_erroneous_members()
 
         await self.cog._force_voice_sync(MockVoiceChannel(members=members))
@@ -339,7 +331,7 @@ class RescheduleTests(unittest.IsolatedAsyncioTestCase):
         self.cog._unsilence_wrapper = mock.create_autospec(self.cog._unsilence_wrapper)
 
         with mock.patch.object(self.cog, "_reschedule", autospec=True):
-            asyncio.run(self.cog._async_init())  # Populate instance attributes.
+            asyncio.run(self.cog.cog_load())  # Populate instance attributes.
 
     async def test_skipped_missing_channel(self):
         """Did nothing because the channel couldn't be retrieved."""
@@ -428,7 +420,7 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
         # Avoid unawaited coroutine warnings.
         self.cog.scheduler.schedule_later.side_effect = lambda delay, task_id, coro: coro.close()
 
-        asyncio.run(self.cog._async_init())  # Populate instance attributes.
+        asyncio.run(self.cog.cog_load())  # Populate instance attributes.
 
         self.text_channel = MockTextChannel()
         self.text_overwrite = PermissionOverwrite(
@@ -701,7 +693,7 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         overwrites_cache = mock.create_autospec(self.cog.previous_overwrites, spec_set=True)
         self.cog.previous_overwrites = overwrites_cache
 
-        asyncio.run(self.cog._async_init())  # Populate instance attributes.
+        asyncio.run(self.cog.cog_load())  # Populate instance attributes.
 
         self.cog.scheduler.__contains__.return_value = True
         overwrites_cache.get.return_value = '{"send_messages": true, "add_reactions": false}'

@@ -11,7 +11,7 @@ NAMESPACE = "doc"
 doc_cache = DocRedisCache(namespace=NAMESPACE)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Doc cog."""
     from ._cog import DocCog
-    bot.add_cog(DocCog(bot))
+    await bot.add_cog(DocCog(bot))

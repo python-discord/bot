@@ -9,18 +9,18 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
 import arrow
+from botcore.site_api import ResponseCodeError
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
-from discord import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
+from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
 from discord.ext.commands import Context
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
-from bot.utils.scheduling import Scheduler
 
 if typing.TYPE_CHECKING:
     from bot.exts.recruitment.talentpool._cog import TalentPool
@@ -151,12 +151,11 @@ class Reviewer:
         # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
         if not NOMINATION_MESSAGE_REGEX.search(message.content):
-            with contextlib.suppress(NoMoreItems):
-                async for new_message in message.channel.history(before=message.created_at):
-                    messages.append(new_message)
+            async for new_message in message.channel.history(before=message.created_at):
+                messages.append(new_message)
 
-                    if NOMINATION_MESSAGE_REGEX.search(new_message.content):
-                        break
+                if NOMINATION_MESSAGE_REGEX.search(new_message.content):
+                    break
 
         log.debug(f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}")
 

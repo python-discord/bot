@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from collections import namedtuple
 from datetime import datetime
@@ -7,6 +8,8 @@ from typing import Optional, Union
 import arrow
 from aioredis import RedisError
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
+from botcore.utils.scheduling import Scheduler
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Forbidden, Member, TextChannel, User
 from discord.ext import tasks
@@ -17,9 +20,8 @@ from bot.constants import Channels, Colours, Emojis, Event, Icons, MODERATION_RO
 from bot.converters import DurationDelta, Expiry
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.messages import format_user
-from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 
@@ -69,16 +71,18 @@ class Defcon(Cog):
 
         scheduling.create_task(self._sync_settings(), event_loop=self.bot.loop)
 
-    @property
-    def mod_log(self) -> ModLog:
+    async def get_mod_log(self) -> ModLog:
         """Get currently loaded ModLog cog instance."""
-        return self.bot.get_cog("ModLog")
+        while not (cog := self.bot.get_cog("ModLog")):
+            await asyncio.sleep(1)
+        return cog
 
     @defcon_settings.atomic_transaction
     async def _sync_settings(self) -> None:
         """On cog load, try to synchronize DEFCON settings to the API."""
         log.trace("Waiting for the guild to become available before syncing.")
         await self.bot.wait_until_guild_available()
+
         self.channel = await self.bot.fetch_channel(Channels.defcon)
 
         log.trace("Syncing settings.")
@@ -101,7 +105,7 @@ class Defcon(Cog):
             self._update_notifier()
             log.info(f"DEFCON synchronized: {time.humanize_delta(self.threshold) if self.threshold else '-'}")
 
-        self._update_channel_topic()
+        await self._update_channel_topic()
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
@@ -133,7 +137,7 @@ class Defcon(Cog):
                 if not message_sent:
                     message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
 
-                await self.mod_log.send_log_message(
+                await (await self.get_mod_log()).send_log_message(
                     Icons.defcon_denied, Colours.soft_red, "Entry denied",
                     message, member.display_avatar.url
                 )
@@ -209,12 +213,12 @@ class Defcon(Cog):
         await role.edit(reason="DEFCON unshutdown", permissions=permissions)
         await ctx.send(f"{Action.SERVER_OPEN.value.emoji} Server reopened.")
 
-    def _update_channel_topic(self) -> None:
+    async def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
         threshold = time.humanize_delta(self.threshold) if self.threshold else '-'
         new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {threshold})"
 
-        self.mod_log.ignore(Event.guild_channel_update, Channels.defcon)
+        (await self.get_mod_log()).ignore(Event.guild_channel_update, Channels.defcon)
         scheduling.create_task(self.channel.edit(topic=new_topic))
 
     @defcon_settings.atomic_transaction
@@ -273,7 +277,7 @@ class Defcon(Cog):
             await channel.send(message)
 
         await self._send_defcon_log(action, author)
-        self._update_channel_topic()
+        await self._update_channel_topic()
 
         self._log_threshold_stat(threshold)
 
@@ -301,7 +305,7 @@ class Defcon(Cog):
         )
         status_msg = f"DEFCON {action.name.lower()}"
 
-        await self.mod_log.send_log_message(info.icon, info.color, status_msg, log_msg)
+        await (await self.get_mod_log()).send_log_message(info.icon, info.color, status_msg, log_msg)
 
     def _update_notifier(self) -> None:
         """Start or stop the notifier according to the DEFCON status."""
@@ -318,13 +322,13 @@ class Defcon(Cog):
         """Routinely notify moderators that DEFCON is active."""
         await self.channel.send(f"Defcon is on and is set to {time.humanize_delta(self.threshold)}.")
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel the notifer and threshold removal tasks when the cog unloads."""
         log.trace("Cog unload: canceling defcon notifier task.")
         self.defcon_notifier.cancel()
         self.scheduler.cancel_all()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Defcon cog."""
-    bot.add_cog(Defcon(bot))
+    await bot.add_cog(Defcon(bot))

@@ -9,7 +9,6 @@ from bot import constants
 from bot.bot import Bot
 from bot.converters import MemberOrUser
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.checks import has_any_role
 from bot.utils.messages import count_unique_users_reaction, send_attachments
 from bot.utils.webhooks import send_webhook
@@ -25,10 +24,9 @@ class DuckPond(Cog):
         self.webhook_id = constants.Webhooks.duck_pond
         self.webhook = None
         self.ducked_messages = []
-        scheduling.create_task(self.fetch_webhook(), event_loop=self.bot.loop)
         self.relay_lock = None
 
-    async def fetch_webhook(self) -> None:
+    async def cog_load(self) -> None:
         """Fetches the webhook object, so we can post to it."""
         await self.bot.wait_until_guild_available()
 
@@ -218,6 +216,6 @@ class DuckPond(Cog):
             await ctx.message.add_reaction("❌")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the DuckPond cog."""
-    bot.add_cog(DuckPond(bot))
+    await bot.add_cog(DuckPond(bot))

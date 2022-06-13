@@ -1,24 +1,24 @@
 import asyncio
+import datetime
 import difflib
 import json
 import random
-from datetime import timedelta
 from functools import partial
 from typing import Optional
 
 import arrow
+from botcore.site_api import ResponseCodeError
 from discord import ButtonStyle, Colour, Embed, Interaction
+from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.ui import Button, View
 from discord.utils import sleep_until
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.converters import OffTopicName
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 
@@ -30,23 +30,39 @@ NAME_START_INDEX = 4
 log = get_logger(__name__)
 
 
-async def update_names(bot: Bot) -> None:
-    """Background updater task that performs the daily channel name update."""
-    while True:
-        # Since we truncate the compute timedelta to seconds, we add one second to ensure
-        # we go past midnight in the `seconds_to_sleep` set below.
-        today_at_midnight = arrow.utcnow().replace(microsecond=0, second=0, minute=0, hour=0)
-        next_midnight = today_at_midnight + timedelta(days=1)
-        await sleep_until(next_midnight.datetime)
+class OffTopicNames(Cog):
+    """Commands related to managing the off-topic category channel names."""
+
+    def __init__(self, bot: Bot):
+        self.bot = bot
+
+        # What errors to handle and restart the task using an exponential back-off algorithm
+        self.update_names.add_exception_type(ResponseCodeError)
+        self.update_names.start()
+
+    async def cog_unload(self) -> None:
+        """
+        Gracefully stop the update_names task.
+
+        Clear the exception types first, so that if the task hits any errors it is not re-attempted.
+        """
+        self.update_names.clear_exception_types()
+        self.update_names.stop()
+
+    @tasks.loop(time=datetime.time(), reconnect=True)
+    async def update_names(self) -> None:
+        """Background updater task that performs the daily channel name update."""
+        await self.bot.wait_until_guild_available()
 
         try:
-            channel_0_name, channel_1_name, channel_2_name = await bot.api_client.get(
+            channel_0_name, channel_1_name, channel_2_name = await self.bot.api_client.get(
                 'bot/off-topic-channel-names', params={'random_items': 3}
             )
         except ResponseCodeError as e:
             log.error(f"Failed to get new off-topic channel names: code {e.response.status}")
-            continue
-        channel_0, channel_1, channel_2 = (bot.get_channel(channel_id) for channel_id in CHANNELS)
+            raise
+
+        channel_0, channel_1, channel_2 = (self.bot.get_channel(channel_id) for channel_id in CHANNELS)
 
         await channel_0.edit(name=OTN_FORMATTER.format(number=0, name=channel_0_name))
         await channel_1.edit(name=OTN_FORMATTER.format(number=1, name=channel_1_name))
@@ -56,28 +72,6 @@ async def update_names(bot: Bot) -> None:
             "Updated off-topic channel names to"
             f" {channel_0_name}, {channel_1_name} and {channel_2_name}"
         )
-
-
-class OffTopicNames(Cog):
-    """Commands related to managing the off-topic category channel names."""
-
-    def __init__(self, bot: Bot):
-        self.bot = bot
-        self.updater_task = None
-
-        scheduling.create_task(self.init_offtopic_updater(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
-        """Cancel any running updater tasks on cog unload."""
-        if self.updater_task is not None:
-            self.updater_task.cancel()
-
-    async def init_offtopic_updater(self) -> None:
-        """Start off-topic channel updating event loop if it hasn't already started."""
-        await self.bot.wait_until_guild_available()
-        if self.updater_task is None:
-            coro = update_names(self.bot)
-            self.updater_task = scheduling.create_task(coro, event_loop=self.bot.loop)
 
     async def toggle_ot_name_activity(self, ctx: Context, name: str, active: bool) -> None:
         """Toggle active attribute for an off-topic name."""
@@ -125,7 +119,7 @@ class OffTopicNames(Cog):
             )
             await ctx.send(
                 f":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. "
-                "Use `!otn forceadd` to override this check."
+                f"Use `{BotConfig.prefix}otn forceadd` to override this check."
             )
         else:
             await self._add_name(ctx, name)
@@ -308,6 +302,6 @@ class OffTopicNames(Cog):
             await ctx.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the OffTopicNames cog."""
-    bot.add_cog(OffTopicNames(bot))
+    await bot.add_cog(OffTopicNames(bot))

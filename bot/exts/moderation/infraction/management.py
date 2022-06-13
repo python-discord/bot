@@ -9,7 +9,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
 from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction import _utils
@@ -89,7 +89,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],
         *,
         reason: str = None
     ) -> None:
@@ -129,7 +129,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],
         *,
         reason: str = None
     ) -> None:
@@ -453,6 +453,6 @@ class ModManagement(commands.Cog):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModManagement cog."""
-    bot.add_cog(ModManagement(bot))
+    await bot.add_cog(ModManagement(bot))

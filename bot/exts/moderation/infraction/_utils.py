@@ -3,10 +3,10 @@ from datetime import datetime
 
 import arrow
 import discord
+from botcore.site_api import ResponseCodeError
 from discord.ext.commands import Context
 
 import bot
-from bot.api import ResponseCodeError
 from bot.constants import Colours, Icons
 from bot.converters import MemberOrUser
 from bot.errors import InvalidInfractedUserError

@@ -4,7 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from aiohttp import ClientConnectorError
 
-from bot.utils.services import FAILED_REQUEST_ATTEMPTS, send_to_paste_service
+from bot.utils.services import (
+    FAILED_REQUEST_ATTEMPTS, MAX_PASTE_LENGTH, PasteTooLongError, PasteUploadError, send_to_paste_service
+)
 from tests.helpers import MockBot
 
 
@@ -55,23 +57,34 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
         for error_json in test_cases:
             with self.subTest(error_json=error_json):
                 response.json = AsyncMock(return_value=error_json)
-                result = await send_to_paste_service("")
+                with self.assertRaises(PasteUploadError):
+                    await send_to_paste_service("")
                 self.assertEqual(self.bot.http_session.post.call_count, FAILED_REQUEST_ATTEMPTS)
-                self.assertIsNone(result)
 
             self.bot.http_session.post.reset_mock()
 
     async def test_request_repeated_on_connection_errors(self):
         """Requests are repeated in the case of connection errors."""
         self.bot.http_session.post = MagicMock(side_effect=ClientConnectorError(Mock(), Mock()))
-        result = await send_to_paste_service("")
+        with self.assertRaises(PasteUploadError):
+            await send_to_paste_service("")
         self.assertEqual(self.bot.http_session.post.call_count, FAILED_REQUEST_ATTEMPTS)
-        self.assertIsNone(result)
 
     async def test_general_error_handled_and_request_repeated(self):
         """All `Exception`s are handled, logged and request repeated."""
         self.bot.http_session.post = MagicMock(side_effect=Exception)
-        result = await send_to_paste_service("")
+        with self.assertRaises(PasteUploadError):
+            await send_to_paste_service("")
         self.assertEqual(self.bot.http_session.post.call_count, FAILED_REQUEST_ATTEMPTS)
         self.assertLogs("bot.utils", logging.ERROR)
-        self.assertIsNone(result)
+
+    async def test_raises_error_on_too_long_input(self):
+        """Ensure PasteTooLongError is raised if `contents` is longer than `MAX_PASTE_LENGTH`."""
+        contents = "a" * (MAX_PASTE_LENGTH + 1)
+        with self.assertRaises(PasteTooLongError):
+            await send_to_paste_service(contents)
+
+    async def test_raises_on_too_large_max_length(self):
+        """Ensure ValueError is raised if `max_length` passed is greater than `MAX_PASTE_LENGTH`."""
+        with self.assertRaises(ValueError):
+            await send_to_paste_service("Hello World!", max_length=MAX_PASTE_LENGTH + 1)

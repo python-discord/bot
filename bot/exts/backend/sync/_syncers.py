@@ -2,14 +2,14 @@ import abc
 import typing as t
 from collections import namedtuple
 
+import discord.errors
+from botcore.site_api import ResponseCodeError
 from discord import Guild
 from discord.ext.commands import Context
 from more_itertools import chunked
 
 import bot
-from bot.api import ResponseCodeError
 from bot.log import get_logger
-from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 
@@ -157,7 +157,16 @@ class UserSyncer(Syncer):
                 if db_user[db_field] != guild_value:
                     updated_fields[db_field] = guild_value
 
-            if guild_user := await get_or_fetch_member(guild, db_user["id"]):
+            guild_user = guild.get_member(db_user["id"])
+            if not guild_user and db_user["in_guild"]:
+                # The member was in the guild during the last sync.
+                # We try to fetch them to verify cache integrity.
+                try:
+                    guild_user = await guild.fetch_member(db_user["id"])
+                except discord.errors.NotFound:
+                    guild_user = None
+
+            if guild_user:
                 seen_guild_users.add(guild_user.id)
 
                 maybe_update("name", guild_user.name)

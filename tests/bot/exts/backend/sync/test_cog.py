@@ -2,9 +2,9 @@ import unittest
 from unittest import mock
 
 import discord
+from botcore.site_api import ResponseCodeError
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.exts.backend import sync
 from bot.exts.backend.sync._cog import Sync
 from bot.exts.backend.sync._syncers import Syncer
@@ -16,11 +16,11 @@ class SyncExtensionTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the sync extension."""
 
     @staticmethod
-    def test_extension_setup():
+    async def test_extension_setup():
         """The Sync cog should be added."""
         bot = helpers.MockBot()
-        sync.setup(bot)
-        bot.add_cog.assert_called_once()
+        await sync.setup(bot)
+        bot.add_cog.assert_awaited_once()
 
 
 class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
@@ -60,22 +60,18 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
 class SyncCogTests(SyncCogTestCase):
     """Tests for the Sync cog."""
 
-    @mock.patch("bot.utils.scheduling.create_task")
-    @mock.patch.object(Sync, "sync_guild", new_callable=mock.MagicMock)
-    def test_sync_cog_init(self, sync_guild, create_task):
-        """Should instantiate syncers and run a sync for the guild."""
-        # Reset because a Sync cog was already instantiated in setUp.
+    async def test_sync_cog_sync_on_load(self):
+        """Roles and users should be synced on cog load."""
+        guild = helpers.MockGuild()
+        self.bot.get_guild = mock.MagicMock(return_value=guild)
+
         self.RoleSyncer.reset_mock()
         self.UserSyncer.reset_mock()
 
-        mock_sync_guild_coro = mock.MagicMock()
-        sync_guild.return_value = mock_sync_guild_coro
+        await self.cog.cog_load()
 
-        Sync(self.bot)
-
-        sync_guild.assert_called_once_with()
-        create_task.assert_called_once()
-        self.assertEqual(create_task.call_args.args[0], mock_sync_guild_coro)
+        self.RoleSyncer.sync.assert_called_once_with(guild)
+        self.UserSyncer.sync.assert_called_once_with(guild)
 
     async def test_sync_cog_sync_guild(self):
         """Roles and users should be synced only if a guild is successfully retrieved."""
@@ -87,7 +83,7 @@ class SyncCogTests(SyncCogTestCase):
 
                 self.bot.get_guild = mock.MagicMock(return_value=guild)
 
-                await self.cog.sync_guild()
+                await self.cog.cog_load()
 
                 self.bot.wait_until_guild_available.assert_called_once()
                 self.bot.get_guild.assert_called_once_with(constants.Guild.id)

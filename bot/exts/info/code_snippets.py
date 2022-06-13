@@ -275,6 +275,6 @@ class CodeSnippets(Cog):
             )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the CodeSnippets cog."""
-    bot.add_cog(CodeSnippets(bot))
+    await bot.add_cog(CodeSnippets(bot))

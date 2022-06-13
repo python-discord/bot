@@ -206,6 +206,6 @@ class Utils(Cog):
             await message.add_reaction(reaction)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Utils cog."""
-    bot.add_cog(Utils(bot))
+    await bot.add_cog(Utils(bot))

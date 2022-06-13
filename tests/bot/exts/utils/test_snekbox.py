@@ -35,15 +35,15 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         resp.json.assert_awaited_once()
 
     async def test_upload_output_reject_too_long(self):
-        """Reject output longer than MAX_PASTE_LEN."""
-        result = await self.cog.upload_output("-" * (snekbox.MAX_PASTE_LEN + 1))
+        """Reject output longer than MAX_PASTE_LENGTH."""
+        result = await self.cog.upload_output("-" * (snekbox.MAX_PASTE_LENGTH + 1))
         self.assertEqual(result, "too long to upload")
 
     @patch("bot.exts.utils.snekbox.send_to_paste_service")
     async def test_upload_output(self, mock_paste_util):
         """Upload the eval output to the URLs.paste_service.format(key="documents") endpoint."""
         await self.cog.upload_output("Test output.")
-        mock_paste_util.assert_called_once_with("Test output.", extension="txt")
+        mock_paste_util.assert_called_once_with("Test output.", extension="txt", max_length=snekbox.MAX_PASTE_LENGTH)
 
     async def test_codeblock_converter(self):
         ctx = MockContext()
@@ -403,11 +403,11 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(actual, expected)
 
 
-class SnekboxSetupTests(unittest.TestCase):
+class SnekboxSetupTests(unittest.IsolatedAsyncioTestCase):
     """Tests setup of the `Snekbox` cog."""
 
-    def test_setup(self):
+    async def test_setup(self):
         """Setup of the extension should call add_cog."""
         bot = MockBot()
-        snekbox.setup(bot)
-        bot.add_cog.assert_called_once()
+        await snekbox.setup(bot)
+        bot.add_cog.assert_awaited_once()

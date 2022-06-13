@@ -1,5 +1,6 @@
 When checking if something is equal to one thing or another, you might think that this is possible:
 ```py
+# Incorrect...
 if favorite_fruit == 'grapefruit' or 'lemon':
     print("That's a weird favorite fruit to have.")
 ```

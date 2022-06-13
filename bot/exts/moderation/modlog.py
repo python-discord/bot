@@ -6,12 +6,14 @@ from datetime import datetime, timezone
 from itertools import zip_longest
 
 import discord
+from botcore.site_api import ResponseCodeError
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown, format_dt, snowflake_time
+from sentry_sdk import add_breadcrumb
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
@@ -53,24 +55,35 @@ class ModLog(Cog, name="ModLog"):
         if attachments is None:
             attachments = []
 
-        response = await self.bot.api_client.post(
-            'bot/deleted-messages',
-            json={
-                'actor': actor_id,
-                'creation': datetime.now(timezone.utc).isoformat(),
-                'deletedmessage_set': [
-                    {
-                        'id': message.id,
-                        'author': message.author.id,
-                        'channel_id': message.channel.id,
-                        'content': message.content.replace("\0", ""),  # Null chars cause 400.
-                        'embeds': [embed.to_dict() for embed in message.embeds],
-                        'attachments': attachment,
-                    }
-                    for message, attachment in zip_longest(messages, attachments, fillvalue=[])
-                ]
+        deletedmessage_set = [
+            {
+                "id": message.id,
+                "author": message.author.id,
+                "channel_id": message.channel.id,
+                "content": message.content.replace("\0", ""),  # Null chars cause 400.
+                "embeds": [embed.to_dict() for embed in message.embeds],
+                "attachments": attachment,
             }
-        )
+            for message, attachment in zip_longest(messages, attachments, fillvalue=[])
+        ]
+
+        try:
+            response = await self.bot.api_client.post(
+                "bot/deleted-messages",
+                json={
+                    "actor": actor_id,
+                    "creation": datetime.now(timezone.utc).isoformat(),
+                    "deletedmessage_set": deletedmessage_set,
+                }
+            )
+        except ResponseCodeError as e:
+            add_breadcrumb(
+                category="api_error",
+                message=str(e),
+                level="error",
+                data=deletedmessage_set,
+            )
+            raise
 
         return f"{URLs.site_logs_view}/{response['id']}"
 
@@ -840,13 +853,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_thread_join(self, thread: Thread) -> None:
+    async def on_thread_create(self, thread: Thread) -> None:
         """Log thread creation."""
-        # If we are in the thread already we can most probably assume we already logged it?
-        # We don't really have a better way of doing this since the API doesn't make any difference between the two
-        if thread.me:
-            return
-
         if self.is_channel_ignored(thread.id):
             log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
             return
@@ -936,6 +944,6 @@ class ModLog(Cog, name="ModLog"):
         )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModLog cog."""
-    bot.add_cog(ModLog(bot))
+    await bot.add_cog(ModLog(bot))
