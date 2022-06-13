@@ -6,13 +6,11 @@ import random
 from functools import partial
 from typing import Optional
 
-import arrow
 from botcore.site_api import ResponseCodeError
 from discord import ButtonStyle, Colour, Embed, Interaction
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.ui import Button, View
-from discord.utils import sleep_until
 
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, NEGATIVE_REPLIES
