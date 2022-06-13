@@ -390,7 +390,12 @@ class Filtering(Cog):
                         await self._send_log(filter_name, _filter, msg, stats, reason)
 
                         # If the filter reason contains `[autoban]`, we want to auto-ban the user
-                        if reason and "[autoban]" in reason.lower():
+                        autoban = reason and "[autoban]" in reason.lower()
+                        if not autoban and filter_name == "filter_invites" and isinstance(result, dict):
+                            autoban = any(
+                                "[autoban]" in invite_info.get("reason", "").lower() for invite_info in result.values()
+                            )
+                        if autoban:
                             # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
                             # This sends the ban confirmation directly under watchlist trigger embed, to inform
                             # mods that the user was auto-banned for the message.
