@@ -24,6 +24,7 @@ from bot.utils.messages import count_unique_users_reaction, pin_no_system_messag
 
 if typing.TYPE_CHECKING:
     from bot.exts.recruitment.talentpool._cog import TalentPool
+    from bot.exts.utils.thread_bumper import ThreadBumper
 
 log = get_logger(__name__)
 
@@ -97,11 +98,16 @@ class Reviewer:
         thread = await last_message.create_thread(
             name=f"Nomination - {nominee}",
         )
-        await thread.send(fr"<@&{Roles.mod_team}> <@&{Roles.admins}>")
+        message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
         if update_database:
             nomination = self._pool.cache.get(user_id)
             await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
+
+        bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
+        if bump_cog:
+            context = await self.bot.get_context(message)
+            await bump_cog.add_thread_to_bump_list(context, thread)
 
     async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
         """Format a generic review of a user and return it with the reviewed emoji and the user themselves."""
