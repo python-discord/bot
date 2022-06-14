@@ -393,7 +393,9 @@ class Filtering(Cog):
                         autoban = reason and "[autoban]" in reason.lower()
                         if not autoban and filter_name == "filter_invites" and isinstance(result, dict):
                             autoban = any(
-                                "[autoban]" in invite_info.get("reason", "").lower() for invite_info in result.values()
+                                "[autoban]" in invite_info["reason"].lower()
+                                for invite_info in result.values()
+                                if invite_info.get("reason")
                             )
                         if autoban:
                             # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
