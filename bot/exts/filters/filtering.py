@@ -387,9 +387,9 @@ class Filtering(Cog):
                                 log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         stats = self._add_stats(filter_name, match, msg.content)
-                        await self._send_log(filter_name, _filter, msg, stats, reason)
 
-                        # If the filter reason contains `[autoban]`, we want to auto-ban the user
+                        # If the filter reason contains `[autoban]`, we want to auto-ban the user.
+                        # Also pass this to _send_log so mods are not pinged filter matches that are auto-actioned
                         autoban = reason and "[autoban]" in reason.lower()
                         if not autoban and filter_name == "filter_invites" and isinstance(result, dict):
                             autoban = any(
@@ -397,6 +397,9 @@ class Filtering(Cog):
                                 for invite_info in result.values()
                                 if invite_info.get("reason")
                             )
+
+                        await self._send_log(filter_name, _filter, msg, stats, reason, autoban=autoban)
+
                         if autoban:
                             # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
                             # This sends the ban confirmation directly under watchlist trigger embed, to inform
@@ -425,6 +428,7 @@ class Filtering(Cog):
         reason: Optional[str] = None,
         *,
         is_eval: bool = False,
+        auto_ban: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
         if msg.channel.type is ChannelType.private:
@@ -438,7 +442,7 @@ class Filtering(Cog):
         content = str(msg.author.id)  # quality-of-life improvement for mobile moderators
 
         # If we are going to autoban, we don't want to ping and don't need the user ID
-        if reason and "[autoban]" in reason:
+        if auto_ban:
             ping_everyone = False
             content = None
 
