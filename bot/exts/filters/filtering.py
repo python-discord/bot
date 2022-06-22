@@ -428,7 +428,7 @@ class Filtering(Cog):
         reason: Optional[str] = None,
         *,
         is_eval: bool = False,
-        auto_ban: bool = False,
+        autoban: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
         if msg.channel.type is ChannelType.private:
@@ -442,7 +442,7 @@ class Filtering(Cog):
         content = str(msg.author.id)  # quality-of-life improvement for mobile moderators
 
         # If we are going to autoban, we don't want to ping and don't need the user ID
-        if auto_ban:
+        if autoban:
             ping_everyone = False
             content = None
 
