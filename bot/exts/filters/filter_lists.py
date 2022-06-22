@@ -64,9 +64,11 @@ class FilterLists(Cog):
             # to set a comment which includes [autoban].
             # Having the guild name in the comment is still useful when reviewing
             # filter list, so prepend it to the set comment in case some mod forgets.
+            guild_name_part = f'Guild "{guild_data["name"]}"' if "name" in guild_data else None
+
             comment = " - ".join(
                 comment_part
-                for comment_part in (guild_data.get("name", ""), comment)
+                for comment_part in (guild_name_part, comment)
                 if comment_part
             )
 
