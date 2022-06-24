@@ -131,7 +131,7 @@ class ModPings(Cog):
         """Reapply the moderator's role to the given moderator."""
         await self.fetch_guild_task
         if self.guild.get_role(Roles.mod_team) not in mod.roles:
-            log.warning(
+            log.info(
                 f"Preventing {mod} from being assigned the moderator role"
                 "since they are missing the mod team role."
             )
