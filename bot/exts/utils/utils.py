@@ -10,11 +10,10 @@ from discord.utils import snowflake_time
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Snowflake
-from bot.decorators import in_whitelist
+from bot.decorators import in_whitelist, not_in_blacklist
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import messages
-from bot.utils.time import time_since
+from bot.utils import messages, time
 
 log = get_logger(__name__)
 
@@ -49,7 +48,7 @@ class Utils(Cog):
         self.bot = bot
 
     @command()
-    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_py), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @not_in_blacklist(channels=(Channels.python_general,), override_roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
@@ -173,7 +172,7 @@ class Utils(Cog):
         lines = []
         for snowflake in snowflakes:
             created_at = snowflake_time(snowflake)
-            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time_since(created_at)}).")
+            lines.append(f"**{snowflake}**\nCreated at {created_at} ({time.format_relative(created_at)}).")
 
         await LinePaginator.paginate(
             lines,
@@ -207,6 +206,6 @@ class Utils(Cog):
             await message.add_reaction(reaction)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Utils cog."""
-    bot.add_cog(Utils(bot))
+    await bot.add_cog(Utils(bot))

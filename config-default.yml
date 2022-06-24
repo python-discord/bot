@@ -174,7 +174,7 @@ guild:
         how_to_get_help:    704250143020417084
 
         # Topical
-        discord_py:         343944376055103488
+        discord_bots:         343944376055103488
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
@@ -513,18 +513,15 @@ help_channels:
     # Prefix for help channel names
     name_prefix: 'help-'
 
-    # Notify if more available channels are needed but there are no more dormant ones
-    notify: true
+    notify_channel:                *HELPERS  # Channel in which to send notifications messages
+    notify_minutes:                15        # Minimum interval between none_remaining or running_low notifications
 
-    # Channel in which to send notifications
-    notify_channel: *HELPERS
-
-    # Minimum interval between helper notifications
-    notify_minutes: 15
-
-    # Mention these roles in notifications
-    notify_roles:
+    notify_none_remaining:         true      # Pinging notification for the Helper role when no dormant channels remain
+    notify_none_remaining_roles:             # Mention these roles in the none_remaining notification
         - *HELPERS_ROLE
+
+    notify_running_low:            true      # Non-pinging notification which is triggered when the channel count is equal or less than the threshold
+    notify_running_low_threshold:  4         # The amount of channels at which a running_low notification will be sent
 
 
 redirect_output:
