@@ -418,6 +418,9 @@ class Snekbox(Cog):
         block. Code can be re-evaluated by editing the original message within 10 seconds and
         clicking the reaction that subsequently appears.
 
+        If multiple codeblocks are in a message, all of them will be joined and evaluated,
+        ignoring the text outside of them.
+
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
