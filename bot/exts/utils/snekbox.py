@@ -401,7 +401,7 @@ class Snekbox(Cog):
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
-    @command(name="eval", aliases=("e",))
+    @command(name="eval", aliases=("e",), usage="<code, ...>")
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
@@ -423,7 +423,7 @@ class Snekbox(Cog):
         """
         await self.run_job("eval", ctx, "\n".join(code))
 
-    @command(name="timeit", aliases=("ti",))
+    @command(name="timeit", aliases=("ti",), usage="[setup_code] <code, ...>")
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
