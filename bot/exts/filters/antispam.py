@@ -9,7 +9,7 @@ from typing import Dict, Iterable, List, Set
 
 import arrow
 from botcore.utils import scheduling
-from discord import Colour, Member, Message, NotFound, Object, TextChannel
+from discord import Colour, Member, Message, MessageType, NotFound, Object, TextChannel
 from discord.ext.commands import Cog
 
 from bot import rules
@@ -169,6 +169,7 @@ class AntiSpam(Cog):
             or (getattr(message.channel, "category", None) and message.channel.category.name == JAM_CATEGORY_NAME)
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
+            or message.type == MessageType.auto_moderation_action
         ):
             return
 
