@@ -146,7 +146,7 @@ class PythonEnhancementProposals(Cog):
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
         # Trigger typing in chat to show users that bot is responding
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
