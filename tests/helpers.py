@@ -432,7 +432,7 @@ message_data = {
     'webhook_id': 431341013479718912,
     'attachments': [],
     'embeds': [],
-    'application': 'Python Discord',
+    'application': {"id": 4, "description": "A Python Bot", "name": "Python Discord", "icon": None},
     'activity': 'mocking',
     'channel': unittest.mock.MagicMock(),
     'edited_timestamp': '2019-10-14T15:33:48+00:00',

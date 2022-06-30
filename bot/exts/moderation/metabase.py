@@ -123,7 +123,7 @@ class Metabase(Cog):
 
         Valid extensions are: csv and json.
         """
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         url = f"{MetabaseConfig.base_url}/api/card/{question_id}/query/{extension}"
 
@@ -158,7 +158,7 @@ class Metabase(Cog):
     @metabase_group.command(name="publish", aliases=("share",))
     async def metabase_publish(self, ctx: Context, question_id: int) -> None:
         """Publically shares the given question and posts the link."""
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         url = f"{MetabaseConfig.base_url}/api/card/{question_id}/public_link"
 
