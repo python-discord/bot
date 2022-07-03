@@ -55,17 +55,22 @@ class FilterLists(Cog):
         """Add an item to a filterlist."""
         allow_type = "whitelist" if allowed else "blacklist"
 
-        # If this is a server invite, we gotta validate it.
+        # If this is a guild invite, we gotta validate it.
         if list_type == "GUILD_INVITE":
             guild_data = await self._validate_guild_invite(ctx, content)
             content = guild_data.get("id")
 
-            # Unless the user has specified another comment, let's
-            # use the server name as the comment so that the list
-            # of guild IDs will be more easily readable when we
-            # display it.
-            if not comment:
-                comment = guild_data.get("name")
+            # Some guild invites are autoban filters, which require the mod
+            # to set a comment which includes [autoban].
+            # Having the guild name in the comment is still useful when reviewing
+            # filter list, so prepend it to the set comment in case some mod forgets.
+            guild_name_part = f'Guild "{guild_data["name"]}"' if "name" in guild_data else None
+
+            comment = " - ".join(
+                comment_part
+                for comment_part in (guild_name_part, comment)
+                if comment_part
+            )
 
         # If it's a file format, let's make sure it has a leading dot.
         elif list_type == "FILE_FORMAT" and not content.startswith("."):
@@ -115,7 +120,8 @@ class FilterLists(Cog):
         # If it is an autoban trigger we send a warning in #mod-meta
         if comment and "[autoban]" in comment:
             await self.bot.get_channel(Channels.mod_meta).send(
-                f":warning: Heads-up! The new filter `{content}` (`{comment}`) will automatically ban users."
+                f":warning: Heads-up! The new `{list_type}` filter "
+                f"`{content}` (`{comment}`) will automatically ban users."
             )
 
         # Insert the item into the cache

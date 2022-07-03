@@ -216,7 +216,7 @@ class Inventory(Converter):
     @staticmethod
     async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
-        await ctx.trigger_typing()
+        await ctx.typing()
         try:
             inventory = await _inventory_parser.fetch_inventory(url)
         except _inventory_parser.InvalidHeaderError:
