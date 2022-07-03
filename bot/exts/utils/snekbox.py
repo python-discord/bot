@@ -401,7 +401,7 @@ class Snekbox(Cog):
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
-    @command(name="eval", aliases=("e",))
+    @command(name="eval", aliases=("e",), usage="<code, ...>")
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
@@ -418,12 +418,15 @@ class Snekbox(Cog):
         block. Code can be re-evaluated by editing the original message within 10 seconds and
         clicking the reaction that subsequently appears.
 
+        If multiple codeblocks are in a message, all of them will be joined and evaluated,
+        ignoring the text outside of them.
+
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         await self.run_job("eval", ctx, "\n".join(code))
 
-    @command(name="timeit", aliases=("ti",))
+    @command(name="timeit", aliases=("ti",), usage="[setup_code] <code, ...>")
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
