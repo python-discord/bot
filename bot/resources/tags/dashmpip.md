@@ -1,4 +1,5 @@
 ---
+aliases: ["minusmpip"]
 embed:
     title: "Install packages with `python -m pip`"
 ---
