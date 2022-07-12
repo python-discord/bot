@@ -488,6 +488,7 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     lovefest: int
     pyweek_announcements: int
+    revival_of_code: int
 
     contributors: int
     help_cooldown: int
