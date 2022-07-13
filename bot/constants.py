@@ -540,6 +540,7 @@ class URLs(metaclass=YAMLGetter):
 
     # Snekbox endpoints
     snekbox_eval_api: str
+    snekbox_311_eval_api: str
 
     # Discord API endpoints
     discord_api: str
