@@ -81,7 +81,7 @@ class SnoozeSelectView(discord.ui.View):
     async def select_snooze_duration(self, _: discord.ui.Select, interaction: discord.Interaction) -> None:
         """Drop down menu which contains a list of snooze durations one can choose."""
         selected_duration = interaction.data["values"][0]
-        current_datetime = datetime.now()
+        current_datetime = datetime.now(timezone.utc)
         if (num_seconds := self.SNOOZE_DURATIONS.get(selected_duration)) is None:
             amount, unit = selected_duration.split()
             if unit.startswith("month"):
@@ -127,8 +127,7 @@ class SnoozeButtonView(discord.ui.View):
         self.reminder_id = reminder_id
         self.reminder_author_id = reminder_author_id
 
-        snooze_button = SnoozeButton(self)
-        self.add_item(snooze_button)
+        self.add_item(SnoozeButton(self))
 
 
 class SnoozeButton(discord.ui.Button):
@@ -151,9 +150,7 @@ class SnoozeButton(discord.ui.Button):
         )
         await interaction.response.edit_message(view=snooze_select_view)
 
-        await snooze_select_view.wait()
-
-        if snooze_select_view.reminder_was_snoozed:
+        if not (await snooze_select_view.wait()):  # view didn't time out so was snoozed
             self.parent_view.new_expiry = snooze_select_view.new_expiry
             self.parent_view.reminder_was_snoozed = True
 
@@ -358,9 +355,7 @@ class Reminders(Cog):
             )
 
         # Before deleting the reminder, see if the user wants to "snooze" it
-        await snooze_button_view.wait()
-
-        if not snooze_button_view.reminder_was_snoozed:
+        if await snooze_button_view.wait():
             # User didn't snooze the reminder
             log.debug(f"Deleting reminder #{reminder_id} ({reminder_author_id} has been reminded and didn't snooze).")
             await self.bot.api_client.delete(f"bot/reminders/{reminder_id}")
