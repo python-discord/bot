@@ -1,5 +1,6 @@
 import asyncio
 import re
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -97,10 +98,9 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         colour = Colours.soft_red
         footer = f"Rejected by {actioned_by}"
 
-    day_timestamp = discord_timestamp(incident.created_at, TimestampFormats.DATE)
-    time_timestamp = discord_timestamp(incident.created_at, TimestampFormats.TIME)
+    reported_timestamp = discord_timestamp(incident.created_at)
     relative_timestamp = discord_timestamp(incident.created_at, TimestampFormats.RELATIVE)
-    reported_on_msg = f"__*Reported {day_timestamp} at {time_timestamp} ({relative_timestamp}).*__"
+    reported_on_msg = f"*Reported {reported_timestamp} ({relative_timestamp}).*"
 
     # If the description will be too long (>4096 total characters), truncate the incident content
     if len(incident.content) > (allowed_content_chars := 4096-len(reported_on_msg)-2):  # -2 for the newlines
@@ -111,6 +111,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
     embed = discord.Embed(
         description=description,
         colour=colour,
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 

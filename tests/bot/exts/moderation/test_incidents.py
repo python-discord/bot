@@ -119,14 +119,13 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
         current_time = datetime.datetime(2022, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
         incident = MockMessage(content="this is an incident", created_at=current_time)
 
-        day_timestamp = discord_timestamp(current_time, TimestampFormats.DATE)
-        time_timestamp = discord_timestamp(current_time, TimestampFormats.TIME)
+        reported_timestamp = discord_timestamp(current_time)
         relative_timestamp = discord_timestamp(current_time, TimestampFormats.RELATIVE)
 
         embed, file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
 
         self.assertEqual(
-            f"{incident.content}\n\n__*Reported {day_timestamp} at {time_timestamp} ({relative_timestamp}).*__",
+            f"{incident.content}\n\n*Reported {reported_timestamp} ({relative_timestamp}).*",
             embed.description
         )
 
