@@ -9,7 +9,7 @@ from typing import Literal, Optional, Tuple
 
 from botcore.utils import interactions, scheduling
 from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
-from discord import AllowedMentions, HTTPException, Interaction, Member, Message, NotFound, Reaction, User, enums, ui
+from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, errors, guild_only
 
 from bot.bot import Bot
@@ -157,7 +157,6 @@ class Snekbox(Cog):
     def build_python_version_switcher_view(
         self,
         job_name: str,
-        member: Member,
         current_python_version: Literal["3.10", "3.11"],
         ctx: Context,
         code: str
@@ -169,7 +168,7 @@ class Snekbox(Cog):
             alt_python_version = "3.10"
 
         view = interactions.ViewWithUserAndRoleCheck(
-            allowed_users=(member.id,),
+            allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
         )
         view.add_item(PythonVersionSwitcherButton(job_name, alt_python_version, self, ctx, code))
@@ -352,7 +351,7 @@ class Snekbox(Cog):
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
                 allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
-                view = self.build_python_version_switcher_view(job_name, ctx.author, python_version, ctx, code)
+                view = self.build_python_version_switcher_view(job_name, python_version, ctx, code)
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view)
 
             log.info(f"{ctx.author}'s {job_name} job had a return code of {results['returncode']}")
