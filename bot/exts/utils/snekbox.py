@@ -7,7 +7,7 @@ from signal import Signals
 from textwrap import dedent
 from typing import Literal, Optional, Tuple
 
-from botcore.utils import interactions, scheduling
+from botcore.utils import interactions
 from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
@@ -141,10 +141,16 @@ class PythonVersionSwitcherButton(ui.Button):
 
         Use a task calling snekbox, as run_job is blocking while it waits for edit/reaction on the message.
         """
-        # Call run_job in a task as blocking here would cause the interaction to be reported as failed by Discord's UI.
-        # Discord.py only ACKs the interaction after this callback finishes.
-        scheduling.create_task(self.snekbox_cog.run_job(self.job_name, self.ctx, self.version_to_switch_to, self.code))
-        await interaction.message.delete()
+        # Defer response here so that the Discord UI doesn't mark this interaction as failed if the job
+        # takes too long to run.
+        await interaction.response.defer()
+
+        with contextlib.suppress(NotFound):
+            # Suppress this delete to cover the case where a user re-runs code and very quickly clicks the button.
+            # The log arg on send_job will stop the actual job from running.
+            await interaction.message.delete()
+
+        await self.snekbox_cog.run_job(self.job_name, self.ctx, self.version_to_switch_to, self.code)
 
 
 class Snekbox(Cog):
