@@ -10,7 +10,7 @@ from typing import Literal, Optional, Tuple
 from botcore.utils import interactions, scheduling
 from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
-from discord.ext.commands import Cog, Command, Context, Converter, command, errors, guild_only
+from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, MODERATION_ROLES, Roles, URLs
@@ -454,7 +454,14 @@ class Snekbox(Cog):
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         while True:
-            response = await self.send_job(ctx, python_version, code, args=args, job_name=job_name)
+            try:
+                response = await self.send_job(ctx, python_version, code, args=args, job_name=job_name)
+            except LockedResourceError:
+                await ctx.send(
+                    f"{ctx.author.mention} You've already got a job running - "
+                    "please wait for it to finish!"
+                )
+                return
 
             # Store the bot's response message id per invocation, to ensure the `wait_for`s in `continue_job`
             # don't trigger if the response has already been replaced by a new response.
