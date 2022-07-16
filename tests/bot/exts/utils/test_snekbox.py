@@ -6,9 +6,10 @@ from discord import AllowedMentions
 from discord.ext import commands
 
 from bot import constants
+from bot.errors import LockedResourceError
 from bot.exts.utils import snekbox
 from bot.exts.utils.snekbox import Snekbox
-from tests.helpers import MockBot, MockContext, MockMessage, MockReaction, MockUser
+from tests.helpers import MockBot, MockContext, MockMember, MockMessage, MockReaction, MockUser
 
 
 class SnekboxTests(unittest.IsolatedAsyncioTestCase):
@@ -26,7 +27,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         context_manager.__aenter__.return_value = resp
         self.bot.http_session.post.return_value = context_manager
 
-        self.assertEqual(await self.cog.post_job("import random"), "return")
+        self.assertEqual(await self.cog.post_job("import random", "3.10"), "return")
         self.bot.http_session.post.assert_called_with(
             constants.URLs.snekbox_eval_api,
             json={"input": "import random"},
@@ -179,9 +180,9 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.send_job = AsyncMock(return_value=response)
         self.cog.continue_job = AsyncMock(return_value=(None, None))
 
-        await self.cog.eval_command(self.cog, ctx=ctx, code=['MyAwesomeCode'])
-        self.cog.send_job.assert_called_once_with(ctx, 'MyAwesomeCode', args=None, job_name='eval')
-        self.cog.continue_job.assert_called_once_with(ctx, response, ctx.command)
+        await self.cog.eval_command(self.cog, ctx=ctx, python_version='3.11', code=['MyAwesomeCode'])
+        self.cog.send_job.assert_called_once_with(ctx, '3.11', 'MyAwesomeCode', args=None, job_name='eval')
+        self.cog.continue_job.assert_called_once_with(ctx, response, 'eval')
 
     async def test_eval_command_evaluate_twice(self):
         """Test the eval and re-eval command procedure."""
@@ -192,23 +193,28 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.continue_job = AsyncMock()
         self.cog.continue_job.side_effect = (('MyAwesomeFormattedCode', None), (None, None))
 
-        await self.cog.eval_command(self.cog, ctx=ctx, code=['MyAwesomeCode'])
+        await self.cog.eval_command(self.cog, ctx=ctx, python_version='3.11', code=['MyAwesomeCode'])
         self.cog.send_job.assert_called_with(
-            ctx, 'MyAwesomeFormattedCode', args=None, job_name='eval'
+            ctx, '3.11', 'MyAwesomeFormattedCode', args=None, job_name='eval'
         )
-        self.cog.continue_job.assert_called_with(ctx, response, ctx.command)
+        self.cog.continue_job.assert_called_with(ctx, response, 'eval')
 
     async def test_eval_command_reject_two_eval_at_the_same_time(self):
         """Test if the eval command rejects an eval if the author already have a running eval."""
         ctx = MockContext()
         ctx.author.id = 42
-        ctx.author.mention = '@LemonLemonishBeard#0042'
-        ctx.send = AsyncMock()
-        self.cog.jobs = (42,)
-        await self.cog.eval_command(self.cog, ctx=ctx, code='MyAwesomeCode')
-        ctx.send.assert_called_once_with(
-            "@LemonLemonishBeard#0042 You've already got a job running - please wait for it to finish!"
-        )
+
+        async def delay_with_side_effect(*args, **kwargs) -> dict:
+            """Delay the post_job call to ensure the job runs long enough to conflict."""
+            await asyncio.sleep(1)
+            return {'stdout': '', 'returncode': 0}
+
+        self.cog.post_job = AsyncMock(side_effect=delay_with_side_effect)
+        with self.assertRaises(LockedResourceError):
+            await asyncio.gather(
+                self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval'),
+                self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval'),
+            )
 
     async def test_send_job(self):
         """Test the send_job function."""
@@ -226,7 +232,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        await self.cog.send_job(ctx, 'MyAwesomeCode', job_name='eval')
+        await self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval')
 
         ctx.send.assert_called_once()
         self.assertEqual(
@@ -237,7 +243,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         expected_allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
         self.assertEqual(allowed_mentions.to_dict(), expected_allowed_mentions.to_dict())
 
-        self.cog.post_job.assert_called_once_with('MyAwesomeCode', args=None)
+        self.cog.post_job.assert_called_once_with('MyAwesomeCode', '3.11', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': '', 'returncode': 0})
         self.cog.get_results_message.assert_called_once_with({'stdout': '', 'returncode': 0}, 'eval')
         self.cog.format_output.assert_called_once_with('')
@@ -258,7 +264,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        await self.cog.send_job(ctx, 'MyAwesomeCode', job_name='eval')
+        await self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval')
 
         ctx.send.assert_called_once()
         self.assertEqual(
@@ -267,7 +273,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             '\n\n```\nWay too long beard\n```\nFull output: lookatmybeard.com'
         )
 
-        self.cog.post_job.assert_called_once_with('MyAwesomeCode', args=None)
+        self.cog.post_job.assert_called_once_with('MyAwesomeCode', '3.11', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0})
         self.cog.get_results_message.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0}, 'eval')
         self.cog.format_output.assert_called_once_with('Way too long beard')
@@ -287,7 +293,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        await self.cog.send_job(ctx, 'MyAwesomeCode', job_name='eval')
+        await self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval')
 
         ctx.send.assert_called_once()
         self.assertEqual(
@@ -295,7 +301,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             '@LemonLemonishBeard#0042 :nope!: Return code 127.\n\n```\nBeard got stuck in the eval\n```'
         )
 
-        self.cog.post_job.assert_called_once_with('MyAwesomeCode', args=None)
+        self.cog.post_job.assert_called_once_with('MyAwesomeCode', '3.11', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
         self.cog.get_results_message.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127}, 'eval')
         self.cog.format_output.assert_not_called()
@@ -303,9 +309,17 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.utils.snekbox.partial")
     async def test_continue_job_does_continue(self, partial_mock):
         """Test that the continue_job function does continue if required conditions are met."""
-        ctx = MockContext(message=MockMessage(add_reaction=AsyncMock(), clear_reactions=AsyncMock()))
-        response = MockMessage(delete=AsyncMock())
+        ctx = MockContext(
+            message=MockMessage(
+                id=4,
+                add_reaction=AsyncMock(),
+                clear_reactions=AsyncMock()
+            ),
+            author=MockMember(id=14)
+        )
+        response = MockMessage(id=42, delete=AsyncMock())
         new_msg = MockMessage()
+        self.cog.jobs = {4: 42}
         self.bot.wait_for.side_effect = ((None, new_msg), None)
         expected = "NewCode"
         self.cog.get_code = create_autospec(self.cog.get_code, spec_set=True, return_value=expected)
