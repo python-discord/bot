@@ -7,18 +7,17 @@ from signal import Signals
 from textwrap import dedent
 from typing import Literal, Optional, Tuple
 
-from botcore.utils import scheduling
+from botcore.utils import interactions, scheduling
 from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
-from discord import AllowedMentions, HTTPException, Interaction, Member, Message, NotFound, Reaction, User, ui
+from discord import AllowedMentions, HTTPException, Interaction, Member, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, errors, guild_only
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, Roles, URLs
+from bot.constants import Categories, Channels, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
 from bot.log import get_logger
 from bot.utils import send_to_paste_service
 from bot.utils.lock import LockedResourceError, lock_arg
-from bot.utils.messages import wait_for_deletion
 from bot.utils.services import PasteTooLongError, PasteUploadError
 
 log = get_logger(__name__)
@@ -117,27 +116,6 @@ class CodeblockConverter(Converter):
         return codeblocks
 
 
-class PythonVersionSwitcherView(ui.View):
-    """
-    A view to hold the Try in X Python version button.
-
-    A subclass is required to implement a custom interaction_check so only the command invoker
-    can change the Python version used.
-    """
-
-    def __init__(self, owner_id: int) -> None:
-        super().__init__()
-        self.owner_id = owner_id
-
-    async def interaction_check(self, interaction: Interaction) -> bool:
-        """Ensure the user clicking the button is the view owner."""
-        if self.owner_id == interaction.user.id:
-            return True
-
-        await interaction.response.send_message("This is not your button to click!", ephemeral=True)
-        return False
-
-
 class PythonVersionSwitcherButton(ui.Button):
     """A button that allows users to re-run their eval command in a different Python version."""
 
@@ -150,7 +128,7 @@ class PythonVersionSwitcherButton(ui.Button):
         code: str
     ) -> None:
         self.version_to_switch_to = version_to_switch_to
-        super().__init__(label=f"Run in {self.version_to_switch_to}")
+        super().__init__(label=f"Run in {self.version_to_switch_to}", style=enums.ButtonStyle.primary)
 
         self.snekbox_cog = snekbox_cog
         self.ctx = ctx
@@ -190,8 +168,13 @@ class Snekbox(Cog):
         else:
             alt_python_version = "3.10"
 
-        view = PythonVersionSwitcherView(member.id)
+        view = interactions.ViewWithUserAndRoleCheck(
+            allowed_users=(member.id,),
+            allowed_roles=MODERATION_ROLES,
+        )
         view.add_item(PythonVersionSwitcherButton(job_name, alt_python_version, self, ctx, code))
+        view.add_item(interactions.DeleteMessageButton())
+
         return view
 
     async def post_job(
@@ -371,7 +354,6 @@ class Snekbox(Cog):
                 allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
                 view = self.build_python_version_switcher_view(job_name, ctx.author, python_version, ctx, code)
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view)
-            scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
 
             log.info(f"{ctx.author}'s {job_name} job had a return code of {results['returncode']}")
         return response
