@@ -359,6 +359,7 @@ class Snekbox(Cog):
                 allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
                 view = self.build_python_version_switcher_view(job_name, python_version, ctx, code)
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view)
+                view.message = response
 
             log.info(f"{ctx.author}'s {job_name} job had a return code of {results['returncode']}")
         return response
