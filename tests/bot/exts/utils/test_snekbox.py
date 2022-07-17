@@ -85,28 +85,28 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     def test_get_results_message(self):
         """Return error and message according to the eval result."""
         cases = (
-            ('ERROR', None, ('Your eval job has failed', 'ERROR')),
-            ('', 128 + snekbox.SIGKILL, ('Your eval job timed out or ran out of memory', '')),
-            ('', 255, ('Your eval job has failed', 'A fatal NsJail error occurred'))
+            ('ERROR', None, ('Your 3.11 eval job has failed', 'ERROR')),
+            ('', 128 + snekbox.SIGKILL, ('Your 3.11 eval job timed out or ran out of memory', '')),
+            ('', 255, ('Your 3.11 eval job has failed', 'A fatal NsJail error occurred'))
         )
         for stdout, returncode, expected in cases:
             with self.subTest(stdout=stdout, returncode=returncode, expected=expected):
-                actual = self.cog.get_results_message({'stdout': stdout, 'returncode': returncode}, 'eval')
+                actual = self.cog.get_results_message({'stdout': stdout, 'returncode': returncode}, 'eval', '3.11')
                 self.assertEqual(actual, expected)
 
     @patch('bot.exts.utils.snekbox.Signals', side_effect=ValueError)
     def test_get_results_message_invalid_signal(self, mock_signals: Mock):
         self.assertEqual(
-            self.cog.get_results_message({'stdout': '', 'returncode': 127}, 'eval'),
-            ('Your eval job has completed with return code 127', '')
+            self.cog.get_results_message({'stdout': '', 'returncode': 127}, 'eval', '3.11'),
+            ('Your 3.11 eval job has completed with return code 127', '')
         )
 
     @patch('bot.exts.utils.snekbox.Signals')
     def test_get_results_message_valid_signal(self, mock_signals: Mock):
         mock_signals.return_value.name = 'SIGTEST'
         self.assertEqual(
-            self.cog.get_results_message({'stdout': '', 'returncode': 127}, 'eval'),
-            ('Your eval job has completed with return code 127 (SIGTEST)', '')
+            self.cog.get_results_message({'stdout': '', 'returncode': 127}, 'eval', '3.11'),
+            ('Your 3.11 eval job has completed with return code 127 (SIGTEST)', '')
         )
 
     def test_get_status_emoji(self):
@@ -245,7 +245,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.post_job.assert_called_once_with('MyAwesomeCode', '3.11', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': '', 'returncode': 0})
-        self.cog.get_results_message.assert_called_once_with({'stdout': '', 'returncode': 0}, 'eval')
+        self.cog.get_results_message.assert_called_once_with({'stdout': '', 'returncode': 0}, 'eval', '3.11')
         self.cog.format_output.assert_called_once_with('')
 
     async def test_send_job_with_paste_link(self):
@@ -275,7 +275,9 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.post_job.assert_called_once_with('MyAwesomeCode', '3.11', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0})
-        self.cog.get_results_message.assert_called_once_with({'stdout': 'Way too long beard', 'returncode': 0}, 'eval')
+        self.cog.get_results_message.assert_called_once_with(
+            {'stdout': 'Way too long beard', 'returncode': 0}, 'eval', '3.11'
+        )
         self.cog.format_output.assert_called_once_with('Way too long beard')
 
     async def test_send_job_with_non_zero_eval(self):
@@ -303,7 +305,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.post_job.assert_called_once_with('MyAwesomeCode', '3.11', args=None)
         self.cog.get_status_emoji.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127})
-        self.cog.get_results_message.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127}, 'eval')
+        self.cog.get_results_message.assert_called_once_with({'stdout': 'ERROR', 'returncode': 127}, 'eval', '3.11')
         self.cog.format_output.assert_not_called()
 
     @patch("bot.exts.utils.snekbox.partial")
