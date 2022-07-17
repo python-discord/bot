@@ -2,7 +2,7 @@
 embed:
     title: Print and Return
     image:
-        url: https://cdn.discordapp.com/attachments/267659945086812160/998198889154879558/print-return.gif
+        url: https://raw.githubusercontent.com/python-discord/bot/main/bot/resources/media/print-return.gif
 ---
 Here's a handy animation demonstrating how `print` and `return` differ in behavior.
 
