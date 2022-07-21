@@ -233,19 +233,19 @@ class Snekbox(Cog):
         return code, args
 
     @staticmethod
-    def get_results_message(results: dict, job_name: str) -> Tuple[str, str]:
+    def get_results_message(results: dict, job_name: str, python_version: Literal["3.10", "3.11"]) -> Tuple[str, str]:
         """Return a user-friendly message and error corresponding to the process's return code."""
         stdout, returncode = results["stdout"], results["returncode"]
-        msg = f"Your {job_name} job has completed with return code {returncode}"
+        msg = f"Your {python_version} {job_name} job has completed with return code {returncode}"
         error = ""
 
         if returncode is None:
-            msg = f"Your {job_name} job has failed"
+            msg = f"Your {python_version} {job_name} job has failed"
             error = stdout.strip()
         elif returncode == 128 + SIGKILL:
-            msg = f"Your {job_name} job timed out or ran out of memory"
+            msg = f"Your {python_version} {job_name} job timed out or ran out of memory"
         elif returncode == 255:
-            msg = f"Your {job_name} job has failed"
+            msg = f"Your {python_version} {job_name} job has failed"
             error = "A fatal NsJail error occurred"
         else:
             # Try to append signal's name if one exists
@@ -330,7 +330,7 @@ class Snekbox(Cog):
         """
         async with ctx.typing():
             results = await self.post_job(code, python_version, args=args)
-            msg, error = self.get_results_message(results, job_name)
+            msg, error = self.get_results_message(results, job_name, python_version)
 
             if error:
                 output, paste_link = error, None
@@ -359,6 +359,7 @@ class Snekbox(Cog):
                 allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
                 view = self.build_python_version_switcher_view(job_name, python_version, ctx, code)
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view)
+                view.message = response
 
             log.info(f"{ctx.author}'s {job_name} job had a return code of {results['returncode']}")
         return response
