@@ -61,6 +61,8 @@ services:
     ports:
      - "127.0.0.1:8060:8060"
     privileged: true
+    profiles:
+      - "3.10"
 
   snekbox-311:
     << : *logging
@@ -71,8 +73,6 @@ services:
     ports:
      - "127.0.0.1:8065:8060"
     privileged: true
-    profiles:
-      - "3.11"
 
   web:
     << : *logging
