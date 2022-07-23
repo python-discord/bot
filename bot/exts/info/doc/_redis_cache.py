@@ -8,6 +8,7 @@ from typing import Optional, TYPE_CHECKING
 from async_rediscache.types.base import RedisObject
 
 from bot.log import get_logger
+from bot.utils.lock import lock
 
 if TYPE_CHECKING:
     from ._cog import DocItem
@@ -17,6 +18,12 @@ WEEK_SECONDS = int(datetime.timedelta(weeks=1).total_seconds())
 log = get_logger(__name__)
 
 
+def serialize_resource_id_from_doc_item(bound_args: dict) -> str:
+    """Return the redis_key of the DocItem `item` from the bound args of DocRedisCache.set."""
+    item: DocItem = bound_args["item"]
+    return f"doc:{item_key(item)}"
+
+
 class DocRedisCache(RedisObject):
     """Interface for redis functionality needed by the Doc cog."""
 
@@ -24,6 +31,7 @@ class DocRedisCache(RedisObject):
         super().__init__(*args, **kwargs)
         self._set_expires = dict[str, float]()
 
+    @lock("DocRedisCache.set", serialize_resource_id_from_doc_item, wait=True)
     async def set(self, item: DocItem, value: str) -> None:
         """
         Set the Markdown `value` for the symbol `item`.
