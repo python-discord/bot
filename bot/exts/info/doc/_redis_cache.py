@@ -5,7 +5,7 @@ import fnmatch
 import time
 from typing import Optional, TYPE_CHECKING
 
-from async_rediscache.types.base import RedisObject, namespace_lock
+from async_rediscache.types.base import RedisObject
 
 from bot.log import get_logger
 
@@ -24,7 +24,6 @@ class DocRedisCache(RedisObject):
         super().__init__(*args, **kwargs)
         self._set_expires = dict[str, float]()
 
-    @namespace_lock
     async def set(self, item: DocItem, value: str) -> None:
         """
         Set the Markdown `value` for the symbol `item`.
@@ -59,12 +58,10 @@ class DocRedisCache(RedisObject):
             await self.redis_session.client.expire(redis_key, WEEK_SECONDS)
             log.info(f"Set {redis_key} to expire in a week.")
 
-    @namespace_lock
     async def get(self, item: DocItem) -> Optional[str]:
         """Return the Markdown content of the symbol `item` if it exists."""
         return await self.redis_session.client.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)
 
-    @namespace_lock
     async def delete(self, package: str) -> bool:
         """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
         pattern = f"{self.namespace}:{package}:*"
@@ -85,7 +82,6 @@ class DocRedisCache(RedisObject):
 class StaleItemCounter(RedisObject):
     """Manage increment counters for stale `DocItem`s."""
 
-    @namespace_lock
     async def increment_for(self, item: DocItem) -> int:
         """
         Increment the counter for `item` by 1, set it to expire in 3 weeks and return the new value.
@@ -96,7 +92,6 @@ class StaleItemCounter(RedisObject):
         await self.redis_session.client.expire(key, WEEK_SECONDS * 3)
         return int(await self.redis_session.client.incr(key))
 
-    @namespace_lock
     async def delete(self, package: str) -> bool:
         """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
         package_keys = [
