@@ -283,8 +283,7 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
 
     async def flush(self):
         """Flush everything from the database to prevent carry-overs between tests."""
-        with await self.session.pool as connection:
-            await connection.flushall()
+        await self.session.client.flushall()
 
     async def asyncSetUp(self):  # noqa: N802
         self.session = RedisSession(use_fakeredis=True)
@@ -293,7 +292,7 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):  # noqa: N802
         if self.session:
-            await self.session.close()
+            await self.session.client.close()
 
     def setUp(self):
         """
