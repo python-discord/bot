@@ -488,6 +488,7 @@ class Roles(metaclass=YAMLGetter):
     announcements: int
     lovefest: int
     pyweek_announcements: int
+    revival_of_code: int
 
     contributors: int
     help_cooldown: int
@@ -539,6 +540,7 @@ class URLs(metaclass=YAMLGetter):
 
     # Snekbox endpoints
     snekbox_eval_api: str
+    snekbox_311_eval_api: str
 
     # Discord API endpoints
     discord_api: str
