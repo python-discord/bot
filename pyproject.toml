@@ -6,7 +6,7 @@ authors = ["Python Discord <info@pythondiscord.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "3.9.*"
+python = "3.10.*"
 
 "discord.py" = {url = "https://github.com/Rapptz/discord.py/archive/0eb3d26343969a25ffc43ba72eca42538d2e7e7a.zip"}
 # See https://bot-core.pythondiscord.com/ for docs.
