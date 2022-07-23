@@ -12,7 +12,7 @@ from bot.log import get_logger
 if TYPE_CHECKING:
     from ._cog import DocItem
 
-WEEK_SECONDS = datetime.timedelta(weeks=1).total_seconds()
+WEEK_SECONDS = int(datetime.timedelta(weeks=1).total_seconds())
 
 log = get_logger(__name__)
 
