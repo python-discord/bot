@@ -5,15 +5,15 @@ import arrow
 from async_rediscache import RedisCache
 from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse, parse as dateutil_parse
-from discord import Embed, Member
+from discord import Member
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
+from bot.constants import Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
-from bot.utils import time
 from bot.utils.members import get_or_fetch_member
+from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
@@ -177,9 +177,10 @@ class ModPings(Cog):
             self._role_scheduler.cancel(mod.id)
         self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
 
-        embed = Embed(timestamp=duration, colour=Colours.bright_green)
-        embed.set_footer(text="Moderators role has been removed until", icon_url=Icons.green_checkmark)
-        await ctx.send(embed=embed)
+        await ctx.send(
+            f"{Emojis.check_mark} Moderators role has been removed "
+            f"until {discord_timestamp(duration, format=TimestampFormats.DAY_TIME)}."
+        )
 
     @modpings_group.command(name='on')
     @has_any_role(*MODERATION_ROLES)
@@ -239,8 +240,8 @@ class ModPings(Cog):
 
         await ctx.send(
             f"{Emojis.ok_hand} {ctx.author.mention} Scheduled mod pings from "
-            f"{time.discord_timestamp(start, time.TimestampFormats.TIME)} to "
-            f"{time.discord_timestamp(end, time.TimestampFormats.TIME)}!"
+            f"{discord_timestamp(start, TimestampFormats.TIME)} to "
+            f"{discord_timestamp(end, TimestampFormats.TIME)}!"
         )
 
     @schedule_modpings.command(name='delete', aliases=('del', 'd'))
