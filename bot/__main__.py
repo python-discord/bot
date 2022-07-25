@@ -28,10 +28,9 @@ async def _create_redis_session() -> RedisSession:
         global_namespace="bot",
     )
     try:
-        await redis_session.connect()
+        return await redis_session.connect()
     except RedisError as e:
         raise StartupError(e)
-    return redis_session
 
 
 async def main() -> None:
