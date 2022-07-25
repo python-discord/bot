@@ -352,8 +352,8 @@ class Reminders(Cog):
             expiry = time.format_relative(remind_at)
 
             mentions = ", ".join([
-                # Both Role and User objects have the `name` attribute
-                mention.name async for mention in self.get_mentionables(mentions)
+                # Both Role and User objects have the `mention` attribute
+                mentionable.mention async for mentionable in self.get_mentionables(mentions)
             ])
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
@@ -381,7 +381,6 @@ class Reminders(Cog):
             lines,
             ctx, embed,
             max_lines=3,
-            empty=True
         )
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
