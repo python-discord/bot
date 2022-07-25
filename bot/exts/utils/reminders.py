@@ -472,7 +472,7 @@ class Reminders(Cog):
         )
 
         formatted_time = time.discord_timestamp(expiration, time.TimestampFormats.DAY_TIME)
-        mention_string = f"Your reminder will arrive on {formatted_time}"
+        mention_string = f"Your reminder will arrive {formatted_time}"
 
         if mentions:
             mention_string += f" and will mention {len(mentions)} other(s)"
@@ -607,9 +607,18 @@ class Reminders(Cog):
         reminder = await self._edit_reminder(id_, payload)
 
         # Send a confirmation message to the channel
+        on_success_message = "That reminder has been edited successfully!"
+
+        if "expiration" in payload:
+            new_expiry_timestamp = time.discord_timestamp(payload['expiration'], time.TimestampFormats.DAY_TIME)
+            on_success_message += f"\n\nYour reminder will now arrive {new_expiry_timestamp}."
+
+        elif "mentions" in payload:
+            on_success_message += f"\n\nYour reminder will now mention {len(payload['mentions'])} other(s)."
+
         await self._send_confirmation(
             ctx,
-            on_success="That reminder has been edited successfully!",
+            on_success=on_success_message,
             reminder_id=id_,
         )
         await self._reschedule_reminder(reminder)
