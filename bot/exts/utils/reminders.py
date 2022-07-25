@@ -64,7 +64,7 @@ class SnoozeSelectView(discord.ui.View):
         self.reminders_instance = reminders_instance
         self.reminder_dct = reminder_dct
 
-        self.dropdown: discord.ui.Select = self.children[0]
+        self.dropdown: discord.ui.Select = self.select_snooze_duration
         for duration in self.SNOOZE_DURATIONS:
             self.dropdown.add_option(label=duration)
 
