@@ -18,14 +18,14 @@ from tests.helpers import (
 redis_session = None
 
 
-def setUpModule():  # noqa: N802
+def setUpModule():
     """Create and connect to the fakeredis session."""
     global redis_session
     redis_session = RedisSession(use_fakeredis=True)
     asyncio.run(redis_session.connect())
 
 
-def tearDownModule():  # noqa: N802
+def tearDownModule():
     """Close the fakeredis session."""
     if redis_session:
         asyncio.run(redis_session.client.close())

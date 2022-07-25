@@ -285,12 +285,12 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
         """Flush everything from the database to prevent carry-overs between tests."""
         await self.session.client.flushall()
 
-    async def asyncSetUp(self):  # noqa: N802
+    async def asyncSetUp(self):
         self.session = RedisSession(use_fakeredis=True)
         await self.session.connect()
         await self.flush()
 
-    async def asyncTearDown(self):  # noqa: N802
+    async def asyncTearDown(self):
         if self.session:
             await self.session.client.close()
 
@@ -655,7 +655,7 @@ class TestOnRawReactionAdd(TestIncidents):
             emoji="reaction",
         )
 
-    async def asyncSetUp(self):  # noqa: N802
+    async def asyncSetUp(self):
         """
         Prepare an empty task and assign it as `crawl_task`.
 
