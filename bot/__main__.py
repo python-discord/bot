@@ -6,6 +6,7 @@ from async_rediscache import RedisSession
 from botcore import StartupError
 from botcore.site_api import APIClient
 from discord.ext import commands
+from redis import RedisError
 
 import bot
 from bot import constants
@@ -19,16 +20,16 @@ LOCALHOST = "127.0.0.1"
 async def _create_redis_session() -> RedisSession:
     """Create and connect to a redis session."""
     redis_session = RedisSession(
-        address=(constants.Redis.host, constants.Redis.port),
+        host=constants.Redis.host,
+        port=constants.Redis.port,
         password=constants.Redis.password,
-        minsize=1,
-        maxsize=20,
+        max_connections=20,
         use_fakeredis=constants.Redis.use_fakeredis,
         global_namespace="bot",
     )
     try:
         await redis_session.connect()
-    except OSError as e:
+    except RedisError as e:
         raise StartupError(e)
     return redis_session
 
