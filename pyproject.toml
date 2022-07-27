@@ -9,7 +9,7 @@ license = "MIT"
 python = "3.10.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
-bot-core = { url = "https://github.com/python-discord/bot-core/archive/refs/tags/v8.0.0-beta.4.zip", extras = ["async-rediscache"] }
+bot-core = { url = "https://github.com/python-discord/bot-core/archive/refs/tags/v8.0.0.zip", extras = ["async-rediscache"] }
 redis = "4.3.4"
 fakeredis = { version = "1.8.2", extras = ["lua"] }
 
