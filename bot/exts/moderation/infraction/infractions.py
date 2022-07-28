@@ -91,9 +91,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str] = None
     ) -> None:
         """
-        Permanently ban a user for the given reason and stop watching them with Big Brother.
+        Permanently ban a `user` for the given `reason` and stop watching them with Big Brother.
 
-        If duration is specified, it temporarily bans that user for the given duration.
+        If a duration is specified, it temporarily bans the `user` for the given duration.
+        Alternatively, an ISO 8601 timestamp representing the expiry time can be provided
+        for `duration_or_expiry`.
         """
         await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
