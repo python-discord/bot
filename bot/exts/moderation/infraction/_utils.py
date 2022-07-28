@@ -102,7 +102,7 @@ async def post_infraction(
         "user": user.id,
         "active": active,
         "dm_sent": dm_sent,
-        "last_applied": current_time,
+        "last_applied": current_time.isoformat(),
     }
 
     # Parse duration or expiry
