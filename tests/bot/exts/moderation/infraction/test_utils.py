@@ -307,8 +307,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         self.user = MockUser(id=1234)
         self.ctx = MockContext(bot=self.bot, author=self.member)
 
-    @patch("bot.exts.moderation.infraction._utils.datetime", wraps=datetime)
-    async def test_normal_post_infraction(self, mock_datetime):
+    async def test_normal_post_infraction(self):
         """Should return response from POST request if there are no errors."""
         now = datetime.now()
         payload = {
@@ -320,16 +319,18 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "active": False,
             "expires_at": now.isoformat(),
             "dm_sent": False,
-            "last_applied": datetime(2020, 1, 1).isoformat(),
         }
 
-        # Patch the datetime.now function to return a specific time
-        mock_datetime.now.return_value = datetime(2020, 1, 1)
         self.ctx.bot.api_client.post.return_value = "foo"
         actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
 
         self.assertEqual(actual, "foo")
-        self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+        self.ctx.bot.api_client.post.assert_awaited_once()
+        await_args = str(self.ctx.bot.api_client.post.await_args)
+        # Check existing keys present, allow for additional keys (e.g. `last_applied`)
+        for key, value in payload.items():
+            self.assertTrue(key in await_args)
+            self.assertTrue(str(value) in await_args)
 
     async def test_unknown_error_post_infraction(self):
         """Should send an error message to chat when a non-400 error occurs."""
