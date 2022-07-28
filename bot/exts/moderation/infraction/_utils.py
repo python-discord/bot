@@ -188,9 +188,10 @@ async def notify_infraction(
         expires_at = "Never"
         duration = "Permanent"
     else:
+        origin = arrow.get(infraction["last_applied"])
         expiry = arrow.get(infraction["expires_at"])
         expires_at = time.format_relative(expiry)
-        duration = time.humanize_delta(infraction["inserted_at"], expiry, max_units=2)
+        duration = time.humanize_delta(origin, expiry, max_units=2)
 
         if infraction["active"]:
             remaining = time.humanize_delta(expiry, arrow.utcnow(), max_units=2)
