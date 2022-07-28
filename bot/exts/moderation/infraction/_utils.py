@@ -8,7 +8,7 @@ from discord.ext.commands import Context
 
 import bot
 from bot.constants import Colours, Icons
-from bot.converters import MemberOrUser, DurationOrExpiry
+from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
