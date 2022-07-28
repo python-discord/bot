@@ -318,14 +318,17 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "user": self.member.id,
             "active": False,
             "expires_at": now.isoformat(),
-            "dm_sent": False
+            "dm_sent": False,
+            "last_applied": datetime(2020, 1, 1).isoformat(),
         }
 
-        self.ctx.bot.api_client.post.return_value = "foo"
-        actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
+        # Patch the time.now(tz=timezone.utc) function to return a specific time
+        with patch("bot.exts.moderation.infraction._utils.datetime.now", return_value=datetime(2020, 1, 1)):
+            self.ctx.bot.api_client.post.return_value = "foo"
+            actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
 
-        self.assertEqual(actual, "foo")
-        self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+            self.assertEqual(actual, "foo")
+            self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
 
     async def test_unknown_error_post_infraction(self):
         """Should send an error message to chat when a non-400 error occurs."""
@@ -356,12 +359,14 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "type": "mute",
             "user": self.user.id,
             "active": True,
-            "dm_sent": False
+            "dm_sent": False,
+            "last_applied": datetime(2020, 1, 1),
         }
 
-        self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
-
-        actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
-        self.assertEqual(actual, "foo")
-        self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
-        post_user_mock.assert_awaited_once_with(self.ctx, self.user)
+        # Patch the time.now(tz=timezone.utc) function to return a specific time
+        with patch("bot.exts.moderation.infraction._utils.datetime.now", return_value=datetime(2020, 1, 1)):
+            self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
+            actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
+            self.assertEqual(actual, "foo")
+            self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
+            post_user_mock.assert_awaited_once_with(self.ctx, self.user)
