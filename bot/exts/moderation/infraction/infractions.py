@@ -9,7 +9,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Age, Duration, DurationOrExpiry, Expiry, MemberOrUser, UnambiguousMemberOrUser
+from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -86,7 +86,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[DurationOrExpiry] = None,
+        duration_or_expiry: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -95,7 +95,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If duration is specified, it temporarily bans that user for the given duration.
         """
-        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
     @command(aliases=("cban", "purgeban", "pban"))
     @ensure_future_timestamp(timestamp_arg=3)
@@ -222,7 +222,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: Expiry,
+        duration_or_expiry: DurationOrExpiry,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -241,7 +241,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
     @command(aliases=("tempvban", "tvban"))
     async def tempvoiceban(self, ctx: Context) -> None:
