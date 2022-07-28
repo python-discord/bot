@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 
 import arrow
 import discord
@@ -8,7 +8,7 @@ from discord.ext.commands import Context
 
 import bot
 from bot.constants import Colours, Icons
-from bot.converters import MemberOrUser
+from bot.converters import MemberOrUser, DurationOrExpiry
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
@@ -80,7 +80,7 @@ async def post_infraction(
         user: MemberOrUser,
         infr_type: str,
         reason: str,
-        expires_at: datetime = None,
+        duration_or_expiry: t.Optional[DurationOrExpiry] = None,
         hidden: bool = False,
         active: bool = True,
         dm_sent: bool = False,
@@ -92,6 +92,8 @@ async def post_infraction(
 
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
+    current_time = datetime.now(tz=timezone.utc)
+
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
         "hidden": hidden,
@@ -99,10 +101,16 @@ async def post_infraction(
         "type": infr_type,
         "user": user.id,
         "active": active,
-        "dm_sent": dm_sent
+        "dm_sent": dm_sent,
+        "last_applied": current_time,
     }
-    if expires_at:
-        payload['expires_at'] = expires_at.isoformat()
+
+    # Parse duration or expiry
+    if duration_or_expiry is not None:
+        if isinstance(duration_or_expiry, datetime):
+            payload['expires_at'] = duration_or_expiry.isoformat()
+        else:  # is relativedelta
+            payload['expires_at'] = (current_time + duration_or_expiry).isoformat()
 
     # Try to apply the infraction. If it fails because the user doesn't exist, try to add it.
     for should_post_user in (True, False):

@@ -9,7 +9,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
+from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser, DurationOrExpiry
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -86,7 +86,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -95,7 +95,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If duration is specified, it temporarily bans that user for the given duration.
         """
-        await self.apply_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
 
     @command(aliases=("cban", "purgeban", "pban"))
     @ensure_future_timestamp(timestamp_arg=3)
@@ -103,7 +103,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -115,10 +115,10 @@ class Infractions(InfractionScheduler, commands.Cog):
         clean_cog: t.Optional[Clean] = self.bot.get_cog("Clean")
         if clean_cog is None:
             # If we can't get the clean cog, fall back to native purgeban.
-            await self.apply_ban(ctx, user, reason, purge_days=1, expires_at=duration)
+            await self.apply_ban(ctx, user, reason, purge_days=1, duration_or_expiry=duration)
             return
 
-        infraction = await self.apply_ban(ctx, user, reason, expires_at=duration)
+        infraction = await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
         if not infraction or not infraction.get("id"):
             # Ban was unsuccessful, quit early.
             await ctx.send(":x: Failed to apply ban.")
@@ -168,7 +168,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str]
     ) -> None:
@@ -177,7 +177,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If duration is specified, it temporarily voice mutes that user for the given duration.
         """
-        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, duration_or_expiry=duration)
 
     # endregion
     # region: Temporary infractions
@@ -187,7 +187,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def tempmute(
         self, ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -214,7 +214,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         if duration is None:
             duration = await Duration().convert(ctx, "1h")
-        await self.apply_mute(ctx, user, reason, expires_at=duration)
+        await self.apply_mute(ctx, user, reason, duration_or_expiry=duration)
 
     @command(aliases=("tban",))
     @ensure_future_timestamp(timestamp_arg=3)
@@ -241,7 +241,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
 
     @command(aliases=("tempvban", "tvban"))
     async def tempvoiceban(self, ctx: Context) -> None:
@@ -258,7 +258,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: Expiry,
+        duration: DurationOrExpiry,
         *,
         reason: t.Optional[str]
     ) -> None:
@@ -277,7 +277,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, duration_or_expiry=duration)
 
     # endregion
     # region: Permanent shadow infractions
@@ -305,7 +305,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: Expiry,
+        duration: DurationOrExpiry,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -324,7 +324,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_ban(ctx, user, reason, expires_at=duration, hidden=True)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration, hidden=True)
 
     # endregion
     # region: Remove infractions (un- commands)
@@ -428,7 +428,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             return None
 
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
-        is_temporary = kwargs.get("expires_at") is not None
+        is_temporary = kwargs.get("duration_or_expiry") is not None
         active_infraction = await _utils.get_active_infraction(ctx, user, "ban", is_temporary)
 
         if active_infraction:
@@ -436,7 +436,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 log.trace("Tempban ignored as it cannot overwrite an active ban.")
                 return None
 
-            if active_infraction.get('expires_at') is None:
+            if active_infraction.get("duration_or_expiry") is None:
                 log.trace("Permaban already exists, notify.")
                 await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
                 return None
