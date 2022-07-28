@@ -9,7 +9,7 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser, DurationOrExpiry
+from bot.converters import Age, Duration, DurationOrExpiry, Expiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
