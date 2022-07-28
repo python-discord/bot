@@ -362,7 +362,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "user": self.user.id,
             "active": True,
             "dm_sent": False,
-            "last_applied": datetime(2020, 1, 1),
+            "last_applied": datetime(2020, 1, 1).isoformat(),
         }
 
         # Patch the datetime.now function to return a specific time
