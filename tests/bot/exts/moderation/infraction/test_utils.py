@@ -307,7 +307,8 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         self.user = MockUser(id=1234)
         self.ctx = MockContext(bot=self.bot, author=self.member)
 
-    async def test_normal_post_infraction(self):
+    @patch("bot.exts.moderation.infraction._utils.datetime", wraps=datetime)
+    async def test_normal_post_infraction(self, mock_datetime):
         """Should return response from POST request if there are no errors."""
         now = datetime.now()
         payload = {
@@ -322,13 +323,13 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "last_applied": datetime(2020, 1, 1).isoformat(),
         }
 
-        # Patch the time.now(tz=timezone.utc) function to return a specific time
-        with patch("bot.exts.moderation.infraction._utils.datetime.now", return_value=datetime(2020, 1, 1)):
-            self.ctx.bot.api_client.post.return_value = "foo"
-            actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
+        # Patch the datetime.now function to return a specific time
+        mock_datetime.now.return_value = datetime(2020, 1, 1)
+        self.ctx.bot.api_client.post.return_value = "foo"
+        actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
 
-            self.assertEqual(actual, "foo")
-            self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+        self.assertEqual(actual, "foo")
+        self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
 
     async def test_unknown_error_post_infraction(self):
         """Should send an error message to chat when a non-400 error occurs."""
@@ -349,8 +350,9 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(actual)
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
 
+    @patch("bot.exts.moderation.infraction._utils.datetime", wraps=datetime)
     @patch("bot.exts.moderation.infraction._utils.post_user", return_value="bar")
-    async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
+    async def test_first_fail_second_success_user_post_infraction(self, post_user_mock, mock_datetime):
         """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
         payload = {
             "actor": self.ctx.author.id,
@@ -363,10 +365,10 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "last_applied": datetime(2020, 1, 1),
         }
 
-        # Patch the time.now(tz=timezone.utc) function to return a specific time
-        with patch("bot.exts.moderation.infraction._utils.datetime.now", return_value=datetime(2020, 1, 1)):
-            self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
-            actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
-            self.assertEqual(actual, "foo")
-            self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
-            post_user_mock.assert_awaited_once_with(self.ctx, self.user)
+        # Patch the datetime.now function to return a specific time
+        mock_datetime.now.return_value = datetime(2020, 1, 1)
+        self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
+        actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
+        self.assertEqual(actual, "foo")
+        self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
+        post_user_mock.assert_awaited_once_with(self.ctx, self.user)
