@@ -8,11 +8,11 @@ from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import aiohttp
 import discord
-from async_rediscache import RedisSession
 
 from bot.constants import Colours
 from bot.exts.moderation import incidents
 from bot.utils.messages import format_user
+from tests.base import RedisTestCase
 from tests.helpers import (
     MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
     MockUser
@@ -270,7 +270,7 @@ class TestAddSignals(unittest.IsolatedAsyncioTestCase):
         self.incident.add_reaction.assert_not_called()
 
 
-class TestIncidents(unittest.IsolatedAsyncioTestCase):
+class TestIncidents(RedisTestCase):
     """
     Tests for bound methods of the `Incidents` cog.
 
@@ -278,21 +278,6 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
     for each test function, but not make any assertions on its own. Tests can mutate
     the instance as they wish.
     """
-
-    session = None
-
-    async def flush(self):
-        """Flush everything from the database to prevent carry-overs between tests."""
-        await self.session.client.flushall()
-
-    async def asyncSetUp(self):
-        self.session = RedisSession(use_fakeredis=True)
-        await self.session.connect()
-        await self.flush()
-
-    async def asyncTearDown(self):
-        if self.session:
-            await self.session.client.close()
 
     def setUp(self):
         """

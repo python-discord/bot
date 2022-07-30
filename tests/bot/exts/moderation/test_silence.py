@@ -6,29 +6,14 @@ from typing import List, Tuple
 from unittest import mock
 from unittest.mock import AsyncMock, Mock
 
-from async_rediscache import RedisSession
 from discord import PermissionOverwrite
 
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.moderation import silence
+from tests.base import RedisTestCase
 from tests.helpers import (
     MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel, MockVoiceChannel, autospec
 )
-
-redis_session = None
-
-
-def setUpModule():
-    """Create and connect to the fakeredis session."""
-    global redis_session
-    redis_session = RedisSession(use_fakeredis=True)
-    asyncio.run(redis_session.connect())
-
-
-def tearDownModule():
-    """Close the fakeredis session."""
-    if redis_session:
-        asyncio.run(redis_session.client.close())
 
 
 # Have to subclass it because builtins can't be patched.
@@ -104,7 +89,7 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
-class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
+class SilenceCogTests(RedisTestCase):
     """Tests for the general functionality of the Silence cog."""
 
     @autospec(silence, "Scheduler", pass_mocks=False)
@@ -244,7 +229,7 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(member.move_to.call_count, 1 if member == failing_member else 2)
 
 
-class SilenceArgumentParserTests(unittest.IsolatedAsyncioTestCase):
+class SilenceArgumentParserTests(RedisTestCase):
     """Tests for the silence argument parser utility function."""
 
     def setUp(self):
@@ -403,7 +388,7 @@ def voice_sync_helper(function):
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
-class SilenceTests(unittest.IsolatedAsyncioTestCase):
+class SilenceTests(RedisTestCase):
     """Tests for the silence command and its related helper methods."""
 
     @autospec(silence.Silence, "_reschedule", pass_mocks=False)
