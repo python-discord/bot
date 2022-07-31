@@ -1,6 +1,6 @@
 **module-not-found**
 
-A `ModuleNotFoundError` is raised when the python interpreter cannot find a `module` either in the local directory or in the `site-packages` directory. 
+A `ModuleNotFoundError` is raised when the python interpreter cannot find a `module` either in the local directory or in the `site-packages` directory.
 
 If you are expecting to use an `external` module, ie one that is *not* built-in (also know as `std` for `standard`) but cannot figure out why `ModuleNotFoundError` is raised, two things may be happening.
 
@@ -9,7 +9,7 @@ If you are expecting to use an `external` module, ie one that is *not* built-in 
 > First you need to open up the *command prompt*. *Note* that this is *not* the python interpreter.
 >
 > Then, you need to install the library with `pip` in order to add it to use it globally.
-> 
+>
 > ```
 > pip install <library name>
 > ```

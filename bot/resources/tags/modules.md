@@ -27,7 +27,7 @@ first_number = add_and_minus.add(1, 2) # 3
 second_number = add_and_minus.minus(first_number, 1) # 2
 ```
 > *Note*
-> 
+>
 > When importing modules, the python interpreter looks in both the local directory and `site-packages` for the `module`. If the module is *not found*, it raises a `ModuleNotFoundError`.
 >
 > See `!tags module-not-found` for more information about this exception.

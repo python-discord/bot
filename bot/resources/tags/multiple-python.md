@@ -12,8 +12,6 @@ Where `python` is the correct python version. This installs the library to that 
 
 <br>
 
-**Or, you can remove all other python versions except for the one that you want.** 
+**Or, you can remove all other python versions except for the one that you want.**
 
 This ensures that only one python `pip` will manage
-
-
