@@ -195,7 +195,11 @@ def humanize_delta(
         end = arrow.get(args[0])
         start = arrow.get(args[1]) if len(args) == 2 else arrow.utcnow()
 
-        delta = relativedelta(end.datetime, start.datetime)
+        # Round microseconds
+        end = round_datetime(end.datetime)
+        start = round_datetime(start.datetime)
+
+        delta = relativedelta(end, start)
         if absolute:
             delta = abs(delta)
     else:
@@ -326,3 +330,14 @@ def until_expiration(expiry: Optional[Timestamp]) -> str:
         return "Expired"
 
     return format_relative(expiry)
+
+
+def round_datetime(dt: datetime.datetime) -> datetime.datetime:
+    """
+    Round a datetime object to the nearest second.
+
+    Resulting datetime objects will have microsecond values of 0, useful for delta comparisons.
+    """
+    if dt.microsecond >= 500000:
+        dt += datetime.timedelta(seconds=1)
+    return dt.replace(microsecond=0)
