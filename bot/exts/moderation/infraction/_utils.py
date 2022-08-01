@@ -188,7 +188,12 @@ async def notify_infraction(
         expires_at = "Never"
         duration = "Permanent"
     else:
-        origin = arrow.get(infraction["last_applied"])
+        if "last_applied" in infraction:
+            origin = infraction["last_applied"]
+        else:  # Fallback for previous API versions without `last_applied`
+            log.trace(f"No last_applied for infraction {infraction}, using inserted_at time.")
+            origin = infraction["inserted_at"]
+        origin = arrow.get(origin)
         expiry = arrow.get(infraction["expires_at"])
         expires_at = time.format_relative(expiry)
         duration = time.humanize_delta(origin, expiry, max_units=2)
