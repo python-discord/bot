@@ -7,7 +7,7 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
-from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
+from discord import Colour, Embed, Message, NotFound, TextChannel, Thread, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, command, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
 from discord.ext.commands.errors import BadArgument
@@ -627,12 +627,18 @@ class Clean(Cog):
     @command()
     async def purge(self, ctx: Context, users: Greedy[User], age: Optional[Union[Age, ISODateTime]] = None) -> None:
         """
-        Clean messages of users from all public channels up to a certain message age (10 minutes by default).
+        Clean messages of `users` from all public channels up to a certain message `age` (10 minutes by default).
 
-        The age is *exclusive*, meaning that `10s` won't delete a message exactly 10 seconds old.
+        Requires 1 or more users to be specified. For channel-based cleaning, use `clean` instead.
+
+        The `age` is *exclusive*, meaning that `10s` won't delete a message exactly 10 seconds old.
         """
+        if not users:
+            raise BadArgument("At least one user must be specified.")
+
         if age is None:
             age = await Age().convert(ctx, "10M")
+
         await self._clean_messages(ctx, channels="*", users=users, first_limit=age)
 
     # endregion
