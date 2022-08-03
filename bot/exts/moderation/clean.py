@@ -631,7 +631,7 @@ class Clean(Cog):
 
         Requires 1 or more users to be specified. For channel-based cleaning, use `clean` instead.
 
-        The `age` is *exclusive*, meaning that `10s` won't delete a message exactly 10 seconds old.
+        `age` can be a duration or an ISO 8601 timestamp.
         """
         if not users:
             raise BadArgument("At least one user must be specified.")
