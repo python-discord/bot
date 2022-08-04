@@ -84,3 +84,9 @@ case_sensitive = true
 combine_as_imports = true
 line_length = 120
 atomic = true
+
+[tool.pytest.ini_options]
+# We don't use nose style tests so disable them in pytest.
+# This stops pytest from running functions named `setup` in test files.
+# See https://github.com/python-discord/bot/pull/2229#issuecomment-1204436420
+addopts = "-p no:nose"
