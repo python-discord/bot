@@ -427,7 +427,7 @@ pycodestyle = ">=2.0.0,<3.0.0"
 
 [[package]]
 name = "frozenlist"
-version = "1.3.0"
+version = "1.3.1"
 description = "A list-like structure which implements collections.abc.MutableSequence"
 category = "main"
 optional = false
@@ -446,7 +446,7 @@ pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_ve
 
 [[package]]
 name = "identify"
-version = "2.5.2"
+version = "2.5.3"
 description = "File identification library for Python"
 category = "dev"
 optional = false
@@ -517,15 +517,15 @@ source = ["Cython (>=0.29.7)"]
 
 [[package]]
 name = "markdownify"
-version = "0.11.2"
+version = "0.6.1"
 description = "Convert HTML to markdown."
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
-beautifulsoup4 = ">=4.9,<5"
-six = ">=1.15,<2"
+beautifulsoup4 = "*"
+six = "*"
 
 [[package]]
 name = "mccabe"
@@ -1071,7 +1071,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "virtualenv"
-version = "20.16.1"
+version = "20.16.2"
 description = "Virtual Python Environment builder"
 category = "dev"
 optional = false
@@ -1096,11 +1096,11 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [[package]]
 name = "yarl"
-version = "1.7.2"
+version = "1.8.1"
 description = "Yet another URL library"
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
 idna = ">=2.0"
@@ -1109,7 +1109,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.10.*"
-content-hash = "a2b47c854b1fb55bde8618ce85d09ce6c92b48c1ae61d281ce49fc0260585090"
+content-hash = "b0dc5e1339805bf94be5f1b6a8454f8722d4eae645b8188ff62cd7b3c925f7e6"
 
 [metadata.files]
 aiodns = []

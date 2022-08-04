@@ -23,7 +23,11 @@ emoji = "2.0.0"
 feedparser = "6.0.10"
 rapidfuzz = "2.3.0"
 lxml = "4.9.1"
-markdownify = "0.11.2"
+
+# Must be kept on this version unless doc command output is fixed
+# See https://github.com/python-discord/bot/pull/2156
+markdownify = "0.6.1"
+
 more_itertools = "8.13.0"
 python-dateutil = "2.8.2"
 python-frontmatter = "1.0.0"
