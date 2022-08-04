@@ -1,6 +1,7 @@
 import textwrap
 import typing as t
 from abc import abstractmethod
+from collections.abc import Callable
 from gettext import ngettext
 
 import arrow
@@ -79,7 +80,7 @@ class InfractionScheduler:
     async def reapply_infraction(
         self,
         infraction: _utils.Infraction,
-        apply_coro: t.Optional[t.Awaitable]
+        action: t.Optional[Callable[[], None]]
     ) -> None:
         """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
         if infraction["expires_at"] is not None:
@@ -101,7 +102,7 @@ class InfractionScheduler:
 
         # Allowing mod log since this is a passive action that should be logged.
         try:
-            await apply_coro
+            await action()
         except discord.HTTPException as e:
             # When user joined and then right after this left again before action completed, this can't apply roles
             if e.code == 10007 or e.status == 404:
@@ -121,14 +122,14 @@ class InfractionScheduler:
         ctx: Context,
         infraction: _utils.Infraction,
         user: MemberOrUser,
-        action_coro: t.Optional[t.Awaitable] = None,
+        action: t.Optional[Callable[[], None]] = None,
         user_reason: t.Optional[str] = None,
         additional_info: str = "",
     ) -> bool:
         """
         Apply an infraction to the user, log the infraction, and optionally notify the user.
 
-        `action_coro`, if not provided, will result in the infraction not getting scheduled for deletion.
+        `action`, if not provided, will result in the infraction not getting scheduled for deletion.
         `user_reason`, if provided, will be sent to the user in place of the infraction reason.
         `additional_info` will be attached to the text field in the mod-log embed.
 
@@ -194,10 +195,10 @@ class InfractionScheduler:
         purge = infraction.get("purge", "")
 
         # Execute the necessary actions to apply the infraction on Discord.
-        if action_coro:
+        if action:
             log.trace(f"Awaiting the infraction #{id_} application action coroutine.")
             try:
-                await action_coro
+                await action()
                 if expiry:
                     # Schedule the expiration of the infraction.
                     self.schedule_expiration(infraction)
