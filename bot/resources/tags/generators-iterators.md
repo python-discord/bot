@@ -4,15 +4,14 @@ What is a generator and an iterator and what is the difference between each othe
 
 **Generator**
 
-A generator is a function that may contain a `yield` or sometimes `return` statements, a generator can also be an expression(genexpr).
+A generator yields one item at a time and generates items only when in demand and can be created with a function that may contain a `yield` or sometimes `return` statements, but they're not bound to functions as you can subclass [collections.abc.Generator](https://docs.python.org/3/library/collections.abc.html#collections.abc.Generator), a generator can also be an expression(genexpr).
 ```py
 >>> print(num for num in range(11))
 <generator object <genexpr> at 0x0000000000000000>
 ```
 
-Well, what does a generator do and what is it any different from a list, for example?
-The generator yields one item at a time and generates items only when in demand. Whereas, in a list, Python reserves memory for the whole list. A generator can be an iterator but not vice versa.
-
+How is a generator any different from a list, for example?
+The generator yields one item at a time and generates items only when in demand. Whereas, in a list, Python reserves memory for the whole list.
 
 **Iterator**
 
@@ -42,4 +41,6 @@ The `StopIteration` exception must be raised or the iterator is pronounced broke
 
 **What is the difference between iterators and generators?**
 
-An iterator requires a `__next__` and `__iter__` methods over a generator that only needs an `__iter__` method.
+All Generators are Iterators, the abstract base class for a `Generator` actually inherits `Iterator`. `Generator` actually requires 2 methods to be implemented over an `Iterator`'s `__next__` and `__iter__`, which are `send`, `throw`, and the mix-in methods `close`, the only difference of a `Generator` and an `Iterator` are there use cases and implementation.
+
+More info here: [collections.abc](https://docs.python.org/3/library/collections.abc.html)
