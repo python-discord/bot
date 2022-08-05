@@ -4,7 +4,19 @@ What is a generator and an iterator and what is the difference between each othe
 
 **Generator**
 
-A generator yields one item at a time and generates items only when in demand and can be created with a function that may contain a `yield` or sometimes `return` statements, but they're not bound to functions as you can subclass [collections.abc.Generator](https://docs.python.org/3/library/collections.abc.html#collections.abc.Generator), a generator can also be an expression(genexpr).
+A generator yields one item at a time and generates items only when in demand and can be created with a function that may contain a `yield` or sometimes `return` statements, but they're not bound to functions as you can subclass [collections.abc.Generator](https://docs.python.org/3/library/collections.abc.html#collections.abc.Generator). Here we create an infinite generator that can be an iterator.
+```py
+from typing import Generator, Iterator
+
+
+def infinite_stream(start: int) -> Generator[int, None, None] | Iterator[int]:
+    while True:
+        yield start
+        start += 1
+```
+
+A generator can also be an expression(genexpr).
+
 ```py
 >>> print(num for num in range(11))
 <generator object <genexpr> at 0x0000000000000000>
