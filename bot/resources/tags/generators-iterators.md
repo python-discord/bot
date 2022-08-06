@@ -38,6 +38,6 @@ for num in foo:
 
 **More Information**
 
-• Generators and Iterators can also be created as custom classes by implementing their required [methods](https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes-1). The preferred way to do this is by extending the respective Abstract Base Classes within `collections.abc`.
+• Generators and Iterators can also be created as custom classes by implementing their required [abstract methods](https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes-1).
 
 • Check out the [Real python article](https://realpython.com/introduction-to-python-generators/) for a more in-depth view of Generators and their use-cases!
