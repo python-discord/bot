@@ -12,9 +12,17 @@ embed:
 
 A generator function can be created by using one or more `yield` statements. Here is an example of how a `read_lines` function returning a `list` can instead use `yield` to return `Generator`
 \```py
-def foo():
-    yield 1
-    yield 2
+def read_lines(file_name):
+    lines = []
+    with open(file_name, "r") as f:
+        for line in f:
+            lines.append(line.strip())
+    return lines
+
+def read_lines(file_name):
+    with open(file_name, "r") as f:
+        for line in f:
+            yield line.strip()
 \```
 When called, this function returns a Generator. Code within the generator does not execute immediately when a Generator is created.
 \```py
