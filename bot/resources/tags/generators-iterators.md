@@ -4,7 +4,11 @@ embed:
     title: "Generators and Iterators"
 ---
 
-What is a generator and an iterator and what is the difference between each other?
+[Iterators](https://docs.python.org/3/glossary.html#term-iterator) are objects that support iteration. Specifically, they need to implement the `__iter__` and `__next__` special methods and raise `StopIteration` when there are no values to be returned.
+
+Built-in functions such as [zip](https://docs.python.org/3/library/functions.html#zip) and [map](https://docs.python.org/3/library/functions.html#map) return Iterators, this allows lazy, or memory-efficient, iteration as the elements do not need to be pre-computed before being used.
+
+[Generators](https://docs.python.org/3/glossary.html#term-generator) are extended Iterators, which provide a simple way to create objects that function like Iterators by using yield functions or expressions.
 
 **Generator**
 
