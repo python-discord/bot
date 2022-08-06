@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime, timezone
+from datetime import datetime
 
 import arrow
 import discord
@@ -92,7 +92,7 @@ async def post_infraction(
 
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
-    current_time = datetime.now(tz=timezone.utc)
+    current_time = arrow.utcnow()
 
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
