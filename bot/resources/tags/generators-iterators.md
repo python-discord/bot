@@ -49,8 +49,8 @@ You can also use `*` to unpack Generators as positional arguments for functions,
 \```py
 print(*foo) -> 0 2 4 6 8
 \```
-**What is the difference between iterators and generators?**
+**More Information**
 
-All Generators are Iterators, the abstract base class for a `Generator` actually inherits `Iterator`. `Generator` actually requires 2 methods to be implemented over an `Iterator`'s `__next__` and `__iter__`, which are `send`, `throw`, and the mix-in methods `close`, the only difference of a `Generator` and an `Iterator` are there use cases and implementation.
+• Generators and Iterators can also be created as custom classes by implementing their required [methods](https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes-1). The preferred way to do this is by extending the respective Abstract Base Classes within `collections.abc`.
 
-More info here: [collections.abc](https://docs.python.org/3/library/collections.abc.html)
+• Check out the [Real python article](https://realpython.com/introduction-to-python-generators/) for a more in-depth view of Generators and their use-cases!
