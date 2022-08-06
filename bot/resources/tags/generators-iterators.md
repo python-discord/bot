@@ -10,29 +10,26 @@ Built-in functions such as [zip](https://docs.python.org/3/library/functions.htm
 
 [Generators](https://docs.python.org/3/glossary.html#term-generator) are extended Iterators, which provide a simple way to create objects that function like Iterators by using yield functions or expressions.
 
-**Generator**
+**Generator Functions**
 
-A generator yields one item at a time and generates items only when in demand and can be created with a function that may contain a `yield` or sometimes `return` statements, but they're not bound to functions as you can subclass [collections.abc.Generator](https://docs.python.org/3/library/collections.abc.html#collections.abc.Generator). Here we create an infinite generator that can be an iterator.
-```py
-from typing import Generator, Iterator
-
-
-def infinite_stream(start: int) -> Generator[int, None, None] | Iterator[int]:
-    while True:
-        yield start
-        start += 1
-```
-
-A generator can also be an expression(genexpr).
-
-```py
->>> print(num for num in range(11))
-<generator object <genexpr> at 0x0000000000000000>
-```
-
-How is a generator any different from a list, for example?
-The generator yields one item at a time and generates items only when in demand. Whereas, in a list, Python reserves memory for the whole list.
-
+A generator function can be created by using one or more `yield` statements. 
+\```py
+def foo():
+    yield 1
+    yield 2
+\```
+When called, this function returns a Generator. Code within the generator does not execute immediately when a Generator is created.
+\```py
+foo()
+<generator object foo at 0x1>
+\```
+Generator results can be accessed by iteration with `for`, or using `next()`. When calling `next()` on a Generator, the function will run until it reaches the next yield, then pause and yield the result. Further code does not execute until the next `yield` is reached. If the Generator is exhausted, a `StopIteration` Exception is raised.
+\```py
+x = foo()
+next(x) -> 1
+next(x) -> 2
+next(x) -> StopIteration
+\```
 **Iterator**
 
 An iterator is any object whose class has `__next__` and `__iter__` methods. An iterator can also be created with the built-in function `iter`
