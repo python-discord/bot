@@ -25,17 +25,6 @@ def read_lines(file_name):
             yield line.strip()
 \```
 Generators can be a memory-efficient alternative to lists in many situations.
-\```py
-foo()
-<generator object foo at 0x1>
-\```
-Generator results can be accessed by iteration with `for`, or using `next()`. When calling `next()` on a Generator, the function will run until it reaches the next yield, then pause and yield the result. Further code does not execute until the next `yield` is reached. If the Generator is exhausted, a `StopIteration` Exception is raised.
-\```py
-x = foo()
-next(x) -> 1
-next(x) -> 2
-next(x) -> StopIteration
-\```
 **Generator Expressions**
 
 Generators can also be created by `for` clauses inside [expressions](https://docs.python.org/3/glossary.html#term-generator-expression). This is similar to creating a list comprehension but using `()` instead of `[]`. You can use `if` `else` ternary operators as you would in other comprehension forms.
