@@ -24,7 +24,7 @@ def read_lines(file_name):
         for line in f:
             yield line.strip()
 \```
-When called, this function returns a Generator. Code within the generator does not execute immediately when a Generator is created.
+Generators can be a memory-efficient alternative to lists in many situations.
 \```py
 foo()
 <generator object foo at 0x1>
