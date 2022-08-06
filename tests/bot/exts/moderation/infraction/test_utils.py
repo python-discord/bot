@@ -1,7 +1,7 @@
 import unittest
 from collections import namedtuple
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from botcore.site_api import ResponseCodeError
 from discord import Embed, Forbidden, HTTPException, NotFound
@@ -351,11 +351,10 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(actual)
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
 
-    @patch("bot.exts.moderation.infraction._utils.datetime", wraps=datetime)
     @patch("bot.exts.moderation.infraction._utils.post_user", return_value="bar")
-    async def test_first_fail_second_success_user_post_infraction(self, post_user_mock, mock_datetime):
+    async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
         """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
-        payload = {
+        expected = {
             "actor": self.ctx.author.id,
             "hidden": False,
             "reason": "Test reason",
@@ -363,13 +362,17 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "user": self.user.id,
             "active": True,
             "dm_sent": False,
-            "last_applied": datetime(2020, 1, 1).isoformat(),
         }
 
-        # Patch the datetime.now function to return a specific time
-        mock_datetime.now.return_value = datetime(2020, 1, 1)
         self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertEqual(actual, "foo")
-        self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
+        await_args = self.bot.api_client.post.await_args_list
+        self.assertEqual(len(await_args), 2, "Expected 2 awaits")
+
+        # Since `last_applied` is based on current time, just check if expected is a subset of payload
+        for args in await_args:
+            payload: dict = args.kwargs["json"]
+            self.assertEqual(payload, payload | expected)
+
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)
