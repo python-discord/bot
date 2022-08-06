@@ -24,7 +24,7 @@ async def apply(
         for msg in recent_messages
         if msg.author == last_message.author
     )
-    # We use `msg.mentions` here as that is supplied by the api itself, to determine who was mentioned
+    # We use `msg.mentions` here as that is supplied by the api itself, to determine who was mentioned.
     # Additionally, `msg.mentions` includes the user replied to, even if the mention doesn't occur in the body.
     # In order to exclude users who are mentioned as a reply, we check if the msg has a reference
     #
@@ -38,11 +38,11 @@ async def apply(
         for user in msg.mentions
     )
 
-    # no reason to run processing and fetch messages if there are no mentions.
+    # No reason to run processing and fetch messages if there are no mentions.
     if not total_recent_mentions:
         return None
 
-    # we don't want to include mentions that are to the replied user in message replies.
+    # We don't want to include mentions that are to the replied user in message replies.
     for msg in relevant_messages:
 
         if msg.type != MessageType.reply and not msg.reference:
@@ -55,20 +55,20 @@ async def apply(
 
         if not resolved:
             ref = msg.reference
-            # it is possible, in a very unusual situation, for a message to have a reference
+            # It is possible, in a very unusual situation, for a message to have a reference
             # that is both not in the cache, and deleted while running this function.
-            # in such a situation this will throw an error.
+            # In such a situation, this will throw an error which we catch.
             try:
                 resolved = await bot.instance.get_partial_messageable(ref.channel_id).fetch_message(ref.message_id)
             except NotFound:
                 log.info('Could not fetch the replied reference as its been deleted.')
                 continue
-        # the rule ignores the potential mention from replying to a message.
-        # we first check if the reply was to a bot or the author since those mentions are already ignored above.
+
+        # We check if the reply was to a bot or the author since those mentions are already ignored above.
         if not (resolved.author.bot or resolved.author == msg.author) and resolved.author in msg.mentions:
             total_recent_mentions -= 1
 
-        # break the loop once `total_recent_mentions` reaches zero
+        # Break the loop once `total_recent_mentions` reaches zero since there's nothing left to process.
         if not total_recent_mentions:
             break
 
