@@ -43,7 +43,7 @@ class TalentPool(Cog, name="Talentpool"):
         await self.refresh_cache()
 
         if await self.autoreview_enabled():
-            await self.autoreview_loop.start()
+            self.autoreview_loop.start()
 
     async def autoreview_enabled(self) -> bool:
         """Return whether automatic posting of nomination reviews is enabled."""
@@ -102,7 +102,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
-        await self.autoreview_loop.start()
+        self.autoreview_loop.start()
         await ctx.send(":white_check_mark: Autoreview enabled.")
 
     @nomination_autoreview_group.command(name="disable", aliases=("off",))
@@ -114,7 +114,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
-        await self.autoreview_loop.stop()
+        self.autoreview_loop.stop()
         await ctx.send(":white_check_mark: Autoreview disabled.")
 
     @nomination_autoreview_group.command(name="status")
