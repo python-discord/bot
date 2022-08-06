@@ -34,28 +34,21 @@ next(x) -> StopIteration
 
 Generators can also be created by `for` clauses inside [expressions](https://docs.python.org/3/glossary.html#term-generator-expression). This is similar to creating a list comprehension but using `()` instead of `[]`. You can use `if` `else` ternary operators as you would in other comprehension forms.
 
-```py
-from typing import NoReturn
+\```py
+foo = (x * 2 for x in range(5))
+bar = sum(x * 2 for x in range(5))
+\```
 
+Note that Generators created using expressions are not functions that return Generators, rather, they are already Generator objects. You can only iterate the contents of `foo` once before it is exhausted.
+\```py
+list(foo) -> [0, 2, 4, 6, 8]
+list(foo) -> []
+\```
 
-class Foo:
-    def __init__(self, max: int = 0) -> None:
-        self.max = max
-
-    def __iter__(self) -> "Foo":
-        self.n = 0
-        return self
-
-    def __next__(self) -> int | NoReturn:
-        if self.n <= self.max:
-            result = 2**self.n
-            self.n += 1
-            return result
-        else:
-            raise StopIteration
-```
-The `StopIteration` exception must be raised or the iterator is pronounced broken.
-
+You can also use `*` to unpack Generators as positional arguments for functions, like any other Iterable object.
+\```py
+print(*foo) -> 0 2 4 6 8
+\```
 **What is the difference between iterators and generators?**
 
 All Generators are Iterators, the abstract base class for a `Generator` actually inherits `Iterator`. `Generator` actually requires 2 methods to be implemented over an `Iterator`'s `__next__` and `__iter__`, which are `send`, `throw`, and the mix-in methods `close`, the only difference of a `Generator` and an `Iterator` are there use cases and implementation.
