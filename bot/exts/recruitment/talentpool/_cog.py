@@ -6,8 +6,8 @@ from typing import Optional, Union
 import discord
 from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
+from discord.ext import tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.bot import Bot
@@ -38,17 +38,12 @@ class TalentPool(Cog, name="Talentpool"):
         self.cache: Optional[defaultdict[dict]] = None
         self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
 
-        self.initial_refresh_task = scheduling.create_task(self.refresh_cache(), event_loop=self.bot.loop)
-        scheduling.create_task(self.schedule_autoreviews(), event_loop=self.bot.loop)
+    async def cog_load(self) -> None:
+        """Load user cache and maybe start autoreview loop."""
+        await self.refresh_cache()
 
-    async def schedule_autoreviews(self) -> None:
-        """Reschedule reviews for active nominations if autoreview is enabled."""
         if await self.autoreview_enabled():
-            # Wait for a populated cache first
-            await self.initial_refresh_task
-            await self.reviewer.reschedule_reviews()
-        else:
-            log.trace("Not scheduling reviews as autoreview is disabled.")
+            await self.autoreview_loop.start()
 
     async def autoreview_enabled(self) -> bool:
         """Return whether automatic posting of nomination reviews is enabled."""
@@ -93,15 +88,21 @@ class TalentPool(Cog, name="Talentpool"):
         """
         Enable automatic posting of reviews.
 
-        This will post reviews up to one day overdue. Older nominations can be
-        manually reviewed with the `tp post_review <user_id>` command.
+        A review will be posted when the current number of active reviews is below the limit
+        and long enough has passed since the last review.
+
+        Users will be considered for review if they have been in the talent pool past a
+        threshold time.
+
+        The next user to review is chosen based on the number of nominations a user has,
+        using the age of the first nomination as a tie-breaker (oldest first).
         """
         if await self.autoreview_enabled():
             await ctx.send(":x: Autoreview is already enabled.")
             return
 
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
-        await self.reviewer.reschedule_reviews()
+        await self.autoreview_loop.start()
         await ctx.send(":white_check_mark: Autoreview enabled.")
 
     @nomination_autoreview_group.command(name="disable", aliases=("off",))
@@ -113,7 +114,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
-        self.reviewer.cancel_all()
+        await self.autoreview_loop.stop()
         await ctx.send(":white_check_mark: Autoreview disabled.")
 
     @nomination_autoreview_group.command(name="status")
@@ -124,6 +125,12 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send("Autoreview is currently enabled.")
         else:
             await ctx.send("Autoreview is currently disabled.")
+
+    @tasks.loop(hours=1)
+    async def autoreview_loop(self) -> None:
+        """Send request to `reviewer` to send a nomination if ready."""
+        log.info("Running check for users to nominate.")
+        await self.reviewer.maybe_review_user()
 
     @nomination_group.command(
         name="nominees",

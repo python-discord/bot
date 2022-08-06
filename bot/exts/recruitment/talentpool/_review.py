@@ -5,7 +5,7 @@ import re
 import textwrap
 import typing
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
 import arrow
@@ -36,6 +36,13 @@ MAX_MESSAGE_SIZE = 2000
 # Maximum amount of characters allowed in an embed
 MAX_EMBED_SIZE = 4000
 
+# Maximum number of active reviews
+MAX_ONGOING_REVIEWS = 4
+# Minimum time between reviews
+MIN_REVIEW_INTERVAL = timedelta(days=1)
+# Minimum time between nomination and sending a review
+MIN_NOMINATION_TIME = timedelta(days=7)
+
 # Regex for finding the first message of a nomination, and extracting the nominee.
 NOMINATION_MESSAGE_REGEX = re.compile(
     r"<@!?(\d+)> \(.+#\d{4}\) for Helper!\n\n",
@@ -55,11 +62,92 @@ class Reviewer:
         """Return True if the user with ID user_id is scheduled for review, False otherwise."""
         return user_id in self._review_scheduler
 
+    async def maybe_review_user(self) -> bool:
+        """
+        Checks if a new vote should be triggered, and triggers one if ready.
+
+        Returns a boolean representing whether a new vote was sent or not.
+        """
+        if not await self.is_ready_for_review():
+            return False
+
+        user = await self.get_user_for_review()
+        if not user:
+            return False
+
+        await self.post_review(user, True)
+        return True
+
+    async def is_ready_for_review(self) -> bool:
+        """
+        Returns a boolean representing whether a new vote should be triggered.
+
+        The criteria for this are:
+         - The current number of reviews is lower than `MAX_ONGOING_REVIEWS`.
+         - The most recent review was sent less than `MIN_REVIEW_INTERVAL` ago.
+        """
+        voting_channel = self.bot.get_channel(Channels.nomination_voting)
+
+        review_count = 0
+        is_first_message = True
+        async for msg in voting_channel.history():
+            # Try and filter out any non-review messages.
+            if not msg.author.bot or "for Helper!" not in msg.content:
+                continue
+
+            if is_first_message:
+                if msg.created_at > datetime.now(timezone.utc) - MIN_REVIEW_INTERVAL:
+                    log.debug("Most recent review was less than %s ago, cancelling check", MIN_REVIEW_INTERVAL)
+                    return False
+
+                is_first_message = False
+
+            review_count += 1
+
+            if review_count >= MAX_ONGOING_REVIEWS:
+                log.debug("There are already at least %s ongoing reviews, cancelling check.", MAX_ONGOING_REVIEWS)
+                return False
+
+        return True
+
+    async def get_user_for_review(self) -> Optional[int]:
+        """
+        Returns the user ID of the next user to review, or None if there are no users ready.
+
+        Users will only be selected for review if:
+         - They have not already been reviewed.
+         - They have been nominated for longer than `MIN_NOMINATION_TIME`.
+
+        The priority of the review is determined by how many nominations the user has
+        (more nominations = higher priority).
+        For users with equal priority the oldest nomination will be reviewed first.
+        """
+        possible = []
+        for user_id, user_data in self._pool.cache.items():
+            if (
+                not user_data["reviewed"]
+                and isoparse(user_data["inserted_at"]) < datetime.now(timezone.utc) - MIN_NOMINATION_TIME
+            ):
+                possible.append((user_id, user_data))
+
+        if not possible:
+            log.debug("No users ready to review.")
+            return None
+
+        # Secondary sort key: creation of first entries on the nomination.
+        possible.sort(key=lambda x: isoparse(x[1]["inserted_at"]))
+
+        # Primary sort key: number of entries on the nomination.
+        user = max(possible, key=lambda x: len(x[1]["entries"]))
+
+        return user[0]  # user id
+
     async def reschedule_reviews(self) -> None:
         """Reschedule all active nominations to be reviewed at the appropriate time."""
         log.trace("Rescheduling reviews")
         await self.bot.wait_until_guild_available()
 
+        await self._pool.refresh_cache()
         for user_id, user_data in self._pool.cache.items():
             if not user_data["reviewed"]:
                 self.schedule_review(user_id)
@@ -85,7 +173,7 @@ class Reviewer:
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.nomination_voting)
 
-        log.trace(f"Posting the review of {nominee} ({nominee.id})")
+        log.info(f"Posting the review of {nominee} ({nominee.id})")
         messages = await self._bulk_send(channel, review)
 
         await pin_no_system_message(messages[0])
