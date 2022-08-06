@@ -310,7 +310,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
     async def test_normal_post_infraction(self):
         """Should return response from POST request if there are no errors."""
         now = datetime.now()
-        payload = {
+        expected = {
             "actor": self.ctx.author.id,
             "hidden": True,
             "reason": "Test reason",
@@ -323,14 +323,12 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
         self.ctx.bot.api_client.post.return_value = "foo"
         actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
-
         self.assertEqual(actual, "foo")
         self.ctx.bot.api_client.post.assert_awaited_once()
-        await_args = str(self.ctx.bot.api_client.post.await_args)
-        # Check existing keys present, allow for additional keys (e.g. `last_applied`)
-        for key, value in payload.items():
-            self.assertTrue(key in await_args)
-            self.assertTrue(str(value) in await_args)
+
+        # Since `last_applied` is based on current time, just check if expected is a subset of payload
+        payload: dict = self.ctx.bot.api_client.post.await_args_list[0].kwargs["json"]
+        self.assertEqual(payload, payload | expected)
 
     async def test_unknown_error_post_infraction(self):
         """Should send an error message to chat when a non-400 error occurs."""
