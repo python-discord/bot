@@ -36,7 +36,9 @@ Generators can also be created by `for` clauses inside [expressions](https://doc
 
 \```py
 foo = (x * 2 for x in range(5))
-bar = sum(x * 2 for x in range(5))
+
+for num in foo:
+    print(num)
 \```
 
 **More Information**
