@@ -1,4 +1,8 @@
-**Generators and Iterators**
+---
+aliases: ["generators", "iterators", "yield"]
+embed:
+    title: "Generators and Iterators"
+---
 
 What is a generator and an iterator and what is the difference between each other?
 
