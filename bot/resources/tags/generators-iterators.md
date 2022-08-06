@@ -27,7 +27,7 @@ def read_lines(file_name):
 Generators can be a memory-efficient alternative to lists in many situations.
 **Generator Expressions**
 
-Generators can also be created by `for` clauses inside [expressions](https://docs.python.org/3/glossary.html#term-generator-expression). This is similar to creating a list comprehension but using `()` instead of `[]`. You can use `if` `else` ternary operators as you would in other comprehension forms.
+Generators can also be created by `for` clauses inside [expressions](https://docs.python.org/3/glossary.html#term-generator-expression), similar to creating a list comprehension.
 
 \```py
 foo = (x * 2 for x in range(5))
