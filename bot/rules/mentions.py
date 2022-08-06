@@ -63,7 +63,9 @@ async def apply(
             except NotFound:
                 log.info('Could not fetch the replied reference as its been deleted.')
                 continue
-        if resolved.author in msg.mentions:
+        # the rule ignores the potential mention from replying to a message.
+        # we first check if the reply was to a bot or the author since those mentions are already ignored above.
+        if not (resolved.author.bot or resolved.author == msg.author) and resolved.author in msg.mentions:
             total_recent_mentions -= 1
 
         # break the loop once `total_recent_mentions` reaches zero
