@@ -163,8 +163,8 @@ class TalentPool(Cog, name="Talentpool"):
         """
         Gives an overview of the nominated users list.
 
-        It specifies the users' mention, name, how long ago they were nominated, and whether their
-        review was scheduled or already posted.
+        It specifies the user's mention, name, how long ago they were nominated, and whether their
+        review was posted.
 
         The optional kwarg `oldest_first` orders the list by oldest entry.
 
@@ -193,8 +193,6 @@ class TalentPool(Cog, name="Talentpool"):
                 line = f"~~{line}~~"
             if user_data['reviewed']:
                 line += " *(reviewed)*"
-            elif user_id in self.reviewer:
-                line += " *(scheduled)*"
             lines.append(line)
 
         if not lines:
@@ -295,9 +293,6 @@ class TalentPool(Cog, name="Talentpool"):
                 resp.raise_for_status()
 
         self.cache[user.id] = response_data
-
-        if await self.autoreview_enabled() and user.id not in self.reviewer:
-            self.reviewer.schedule_review(user.id)
 
         await ctx.send(f"✅ The nomination for {user.mention} has been added to the talent pool.")
 
@@ -555,9 +550,6 @@ class TalentPool(Cog, name="Talentpool"):
         )
 
         self.cache.pop(user_id)
-        if await self.autoreview_enabled():
-            self.reviewer.cancel(user_id)
-
         return True
 
     async def _nomination_to_string(self, nomination_object: dict) -> str:
@@ -612,4 +604,4 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def cog_unload(self) -> None:
         """Cancels all review tasks on cog unload."""
-        self.reviewer.cancel_all()
+        self.autoreview_loop.stop()

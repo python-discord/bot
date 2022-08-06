@@ -8,9 +8,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
-import arrow
 from botcore.site_api import ResponseCodeError
-from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
 from discord.ext.commands import Context
@@ -27,9 +25,6 @@ if typing.TYPE_CHECKING:
     from bot.exts.utils.thread_bumper import ThreadBumper
 
 log = get_logger(__name__)
-
-# Maximum amount of days before an automatic review is posted.
-MAX_DAYS_IN_POOL = 30
 
 # Maximum amount of characters allowed in a message
 MAX_MESSAGE_SIZE = 2000
@@ -51,16 +46,11 @@ NOMINATION_MESSAGE_REGEX = re.compile(
 
 
 class Reviewer:
-    """Schedules, formats, and publishes reviews of helper nominees."""
+    """Manages, formats, and publishes reviews of helper nominees."""
 
     def __init__(self, name: str, bot: Bot, pool: 'TalentPool'):
         self.bot = bot
         self._pool = pool
-        self._review_scheduler = Scheduler(name)
-
-    def __contains__(self, user_id: int) -> bool:
-        """Return True if the user with ID user_id is scheduled for review, False otherwise."""
-        return user_id in self._review_scheduler
 
     async def maybe_review_user(self) -> bool:
         """
@@ -141,28 +131,6 @@ class Reviewer:
         user = max(possible, key=lambda x: len(x[1]["entries"]))
 
         return user[0]  # user id
-
-    async def reschedule_reviews(self) -> None:
-        """Reschedule all active nominations to be reviewed at the appropriate time."""
-        log.trace("Rescheduling reviews")
-        await self.bot.wait_until_guild_available()
-
-        await self._pool.refresh_cache()
-        for user_id, user_data in self._pool.cache.items():
-            if not user_data["reviewed"]:
-                self.schedule_review(user_id)
-
-    def schedule_review(self, user_id: int) -> None:
-        """Schedules a single user for review."""
-        log.trace(f"Scheduling review of user with ID {user_id}")
-
-        user_data = self._pool.cache.get(user_id)
-        inserted_at = isoparse(user_data['inserted_at'])
-        review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
-
-        # If it's over a day overdue, it's probably an old nomination and shouldn't be automatically reviewed.
-        if arrow.utcnow() - review_at < timedelta(days=1):
-            self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
@@ -512,27 +480,5 @@ class Reviewer:
             return False
 
         await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
-        if user_id in self._review_scheduler:
-            self._review_scheduler.cancel(user_id)
 
         return True
-
-    def cancel(self, user_id: int) -> None:
-        """
-        Cancels the review of the nominee with ID `user_id`.
-
-        It's important to note that this applies only until reschedule_reviews is called again.
-        To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
-        """
-        log.trace(f"Canceling the review of user {user_id}.")
-        self._review_scheduler.cancel(user_id)
-
-    def cancel_all(self) -> None:
-        """
-        Cancels all reviews.
-
-        It's important to note that this applies only until reschedule_reviews is called again.
-        To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
-        """
-        log.trace("Canceling all reviews.")
-        self._review_scheduler.cancel_all()
