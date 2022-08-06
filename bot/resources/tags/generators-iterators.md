@@ -30,9 +30,9 @@ next(x) -> 1
 next(x) -> 2
 next(x) -> StopIteration
 \```
-**Iterator**
+**Generator Expressions**
 
-An iterator is any object whose class has `__next__` and `__iter__` methods. An iterator can also be created with the built-in function `iter`
+Generators can also be created by `for` clauses inside [expressions](https://docs.python.org/3/glossary.html#term-generator-expression). This is similar to creating a list comprehension but using `()` instead of `[]`. You can use `if` `else` ternary operators as you would in other comprehension forms.
 
 ```py
 from typing import NoReturn
