@@ -12,7 +12,7 @@ Built-in functions such as [zip](https://docs.python.org/3/library/functions.htm
 
 **Generator Functions**
 
-A generator function can be created by using one or more `yield` statements. 
+A generator function can be created by using one or more `yield` statements.
 \```py
 def foo():
     yield 1
