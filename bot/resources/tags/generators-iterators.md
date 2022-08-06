@@ -10,7 +10,7 @@ embed:
 
 **Generator Functions**
 
-A generator function can be created by using one or more `yield` statements.
+A generator function can be created by using one or more `yield` statements. Here is an example of how a `read_lines` function returning a `list` can instead use `yield` to return `Generator`
 \```py
 def foo():
     yield 1
