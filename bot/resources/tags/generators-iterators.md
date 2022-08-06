@@ -39,16 +39,6 @@ foo = (x * 2 for x in range(5))
 bar = sum(x * 2 for x in range(5))
 \```
 
-Note that Generators created using expressions are not functions that return Generators, rather, they are already Generator objects. You can only iterate the contents of `foo` once before it is exhausted.
-\```py
-list(foo) -> [0, 2, 4, 6, 8]
-list(foo) -> []
-\```
-
-You can also use `*` to unpack Generators as positional arguments for functions, like any other Iterable object.
-\```py
-print(*foo) -> 0 2 4 6 8
-\```
 **More Information**
 
 • Generators and Iterators can also be created as custom classes by implementing their required [methods](https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes-1). The preferred way to do this is by extending the respective Abstract Base Classes within `collections.abc`.
