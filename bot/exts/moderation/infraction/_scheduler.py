@@ -1,7 +1,7 @@
 import textwrap
 import typing as t
 from abc import abstractmethod
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from gettext import ngettext
 
 import arrow
@@ -80,9 +80,14 @@ class InfractionScheduler:
     async def reapply_infraction(
         self,
         infraction: _utils.Infraction,
-        action: t.Optional[Callable[[], None]]
+        action: t.Optional[Callable[[], Awaitable[None]]]
     ) -> None:
-        """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
+        """
+        Reapply an infraction if it's still active or deactivate it if less than 60 sec left.
+
+        Note: The `action` provided is an async function rather than a coroutine
+        to prevent getting a RuntimeWarning if it is not used (e.g. in mocked tests).
+        """
         if infraction["expires_at"] is not None:
             # Calculate the time remaining, in seconds, for the mute.
             expiry = dateutil.parser.isoparse(infraction["expires_at"])
@@ -112,7 +117,7 @@ class InfractionScheduler:
             else:
                 log.exception(
                     f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
-                    f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
+                    f"when running {infraction['type']} action for {infraction['user']}."
                 )
         else:
             log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
@@ -122,7 +127,7 @@ class InfractionScheduler:
         ctx: Context,
         infraction: _utils.Infraction,
         user: MemberOrUser,
-        action: t.Optional[Callable[[], None]] = None,
+        action: t.Optional[Callable[[], Awaitable[None]]] = None,
         user_reason: t.Optional[str] = None,
         additional_info: str = "",
     ) -> bool:
@@ -132,6 +137,9 @@ class InfractionScheduler:
         `action`, if not provided, will result in the infraction not getting scheduled for deletion.
         `user_reason`, if provided, will be sent to the user in place of the infraction reason.
         `additional_info` will be attached to the text field in the mod-log embed.
+
+        Note: The `action` provided is an async function rather than just a coroutine
+        to prevent getting a RuntimeWarning if it is not used (e.g. in mocked tests).
 
         Returns whether or not the infraction succeeded.
         """
@@ -196,7 +204,7 @@ class InfractionScheduler:
 
         # Execute the necessary actions to apply the infraction on Discord.
         if action:
-            log.trace(f"Awaiting the infraction #{id_} application action coroutine.")
+            log.trace(f"Running the infraction #{id_} application action.")
             try:
                 await action()
                 if expiry:
