@@ -228,7 +228,7 @@ class Reminders(Cog):
 
         # If the replied message has no content (e.g. only attachments/embeds)
         if content == "":
-            content = "See referenced message."
+            content = "*See referenced message.*"
 
         return content
 
