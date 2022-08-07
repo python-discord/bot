@@ -75,7 +75,7 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.CheckFailure):
             log.debug(debug_message)
             await self.handle_check_failure(ctx, e)
-        elif isinstance(e, errors.CommandOnCooldown):
+        elif isinstance(e, (errors.CommandOnCooldown, errors.MaxConcurrencyReached)):
             log.debug(debug_message)
             await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):

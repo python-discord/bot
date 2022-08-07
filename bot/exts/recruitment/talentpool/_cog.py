@@ -1,3 +1,4 @@
+import asyncio
 import textwrap
 from collections import ChainMap, defaultdict
 from io import StringIO
@@ -7,7 +8,7 @@ import discord
 from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
-from discord.ext import tasks
+from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.bot import Bot
@@ -37,6 +38,9 @@ class TalentPool(Cog, name="Talentpool"):
         self.reviewer = Reviewer(bot, self)
         self.cache: Optional[defaultdict[dict]] = None
         self.api_default_params = {'active': 'true', 'ordering': '-inserted_at'}
+
+        # This lock lets us avoid cancelling the reviewer loop while the review code is running.
+        self.autoreview_lock = asyncio.Lock()
 
     async def cog_load(self) -> None:
         """Load user cache and maybe start autoreview loop."""
@@ -84,6 +88,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     @nomination_autoreview_group.command(name="enable", aliases=("on",))
     @has_any_role(Roles.admins)
+    @commands.max_concurrency(1)
     async def autoreview_enable(self, ctx: Context) -> None:
         """
         Enable automatic posting of reviews.
@@ -101,20 +106,24 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(":x: Autoreview is already enabled.")
             return
 
-        await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
         self.autoreview_loop.start()
+        await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
         await ctx.send(":white_check_mark: Autoreview enabled.")
 
     @nomination_autoreview_group.command(name="disable", aliases=("off",))
     @has_any_role(Roles.admins)
+    @commands.max_concurrency(1)
     async def autoreview_disable(self, ctx: Context) -> None:
         """Disable automatic posting of reviews."""
         if not await self.autoreview_enabled():
             await ctx.send(":x: Autoreview is already disabled.")
             return
 
+        # Only cancel the loop task when the autoreview code is not running
+        async with self.autoreview_lock:
+            self.autoreview_loop.cancel()
+
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
-        self.autoreview_loop.stop()
         await ctx.send(":white_check_mark: Autoreview disabled.")
 
     @nomination_autoreview_group.command(name="status")
@@ -129,8 +138,12 @@ class TalentPool(Cog, name="Talentpool"):
     @tasks.loop(hours=1)
     async def autoreview_loop(self) -> None:
         """Send request to `reviewer` to send a nomination if ready."""
-        log.info("Running check for users to nominate.")
-        await self.reviewer.maybe_review_user()
+        if not await self.autoreview_enabled():
+            return
+
+        async with self.autoreview_lock:
+            log.info("Running check for users to nominate.")
+            await self.reviewer.maybe_review_user()
 
     @nomination_group.command(
         name="nominees",
@@ -603,5 +616,7 @@ class TalentPool(Cog, name="Talentpool"):
         return lines.strip()
 
     async def cog_unload(self) -> None:
-        """Cancels all review tasks on cog unload."""
-        self.autoreview_loop.stop()
+        """Cancels the autoreview loop on cog unload."""
+        # Only cancel the loop task when the autoreview code is not running
+        async with self.autoreview_lock:
+            self.autoreview_loop_lock.cancel()
