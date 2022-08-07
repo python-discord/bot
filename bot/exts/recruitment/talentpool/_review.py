@@ -44,15 +44,11 @@ NOMINATION_MESSAGE_REGEX = re.compile(
     re.MULTILINE
 )
 
-# This is a constant so we can detect the final message in a nomination. Keep this in mind
-# if changing this value.
-REVIEW_FOOTER_MESSAGE = "*Refer to their nomination and infraction histories for further details.*"
-
 
 class Reviewer:
     """Manages, formats, and publishes reviews of helper nominees."""
 
-    def __init__(self, name: str, bot: Bot, pool: 'TalentPool'):
+    def __init__(self, bot: Bot, pool: 'TalentPool'):
         self.bot = bot
         self._pool = pool
 
@@ -86,8 +82,9 @@ class Reviewer:
         is_first_message = True
         async for msg in voting_channel.history():
             # Try and filter out any non-review messages. We also only want to count
-            # the final message in the case of reviews split over multiple messages.
-            if not msg.author.bot or REVIEW_FOOTER_MESSAGE not in msg.content:
+            # one message from reviews split over multiple messages. We use fixed text
+            # from the start as any later text could be split over messages.
+            if not msg.author.bot or "for Helper!" not in msg.content:
                 continue
 
             if is_first_message:
@@ -203,7 +200,7 @@ class Reviewer:
 
         reviewed_emoji = self._random_ducky(guild)
         vote_request = (
-            f"{REVIEW_FOOTER_MESSAGE}.\n"
+            f"*Refer to their nomination and infraction histories for further details.*\n"
             f"*Please react {reviewed_emoji} once you have reviewed this user,"
             " and react :+1: for approval, or :-1: for disapproval*."
         )
