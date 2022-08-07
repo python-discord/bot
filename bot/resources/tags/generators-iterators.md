@@ -11,7 +11,7 @@ embed:
 **Generator Functions**
 
 A generator function can be created by using one or more `yield` statements. Here is an example of how a `read_lines` function returning a `list` can instead use `yield` to return `Generator`
-\```py
+```py
 def read_lines(file_name):
     lines = []
     with open(file_name, "r") as f:
@@ -23,18 +23,18 @@ def read_lines(file_name):
     with open(file_name, "r") as f:
         for line in f:
             yield line.strip()
-\```
+```
 Generators can be a memory-efficient alternative to lists in many situations.
 **Generator Expressions**
 
 Generators can also be created by `for` clauses inside [expressions](https://docs.python.org/3/glossary.html#term-generator-expression), similar to creating a list comprehension.
 
-\```py
+```py
 foo = (x * 2 for x in range(5))
 
 for num in foo:
     print(num)
-\```
+```
 
 **More Information**
 
