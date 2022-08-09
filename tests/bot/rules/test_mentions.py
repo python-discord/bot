@@ -6,10 +6,10 @@ from tests.helpers import MockMember, MockMessage
 
 
 def make_msg(author: str, total_user_mentions: int, total_bot_mentions: int = 0) -> MockMessage:
-    """Makes a message with `total_mentions` mentions."""
+    """Makes a message from `author` with `total_user_mentions` user mentions and `total_bot_mentions` bot mentions."""
     user_mentions = [MockMember() for _ in range(total_user_mentions)]
     bot_mentions = [MockMember(bot=True) for _ in range(total_bot_mentions)]
-    return MockMessage(author=author, mentions=user_mentions+bot_mentions)
+    return MockMessage(author=author, mentions=user_mentions+bot_mentions, reference=None)
 
 
 class TestMentions(RuleTest):
