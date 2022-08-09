@@ -1,16 +1,16 @@
+import re
 from typing import Optional
 
+from botcore.site_api import ResponseCodeError
 from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
 
 from bot import constants
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 
@@ -29,9 +29,8 @@ class FilterLists(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        scheduling.create_task(self._amend_docstrings(), event_loop=self.bot.loop)
 
-    async def _amend_docstrings(self) -> None:
+    async def cog_load(self) -> None:
         """Add the valid FilterList types to the docstrings, so they'll appear in !help invocations."""
         await self.bot.wait_until_guild_available()
 
@@ -56,21 +55,38 @@ class FilterLists(Cog):
         """Add an item to a filterlist."""
         allow_type = "whitelist" if allowed else "blacklist"
 
-        # If this is a server invite, we gotta validate it.
+        # If this is a guild invite, we gotta validate it.
         if list_type == "GUILD_INVITE":
             guild_data = await self._validate_guild_invite(ctx, content)
             content = guild_data.get("id")
 
-            # Unless the user has specified another comment, let's
-            # use the server name as the comment so that the list
-            # of guild IDs will be more easily readable when we
-            # display it.
-            if not comment:
-                comment = guild_data.get("name")
+            # Some guild invites are autoban filters, which require the mod
+            # to set a comment which includes [autoban].
+            # Having the guild name in the comment is still useful when reviewing
+            # filter list, so prepend it to the set comment in case some mod forgets.
+            guild_name_part = f'Guild "{guild_data["name"]}"' if "name" in guild_data else None
+
+            comment = " - ".join(
+                comment_part
+                for comment_part in (guild_name_part, comment)
+                if comment_part
+            )
 
         # If it's a file format, let's make sure it has a leading dot.
         elif list_type == "FILE_FORMAT" and not content.startswith("."):
             content = f".{content}"
+
+        # If it's a filter token, validate the passed regex
+        elif list_type == "FILTER_TOKEN":
+            try:
+                re.compile(content)
+            except re.error as e:
+                await ctx.message.add_reaction("❌")
+                await ctx.send(
+                    f"{ctx.author.mention} that's not a valid regex! "
+                    f"Regex error message: {e.msg}."
+                )
+                return
 
         # Try to add the item to the database
         log.trace(f"Trying to add the {content} item to the {list_type} {allow_type}")
@@ -104,7 +120,8 @@ class FilterLists(Cog):
         # If it is an autoban trigger we send a warning in #mod-meta
         if comment and "[autoban]" in comment:
             await self.bot.get_channel(Channels.mod_meta).send(
-                f":warning: Heads-up! The new filter `{content}` (`{comment}`) will automatically ban users."
+                f":warning: Heads-up! The new `{list_type}` filter "
+                f"`{content}` (`{comment}`) will automatically ban users."
             )
 
         # Insert the item into the cache
@@ -275,6 +292,6 @@ class FilterLists(Cog):
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the FilterLists cog."""
-    bot.add_cog(FilterLists(bot))
+    await bot.add_cog(FilterLists(bot))

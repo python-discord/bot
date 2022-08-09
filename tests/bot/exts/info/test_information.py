@@ -1,6 +1,7 @@
 import textwrap
 import unittest
 import unittest.mock
+from datetime import datetime
 
 import discord
 
@@ -276,6 +277,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_uses_string_representation_of_user_in_title_if_nick_is_not_available(self):
         """The embed should use the string representation of the user if they don't have a nick."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
@@ -284,14 +289,19 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         user.nick = None
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
         user.colour = 0
+        user.created_at = user.joined_at = datetime.utcnow()
 
-        embed = await self.cog.create_user_embed(ctx, user)
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertEqual(embed.title, "Mr. Hemlock")
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
     )
     async def test_create_user_embed_uses_nick_in_title_if_available(self):
         """The embed should use the nick if it's available."""
@@ -301,14 +311,19 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         user.nick = "Cat lover"
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
         user.colour = 0
+        user.created_at = user.joined_at = datetime.utcnow()
 
-        embed = await self.cog.create_user_embed(ctx, user)
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertEqual(embed.title, "Cat lover (Mr. Hemlock)")
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
     )
     async def test_create_user_embed_ignores_everyone_role(self):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
@@ -317,14 +332,19 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
 
         # A `MockMember` has the @Everyone role by default; we add the Admins to that.
         user = helpers.MockMember(roles=[admins_role], colour=100)
+        user.created_at = user.joined_at = datetime.utcnow()
 
-        embed = await self.cog.create_user_embed(ctx, user)
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertIn("&Admins", embed.fields[1].value)
         self.assertNotIn("&Everyone", embed.fields[1].value)
 
     @unittest.mock.patch(f"{COG_PATH}.expanded_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
     @unittest.mock.patch(f"{COG_PATH}.user_nomination_counts", new_callable=unittest.mock.AsyncMock)
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_expanded_information_in_moderation_channels(
             self,
             nomination_counts,
@@ -339,7 +359,8 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         nomination_counts.return_value = ("Nominations", "nomination info")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
-        embed = await self.cog.create_user_embed(ctx, user)
+        user.created_at = user.joined_at = datetime.utcfromtimestamp(1)
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         infraction_counts.assert_called_once_with(user)
         nomination_counts.assert_called_once_with(user)
@@ -363,16 +384,23 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         )
 
     @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
-    async def test_create_user_embed_basic_information_outside_of_moderation_channels(self, infraction_counts):
+    @unittest.mock.patch(f"{COG_PATH}.user_messages", new_callable=unittest.mock.AsyncMock)
+    async def test_create_user_embed_basic_information_outside_of_moderation_channels(
+        self,
+        user_messages,
+        infraction_counts,
+    ):
         """The embed should contain only basic infraction data outside of mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
 
         moderators_role = helpers.MockRole(name='Moderators')
 
         infraction_counts.return_value = ("Infractions", "basic infractions info")
+        user_messages.return_value = ("Messages", "user message counts")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
-        embed = await self.cog.create_user_embed(ctx, user)
+        user.created_at = user.joined_at = datetime.utcfromtimestamp(1)
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         infraction_counts.assert_called_once_with(user)
 
@@ -394,13 +422,22 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(
-            "basic infractions info",
+            "user message counts",
             embed.fields[2].value
+        )
+
+        self.assertEqual(
+            "basic infractions info",
+            embed.fields[3].value
         )
 
     @unittest.mock.patch(
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
+    )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
     )
     async def test_create_user_embed_uses_top_role_colour_when_user_has_roles(self):
         """The embed should be created with the colour of the top role, if a top role is available."""
@@ -409,7 +446,8 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         moderators_role = helpers.MockRole(name='Moderators')
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
-        embed = await self.cog.create_user_embed(ctx, user)
+        user.created_at = user.joined_at = datetime.utcnow()
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertEqual(embed.colour, discord.Colour(100))
 
@@ -417,12 +455,17 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_uses_og_blurple_colour_when_user_has_no_roles(self):
         """The embed should be created with the og blurple colour if the user has no assigned roles."""
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=discord.Colour.default())
-        embed = await self.cog.create_user_embed(ctx, user)
+        user.created_at = user.joined_at = datetime.utcnow()
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertEqual(embed.colour, discord.Colour.og_blurple())
 
@@ -430,13 +473,18 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         f"{COG_PATH}.basic_user_infraction_counts",
         new=unittest.mock.AsyncMock(return_value=("Infractions", "basic infractions"))
     )
+    @unittest.mock.patch(
+        f"{COG_PATH}.user_messages",
+        new=unittest.mock.AsyncMock(return_value=("Messsages", "user message count"))
+    )
     async def test_create_user_embed_uses_png_format_of_user_avatar_as_thumbnail(self):
         """The embed thumbnail should be set to the user's avatar in `png` format."""
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=0)
+        user.created_at = user.joined_at = datetime.utcnow()
         user.display_avatar.url = "avatar url"
-        embed = await self.cog.create_user_embed(ctx, user)
+        embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertEqual(embed.thumbnail.url, "avatar url")
 
@@ -489,7 +537,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.user_info(self.cog, ctx)
 
-        create_embed.assert_called_once_with(ctx, self.author)
+        create_embed.assert_called_once_with(ctx, self.author, False)
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
@@ -500,7 +548,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.user_info(self.cog, ctx, self.author)
 
-        create_embed.assert_called_once_with(ctx, self.author)
+        create_embed.assert_called_once_with(ctx, self.author, False)
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
@@ -511,7 +559,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.user_info(self.cog, ctx)
 
-        create_embed.assert_called_once_with(ctx, self.moderator)
+        create_embed.assert_called_once_with(ctx, self.moderator, False)
         ctx.send.assert_called_once()
 
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
@@ -523,5 +571,5 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.user_info(self.cog, ctx, self.target)
 
-        create_embed.assert_called_once_with(ctx, self.target)
+        create_embed.assert_called_once_with(ctx, self.target, False)
         ctx.send.assert_called_once()

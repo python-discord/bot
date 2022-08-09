@@ -8,7 +8,8 @@ from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
 import arrow
-from discord import Colour, Member, Message, NotFound, Object, TextChannel
+from botcore.utils import scheduling
+from discord import Colour, Member, Message, MessageType, NotFound, Object, TextChannel
 from discord.ext.commands import Cog
 
 from bot import rules
@@ -20,7 +21,7 @@ from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import lock, scheduling
+from bot.utils import lock
 from bot.utils.message_cache import MessageCache
 from bot.utils.messages import format_user, send_attachments
 
@@ -103,6 +104,7 @@ class DeletionContext:
             mod_alert_message += content
 
         await modlog.send_log_message(
+            content=", ".join(str(m.id) for m in self.members),  # quality-of-life improvement for mobile moderators
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title="Spam detected!",
@@ -133,18 +135,12 @@ class AntiSpam(Cog):
         self.max_interval = max_interval_config['interval']
         self.cache = MessageCache(AntiSpamConfig.cache_size, newest_first=True)
 
-        scheduling.create_task(
-            self.alert_on_validation_error(),
-            name="AntiSpam.alert_on_validation_error",
-            event_loop=self.bot.loop,
-        )
-
     @property
     def mod_log(self) -> ModLog:
         """Allows for easy access of the ModLog cog."""
         return self.bot.get_cog("ModLog")
 
-    async def alert_on_validation_error(self) -> None:
+    async def cog_load(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
         await self.bot.wait_until_guild_available()
         if self.validation_errors:
@@ -173,6 +169,7 @@ class AntiSpam(Cog):
             or (getattr(message.channel, "category", None) and message.channel.category.name == JAM_CATEGORY_NAME)
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
+            or message.type == MessageType.auto_moderation_action
         ):
             return
 
@@ -321,7 +318,7 @@ def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     return validation_errors
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Validate the AntiSpam configs and load the AntiSpam cog."""
     validation_errors = validate_config()
-    bot.add_cog(AntiSpam(bot, validation_errors))
+    await bot.add_cog(AntiSpam(bot, validation_errors))

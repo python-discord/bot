@@ -9,8 +9,8 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
-from bot.decorators import respect_role_hierarchy
+from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
+from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -18,6 +18,11 @@ from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
+
+if t.TYPE_CHECKING:
+    from bot.exts.moderation.clean import Clean
+    from bot.exts.moderation.infraction.management import ModManagement
+    from bot.exts.moderation.watchchannels.bigbrother import BigBrother
 
 
 class Infractions(InfractionScheduler, commands.Cog):
@@ -27,7 +32,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     category_description = "Server moderation tools."
 
     def __init__(self, bot: Bot):
-        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_ban"})
+        super().__init__(bot, supported_infractions={"ban", "kick", "mute", "note", "warning", "voice_mute"})
 
         self.category = "Moderation"
         self._muted_role = discord.Object(constants.Roles.muted)
@@ -76,6 +81,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_kick(ctx, user, reason)
 
     @command()
+    @ensure_future_timestamp(timestamp_arg=3)
     async def ban(
         self,
         ctx: Context,
@@ -91,8 +97,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
-    @command(aliases=('pban',))
-    async def purgeban(
+    @command(aliases=("cban", "purgeban", "pban"))
+    @ensure_future_timestamp(timestamp_arg=3)
+    async def cleanban(
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
@@ -101,14 +108,63 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str] = None
     ) -> None:
         """
-        Same as ban but removes all their messages of the last 24 hours.
+        Same as ban, but also cleans all their messages from the last hour.
 
         If duration is specified, it temporarily bans that user for the given duration.
         """
-        await self.apply_ban(ctx, user, reason, 1, expires_at=duration)
+        clean_cog: t.Optional[Clean] = self.bot.get_cog("Clean")
+        if clean_cog is None:
+            # If we can't get the clean cog, fall back to native purgeban.
+            await self.apply_ban(ctx, user, reason, purge_days=1, expires_at=duration)
+            return
 
-    @command(aliases=('vban',))
-    async def voiceban(
+        infraction = await self.apply_ban(ctx, user, reason, expires_at=duration)
+        if not infraction or not infraction.get("id"):
+            # Ban was unsuccessful, quit early.
+            await ctx.send(":x: Failed to apply ban.")
+            log.error("Failed to apply ban to user %d", user.id)
+            return
+
+        # Calling commands directly skips discord.py's convertors, so we need to convert args manually.
+        clean_time = await Age().convert(ctx, "1h")
+
+        log_url = await clean_cog._clean_messages(
+            ctx,
+            users=[user],
+            channels="*",
+            first_limit=clean_time,
+            attempt_delete_invocation=False,
+        )
+        if not log_url:
+            # Cleaning failed, or there were no messages to clean, exit early.
+            return
+
+        infr_manage_cog: t.Optional[ModManagement] = self.bot.get_cog("ModManagement")
+        if infr_manage_cog is None:
+            # If we can't get the mod management cog, don't bother appending the log.
+            return
+
+        # Overwrite the context's send function so infraction append
+        # doesn't output the update infraction confirmation message.
+        async def send(*args, **kwargs) -> None:
+            pass
+        ctx.send = send
+        await infr_manage_cog.infraction_append(ctx, infraction, None, reason=f"[Clean log]({log_url})")
+
+    @command(aliases=("vban",))
+    async def voiceban(self, ctx: Context) -> None:
+        """
+        NOT IMPLEMENTED.
+
+        Permanently ban a user from joining voice channels.
+
+        If duration is specified, it temporarily voice bans that user for the given duration.
+        """
+        await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `voicemute`?")
+
+    @command(aliases=("vmute",))
+    @ensure_future_timestamp(timestamp_arg=3)
+    async def voicemute(
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
@@ -117,16 +173,17 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str]
     ) -> None:
         """
-        Permanently ban user from using voice channels.
+        Permanently mute user in voice channels.
 
-        If duration is specified, it temporarily voice bans that user for the given duration.
+        If duration is specified, it temporarily voice mutes that user for the given duration.
         """
-        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Temporary infractions
 
     @command(aliases=["mute"])
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempmute(
         self, ctx: Context,
         user: UnambiguousMemberOrUser,
@@ -160,6 +217,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_mute(ctx, user, reason, expires_at=duration)
 
     @command(aliases=("tban",))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def tempban(
         self,
         ctx: Context,
@@ -186,16 +244,26 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.apply_ban(ctx, user, reason, expires_at=duration)
 
     @command(aliases=("tempvban", "tvban"))
-    async def tempvoiceban(
-            self,
-            ctx: Context,
-            user: UnambiguousMemberOrUser,
-            duration: Expiry,
-            *,
-            reason: t.Optional[str]
+    async def tempvoiceban(self, ctx: Context) -> None:
+        """
+        NOT IMPLEMENTED.
+
+        Temporarily voice bans that user for the given duration.
+        """
+        await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `tempvoicemute`?")
+
+    @command(aliases=("tempvmute", "tvmute"))
+    @ensure_future_timestamp(timestamp_arg=3)
+    async def tempvoicemute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        duration: Expiry,
+        *,
+        reason: t.Optional[str]
     ) -> None:
         """
-        Temporarily voice ban a user for the given reason and duration.
+        Temporarily voice mute a user for the given reason and duration.
 
         A unit of time should be appended to the duration.
         Units (∗case-sensitive):
@@ -209,7 +277,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_voice_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
 
     # endregion
     # region: Permanent shadow infractions
@@ -232,6 +300,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Temporary shadow infractions
 
     @command(hidden=True, aliases=["shadowtempban", "stempban", "stban"])
+    @ensure_future_timestamp(timestamp_arg=3)
     async def shadow_tempban(
         self,
         ctx: Context,
@@ -271,9 +340,18 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.pardon_infraction(ctx, "ban", user)
 
     @command(aliases=("uvban",))
-    async def unvoiceban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
-        """Prematurely end the active voice ban infraction for the user."""
-        await self.pardon_infraction(ctx, "voice_ban", user)
+    async def unvoiceban(self, ctx: Context) -> None:
+        """
+        NOT IMPLEMENTED.
+
+        Temporarily voice bans that user for the given duration.
+        """
+        await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `unvoicemute`?")
+
+    @command(aliases=("uvmute",))
+    async def unvoicemute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+        """Prematurely end the active voice mute infraction for the user."""
+        await self.pardon_infraction(ctx, "voice_mute", user)
 
     # endregion
     # region: Base apply functions
@@ -339,7 +417,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         reason: t.Optional[str],
         purge_days: t.Optional[int] = 0,
         **kwargs
-    ) -> None:
+    ) -> t.Optional[dict]:
         """
         Apply a ban infraction with kwargs passed to `post_infraction`.
 
@@ -347,7 +425,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         if isinstance(user, Member) and user.top_role >= ctx.me.top_role:
             await ctx.send(":x: I can't ban users above or equal to me in the role hierarchy.")
-            return
+            return None
 
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
         is_temporary = kwargs.get("expires_at") is not None
@@ -356,19 +434,19 @@ class Infractions(InfractionScheduler, commands.Cog):
         if active_infraction:
             if is_temporary:
                 log.trace("Tempban ignored as it cannot overwrite an active ban.")
-                return
+                return None
 
             if active_infraction.get('expires_at') is None:
                 log.trace("Permaban already exists, notify.")
                 await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
-                return
+                return None
 
             log.trace("Old tempban is being replaced by new permaban.")
             await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
 
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
-            return
+            return None
 
         infraction["purge"] = "purge " if purge_days else ""
 
@@ -380,27 +458,25 @@ class Infractions(InfractionScheduler, commands.Cog):
         action = ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
         await self.apply_infraction(ctx, infraction, user, action)
 
+        bb_cog: t.Optional[BigBrother] = self.bot.get_cog("Big Brother")
         if infraction.get('expires_at') is not None:
             log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
-            return
-
-        bb_cog = self.bot.get_cog("Big Brother")
-        if not bb_cog:
+        elif not bb_cog:
             log.error(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
-            return
+        else:
+            log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
+            bb_reason = "User has been permanently banned from the server. Automatically removed."
+            await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
 
-        log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
-
-        bb_reason = "User has been permanently banned from the server. Automatically removed."
-        await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
+        return infraction
 
     @respect_role_hierarchy(member_arg=2)
-    async def apply_voice_ban(self, ctx: Context, user: MemberOrUser, reason: t.Optional[str], **kwargs) -> None:
-        """Apply a voice ban infraction with kwargs passed to `post_infraction`."""
-        if await _utils.get_active_infraction(ctx, user, "voice_ban"):
+    async def apply_voice_mute(self, ctx: Context, user: MemberOrUser, reason: t.Optional[str], **kwargs) -> None:
+        """Apply a voice mute infraction with kwargs passed to `post_infraction`."""
+        if await _utils.get_active_infraction(ctx, user, "voice_mute"):
             return
 
-        infraction = await _utils.post_infraction(ctx, user, "voice_ban", reason, active=True, **kwargs)
+        infraction = await _utils.post_infraction(ctx, user, "voice_mute", reason, active=True, **kwargs)
         if infraction is None:
             return
 
@@ -414,7 +490,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             if not isinstance(user, Member):
                 return
 
-            await user.move_to(None, reason="Disconnected from voice to apply voiceban.")
+            await user.move_to(None, reason="Disconnected from voice to apply voice mute.")
             await user.remove_roles(self._voice_verified_role, reason=reason)
 
         await self.apply_infraction(ctx, infraction, user, action())
@@ -471,7 +547,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         return log_text
 
-    async def pardon_voice_ban(
+    async def pardon_voice_mute(
         self,
         user_id: int,
         guild: discord.Guild,
@@ -487,9 +563,9 @@ class Infractions(InfractionScheduler, commands.Cog):
                 # DM user about infraction expiration
                 notified = await _utils.notify_pardon(
                     user=user,
-                    title="Voice ban ended",
-                    content="You have been unbanned and can verify yourself again in the server.",
-                    icon_url=_utils.INFRACTION_ICONS["voice_ban"][1]
+                    title="Voice mute ended",
+                    content="You have been unmuted and can verify yourself again in the server.",
+                    icon_url=_utils.INFRACTION_ICONS["voice_mute"][1]
                 )
                 log_text["DM"] = "Sent" if notified else "**Failed**"
 
@@ -514,8 +590,8 @@ class Infractions(InfractionScheduler, commands.Cog):
             return await self.pardon_mute(user_id, guild, reason, notify=notify)
         elif infraction["type"] == "ban":
             return await self.pardon_ban(user_id, guild, reason)
-        elif infraction["type"] == "voice_ban":
-            return await self.pardon_voice_ban(user_id, guild, notify=notify)
+        elif infraction["type"] == "voice_mute":
+            return await self.pardon_voice_mute(user_id, guild, notify=notify)
 
     # endregion
 
@@ -533,6 +609,6 @@ class Infractions(InfractionScheduler, commands.Cog):
                 error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Infractions cog."""
-    bot.add_cog(Infractions(bot))
+    await bot.add_cog(Infractions(bot))

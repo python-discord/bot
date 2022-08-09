@@ -3,16 +3,16 @@ import datetime
 
 import arrow
 from async_rediscache import RedisCache
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse, parse as dateutil_parse
-from discord import Embed, Member
+from discord import Member
 from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Colours, Emojis, Guild, Icons, MODERATION_ROLES, Roles
+from bot.constants import Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
-from bot.utils import scheduling
-from bot.utils.scheduling import Scheduler
+from bot.utils.members import get_or_fetch_member
 from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
@@ -41,15 +41,10 @@ class ModPings(Cog):
         self.guild = None
         self.moderators_role = None
 
-        self.modpings_schedule_task = scheduling.create_task(
-            self.reschedule_modpings_schedule(),
-            event_loop=self.bot.loop
-        )
-        self.reschedule_task = scheduling.create_task(
-            self.reschedule_roles(),
-            name="mod-pings-reschedule",
-            event_loop=self.bot.loop,
-        )
+    async def cog_load(self) -> None:
+        """Schedule both when to reapply role and all mod ping schedules."""
+        # await self.reschedule_modpings_schedule()
+        await self.reschedule_roles()
 
     async def reschedule_roles(self) -> None:
         """Reschedule moderators role re-apply times."""
@@ -63,17 +58,28 @@ class ModPings(Cog):
 
         log.trace("Applying the moderators role to the mod team where necessary.")
         for mod in mod_team.members:
-            if mod in pings_on:  # Make sure that on-duty mods aren't in the cache.
+            if mod in pings_on:  # Make sure that on-duty mods aren't in the redis cache.
                 if mod.id in pings_off:
                     await self.pings_off_mods.delete(mod.id)
                 continue
 
-            # Keep the role off only for those in the cache.
+            # Keep the role off only for those in the redis cache.
             if mod.id not in pings_off:
                 await self.reapply_role(mod)
             else:
                 expiry = isoparse(pings_off[mod.id])
                 self._role_scheduler.schedule_at(expiry, mod.id, self.reapply_role(mod))
+
+        # At this stage every entry in `pings_off` is expected to have a scheduled task, but that might not be the case
+        # if the discord.py cache is missing members, or if the ID belongs to a former moderator.
+        for mod_id, expiry_iso in pings_off.items():
+            if mod_id not in self._role_scheduler:
+                mod = await get_or_fetch_member(self.guild, mod_id)
+                # Make sure the member is still a moderator and doesn't have the pingable role.
+                if mod is None or mod.get_role(Roles.mod_team) is None or mod.get_role(Roles.moderators) is not None:
+                    await self.pings_off_mods.delete(mod_id)
+                else:
+                    self._role_scheduler.schedule_at(isoparse(expiry_iso), mod_id, self.reapply_role(mod))
 
     async def reschedule_modpings_schedule(self) -> None:
         """Reschedule moderators schedule ping."""
@@ -171,9 +177,10 @@ class ModPings(Cog):
             self._role_scheduler.cancel(mod.id)
         self._role_scheduler.schedule_at(duration, mod.id, self.reapply_role(mod))
 
-        embed = Embed(timestamp=duration, colour=Colours.bright_green)
-        embed.set_footer(text="Moderators role has been removed until", icon_url=Icons.green_checkmark)
-        await ctx.send(embed=embed)
+        await ctx.send(
+            f"{Emojis.check_mark} Moderators role has been removed "
+            f"until {discord_timestamp(duration, format=TimestampFormats.DAY_TIME)}."
+        )
 
     @modpings_group.command(name='on')
     @has_any_role(*MODERATION_ROLES)
@@ -244,16 +251,13 @@ class ModPings(Cog):
         await self.modpings_schedule.delete(ctx.author.id)
         await ctx.send(f"{Emojis.ok_hand} {ctx.author.mention} Deleted your modpings schedule!")
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
-        log.trace("Cog unload: canceling role tasks.")
-        self.reschedule_task.cancel()
+        log.trace("Cog unload: cancelling all scheduled tasks.")
         self._role_scheduler.cancel_all()
-
-        self.modpings_schedule_task.cancel()
         self._modpings_scheduler.cancel_all()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModPings cog."""
-    bot.add_cog(ModPings(bot))
+    await bot.add_cog(ModPings(bot))
