@@ -12,6 +12,7 @@ from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
 
@@ -102,15 +103,13 @@ async def post_infraction(
         "user": user.id,
         "active": active,
         "dm_sent": dm_sent,
+        "inserted_at": current_time.isoformat(),
         "last_applied": current_time.isoformat(),
     }
 
-    # Parse duration or expiry
     if duration_or_expiry is not None:
-        if isinstance(duration_or_expiry, datetime):
-            payload['expires_at'] = duration_or_expiry.isoformat()
-        else:  # is relativedelta
-            payload['expires_at'] = (current_time + duration_or_expiry).isoformat()
+        _, expiry = unpack_duration(duration_or_expiry, current_time)
+        payload["expires_at"] = expiry.isoformat()
 
     # Try to apply the infraction. If it fails because the user doesn't exist, try to add it.
     for should_post_user in (True, False):
