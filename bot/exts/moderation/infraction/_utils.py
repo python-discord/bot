@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 import arrow
 import discord
