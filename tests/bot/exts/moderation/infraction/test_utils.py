@@ -309,7 +309,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
     async def test_normal_post_infraction(self):
         """Should return response from POST request if there are no errors."""
-        now = datetime.now()
+        now = datetime.utcnow()
         expected = {
             "actor": self.ctx.author.id,
             "hidden": True,
