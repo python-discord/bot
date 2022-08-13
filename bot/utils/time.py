@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import datetime
 import re
+from copy import copy
 from enum import Enum
 from time import struct_time
-from typing import Literal, Optional, Union, overload
+from typing import Literal, Optional, TYPE_CHECKING, Union, overload
 
 import arrow
 from dateutil.relativedelta import relativedelta
+
+if TYPE_CHECKING:
+    from bot.converters import DurationOrExpiry
 
 _DURATION_REGEX = re.compile(
     r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
@@ -194,12 +200,8 @@ def humanize_delta(
     elif len(args) <= 2:
         end = arrow.get(args[0])
         start = arrow.get(args[1]) if len(args) == 2 else arrow.utcnow()
+        delta = round_delta(relativedelta(end.datetime, start.datetime))
 
-        # Round microseconds
-        end = round_datetime(end.datetime)
-        start = round_datetime(start.datetime)
-
-        delta = relativedelta(end, start)
         if absolute:
             delta = abs(delta)
     else:
@@ -332,12 +334,35 @@ def until_expiration(expiry: Optional[Timestamp]) -> str:
     return format_relative(expiry)
 
 
-def round_datetime(dt: datetime.datetime) -> datetime.datetime:
+def unpack_duration(
+        duration_or_expiry: DurationOrExpiry,
+        origin: Optional[Union[datetime.datetime, arrow.Arrow]] = None
+) -> tuple[datetime.datetime, datetime.datetime]:
     """
-    Round a datetime object to the nearest second.
+    Unpacks a DurationOrExpiry into a tuple of (origin, expiry).
 
-    Resulting datetime objects will have microsecond values of 0, useful for delta comparisons.
+    The `origin` defaults to the current UTC time at function call.
     """
-    if dt.microsecond >= 500000:
-        dt += datetime.timedelta(seconds=1)
-    return dt.replace(microsecond=0)
+    if origin is None:
+        origin = datetime.datetime.now(tz=datetime.timezone.utc)
+
+    if isinstance(origin, arrow.Arrow):
+        origin = origin.datetime
+
+    if isinstance(duration_or_expiry, relativedelta):
+        return origin, origin + duration_or_expiry
+    else:
+        return origin, duration_or_expiry
+
+
+def round_delta(delta: relativedelta) -> relativedelta:
+    """
+    Rounds `delta` to the nearest second.
+
+    Returns a copy with microsecond values of 0.
+    """
+    delta = copy(delta)
+    if delta.microseconds >= 500000:
+        delta += relativedelta(seconds=1)
+    delta.microseconds = 0
+    return delta
