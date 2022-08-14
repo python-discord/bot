@@ -108,7 +108,7 @@ services:
     depends_on:
       - web
       - redis
-      - snekbox
+      - snekbox-311
     env_file:
       - .env
     environment:
