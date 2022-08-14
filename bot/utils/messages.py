@@ -6,12 +6,12 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
+from botcore.utils import scheduling
 from discord.ext.commands import Context
 
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.log import get_logger
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 

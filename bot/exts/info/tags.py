@@ -82,6 +82,7 @@ class Tag:
         self.metadata = post.metadata
         self._restricted_to: set[int] = set(self.metadata.get("restricted_to", ()))
         self._cooldowns: dict[discord.TextChannel, float] = {}
+        self.aliases: list[str] = self.metadata.get("aliases", [])
 
     @property
     def embed(self) -> Embed:
@@ -149,7 +150,11 @@ class Tags(Cog):
                 # Files directly under `base_path` have an empty string as the parent directory name
                 tag_group = parent_dir.name or None
 
-                self.tags[TagIdentifier(tag_group, tag_name)] = Tag(file)
+                tag = Tag(file)
+                self.tags[TagIdentifier(tag_group, tag_name)] = tag
+
+                for alias in tag.aliases:
+                    self.tags[TagIdentifier(tag_group, alias)] = tag
 
     def _get_suggestions(self, tag_identifier: TagIdentifier) -> list[tuple[TagIdentifier, Tag]]:
         """Return a list of suggested tags for `tag_identifier`."""
@@ -274,11 +279,16 @@ class Tags(Cog):
             if tag.accessible_by(ctx.author)
         ]
 
+        # Try exact match, includes checking through alt names
         tag = self.tags.get(tag_identifier)
 
         if tag is None and tag_identifier.group is not None:
             # Try exact match with only the name
-            tag = self.tags.get(TagIdentifier(None, tag_identifier.group))
+            name_only_identifier = TagIdentifier(None, tag_identifier.group)
+            tag = self.tags.get(name_only_identifier)
+            if tag:
+                # Ensure the correct tag information is sent to statsd
+                tag_identifier = name_only_identifier
 
         if tag is None and len(filtered_tags) == 1:
             tag_identifier = filtered_tags[0][0]
@@ -395,6 +405,6 @@ class Tags(Cog):
         return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Tags cog."""
-    bot.add_cog(Tags(bot))
+    await bot.add_cog(Tags(bot))

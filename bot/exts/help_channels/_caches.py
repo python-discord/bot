@@ -17,10 +17,6 @@ claimant_last_message_times = RedisCache(namespace="HelpChannels.claimant_last_m
 # RedisCache[discord.TextChannel.id, UtcPosixTimestamp]
 non_claimant_last_message_times = RedisCache(namespace="HelpChannels.non_claimant_last_message_times")
 
-# This cache maps a help channel to original question message in same channel.
-# RedisCache[discord.TextChannel.id, discord.Message.id]
-question_messages = RedisCache(namespace="HelpChannels.question_messages")
-
 # This cache keeps track of the dynamic message ID for
 # the continuously updated message in the #How-to-get-help channel.
 dynamic_message = RedisCache(namespace="HelpChannels.dynamic_message")

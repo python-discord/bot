@@ -5,12 +5,12 @@ from datetime import timedelta
 import arrow
 import discord
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Event, MODERATION_ROLES, Roles, VoiceGate as GateConf
+from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.decorators import has_no_roles, in_whitelist
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -30,21 +30,21 @@ FAILED_MESSAGE = (
 
 MESSAGE_FIELD_MAP = {
     "joined_at": f"have been on the server for less than {GateConf.minimum_days_member} days",
-    "voice_banned": "have an active voice ban infraction",
+    "voice_gate_blocked": "have an active voice infraction",
     "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
     "activity_blocks": f"have been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
 }
 
 VOICE_PING = (
     "Wondering why you can't talk in the voice channels? "
-    "Use the `!voiceverify` command in here to verify. "
+    f"Use the `{BotConfig.prefix}voiceverify` command in here to verify. "
     "If you don't yet qualify, you'll be told why!"
 )
 
 VOICE_PING_DM = (
     "Wondering why you can't talk in the voice channels? "
-    "Use the `!voiceverify` command in {channel_mention} to verify. "
-    "If you don't yet qualify, you'll be told why!"
+    f"Use the `{BotConfig.prefix}voiceverify` command in "
+    "{channel_mention} to verify. If you don't yet qualify, you'll be told why!"
 )
 
 
@@ -170,7 +170,7 @@ class VoiceGate(Cog):
                 ctx.author.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
             ),
             "total_messages": data["total_messages"] < GateConf.minimum_messages,
-            "voice_banned": data["voice_banned"],
+            "voice_gate_blocked": data["voice_gate_blocked"],
             "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
         }
 
@@ -191,7 +191,6 @@ class VoiceGate(Cog):
                 await ctx.channel.send(ctx.author.mention, embed=embed)
             return
 
-        self.mod_log.ignore(Event.member_update, ctx.author.id)
         embed = discord.Embed(
             title="Voice gate passed",
             description="You have been granted permission to use voice channels in Python Discord.",
@@ -238,10 +237,6 @@ class VoiceGate(Cog):
             log.trace(f"Excluding moderator message {message.id} from deletion in #{message.channel}.")
             return
 
-        # Ignore deleted voice verification messages
-        if ctx.command is not None and ctx.command.name == "voice_verify":
-            self.mod_log.ignore(Event.message_delete, message.id)
-
         with suppress(discord.NotFound):
             await message.delete()
 
@@ -277,6 +272,6 @@ class VoiceGate(Cog):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Loads the VoiceGate cog."""
-    bot.add_cog(VoiceGate(bot))
+    await bot.add_cog(VoiceGate(bot))

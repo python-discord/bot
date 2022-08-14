@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import aiohttp
 import discord
-from async_rediscache import RedisSession
 
 from bot.constants import Colours
 from bot.exts.moderation import incidents
 from bot.utils.messages import format_user
 from bot.utils.time import TimestampFormats, discord_timestamp
+from tests.base import RedisTestCase
 from tests.helpers import (
     MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
     MockUser
@@ -280,7 +280,7 @@ class TestAddSignals(unittest.IsolatedAsyncioTestCase):
         self.incident.add_reaction.assert_not_called()
 
 
-class TestIncidents(unittest.IsolatedAsyncioTestCase):
+class TestIncidents(RedisTestCase):
     """
     Tests for bound methods of the `Incidents` cog.
 
@@ -288,22 +288,6 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
     for each test function, but not make any assertions on its own. Tests can mutate
     the instance as they wish.
     """
-
-    session = None
-
-    async def flush(self):
-        """Flush everything from the database to prevent carry-overs between tests."""
-        with await self.session.pool as connection:
-            await connection.flushall()
-
-    async def asyncSetUp(self):  # noqa: N802
-        self.session = RedisSession(use_fakeredis=True)
-        await self.session.connect()
-        await self.flush()
-
-    async def asyncTearDown(self):  # noqa: N802
-        if self.session:
-            await self.session.close()
 
     def setUp(self):
         """
@@ -667,7 +651,7 @@ class TestOnRawReactionAdd(TestIncidents):
             emoji="reaction",
         )
 
-    async def asyncSetUp(self):  # noqa: N802
+    async def asyncSetUp(self):
         """
         Prepare an empty task and assign it as `crawl_task`.
 

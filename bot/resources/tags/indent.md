@@ -16,9 +16,9 @@ The first line is not indented. The next two lines are indented to be inside of 
 
 **Indentation is used after:**
 **1.** [Compound statements](https://docs.python.org/3/reference/compound_stmts.html) (eg. `if`, `while`, `for`, `try`, `with`, `def`, `class`, and their counterparts)
-**2.** [Continuation lines](https://www.python.org/dev/peps/pep-0008/#indentation)
+**2.** [Continuation lines](https://peps.python.org/pep-0008/#indentation)
 
 **More Info**
-**1.** [Indentation style guide](https://www.python.org/dev/peps/pep-0008/#indentation)
-**2.** [Tabs or Spaces?](https://www.python.org/dev/peps/pep-0008/#tabs-or-spaces)
+**1.** [Indentation style guide](https://peps.python.org/pep-0008/#indentation)
+**2.** [Tabs or Spaces?](https://peps.python.org/pep-0008/#tabs-or-spaces)
 **3.** [Official docs on indentation](https://docs.python.org/3/reference/lexical_analysis.html#indentation)

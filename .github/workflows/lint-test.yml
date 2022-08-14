@@ -46,6 +46,10 @@ jobs:
       PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
       PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
 
+      # See https://github.com/pre-commit/pre-commit/issues/2178#issuecomment-1002163763
+      # for why we set this.
+      SETUPTOOLS_USE_DISTUTILS: stdlib
+
     steps:
       - name: Add custom PYTHONUSERBASE to PATH
         run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
@@ -57,7 +61,7 @@ jobs:
         id: python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       # This step caches our Python dependencies. To make sure we
       # only restore a cache when the dependencies, the python version,

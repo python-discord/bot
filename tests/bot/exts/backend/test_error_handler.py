@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
+from botcore.site_api import ResponseCodeError
 from discord.ext.commands import errors
 
-from bot.api import ResponseCodeError
 from bot.errors import InvalidInfractedUserError, LockedResourceError
-from bot.exts.backend.error_handler import ErrorHandler, setup
+from bot.exts.backend import error_handler
 from bot.exts.info.tags import Tags
 from bot.exts.moderation.silence import Silence
 from bot.utils.checks import InWhitelistCheckFailure
@@ -18,14 +18,14 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.bot = MockBot()
         self.ctx = MockContext(bot=self.bot)
+        self.cog = error_handler.ErrorHandler(self.bot)
 
     async def test_error_handler_already_handled(self):
         """Should not do anything when error is already handled by local error handler."""
         self.ctx.reset_mock()
-        cog = ErrorHandler(self.bot)
         error = errors.CommandError()
         error.handled = "foo"
-        self.assertIsNone(await cog.on_command_error(self.ctx, error))
+        self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
         self.ctx.send.assert_not_awaited()
 
     async def test_error_handler_command_not_found_error_not_invoked_by_handler(self):
@@ -45,27 +45,27 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 "called_try_get_tag": True
             }
         )
-        cog = ErrorHandler(self.bot)
-        cog.try_silence = AsyncMock()
-        cog.try_get_tag = AsyncMock()
+        self.cog.try_silence = AsyncMock()
+        self.cog.try_get_tag = AsyncMock()
+        self.cog.try_run_eval = AsyncMock(return_value=False)
 
         for case in test_cases:
             with self.subTest(try_silence_return=case["try_silence_return"], try_get_tag=case["called_try_get_tag"]):
                 self.ctx.reset_mock()
-                cog.try_silence.reset_mock(return_value=True)
-                cog.try_get_tag.reset_mock()
+                self.cog.try_silence.reset_mock(return_value=True)
+                self.cog.try_get_tag.reset_mock()
 
-                cog.try_silence.return_value = case["try_silence_return"]
+                self.cog.try_silence.return_value = case["try_silence_return"]
                 self.ctx.channel.id = 1234
 
-                self.assertIsNone(await cog.on_command_error(self.ctx, error))
+                self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
 
                 if case["try_silence_return"]:
-                    cog.try_get_tag.assert_not_awaited()
-                    cog.try_silence.assert_awaited_once()
+                    self.cog.try_get_tag.assert_not_awaited()
+                    self.cog.try_silence.assert_awaited_once()
                 else:
-                    cog.try_silence.assert_awaited_once()
-                    cog.try_get_tag.assert_awaited_once()
+                    self.cog.try_silence.assert_awaited_once()
+                    self.cog.try_get_tag.assert_awaited_once()
 
                 self.ctx.send.assert_not_awaited()
 
@@ -73,57 +73,54 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         """Should do nothing when error is `CommandNotFound` and have attribute `invoked_from_error_handler`."""
         ctx = MockContext(bot=self.bot, invoked_from_error_handler=True)
 
-        cog = ErrorHandler(self.bot)
-        cog.try_silence = AsyncMock()
-        cog.try_get_tag = AsyncMock()
+        self.cog.try_silence = AsyncMock()
+        self.cog.try_get_tag = AsyncMock()
+        self.cog.try_run_eval = AsyncMock()
 
         error = errors.CommandNotFound()
 
-        self.assertIsNone(await cog.on_command_error(ctx, error))
+        self.assertIsNone(await self.cog.on_command_error(ctx, error))
 
-        cog.try_silence.assert_not_awaited()
-        cog.try_get_tag.assert_not_awaited()
+        self.cog.try_silence.assert_not_awaited()
+        self.cog.try_get_tag.assert_not_awaited()
+        self.cog.try_run_eval.assert_not_awaited()
         self.ctx.send.assert_not_awaited()
 
     async def test_error_handler_user_input_error(self):
         """Should await `ErrorHandler.handle_user_input_error` when error is `UserInputError`."""
         self.ctx.reset_mock()
-        cog = ErrorHandler(self.bot)
-        cog.handle_user_input_error = AsyncMock()
+        self.cog.handle_user_input_error = AsyncMock()
         error = errors.UserInputError()
-        self.assertIsNone(await cog.on_command_error(self.ctx, error))
-        cog.handle_user_input_error.assert_awaited_once_with(self.ctx, error)
+        self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
+        self.cog.handle_user_input_error.assert_awaited_once_with(self.ctx, error)
 
     async def test_error_handler_check_failure(self):
         """Should await `ErrorHandler.handle_check_failure` when error is `CheckFailure`."""
         self.ctx.reset_mock()
-        cog = ErrorHandler(self.bot)
-        cog.handle_check_failure = AsyncMock()
+        self.cog.handle_check_failure = AsyncMock()
         error = errors.CheckFailure()
-        self.assertIsNone(await cog.on_command_error(self.ctx, error))
-        cog.handle_check_failure.assert_awaited_once_with(self.ctx, error)
+        self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
+        self.cog.handle_check_failure.assert_awaited_once_with(self.ctx, error)
 
     async def test_error_handler_command_on_cooldown(self):
         """Should send error with `ctx.send` when error is `CommandOnCooldown`."""
         self.ctx.reset_mock()
-        cog = ErrorHandler(self.bot)
         error = errors.CommandOnCooldown(10, 9, type=None)
-        self.assertIsNone(await cog.on_command_error(self.ctx, error))
+        self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
         self.ctx.send.assert_awaited_once_with(error)
 
     async def test_error_handler_command_invoke_error(self):
         """Should call `handle_api_error` or `handle_unexpected_error` depending on original error."""
-        cog = ErrorHandler(self.bot)
-        cog.handle_api_error = AsyncMock()
-        cog.handle_unexpected_error = AsyncMock()
+        self.cog.handle_api_error = AsyncMock()
+        self.cog.handle_unexpected_error = AsyncMock()
         test_cases = (
             {
                 "args": (self.ctx, errors.CommandInvokeError(ResponseCodeError(AsyncMock()))),
-                "expect_mock_call": cog.handle_api_error
+                "expect_mock_call": self.cog.handle_api_error
             },
             {
                 "args": (self.ctx, errors.CommandInvokeError(TypeError)),
-                "expect_mock_call": cog.handle_unexpected_error
+                "expect_mock_call": self.cog.handle_unexpected_error
             },
             {
                 "args": (self.ctx, errors.CommandInvokeError(LockedResourceError("abc", "test"))),
@@ -138,7 +135,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         for case in test_cases:
             with self.subTest(args=case["args"], expect_mock_call=case["expect_mock_call"]):
                 self.ctx.send.reset_mock()
-                self.assertIsNone(await cog.on_command_error(*case["args"]))
+                self.assertIsNone(await self.cog.on_command_error(*case["args"]))
                 if case["expect_mock_call"] == "send":
                     self.ctx.send.assert_awaited_once()
                 else:
@@ -148,29 +145,27 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_error_handler_conversion_error(self):
         """Should call `handle_api_error` or `handle_unexpected_error` depending on original error."""
-        cog = ErrorHandler(self.bot)
-        cog.handle_api_error = AsyncMock()
-        cog.handle_unexpected_error = AsyncMock()
+        self.cog.handle_api_error = AsyncMock()
+        self.cog.handle_unexpected_error = AsyncMock()
         cases = (
             {
                 "error": errors.ConversionError(AsyncMock(), ResponseCodeError(AsyncMock())),
-                "mock_function_to_call": cog.handle_api_error
+                "mock_function_to_call": self.cog.handle_api_error
             },
             {
                 "error": errors.ConversionError(AsyncMock(), TypeError),
-                "mock_function_to_call": cog.handle_unexpected_error
+                "mock_function_to_call": self.cog.handle_unexpected_error
             }
         )
 
         for case in cases:
             with self.subTest(**case):
-                self.assertIsNone(await cog.on_command_error(self.ctx, case["error"]))
+                self.assertIsNone(await self.cog.on_command_error(self.ctx, case["error"]))
                 case["mock_function_to_call"].assert_awaited_once_with(self.ctx, case["error"].original)
 
     async def test_error_handler_two_other_errors(self):
         """Should call `handle_unexpected_error` if error is `MaxConcurrencyReached` or `ExtensionError`."""
-        cog = ErrorHandler(self.bot)
-        cog.handle_unexpected_error = AsyncMock()
+        self.cog.handle_unexpected_error = AsyncMock()
         errs = (
             errors.MaxConcurrencyReached(1, MagicMock()),
             errors.ExtensionError(name="foo")
@@ -178,16 +173,15 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
         for err in errs:
             with self.subTest(error=err):
-                cog.handle_unexpected_error.reset_mock()
-                self.assertIsNone(await cog.on_command_error(self.ctx, err))
-                cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, err)
+                self.cog.handle_unexpected_error.reset_mock()
+                self.assertIsNone(await self.cog.on_command_error(self.ctx, err))
+                self.cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, err)
 
     @patch("bot.exts.backend.error_handler.log")
     async def test_error_handler_other_errors(self, log_mock):
         """Should `log.debug` other errors."""
-        cog = ErrorHandler(self.bot)
         error = errors.DisabledCommand()  # Use this just as a other error
-        self.assertIsNone(await cog.on_command_error(self.ctx, error))
+        self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
         log_mock.debug.assert_called_once()
 
 
@@ -199,7 +193,7 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         self.silence = Silence(self.bot)
         self.bot.get_command.return_value = self.silence.silence
         self.ctx = MockContext(bot=self.bot)
-        self.cog = ErrorHandler(self.bot)
+        self.cog = error_handler.ErrorHandler(self.bot)
 
     async def test_try_silence_context_invoked_from_error_handler(self):
         """Should set `Context.invoked_from_error_handler` to `True`."""
@@ -331,7 +325,7 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.ctx = MockContext()
         self.tag = Tags(self.bot)
-        self.cog = ErrorHandler(self.bot)
+        self.cog = error_handler.ErrorHandler(self.bot)
         self.bot.get_command.return_value = self.tag.get_command
 
     async def test_try_get_tag_get_command(self):
@@ -396,7 +390,7 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.bot = MockBot()
         self.ctx = MockContext(bot=self.bot)
-        self.cog = ErrorHandler(self.bot)
+        self.cog = error_handler.ErrorHandler(self.bot)
 
     async def test_handle_input_error_handler_errors(self):
         """Should handle each error probably."""
@@ -477,11 +471,11 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.exts.backend.error_handler.log")
     async def test_handle_api_error(self, log_mock):
-        """Should `ctx.send` on HTTP error codes, `log.debug|warning` depends on code."""
+        """Should `ctx.send` on HTTP error codes, and log at correct level."""
         test_cases = (
             {
                 "error": ResponseCodeError(AsyncMock(status=400)),
-                "log_level": "debug"
+                "log_level": "error"
             },
             {
                 "error": ResponseCodeError(AsyncMock(status=404)),
@@ -505,6 +499,8 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.send.assert_awaited_once()
                 if case["log_level"] == "warning":
                     log_mock.warning.assert_called_once()
+                elif case["log_level"] == "error":
+                    log_mock.error.assert_called_once()
                 else:
                     log_mock.debug.assert_called_once()
 
@@ -544,11 +540,11 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 push_scope_mock.set_extra.has_calls(set_extra_calls)
 
 
-class ErrorHandlerSetupTests(unittest.TestCase):
+class ErrorHandlerSetupTests(unittest.IsolatedAsyncioTestCase):
     """Tests for `ErrorHandler` `setup` function."""
 
-    def test_setup(self):
+    async def test_setup(self):
         """Should call `bot.add_cog` with `ErrorHandler`."""
         bot = MockBot()
-        setup(bot)
-        bot.add_cog.assert_called_once()
+        await error_handler.setup(bot)
+        bot.add_cog.assert_awaited_once()

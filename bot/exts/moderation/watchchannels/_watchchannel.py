@@ -7,10 +7,11 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import discord
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
 from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.exts.filters.token_remover import TokenRemover
@@ -18,9 +19,8 @@ from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
 from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
-from bot.utils import CogABCMeta, messages, scheduling
+from bot.utils import CogABCMeta, messages, time
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import get_time_delta
 
 log = get_logger(__name__)
 
@@ -70,8 +70,6 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_history = MessageHistory()
         self.disable_header = disable_header
 
-        self._start = scheduling.create_task(self.start_watchchannel(), event_loop=self.bot.loop)
-
     @property
     def modlog(self) -> ModLog:
         """Provides access to the ModLog cog for alert purposes."""
@@ -94,7 +92,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         return True
 
-    async def start_watchchannel(self) -> None:
+    async def cog_load(self) -> None:
         """Starts the watch channel by getting the channel, webhook, and user cache ready."""
         await self.bot.wait_until_guild_available()
 
@@ -286,7 +284,7 @@ class WatchChannel(metaclass=CogABCMeta):
         actor = actor.display_name if actor else self.watched_users[user_id]['actor']
 
         inserted_at = self.watched_users[user_id]['inserted_at']
-        time_delta = get_time_delta(inserted_at)
+        time_delta = time.format_relative(inserted_at)
 
         reason = self.watched_users[user_id]['reason']
 
@@ -360,7 +358,7 @@ class WatchChannel(metaclass=CogABCMeta):
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data['inserted_at']
-            line += f", added {get_time_delta(inserted_at)}"
+            line += f", added {time.format_relative(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"
             list_data["info"][user_id] = line
@@ -375,7 +373,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_queue.pop(user_id, None)
         self.consumption_queue.pop(user_id, None)
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace("Unloading the cog")
         if self._consume_task and not self._consume_task.done():

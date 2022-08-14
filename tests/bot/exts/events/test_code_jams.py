@@ -160,11 +160,11 @@ class JamCodejamCreateTests(unittest.IsolatedAsyncioTestCase):
                 member.add_roles.assert_not_awaited()
 
 
-class CodeJamSetup(unittest.TestCase):
+class CodeJamSetup(unittest.IsolatedAsyncioTestCase):
     """Test for `setup` function of `CodeJam` cog."""
 
-    def test_setup(self):
+    async def test_setup(self):
         """Should call `bot.add_cog`."""
         bot = MockBot()
-        code_jams.setup(bot)
-        bot.add_cog.assert_called_once()
+        await code_jams.setup(bot)
+        bot.add_cog.assert_awaited_once()

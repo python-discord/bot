@@ -255,4 +255,10 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     else:
         signature = get_signatures(symbol_heading)
         description = get_dd_description(symbol_heading)
-    return _create_markdown(signature, description, symbol_data.url).replace("¶", "").strip()
+
+    for description_element in description:
+        if isinstance(description_element, Tag):
+            for tag in description_element.find_all("a", class_="headerlink"):
+                tag.decompose()
+
+    return _create_markdown(signature, description, symbol_data.url).strip()

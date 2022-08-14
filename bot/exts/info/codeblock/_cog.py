@@ -2,6 +2,7 @@ import time
 from typing import Optional
 
 import discord
+from botcore.utils import scheduling
 from discord import Message, RawMessageUpdateEvent
 from discord.ext.commands import Cog
 
@@ -11,7 +12,7 @@ from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.info.codeblock._instructions import get_instructions
 from bot.log import get_logger
-from bot.utils import has_lines, scheduling
+from bot.utils import has_lines
 from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
 

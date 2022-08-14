@@ -1,4 +1,3 @@
-import re
 from functools import partial
 from typing import Callable, Container, Iterable, List, Union
 
@@ -11,7 +10,6 @@ from . import MAX_SIGNATURE_AMOUNT
 
 log = get_logger(__name__)
 
-_UNWANTED_SIGNATURE_SYMBOLS_RE = re.compile(r"\[source]|\\\\|¶")
 _SEARCH_END_TAG_ATTRS = (
     "data",
     "function",
@@ -129,9 +127,23 @@ def get_signatures(start_signature: PageElement) -> List[str]:
             start_signature,
             *_find_next_siblings_until_tag(start_signature, ("dd",), limit=2),
     )[-MAX_SIGNATURE_AMOUNT:]:
-        signature = _UNWANTED_SIGNATURE_SYMBOLS_RE.sub("", element.text)
+        for tag in element.find_all(_filter_signature_links, recursive=False):
+            tag.decompose()
 
+        signature = element.text
         if signature:
             signatures.append(signature)
 
     return signatures
+
+
+def _filter_signature_links(tag: Tag) -> bool:
+    """Return True if `tag` is a headerlink, or a link to source code; False otherwise."""
+    if tag.name == "a":
+        if "headerlink" in tag.get("class", ()):
+            return True
+
+        if tag.find(class_="viewcode-link"):
+            return True
+
+    return False
