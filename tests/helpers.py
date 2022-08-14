@@ -492,6 +492,28 @@ class MockAttachment(CustomMockMixin, unittest.mock.MagicMock):
     spec_set = attachment_instance
 
 
+message_reference_instance = discord.MessageReference(
+    message_id=unittest.mock.MagicMock(id=1),
+    channel_id=unittest.mock.MagicMock(id=2),
+    guild_id=unittest.mock.MagicMock(id=3)
+)
+
+
+class MockMessageReference(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock MessageReference objects.
+
+    Instances of this class will follow the specification of `discord.MessageReference` instances.
+    For more information, see the `MockGuild` docstring.
+    """
+    spec_set = message_reference_instance
+
+    def __init__(self, *, reference_author_is_bot: bool = False, **kwargs):
+        super().__init__(**kwargs)
+        referenced_msg_author = MockMember(name="bob", bot=reference_author_is_bot)
+        self.resolved = MockMessage(author=referenced_msg_author)
+
+
 class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
     """
     A MagicMock subclass to mock Message objects.

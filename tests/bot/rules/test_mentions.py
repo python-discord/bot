@@ -1,15 +1,27 @@
-from typing import Iterable
+from typing import Iterable, Optional
 
 from bot.rules import mentions
 from tests.bot.rules import DisallowedCase, RuleTest
-from tests.helpers import MockMember, MockMessage
+from tests.helpers import MockMember, MockMessage, MockMessageReference
 
 
-def make_msg(author: str, total_user_mentions: int, total_bot_mentions: int = 0) -> MockMessage:
+def make_msg(
+    author: str,
+    total_user_mentions: int,
+    total_bot_mentions: int = 0,
+    *,
+    reference: Optional[MockMessageReference] = None
+) -> MockMessage:
     """Makes a message from `author` with `total_user_mentions` user mentions and `total_bot_mentions` bot mentions."""
     user_mentions = [MockMember() for _ in range(total_user_mentions)]
     bot_mentions = [MockMember(bot=True) for _ in range(total_bot_mentions)]
-    return MockMessage(author=author, mentions=user_mentions+bot_mentions, reference=None)
+
+    mentions = user_mentions + bot_mentions
+    if reference is not None:
+        # For the sake of these tests we assume that all references are mentions.
+        mentions.append(reference.resolved.author)
+
+    return MockMessage(author=author, mentions=mentions, reference=reference)
 
 
 class TestMentions(RuleTest):
@@ -56,6 +68,16 @@ class TestMentions(RuleTest):
                 ("bob",),
                 3,
             ),
+            DisallowedCase(
+                [make_msg("bob", 3, reference=MockMessageReference())],
+                ("bob",),
+                3,
+            ),
+            DisallowedCase(
+                [make_msg("bob", 3, reference=MockMessageReference(reference_author_is_bot=True))],
+                ("bob",),
+                3
+            )
         )
 
         await self.run_disallowed(cases)
@@ -67,6 +89,27 @@ class TestMentions(RuleTest):
             [make_msg("bob", 2, 1)],
             [make_msg("bob", 1, 2), make_msg("bob", 1, 2)],
             [make_msg("bob", 1, 5), make_msg("alice", 2, 5)]
+        )
+
+        await self.run_allowed(cases)
+
+    async def test_ignore_reply_mentions(self):
+        """Messages with an allowed amount of mentions in the content, also containing reply mentions."""
+        cases = (
+            [
+                make_msg("bob", 2, reference=MockMessageReference())
+            ],
+            [
+                make_msg("bob", 2, reference=MockMessageReference(reference_author_is_bot=True))
+            ],
+            [
+                make_msg("bob", 2, reference=MockMessageReference()),
+                make_msg("bob", 0, reference=MockMessageReference())
+            ],
+            [
+                make_msg("bob", 2, reference=MockMessageReference(reference_author_is_bot=True)),
+                make_msg("bob", 0, reference=MockMessageReference(reference_author_is_bot=True))
+            ]
         )
 
         await self.run_allowed(cases)
