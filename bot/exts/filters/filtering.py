@@ -2,7 +2,7 @@ import asyncio
 import re
 import unicodedata
 import urllib.parse
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
@@ -413,7 +413,7 @@ class Filtering(Cog):
                             await context.invoke(
                                 context.command,
                                 msg.author,
-                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                datetime.utcnow() + AUTO_BAN_DURATION,
                                 reason=AUTO_BAN_REASON
                             )
 
