@@ -189,7 +189,10 @@ class InfractionScheduler:
                 f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
             )
             if reason:
-                end_msg = f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
+                end_msg = (
+                    f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
+                    " Moderators have been alerted for review"
+                )
 
         purge = infraction.get("purge", "")
 
