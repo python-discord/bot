@@ -191,7 +191,7 @@ class InfractionScheduler:
             if reason:
                 end_msg = (
                     f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})."
-                    f"\n\n<@&{Roles.moderators}> have been alerted for review"
+                    f"\n\nThe <@&{Roles.moderators}> have been alerted for review"
                 )
 
         purge = infraction.get("purge", "")
