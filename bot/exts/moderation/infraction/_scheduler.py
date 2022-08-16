@@ -12,7 +12,7 @@ from discord.ext.commands import Context
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Colours
+from bot.constants import Colours, Roles
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.modlog import ModLog
@@ -190,8 +190,8 @@ class InfractionScheduler:
             )
             if reason:
                 end_msg = (
-                    f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})"
-                    " Moderators have been alerted for review"
+                    f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})."
+                    f"\n\n<@&{Roles.moderators}> have been alerted for review"
                 )
 
         purge = infraction.get("purge", "")
@@ -246,7 +246,8 @@ class InfractionScheduler:
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
-        await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.")
+        mentions = discord.AllowedMentions(users=[user], roles=False)
+        await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
         # Send a log message to the mod log.
         # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
