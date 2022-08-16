@@ -30,6 +30,7 @@ log = get_logger(__name__)
 
 DISCORD_EPOCH_DT = snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
+RE_STRIP_HTTP = re.compile(r"https?://(www\.)?")
 
 
 class ValidDiscordServerInvite(Converter):
@@ -52,6 +53,7 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
+        server_invite = RE_STRIP_HTTP.sub("", server_invite)
         invite_code = DISCORD_INVITE.match(server_invite)
         if invite_code:
             response = await ctx.bot.http_session.get(
