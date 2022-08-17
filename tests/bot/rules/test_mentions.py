@@ -1,5 +1,7 @@
 from typing import Iterable, Optional
 
+import discord
+
 from bot.rules import mentions
 from tests.bot.rules import DisallowedCase, RuleTest
 from tests.helpers import MockMember, MockMessage, MockMessageReference
@@ -20,8 +22,11 @@ def make_msg(
     if reference is not None:
         # For the sake of these tests we assume that all references are mentions.
         mentions.append(reference.resolved.author)
+        msg_type = discord.MessageType.reply
+    else:
+        msg_type = discord.MessageType.default
 
-    return MockMessage(author=author, mentions=mentions, reference=reference)
+    return MockMessage(author=author, mentions=mentions, reference=reference, type=msg_type)
 
 
 class TestMentions(RuleTest):

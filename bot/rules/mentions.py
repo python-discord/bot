@@ -32,45 +32,34 @@ async def apply(
     # the mentions, that solution is very prone to breaking.
     # We would need to deal with codeblocks, escaping markdown, and any discrepancies between
     # our implementation and discord's markdown parser which would cause false positives or false negatives.
-    total_recent_mentions = sum(
-        not (user.bot or msg.author == user)
-        for msg in relevant_messages
-        for user in msg.mentions
-    )
-
-    # No reason to run processing and fetch messages if there are no mentions.
-    if not total_recent_mentions:
-        return None
-
-    # We don't want to include mentions that are to the replied user in message replies.
+    total_recent_mentions = 0
     for msg in relevant_messages:
+        # We check if the message is a reply, and if it is try to get the author
+        # since we ignore mentions of a user that we're replying to
+        reply_author = None
 
-        if msg.type != MessageType.reply and not msg.reference:
-            continue
-
-        resolved = msg.reference.resolved
-        if isinstance(resolved, DeletedReferencedMessage):
-            # can't figure out the author
-            continue
-
-        if not resolved:
+        if msg.type == MessageType.reply:
             ref = msg.reference
-            # It is possible, in a very unusual situation, for a message to have a reference
-            # that is both not in the cache, and deleted while running this function.
-            # In such a situation, this will throw an error which we catch.
-            try:
-                resolved = await bot.instance.get_partial_messageable(ref.channel_id).fetch_message(ref.message_id)
-            except NotFound:
-                log.info('Could not fetch the replied reference as its been deleted.')
+
+            if not (resolved := ref.resolved):
+                # It is possible, in a very unusual situation, for a message to have a reference
+                # that is both not in the cache, and deleted while running this function.
+                # In such a situation, this will throw an error which we catch.
+                try:
+                    resolved = await bot.instance.get_partial_messageable(resolved.channel_id).fetch_message(
+                        resolved.message_id
+                    )
+                except NotFound:
+                    log.info('Could not fetch the reference message as it has been deleted.')
+
+            if resolved and not isinstance(resolved, DeletedReferencedMessage):
+                reply_author = resolved.author
+
+        for user in msg.mentions:
+            # Don't count bot or self mentions, or the user being replied to (if applicable)
+            if user.bot or user in {msg.author, reply_author}:
                 continue
-
-        # We check if the reply was to a bot or the author since those mentions are already ignored above.
-        if not (resolved.author.bot or resolved.author == msg.author) and resolved.author in msg.mentions:
-            total_recent_mentions -= 1
-
-        # Break the loop once `total_recent_mentions` reaches zero since there's nothing left to process.
-        if not total_recent_mentions:
-            break
+            total_recent_mentions += 1
 
     if total_recent_mentions > config['max']:
         return (
