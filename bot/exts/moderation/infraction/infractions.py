@@ -1,7 +1,7 @@
 import textwrap
 import typing as t
-from datetime import datetime
 
+import arrow
 import discord
 from discord import Member
 from discord.ext import commands
@@ -156,7 +156,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command()
     async def compban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Same as cleanban, but specifically with the ban reason and duration used for compromised accounts."""
-        await self.cleanban(ctx, user, duration=datetime.utcnow() + AUTO_BAN_DURATION, reason=AUTO_BAN_REASON)
+        await self.cleanban(ctx, user, duration=(arrow.utcnow() + AUTO_BAN_DURATION).datetime, reason=AUTO_BAN_REASON)
 
     @command(aliases=("vban",))
     async def voiceban(self, ctx: Context) -> None:
