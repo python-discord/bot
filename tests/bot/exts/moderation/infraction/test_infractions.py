@@ -90,8 +90,14 @@ class VoiceMuteTests(unittest.IsolatedAsyncioTestCase):
     async def test_voice_unmute(self):
         """Should call infraction pardoning function."""
         self.cog.pardon_infraction = AsyncMock()
+        self.assertIsNone(await self.cog.unvoicemute(self.cog, self.ctx, self.user, pardon_reason="foobar"))
+        self.cog.pardon_infraction.assert_awaited_once_with(self.ctx, "voice_mute", self.user, "foobar")
+
+    async def test_voice_unmute_reasonless(self):
+        """Should call infraction pardoning function without a pardon reason."""
+        self.cog.pardon_infraction = AsyncMock()
         self.assertIsNone(await self.cog.unvoicemute(self.cog, self.ctx, self.user))
-        self.cog.pardon_infraction.assert_awaited_once_with(self.ctx, "voice_mute", self.user)
+        self.cog.pardon_infraction.assert_awaited_once_with(self.ctx, "voice_mute", self.user, None)
 
     @patch("bot.exts.moderation.infraction.infractions._utils.post_infraction")
     @patch("bot.exts.moderation.infraction.infractions._utils.get_active_infraction")
