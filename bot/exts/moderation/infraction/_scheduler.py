@@ -279,7 +279,7 @@ class InfractionScheduler:
         """
         Prematurely end an infraction for a user and log the action in the mod log.
 
-        If `pardon_reason` is None, then the infraction object will not receive
+        If `pardon_reason` is None, then the database will not receive
         appended text explaining why the infraction was pardoned.
 
         If `send_msg` is True, then a pardoning confirmation message will be sent to
@@ -367,12 +367,13 @@ class InfractionScheduler:
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
 
-        If `pardon_reason` is None, then the infraction object will not receive
-        appended text explaining why the infraction was pardoned.
-
         The infraction is removed from Discord, marked as inactive in the database, and has its
-        expiration task cancelled. If `send_log` is True, a mod log is sent for the
-        deactivation of the infraction.
+        expiration task cancelled.
+
+        If `pardon_reason` is None, then the database will not receive
+        appended text explaining why the infraction was pardoned.
+        
+        If `send_log` is True, a mod log is sent for the deactivation of the infraction.
 
         If `notify` is True, notify the user of the pardon via DM where applicable.
 
