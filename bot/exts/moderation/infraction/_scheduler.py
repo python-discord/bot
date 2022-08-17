@@ -394,7 +394,7 @@ class InfractionScheduler:
             "Reason": infraction["reason"],
             "Created": time.format_with_duration(infraction["inserted_at"], infraction["expires_at"]),
         }
-        
+
         try:
             log.trace("Awaiting the pardon action coroutine.")
             returned_log = await self._pardon_action(infraction, notify)
@@ -438,7 +438,7 @@ class InfractionScheduler:
         except ResponseCodeError:
             log.exception(f"Failed to fetch watch status for user {user_id}")
             log_text["Watching"] = "Unknown - failed to fetch watch status."
-        
+
         try:
             # Mark infraction as inactive in the database.
             log.trace(f"Marking infraction #{id_} as inactive in the database.")

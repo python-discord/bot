@@ -330,12 +330,24 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Remove infractions (un- commands)
 
     @command()
-    async def unmute(self, ctx: Context, user: UnambiguousMemberOrUser, *, pardon_reason: t.Optional[str] = None) -> None:
+    async def unmute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        *,
+        pardon_reason: t.Optional[str] = None
+    ) -> None:
         """Prematurely end the active mute infraction for the user."""
         await self.pardon_infraction(ctx, "mute", user, pardon_reason)
 
     @command()
-    async def unban(self, ctx: Context, user: UnambiguousMemberOrUser, *, pardon_reason: t.Optional[str] = None) -> None:
+    async def unban(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        *,
+        pardon_reason: t.Optional[str] = None
+    ) -> None:
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user, pardon_reason)
 
@@ -349,7 +361,13 @@ class Infractions(InfractionScheduler, commands.Cog):
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `unvoicemute`?")
 
     @command(aliases=("uvmute",))
-    async def unvoicemute(self, ctx: Context, user: UnambiguousMemberOrUser, *, pardon_reason: t.Optional[str] = None) -> None:
+    async def unvoicemute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        *,
+        pardon_reason: t.Optional[str] = None
+    ) -> None:
         """Prematurely end the active voice mute infraction for the user."""
         await self.pardon_infraction(ctx, "voice_mute", user, pardon_reason)
 
