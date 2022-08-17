@@ -271,12 +271,16 @@ class InfractionScheduler:
             ctx: Context,
             infr_type: str,
             user: MemberOrUser,
+            pardon_reason: t.Optional[str] = None,
             *,
             send_msg: bool = True,
             notify: bool = True
     ) -> None:
         """
         Prematurely end an infraction for a user and log the action in the mod log.
+
+        If `pardon_reason` is None, then the infraction object will not receive
+        appended text explaining why the infraction was pardoned.
 
         If `send_msg` is True, then a pardoning confirmation message will be sent to
         the context channel. Otherwise, no such message will be sent.
@@ -302,7 +306,7 @@ class InfractionScheduler:
             return
 
         # Deactivate the infraction and cancel its scheduled expiration task.
-        log_text = await self.deactivate_infraction(response[0], send_log=False, notify=notify)
+        log_text = await self.deactivate_infraction(response[0], pardon_reason, send_log=False, notify=notify)
 
         log_text["Member"] = messages.format_user(user)
         log_text["Actor"] = ctx.author.mention
@@ -355,12 +359,16 @@ class InfractionScheduler:
     async def deactivate_infraction(
         self,
         infraction: _utils.Infraction,
+        pardon_reason: t.Optional[str] = None,
         *,
         send_log: bool = True,
         notify: bool = True
     ) -> t.Dict[str, str]:
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
+
+        If `pardon_reason` is None, then the infraction object will not receive
+        appended text explaining why the infraction was pardoned.
 
         The infraction is removed from Discord, marked as inactive in the database, and has its
         expiration task cancelled. If `send_log` is True, a mod log is sent for the
@@ -386,7 +394,7 @@ class InfractionScheduler:
             "Reason": infraction["reason"],
             "Created": time.format_with_duration(infraction["inserted_at"], infraction["expires_at"]),
         }
-
+        
         try:
             log.trace("Awaiting the pardon action coroutine.")
             returned_log = await self._pardon_action(infraction, notify)
@@ -430,13 +438,19 @@ class InfractionScheduler:
         except ResponseCodeError:
             log.exception(f"Failed to fetch watch status for user {user_id}")
             log_text["Watching"] = "Unknown - failed to fetch watch status."
-
+        
         try:
             # Mark infraction as inactive in the database.
             log.trace(f"Marking infraction #{id_} as inactive in the database.")
+
+            data = {"active": False}
+
+            if pardon_reason is not None:
+                data["reason"] = infraction["reason"] + f" | Pardoned: {pardon_reason}"
+
             await self.bot.api_client.patch(
                 f"bot/infractions/{id_}",
-                json={"active": False}
+                json=data
             )
         except ResponseCodeError as e:
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
