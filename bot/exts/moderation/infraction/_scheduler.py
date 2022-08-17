@@ -372,7 +372,7 @@ class InfractionScheduler:
 
         If `pardon_reason` is None, then the database will not receive
         appended text explaining why the infraction was pardoned.
-        
+
         If `send_log` is True, a mod log is sent for the deactivation of the infraction.
 
         If `notify` is True, notify the user of the pardon via DM where applicable.
