@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import Dict
 
 import discord
+from async_rediscache import RedisSession
 from discord.ext import commands
 
 from bot.log import get_logger
@@ -104,3 +105,26 @@ class CommandTestCase(unittest.IsolatedAsyncioTestCase):
             await cmd.can_run(ctx)
 
         self.assertCountEqual(permissions.keys(), cm.exception.missing_permissions)
+
+
+class RedisTestCase(unittest.IsolatedAsyncioTestCase):
+    """
+    Use this as a base class for any test cases that require a redis session.
+
+    This will prepare a fresh redis instance for each test function, and will
+    not make any assertions on its own. Tests can mutate the instance as they wish.
+    """
+
+    session = None
+
+    async def flush(self):
+        """Flush everything from the redis database to prevent carry-overs between tests."""
+        await self.session.client.flushall()
+
+    async def asyncSetUp(self):
+        self.session = await RedisSession(use_fakeredis=True).connect()
+        await self.flush()
+
+    async def asyncTearDown(self):
+        if self.session:
+            await self.session.client.close()
