@@ -443,11 +443,15 @@ class InfractionScheduler:
         try:
             # Mark infraction as inactive in the database.
             log.trace(f"Marking infraction #{id_} as inactive in the database.")
-
-            data = {"active": False}
-
+            
+            data = {"active": False, "reason": ""}
+            
             if pardon_reason is not None:
-                data["reason"] = infraction["reason"] + f" | Pardoned: {pardon_reason}"
+                # Append pardon reason to infraction in database.
+                if (punish_reason := infraction["reason"]) is not None:
+                    data["reason"] = punish_reason + " | "
+                
+                data["reason"] += f"Pardoned: {pardon_reason}"
 
             await self.bot.api_client.patch(
                 f"bot/infractions/{id_}",
