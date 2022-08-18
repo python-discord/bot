@@ -341,13 +341,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         await self.pardon_infraction(ctx, "mute", user, pardon_reason)
 
     @command()
-    async def unban(
-        self,
-        ctx: Context,
-        user: UnambiguousMemberOrUser,
-        *,
-        pardon_reason: t.Optional[str] = None
-    ) -> None:
+    async def unban(self, ctx: Context, user: UnambiguousMemberOrUser, *, pardon_reason: str) -> None:
         """Prematurely end the active ban infraction for the user."""
         await self.pardon_infraction(ctx, "ban", user, pardon_reason)
 
