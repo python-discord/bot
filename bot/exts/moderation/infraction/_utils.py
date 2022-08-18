@@ -170,13 +170,16 @@ async def send_active_infraction_message(ctx: Context, infraction: Infraction) -
 async def notify_infraction(
         infraction: Infraction,
         user: MemberOrUser,
-        reason: t.Optional[str] = None
+        reason: t.Optional[str] = None,
+        resend: bool = False
 ) -> bool:
     """
     DM a user about their new infraction and return True if the DM is successful.
 
     `reason` can be used to override what is in `infraction`. Otherwise, this data will
     be retrieved from `infraction`.
+
+    If `resend` is True, the DM will include both the duration and remaining time.
     """
     infr_id = infraction["id"]
     infr_type = infraction["type"].replace("_", " ").title()
@@ -191,11 +194,10 @@ async def notify_infraction(
         expires_at = time.format_relative(expiry)
         duration = time.humanize_delta(origin, expiry, max_units=2)
 
-        if infraction["active"]:
+        if infraction["active"] and resend:
             remaining = time.humanize_delta(expiry, arrow.utcnow(), max_units=2)
-            if duration != remaining:
-                duration += f" ({remaining} remaining)"
-        else:
+            duration += f" ({remaining} remaining)"
+        elif not infraction["active"]:
             expires_at += " (Inactive)"
 
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
