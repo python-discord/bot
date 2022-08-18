@@ -26,6 +26,7 @@ async def _create_redis_session() -> RedisSession:
         max_connections=20,
         use_fakeredis=constants.Redis.use_fakeredis,
         global_namespace="bot",
+        decode_responses=True,
     )
     try:
         return await redis_session.connect()
