@@ -447,6 +447,7 @@ class InfractionScheduler:
             data = {"active": False}
 
             if pardon_reason is not None:
+                data["reason"] = ""
                 # Append pardon reason to infraction in database.
                 if (punish_reason := infraction["reason"]) is not None:
                     data["reason"] = punish_reason + " | "
