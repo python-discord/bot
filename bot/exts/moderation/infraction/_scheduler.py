@@ -137,8 +137,11 @@ class InfractionScheduler:
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = time.format_with_duration(infraction["expires_at"])
         id_ = infraction['id']
+        expiry = time.format_with_duration(
+            infraction["expires_at"],
+            infraction["last_applied"]
+        )
 
         if user_reason is None:
             user_reason = reason
