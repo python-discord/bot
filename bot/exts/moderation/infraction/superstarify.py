@@ -4,13 +4,14 @@ import textwrap
 import typing as t
 from pathlib import Path
 
-from disnake import Embed, Member
-from disnake.ext.commands import Cog, Context, command, has_any_role
-from disnake.utils import escape_markdown
+from discord import Embed, Member
+from discord.ext.commands import Cog, Context, command, has_any_role
+from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
 from bot.converters import Duration, Expiry
+from bot.decorators import ensure_future_timestamp
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -103,6 +104,7 @@ class Superstarify(InfractionScheduler, Cog):
             await self.reapply_infraction(infraction, action)
 
     @command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def superstarify(
         self,
         ctx: Context,
@@ -237,6 +239,6 @@ class Superstarify(InfractionScheduler, Cog):
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Superstarify cog."""
-    bot.add_cog(Superstarify(bot))
+    await bot.add_cog(Superstarify(bot))

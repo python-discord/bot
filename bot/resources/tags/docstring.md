@@ -15,4 +15,4 @@ You can get the docstring by using the [`inspect.getdoc`](https://docs.python.or
 
 For the last example, you can print it by doing this: `print(inspect.getdoc(greet))`.
 
-For more details about what a docstring is and its usage, check out this guide by [Real Python](https://realpython.com/documenting-python-code/#docstrings-background), or the [official docstring specification](https://www.python.org/dev/peps/pep-0257/#what-is-a-docstring).
+For more details about what a docstring is and its usage, check out this guide by [Real Python](https://realpython.com/documenting-python-code/#docstrings-background), or the [official docstring specification](https://peps.python.org/pep-0257/#what-is-a-docstring).

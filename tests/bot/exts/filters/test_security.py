@@ -1,7 +1,6 @@
 import unittest
-from unittest.mock import MagicMock
 
-from disnake.ext.commands import NoPrivateMessage
+from discord.ext.commands import NoPrivateMessage
 
 from bot.exts.filters import security
 from tests.helpers import MockBot, MockContext
@@ -44,11 +43,11 @@ class SecurityCogTests(unittest.TestCase):
         self.assertTrue(self.cog.check_on_guild(self.ctx))
 
 
-class SecurityCogLoadTests(unittest.TestCase):
+class SecurityCogLoadTests(unittest.IsolatedAsyncioTestCase):
     """Tests loading the `Security` cog."""
 
-    def test_security_cog_load(self):
+    async def test_security_cog_load(self):
         """Setup of the extension should call add_cog."""
-        bot = MagicMock()
-        security.setup(bot)
-        bot.add_cog.assert_called_once()
+        bot = MockBot()
+        await security.setup(bot)
+        bot.add_cog.assert_awaited_once()

@@ -11,7 +11,7 @@ class FilteringCogTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Instantiate the bot and cog."""
         self.bot = MockBot()
-        with patch("bot.utils.scheduling.create_task", new=lambda task, **_: task.close()):
+        with patch("botcore.utils.scheduling.create_task", new=lambda task, **_: task.close()):
             self.cog = filtering.Filtering(self.bot)
 
     @autospec(filtering.Filtering, "_get_filterlist_items", pass_mocks=False, return_value=["TOKEN"])

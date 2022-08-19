@@ -4,21 +4,22 @@ import typing as t
 from datetime import datetime, timezone
 from operator import itemgetter
 
-import disnake
+import discord
+from botcore.utils import scheduling
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
-from disnake.ext.commands import Cog, Context, Greedy, group
+from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
 from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Duration, UnambiguousUser
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
-from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 
@@ -26,8 +27,8 @@ LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
-Mentionable = t.Union[disnake.Member, disnake.Role]
-ReminderMention = t.Union[UnambiguousUser, disnake.Role]
+Mentionable = t.Union[discord.Member, discord.Role]
+ReminderMention = t.Union[UnambiguousUser, discord.Role]
 
 
 class Reminders(Cog):
@@ -37,13 +38,11 @@ class Reminders(Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        scheduling.create_task(self.reschedule_reminders(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
-    async def reschedule_reminders(self) -> None:
+    async def cog_load(self) -> None:
         """Get all current reminders from the API and reschedule them."""
         await self.bot.wait_until_guild_available()
         response = await self.bot.api_client.get(
@@ -66,7 +65,7 @@ class Reminders(Cog):
             else:
                 self.schedule_reminder(reminder)
 
-    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, disnake.TextChannel]:
+    def ensure_valid_reminder(self, reminder: dict) -> t.Tuple[bool, discord.TextChannel]:
         """Ensure reminder channel can be fetched otherwise delete the reminder."""
         channel = self.bot.get_channel(reminder['channel_id'])
         is_valid = True
@@ -87,9 +86,9 @@ class Reminders(Cog):
         reminder_id: t.Union[str, int]
     ) -> None:
         """Send an embed confirming the reminder change was made successfully."""
-        embed = disnake.Embed(
+        embed = discord.Embed(
             description=on_success,
-            colour=disnake.Colour.green(),
+            colour=discord.Colour.green(),
             title=random.choice(POSITIVE_REPLIES)
         )
 
@@ -113,7 +112,7 @@ class Reminders(Cog):
         if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
-            return all(isinstance(mention, (disnake.User, disnake.Member)) for mention in mentions), "roles"
+            return all(isinstance(mention, (discord.User, discord.Member)) for mention in mentions), "roles"
         else:
             return True, ""
 
@@ -173,15 +172,15 @@ class Reminders(Cog):
         if not is_valid:
             # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
-        embed = disnake.Embed()
+        embed = discord.Embed()
         if expected_time:
-            embed.colour = disnake.Colour.red()
+            embed.colour = discord.Colour.red()
             embed.set_author(
                 icon_url=Icons.remind_red,
                 name="Sorry, your reminder should have arrived earlier!"
             )
         else:
-            embed.colour = disnake.Colour.og_blurple()
+            embed.colour = discord.Colour.og_blurple()
             embed.set_author(
                 icon_url=Icons.remind_blurple,
                 name="It has arrived!"
@@ -200,7 +199,7 @@ class Reminders(Cog):
         partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
         try:
             await partial_message.reply(content=f"{additional_mentions}", embed=embed)
-        except disnake.HTTPException as e:
+        except discord.HTTPException as e:
             log.info(
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
                 "fall back to using jump_url"
@@ -284,7 +283,7 @@ class Reminders(Cog):
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
             if reference := ctx.message.reference:
-                if isinstance((resolved_message := reference.resolved), disnake.Message):
+                if isinstance((resolved_message := reference.resolved), discord.Message):
                     content = resolved_message.content
             # If we weren't able to get the content of a replied message
             if content is None:
@@ -361,8 +360,8 @@ class Reminders(Cog):
 
             lines.append(text)
 
-        embed = disnake.Embed()
-        embed.colour = disnake.Colour.og_blurple()
+        embed = discord.Embed()
+        embed.colour = discord.Colour.og_blurple()
         embed.title = f"Reminders for {ctx.author}"
 
         # Remind the user that they have no reminders :^)
@@ -372,7 +371,7 @@ class Reminders(Cog):
             return
 
         # Construct the embed and paginate it.
-        embed.colour = disnake.Colour.og_blurple()
+        embed.colour = discord.Colour.og_blurple()
 
         await LinePaginator.paginate(
             lines,
@@ -486,6 +485,6 @@ class Reminders(Cog):
         return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Reminders cog."""
-    bot.add_cog(Reminders(bot))
+    await bot.add_cog(Reminders(bot))

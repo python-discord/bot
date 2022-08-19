@@ -9,13 +9,14 @@ from io import StringIO
 from typing import Any, Optional, Tuple
 
 import arrow
-import disnake
-from disnake.ext.commands import Cog, Context, group, has_any_role, is_owner
+import discord
+from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
 
 from bot.bot import Bot
 from bot.constants import DEBUG_MODE, Roles
 from bot.log import get_logger
 from bot.utils import find_nth_occurrence, send_to_paste_service
+from bot.utils.services import PasteTooLongError, PasteUploadError
 
 log = get_logger(__name__)
 
@@ -42,7 +43,7 @@ class Internal(Cog):
         self.socket_event_total += 1
         self.socket_events[event_type] += 1
 
-    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[disnake.Embed]]:
+    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
         """Format the eval output into a string & attempt to format it into an Embed."""
         self._ = out
 
@@ -103,7 +104,7 @@ class Internal(Cog):
 
         res += f"Out[{self.ln}]: "
 
-        if isinstance(out, disnake.Embed):
+        if isinstance(out, discord.Embed):
             # We made an embed? Send that as embed
             res += "<Embed>"
             res = (res, out)
@@ -136,7 +137,7 @@ class Internal(Cog):
 
         return res  # Return (text, embed)
 
-    async def _eval(self, ctx: Context, code: str) -> Optional[disnake.Message]:
+    async def _eval(self, ctx: Context, code: str) -> Optional[discord.Message]:
         """Eval the input code string & send an embed to the invoking context."""
         self.ln += 1
 
@@ -154,8 +155,7 @@ class Internal(Cog):
             "self": self,
             "bot": self.bot,
             "inspect": inspect,
-            "discord": disnake,
-            "disnake": disnake,
+            "discord": discord,
             "contextlib": contextlib
         }
 
@@ -195,11 +195,14 @@ async def func():  # (None,) -> Any
             truncate_index = newline_truncate_index
 
         if len(out) > truncate_index:
-            paste_link = await send_to_paste_service(out, extension="py")
-            if paste_link is not None:
-                paste_text = f"full contents at {paste_link}"
-            else:
+            try:
+                paste_link = await send_to_paste_service(out, extension="py")
+            except PasteTooLongError:
+                paste_text = "too long to upload to paste service."
+            except PasteUploadError:
                 paste_text = "failed to upload contents to paste service."
+            else:
+                paste_text = f"full contents at {paste_link}"
 
             await ctx.send(
                 f"```py\n{out[:truncate_index]}\n```"
@@ -241,10 +244,10 @@ async def func():  # (None,) -> Any
 
         per_s = self.socket_event_total / running_s
 
-        stats_embed = disnake.Embed(
+        stats_embed = discord.Embed(
             title="WebSocket statistics",
             description=f"Receiving {per_s:0.2f} events per second.",
-            color=disnake.Color.og_blurple()
+            color=discord.Color.og_blurple()
         )
 
         for event_type, count in self.socket_events.most_common(25):
@@ -253,6 +256,6 @@ async def func():  # (None,) -> Any
         await ctx.send(embed=stats_embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Internal cog."""
-    bot.add_cog(Internal(bot))
+    await bot.add_cog(Internal(bot))

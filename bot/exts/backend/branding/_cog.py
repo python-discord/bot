@@ -1,23 +1,23 @@
 import asyncio
 import contextlib
 import random
+import types
 import typing as t
 from datetime import timedelta
 from enum import Enum
 from operator import attrgetter
 
 import async_timeout
-import disnake
+import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
-from disnake.ext import commands, tasks
+from discord.ext import commands, tasks
 
 from bot.bot import Bot
 from bot.constants import Branding as BrandingConfig, Channels, Colours, Guild, MODERATION_ROLES
 from bot.decorators import mock_in_debug
 from bot.exts.backend.branding._repository import BrandingRepository, Event, RemoteObject
 from bot.log import get_logger
-from bot.utils import scheduling
 
 log = get_logger(__name__)
 
@@ -42,7 +42,7 @@ def compound_hash(objects: t.Iterable[RemoteObject]) -> str:
     return "-".join(item.sha for item in objects)
 
 
-def make_embed(title: str, description: str, *, success: bool) -> disnake.Embed:
+def make_embed(title: str, description: str, *, success: bool) -> discord.Embed:
     """
     Construct simple response embed.
 
@@ -51,7 +51,7 @@ def make_embed(title: str, description: str, *, success: bool) -> disnake.Embed:
     For both `title` and `description`, empty string are valid values ~ fields will be empty.
     """
     colour = Colours.soft_green if success else Colours.soft_red
-    return disnake.Embed(title=title[:256], description=description[:4096], colour=colour)
+    return discord.Embed(title=title[:256], description=description[:4096], colour=colour)
 
 
 def extract_event_duration(event: Event) -> str:
@@ -105,19 +105,24 @@ class Branding(commands.Cog):
     """
 
     # RedisCache[
-    #     "daemon_active": bool            | If True, daemon starts on start-up. Controlled via commands.
-    #     "event_path": str                | Current event's path in the branding repo.
-    #     "event_description": str         | Current event's Markdown description.
-    #     "event_duration": str            | Current event's human-readable date range.
-    #     "banner_hash": str               | SHA of the currently applied banner.
-    #     "icons_hash": str                | Compound SHA of all icons in current rotation.
-    #     "last_rotation_timestamp": float | POSIX UTC timestamp.
+    #     "daemon_active": bool                   | If True, daemon starts on start-up. Controlled via commands.
+    #     "event_path": str                       | Current event's path in the branding repo.
+    #     "event_description": str                | Current event's Markdown description.
+    #     "event_duration": str                   | Current event's human-readable date range.
+    #     "banners_hash": str                     | Compound SHA of all banners in the current rotation.
+    #     "icons_hash": str                       | Compound SHA of all icons in current rotation.
+    #     "last_icon_rotation_timestamp": float   | POSIX UTC timestamp.
+    #     "last_banner_rotation_timestamp": float | POSIX UTC timestamp.
     # ]
     cache_information = RedisCache()
 
-    # Icons in current rotation. Keys (str) are download URLs, values (int) track the amount of times each
-    # icon has been used in the current rotation.
-    cache_icons = RedisCache()
+    # Icons and banners in current rotation.
+    # Keys (str) are download URLs, values (int) track the amount of times each
+    # asset has been used in the current rotation.
+    asset_caches = types.MappingProxyType({
+        AssetType.ICON: RedisCache(namespace="Branding.icon_cache"),
+        AssetType.BANNER: RedisCache(namespace="Branding.banner_cache")
+    })
 
     # All available event names & durations. Cached by the daemon nightly; read by the calendar command.
     cache_events = RedisCache()
@@ -127,7 +132,9 @@ class Branding(commands.Cog):
         self.bot = bot
         self.repository = BrandingRepository(bot)
 
-        scheduling.create_task(self.maybe_start_daemon(), event_loop=self.bot.loop)  # Start depending on cache.
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self.maybe_start_daemon()  # Start depending on cache.
 
     # region: Internal logic & state management
 
@@ -147,13 +154,13 @@ class Branding(commands.Cog):
             return False
 
         await self.bot.wait_until_guild_available()
-        pydis: disnake.Guild = self.bot.get_guild(Guild.id)
+        pydis: discord.Guild = self.bot.get_guild(Guild.id)
 
         timeout = 10  # Seconds.
         try:
             with async_timeout.timeout(timeout):  # Raise after `timeout` seconds.
                 await pydis.edit(**{asset_type.value: file})
-        except disnake.HTTPException:
+        except discord.HTTPException:
             log.exception("Asset upload to Discord failed.")
             return False
         except asyncio.TimeoutError:
@@ -163,107 +170,92 @@ class Branding(commands.Cog):
             log.trace("Asset uploaded successfully.")
             return True
 
-    async def apply_banner(self, banner: RemoteObject) -> bool:
+    async def rotate_assets(self, asset_type: AssetType) -> bool:
         """
-        Apply `banner` to the guild and cache its hash if successful.
+        Choose and apply the next-up asset in rotation.
 
-        Banners should always be applied via this method to ensure that the last hash is cached.
-
-        Return a boolean indicating whether the application was successful.
-        """
-        success = await self.apply_asset(AssetType.BANNER, banner.download_url)
-
-        if success:
-            await self.cache_information.set("banner_hash", banner.sha)
-
-        return success
-
-    async def rotate_icons(self) -> bool:
-        """
-        Choose and apply the next-up icon in rotation.
-
-        We keep track of the amount of times each icon has been used. The values in `cache_icons` can be understood
-        to be iteration IDs. When an icon is chosen & applied, we bump its count, pushing it into the next iteration.
+        We keep track of the amount of times each asset has been used. The values in the cache can be understood
+        to be iteration IDs. When an asset is chosen & applied, we bump its count, pushing it into the next iteration.
 
         Once the current iteration (lowest count in the cache) depletes, we move onto the next iteration.
 
-        In the case that there is only 1 icon in the rotation and has already been applied, do nothing.
+        In the case that there is only 1 asset in the rotation and has already been applied, do nothing.
 
-        Return a boolean indicating whether a new icon was applied successfully.
+        Return a boolean indicating whether a new asset was applied successfully.
         """
-        log.debug("Rotating icons.")
+        log.debug(f"Rotating {asset_type.value}s.")
 
-        state = await self.cache_icons.to_dict()
-        log.trace(f"Total icons in rotation: {len(state)}.")
+        state = await self.asset_caches[asset_type].to_dict()
+        log.trace(f"Total {asset_type.value}s in rotation: {len(state)}.")
 
         if not state:  # This would only happen if rotation not initiated, but we can handle gracefully.
-            log.warning("Attempted icon rotation with an empty icon cache. This indicates wrong logic.")
+            log.warning(f"Attempted {asset_type.value} rotation with an empty cache. This indicates wrong logic.")
             return False
 
         if len(state) == 1 and 1 in state.values():
-            log.debug("Aborting icon rotation: only 1 icon is available and has already been applied.")
+            log.debug(f"Aborting {asset_type.value} rotation: only 1 asset is available and has already been applied.")
             return False
 
         current_iteration = min(state.values())  # Choose iteration to draw from.
         options = [download_url for download_url, times_used in state.items() if times_used == current_iteration]
 
-        log.trace(f"Choosing from {len(options)} icons in iteration {current_iteration}.")
-        next_icon = random.choice(options)
+        log.trace(f"Choosing from {len(options)} {asset_type.value}s in iteration {current_iteration}.")
+        next_asset = random.choice(options)
 
-        success = await self.apply_asset(AssetType.ICON, next_icon)
+        success = await self.apply_asset(asset_type, next_asset)
 
         if success:
-            await self.cache_icons.increment(next_icon)  # Push the icon into the next iteration.
+            await self.asset_caches[asset_type].increment(next_asset)  # Push the asset into the next iteration.
 
             timestamp = Arrow.utcnow().timestamp()
-            await self.cache_information.set("last_rotation_timestamp", timestamp)
+            await self.cache_information.set(f"last_{asset_type.value}_rotation_timestamp", timestamp)
 
         return success
 
-    async def maybe_rotate_icons(self) -> None:
+    async def maybe_rotate_assets(self, asset_type: AssetType) -> None:
         """
-        Call `rotate_icons` if the configured amount of time has passed since last rotation.
+        Call `rotate_assets` if the configured amount of time has passed since last rotation.
 
         We offset the calculated time difference into the future to avoid off-by-a-little-bit errors. Because there
         is work to be done before the timestamp is read and written, the next read will likely commence slightly
         under 24 hours after the last write.
         """
-        log.debug("Checking whether it's time for icons to rotate.")
+        log.debug(f"Checking whether it's time for {asset_type.value}s to rotate.")
 
-        last_rotation_timestamp = await self.cache_information.get("last_rotation_timestamp")
+        last_rotation_timestamp = await self.cache_information.get(f"last_{asset_type.value}_rotation_timestamp")
 
         if last_rotation_timestamp is None:  # Maiden case ~ never rotated.
-            await self.rotate_icons()
+            await self.rotate_assets(asset_type)
             return
 
         last_rotation = Arrow.utcfromtimestamp(last_rotation_timestamp)
         difference = (Arrow.utcnow() - last_rotation) + timedelta(minutes=5)
 
-        log.trace(f"Icons last rotated at {last_rotation} (difference: {difference}).")
+        log.trace(f"{asset_type.value.title()}s last rotated at {last_rotation} (difference: {difference}).")
 
         if difference.days >= BrandingConfig.cycle_frequency:
-            await self.rotate_icons()
+            await self.rotate_assets(asset_type)
 
-    async def initiate_icon_rotation(self, available_icons: t.List[RemoteObject]) -> None:
+    async def initiate_rotation(self, asset_type: AssetType, available_assets: list[RemoteObject]) -> None:
         """
-        Set up a new icon rotation.
+        Set up a new asset rotation.
 
-        This function should be called whenever available icons change. This is generally the case when we enter
+        This function should be called whenever available asset groups change. This is generally the case when we enter
         a new event, but potentially also when the assets of an on-going event change. In such cases, a reset
-        of `cache_icons` is necessary, because it contains download URLs which may have gotten stale.
+        of the cache is necessary, because it contains download URLs which may have gotten stale.
 
-        This function does not upload a new icon!
+        This function does not upload a new asset!
         """
-        log.debug("Initiating new icon rotation.")
+        log.debug(f"Initiating new {asset_type.value} rotation.")
 
-        await self.cache_icons.clear()
+        await self.asset_caches[asset_type].clear()
 
-        new_state = {icon.download_url: 0 for icon in available_icons}
-        await self.cache_icons.update(new_state)
+        new_state = {asset.download_url: 0 for asset in available_assets}
+        await self.asset_caches[asset_type].update(new_state)
 
-        log.trace(f"Icon rotation initiated for {len(new_state)} icons.")
+        log.trace(f"{asset_type.value.title()} rotation initiated for {len(new_state)} assets.")
 
-        await self.cache_information.set("icons_hash", compound_hash(available_icons))
+        await self.cache_information.set(f"{asset_type.value}s_hash", compound_hash(available_assets))
 
     async def send_info_embed(self, channel_id: int, *, is_notification: bool) -> None:
         """
@@ -277,7 +269,7 @@ class Branding(commands.Cog):
         log.debug(f"Sending event information event to channel: {channel_id} ({is_notification=}).")
 
         await self.bot.wait_until_guild_available()
-        channel: t.Optional[disnake.TextChannel] = self.bot.get_channel(channel_id)
+        channel: t.Optional[discord.TextChannel] = self.bot.get_channel(channel_id)
 
         if channel is None:
             log.warning(f"Cannot send event information: channel {channel_id} not found!")
@@ -294,7 +286,7 @@ class Branding(commands.Cog):
 
         else:
             content = "Python Discord is entering a new event!" if is_notification else None
-            embed = disnake.Embed(description=description[:4096], colour=disnake.Colour.og_blurple())
+            embed = discord.Embed(description=description[:4096], colour=discord.Colour.og_blurple())
             embed.set_footer(text=duration[:4096])
 
         await channel.send(content=content, embed=embed)
@@ -315,10 +307,12 @@ class Branding(commands.Cog):
         """
         log.info(f"Entering event: '{event.path}'.")
 
-        banner_success = await self.apply_banner(event.banner)  # Only one asset ~ apply directly.
+        # Prepare and apply new icon and banner rotations
+        await self.initiate_rotation(AssetType.ICON, event.icons)
+        await self.initiate_rotation(AssetType.BANNER, event.banners)
 
-        await self.initiate_icon_rotation(event.icons)  # Prepare a new rotation.
-        icon_success = await self.rotate_icons()  # Apply an icon from the new rotation.
+        icon_success = await self.rotate_assets(AssetType.ICON)
+        banner_success = await self.rotate_assets(AssetType.BANNER)
 
         # This will only be False in the case of a manual same-event re-synchronisation.
         event_changed = event.path != await self.cache_information.get("event_path")
@@ -413,7 +407,7 @@ class Branding(commands.Cog):
         if should_begin:
             self.daemon_loop.start()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """
         Cancel the daemon in case of cog unload.
 
@@ -453,16 +447,19 @@ class Branding(commands.Cog):
 
         log.trace("Daemon main: event has not changed, checking for change in assets.")
 
-        if new_event.banner.sha != await self.cache_information.get("banner_hash"):
+        if compound_hash(new_event.banners) != await self.cache_information.get("banners_hash"):
             log.debug("Daemon main: detected banner change.")
-            await self.apply_banner(new_event.banner)
+            await self.initiate_rotation(AssetType.BANNER, new_event.banners)
+            await self.rotate_assets(AssetType.BANNER)
+        else:
+            await self.maybe_rotate_assets(AssetType.BANNER)
 
         if compound_hash(new_event.icons) != await self.cache_information.get("icons_hash"):
             log.debug("Daemon main: detected icon change.")
-            await self.initiate_icon_rotation(new_event.icons)
-            await self.rotate_icons()
+            await self.initiate_rotation(AssetType.ICON, new_event.icons)
+            await self.rotate_assets(AssetType.ICON)
         else:
-            await self.maybe_rotate_icons()
+            await self.maybe_rotate_assets(AssetType.ICON)
 
     @tasks.loop(hours=24)
     async def daemon_loop(self) -> None:
@@ -573,7 +570,7 @@ class Branding(commands.Cog):
             await ctx.send(embed=resp)
             return
 
-        embed = disnake.Embed(title="Current event calendar", colour=disnake.Colour.og_blurple())
+        embed = discord.Embed(title="Current event calendar", colour=discord.Colour.og_blurple())
 
         # Because Discord embeds can only contain up to 25 fields, we only show the first 25.
         first_25 = list(available_events.items())[:25]

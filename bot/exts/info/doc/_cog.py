@@ -6,22 +6,21 @@ import textwrap
 from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Dict, NamedTuple, Optional, Tuple, Union
+from typing import Dict, Literal, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
-import disnake
-from disnake.ext import commands
+import discord
+from botcore.site_api import ResponseCodeError
+from botcore.utils.scheduling import Scheduler
+from discord.ext import commands
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput
-from bot.converters import Inventory, PackageName, ValidURL, allowed_strings
+from bot.converters import Inventory, PackageName, ValidURL
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
-from bot.utils.scheduling import Scheduler
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 from ._inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
@@ -78,14 +77,7 @@ class DocCog(commands.Cog):
         self.refresh_event.set()
         self.symbol_get_event = SharedEvent()
 
-        self.init_refresh_task = scheduling.create_task(
-            self.init_refresh_inventory(),
-            name="Doc inventory init",
-            event_loop=self.bot.loop,
-        )
-
-    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
-    async def init_refresh_inventory(self) -> None:
+    async def cog_load(self) -> None:
         """Refresh documentation inventory on cog initialization."""
         await self.bot.wait_until_guild_available()
         await self.refresh_inventories()
@@ -275,7 +267,7 @@ class DocCog(commands.Cog):
                 return "Unable to parse the requested symbol."
         return markdown
 
-    async def create_symbol_embed(self, symbol_name: str) -> Optional[disnake.Embed]:
+    async def create_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -304,8 +296,8 @@ class DocCog(commands.Cog):
             else:
                 footer_text = ""
 
-            embed = disnake.Embed(
-                title=disnake.utils.escape_markdown(symbol_name),
+            embed = discord.Embed(
+                title=discord.utils.escape_markdown(symbol_name),
                 url=f"{doc_item.url}#{doc_item.symbol_id}",
                 description=await self.get_symbol_markdown(doc_item)
             )
@@ -331,9 +323,9 @@ class DocCog(commands.Cog):
             !docs getdoc aiohttp.ClientSession
         """
         if not symbol_name:
-            inventory_embed = disnake.Embed(
+            inventory_embed = discord.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)",
-                colour=disnake.Colour.blue()
+                colour=discord.Colour.blue()
             )
 
             lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
@@ -355,7 +347,7 @@ class DocCog(commands.Cog):
 
                 # Make sure that we won't cause a ghost-ping by deleting the message
                 if not (ctx.message.mentions or ctx.message.role_mentions):
-                    with suppress(disnake.NotFound):
+                    with suppress(discord.NotFound):
                         await ctx.message.delete()
                         await error_message.delete()
 
@@ -439,7 +431,7 @@ class DocCog(commands.Cog):
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
-        with ctx.typing():
+        async with ctx.typing():
             await self.refresh_inventories()
         new_inventories = set(self.base_urls)
 
@@ -449,7 +441,7 @@ class DocCog(commands.Cog):
         if removed := ", ".join(old_inventories - new_inventories):
             removed = "- " + removed
 
-        embed = disnake.Embed(
+        embed = discord.Embed(
             title="Inventories refreshed",
             description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )
@@ -460,7 +452,7 @@ class DocCog(commands.Cog):
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: Union[PackageName, allowed_strings("*")]  # noqa: F722
+        package_name: Union[PackageName, Literal["*"]]
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
@@ -469,8 +461,7 @@ class DocCog(commands.Cog):
         else:
             await ctx.send("No keys matching the package found.")
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
-        self.init_refresh_task.cancel()
-        scheduling.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")
+        await self.item_fetcher.clear()

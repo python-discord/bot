@@ -1,11 +1,11 @@
-import disnake
-from disnake.ext.commands import Cog, Context, command, has_any_role
+import discord
+from discord.ext.commands import Cog, Context, command, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Emojis, MODERATION_ROLES
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
-from bot.utils.services import send_to_paste_service
+from bot.utils.services import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 log = get_logger(__name__)
 
@@ -17,7 +17,7 @@ class DMRelay(Cog):
         self.bot = bot
 
     @command(aliases=("relay", "dr"))
-    async def dmrelay(self, ctx: Context, user: disnake.User, limit: int = 100) -> None:
+    async def dmrelay(self, ctx: Context, user: discord.User, limit: int = 100) -> None:
         """Relays the direct message history between the bot and given user."""
         log.trace(f"Relaying DMs with {user.name} ({user.id})")
 
@@ -53,14 +53,14 @@ class DMRelay(Cog):
             f"User: {user} ({user.id})\n"
             f"Channel ID: {user.dm_channel.id}\n\n"
         )
+        try:
+            message = await send_to_paste_service(metadata + output, extension="txt")
+        except PasteTooLongError:
+            message = f"{Emojis.cross_mark} Too long to upload to paste service."
+        except PasteUploadError:
+            message = f"{Emojis.cross_mark} Failed to upload to paste service."
 
-        paste_link = await send_to_paste_service(metadata + output, extension="txt")
-
-        if paste_link is None:
-            await ctx.send(f"{Emojis.cross_mark} Failed to upload output to hastebin.")
-            return
-
-        await ctx.send(paste_link)
+        await ctx.send(message)
 
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog in mod channels."""
@@ -68,6 +68,6 @@ class DMRelay(Cog):
                 and is_mod_channel(ctx.channel))
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the DMRelay cog."""
-    bot.add_cog(DMRelay(bot))
+    await bot.add_cog(DMRelay(bot))

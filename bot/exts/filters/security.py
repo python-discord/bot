@@ -1,4 +1,4 @@
-from disnake.ext.commands import Cog, Context, NoPrivateMessage
+from discord.ext.commands import Cog, Context, NoPrivateMessage
 
 from bot.bot import Bot
 from bot.log import get_logger
@@ -25,6 +25,6 @@ class Security(Cog):
         return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Security cog."""
-    bot.add_cog(Security(bot))
+    await bot.add_cog(Security(bot))

@@ -2,9 +2,9 @@ import functools
 import typing as t
 from enum import Enum
 
-from disnake import Colour, Embed
-from disnake.ext import commands
-from disnake.ext.commands import Context, group
+from discord import Colour, Embed
+from discord.ext import commands
+from discord.ext.commands import Context, group
 
 from bot import exts
 from bot.bot import Bot
@@ -12,7 +12,6 @@ from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
 from bot.converters import Extension
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.extensions import EXTENSIONS
 
 log = get_logger(__name__)
 
@@ -35,6 +34,7 @@ class Extensions(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.action_in_progress = False
 
     @group(name="extensions", aliases=("ext", "exts", "c", "cog", "cogs"), invoke_without_command=True)
     async def extensions_group(self, ctx: Context) -> None:
@@ -53,10 +53,9 @@ class Extensions(commands.Cog):
             return
 
         if "*" in extensions or "**" in extensions:
-            extensions = set(EXTENSIONS) - set(self.bot.extensions.keys())
+            extensions = set(self.bot.all_extensions) - set(self.bot.extensions.keys())
 
-        msg = self.batch_manage(Action.LOAD, *extensions)
-        await ctx.send(msg)
+        await self.batch_manage(Action.LOAD, ctx, *extensions)
 
     @extensions_group.command(name="unload", aliases=("ul",))
     async def unload_command(self, ctx: Context, *extensions: Extension) -> None:
@@ -72,14 +71,12 @@ class Extensions(commands.Cog):
         blacklisted = "\n".join(UNLOAD_BLACKLIST & set(extensions))
 
         if blacklisted:
-            msg = f":x: The following extension(s) may not be unloaded:```\n{blacklisted}```"
+            await ctx.send(f":x: The following extension(s) may not be unloaded:```\n{blacklisted}```")
         else:
             if "*" in extensions or "**" in extensions:
                 extensions = set(self.bot.extensions.keys()) - UNLOAD_BLACKLIST
 
-            msg = self.batch_manage(Action.UNLOAD, *extensions)
-
-        await ctx.send(msg)
+            await self.batch_manage(Action.UNLOAD, ctx, *extensions)
 
     @extensions_group.command(name="reload", aliases=("r",), root_aliases=("reload",))
     async def reload_command(self, ctx: Context, *extensions: Extension) -> None:
@@ -96,14 +93,12 @@ class Extensions(commands.Cog):
             return
 
         if "**" in extensions:
-            extensions = EXTENSIONS
+            extensions = self.bot.all_extensions
         elif "*" in extensions:
             extensions = set(self.bot.extensions.keys()) | set(extensions)
             extensions.remove("*")
 
-        msg = self.batch_manage(Action.RELOAD, *extensions)
-
-        await ctx.send(msg)
+        await self.batch_manage(Action.RELOAD, ctx, *extensions)
 
     @extensions_group.command(name="list", aliases=("all",))
     async def list_command(self, ctx: Context) -> None:
@@ -136,7 +131,7 @@ class Extensions(commands.Cog):
         """Return a mapping of extension names and statuses to their categories."""
         categories = {}
 
-        for ext in EXTENSIONS:
+        for ext in self.bot.all_extensions:
             if ext in self.bot.extensions:
                 status = Emojis.status_online
             else:
@@ -152,21 +147,31 @@ class Extensions(commands.Cog):
 
         return categories
 
-    def batch_manage(self, action: Action, *extensions: str) -> str:
+    async def batch_manage(self, action: Action, ctx: Context, *extensions: str) -> None:
         """
-        Apply an action to multiple extensions and return a message with the results.
+        Apply an action to multiple extensions, giving feedback to the invoker while doing so.
 
         If only one extension is given, it is deferred to `manage()`.
         """
-        if len(extensions) == 1:
-            msg, _ = self.manage(action, extensions[0])
-            return msg
+        if self.action_in_progress:
+            await ctx.send(":x: Another action is in progress, please try again later.")
+            return
 
         verb = action.name.lower()
+
+        self.action_in_progress = True
+        loading_message = await ctx.send(f":hourglass_flowing_sand: {verb} in progress, please wait...")
+
+        if len(extensions) == 1:
+            msg, _ = await self.manage(action, extensions[0])
+            await loading_message.edit(content=msg)
+            self.action_in_progress = False
+            return
+
         failures = {}
 
         for extension in extensions:
-            _, error = self.manage(action, extension)
+            _, error = await self.manage(action, extension)
             if error:
                 failures[extension] = error
 
@@ -179,19 +184,20 @@ class Extensions(commands.Cog):
 
         log.debug(f"Batch {verb}ed extensions.")
 
-        return msg
+        await loading_message.edit(content=msg)
+        self.action_in_progress = False
 
-    def manage(self, action: Action, ext: str) -> t.Tuple[str, t.Optional[str]]:
+    async def manage(self, action: Action, ext: str) -> t.Tuple[str, t.Optional[str]]:
         """Apply an action to an extension and return the status message and any error message."""
         verb = action.name.lower()
         error_msg = None
 
         try:
-            action.value(self.bot, ext)
+            await action.value(self.bot, ext)
         except (commands.ExtensionAlreadyLoaded, commands.ExtensionNotLoaded):
             if action is Action.RELOAD:
                 # When reloading, just load the extension if it was not loaded.
-                return self.manage(Action.LOAD, ext)
+                return await self.manage(Action.LOAD, ext)
 
             msg = f":x: Extension `{ext}` is already {verb}ed."
             log.debug(msg[4:])
@@ -216,12 +222,16 @@ class Extensions(commands.Cog):
 
     # This cannot be static (must have a __func__ attribute).
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
-        """Handle BadArgument errors locally to prevent the help command from showing."""
+        """Handle errors locally to prevent the error handler cog from interfering when not wanted."""
+        # Safely clear the flag on unexpected errors to avoid deadlocks.
+        self.action_in_progress = False
+
+        # Handle BadArgument errors locally to prevent the help command from showing.
         if isinstance(error, commands.BadArgument):
             await ctx.send(str(error))
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Extensions cog."""
-    bot.add_cog(Extensions(bot))
+    await bot.add_cog(Extensions(bot))

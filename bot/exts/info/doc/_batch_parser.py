@@ -7,13 +7,13 @@ from contextlib import suppress
 from operator import attrgetter
 from typing import Deque, Dict, List, NamedTuple, Optional, Union
 
-import disnake
+import discord
+from botcore.utils import scheduling
 from bs4 import BeautifulSoup
 
 import bot
 from bot.constants import Channels
 from bot.log import get_logger
-from bot.utils import scheduling
 
 from . import _cog, doc_cache
 from ._parsing import get_symbol_markdown
@@ -48,7 +48,7 @@ class StaleInventoryNotifier:
             if await self.symbol_counter.increment_for(doc_item) < 3:
                 self._warned_urls.add(doc_item.url)
                 await self._init_task
-                embed = disnake.Embed(
+                embed = discord.Embed(
                     description=f"Doc item `{doc_item.symbol_id=}` present in loaded documentation inventories "
                                 f"not found on [site]({doc_item.url}), inventories may need to be refreshed."
                 )

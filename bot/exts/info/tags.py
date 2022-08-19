@@ -6,10 +6,10 @@ import time
 from pathlib import Path
 from typing import Callable, Iterable, Literal, NamedTuple, Optional, Union
 
-import disnake
+import discord
 import frontmatter
-from disnake import Embed, Member
-from disnake.ext.commands import Cog, Context, group
+from discord import Embed, Member
+from discord.ext.commands import Cog, Context, group
 
 from bot import constants
 from bot.bot import Bot
@@ -81,7 +81,8 @@ class Tag:
         self.content = post.content
         self.metadata = post.metadata
         self._restricted_to: set[int] = set(self.metadata.get("restricted_to", ()))
-        self._cooldowns: dict[disnake.TextChannel, float] = {}
+        self._cooldowns: dict[discord.TextChannel, float] = {}
+        self.aliases: list[str] = self.metadata.get("aliases", [])
 
     @property
     def embed(self) -> Embed:
@@ -90,18 +91,18 @@ class Tag:
         embed.description = self.content
         return embed
 
-    def accessible_by(self, member: disnake.Member) -> bool:
+    def accessible_by(self, member: discord.Member) -> bool:
         """Check whether `member` can access the tag."""
         return bool(
             not self._restricted_to
             or self._restricted_to & {role.id for role in member.roles}
         )
 
-    def on_cooldown_in(self, channel: disnake.TextChannel) -> bool:
+    def on_cooldown_in(self, channel: discord.TextChannel) -> bool:
         """Check whether the tag is on cooldown in `channel`."""
         return self._cooldowns.get(channel, float("-inf")) > time.time()
 
-    def set_cooldown_for(self, channel: disnake.TextChannel) -> None:
+    def set_cooldown_for(self, channel: discord.TextChannel) -> None:
         """Set the tag to be on cooldown in `channel` for `constants.Cooldowns.tags` seconds."""
         self._cooldowns[channel] = time.time() + constants.Cooldowns.tags
 
@@ -149,7 +150,11 @@ class Tags(Cog):
                 # Files directly under `base_path` have an empty string as the parent directory name
                 tag_group = parent_dir.name or None
 
-                self.tags[TagIdentifier(tag_group, tag_name)] = Tag(file)
+                tag = Tag(file)
+                self.tags[TagIdentifier(tag_group, tag_name)] = tag
+
+                for alias in tag.aliases:
+                    self.tags[TagIdentifier(tag_group, alias)] = tag
 
     def _get_suggestions(self, tag_identifier: TagIdentifier) -> list[tuple[TagIdentifier, Tag]]:
         """Return a list of suggested tags for `tag_identifier`."""
@@ -274,11 +279,16 @@ class Tags(Cog):
             if tag.accessible_by(ctx.author)
         ]
 
+        # Try exact match, includes checking through alt names
         tag = self.tags.get(tag_identifier)
 
         if tag is None and tag_identifier.group is not None:
             # Try exact match with only the name
-            tag = self.tags.get(TagIdentifier(None, tag_identifier.group))
+            name_only_identifier = TagIdentifier(None, tag_identifier.group)
+            tag = self.tags.get(name_only_identifier)
+            if tag:
+                # Ensure the correct tag information is sent to statsd
+                tag_identifier = name_only_identifier
 
         if tag is None and len(filtered_tags) == 1:
             tag_identifier = filtered_tags[0][0]
@@ -344,7 +354,7 @@ class Tags(Cog):
 
         return result_lines
 
-    def accessible_tags_in_group(self, group: str, user: disnake.Member) -> list[str]:
+    def accessible_tags_in_group(self, group: str, user: discord.Member) -> list[str]:
         """Return a formatted list of tags in `group`, that are accessible by `user`."""
         return sorted(
             f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
@@ -395,6 +405,6 @@ class Tags(Cog):
         return True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Tags cog."""
-    bot.add_cog(Tags(bot))
+    await bot.add_cog(Tags(bot))

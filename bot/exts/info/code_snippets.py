@@ -4,9 +4,9 @@ import textwrap
 from typing import Any
 from urllib.parse import quote_plus
 
-import disnake
+import discord
 from aiohttp import ClientResponseError
-from disnake.ext.commands import Cog
+from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels
@@ -241,7 +241,7 @@ class CodeSnippets(Cog):
         return '\n'.join(map(lambda x: x[1], sorted(all_snippets)))
 
     @Cog.listener()
-    async def on_message(self, message: disnake.Message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if message.author.bot:
             return
@@ -255,7 +255,7 @@ class CodeSnippets(Cog):
         if 0 < len(message_to_send) <= 2000 and message_to_send.count('\n') <= 15:
             try:
                 await message.edit(suppress=True)
-            except disnake.NotFound:
+            except discord.NotFound:
                 # Don't send snippets if the original message was deleted.
                 return
 
@@ -275,6 +275,6 @@ class CodeSnippets(Cog):
             )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the CodeSnippets cog."""
-    bot.add_cog(CodeSnippets(bot))
+    await bot.add_cog(CodeSnippets(bot))

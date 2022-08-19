@@ -1,18 +1,19 @@
 import asyncio
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-import disnake
+import discord
 from async_rediscache import RedisCache
-from disnake.ext.commands import Cog, Context, MessageConverter, MessageNotFound
+from botcore.utils import scheduling
+from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.messages import format_user, sub_clyde
+from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
@@ -25,9 +26,9 @@ CRAWL_LIMIT = 50
 CRAWL_SLEEP = 2
 
 DISCORD_MESSAGE_LINK_RE = re.compile(
-    r"(https?:\/\/(?:(ptb|canary|www)\.)?discord(?:app)?\.com\/channels\/"
+    r"(https?://(?:(ptb|canary|www)\.)?discord(?:app)?\.com/channels/"
     r"[0-9]{15,20}"
-    r"\/[0-9]{15,20}\/[0-9]{15,20})"
+    r"/[0-9]{15,20}/[0-9]{15,20})"
 )
 
 
@@ -52,10 +53,10 @@ ALL_SIGNALS: set[str] = {signal.value for signal in Signal}
 
 # An embed coupled with an optional file to be dispatched
 # If the file is not None, the embed attempts to show it in its body
-FileEmbed = tuple[disnake.Embed, Optional[disnake.File]]
+FileEmbed = tuple[discord.Embed, Optional[discord.File]]
 
 
-async def download_file(attachment: disnake.Attachment) -> Optional[disnake.File]:
+async def download_file(attachment: discord.Attachment) -> Optional[discord.File]:
     """
     Download & return `attachment` file.
 
@@ -65,13 +66,13 @@ async def download_file(attachment: disnake.Attachment) -> Optional[disnake.File
     log.debug(f"Attempting to download attachment: {attachment.filename}")
     try:
         return await attachment.to_file()
-    except (disnake.NotFound, disnake.Forbidden) as exc:
+    except (discord.NotFound, discord.Forbidden) as exc:
         log.debug(f"Failed to download attachment: {exc}")
     except Exception:
         log.exception("Failed to download attachment")
 
 
-async def make_embed(incident: disnake.Message, outcome: Signal, actioned_by: disnake.Member) -> FileEmbed:
+async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> FileEmbed:
     """
     Create an embed representation of `incident` for the #incidents-archive channel.
 
@@ -97,10 +98,20 @@ async def make_embed(incident: disnake.Message, outcome: Signal, actioned_by: di
         colour = Colours.soft_red
         footer = f"Rejected by {actioned_by}"
 
-    embed = disnake.Embed(
-        description=incident.content,
-        timestamp=datetime.utcnow(),
+    reported_timestamp = discord_timestamp(incident.created_at)
+    relative_timestamp = discord_timestamp(incident.created_at, TimestampFormats.RELATIVE)
+    reported_on_msg = f"*Reported {reported_timestamp} ({relative_timestamp}).*"
+
+    # If the description will be too long (>4096 total characters), truncate the incident content
+    if len(incident.content) > (allowed_content_chars := 4096-len(reported_on_msg)-2):  # -2 for the newlines
+        description = incident.content[:allowed_content_chars-3] + f"...\n\n{reported_on_msg}"
+    else:
+        description = incident.content + f"\n\n{reported_on_msg}"
+
+    embed = discord.Embed(
+        description=description,
         colour=colour,
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 
@@ -113,12 +124,12 @@ async def make_embed(incident: disnake.Message, outcome: Signal, actioned_by: di
         else:
             embed.set_author(name="[Failed to relay attachment]", url=attachment.proxy_url)  # Embed links the file
     else:
-        file = disnake.utils.MISSING
+        file = discord.utils.MISSING
 
     return embed, file
 
 
-def is_incident(message: disnake.Message) -> bool:
+def is_incident(message: discord.Message) -> bool:
     """True if `message` qualifies as an incident, False otherwise."""
     conditions = (
         message.channel.id == Channels.incidents,  # Message sent in #incidents
@@ -129,12 +140,12 @@ def is_incident(message: disnake.Message) -> bool:
     return all(conditions)
 
 
-def own_reactions(message: disnake.Message) -> set[str]:
+def own_reactions(message: discord.Message) -> set[str]:
     """Get the set of reactions placed on `message` by the bot itself."""
     return {str(reaction.emoji) for reaction in message.reactions if reaction.me}
 
 
-def has_signals(message: disnake.Message) -> bool:
+def has_signals(message: discord.Message) -> bool:
     """True if `message` already has all `Signal` reactions, False otherwise."""
     return ALL_SIGNALS.issubset(own_reactions(message))
 
@@ -167,9 +178,9 @@ def shorten_text(text: str) -> str:
     return text
 
 
-async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[disnake.Embed]:
+async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[discord.Embed]:
     """
-    Create an embedded representation of the Discord message link contained in the incident report.
+    Create an embedded representation of the discord message link contained in the incident report.
 
     The Embed would contain the following information -->
         Author: @Jason Terror ♦ (736234578745884682)
@@ -179,23 +190,23 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
     embed = None
 
     try:
-        message: disnake.Message = await MessageConverter().convert(ctx, message_link)
+        message: discord.Message = await MessageConverter().convert(ctx, message_link)
     except MessageNotFound:
         mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
 
-        last_100_logs: list[disnake.Message] = await mod_logs_channel.history(limit=100).flatten()
+        last_100_logs: list[discord.Message] = [message async for message in mod_logs_channel.history(limit=100)]
 
         for log_entry in last_100_logs:
             if not log_entry.embeds:
                 continue
 
-            log_embed: disnake.Embed = log_entry.embeds[0]
+            log_embed: discord.Embed = log_entry.embeds[0]
             if (
                     log_embed.author.name == "Message deleted"
                     and f"[Jump to message]({message_link})" in log_embed.description
             ):
-                embed = disnake.Embed(
-                    colour=disnake.Colour.dark_gold(),
+                embed = discord.Embed(
+                    colour=discord.Colour.dark_gold(),
                     title="Deleted Message Link",
                     description=(
                         f"Found <#{Channels.mod_log}> entry for deleted message: "
@@ -203,12 +214,12 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
                     )
                 )
         if not embed:
-            embed = disnake.Embed(
-                colour=disnake.Colour.red(),
+            embed = discord.Embed(
+                colour=discord.Colour.red(),
                 title="Bad Message Link",
                 description=f"Message {message_link} not found."
             )
-    except disnake.DiscordException as e:
+    except discord.DiscordException as e:
         log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
     else:
         channel = message.channel
@@ -219,12 +230,12 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
             )
             return
 
-        embed = disnake.Embed(
-            colour=disnake.Colour.gold(),
+        embed = discord.Embed(
+            colour=discord.Colour.gold(),
             description=(
                 f"**Author:** {format_user(message.author)}\n"
                 f"**Channel:** {channel.mention} ({channel.category}"
-                f"{f'/#{channel.parent.name} - ' if isinstance(channel, disnake.Thread) else '/#'}"
+                f"{f'/#{channel.parent.name} - ' if isinstance(channel, discord.Thread) else '/#'}"
                 f"{channel.name})\n"
             ),
             timestamp=message.created_at
@@ -242,7 +253,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
     return embed
 
 
-async def add_signals(incident: disnake.Message) -> None:
+async def add_signals(incident: discord.Message) -> None:
     """
     Add `Signal` member emoji to `incident` as reactions.
 
@@ -257,7 +268,7 @@ async def add_signals(incident: disnake.Message) -> None:
             log.trace(f"Adding reaction: {signal_emoji}")
             try:
                 await incident.add_reaction(signal_emoji.value)
-            except disnake.NotFound as e:
+            except discord.NotFound as e:
                 if e.code != 10008:
                     raise
 
@@ -300,7 +311,7 @@ class Incidents(Cog):
     """
 
     # This dictionary maps an incident report message to the message link embed's ID
-    # RedisCache[disnake.Message.id, disnake.Message.id]
+    # RedisCache[discord.Message.id, discord.Message.id]
     message_link_embeds_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
@@ -319,7 +330,7 @@ class Incidents(Cog):
 
         try:
             self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
-        except disnake.HTTPException:
+        except discord.HTTPException:
             log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents}`.")
 
     async def crawl_incidents(self) -> None:
@@ -335,7 +346,7 @@ class Incidents(Cog):
         Behaviour is configured by: `CRAWL_LIMIT`, `CRAWL_SLEEP`.
         """
         await self.bot.wait_until_guild_available()
-        incidents: disnake.TextChannel = self.bot.get_channel(Channels.incidents)
+        incidents: discord.TextChannel = self.bot.get_channel(Channels.incidents)
 
         log.debug(f"Crawling messages in #incidents: {CRAWL_LIMIT=}, {CRAWL_SLEEP=}")
         async for message in incidents.history(limit=CRAWL_LIMIT):
@@ -353,7 +364,7 @@ class Incidents(Cog):
 
         log.debug("Crawl task finished!")
 
-    async def archive(self, incident: disnake.Message, outcome: Signal, actioned_by: disnake.Member) -> bool:
+    async def archive(self, incident: discord.Message, outcome: Signal, actioned_by: discord.Member) -> bool:
         """
         Relay an embed representation of `incident` to the #incidents-archive channel.
 
@@ -381,7 +392,7 @@ class Incidents(Cog):
             webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
             await webhook.send(
                 embed=embed,
-                username=sub_clyde(incident.author.name),
+                username=sub_clyde(incident.author.display_name),
                 avatar_url=incident.author.display_avatar.url,
                 file=attachment_file,
             )
@@ -392,7 +403,7 @@ class Incidents(Cog):
             log.trace("Message archived successfully!")
             return True
 
-    def make_confirmation_task(self, incident: disnake.Message, timeout: int = 5) -> asyncio.Task:
+    def make_confirmation_task(self, incident: discord.Message, timeout: int = 5) -> asyncio.Task:
         """
         Create a task to wait `timeout` seconds for `incident` to be deleted.
 
@@ -401,13 +412,13 @@ class Incidents(Cog):
         """
         log.trace(f"Confirmation task will wait {timeout=} seconds for {incident.id=} to be deleted")
 
-        def check(payload: disnake.RawReactionActionEvent) -> bool:
+        def check(payload: discord.RawReactionActionEvent) -> bool:
             return payload.message_id == incident.id
 
-        coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
+        coroutine = self.bot.wait_for("raw_message_delete", check=check, timeout=timeout)
         return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
-    async def process_event(self, reaction: str, incident: disnake.Message, member: disnake.Member) -> None:
+    async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """
         Process a `reaction_add` event in #incidents.
 
@@ -430,7 +441,7 @@ class Incidents(Cog):
             log.debug(f"Removing invalid reaction: user {member} is not permitted to send signals")
             try:
                 await incident.remove_reaction(reaction, member)
-            except disnake.NotFound:
+            except discord.NotFound:
                 log.trace("Couldn't remove reaction because the reaction or its message was deleted")
             return
 
@@ -440,7 +451,7 @@ class Incidents(Cog):
             log.debug(f"Removing invalid reaction: emoji {reaction} is not a valid signal")
             try:
                 await incident.remove_reaction(reaction, member)
-            except disnake.NotFound:
+            except discord.NotFound:
                 log.trace("Couldn't remove reaction because the reaction or its message was deleted")
             return
 
@@ -461,7 +472,7 @@ class Incidents(Cog):
         log.trace("Deleting original message")
         try:
             await incident.delete()
-        except disnake.NotFound:
+        except discord.NotFound:
             log.trace("Couldn't delete message because it was already deleted")
 
         log.trace(f"Awaiting deletion confirmation: {timeout=} seconds")
@@ -476,9 +487,9 @@ class Incidents(Cog):
             # Deletes the message link embeds found in cache from the channel and cache.
             await self.delete_msg_link_embed(incident.id)
 
-    async def resolve_message(self, message_id: int) -> Optional[disnake.Message]:
+    async def resolve_message(self, message_id: int) -> Optional[discord.Message]:
         """
-        Get `disnake.Message` for `message_id` from cache, or API.
+        Get `discord.Message` for `message_id` from cache, or API.
 
         We first look into the local cache to see if the message is present.
 
@@ -491,7 +502,7 @@ class Incidents(Cog):
         """
         await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
         log.trace(f"Resolving message for: {message_id=}")
-        message: Optional[disnake.Message] = self.bot._connection._get_message(message_id)
+        message: Optional[discord.Message] = self.bot._connection._get_message(message_id)
 
         if message is not None:
             log.trace("Message was found in cache")
@@ -500,7 +511,7 @@ class Incidents(Cog):
         log.trace("Message not found, attempting to fetch")
         try:
             message = await self.bot.get_channel(Channels.incidents).fetch_message(message_id)
-        except disnake.NotFound:
+        except discord.NotFound:
             log.trace("Message doesn't exist, it was likely already relayed")
         except Exception:
             log.exception(f"Failed to fetch message {message_id}!")
@@ -509,7 +520,7 @@ class Incidents(Cog):
             return message
 
     @Cog.listener()
-    async def on_raw_reaction_add(self, payload: disnake.RawReactionActionEvent) -> None:
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
         """
         Pre-process `payload` and pass it to `process_event` if appropriate.
 
@@ -521,11 +532,11 @@ class Incidents(Cog):
 
         Next, we acquire `event_lock` - to prevent racing, events are processed one at a time.
 
-        Once we have the lock, the `disnake.Message` object for this event must be resolved.
+        Once we have the lock, the `discord.Message` object for this event must be resolved.
         If the lock was previously held by an event which successfully relayed the incident,
         this will fail and we abort the current event.
 
-        Finally, with both the lock and the `disnake.Message` instance in our hands, we delegate
+        Finally, with both the lock and the `discord.Message` instance in our hands, we delegate
         to `process_event` to handle the event.
 
         The justification for using a raw listener is the need to receive events for messages
@@ -554,7 +565,7 @@ class Incidents(Cog):
             log.trace("Releasing event lock")
 
     @Cog.listener()
-    async def on_message(self, message: disnake.Message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """
         Pass `message` to `add_signals` and `extract_message_links` if it satisfies `is_incident`.
 
@@ -575,7 +586,7 @@ class Incidents(Cog):
                 await self.send_message_link_embeds(embed_list, message, self.incidents_webhook)
 
     @Cog.listener()
-    async def on_raw_message_delete(self, payload: disnake.RawMessageDeleteEvent) -> None:
+    async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent) -> None:
         """
         Delete message link embeds for `payload.message_id`.
 
@@ -584,7 +595,7 @@ class Incidents(Cog):
         if self.incidents_webhook:
             await self.delete_msg_link_embed(payload.message_id)
 
-    async def extract_message_links(self, message: disnake.Message) -> Optional[list[disnake.Embed]]:
+    async def extract_message_links(self, message: discord.Message) -> Optional[list[discord.Embed]]:
         """
         Check if there's any message links in the text content.
 
@@ -615,8 +626,8 @@ class Incidents(Cog):
     async def send_message_link_embeds(
             self,
             webhook_embed_list: list,
-            message: disnake.Message,
-            webhook: disnake.Webhook,
+            message: discord.Message,
+            webhook: discord.Webhook,
     ) -> Optional[int]:
         """
         Send message link embeds to #incidents channel.
@@ -634,7 +645,7 @@ class Incidents(Cog):
                 avatar_url=message.author.display_avatar.url,
                 wait=True,
             )
-        except disnake.DiscordException:
+        except discord.DiscordException:
             log.exception(
                 f"Failed to send message link embed {message.id} to #incidents."
             )
@@ -651,13 +662,13 @@ class Incidents(Cog):
         if webhook_msg_id:
             try:
                 await self.incidents_webhook.delete_message(webhook_msg_id)
-            except disnake.errors.NotFound:
+            except discord.errors.NotFound:
                 log.trace(f"Incidents message link embed (`{webhook_msg_id}`) has already been deleted, skipping.")
 
         await self.message_link_embeds_cache.delete(message_id)
         log.trace("Successfully deleted discord links webhook message.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Incidents cog."""
-    bot.add_cog(Incidents(bot))
+    await bot.add_cog(Incidents(bot))

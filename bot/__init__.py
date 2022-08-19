@@ -15,7 +15,6 @@ log.setup()
 if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-# Apply all monkey patches from bot core.
 apply_monkey_patches()
 
 instance: "Bot" = None  # Global Bot instance.

@@ -2,20 +2,20 @@ import asyncio
 import unittest
 import unittest.mock
 
-import disnake
+import discord
 
 from tests import helpers
 
 
 class DiscordMocksTests(unittest.TestCase):
-    """Tests for our specialized disnake mocks."""
+    """Tests for our specialized discord.py mocks."""
 
     def test_mock_role_default_initialization(self):
         """Test if the default initialization of MockRole results in the correct object."""
         role = helpers.MockRole()
 
-        # The `spec` argument makes sure `isistance` checks with `disnake.Role` pass
-        self.assertIsInstance(role, disnake.Role)
+        # The `spec` argument makes sure `isistance` checks with `discord.Role` pass
+        self.assertIsInstance(role, discord.Role)
 
         self.assertEqual(role.name, "role")
         self.assertEqual(role.position, 1)
@@ -61,8 +61,8 @@ class DiscordMocksTests(unittest.TestCase):
         """Test if the default initialization of Mockmember results in the correct object."""
         member = helpers.MockMember()
 
-        # The `spec` argument makes sure `isistance` checks with `disnake.Member` pass
-        self.assertIsInstance(member, disnake.Member)
+        # The `spec` argument makes sure `isistance` checks with `discord.Member` pass
+        self.assertIsInstance(member, discord.Member)
 
         self.assertEqual(member.name, "member")
         self.assertListEqual(member.roles, [helpers.MockRole(name="@everyone", position=1, id=0)])
@@ -86,18 +86,18 @@ class DiscordMocksTests(unittest.TestCase):
         """Test if MockMember accepts and sets abitrary keyword arguments."""
         member = helpers.MockMember(
             nick="Dino Man",
-            colour=disnake.Colour.default(),
+            colour=discord.Colour.default(),
         )
 
         self.assertEqual(member.nick, "Dino Man")
-        self.assertEqual(member.colour, disnake.Colour.default())
+        self.assertEqual(member.colour, discord.Colour.default())
 
     def test_mock_guild_default_initialization(self):
         """Test if the default initialization of Mockguild results in the correct object."""
         guild = helpers.MockGuild()
 
-        # The `spec` argument makes sure `isistance` checks with `disnake.Guild` pass
-        self.assertIsInstance(guild, disnake.Guild)
+        # The `spec` argument makes sure `isistance` checks with `discord.Guild` pass
+        self.assertIsInstance(guild, discord.Guild)
 
         self.assertListEqual(guild.roles, [helpers.MockRole(name="@everyone", position=1, id=0)])
         self.assertListEqual(guild.members, [])
@@ -127,15 +127,15 @@ class DiscordMocksTests(unittest.TestCase):
         """Tests if MockBot initializes with the correct values."""
         bot = helpers.MockBot()
 
-        # The `spec` argument makes sure `isistance` checks with `disnake.ext.commands.Bot` pass
-        self.assertIsInstance(bot, disnake.ext.commands.Bot)
+        # The `spec` argument makes sure `isistance` checks with `discord.ext.commands.Bot` pass
+        self.assertIsInstance(bot, discord.ext.commands.Bot)
 
     def test_mock_context_default_initialization(self):
         """Tests if MockContext initializes with the correct values."""
         context = helpers.MockContext()
 
-        # The `spec` argument makes sure `isistance` checks with `disnake.ext.commands.Context` pass
-        self.assertIsInstance(context, disnake.ext.commands.Context)
+        # The `spec` argument makes sure `isistance` checks with `discord.ext.commands.Context` pass
+        self.assertIsInstance(context, discord.ext.commands.Context)
 
         self.assertIsInstance(context.bot, helpers.MockBot)
         self.assertIsInstance(context.guild, helpers.MockGuild)
@@ -327,7 +327,7 @@ class MockObjectTests(unittest.TestCase):
     def test_spec_propagation_of_mock_subclasses(self):
         """Test if the `spec` does not propagate to attributes of the mock object."""
         test_values = (
-            (helpers.MockGuild, "region"),
+            (helpers.MockGuild, "features"),
             (helpers.MockRole, "mentionable"),
             (helpers.MockMember, "display_name"),
             (helpers.MockBot, "owner_id"),

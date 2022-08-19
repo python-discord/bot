@@ -2,10 +2,11 @@ from datetime import timedelta, timezone
 from operator import itemgetter
 
 import arrow
-import disnake
+import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
-from disnake.ext import commands
+from botcore.utils import scheduling
+from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import (
@@ -14,7 +15,7 @@ from bot.constants import (
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
@@ -24,25 +25,19 @@ class Stream(commands.Cog):
     """Grant and revoke streaming permissions from members."""
 
     # Stores tasks to remove streaming permission
-    # RedisCache[disnake.Member.id, UtcPosixTimestamp]
+    # RedisCache[discord.Member.id, UtcPosixTimestamp]
     task_cache = RedisCache()
 
     def __init__(self, bot: Bot):
         self.bot = bot
         self.scheduler = scheduling.Scheduler(self.__class__.__name__)
-        self.reload_task = scheduling.create_task(self._reload_tasks_from_redis(), event_loop=self.bot.loop)
 
-    def cog_unload(self) -> None:
-        """Cancel all scheduled tasks."""
-        self.reload_task.cancel()
-        self.reload_task.add_done_callback(lambda _: self.scheduler.cancel_all())
-
-    async def _revoke_streaming_permission(self, member: disnake.Member) -> None:
+    async def _revoke_streaming_permission(self, member: discord.Member) -> None:
         """Remove the streaming permission from the given Member."""
         await self.task_cache.delete(member.id)
-        await member.remove_roles(disnake.Object(Roles.video), reason="Streaming access revoked")
+        await member.remove_roles(discord.Object(Roles.video), reason="Streaming access revoked")
 
-    async def _reload_tasks_from_redis(self) -> None:
+    async def cog_load(self) -> None:
         """Reload outstanding tasks from redis on startup, delete the task if the member has since left the server."""
         await self.bot.wait_until_guild_available()
         items = await self.task_cache.items()
@@ -66,7 +61,7 @@ class Stream(commands.Cog):
                 self._revoke_streaming_permission(member)
             )
 
-    async def _suspend_stream(self, ctx: commands.Context, member: disnake.Member) -> None:
+    async def _suspend_stream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Suspend a member's stream."""
         await self.bot.wait_until_guild_available()
         voice_state = member.voice
@@ -90,7 +85,7 @@ class Stream(commands.Cog):
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def stream(self, ctx: commands.Context, member: disnake.Member, duration: Expiry = None) -> None:
+    async def stream(self, ctx: commands.Context, member: discord.Member, duration: Expiry = None) -> None:
         """
         Temporarily grant streaming permissions to a member for a given duration.
 
@@ -128,7 +123,7 @@ class Stream(commands.Cog):
         self.scheduler.schedule_at(duration, member.id, self._revoke_streaming_permission(member))
         await self.task_cache.set(member.id, duration.timestamp())
 
-        await member.add_roles(disnake.Object(Roles.video), reason="Temporary streaming access granted")
+        await member.add_roles(discord.Object(Roles.video), reason="Temporary streaming access granted")
 
         await ctx.send(f"{Emojis.check_mark} {member.mention} can now stream until {time.discord_timestamp(duration)}.")
 
@@ -142,7 +137,7 @@ class Stream(commands.Cog):
 
     @commands.command(aliases=("pstream",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def permanentstream(self, ctx: commands.Context, member: disnake.Member) -> None:
+    async def permanentstream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Permanently grants the given member the permission to stream."""
         log.trace(f"Attempting to give permanent streaming permission to {member} ({member.id}).")
 
@@ -163,13 +158,13 @@ class Stream(commands.Cog):
             log.debug(f"{member} ({member.id}) already had permanent streaming permission.")
             return
 
-        await member.add_roles(disnake.Object(Roles.video), reason="Permanent streaming access granted")
+        await member.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
         await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
         log.debug(f"Successfully gave {member} ({member.id}) permanent streaming permission.")
 
     @commands.command(aliases=("unstream", "rstream"))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def revokestream(self, ctx: commands.Context, member: disnake.Member) -> None:
+    async def revokestream(self, ctx: commands.Context, member: discord.Member) -> None:
         """Revoke the permission to stream from the given member."""
         log.trace(f"Attempting to remove streaming permission from {member} ({member.id}).")
 
@@ -222,7 +217,7 @@ class Stream(commands.Cog):
 
             # Only output the message in the pagination
             lines = [line[1] for line in streamer_info]
-            embed = disnake.Embed(
+            embed = discord.Embed(
                 title=f"Members with streaming permission (`{len(lines)}` total)",
                 colour=Colours.soft_green
             )
@@ -230,7 +225,11 @@ class Stream(commands.Cog):
         else:
             await ctx.send("No members with stream permissions found.")
 
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks."""
+        self.scheduler.cancel_all()
 
-def setup(bot: Bot) -> None:
+
+async def setup(bot: Bot) -> None:
     """Loads the Stream cog."""
-    bot.add_cog(Stream(bot))
+    await bot.add_cog(Stream(bot))

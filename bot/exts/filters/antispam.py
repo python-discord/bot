@@ -8,8 +8,9 @@ from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
 import arrow
-from disnake import Colour, Member, Message, NotFound, Object, TextChannel
-from disnake.ext.commands import Cog
+from botcore.utils import scheduling
+from discord import Colour, Member, Message, MessageType, NotFound, Object, TextChannel
+from discord.ext.commands import Cog
 
 from bot import rules
 from bot.bot import Bot
@@ -20,7 +21,7 @@ from bot.converters import Duration
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import lock, scheduling
+from bot.utils import lock
 from bot.utils.message_cache import MessageCache
 from bot.utils.messages import format_user, send_attachments
 
@@ -134,18 +135,12 @@ class AntiSpam(Cog):
         self.max_interval = max_interval_config['interval']
         self.cache = MessageCache(AntiSpamConfig.cache_size, newest_first=True)
 
-        scheduling.create_task(
-            self.alert_on_validation_error(),
-            name="AntiSpam.alert_on_validation_error",
-            event_loop=self.bot.loop,
-        )
-
     @property
     def mod_log(self) -> ModLog:
         """Allows for easy access of the ModLog cog."""
         return self.bot.get_cog("ModLog")
 
-    async def alert_on_validation_error(self) -> None:
+    async def cog_load(self) -> None:
         """Unloads the cog and alerts admins if configuration validation failed."""
         await self.bot.wait_until_guild_available()
         if self.validation_errors:
@@ -174,6 +169,7 @@ class AntiSpam(Cog):
             or (getattr(message.channel, "category", None) and message.channel.category.name == JAM_CATEGORY_NAME)
             or (message.channel.id in Filter.channel_whitelist and not DEBUG_MODE)
             or (any(role.id in Filter.role_whitelist for role in message.author.roles) and not DEBUG_MODE)
+            or message.type == MessageType.auto_moderation_action
         ):
             return
 
@@ -189,13 +185,13 @@ class AntiSpam(Cog):
             # Create a list of messages that were sent in the interval that the rule cares about.
             latest_interesting_stamp = arrow.utcnow() - timedelta(seconds=rule_config['interval'])
             messages_for_rule = list(
-                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)
+                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)  # noqa: B023
             )
 
             result = await rule_function(message, messages_for_rule, rule_config)
 
             # If the rule returns `None`, that means the message didn't violate it.
-            # If it doesn't, it returns a tuple in the form `(str, Iterable[disnake.Member])`
+            # If it doesn't, it returns a tuple in the form `(str, Iterable[discord.Member])`
             # which contains the reason for why the message violated the rule and
             # an iterable of all members that violated the rule.
             if result is not None:
@@ -265,7 +261,7 @@ class AntiSpam(Cog):
                         # In the rare case where we found messages matching the
                         # spam filter across multiple channels, it is possible
                         # that a single channel will only contain a single message
-                        # to delete. If that should be the case, disnake will
+                        # to delete. If that should be the case, discord.py will
                         # use the "delete single message" endpoint instead of the
                         # bulk delete endpoint, and the single message deletion
                         # endpoint will complain if you give it that does not exist.
@@ -322,7 +318,7 @@ def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
     return validation_errors
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Validate the AntiSpam configs and load the AntiSpam cog."""
     validation_errors = validate_config()
-    bot.add_cog(AntiSpam(bot, validation_errors))
+    await bot.add_cog(AntiSpam(bot, validation_errors))

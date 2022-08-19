@@ -2,19 +2,18 @@ import re
 import typing as t
 from datetime import date, datetime
 
-import disnake
+import discord
 import feedparser
 from bs4 import BeautifulSoup
-from disnake.ext.commands import Cog
-from disnake.ext.tasks import loop
+from discord.ext.commands import Cog
+from discord.ext.tasks import loop
 
 from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.webhooks import send_webhook
 
-PEPS_RSS_URL = "https://www.python.org/dev/peps/peps.rss/"
+PEPS_RSS_URL = "https://peps.python.org/peps.rss"
 
 RECENT_THREADS_TEMPLATE = "https://mail.python.org/archives/list/{name}@python.org/recent-threads"
 THREAD_TEMPLATE_URL = "https://mail.python.org/archives/api/list/{name}@python.org/thread/{id}/"
@@ -40,10 +39,12 @@ class PythonNews(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.webhook_names = {}
-        self.webhook: t.Optional[disnake.Webhook] = None
+        self.webhook: t.Optional[discord.Webhook] = None
 
-        scheduling.create_task(self.get_webhook_names(), event_loop=self.bot.loop)
-        scheduling.create_task(self.get_webhook_and_channel(), event_loop=self.bot.loop)
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self.get_webhook_names()
+        await self.get_webhook_and_channel()
 
     async def start_tasks(self) -> None:
         """Start the tasks for fetching new PEPs and mailing list messages."""
@@ -119,7 +120,7 @@ class PythonNews(Cog):
                 continue
 
             # Build an embed and send a webhook
-            embed = disnake.Embed(
+            embed = discord.Embed(
                 title=self.escape_markdown(new["title"]),
                 description=self.escape_markdown(new["summary"]),
                 timestamp=new_datetime,
@@ -189,7 +190,7 @@ class PythonNews(Cog):
                 link = THREAD_URL.format(id=thread["href"].split("/")[-2], list=maillist)
 
                 # Build an embed and send a message to the webhook
-                embed = disnake.Embed(
+                embed = discord.Embed(
                     title=self.escape_markdown(thread_information["subject"]),
                     description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
                     timestamp=new_date,
@@ -240,11 +241,11 @@ class PythonNews(Cog):
 
         await self.start_tasks()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Stop news posting tasks on cog unload."""
         self.fetch_new_media.cancel()
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Add `News` cog."""
-    bot.add_cog(PythonNews(bot))
+    await bot.add_cog(PythonNews(bot))

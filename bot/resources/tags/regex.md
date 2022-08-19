@@ -5,9 +5,9 @@ Regular expressions (regex) are a tool for finding patterns in strings. The stan
 We can use regex to pull out all the numbers in a sentence:
 ```py
 >>> import re
->>> x = "On Oct 18 1963 a cat was launched aboard rocket #47"
+>>> text = "On Oct 18 1963 a cat was launched aboard rocket #47"
 >>> regex_pattern = r"[0-9]{1,3}"  # Matches 1-3 digits
->>> re.findall(regex_pattern, foo)
+>>> re.findall(regex_pattern, text)
 ['18', '196', '3', '47']  # Notice the year is cut off
 ```
 **See Also**

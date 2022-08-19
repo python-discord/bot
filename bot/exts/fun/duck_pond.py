@@ -1,15 +1,14 @@
 import asyncio
 from typing import Union
 
-import disnake
-from disnake import Color, Embed, Message, RawReactionActionEvent, TextChannel, errors
-from disnake.ext.commands import Cog, Context, command
+import discord
+from discord import Color, Embed, Message, RawReactionActionEvent, errors
+from discord.ext.commands import Cog, Context, command
 
 from bot import constants
 from bot.bot import Bot
 from bot.converters import MemberOrUser
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.checks import has_any_role
 from bot.utils.messages import count_unique_users_reaction, send_attachments
 from bot.utils.webhooks import send_webhook
@@ -25,16 +24,15 @@ class DuckPond(Cog):
         self.webhook_id = constants.Webhooks.duck_pond
         self.webhook = None
         self.ducked_messages = []
-        scheduling.create_task(self.fetch_webhook(), event_loop=self.bot.loop)
         self.relay_lock = None
 
-    async def fetch_webhook(self) -> None:
+    async def cog_load(self) -> None:
         """Fetches the webhook object, so we can post to it."""
         await self.bot.wait_until_guild_available()
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
-        except disnake.HTTPException:
+        except discord.HTTPException:
             log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
     @staticmethod
@@ -46,17 +44,6 @@ class DuckPond(Cog):
                     return True
         return False
 
-    @staticmethod
-    def is_helper_viewable(channel: TextChannel) -> bool:
-        """Check if helpers can view a specific channel."""
-        guild = channel.guild
-        helper_role = guild.get_role(constants.Roles.helpers)
-        # check channel overwrites for both the Helper role and @everyone and
-        # return True for channels that they have permissions to view.
-        helper_overwrites = channel.overwrites_for(helper_role)
-        default_overwrites = channel.overwrites_for(guild.default_role)
-        return default_overwrites.view_channel is None or helper_overwrites.view_channel is True
-
     async def has_green_checkmark(self, message: Message) -> bool:
         """Check if the message has a green checkmark reaction."""
         for reaction in message.reactions:
@@ -67,7 +54,7 @@ class DuckPond(Cog):
         return False
 
     @staticmethod
-    def _is_duck_emoji(emoji: Union[str, disnake.PartialEmoji, disnake.Emoji]) -> bool:
+    def _is_duck_emoji(emoji: Union[str, discord.PartialEmoji, discord.Emoji]) -> bool:
         """Check if the emoji is a valid duck emoji."""
         if isinstance(emoji, str):
             return emoji == "🦆"
@@ -111,7 +98,7 @@ class DuckPond(Cog):
                     username=message.author.display_name,
                     avatar_url=message.author.display_avatar.url
                 )
-            except disnake.HTTPException:
+            except discord.HTTPException:
                 log.exception("Failed to send an attachment to the webhook")
 
     async def locked_relay(self, message: Message) -> bool:
@@ -133,7 +120,7 @@ class DuckPond(Cog):
             await message.add_reaction("✅")
         return True
 
-    def _payload_has_duckpond_emoji(self, emoji: disnake.PartialEmoji) -> bool:
+    def _payload_has_duckpond_emoji(self, emoji: discord.PartialEmoji) -> bool:
         """Test if the RawReactionActionEvent payload contains a duckpond emoji."""
         if emoji.is_unicode_emoji():
             # For unicode PartialEmojis, the `name` attribute is just the string
@@ -165,20 +152,23 @@ class DuckPond(Cog):
         if not self._payload_has_duckpond_emoji(payload.emoji):
             return
 
-        channel = disnake.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        await self.bot.wait_until_guild_available()
+        guild = self.bot.get_guild(payload.guild_id)
+        channel = guild.get_channel_or_thread(payload.channel_id)
         if channel is None:
             return
 
         # Was the message sent in a channel Helpers can see?
-        if not self.is_helper_viewable(channel):
+        helper_role = guild.get_role(constants.Roles.helpers)
+        if not channel.permissions_for(helper_role).view_channel:
             return
 
         try:
             message = await channel.fetch_message(payload.message_id)
-        except disnake.NotFound:
+        except discord.NotFound:
             return  # Message was deleted.
 
-        member = disnake.utils.get(message.guild.members, id=payload.user_id)
+        member = discord.utils.get(message.guild.members, id=payload.user_id)
         if not member:
             return  # Member left or wasn't in the cache.
 
@@ -205,7 +195,7 @@ class DuckPond(Cog):
         if payload.guild_id != constants.Guild.id:
             return
 
-        channel = disnake.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
+        channel = discord.utils.get(self.bot.get_all_channels(), id=payload.channel_id)
         if channel is None:
             return
 
@@ -226,6 +216,6 @@ class DuckPond(Cog):
             await ctx.message.add_reaction("❌")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the DuckPond cog."""
-    bot.add_cog(DuckPond(bot))
+    await bot.add_cog(DuckPond(bot))

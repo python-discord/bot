@@ -1,7 +1,7 @@
 import re
 
-from disnake import Colour, Message, NotFound
-from disnake.ext.commands import Cog
+from discord import Colour, Message, NotFound
+from discord.ext.commands import Cog
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Event, Icons
@@ -89,6 +89,6 @@ class WebhookRemover(Cog):
         await self.on_message(after)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load `WebhookRemover` cog."""
-    bot.add_cog(WebhookRemover(bot))
+    await bot.add_cog(WebhookRemover(bot))

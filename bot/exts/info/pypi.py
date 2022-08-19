@@ -3,9 +3,9 @@ import random
 import re
 from contextlib import suppress
 
-from disnake import Embed, NotFound
-from disnake.ext.commands import Cog, Context, command
-from disnake.utils import escape_markdown
+from discord import Embed, NotFound
+from discord.ext.commands import Cog, Context, command
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
@@ -82,6 +82,6 @@ class PyPi(Cog):
             await ctx.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the PyPi cog."""
-    bot.add_cog(PyPi(bot))
+    await bot.add_cog(PyPi(bot))

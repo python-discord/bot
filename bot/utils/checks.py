@@ -1,6 +1,6 @@
 from typing import Callable, Container, Iterable, Optional, Union
 
-from disnake.ext.commands import (
+from discord.ext.commands import (
     BucketType, CheckFailure, Cog, Command, CommandOnCooldown, Context, Cooldown, CooldownMapping, NoPrivateMessage,
     has_any_role
 )
@@ -135,7 +135,7 @@ def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketTy
         if any(role.id in bypass for role in ctx.author.roles):
             return
 
-        # cooldown logic, taken from disnake's internals
+        # cooldown logic, taken from discord.py internals
         current = ctx.message.created_at.timestamp()
         bucket = buckets.get_bucket(ctx.message)
         retry_after = bucket.update_rate_limit(current)

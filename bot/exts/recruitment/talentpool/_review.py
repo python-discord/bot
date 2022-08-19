@@ -9,21 +9,22 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
 import arrow
+from botcore.site_api import ResponseCodeError
+from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
-from disnake import Embed, Emoji, Member, Message, NoMoreItems, NotFound, PartialMessage, TextChannel
-from disnake.ext.commands import Context
+from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
+from discord.ext.commands import Context
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
-from bot.utils.scheduling import Scheduler
 
 if typing.TYPE_CHECKING:
     from bot.exts.recruitment.talentpool._cog import TalentPool
+    from bot.exts.utils.thread_bumper import ThreadBumper
 
 log = get_logger(__name__)
 
@@ -97,11 +98,16 @@ class Reviewer:
         thread = await last_message.create_thread(
             name=f"Nomination - {nominee}",
         )
-        await thread.send(fr"<@&{Roles.mod_team}> <@&{Roles.admins}>")
+        message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
         if update_database:
             nomination = self._pool.cache.get(user_id)
             await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
+
+        bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
+        if bump_cog:
+            context = await self.bot.get_context(message)
+            await bump_cog.add_thread_to_bump_list(context, thread)
 
     async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
         """Format a generic review of a user and return it with the reviewed emoji and the user themselves."""
@@ -151,12 +157,11 @@ class Reviewer:
         # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
         if not NOMINATION_MESSAGE_REGEX.search(message.content):
-            with contextlib.suppress(NoMoreItems):
-                async for new_message in message.channel.history(before=message.created_at):
-                    messages.append(new_message)
+            async for new_message in message.channel.history(before=message.created_at):
+                messages.append(new_message)
 
-                    if NOMINATION_MESSAGE_REGEX.search(new_message.content):
-                        break
+                if NOMINATION_MESSAGE_REGEX.search(new_message.content):
+                    break
 
         log.debug(f"Found {len(messages)} messages: {', '.join(str(m.id) for m in messages)}")
 

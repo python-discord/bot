@@ -5,18 +5,17 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, OrderedDict, Union
 
 from async_rediscache import RedisCache
-from disnake import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
-from disnake.ext import commands, tasks
-from disnake.ext.commands import Context
-from disnake.utils import MISSING
+from botcore.utils.scheduling import Scheduler
+from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
+from discord.ext import commands, tasks
+from discord.ext.commands import Context
+from discord.utils import MISSING
 
 from bot import constants
 from bot.bot import Bot
 from bot.converters import HushDurationConverter
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.lock import LockedResourceError, lock, lock_arg
-from bot.utils.scheduling import Scheduler
 
 log = get_logger(__name__)
 
@@ -56,7 +55,6 @@ class SilenceNotifier(tasks.Loop):
             hours=0,
             count=None,
             reconnect=True,
-            loop=None,
             time=MISSING
         )
         self._silenced_channels = {}
@@ -115,9 +113,7 @@ class Silence(commands.Cog):
         self.bot = bot
         self.scheduler = Scheduler(self.__class__.__name__)
 
-        self._init_task = scheduling.create_task(self._async_init(), event_loop=self.bot.loop)
-
-    async def _async_init(self) -> None:
+    async def cog_load(self) -> None:
         """Set instance attributes once the guild is available and reschedule unsilences."""
         await self.bot.wait_until_guild_available()
 
@@ -177,7 +173,6 @@ class Silence(commands.Cog):
         Passing a voice channel will attempt to move members out of the channel and back to force sync permissions.
         If `kick` is True, members will not be added back to the voice channel, and members will be unable to rejoin.
         """
-        await self._init_task
         channel, duration = self.parse_silence_args(ctx, duration_or_channel, duration)
 
         channel_info = f"#{channel} ({channel.id})"
@@ -281,7 +276,6 @@ class Silence(commands.Cog):
 
         If the channel was silenced indefinitely, notifications for the channel will stop.
         """
-        await self._init_task
         if channel is None:
             channel = ctx.channel
         log.debug(f"Unsilencing channel #{channel} from {ctx.author}'s command.")
@@ -467,21 +461,16 @@ class Silence(commands.Cog):
                 log.info(f"Rescheduling silence for #{channel} ({channel.id}).")
                 self.scheduler.schedule_later(delta, channel_id, self._unsilence_wrapper(channel))
 
-    def cog_unload(self) -> None:
-        """Cancel the init task and scheduled tasks."""
-        # It's important to wait for _init_task (specifically for _reschedule) to be cancelled
-        # before cancelling scheduled tasks. Otherwise, it's possible for _reschedule to schedule
-        # more tasks after cancel_all has finished, despite _init_task.cancel being called first.
-        # This is cause cancel() on its own doesn't block until the task is cancelled.
-        self._init_task.cancel()
-        self._init_task.add_done_callback(lambda _: self.scheduler.cancel_all())
-
     # This cannot be static (must have a __func__ attribute).
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
         return await commands.has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks."""
+        self.scheduler.cancel_all()
 
-def setup(bot: Bot) -> None:
+
+async def setup(bot: Bot) -> None:
     """Load the Silence cog."""
-    bot.add_cog(Silence(bot))
+    await bot.add_cog(Silence(bot))

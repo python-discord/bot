@@ -2,7 +2,7 @@ import textwrap
 import typing as t
 
 import arrow
-import disnake
+import discord
 from arrow import Arrow
 
 import bot
@@ -27,7 +27,7 @@ For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}
 
 AVAILABLE_TITLE = "Available help channel"
 
-AVAILABLE_FOOTER = "Closes after a period of inactivity, or when you send !close."
+AVAILABLE_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
 
 DORMANT_MSG = f"""
 This help channel has been marked as **dormant**, and has been moved into the **{{dormant}}** \
@@ -41,7 +41,7 @@ through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
 """
 
 
-async def update_message_caches(message: disnake.Message) -> None:
+async def update_message_caches(message: discord.Message) -> None:
     """Checks the source of new content in a help channel and updates the appropriate cache."""
     channel = message.channel
 
@@ -62,18 +62,18 @@ async def update_message_caches(message: disnake.Message) -> None:
         await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
 
 
-async def get_last_message(channel: disnake.TextChannel) -> t.Optional[disnake.Message]:
+async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
     """Return the last message sent in the channel or None if no messages exist."""
     log.trace(f"Getting the last message in #{channel} ({channel.id}).")
 
-    try:
-        return await channel.history(limit=1).next()  # noqa: B305
-    except disnake.NoMoreItems:
-        log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
-        return None
+    async for message in channel.history(limit=1):
+        return message
+
+    log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
+    return None
 
 
-async def is_empty(channel: disnake.TextChannel) -> bool:
+async def is_empty(channel: discord.TextChannel) -> bool:
     """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
     log.trace(f"Checking if #{channel} ({channel.id}) is empty.")
 
@@ -92,13 +92,13 @@ async def is_empty(channel: disnake.TextChannel) -> bool:
     return False
 
 
-async def dm_on_open(message: disnake.Message) -> None:
+async def dm_on_open(message: discord.Message) -> None:
     """
     DM claimant with a link to the claimed channel's first message, with a 100 letter preview of the message.
 
     Does nothing if the user has DMs disabled.
     """
-    embed = disnake.Embed(
+    embed = discord.Embed(
         title="Help channel opened",
         description=f"You claimed {message.channel.mention}.",
         colour=bot.constants.Colours.bright_green,
@@ -118,7 +118,7 @@ async def dm_on_open(message: disnake.Message) -> None:
     try:
         await message.author.send(embed=embed)
         log.trace(f"Sent DM to {message.author.id} after claiming help channel.")
-    except disnake.errors.Forbidden:
+    except discord.errors.Forbidden:
         log.trace(
             f"Ignoring to send DM to {message.author.id} after claiming help channel: DMs disabled."
         )
@@ -146,7 +146,7 @@ async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
     log.trace("Notifying about lack of channels.")
 
     mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_none_remaining_roles)
-    allowed_roles = [disnake.Object(id_) for id_ in constants.HelpChannels.notify_none_remaining_roles]
+    allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_none_remaining_roles]
 
     channel = bot.instance.get_channel(constants.HelpChannels.notify_channel)
     if channel is None:
@@ -157,7 +157,7 @@ async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
             f"{mentions} A new available help channel is needed but there "
             "are no more dormant ones. Consider freeing up some in-use channels manually by "
             f"using the `{constants.Bot.prefix}dormant` command within the channels.",
-            allowed_mentions=disnake.AllowedMentions(everyone=False, roles=allowed_roles)
+            allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
         )
     except Exception:
         # Handle it here cause this feature isn't critical for the functionality of the system.
@@ -213,18 +213,17 @@ async def notify_running_low(number_of_channels_left: int, last_notification: Ar
         return arrow.utcnow()
 
 
-async def pin(message: disnake.Message) -> None:
-    """Pin an initial question `message` and store it in a cache."""
-    if await pin_wrapper(message.id, message.channel, pin=True):
-        await _caches.question_messages.set(message.channel.id, message.id)
+async def pin(message: discord.Message) -> None:
+    """Pin an initial question `message`."""
+    await _pin_wrapper(message, pin=True)
 
 
-async def send_available_message(channel: disnake.TextChannel) -> None:
+async def send_available_message(channel: discord.TextChannel) -> None:
     """Send the available message by editing a dormant message or sending a new message."""
     channel_info = f"#{channel} ({channel.id})"
     log.trace(f"Sending available message in {channel_info}.")
 
-    embed = disnake.Embed(
+    embed = discord.Embed(
         color=constants.Colours.bright_green,
         description=AVAILABLE_MSG,
     )
@@ -240,51 +239,48 @@ async def send_available_message(channel: disnake.TextChannel) -> None:
         await channel.send(embed=embed)
 
 
-async def unpin(channel: disnake.TextChannel) -> None:
-    """Unpin the initial question message sent in `channel`."""
-    msg_id = await _caches.question_messages.pop(channel.id)
-    if msg_id is None:
-        log.debug(f"#{channel} ({channel.id}) doesn't have a message pinned.")
-    else:
-        await pin_wrapper(msg_id, channel, pin=False)
+async def unpin_all(channel: discord.TextChannel) -> int:
+    """Unpin all pinned messages in `channel` and return the amount of unpinned messages."""
+    count = 0
+    for message in await channel.pins():
+        if await _pin_wrapper(message, pin=False):
+            count += 1
+
+    return count
 
 
-def _match_bot_embed(message: t.Optional[disnake.Message], description: str) -> bool:
+def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> bool:
     """Return `True` if the bot's `message`'s embed description matches `description`."""
     if not message or not message.embeds:
         return False
 
     bot_msg_desc = message.embeds[0].description
-    if bot_msg_desc is disnake.Embed.Empty:
+    if bot_msg_desc is None:
         log.trace("Last message was a bot embed but it was empty.")
         return False
     return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
 
 
-async def pin_wrapper(msg_id: int, channel: disnake.TextChannel, *, pin: bool) -> bool:
+async def _pin_wrapper(message: discord.Message, *, pin: bool) -> bool:
     """
-    Pin message `msg_id` in `channel` if `pin` is True or unpin if it's False.
+    Pin `message` if `pin` is True or unpin if it's False.
 
     Return True if successful and False otherwise.
     """
-    channel_str = f"#{channel} ({channel.id})"
-    if pin:
-        func = bot.instance.http.pin_message
-        verb = "pin"
-    else:
-        func = bot.instance.http.unpin_message
-        verb = "unpin"
+    channel_str = f"#{message.channel} ({message.channel.id})"
+    func = message.pin if pin else message.unpin
 
     try:
-        await func(channel.id, msg_id)
-    except disnake.HTTPException as e:
+        await func()
+    except discord.HTTPException as e:
         if e.code == 10008:
-            log.debug(f"Message {msg_id} in {channel_str} doesn't exist; can't {verb}.")
+            log.debug(f"Message {message.id} in {channel_str} doesn't exist; can't {func.__name__}.")
         else:
             log.exception(
-                f"Error {verb}ning message {msg_id} in {channel_str}: {e.status} ({e.code})"
+                f"Error {func.__name__}ning message {message.id} in {channel_str}: "
+                f"{e.status} ({e.code})"
             )
         return False
     else:
-        log.trace(f"{verb.capitalize()}ned message {msg_id} in {channel_str}.")
+        log.trace(f"{func.__name__.capitalize()}ned message {message.id} in {channel_str}.")
         return True

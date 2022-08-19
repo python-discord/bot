@@ -1,7 +1,7 @@
 import arrow
 from aiohttp import client_exceptions
-from disnake import Embed
-from disnake.ext import commands
+from discord import Embed
+from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES, URLs
@@ -60,6 +60,6 @@ class Latency(commands.Cog):
         await ctx.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Latency cog."""
-    bot.add_cog(Latency(bot))
+    await bot.add_cog(Latency(bot))

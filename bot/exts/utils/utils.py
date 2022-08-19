@@ -3,14 +3,14 @@ import re
 import unicodedata
 from typing import Tuple, Union
 
-from disnake import Colour, Embed, utils
-from disnake.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
-from disnake.utils import snowflake_time
+from discord import Colour, Embed, utils
+from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
+from discord.utils import snowflake_time
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Snowflake
-from bot.decorators import in_whitelist
+from bot.decorators import in_whitelist, not_in_blacklist
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
@@ -48,7 +48,7 @@ class Utils(Cog):
         self.bot = bot
 
     @command()
-    @in_whitelist(channels=(Channels.bot_commands, Channels.discord_bots), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @not_in_blacklist(channels=(Channels.python_general,), override_roles=STAFF_PARTNERS_COMMUNITY_ROLES)
     async def charinfo(self, ctx: Context, *, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
@@ -206,6 +206,6 @@ class Utils(Cog):
             await message.add_reaction(reaction)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Utils cog."""
-    bot.add_cog(Utils(bot))
+    await bot.add_cog(Utils(bot))

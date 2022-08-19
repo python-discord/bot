@@ -269,6 +269,7 @@ guild:
         announcements:                          463658397560995840
         lovefest:                               542431903886606399
         pyweek_announcements:                   897568414044938310
+        revival_of_code:                        988801794668908655
 
         contributors:                           295488872404484098
         help_cooldown:                          699189276025421825
@@ -383,6 +384,7 @@ urls:
 
     # Snekbox
     snekbox_eval_api: !ENV ["SNEKBOX_EVAL_API", "http://snekbox.default.svc.cluster.local/eval"]
+    snekbox_311_eval_api: !ENV ["SNEKBOX_311_EVAL_API", "http://snekbox-311.default.svc.cluster.local/eval"]
 
     # Discord API URLs
     discord_api:        &DISCORD_API "https://discordapp.com/api/v7/"

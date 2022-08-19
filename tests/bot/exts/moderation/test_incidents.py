@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import enum
 import logging
 import typing as t
@@ -7,16 +8,19 @@ from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 import aiohttp
-import disnake
-from async_rediscache import RedisSession
+import discord
 
 from bot.constants import Colours
 from bot.exts.moderation import incidents
 from bot.utils.messages import format_user
+from bot.utils.time import TimestampFormats, discord_timestamp
+from tests.base import RedisTestCase
 from tests.helpers import (
     MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
     MockUser
 )
+
+CURRENT_TIME = datetime.datetime(2022, 1, 1, tzinfo=datetime.timezone.utc)
 
 
 class MockAsyncIterable:
@@ -24,7 +28,7 @@ class MockAsyncIterable:
     Helper for mocking asynchronous for loops.
 
     It does not appear that the `unittest` library currently provides anything that would
-    allow us to simply mock an async iterator, such as `disnake.TextChannel.history`.
+    allow us to simply mock an async iterator, such as `discord.TextChannel.history`.
 
     We therefore write our own helper to wrap a regular synchronous iterable, and feed
     its values via `__anext__` rather than `__next__`.
@@ -60,7 +64,7 @@ class MockSignal(enum.Enum):
     B = "B"
 
 
-mock_404 = disnake.NotFound(
+mock_404 = discord.NotFound(
     response=MagicMock(aiohttp.ClientResponse),  # Mock the erroneous response
     message="Not found",
 )
@@ -70,8 +74,8 @@ class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
     """Collection of tests for the `download_file` helper function."""
 
     async def test_download_file_success(self):
-        """If `to_file` succeeds, function returns the acquired `disnake.File`."""
-        file = MagicMock(disnake.File, filename="bigbadlemon.jpg")
+        """If `to_file` succeeds, function returns the acquired `discord.File`."""
+        file = MagicMock(discord.File, filename="bigbadlemon.jpg")
         attachment = MockAttachment(to_file=AsyncMock(return_value=file))
 
         acquired_file = await incidents.download_file(attachment)
@@ -86,7 +90,7 @@ class TestDownloadFile(unittest.IsolatedAsyncioTestCase):
 
     async def test_download_file_fail(self):
         """If `to_file` fails on a non-404 error, function logs the exception & returns None."""
-        arbitrary_error = disnake.HTTPException(MagicMock(aiohttp.ClientResponse), "Arbitrary API error")
+        arbitrary_error = discord.HTTPException(MagicMock(aiohttp.ClientResponse), "Arbitrary API error")
         attachment = MockAttachment(to_file=AsyncMock(side_effect=arbitrary_error))
 
         with self.assertLogs(logger=incidents.log, level=logging.ERROR):
@@ -100,30 +104,45 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
 
     async def test_make_embed_actioned(self):
         """Embed is coloured green and footer contains 'Actioned' when `outcome=Signal.ACTIONED`."""
-        embed, file = await incidents.make_embed(MockMessage(), incidents.Signal.ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(
+            incident=MockMessage(created_at=CURRENT_TIME),
+            outcome=incidents.Signal.ACTIONED,
+            actioned_by=MockMember()
+        )
 
         self.assertEqual(embed.colour.value, Colours.soft_green)
         self.assertIn("Actioned", embed.footer.text)
 
     async def test_make_embed_not_actioned(self):
         """Embed is coloured red and footer contains 'Rejected' when `outcome=Signal.NOT_ACTIONED`."""
-        embed, file = await incidents.make_embed(MockMessage(), incidents.Signal.NOT_ACTIONED, MockMember())
+        embed, file = await incidents.make_embed(
+            incident=MockMessage(created_at=CURRENT_TIME),
+            outcome=incidents.Signal.NOT_ACTIONED,
+            actioned_by=MockMember()
+        )
 
         self.assertEqual(embed.colour.value, Colours.soft_red)
         self.assertIn("Rejected", embed.footer.text)
 
     async def test_make_embed_content(self):
         """Incident content appears as embed description."""
-        incident = MockMessage(content="this is an incident")
+        incident = MockMessage(content="this is an incident", created_at=CURRENT_TIME)
+
+        reported_timestamp = discord_timestamp(CURRENT_TIME)
+        relative_timestamp = discord_timestamp(CURRENT_TIME, TimestampFormats.RELATIVE)
+
         embed, file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
 
-        self.assertEqual(incident.content, embed.description)
+        self.assertEqual(
+            f"{incident.content}\n\n*Reported {reported_timestamp} ({relative_timestamp}).*",
+            embed.description
+        )
 
     async def test_make_embed_with_attachment_succeeds(self):
         """Incident's attachment is downloaded and displayed in the embed's image field."""
-        file = MagicMock(disnake.File, filename="bigbadjoe.jpg")
+        file = MagicMock(discord.File, filename="bigbadjoe.jpg")
         attachment = MockAttachment(filename="bigbadjoe.jpg")
-        incident = MockMessage(content="this is an incident", attachments=[attachment])
+        incident = MockMessage(content="this is an incident", attachments=[attachment], created_at=CURRENT_TIME)
 
         # Patch `download_file` to return our `file`
         with patch("bot.exts.moderation.incidents.download_file", AsyncMock(return_value=file)):
@@ -135,7 +154,7 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
     async def test_make_embed_with_attachment_fails(self):
         """Incident's attachment fails to download, proxy url is linked instead."""
         attachment = MockAttachment(proxy_url="discord.com/bigbadjoe.jpg")
-        incident = MockMessage(content="this is an incident", attachments=[attachment])
+        incident = MockMessage(content="this is an incident", attachments=[attachment], created_at=CURRENT_TIME)
 
         # Patch `download_file` to return None as if the download failed
         with patch("bot.exts.moderation.incidents.download_file", AsyncMock(return_value=None)):
@@ -270,7 +289,7 @@ class TestAddSignals(unittest.IsolatedAsyncioTestCase):
         self.incident.add_reaction.assert_not_called()
 
 
-class TestIncidents(unittest.IsolatedAsyncioTestCase):
+class TestIncidents(RedisTestCase):
     """
     Tests for bound methods of the `Incidents` cog.
 
@@ -278,22 +297,6 @@ class TestIncidents(unittest.IsolatedAsyncioTestCase):
     for each test function, but not make any assertions on its own. Tests can mutate
     the instance as they wish.
     """
-
-    session = None
-
-    async def flush(self):
-        """Flush everything from the database to prevent carry-overs between tests."""
-        with await self.session.pool as connection:
-            await connection.flushall()
-
-    async def asyncSetUp(self):  # noqa: N802
-        self.session = RedisSession(use_fakeredis=True)
-        await self.session.connect()
-        await self.flush()
-
-    async def asyncTearDown(self):  # noqa: N802
-        if self.session:
-            await self.session.close()
 
     def setUp(self):
         """
@@ -365,7 +368,6 @@ class TestCrawlIncidents(TestIncidents):
 
 class TestArchive(TestIncidents):
     """Tests for the `Incidents.archive` coroutine."""
-
     async def test_archive_webhook_not_found(self):
         """
         Method recovers and returns False when the webhook is not found.
@@ -375,7 +377,11 @@ class TestArchive(TestIncidents):
         """
         self.cog_instance.bot.fetch_webhook = AsyncMock(side_effect=mock_404)
         self.assertFalse(
-            await self.cog_instance.archive(incident=MockMessage(), outcome=MagicMock(), actioned_by=MockMember())
+            await self.cog_instance.archive(
+                incident=MockMessage(created_at=CURRENT_TIME),
+                outcome=MagicMock(),
+                actioned_by=MockMember()
+            )
         )
 
     async def test_archive_relays_incident(self):
@@ -391,10 +397,10 @@ class TestArchive(TestIncidents):
         # Define our own `incident` to be archived
         incident = MockMessage(
             content="this is an incident",
-            author=MockUser(name="author_name", display_avatar=Mock(url="author_avatar")),
+            author=MockUser(display_name="author_name", display_avatar=Mock(url="author_avatar")),
             id=123,
         )
-        built_embed = MagicMock(disnake.Embed, id=123)  # We patch `make_embed` to return this
+        built_embed = MagicMock(discord.Embed, id=123)  # We patch `make_embed` to return this
 
         with patch("bot.exts.moderation.incidents.make_embed", AsyncMock(return_value=(built_embed, None))):
             archive_return = await self.cog_instance.archive(incident, MagicMock(value="A"), MockMember())
@@ -422,7 +428,7 @@ class TestArchive(TestIncidents):
         webhook = MockAsyncWebhook()
         self.cog_instance.bot.fetch_webhook = AsyncMock(return_value=webhook)
 
-        message_from_clyde = MockMessage(author=MockUser(name="clyde the great"))
+        message_from_clyde = MockMessage(author=MockUser(display_name="clyde the great"), created_at=CURRENT_TIME)
         await self.cog_instance.archive(message_from_clyde, MagicMock(incidents.Signal), MockMember())
 
         self.assertNotIn("clyde", webhook.send.call_args.kwargs["username"])
@@ -521,12 +527,13 @@ class TestProcessEvent(TestIncidents):
     async def test_process_event_confirmation_task_is_awaited(self):
         """Task given by `Incidents.make_confirmation_task` is awaited before method exits."""
         mock_task = AsyncMock()
+        mock_member = MockMember(display_name="Bobby Johnson", roles=[MockRole(id=1)])
 
         with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
             await self.cog_instance.process_event(
                 reaction=incidents.Signal.ACTIONED.value,
-                incident=MockMessage(id=123),
-                member=MockMember(roles=[MockRole(id=1)])
+                incident=MockMessage(author=mock_member, id=123, created_at=CURRENT_TIME),
+                member=mock_member
             )
 
         mock_task.assert_awaited()
@@ -545,7 +552,7 @@ class TestProcessEvent(TestIncidents):
             with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
                 await self.cog_instance.process_event(
                     reaction=incidents.Signal.ACTIONED.value,
-                    incident=MockMessage(id=123),
+                    incident=MockMessage(id=123, created_at=CURRENT_TIME),
                     member=MockMember(roles=[MockRole(id=1)])
                 )
         except asyncio.TimeoutError:
@@ -616,7 +623,7 @@ class TestResolveMessage(TestIncidents):
         """
         self.cog_instance.bot._connection._get_message = MagicMock(return_value=None)  # Cache returns None
 
-        arbitrary_error = disnake.HTTPException(
+        arbitrary_error = discord.HTTPException(
             response=MagicMock(aiohttp.ClientResponse),
             message="Arbitrary error",
         )
@@ -649,14 +656,14 @@ class TestOnRawReactionAdd(TestIncidents):
         super().setUp()  # Ensure `cog_instance` is assigned
 
         self.payload = MagicMock(
-            disnake.RawReactionActionEvent,
+            discord.RawReactionActionEvent,
             channel_id=123,  # Patched at class level
             message_id=456,
             member=MockMember(bot=False),
             emoji="reaction",
         )
 
-    async def asyncSetUp(self):  # noqa: N802
+    async def asyncSetUp(self):
         """
         Prepare an empty task and assign it as `crawl_task`.
 

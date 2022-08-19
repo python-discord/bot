@@ -6,11 +6,12 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-import disnake
-from disnake import Color, DMChannel, Embed, HTTPException, Message, errors
-from disnake.ext.commands import Cog, Context
+import discord
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
+from discord import Color, DMChannel, Embed, HTTPException, Message, errors
+from discord.ext.commands import Cog, Context
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.exts.filters.token_remover import TokenRemover
@@ -18,7 +19,7 @@ from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
 from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
-from bot.utils import CogABCMeta, messages, scheduling, time
+from bot.utils import CogABCMeta, messages, time
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
@@ -69,8 +70,6 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_history = MessageHistory()
         self.disable_header = disable_header
 
-        self._start = scheduling.create_task(self.start_watchchannel(), event_loop=self.bot.loop)
-
     @property
     def modlog(self) -> ModLog:
         """Provides access to the ModLog cog for alert purposes."""
@@ -93,7 +92,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         return True
 
-    async def start_watchchannel(self) -> None:
+    async def cog_load(self) -> None:
         """Starts the watch channel by getting the channel, webhook, and user cache ready."""
         await self.bot.wait_until_guild_available()
 
@@ -104,7 +103,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
-        except disnake.HTTPException:
+        except discord.HTTPException:
             self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
         if self.channel is None or self.webhook is None:
@@ -217,7 +216,7 @@ class WatchChannel(metaclass=CogABCMeta):
         username = messages.sub_clyde(username)
         try:
             await self.webhook.send(content=content, username=username, avatar_url=avatar_url, embed=embed)
-        except disnake.HTTPException as exc:
+        except discord.HTTPException as exc:
             self.log.exception(
                 "Failed to send a message to the webhook",
                 exc_info=exc
@@ -265,7 +264,7 @@ class WatchChannel(metaclass=CogABCMeta):
                     username=msg.author.display_name,
                     avatar_url=msg.author.display_avatar.url
                 )
-            except disnake.HTTPException as exc:
+            except discord.HTTPException as exc:
                 self.log.exception(
                     "Failed to send an attachment to the webhook",
                     exc_info=exc
@@ -374,7 +373,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.message_queue.pop(user_id, None)
         self.consumption_queue.pop(user_id, None)
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace("Unloading the cog")
         if self._consume_task and not self._consume_task.done():

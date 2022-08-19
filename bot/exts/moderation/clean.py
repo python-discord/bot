@@ -7,10 +7,10 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Callable, Iterable, Literal, Optional, TYPE_CHECKING, Union
 
-from disnake import Colour, Message, NotFound, TextChannel, User, errors
-from disnake.ext.commands import Cog, Context, Converter, Greedy, group, has_any_role
-from disnake.ext.commands.converter import TextChannelConverter
-from disnake.ext.commands.errors import BadArgument
+from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
+from discord.ext.commands import Cog, Context, Converter, Greedy, command, group, has_any_role
+from discord.ext.commands.converter import TextChannelConverter
+from discord.ext.commands.errors import BadArgument
 
 from bot.bot import Bot
 from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons, MODERATION_ROLES
@@ -130,8 +130,8 @@ class Clean(Cog):
         else:
             if channels == "*":
                 channels = {
-                    channel for channel in ctx.guild.channels
-                    if isinstance(channel, TextChannel)
+                    channel for channel in ctx.guild.channels + ctx.guild.threads
+                    if isinstance(channel, (TextChannel, Thread))
                     # Assume that non-public channels are not needed to optimize for speed.
                     and channel.permissions_for(ctx.guild.default_role).view_channel
                 }
@@ -179,11 +179,11 @@ class Clean(Cog):
 
         def predicate_range(message: Message) -> bool:
             """Check if the message age is between the two limits."""
-            return first_limit <= message.created_at <= second_limit
+            return first_limit < message.created_at < second_limit
 
         def predicate_after(message: Message) -> bool:
-            """Check if the message is older than the first limit."""
-            return message.created_at >= first_limit
+            """Check if the message is younger than the first limit."""
+            return message.created_at > first_limit
 
         predicates = []
         # Set up the correct predicate
@@ -241,9 +241,14 @@ class Clean(Cog):
         self,
         channels: Iterable[TextChannel],
         to_delete: Predicate,
-        before: datetime,
-        after: Optional[datetime] = None
+        after: datetime,
+        before: Optional[datetime] = None
     ) -> tuple[defaultdict[TextChannel, list], list]:
+        """
+        Collect the messages for deletion by iterating over the histories of the appropriate channels.
+
+        The clean cog enforces an upper limit on message age through `_validate_input`.
+        """
         message_mappings = defaultdict(list)
         message_ids = []
 
@@ -419,8 +424,8 @@ class Clean(Cog):
             message_mappings, message_ids = await self._get_messages_from_channels(
                 channels=deletion_channels,
                 to_delete=predicate,
-                before=second_limit,
-                after=first_limit  # Remember first is the earlier datetime.
+                after=first_limit,  # Remember first is the earlier datetime (the "older" time).
+                before=second_limit
             )
 
         if not self.cleaning:
@@ -441,7 +446,10 @@ class Clean(Cog):
             f"A log of the deleted messages can be found here {log_url}."
         )
         if log_url and is_mod_channel(ctx.channel):
-            await ctx.reply(success_message)
+            try:
+                await ctx.reply(success_message)
+            except errors.HTTPException:
+                await ctx.send(success_message)
         elif log_url:
             if mods := self.bot.get_channel(Channels.mods):
                 await mods.send(f"{ctx.author.mention} {success_message}")
@@ -449,7 +457,7 @@ class Clean(Cog):
 
     # region: Commands
 
-    @group(invoke_without_command=True, name="clean", aliases=["clear", "purge"])
+    @group(invoke_without_command=True, name="clean", aliases=("clear",))
     async def clean_group(
         self,
         ctx: Context,
@@ -459,7 +467,7 @@ class Clean(Cog):
         regex: Optional[Regex] = None,
         bots_only: Optional[bool] = False,
         *,
-        channels: CleanChannels = None  # "Optional" with disnake silently ignores incorrect input.
+        channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
     ) -> None:
         """
         Commands for cleaning messages in channels.
@@ -468,7 +476,7 @@ class Clean(Cog):
 
         \u2003• `users`: A series of user mentions, ID's, or names.
         \u2003• `first_limit` and `second_limit`: A message, a duration delta, or an ISO datetime.
-        At least one limit is required.
+        At least one limit is required. The limits are *exclusive*.
         If a message is provided, cleaning will happen in that channel, and channels cannot be provided.
         If only one of them is provided, acts as `clean until`. If both are provided, acts as `clean between`.
         \u2003• `regex`: A regex pattern the message must contain to be deleted.
@@ -483,34 +491,40 @@ class Clean(Cog):
 
         await self._clean_messages(ctx, channels, bots_only, users, regex, first_limit, second_limit)
 
-    @clean_group.command(name="user", aliases=["users"])
-    async def clean_user(
+    @clean_group.command(name="users", aliases=["user"])
+    async def clean_users(
         self,
         ctx: Context,
-        user: User,
+        users: Greedy[User],
         message_or_time: CleanLimit,
         *,
         channels: CleanChannels = None
     ) -> None:
         """
-        Delete messages posted by the provided user, stop cleaning after reaching `message_or_time`.
+        Delete messages posted by the provided users, stop cleaning after reaching `message_or_time`.
 
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
 
-        If a message is specified, `channels` cannot be specified.
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
-        await self._clean_messages(ctx, users=[user], channels=channels, first_limit=message_or_time)
+        await self._clean_messages(ctx, users=users, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
     async def clean_bots(self, ctx: Context, message_or_time: CleanLimit, *, channels: CleanChannels = None) -> None:
         """
-        Delete all messages posted by a bot, stop cleaning after traversing `traverse` messages.
+        Delete all messages posted by a bot, stop cleaning after reaching `message_or_time`.
 
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
 
-        If a message is specified, `channels` cannot be specified.
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
         await self._clean_messages(ctx, bots_only=True, channels=channels, first_limit=message_or_time)
 
@@ -528,11 +542,19 @@ class Clean(Cog):
 
         `message_or_time` can be either a message to stop at (exclusive), a timedelta for max message age, or an ISO
         datetime.
-        If a message is specified, `channels` cannot be specified.
 
-        The pattern must be provided enclosed in backticks.
-        If the pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
-        For example: `[0-9]`
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
+
+        The `regex` pattern must be provided enclosed in backticks.
+
+        For example: \\`[0-9]\\`.
+
+        If the `regex` pattern contains spaces, it still needs to be enclosed in double quotes on top of that.
+
+        For example: "\\`[0-9]\\`".
         """
         await self._clean_messages(ctx, regex=regex, channels=channels, first_limit=message_or_time)
 
@@ -547,7 +569,13 @@ class Clean(Cog):
         Delete all messages until a certain limit.
 
         A limit can be either a message, and ISO date-time string, or a time delta.
-        If a message is specified, `channel` cannot be specified.
+
+        The limit is *exclusive*.
+
+        If a message is specified the cleanup will be limited to the channel the message is in.
+
+        If a timedelta or an ISO datetime is specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
         await self._clean_messages(
             ctx,
@@ -569,8 +597,13 @@ class Clean(Cog):
         The range is specified through two limits.
         A limit can be either a message, and ISO date-time string, or a time delta.
 
+        The limits are *exclusive*.
+
         If two messages are specified, they both must be in the same channel.
-        If a message is specified, `channel` cannot be specified.
+        The cleanup will be limited to the channel the messages are in.
+
+        If two timedeltas or ISO datetimes are specified, `channels` can be specified to clean across multiple channels.
+        An asterisk can also be used to designate cleanup across all channels.
         """
         await self._clean_messages(
             ctx,
@@ -591,6 +624,23 @@ class Clean(Cog):
         await self._send_expiring_message(ctx, message)
         await self._delete_invocation(ctx)
 
+    @command()
+    async def purge(self, ctx: Context, users: Greedy[User], age: Optional[Union[Age, ISODateTime]] = None) -> None:
+        """
+        Clean messages of `users` from all public channels up to a certain message `age` (10 minutes by default).
+
+        Requires 1 or more users to be specified. For channel-based cleaning, use `clean` instead.
+
+        `age` can be a duration or an ISO 8601 timestamp.
+        """
+        if not users:
+            raise BadArgument("At least one user must be specified.")
+
+        if age is None:
+            age = await Age().convert(ctx, "10M")
+
+        await self._clean_messages(ctx, channels="*", users=users, first_limit=age)
+
     # endregion
 
     async def cog_check(self, ctx: Context) -> bool:
@@ -602,6 +652,6 @@ class Clean(Cog):
         self.cleaning = False
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Clean cog."""
-    bot.add_cog(Clean(bot))
+    await bot.add_cog(Clean(bot))

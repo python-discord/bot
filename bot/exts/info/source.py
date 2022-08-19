@@ -2,8 +2,8 @@ import inspect
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
-from disnake import Embed
-from disnake.ext import commands
+from discord import Embed
+from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import URLs
@@ -98,6 +98,6 @@ class BotSource(commands.Cog):
         return embed
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the BotSource cog."""
-    bot.add_cog(BotSource(bot))
+    await bot.add_cog(BotSource(bot))

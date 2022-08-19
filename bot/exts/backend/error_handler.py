@@ -1,10 +1,11 @@
+import copy
 import difflib
 
-from disnake import Embed
-from disnake.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
+from botcore.site_api import ResponseCodeError
+from discord import Embed
+from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from sentry_sdk import push_scope
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.errors import InvalidInfractedUserError, LockedResourceError
@@ -64,6 +65,8 @@ class ErrorHandler(Cog):
 
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
             if await self.try_silence(ctx):
+                return
+            if await self.try_run_eval(ctx):
                 return
             await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
         elif isinstance(e, errors.UserInputError):
@@ -179,6 +182,30 @@ class ErrorHandler(Cog):
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
 
+    async def try_run_eval(self, ctx: Context) -> bool:
+        """
+        Attempt to run eval command with backticks directly after command.
+
+        For example: !eval```print("hi")```
+
+        Return True if command was invoked, else False
+        """
+        msg = copy.copy(ctx.message)
+
+        command, sep, end = msg.content.partition("```")
+        msg.content = command + " " + sep + end
+        new_ctx = await self.bot.get_context(msg)
+
+        eval_command = self.bot.get_command("eval")
+        if eval_command is None or new_ctx.command != eval_command:
+            return False
+
+        log.debug("Running fixed eval command.")
+        new_ctx.invoked_from_error_handler = True
+        await self.bot.invoke(new_ctx)
+
+        return True
+
     async def send_command_suggestion(self, ctx: Context, command_name: str) -> None:
         """Sends user similar commands if any can be found."""
         # No similar tag found, or tag on cooldown -
@@ -284,8 +311,11 @@ class ErrorHandler(Cog):
             await ctx.send("There does not seem to be anything matching your query.")
             ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
-            content = await e.response.json()
-            log.debug(f"API responded with 400 for command {ctx.command}: %r.", content)
+            log.error(
+                "API responded with 400 for command %s: %r.",
+                ctx.command,
+                e.response_json or e.response_text,
+            )
             await ctx.send("According to the API, your request is malformed.")
             ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
@@ -328,6 +358,6 @@ class ErrorHandler(Cog):
             log.error(f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}", exc_info=e)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ErrorHandler cog."""
-    bot.add_cog(ErrorHandler(bot))
+    await bot.add_cog(ErrorHandler(bot))

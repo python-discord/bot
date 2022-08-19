@@ -1,7 +1,7 @@
 import textwrap
 from collections import ChainMap
 
-from disnake.ext.commands import Cog, Context, group, has_any_role
+from discord.ext.commands import Cog, Context, group, has_any_role
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Webhooks
@@ -22,7 +22,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             destination=Channels.big_brother_logs,
             webhook_id=Webhooks.big_brother,
             api_endpoint='bot/infractions',
-            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at'},
+            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at', 'limit': 10_000},
             logger=log
         )
 
@@ -94,7 +94,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             await ctx.send(f":x: {user.mention} is already being watched.")
             return
 
-        # disnake.User instances don't have a roles attribute
+        # discord.User instances don't have a roles attribute
         if hasattr(user, "roles") and any(role.id in MODERATION_ROLES for role in user.roles):
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I must be kind to my masters.")
             return
@@ -169,6 +169,6 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         await ctx.send(message)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the BigBrother cog."""
-    bot.add_cog(BigBrother(bot))
+    await bot.add_cog(BigBrother(bot))

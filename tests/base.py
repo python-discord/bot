@@ -3,8 +3,9 @@ import unittest
 from contextlib import contextmanager
 from typing import Dict
 
-import disnake
-from disnake.ext import commands
+import discord
+from async_rediscache import RedisSession
+from discord.ext import commands
 
 from bot.log import get_logger
 from tests import helpers
@@ -80,7 +81,7 @@ class LoggingTestsMixin:
 
 
 class CommandTestCase(unittest.IsolatedAsyncioTestCase):
-    """TestCase with additional assertions that are useful for testing disnake commands."""
+    """TestCase with additional assertions that are useful for testing Discord commands."""
 
     async def assertHasPermissionsCheck(  # noqa: N802
         self,
@@ -98,9 +99,32 @@ class CommandTestCase(unittest.IsolatedAsyncioTestCase):
         permissions = {k: not v for k, v in permissions.items()}
 
         ctx = helpers.MockContext()
-        ctx.channel.permissions_for.return_value = disnake.Permissions(**permissions)
+        ctx.channel.permissions_for.return_value = discord.Permissions(**permissions)
 
         with self.assertRaises(commands.MissingPermissions) as cm:
             await cmd.can_run(ctx)
 
         self.assertCountEqual(permissions.keys(), cm.exception.missing_permissions)
+
+
+class RedisTestCase(unittest.IsolatedAsyncioTestCase):
+    """
+    Use this as a base class for any test cases that require a redis session.
+
+    This will prepare a fresh redis instance for each test function, and will
+    not make any assertions on its own. Tests can mutate the instance as they wish.
+    """
+
+    session = None
+
+    async def flush(self):
+        """Flush everything from the redis database to prevent carry-overs between tests."""
+        await self.session.client.flushall()
+
+    async def asyncSetUp(self):
+        self.session = await RedisSession(use_fakeredis=True).connect()
+        await self.flush()
+
+    async def asyncTearDown(self):
+        if self.session:
+            await self.session.client.close()

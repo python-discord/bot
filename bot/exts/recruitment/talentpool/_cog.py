@@ -3,19 +3,20 @@ from collections import ChainMap, defaultdict
 from io import StringIO
 from typing import Optional, Union
 
-import disnake
+import discord
 from async_rediscache import RedisCache
-from disnake import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
-from disnake.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
+from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
+from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import scheduling, time
+from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
@@ -96,33 +97,33 @@ class TalentPool(Cog, name="Talentpool"):
         manually reviewed with the `tp post_review <user_id>` command.
         """
         if await self.autoreview_enabled():
-            await ctx.send(":x: Autoreview is already enabled")
+            await ctx.send(":x: Autoreview is already enabled.")
             return
 
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, True)
         await self.reviewer.reschedule_reviews()
-        await ctx.send(":white_check_mark: Autoreview enabled")
+        await ctx.send(":white_check_mark: Autoreview enabled.")
 
     @nomination_autoreview_group.command(name="disable", aliases=("off",))
     @has_any_role(Roles.admins)
     async def autoreview_disable(self, ctx: Context) -> None:
         """Disable automatic posting of reviews."""
         if not await self.autoreview_enabled():
-            await ctx.send(":x: Autoreview is already disabled")
+            await ctx.send(":x: Autoreview is already disabled.")
             return
 
         await self.talentpool_settings.set(AUTOREVIEW_ENABLED_KEY, False)
         self.reviewer.cancel_all()
-        await ctx.send(":white_check_mark: Autoreview disabled")
+        await ctx.send(":white_check_mark: Autoreview disabled.")
 
     @nomination_autoreview_group.command(name="status")
     @has_any_role(*MODERATION_ROLES)
     async def autoreview_status(self, ctx: Context) -> None:
         """Show whether automatic posting of reviews is enabled or disabled."""
         if await self.autoreview_enabled():
-            await ctx.send("Autoreview is currently enabled")
+            await ctx.send("Autoreview is currently enabled.")
         else:
-            await ctx.send("Autoreview is currently disabled")
+            await ctx.send("Autoreview is currently disabled.")
 
     @nomination_group.command(
         name="nominees",
@@ -236,10 +237,10 @@ class TalentPool(Cog, name="Talentpool"):
             if any(role.id in MODERATION_ROLES for role in ctx.author.roles):
                 await ctx.send(
                     f":x: Nominations should be run in the <#{Channels.nominations}> channel. "
-                    "Use `!tp forcenominate` to override this check."
+                    f"Use `{BotConfig.prefix}tp forcenominate` to override this check."
                 )
             else:
-                await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel")
+                await ctx.send(f":x: Nominations must be run in the <#{Channels.nominations}> channel.")
             return
 
         await self._nominate_user(ctx, user, reason)
@@ -255,11 +256,11 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         if not await self.refresh_cache():
-            await ctx.send(f":x: Failed to update the cache; can't add {user}")
+            await ctx.send(f":x: Failed to update the cache; can't add {user.mention}.")
             return
 
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response
@@ -278,9 +279,9 @@ class TalentPool(Cog, name="Talentpool"):
 
             if resp.status == 400:
                 if response_data.get('user', False):
-                    await ctx.send(":x: The specified user can't be found in the database tables")
+                    await ctx.send(f":x: {user.mention} can't be found in the database tables.")
                 elif response_data.get('actor', False):
-                    await ctx.send(":x: You have already nominated this user")
+                    await ctx.send(f":x: You have already nominated {user.mention}.")
 
                 return
             else:
@@ -291,9 +292,7 @@ class TalentPool(Cog, name="Talentpool"):
         if await self.autoreview_enabled() and user.id not in self.reviewer:
             self.reviewer.schedule_review(user.id)
 
-        msg = f"✅ The nomination for {user.mention} has been added to the talent pool"
-
-        await ctx.send(msg)
+        await ctx.send(f"✅ The nomination for {user.mention} has been added to the talent pool.")
 
     @nomination_group.command(name='history', aliases=('info', 'search'))
     @has_any_role(*MODERATION_ROLES)
@@ -307,7 +306,7 @@ class TalentPool(Cog, name="Talentpool"):
             }
         )
         if not result:
-            await ctx.send(":warning: This user has never been nominated")
+            await ctx.send(f":warning: {user.mention} has never been nominated.")
             return
 
         embed = Embed(
@@ -333,13 +332,13 @@ class TalentPool(Cog, name="Talentpool"):
         Providing a `reason` is required.
         """
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maximum allowed characters for the end reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
 
         if await self.end_nomination(user.id, reason):
-            await ctx.send(f":white_check_mark: Successfully un-nominated {user}")
+            await ctx.send(f":white_check_mark: Successfully un-nominated {user.mention}.")
         else:
-            await ctx.send(":x: The specified user does not have an active nomination")
+            await ctx.send(f":x: {user.mention} doesn't have an active nomination.")
 
     @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
     @has_any_role(*STAFF_ROLES)
@@ -374,7 +373,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             if ctx.channel.id != Channels.nominations:
-                await ctx.send(f":x: Nomination edits must be run in the <#{Channels.nominations}> channel")
+                await ctx.send(f":x: Nomination edits must be run in the <#{Channels.nominations}> channel.")
                 return
 
             if nominator != ctx.author or isinstance(nominee_or_nomination_id, int):
@@ -401,7 +400,7 @@ class TalentPool(Cog, name="Talentpool"):
     ) -> None:
         """Edit a nomination reason in the database after validating the input."""
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
         if isinstance(target, int):
             nomination_id = target
@@ -409,7 +408,7 @@ class TalentPool(Cog, name="Talentpool"):
             if nomination := self.cache.get(target.id):
                 nomination_id = nomination["id"]
             else:
-                await ctx.send("No active nomination found for that member.")
+                await ctx.send(f":x: {target.mention} doesn't have an active nomination.")
                 return
 
         try:
@@ -417,13 +416,13 @@ class TalentPool(Cog, name="Talentpool"):
         except ResponseCodeError as e:
             if e.response.status == 404:
                 log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
-                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
+                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
                 return
             else:
                 raise
 
         if not nomination["active"]:
-            await ctx.send(":x: Can't edit the reason of an inactive nomination.")
+            await ctx.send(f":x: <@{nomination['user']}> doesn't have an active nomination.")
             return
 
         if not any(entry["actor"] == actor.id for entry in nomination["entries"]):
@@ -437,14 +436,14 @@ class TalentPool(Cog, name="Talentpool"):
             json={"actor": actor.id, "reason": reason}
         )
         await self.refresh_cache()  # Update cache
-        await ctx.send(":white_check_mark: Successfully updated nomination reason.")
+        await ctx.send(f":white_check_mark: Updated the nomination reason for <@{nomination['user']}>.")
 
     @nomination_edit_group.command(name='end_reason')
     @has_any_role(*MODERATION_ROLES)
     async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """Edits the unnominate reason for the nomination with the given `id`."""
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maximum allowed characters for the end reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
 
         try:
@@ -452,13 +451,15 @@ class TalentPool(Cog, name="Talentpool"):
         except ResponseCodeError as e:
             if e.response.status == 404:
                 log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
-                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`")
+                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
                 return
             else:
                 raise
 
         if nomination["active"]:
-            await ctx.send(":x: Can't edit the end reason of an active nomination.")
+            await ctx.send(
+                f":x: Can't edit the nomination end reason for <@{nomination['user']}> because it's still active."
+            )
             return
 
         log.trace(f"Changing end reason for nomination with id {nomination_id} to {repr(reason)}")
@@ -468,7 +469,7 @@ class TalentPool(Cog, name="Talentpool"):
             json={"end_reason": reason}
         )
         await self.refresh_cache()  # Update cache.
-        await ctx.send(":white_check_mark: Updated the end reason of the nomination!")
+        await ctx.send(f":white_check_mark: Updated the nomination end reason for <@{nomination['user']}>.")
 
     @nomination_group.command(aliases=('mr',))
     @has_any_role(*MODERATION_ROLES)
@@ -483,7 +484,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
         review, _, _ = await self.reviewer.make_review(user_id)
-        file = disnake.File(StringIO(review), f"{user_id}_review.md")
+        file = discord.File(StringIO(review), f"{user_id}_review.md")
         await ctx.send(file=file)
 
     @nomination_group.command(aliases=('review',))
@@ -602,7 +603,6 @@ class TalentPool(Cog, name="Talentpool"):
 
         return lines.strip()
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancels all review tasks on cog unload."""
-        super().cog_unload()
         self.reviewer.cancel_all()
