@@ -1,13 +1,41 @@
 import datetime
-import logging
 
+import arrow
 import discord
 from discord.ext import commands, tasks
 
 from bot import constants, utils
 from bot.bot import Bot
+from bot.log import get_logger
+from bot.utils.channel import get_or_fetch_channel
+from bot.utils.members import has_role_id
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
+
+PATREON_INFORMATION = (
+    "Python Discord is not-for-profit and volunteer run, so we rely on Patreon donations to do what we do. "
+    "We use the money we get to offer excellent prizes for all of our events. Prizes like t-shirts, "
+    "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\n"
+    "You can read more about how Patreon donations help us, and consider donating yourself, on our patreon page "
+    "[here](https://pydis.com/patreon)!"
+)
+
+# List of tuples containing tier number and discord role id
+PATREON_TIERS: list[tuple[int, int]] = [
+    (3, constants.Roles.patreon_tier_3),
+    (2, constants.Roles.patreon_tier_2),
+    (1, constants.Roles.patreon_tier_1),
+]
+
+
+def get_patreon_tier(member: discord.Member) -> int:
+    """
+    Get the patreon tier of `member`.
+
+    A patreon tier of 0 indicates the user is not a patreon.
+    """
+    # Iterates over PATREON_TIERS, returning the first tier that matches the user, else 0.
+    return next((tier for tier, role_id in PATREON_TIERS if has_role_id(member, role_id)), 0)
 
 
 class Patreon(commands.Cog):
@@ -21,111 +49,54 @@ class Patreon(commands.Cog):
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         """Send a message when someone receives a patreon role."""
-        # Ensure the caches are up to date
-        await self.bot.wait_until_guild_available()
+        old_patreon_tier = get_patreon_tier(before)
+        new_patreon_tier = get_patreon_tier(after)
 
-        guild = after.guild
-
-        patreon_tier_1_role = guild.get_role(constants.Roles.patreon_tier_1)
-        patreon_tier_2_role = guild.get_role(constants.Roles.patreon_tier_2)
-        patreon_tier_3_role = guild.get_role(constants.Roles.patreon_tier_3)
-
-        current_patreon_tier = 0
-        new_patreon_tier = 0
-
-        # Both of these go from top to bottom to give the user their highest patreon role if they have multiple
-
-        if patreon_tier_3_role in before.roles:
-            current_patreon_tier = 3
-        elif patreon_tier_2_role in before.roles:
-            current_patreon_tier = 2
-        elif patreon_tier_1_role in before.roles:
-            current_patreon_tier = 1
-
-        if patreon_tier_3_role in after.roles:
-            new_patreon_tier = 3
-            colour = patreon_tier_3_role.colour
-        elif patreon_tier_2_role in after.roles:
-            new_patreon_tier = 2
-            colour = patreon_tier_2_role.colour
-        elif patreon_tier_1_role in after.roles:
-            new_patreon_tier = 1
-            colour = patreon_tier_1_role.colour
-
-        if not new_patreon_tier > current_patreon_tier:
+        if not new_patreon_tier > old_patreon_tier:
             return
 
         message = (
             f":tada: {after.mention} just became a **tier {new_patreon_tier}** patron!\n"
             "[Support us on Patreon](https://pydis.com/patreon)"
         )
+        channel = await utils.channel.get_or_fetch_channel(constants.Channels.meta)
+        role = after.guild.get_role(new_patreon_tier)
 
-        sending_channel = utils.channel.get_or_fetch_channel(constants.Channels.meta)
-
-        await sending_channel.send(
+        await channel.send(
             embed=discord.Embed(
                 description=message,
-                colour=colour
+                colour=role.colour,
             )
         )
 
-    async def send_current_supporters(self, channel: discord.TextChannel) -> None:
+    async def send_current_supporters(self, channel: discord.abc.Messageable) -> None:
         """Send the current list of patreon supporters, sorted by tier level."""
-        await self.bot.wait_until_guild_available()
-
         guild = self.bot.get_guild(constants.Guild.id)
 
-        tier_1_or_above_patrons = set(guild.get_role(constants.Roles.patreon_tier_1).members)
-        tier_2_or_above_patrons = set(guild.get_role(constants.Roles.patreon_tier_2).members)
-        tier_3_patrons = set(guild.get_role(constants.Roles.patreon_tier_3).members)
-
-        tier_1_patrons = tier_1_or_above_patrons - tier_2_or_above_patrons - tier_3_patrons
-        tier_2_patrons = tier_2_or_above_patrons - tier_3_patrons
-
-        tier_1_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_1_patrons}
-        tier_2_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_2_patrons}
-        tier_3_patrons = {f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in tier_3_patrons}
-
         embed_list = []
+        for tier, role_id in PATREON_TIERS:
+            role = guild.get_role(role_id)
 
-        embed_patron_info = discord.Embed(
+            # Filter out any members where this is not their highest tier.
+            patrons = [member for member in role.members if get_patreon_tier(member) == tier]
+
+            names = [f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in patrons]
+            embed = discord.Embed(
+                title=f"{role.name}",
+                description="\n".join(names),
+                colour=role.colour
+            )
+            embed_list.append(embed)
+
+        main_embed = discord.Embed(
             title="Patreon Supporters",
             description=(
-                "We use the money from Patreon to offer excellent prizes for all of our events. Prizes like t-shirts, "
-                "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\n"
-
-                "You can read more about how Patreon supports us, or even support us yourself, on our Patreon page "
-                "[here](https://pydis.com/patreon)!"
-            )
+                PATREON_INFORMATION +
+                "\n\nThank you to the users listed below who are already supporting us!"
+            ),
         )
 
-        embed_list.append(embed_patron_info)
-
-        if tier_1_patrons:
-            embed_tier_1 = discord.Embed(
-                title="Tier 1 patrons",
-                description="\n".join(tier_1_patrons),
-                colour=guild.get_role(constants.Roles.patreon_tier_1).colour
-            )
-            embed_list.append(embed_tier_1)
-
-        if tier_2_patrons:
-            embed_tier_2 = discord.Embed(
-                title="Tier 2 patrons",
-                description="\n".join(tier_2_patrons),
-                colour=guild.get_role(constants.Roles.patreon_tier_2).colour
-            )
-            embed_list.append(embed_tier_2)
-
-        if tier_3_patrons:
-            embed_tier_3 = discord.Embed(
-                title="Tier 3 patrons",
-                description="\n".join(tier_3_patrons),
-                colour=guild.get_role(constants.Roles.patreon_tier_3).colour
-            )
-            embed_list.append(embed_tier_3)
-
-        await channel.send(embeds=embed_list)
+        await channel.send(embeds=(main_embed, *embed_list))
 
     @commands.command("patrons")
     async def current_supporters_command(self, ctx: commands.Context) -> None:
@@ -135,28 +106,20 @@ class Patreon(commands.Cog):
     @tasks.loop(time=datetime.time(hour=17))
     async def current_monthly_supporters(self) -> None:
         """A loop running daily to see if it's the first of the month. If so call `self.send_current_supporters()`."""
-        date = datetime.date.today().day
-
-        if date == 1:
-            await self.send_current_supporters(
-                utils.channels.get_or_fetch_channel(constants.Channels.meta)
-            )
+        now = arrow.utcnow()
+        if now.day == 1:
+            meta_channel = await get_or_fetch_channel(constants.Channels.meta)
+            await self.send_current_supporters(meta_channel)
 
     @commands.command("patreon")
     async def patreon_info(self, ctx: commands.Context) -> None:
         """Send information about how Python Discord uses Patreon."""
         await ctx.send(embed=discord.Embed(
             title="Patreon",
-            description=(
-                "We use the money from Patreon to offer excellent prizes for all of our events. Prizes like t-shirts, "
-                "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\n"
-
-                "You can read more about how Patreon supports us, or even support us yourself, on our Patreon page "
-                "[here](https://pydis.com/patreon)!"
-            )
+            description=PATREON_INFORMATION
         ))
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Patreon cog."""
-    bot.add_cog(Patreon(bot))
+    await bot.add_cog(Patreon(bot))

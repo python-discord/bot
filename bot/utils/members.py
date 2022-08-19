@@ -46,3 +46,8 @@ async def handle_role_change(
         )
     except discord.HTTPException as e:
         log.error(f"Failed to change role for {member} ({member.id}): {e.status} {e.code}")
+
+
+def has_role_id(member: discord.Member, role_id: int) -> bool:
+    """Return boolean representing whether a member has the given role."""
+    return any(role_id == role.id for role in member.roles)
