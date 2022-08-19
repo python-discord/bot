@@ -518,12 +518,12 @@ class Information(Cog):
         await self.send_raw_content(ctx, message, json=True)
 
     @command(aliases=("rule",))
-    async def rules(self, ctx: Context, rules: Greedy[int]) -> None:
+    async def rules(self, ctx: Context, rules: Greedy[int], keyword: Optional[str]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
 
-        if not rules:
-            # Rules were not submitted. Return the default description.
+        if not rules and not keyword:
+            # Neither rules nor keywords were submitted. Return the default description.
             rules_embed.description = (
                 "The rules and guidelines that apply to this community can be found on"
                 " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
@@ -547,7 +547,21 @@ class Information(Cog):
         for rule in rules:
             self.bot.stats.incr(f"rule_uses.{rule}")
 
-        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
+        if rules:
+            final_rules = tuple(f"**{pick}.** {full_rules[pick - 1][0]}" for pick in rules)
+        else:
+            final_rules = tuple(f"**{pick + 1}** {full_rules[pick][0]}" for pick, rule in enumerate(full_rules)
+                                if keyword in rule[1])
+
+        if not rules and not final_rules:
+            # This would mean that we didn't find a match for the used keyword
+            rules_embed.description = (
+                f"There are currently no rules that correspond to keyword: {keyword}."
+                " If you think it should be added, please ask our admins and they'll take care of the rest."
+            )
+
+            await ctx.send(embed=rules_embed)
+            return
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
