@@ -1,6 +1,7 @@
 import textwrap
 import typing as t
 
+import arrow
 import discord
 from discord import Member
 from discord.ext import commands
@@ -11,6 +12,7 @@ from bot.bot import Bot
 from bot.constants import Event
 from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
+from bot.exts.filters.filtering import AUTO_BAN_DURATION, AUTO_BAN_REASON
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -152,6 +154,11 @@ class Infractions(InfractionScheduler, commands.Cog):
             pass
         ctx.send = send
         await infr_manage_cog.infraction_append(ctx, infraction, None, reason=f"[Clean log]({log_url})")
+
+    @command()
+    async def compban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+        """Same as cleanban, but specifically with the ban reason and duration used for compromised accounts."""
+        await self.cleanban(ctx, user, duration=(arrow.utcnow() + AUTO_BAN_DURATION).datetime, reason=AUTO_BAN_REASON)
 
     @command(aliases=("vban",))
     async def voiceban(self, ctx: Context) -> None:
