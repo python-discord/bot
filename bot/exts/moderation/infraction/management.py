@@ -79,7 +79,7 @@ class ModManagement(commands.Cog):
         reason = infraction["reason"] or "No reason provided."
         reason += "\n\n**This is a re-sent message for a previously applied infraction which may have been edited.**"
 
-        if await _utils.notify_infraction(infraction, member, reason, resend=True):
+        if await _utils.notify_infraction(infraction, member, reason):
             await ctx.send(f":incoming_envelope: Resent DM for infraction `{id_}`.")
         else:
             await ctx.send(f"{constants.Emojis.failmail} Failed to resend DM for infraction `{id_}`.")
