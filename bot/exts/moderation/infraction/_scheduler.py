@@ -444,7 +444,7 @@ class InfractionScheduler:
             # Mark infraction as inactive in the database.
             log.trace(f"Marking infraction #{id_} as inactive in the database.")
 
-            data = {"active": False, "reason": ""}
+            data = {"active": False}
 
             if pardon_reason is not None:
                 # Append pardon reason to infraction in database.
