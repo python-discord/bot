@@ -20,7 +20,8 @@ PATREON_INFORMATION = (
     "[here](https://pydis.com/patreon)!"
 )
 
-# List of tuples containing tier number and discord role id
+# List of tuples containing tier number and Discord role ID.
+# Ordered from highest tier to lowest.
 PATREON_TIERS: list[tuple[int, int]] = [
     (3, constants.Roles.patreon_tier_3),
     (2, constants.Roles.patreon_tier_2),
@@ -34,8 +35,10 @@ def get_patreon_tier(member: discord.Member) -> int:
 
     A patreon tier of 0 indicates the user is not a patreon.
     """
-    # Iterates over PATREON_TIERS, returning the first tier that matches the user, else 0.
-    return next((tier for tier, role_id in PATREON_TIERS if has_role_id(member, role_id)), 0)
+    for tier, role_id in PATREON_TIERS:
+        if has_role_id(member, role_id):
+            return tier
+    return 0
 
 
 class Patreon(commands.Cog):
@@ -79,11 +82,11 @@ class Patreon(commands.Cog):
 
             # Filter out any members where this is not their highest tier.
             patrons = [member for member in role.members if get_patreon_tier(member) == tier]
+            patron_names = [f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in patrons]
 
-            names = [f"{patron.mention} ({patron.name}#{patron.discriminator})" for patron in patrons]
             embed = discord.Embed(
                 title=f"{role.name}",
-                description="\n".join(names),
+                description="\n".join(patron_names),
                 colour=role.colour
             )
             embed_list.append(embed)
