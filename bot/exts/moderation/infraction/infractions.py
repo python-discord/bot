@@ -125,8 +125,6 @@ class Infractions(InfractionScheduler, commands.Cog):
         infraction = await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
         if not infraction or not infraction.get("id"):
             # Ban was unsuccessful, quit early.
-            await ctx.send(":x: Failed to apply ban.")
-            log.error("Failed to apply ban to user %d", user.id)
             return
 
         # Calling commands directly skips discord.py's convertors, so we need to convert args manually.
