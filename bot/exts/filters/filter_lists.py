@@ -1,13 +1,13 @@
 import re
 from typing import Optional
 
+import discord
 from botcore.site_api import ResponseCodeError
-from discord import Colour, Embed
 from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels
+from bot.constants import Channels, Colours
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -179,9 +179,9 @@ class FilterLists(Cog):
 
         # Build the embed
         list_type_plural = list_type.lower().replace("_", " ").title() + "s"
-        embed = Embed(
+        embed = discord.Embed(
             title=f"{allow_type.title()}ed {list_type_plural} ({len(result)} total)",
-            colour=Colour.blue()
+            colour=Colours.blue
         )
         log.trace(f"Trying to list {len(result)} items from the {list_type.lower()} {allow_type}")
 
