@@ -9,9 +9,12 @@ from typing import Literal, Optional, Tuple
 
 from botcore.utils import interactions
 from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
-from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
+from discord import (
+    AllowedMentions, HTTPException, Interaction, Message, NotFound, Object, Reaction, User, app_commands, enums, ui
+)
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 
+from bot import constants
 from bot.bot import Bot
 from bot.constants import Categories, Channels, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
@@ -158,6 +161,14 @@ class Snekbox(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+        # The `app_commands.context_menu` decorator does not support cogs
+        self.ctx_menu = app_commands.ContextMenu(
+            name="Run code",
+            callback=self.eval_ctx_menu,
+        )
+        self.bot.tree.add_command(self.ctx_menu)
+
         self.jobs = {}
 
     def build_python_version_switcher_view(
@@ -480,6 +491,13 @@ class Snekbox(Cog):
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
+    async def eval_ctx_menu(self, interaction: Interaction, message: Message) -> None:
+        """Same functionality as `eval_command` but invoked using a context menu."""
+        fake_ctx: Context = await Context.from_interaction(interaction)
+        python_version = "3.11"
+        code = await CodeblockConverter.convert(fake_ctx, message.content)
+        await self.run_job("eval", fake_ctx, python_version, "\n".join(code))
+
     @command(name="eval", aliases=("e",), usage="[python_version] <code, ...>")
     @guild_only()
     @redirect_output(
@@ -568,3 +586,7 @@ def predicate_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bo
 async def setup(bot: Bot) -> None:
     """Load the Snekbox cog."""
     await bot.add_cog(Snekbox(bot))
+
+    guild = Object(id=constants.Guild.id)
+    bot.tree.copy_global_to(guild=guild)
+    await bot.tree.sync(guild=guild)  # Syncs the application commands present in this cog
