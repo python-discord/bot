@@ -307,7 +307,7 @@ class CustomHelpCommand(HelpCommand):
         # Remove line breaks from docstrings, if not used to separate paragraphs.
         # Allow overriding this behaviour via putting \u2003 at the start of a line.
         formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help)
-        command_details += f"*{formatted_doc or 'No details provided.'}*\n"
+        command_details += f"{formatted_doc or 'No details provided.'}\n"
         embed.description = command_details
 
         # If the help is invoked in the context of an error, don't show subcommand navigation.
