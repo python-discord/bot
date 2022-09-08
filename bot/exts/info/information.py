@@ -521,6 +521,7 @@ class Information(Cog):
     async def rules(self, ctx: Context, rules: Greedy[int], keyword: Optional[str]) -> None:
         """Provides a link to all rules or, if specified, displays specific rule(s)."""
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
+        keyword = keyword.lower()
 
         if not rules and not keyword:
             # Neither rules nor keywords were submitted. Return the default description.
@@ -548,9 +549,13 @@ class Information(Cog):
             self.bot.stats.incr(f"rule_uses.{rule}")
 
         if rules:
-            final_rules = tuple(f"**{pick}.** {full_rules[pick - 1][0]}" for pick in rules)
+            final_rules = tuple(f"**{pick}.** {full_rules[pick - 1][0]}\n\n"
+                                f"You can also invoke this rule with the following keywords: "
+                                f"{', '.join(full_rules[pick -1][1])}" for pick in rules)
         else:
-            final_rules = tuple(f"**{pick + 1}** {full_rules[pick][0]}" for pick, rule in enumerate(full_rules)
+            final_rules = tuple(f"**{pick + 1}** {full_rules[pick][0]}\n\n"
+                                f"You can also invoke this rule with the following keywords: "
+                                f"{', '.join(full_rules[pick][1])}" for pick, rule in enumerate(full_rules)
                                 if keyword in rule[1])
 
         if not rules and not final_rules:
