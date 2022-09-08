@@ -560,12 +560,9 @@ class Information(Cog):
 
         if not rules and not final_rules:
             # This would mean that we didn't find a match for the used keyword
-            rules_embed.description = (
+            await ctx.send(
                 f"There are currently no rules that correspond to keyword: {keyword}."
-                " If you think it should be added, please ask our admins and they'll take care of the rest."
-            )
-
-            await ctx.send(embed=rules_embed)
+                "If you think it should be added, please ask our admins and they'll take care of the rest.")
             return
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
