@@ -331,7 +331,7 @@ class CustomHelpCommand(HelpCommand):
         for command in commands_:
             signature = f" {command.signature}" if command.signature else ""
             details.append(
-                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n*{command.short_doc or 'No details provided'}*"
+                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n{command.short_doc or 'No details provided'}"
             )
         if return_as_list:
             return details
@@ -372,7 +372,7 @@ class CustomHelpCommand(HelpCommand):
 
         embed = Embed()
         embed.set_author(name="Command Help", icon_url=constants.Icons.questionmark)
-        embed.description = f"**{cog.qualified_name}**\n*{cog.description}*"
+        embed.description = f"**{cog.qualified_name}**\n{cog.description}"
 
         command_details = self.get_commands_brief_details(commands_)
         if command_details:
@@ -412,7 +412,7 @@ class CustomHelpCommand(HelpCommand):
         filtered_commands = await self.filter_commands(all_commands, sort=True)
 
         command_detail_lines = self.get_commands_brief_details(filtered_commands, return_as_list=True)
-        description = f"**{category.name}**\n*{category.description}*"
+        description = f"**{category.name}**\n{category.description}"
 
         if command_detail_lines:
             description += "\n\n**Commands:**"
