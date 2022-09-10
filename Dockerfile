@@ -3,7 +3,7 @@ FROM --platform=linux/amd64 python:3.10-slim
 # Set pip to have no saved cache
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
-    POETRY_VERSION=1.1.15 \
+    POETRY_VERSION=1.2.0 \
     POETRY_HOME="/opt/poetry" \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     POETRY_NO_INTERACTION=1 \
