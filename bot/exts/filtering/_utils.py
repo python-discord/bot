@@ -84,14 +84,18 @@ class FieldRequiring(ABC):
         ...
 
     def __init_subclass__(cls, **kwargs):
+        def inherited(attr: str) -> bool:
+            """True if `attr` was inherited from a parent class."""
+            for parent in cls.__mro__[1:-1]:  # The first element is the class itself, last element is object.
+                if hasattr(parent, attr):  # The attribute was inherited.
+                    return True
+            return False
+
         # If a new attribute with the value MUST_SET_UNIQUE was defined in an abstract class, record it.
         if inspect.isabstract(cls):
             for attribute in dir(cls):
                 if getattr(cls, attribute, None) is FieldRequiring.MUST_SET_UNIQUE:
-                    for parent in cls.__mro__[1:-1]:  # The first element is the class itself, last element is object.
-                        if hasattr(parent, attribute):  # The attribute was inherited.
-                            break
-                    else:
+                    if not inherited(attribute):
                         # A new attribute with the value MUST_SET_UNIQUE.
                         FieldRequiring.__unique_attributes[cls][attribute] = set()
             return
@@ -100,9 +104,9 @@ class FieldRequiring(ABC):
             if attribute.startswith("__") or attribute in ("MUST_SET", "MUST_SET_UNIQUE"):
                 continue
             value = getattr(cls, attribute)
-            if value is FieldRequiring.MUST_SET:
+            if value is FieldRequiring.MUST_SET and inherited(attribute):
                 raise ValueError(f"You must set attribute {attribute!r} when creating {cls!r}")
-            elif value is FieldRequiring.MUST_SET_UNIQUE:
+            elif value is FieldRequiring.MUST_SET_UNIQUE and inherited(attribute):
                 raise ValueError(f"You must set a unique value to attribute {attribute!r} when creating {cls!r}")
             else:
                 # Check if the value needs to be unique.

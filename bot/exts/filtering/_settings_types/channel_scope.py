@@ -1,21 +1,16 @@
-from typing import Any, Union
+from typing import ClassVar, Union
+
+from pydantic import validator
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ValidationEntry
 
 
-def maybe_cast_to_int(item: str) -> Union[str, int]:
-    """Cast the item to int if it consists of only digit, or leave as is otherwise."""
-    if item.isdigit():
-        return int(item)
-    return item
-
-
 class ChannelScope(ValidationEntry):
     """A setting entry which tells whether the filter was invoked in a whitelisted channel or category."""
 
-    name = "channel_scope"
-    description = {
+    name: ClassVar[str] = "channel_scope"
+    description: ClassVar[str] = {
         "disabled_channels": "A list of channel IDs or channel names. The filter will not trigger in these channels.",
         "disabled_categories": (
             "A list of category IDs or category names. The filter will not trigger in these categories."
@@ -26,22 +21,25 @@ class ChannelScope(ValidationEntry):
         )
     }
 
-    def __init__(self, entry_data: Any):
-        super().__init__(entry_data)
-        if entry_data["disabled_channels"]:
-            self.disabled_channels = set(map(maybe_cast_to_int, entry_data["disabled_channels"]))
-        else:
-            self.disabled_channels = set()
+    disabled_channels: set[Union[str, int]]
+    disabled_categories: set[Union[str, int]]
+    enabled_channels: set[Union[str, int]]
 
-        if entry_data["disabled_categories"]:
-            self.disabled_categories = set(map(maybe_cast_to_int, entry_data["disabled_categories"]))
-        else:
-            self.disabled_categories = set()
+    @validator("*", pre=True)
+    @classmethod
+    def init_if_sequence_none(cls, sequence: list[str]) -> list[str]:
+        """Initialize an empty sequence if the value is None."""
+        if sequence is None:
+            return []
+        return sequence
 
-        if entry_data["enabled_channels"]:
-            self.enabled_channels = set(map(maybe_cast_to_int, entry_data["enabled_channels"]))
-        else:
-            self.enabled_channels = set()
+    @validator("*", each_item=True)
+    @classmethod
+    def maybe_cast_items(cls, channel_or_category: str) -> Union[str, int]:
+        """Cast to int each value in each sequence if it is alphanumeric."""
+        if channel_or_category.isdigit():
+            return int(channel_or_category)
+        return channel_or_category
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """

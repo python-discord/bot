@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional, Union
+
+from pydantic import BaseModel
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._utils import FieldRequiring
 
 
-class SettingsEntry(FieldRequiring):
+class SettingsEntry(BaseModel, FieldRequiring):
     """
     A basic entry in the settings field appearing in every filter list and filter.
 
@@ -16,34 +18,10 @@ class SettingsEntry(FieldRequiring):
 
     # Each subclass must define a name matching the entry name we're expecting to receive from the database.
     # Names must be unique across all filter lists.
-    name = FieldRequiring.MUST_SET_UNIQUE
+    name: ClassVar[str] = FieldRequiring.MUST_SET_UNIQUE
     # Each subclass must define a description of what it does. If the data an entry type receives is comprised of
     # several DB fields, the value should a dictionary of field names and their descriptions.
-    description = FieldRequiring.MUST_SET
-
-    @abstractmethod
-    def __init__(self, entry_data: Any):
-        super().__init__()
-        self._dict = {}
-
-    def __setattr__(self, key: str, value: Any) -> None:
-        super().__setattr__(key, value)
-        if key == "_dict":
-            return
-        self._dict[key] = value
-
-    def __eq__(self, other: SettingsEntry) -> bool:
-        if not isinstance(other, SettingsEntry):
-            return NotImplemented
-        return self._dict == other._dict
-
-    def to_dict(self) -> dict[str, Any]:
-        """Return a dictionary representation of the entry."""
-        return self._dict.copy()
-
-    def copy(self) -> SettingsEntry:
-        """Return a new entry object with the same parameters."""
-        return self.__class__(self.to_dict())
+    description: ClassVar[Union[str, dict[str, str]]] = FieldRequiring.MUST_SET
 
     @classmethod
     def create(cls, entry_data: Optional[dict[str, Any]], *, keep_empty: bool = False) -> Optional[SettingsEntry]:
@@ -58,7 +36,9 @@ class SettingsEntry(FieldRequiring):
         if not keep_empty and hasattr(entry_data, "values") and not any(value for value in entry_data.values()):
             return None
 
-        return cls(entry_data)
+        if not isinstance(entry_data, dict):
+            entry_data = {cls.name: entry_data}
+        return cls(**entry_data)
 
 
 class ValidationEntry(SettingsEntry):

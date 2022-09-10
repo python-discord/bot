@@ -215,14 +215,14 @@ class Filtering(Cog):
         default_setting_values = {}
         for type_ in ("actions", "validations"):
             for _, setting in filter_list.defaults[list_type][type_].items():
-                default_setting_values.update(to_serializable(setting.to_dict()))
+                default_setting_values.update(to_serializable(setting.dict()))
 
         # Get the filter's overridden settings
         overrides_values = {}
         for settings in (filter_.actions, filter_.validations):
             if settings:
                 for _, setting in settings.items():
-                    overrides_values.update(to_serializable(setting.to_dict()))
+                    overrides_values.update(to_serializable(setting.dict()))
 
         # Combine them. It's done in this way to preserve field order, since the filter won't have all settings.
         total_values = {}
@@ -345,7 +345,7 @@ class Filtering(Cog):
         setting_values = {}
         for type_ in ("actions", "validations"):
             for _, setting in list_defaults[type_].items():
-                setting_values.update(to_serializable(setting.to_dict()))
+                setting_values.update(to_serializable(setting.dict()))
 
         embed = self._build_embed_from_dict(setting_values)
         # Use the class's docstring, and ignore single newlines.
@@ -458,7 +458,7 @@ class Filtering(Cog):
             await ctx.send(f":x: There is no list of {past_tense(list_type.name.lower())} {filter_list.name}s.")
             return
 
-        lines = list(map(str, type_filters))
+        lines = list(map(str, type_filters.values()))
         log.trace(f"Sending a list of {len(lines)} filters.")
 
         embed = Embed(colour=Colour.blue())

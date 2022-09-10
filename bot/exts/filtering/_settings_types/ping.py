@@ -1,7 +1,8 @@
 from functools import cache
-from typing import Any
+from typing import ClassVar
 
 from discord import Guild
+from pydantic import validator
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
@@ -10,8 +11,8 @@ from bot.exts.filtering._settings_types.settings_entry import ActionEntry
 class Ping(ActionEntry):
     """A setting entry which adds the appropriate pings to the alert."""
 
-    name = "mentions"
-    description = {
+    name: ClassVar[str] = "mentions"
+    description: ClassVar[dict[str, str]] = {
         "guild_pings": (
             "A list of role IDs/role names/user IDs/user names/here/everyone. "
             "If a mod-alert is generated for a filter triggered in a public channel, these will be pinged."
@@ -22,11 +23,16 @@ class Ping(ActionEntry):
         )
     }
 
-    def __init__(self, entry_data: Any):
-        super().__init__(entry_data)
+    guild_pings: set[str]
+    dm_pings: set[str]
 
-        self.guild_pings = set(entry_data["guild_pings"]) if entry_data["guild_pings"] else set()
-        self.dm_pings = set(entry_data["dm_pings"]) if entry_data["dm_pings"] else set()
+    @validator("*")
+    @classmethod
+    def init_sequence_if_none(cls, pings: list[str]) -> list[str]:
+        """Initialize an empty sequence if the value is None."""
+        if pings is None:
+            return []
+        return pings
 
     async def action(self, ctx: FilterContext) -> None:
         """Add the stored pings to the alert message content."""
@@ -39,10 +45,7 @@ class Ping(ActionEntry):
         if not isinstance(other, Ping):
             return NotImplemented
 
-        return Ping({
-            "ping_type": self.guild_pings | other.guild_pings,
-            "dm_ping_type": self.dm_pings | other.dm_pings
-        })
+        return Ping(ping_type=self.guild_pings | other.guild_pings, dm_ping_type=self.dm_pings | other.dm_pings)
 
     @staticmethod
     @cache

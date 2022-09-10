@@ -1,5 +1,5 @@
 from contextlib import suppress
-from typing import Any
+from typing import ClassVar
 
 from discord.errors import NotFound
 
@@ -10,12 +10,12 @@ from bot.exts.filtering._settings_types.settings_entry import ActionEntry
 class DeleteMessages(ActionEntry):
     """A setting entry which tells whether to delete the offending message(s)."""
 
-    name = "delete_messages"
-    description = "A boolean field. If True, the filter being triggered will cause the offending message to be deleted."
+    name: ClassVar[str] = "delete_messages"
+    description: ClassVar[str] = (
+        "A boolean field. If True, the filter being triggered will cause the offending message to be deleted."
+    )
 
-    def __init__(self, entry_data: Any):
-        super().__init__(entry_data)
-        self.delete_messages: bool = entry_data
+    delete_messages: bool
 
     async def action(self, ctx: FilterContext) -> None:
         """Delete the context message(s)."""
@@ -32,4 +32,4 @@ class DeleteMessages(ActionEntry):
         if not isinstance(other, DeleteMessages):
             return NotImplemented
 
-        return DeleteMessages(self.delete_messages or other.delete_messages)
+        return DeleteMessages(delete_messages=self.delete_messages or other.delete_messages)

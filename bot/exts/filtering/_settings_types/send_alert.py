@@ -1,4 +1,4 @@
-from typing import Any
+from typing import ClassVar
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
@@ -7,12 +7,10 @@ from bot.exts.filtering._settings_types.settings_entry import ActionEntry
 class SendAlert(ActionEntry):
     """A setting entry which tells whether to send an alert message."""
 
-    name = "send_alert"
-    description = "A boolean field. If all filters triggered set this to False, no mod-alert will be created."
+    name: ClassVar[str] = "send_alert"
+    description: ClassVar[str] = "A boolean. If all filters triggered set this to False, no mod-alert will be created."
 
-    def __init__(self, entry_data: Any):
-        super().__init__(entry_data)
-        self.send_alert: bool = entry_data
+    send_alert: bool
 
     async def action(self, ctx: FilterContext) -> None:
         """Add the stored pings to the alert message content."""
@@ -23,4 +21,4 @@ class SendAlert(ActionEntry):
         if not isinstance(other, SendAlert):
             return NotImplemented
 
-        return SendAlert(self.send_alert or other.send_alert)
+        return SendAlert(send_alert=self.send_alert or other.send_alert)

@@ -1,11 +1,12 @@
 from collections import namedtuple
 from datetime import timedelta
 from enum import Enum, auto
-from typing import Any, Optional
+from typing import ClassVar, Optional
 
 import arrow
 from discord import Colour, Embed
 from discord.errors import Forbidden
+from pydantic import validator
 
 import bot
 from bot.constants import Channels, Guild
@@ -50,8 +51,8 @@ class InfractionAndNotification(ActionEntry):
     Since a DM cannot be sent when a user is banned or kicked, these two functions need to be grouped together.
     """
 
-    name = "infraction_and_notification"
-    description = {
+    name: ClassVar[str] = "infraction_and_notification"
+    description: ClassVar[dict[str, str]] = {
         "infraction_type": (
             "The type of infraction to issue when the filter triggers, or 'NONE'. "
             "If two infractions are triggered for the same message, "
@@ -65,27 +66,18 @@ class InfractionAndNotification(ActionEntry):
         "dm_embed": "The contents of the embed to be DMed to the offending user."
     }
 
-    def __init__(self, entry_data: Any):
-        super().__init__(entry_data)
+    dm_content: str
+    dm_embed: str
+    infraction_type: Optional[Infraction]
+    infraction_reason: Optional[str]
+    infraction_duration: Optional[float]
+    superstar: Optional[superstar] = None
 
-        if entry_data["infraction_type"]:
-            self.infraction_type = entry_data["infraction_type"]
-            if isinstance(self.infraction_type, str):
-                self.infraction_type = Infraction[self.infraction_type.replace(" ", "_").upper()]
-            self.infraction_reason = entry_data["infraction_reason"]
-            if entry_data["infraction_duration"] is not None:
-                self.infraction_duration = float(entry_data["infraction_duration"])
-            else:
-                self.infraction_duration = None
-        else:
-            self.infraction_type = Infraction.NONE
-            self.infraction_reason = None
-            self.infraction_duration = 0
-
-        self.dm_content = entry_data["dm_content"]
-        self.dm_embed = entry_data["dm_embed"]
-
-        self._superstar = entry_data.get("superstar", None)
+    @validator("infraction_type", pre=True)
+    @classmethod
+    def convert_infraction_name(cls, infr_type: str) -> Infraction:
+        """Convert the string to an Infraction by name."""
+        return Infraction[infr_type.replace(" ", "_").upper()] if infr_type else Infraction.NONE
 
     async def action(self, ctx: FilterContext) -> None:
         """Send the notification to the user, and apply any specified infractions."""
@@ -115,14 +107,14 @@ class InfractionAndNotification(ActionEntry):
         msg_ctx.guild = bot.instance.get_guild(Guild.id)
         msg_ctx.author = ctx.author
         msg_ctx.channel = ctx.channel
-        if self._superstar:
+        if self.superstar:
             msg_ctx.command = bot.instance.get_command("superstarify")
             await msg_ctx.invoke(
                 msg_ctx.command,
                 ctx.author,
-                arrow.utcnow() + timedelta(seconds=self._superstar.duration)
-                if self._superstar.duration is not None else None,
-                reason=self._superstar.reason
+                arrow.utcnow() + timedelta(seconds=self.superstar.duration)
+                if self.superstar.duration is not None else None,
+                reason=self.superstar.reason
             )
             ctx.action_descriptions.append("superstar")
 
@@ -160,31 +152,31 @@ class InfractionAndNotification(ActionEntry):
 
         # Lower number -> higher in the hierarchy
         if self.infraction_type.value < other.infraction_type.value and other.infraction_type != Infraction.SUPERSTAR:
-            result = InfractionAndNotification(self.to_dict())
-            result._superstar = self._merge_superstars(self._superstar, other._superstar)
+            result = self.copy()
+            result.superstar = self._merge_superstars(self.superstar, other.superstar)
             return result
         elif self.infraction_type.value > other.infraction_type.value and self.infraction_type != Infraction.SUPERSTAR:
-            result = InfractionAndNotification(other.to_dict())
-            result._superstar = self._merge_superstars(self._superstar, other._superstar)
+            result = other.copy()
+            result.superstar = self._merge_superstars(self.superstar, other.superstar)
             return result
 
         if self.infraction_type == other.infraction_type:
             if self.infraction_duration is None or (
                     other.infraction_duration is not None and self.infraction_duration > other.infraction_duration
             ):
-                result = InfractionAndNotification(self.to_dict())
+                result = self.copy()
             else:
-                result = InfractionAndNotification(other.to_dict())
-            result._superstar = self._merge_superstars(self._superstar, other._superstar)
+                result = other.copy()
+            result.superstar = self._merge_superstars(self.superstar, other.superstar)
             return result
 
         # At this stage the infraction types are different, and the lower one is a superstar.
         if self.infraction_type.value < other.infraction_type.value:
-            result = InfractionAndNotification(self.to_dict())
-            result._superstar = superstar(other.infraction_reason, other.infraction_duration)
+            result = self.copy()
+            result.superstar = superstar(other.infraction_reason, other.infraction_duration)
         else:
-            result = InfractionAndNotification(other.to_dict())
-            result._superstar = superstar(self.infraction_reason, self.infraction_duration)
+            result = other.copy()
+            result.superstar = superstar(self.infraction_reason, self.infraction_duration)
         return result
 
     @staticmethod

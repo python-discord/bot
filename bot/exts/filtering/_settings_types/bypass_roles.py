@@ -1,6 +1,7 @@
-from typing import Any
+from typing import ClassVar, Union
 
 from discord import Member
+from pydantic import validator
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ValidationEntry
@@ -9,17 +10,18 @@ from bot.exts.filtering._settings_types.settings_entry import ValidationEntry
 class RoleBypass(ValidationEntry):
     """A setting entry which tells whether the roles the member has allow them to bypass the filter."""
 
-    name = "bypass_roles"
-    description = "A list of role IDs or role names. Users with these roles will not trigger the filter."
+    name: ClassVar[str] = "bypass_roles"
+    description: ClassVar[str] = "A list of role IDs or role names. Users with these roles will not trigger the filter."
 
-    def __init__(self, entry_data: Any):
-        super().__init__(entry_data)
-        self.bypass_roles = set()
-        for role in entry_data:
-            if role.isdigit():
-                self.bypass_roles.add(int(role))
-            else:
-                self.bypass_roles.add(role)
+    bypass_roles: set[Union[int, str]]
+
+    @validator("bypass_roles", each_item=True)
+    @classmethod
+    def maybe_cast_to_int(cls, role: str) -> Union[int, str]:
+        """If the string is alphanumeric, cast it to int."""
+        if role.isdigit():
+            return int(role)
+        return role
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """Return whether the filter should be triggered on this user given their roles."""
