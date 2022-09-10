@@ -116,9 +116,13 @@ class ErrorHandler(Cog):
         * invoked with `unshh+` unsilence channel
         Return bool depending on success of command.
         """
+        silence_command = self.bot.get_command("silence")
+        if not silence_command:
+            log.debug("Not attempting to parse message as `shh`/`unshh` as could not find `silence` command.")
+            return False
+
         command = ctx.invoked_with.lower()
         args = ctx.message.content.lower().split(" ")
-        silence_command = self.bot.get_command("silence")
         ctx.invoked_from_error_handler = True
 
         try:
@@ -164,6 +168,10 @@ class ErrorHandler(Cog):
         the context to prevent infinite recursion in the case of a CommandNotFound exception.
         """
         tags_get_command = self.bot.get_command("tags get")
+        if not tags_get_command:
+            log.debug("Not attempting to parse message as a tag as could not find `tags get` command.")
+            return False
+
         ctx.invoked_from_error_handler = True
 
         log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
