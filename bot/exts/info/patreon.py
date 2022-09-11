@@ -10,7 +10,6 @@ from bot.constants import Channels, Guild, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.decorators import in_whitelist
 from bot.log import get_logger
 from bot.utils.channel import get_or_fetch_channel
-from bot.utils.members import has_role_id
 
 log = get_logger(__name__)
 
@@ -38,7 +37,7 @@ def get_patreon_tier(member: discord.Member) -> int:
     A patreon tier of 0 indicates the user is not a patreon.
     """
     for tier, role_id in PATREON_TIERS:
-        if has_role_id(member, role_id):
+        if member.get_role(role_id):
             return tier
     return 0
 
