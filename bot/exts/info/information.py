@@ -8,7 +8,7 @@ from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
 import rapidfuzz
 from botcore.site_api import ResponseCodeError
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
+from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 
 from bot import constants
@@ -518,12 +518,23 @@ class Information(Cog):
         await self.send_raw_content(ctx, message, json=True)
 
     @command(aliases=("rule",))
-    async def rules(self, ctx: Context, rules: Greedy[int], keyword: Optional[str]) -> None:
-        """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
-        keyword = keyword.lower()
+    async def rules(self, ctx: Context, *args: Optional[str]) -> None:
+        """
+        Provides a link to all rules or, if specified, displays specific rules(s).
 
-        if not rules and not keyword:
+        It accepts either rule numbers or particular keywords that map to a particular rule.
+        Rule numbers and keywords can be sent in any order.
+        """
+        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
+        keywords, rules = [], []
+
+        for word in args:
+            if word.isdigit():
+                rules.append(int(word))
+            else:
+                keywords.append(word.lower())
+
+        if not rules and not keywords:
             # Neither rules nor keywords were submitted. Return the default description.
             rules_embed.description = (
                 "The rules and guidelines that apply to this community can be found on"
@@ -538,30 +549,39 @@ class Information(Cog):
 
         # Remove duplicates and sort the rule indices
         rules = sorted(set(rules))
+        # Remove duplicate keywords
+        keywords = set(keywords)
 
         invalid = ", ".join(str(index) for index in rules if index < 1 or index > len(full_rules))
 
-        if invalid:
+        if invalid and not keywords:
             await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
             return
 
-        for rule in rules:
-            self.bot.stats.incr(f"rule_uses.{rule}")
+        final_rules = set()
 
-        if rules:
-            final_rules = tuple(f"**{pick}.** {full_rules[pick - 1][0]}\n\n"
-                                f"You can also invoke this rule with the following keywords: "
-                                f"{', '.join(full_rules[pick -1][1])}" for pick in rules)
-        else:
-            final_rules = tuple(f"**{pick + 1}** {full_rules[pick][0]}\n\n"
-                                f"You can also invoke this rule with the following keywords: "
-                                f"{', '.join(full_rules[pick][1])}" for pick, rule in enumerate(full_rules)
-                                if keyword in rule[1])
+        for pick in rules:
+            self.bot.stats.incr(f"rule_uses.{pick}")
+            final_rules.add(
+                f"**{pick}.** {full_rules[pick - 1][0]}\n\n"
+                f"You can also invoke this rule with the following keywords: "
+                f"{', '.join(full_rules[pick -1][1])}")
+
+        for keyword in keywords:
+            for pick, rule in enumerate(full_rules):
+                if keyword not in rule[1]:
+                    continue
+
+                self.bot.stats.incr(f"rule_uses.{pick + 1}")
+                final_rules.add(
+                    f"**{pick + 1}.** {full_rules[pick][0]}\n\n"
+                    f"You can also invoke this rule with the following keywords: "
+                    f"{', '.join(full_rules[pick][1])}")
 
         if not rules and not final_rules:
-            # This would mean that we didn't find a match for the used keyword
+            # This would mean that only keywords where used and no match for them was found
             await ctx.send(
-                f"There are currently no rules that correspond to keyword: {keyword}."
+                f"There are currently no rules that correspond to keywords: {[', '.join(keywords)]}."
                 "If you think it should be added, please ask our admins and they'll take care of the rest.")
             return
 
