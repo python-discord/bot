@@ -19,7 +19,7 @@ from bot.errors import NonExistentRoleError
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.channel import is_mod_channel, is_staff_channel
+from bot.utils.channel import get_or_fetch_channel, is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
 from bot.utils.members import get_or_fetch_member
 
@@ -580,9 +580,12 @@ class Information(Cog):
 
         if not rules and not final_rules:
             # This would mean that only keywords where used and no match for them was found
+            dev_contrib_channel = await get_or_fetch_channel(constants.Channels.dev_contrib)
+            meta_channel = await get_or_fetch_channel(constants.Channels.meta)
             await ctx.send(
-                f"There are currently no rules that correspond to keywords: {[', '.join(keywords)]}."
-                "If you think it should be added, please ask our admins and they'll take care of the rest.")
+                f"There are currently no rules that correspond to keywords: **{', '.join(keywords)}**.\n"
+                f"If you think it should be added, please suggest it in either "
+                f"{meta_channel.mention} or {dev_contrib_channel.mention}")
             return
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
