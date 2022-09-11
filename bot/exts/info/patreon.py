@@ -14,9 +14,9 @@ from bot.utils.channel import get_or_fetch_channel
 log = get_logger(__name__)
 
 PATREON_INFORMATION = (
-    "Python Discord is not-for-profit and volunteer run, so we rely on Patreon donations to do what we do. "
-    "We use the money we get to offer excellent prizes for all of our events. Prizes like t-shirts, "
-    "stickers, microcontrollers that support CircuitPython, or maybe even a mechanical keyboard.\n\n"
+    "Python Discord a volunteer run non-profit organization, so we rely on Patreon donations to do what we do. "
+    "We use the money we get to offer excellent prizes for all of our events. These include t-shirts, "
+    "stickers, microcontrollers that support CircuitPython, and maybe even mechanical keyboards.\n\n"
     "You can read more about how Patreon donations help us, and consider donating yourself, on our patreon page "
     "[here](https://pydis.com/patreon)!"
 )
@@ -34,7 +34,7 @@ def get_patreon_tier(member: discord.Member) -> int:
     """
     Get the patreon tier of `member`.
 
-    A patreon tier of 0 indicates the user is not a patreon.
+    A patreon tier of 0 indicates the user is not a patron.
     """
     for tier, role_id in PATREON_TIERS:
         if member.get_role(role_id):
@@ -56,7 +56,7 @@ class Patreon(commands.Cog):
         old_patreon_tier = get_patreon_tier(before)
         new_patreon_tier = get_patreon_tier(after)
 
-        if not new_patreon_tier > old_patreon_tier:
+        if new_patreon_tier <= old_patreon_tier:
             return
 
         message = (
@@ -76,7 +76,7 @@ class Patreon(commands.Cog):
 
             # Filter out any members where this is not their highest tier.
             patrons = [member for member in role.members if get_patreon_tier(member) == tier]
-            patron_names = [f"• {patron.name}#{patron.discriminator}" for patron in patrons]
+            patron_names = [f"• {patron}" for patron in patrons]
 
             embed = discord.Embed(
                 title=role.name,
