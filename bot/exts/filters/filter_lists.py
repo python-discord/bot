@@ -295,8 +295,8 @@ class FilterLists(Cog):
 
     @command(name="filter_report")
     async def force_send_weekly_report(self, ctx: Context) -> None:
-        """Send a list of autobans added in the last 7 days to #mod-meta."""
-        await self.send_weekly_autoban_report()
+        """Respond with a list of autobans added in the last 7 days."""
+        await self.send_weekly_autoban_report(ctx.channel)
 
     @tasks.loop(time=datetime.time(hour=18))
     async def weekly_autoban_report_task(self) -> None:
@@ -307,7 +307,11 @@ class FilterLists(Cog):
         await self.send_weekly_autoban_report()
 
     async def send_weekly_autoban_report(self, channel: discord.abc.Messageable = None) -> None:
-        """Send a list of autobans added in the last 7 days to #mod-meta."""
+        """
+        Send a list of autobans added in the last 7 days to the specified channel.
+
+        If chanel is not specified, it is sent to #mod-meta.
+        """
         seven_days_ago = arrow.utcnow().shift(days=-7)
         if not channel:
             channel = self.bot.get_channel(Channels.mod_meta)
