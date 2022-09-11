@@ -397,6 +397,7 @@ class Categories(metaclass=YAMLGetter):
     # 2021 Summer Code Jam
     summer_code_jam: int
 
+
 class Channels(metaclass=YAMLGetter):
     section = "guild"
     subsection = "channels"
