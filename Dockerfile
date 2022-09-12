@@ -6,7 +6,8 @@ ARG git_sha="development"
 # POETRY_VIRTUALENVS_IN_PROJECT is required to ensure in-projects venvs mounted from the host in dev
 # don't get prioritised by `poetry run`
 ENV POETRY_VERSION=1.2.0 \
-  POETRY_HOME="/opt/poetry" \
+  POETRY_HOME="/opt/poetry/home" \
+  POETRY_CACHE_DIR="/opt/poetry/cache" \
   POETRY_NO_INTERACTION=1 \
   POETRY_VIRTUALENVS_IN_PROJECT=false \
   APP_DIR="/bot" \
