@@ -214,7 +214,7 @@ class Reminders(Cog):
         """
         Attempts to get content from the referenced message, if applicable.
 
-        Differs from botcore.utils.commands.clean_text_or_reply as allows for embeds.
+        Differs from botcore.utils.commands.clean_text_or_reply as allows for messages with no content.
         """
         content = None
         if reference := ctx.message.reference:
@@ -398,20 +398,7 @@ class Reminders(Cog):
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
     async def edit_reminder_group(self, ctx: Context) -> None:
-        """
-        Commands for modifying your current reminders.
-
-        The `expiration` duration supports the following symbols for each unit of time:
-        - years: `Y`, `y`, `year`, `years`
-        - months: `m`, `month`, `months`
-        - weeks: `w`, `W`, `week`, `weeks`
-        - days: `d`, `D`, `day`, `days`
-        - hours: `H`, `h`, `hour`, `hours`
-        - minutes: `M`, `minute`, `minutes`
-        - seconds: `S`, `s`, `second`, `seconds`
-
-        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
-        """
+        """Commands for modifying your current reminders."""
         await ctx.send_help(ctx.command)
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
@@ -434,11 +421,15 @@ class Reminders(Cog):
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
     async def edit_reminder_content(self, ctx: Context, id_: int, *, content: t.Optional[str] = None) -> None:
-        """Edit one of your reminder's content."""
+        """
+        Edit one of your reminder's content.
+
+        You can either supply the new content yourself, or reply to a message to use its content.
+        """
         if not content:
             content = await self.try_get_content_from_reply(ctx)
             if not content:
-                # Couldn't get content from reply
+                # Message doesn't have a reply to get content from
                 return
         await self.edit_reminder(ctx, id_, {"content": content})
 
