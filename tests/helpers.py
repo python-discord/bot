@@ -317,7 +317,7 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
         guild_id=1,
         intents=discord.Intents.all(),
     )
-    additional_spec_asyncs = ("wait_for", "redis_ready")
+    additional_spec_asyncs = ("wait_for",)
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
