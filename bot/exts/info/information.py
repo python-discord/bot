@@ -520,7 +520,7 @@ class Information(Cog):
     @command(aliases=("rule",))
     async def rules(self, ctx: Context, *args: Optional[str]) -> None:
         """
-        Provides a link to all rules or, if specified, displays specific rules(s).
+        Provides a link to all rules or, if specified, displays specific rule(s).
 
         It accepts either rule numbers or particular keywords that map to a particular rule.
         Rule numbers and keywords can be sent in any order.
