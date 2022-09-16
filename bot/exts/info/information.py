@@ -526,15 +526,15 @@ class Information(Cog):
         Rule numbers and keywords can be sent in any order.
         """
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
-        keywords, rules = [], []
+        keywords, rule_numbers = [], []
 
         for word in args:
             try:
-                rules.append(int(word))
+                rule_numbers.append(int(word))
             except ValueError:
                 keywords.append(word.lower())
 
-        if not rules and not keywords:
+        if not rule_numbers and not keywords:
             # Neither rules nor keywords were submitted. Return the default description.
             rules_embed.description = (
                 "The rules and guidelines that apply to this community can be found on"
@@ -548,11 +548,11 @@ class Information(Cog):
         full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
 
         # Remove duplicates and sort the rule indices
-        rules = sorted(set(rules))
+        rule_numbers = sorted(set(rule_numbers))
         # Remove duplicate keywords
         keywords = set(keywords)
 
-        invalid = ", ".join(str(index) for index in rules if index < 1 or index > len(full_rules))
+        invalid = ", ".join(str(index) for index in rule_numbers if index < 1 or index > len(full_rules))
 
         if invalid and not keywords:
             await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
@@ -560,7 +560,7 @@ class Information(Cog):
 
         final_rules = set()
 
-        for pick in rules:
+        for pick in rule_numbers:
             self.bot.stats.incr(f"rule_uses.{pick}")
             final_rules.add(
                 f"**{pick}.** {full_rules[pick - 1][0]}\n\n"
@@ -578,7 +578,7 @@ class Information(Cog):
                     f"You can also invoke this rule with the following keywords: "
                     f"{', '.join(full_rules[pick][1])}")
 
-        if not rules and not final_rules:
+        if not rule_numbers and not final_rules:
             # This would mean that only keywords where used and no match for them was found
             await ctx.send(
                 f"There are currently no rules that correspond to keywords: **{', '.join(keywords)}**.\n"
