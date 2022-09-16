@@ -529,9 +529,9 @@ class Information(Cog):
         keywords, rules = [], []
 
         for word in args:
-            if word.isdigit():
+            try:
                 rules.append(int(word))
-            else:
+            except ValueError:
                 keywords.append(word.lower())
 
         if not rules and not keywords:
