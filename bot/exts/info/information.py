@@ -562,10 +562,7 @@ class Information(Cog):
 
         for pick in rule_numbers:
             self.bot.stats.incr(f"rule_uses.{pick}")
-            final_rules.add(
-                f"**{pick}.** {full_rules[pick - 1][0]}\n\n"
-                f"You can also invoke this rule with the following keywords: "
-                f"{', '.join(full_rules[pick -1][1])}")
+            final_rules.add(f"**{pick}.** {full_rules[pick - 1][0]}")
 
         for keyword in keywords:
             for pick, rule in enumerate(full_rules):
@@ -573,10 +570,7 @@ class Information(Cog):
                     continue
 
                 self.bot.stats.incr(f"rule_uses.{pick + 1}")
-                final_rules.add(
-                    f"**{pick + 1}.** {full_rules[pick][0]}\n\n"
-                    f"You can also invoke this rule with the following keywords: "
-                    f"{', '.join(full_rules[pick][1])}")
+                final_rules.add(f"**{pick + 1}.** {full_rules[pick][0]}")
 
         if not rule_numbers and not final_rules:
             # This would mean that only keywords where used and no match for them was found
