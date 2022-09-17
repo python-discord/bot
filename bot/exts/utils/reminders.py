@@ -465,9 +465,13 @@ class Reminders(Cog):
 
     @remind_group.command("delete", aliases=("remove", "cancel"))
     async def delete_reminder(self, ctx: Context, ids: Greedy[int]) -> None:
-        """Delete one of your active reminders."""
+        """Delete up to (and including) 5 of your active reminders."""
+        if len(ids) > 5:
+            await send_denial(ctx, "You can only delete a maximum of 5 reminders at once.")
+            return
+
         deleted_ids = []
-        for id_ in ids:
+        for id_ in set(ids):
             try:
                 reminder_deleted = await self._delete_reminder(ctx, id_)
             except LockedResourceError:
