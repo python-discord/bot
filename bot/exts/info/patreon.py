@@ -14,9 +14,9 @@ from bot.utils.channel import get_or_fetch_channel
 log = get_logger(__name__)
 
 PATREON_INFORMATION = (
-    "Python Discord a volunteer run non-profit organization, so we rely on Patreon donations to do what we do. "
+    "Python Discord is a volunteer run non-profit organization, so we rely on Patreon donations to do what we do. "
     "We use the money we get to offer excellent prizes for all of our events. These include t-shirts, "
-    "stickers, microcontrollers that support CircuitPython, and maybe even mechanical keyboards.\n\n"
+    "stickers, and sometimes even Raspberry Pis!\n\n"
     "You can read more about how Patreon donations help us, and consider donating yourself, on our patreon page "
     "[here](https://pydis.com/patreon)!"
 )
