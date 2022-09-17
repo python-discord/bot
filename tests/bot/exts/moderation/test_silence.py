@@ -6,30 +6,14 @@ from typing import List, Tuple
 from unittest import mock
 from unittest.mock import AsyncMock, Mock
 
-from async_rediscache import RedisSession
 from discord import PermissionOverwrite
 
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.moderation import silence
+from tests.base import RedisTestCase
 from tests.helpers import (
     MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel, MockVoiceChannel, autospec
 )
-
-redis_session = None
-redis_loop = asyncio.get_event_loop()
-
-
-def setUpModule():  # noqa: N802
-    """Create and connect to the fakeredis session."""
-    global redis_session
-    redis_session = RedisSession(use_fakeredis=True)
-    redis_loop.run_until_complete(redis_session.connect())
-
-
-def tearDownModule():  # noqa: N802
-    """Close the fakeredis session."""
-    if redis_session:
-        redis_loop.run_until_complete(redis_session.close())
 
 
 # Have to subclass it because builtins can't be patched.
@@ -105,7 +89,7 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
-class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
+class SilenceCogTests(RedisTestCase):
     """Tests for the general functionality of the Silence cog."""
 
     @autospec(silence, "Scheduler", pass_mocks=False)
@@ -245,14 +229,12 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(member.move_to.call_count, 1 if member == failing_member else 2)
 
 
-class SilenceArgumentParserTests(unittest.IsolatedAsyncioTestCase):
+class SilenceArgumentParserTests(RedisTestCase):
     """Tests for the silence argument parser utility function."""
 
     def setUp(self):
         self.bot = MockBot()
         self.cog = silence.Silence(self.bot)
-        self.cog._init_task = asyncio.Future()
-        self.cog._init_task.set_result(None)
 
     @autospec(silence.Silence, "send_message", pass_mocks=False)
     @autospec(silence.Silence, "_set_silence_overwrites", return_value=False, pass_mocks=False)
@@ -406,7 +388,7 @@ def voice_sync_helper(function):
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
-class SilenceTests(unittest.IsolatedAsyncioTestCase):
+class SilenceTests(RedisTestCase):
     """Tests for the silence command and its related helper methods."""
 
     @autospec(silence.Silence, "_reschedule", pass_mocks=False)
@@ -414,8 +396,6 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.bot = MockBot(get_channel=lambda _: MockTextChannel())
         self.cog = silence.Silence(self.bot)
-        self.cog._init_task = asyncio.Future()
-        self.cog._init_task.set_result(None)
 
         # Avoid unawaited coroutine warnings.
         self.cog.scheduler.schedule_later.side_effect = lambda delay, task_id, coro: coro.close()
@@ -687,8 +667,6 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.bot = MockBot(get_channel=lambda _: MockTextChannel())
         self.cog = silence.Silence(self.bot)
-        self.cog._init_task = asyncio.Future()
-        self.cog._init_task.set_result(None)
 
         overwrites_cache = mock.create_autospec(self.cog.previous_overwrites, spec_set=True)
         self.cog.previous_overwrites = overwrites_cache
