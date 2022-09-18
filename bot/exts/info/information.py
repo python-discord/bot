@@ -566,10 +566,11 @@ class Information(Cog):
             return
 
         final_rule_numbers = []
+
         final_rule_numbers.extend(rule_numbers)
 
         for keyword in keywords:
-            final_rule_numbers.append(keyword_to_rule_number.get(keyword))
+            final_rule_numbers.append(keyword_to_rule_number[keyword])
 
         final_rules = []
         final_rule_numbers = set(final_rule_numbers)
