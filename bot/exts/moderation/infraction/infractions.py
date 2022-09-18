@@ -54,8 +54,9 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         if active_mutes:
             reason = f"Re-applying active mute: {active_mutes[0]['id']}"
-            action = member.add_roles(self._muted_role, reason=reason)
 
+            async def action() -> None:
+                await member.add_roles(self._muted_role, reason=reason)
             await self.reapply_infraction(active_mutes[0], action)
 
     # region: Permanent infractions
@@ -339,14 +340,20 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Remove infractions (un- commands)
 
     @command()
-    async def unmute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+    async def unmute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        *,
+        pardon_reason: t.Optional[str] = None
+    ) -> None:
         """Prematurely end the active mute infraction for the user."""
-        await self.pardon_infraction(ctx, "mute", user)
+        await self.pardon_infraction(ctx, "mute", user, pardon_reason)
 
     @command()
-    async def unban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+    async def unban(self, ctx: Context, user: UnambiguousMemberOrUser, *, pardon_reason: str) -> None:
         """Prematurely end the active ban infraction for the user."""
-        await self.pardon_infraction(ctx, "ban", user)
+        await self.pardon_infraction(ctx, "ban", user, pardon_reason)
 
     @command(aliases=("uvban",))
     async def unvoiceban(self, ctx: Context) -> None:
@@ -358,9 +365,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `unvoicemute`?")
 
     @command(aliases=("uvmute",))
-    async def unvoicemute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+    async def unvoicemute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        *,
+        pardon_reason: t.Optional[str] = None
+    ) -> None:
         """Prematurely end the active voice mute infraction for the user."""
-        await self.pardon_infraction(ctx, "voice_mute", user)
+        await self.pardon_infraction(ctx, "voice_mute", user, pardon_reason)
 
     # endregion
     # region: Base apply functions
@@ -397,7 +410,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.trace(f"Attempting to kick {user} from voice because they've been muted.")
             await user.move_to(None, reason=reason)
 
-        await self.apply_infraction(ctx, infraction, user, action())
+        await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy(member_arg=2)
     async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
@@ -415,7 +428,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = user.kick(reason=reason)
+        async def action() -> None:
+            await user.kick(reason=reason)
+
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy(member_arg=2)
@@ -464,7 +479,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
+        async def action() -> None:
+            await ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
+
         await self.apply_infraction(ctx, infraction, user, action)
 
         bb_cog: t.Optional[BigBrother] = self.bot.get_cog("Big Brother")
@@ -502,7 +519,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             await user.move_to(None, reason="Disconnected from voice to apply voice mute.")
             await user.remove_roles(self._voice_verified_role, reason=reason)
 
-        await self.apply_infraction(ctx, infraction, user, action())
+        await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
     # region: Base pardon functions
