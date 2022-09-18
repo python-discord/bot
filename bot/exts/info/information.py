@@ -576,8 +576,8 @@ class Information(Cog):
                     break
 
         final_rules = []
-        final_rule_numbers.sort()
         final_rule_numbers = set(final_rule_numbers)
+        final_rule_numbers = sorted(list(final_rule_numbers))
 
         for rule_number in final_rule_numbers:
             self.bot.stats.incr(f"rule_uses.{rule_number}")
