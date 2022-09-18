@@ -570,9 +570,9 @@ class Information(Cog):
         final_rule_numbers.extend(rule_numbers)
 
         for keyword in keywords:
-            for pick, rule in enumerate(full_rules):
+            for rule_number, rule in enumerate(full_rules):
                 if keyword in rule[1]:
-                    final_rule_numbers.append(pick + 1)
+                    final_rule_numbers.append(rule_number + 1)
                     break
 
         if not rule_numbers and not final_rule_numbers:
