@@ -528,11 +528,19 @@ class Information(Cog):
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
         keywords, rule_numbers = [], []
 
+        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+        available_keywords = set()
+
+        for _, rule_keywords in full_rules:
+            available_keywords = available_keywords | set(rule_keywords)
+
         for word in args:
             try:
                 rule_numbers.append(int(word))
             except ValueError:
-                keywords.append(word.lower())
+                if (kw := word.lower()) not in available_keywords:
+                    break
+                keywords.append(kw)
 
         if not rule_numbers and not keywords:
             # Neither rules nor keywords were submitted. Return the default description.
@@ -544,12 +552,6 @@ class Information(Cog):
 
             await ctx.send(embed=rules_embed)
             return
-
-        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
-        available_keywords = set()
-
-        for _, rule_keywords in full_rules:
-            available_keywords = available_keywords | set(rule_keywords)
 
         # Remove duplicates and sort the rule indices
         rule_numbers = sorted(set(rule_numbers))
@@ -566,15 +568,10 @@ class Information(Cog):
         final_rule_numbers.extend(rule_numbers)
 
         for keyword in keywords:
-            if keyword not in available_keywords:
-                break
-
             for pick, rule in enumerate(full_rules):
-                if keyword not in rule[1]:
-                    continue
-
-                final_rule_numbers.append(pick + 1)
-                break
+                if keyword in rule[1]:
+                    final_rule_numbers.append(pick + 1)
+                    break
 
         if not rule_numbers and not final_rule_numbers:
             # This would mean that only keywords where used and no match for them was found
@@ -584,12 +581,13 @@ class Information(Cog):
                 f"<#{constants.Channels.meta}> or <#{constants.Channels.dev_contrib}>")
             return
 
-        for rule_number in final_rule_numbers:
-            self.bot.stats.incr(f"rule_uses.{rule_number}")
-
+        final_rules = []
         final_rule_numbers.sort()
         final_rule_numbers = set(final_rule_numbers)
-        final_rules = [f"**{rule_number}.** {full_rules[rule_number - 1][0]}" for rule_number in final_rule_numbers]
+
+        for rule_number in final_rule_numbers:
+            self.bot.stats.incr(f"rule_uses.{rule_number}")
+            final_rules.append(f"**{rule_number}.** {full_rules[rule_number - 1][0]}")
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
