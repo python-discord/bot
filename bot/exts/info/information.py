@@ -555,8 +555,6 @@ class Information(Cog):
 
         # Remove duplicates and sort the rule indices
         rule_numbers = sorted(set(rule_numbers))
-        # Remove duplicate keywords and preserve the order of initial keywords
-        keywords = list(dict.fromkeys(keywords))
 
         invalid = ", ".join(
             str(rule_number) for rule_number in rule_numbers
