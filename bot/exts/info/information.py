@@ -575,14 +575,6 @@ class Information(Cog):
                     final_rule_numbers.append(rule_number + 1)
                     break
 
-        if not rule_numbers and not final_rule_numbers:
-            # This would mean that only keywords where used and no match for them was found
-            await ctx.send(
-                f"There are currently no rules that correspond to keywords: **{', '.join(keywords)}**.\n"
-                f"If you think it should be added, please suggest it in either "
-                f"<#{constants.Channels.meta}> or <#{constants.Channels.dev_contrib}>")
-            return
-
         final_rules = []
         final_rule_numbers.sort()
         final_rule_numbers = set(final_rule_numbers)
