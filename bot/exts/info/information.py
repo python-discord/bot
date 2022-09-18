@@ -546,39 +546,50 @@ class Information(Cog):
             return
 
         full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+        available_keywords = set()
+
+        for _, rule_keywords in full_rules:
+            available_keywords = available_keywords | set(rule_keywords)
 
         # Remove duplicates and sort the rule indices
         rule_numbers = sorted(set(rule_numbers))
-        # Remove duplicate keywords
-        keywords = set(keywords)
+        # Remove duplicate keywords and preserve the order of initial keywords
+        keywords = list(dict.fromkeys(keywords))
 
         invalid = ", ".join(str(index) for index in rule_numbers if index < 1 or index > len(full_rules))
 
-        if invalid and not keywords:
+        if invalid:
             await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
             return
 
-        final_rules = set()
-
-        for pick in rule_numbers:
-            self.bot.stats.incr(f"rule_uses.{pick}")
-            final_rules.add(f"**{pick}.** {full_rules[pick - 1][0]}")
+        final_rule_numbers = []
+        final_rule_numbers.extend(rule_numbers)
 
         for keyword in keywords:
+            if keyword not in available_keywords:
+                break
+
             for pick, rule in enumerate(full_rules):
                 if keyword not in rule[1]:
                     continue
 
-                self.bot.stats.incr(f"rule_uses.{pick + 1}")
-                final_rules.add(f"**{pick + 1}.** {full_rules[pick][0]}")
+                final_rule_numbers.append(pick + 1)
+                break
 
-        if not rule_numbers and not final_rules:
+        if not rule_numbers and not final_rule_numbers:
             # This would mean that only keywords where used and no match for them was found
             await ctx.send(
                 f"There are currently no rules that correspond to keywords: **{', '.join(keywords)}**.\n"
                 f"If you think it should be added, please suggest it in either "
                 f"<#{constants.Channels.meta}> or <#{constants.Channels.dev_contrib}>")
             return
+
+        for rule_number in final_rule_numbers:
+            self.bot.stats.incr(f"rule_uses.{rule_number}")
+
+        final_rule_numbers.sort()
+        final_rule_numbers = set(final_rule_numbers)
+        final_rules = [f"**{rule_number}.** {full_rules[rule_number - 1][0]}" for rule_number in final_rule_numbers]
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
