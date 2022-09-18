@@ -85,13 +85,13 @@ class VoiceMuteTests(unittest.IsolatedAsyncioTestCase):
         """Should call voice mute applying function without expiry."""
         self.cog.apply_voice_mute = AsyncMock()
         self.assertIsNone(await self.cog.voicemute(self.cog, self.ctx, self.user, reason="foobar"))
-        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", expires_at=None)
+        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", duration_or_expiry=None)
 
     async def test_temporary_voice_mute(self):
         """Should call voice mute applying function with expiry."""
         self.cog.apply_voice_mute = AsyncMock()
         self.assertIsNone(await self.cog.tempvoicemute(self.cog, self.ctx, self.user, "baz", reason="foobar"))
-        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", expires_at="baz")
+        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", duration_or_expiry="baz")
 
     async def test_voice_unmute(self):
         """Should call infraction pardoning function."""
@@ -195,7 +195,8 @@ class VoiceMuteTests(unittest.IsolatedAsyncioTestCase):
 
         user = MockUser()
         await self.cog.voicemute(self.cog, self.ctx, user, reason=None)
-        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_mute", None, active=True, expires_at=None)
+        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_mute", None, active=True,
+                                                     duration_or_expiry=None)
         apply_infraction_mock.assert_called_once_with(self.cog, self.ctx, infraction, user, ANY)
 
         # Test action
@@ -279,7 +280,7 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
             self.user,
             "FooBar",
             purge_days=1,
-            expires_at=None,
+            duration_or_expiry=None,
         )
 
     async def test_cleanban_doesnt_purge_messages_if_clean_cog_available(self):
@@ -291,7 +292,7 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
             self.ctx,
             self.user,
             "FooBar",
-            expires_at=None,
+            duration_or_expiry=None,
         )
 
     @patch("bot.exts.moderation.infraction.infractions.Age")
