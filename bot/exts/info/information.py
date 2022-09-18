@@ -558,7 +558,9 @@ class Information(Cog):
         # Remove duplicate keywords and preserve the order of initial keywords
         keywords = list(dict.fromkeys(keywords))
 
-        invalid = ", ".join(str(index) for index in rule_numbers if index < 1 or index > len(full_rules))
+        invalid = ", ".join(
+            str(rule_number) for rule_number in rule_numbers
+            if rule_number < 1 or rule_number > len(full_rules))
 
         if invalid:
             await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
