@@ -1,28 +1,16 @@
-FROM --platform=linux/amd64 python:3.9-slim
+FROM --platform=linux/amd64 ghcr.io/chrislovering/python-poetry-base:3.10-slim
 
-# Set pip to have no saved cache
-ENV PIP_NO_CACHE_DIR=false \
-    POETRY_VIRTUALENVS_CREATE=false
-
-
-# Install poetry
-RUN pip install -U poetry
-
-# Create the working directory
-WORKDIR /bot
+# Define Git SHA build argument for sentry
+ARG git_sha="development"
+ENV GIT_SHA=$git_sha
 
 # Install project dependencies
+WORKDIR /bot
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-dev
-
-# Define Git SHA build argument
-ARG git_sha="development"
-
-# Set Git SHA environment variable for Sentry
-ENV GIT_SHA=$git_sha
+RUN poetry install --without dev
 
 # Copy the source code in last to optimize rebuilding the image
 COPY . .
 
-ENTRYPOINT ["python3"]
-CMD ["-m", "bot"]
+ENTRYPOINT ["poetry"]
+CMD ["run", "python", "-m", "bot"]
