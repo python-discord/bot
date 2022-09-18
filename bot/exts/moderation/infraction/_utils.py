@@ -1,5 +1,4 @@
 import typing as t
-from datetime import datetime
 
 import arrow
 import discord
@@ -8,10 +7,11 @@ from discord.ext.commands import Context
 
 import bot
 from bot.constants import Colours, Icons
-from bot.converters import MemberOrUser
+from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
 
@@ -44,8 +44,8 @@ LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL
 
 INFRACTION_DESCRIPTION_TEMPLATE = (
     "**Type:** {type}\n"
-    "**Expires:** {expires}\n"
     "**Duration:** {duration}\n"
+    "**Expires:** {expires}\n"
     "**Reason:** {reason}\n"
 )
 
@@ -80,7 +80,7 @@ async def post_infraction(
         user: MemberOrUser,
         infr_type: str,
         reason: str,
-        expires_at: datetime = None,
+        duration_or_expiry: t.Optional[DurationOrExpiry] = None,
         hidden: bool = False,
         active: bool = True,
         dm_sent: bool = False,
@@ -92,6 +92,8 @@ async def post_infraction(
 
     log.trace(f"Posting {infr_type} infraction for {user} to the API.")
 
+    current_time = arrow.utcnow()
+
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
         "hidden": hidden,
@@ -99,10 +101,14 @@ async def post_infraction(
         "type": infr_type,
         "user": user.id,
         "active": active,
-        "dm_sent": dm_sent
+        "dm_sent": dm_sent,
+        "inserted_at": current_time.isoformat(),
+        "last_applied": current_time.isoformat(),
     }
-    if expires_at:
-        payload['expires_at'] = expires_at.isoformat()
+
+    if duration_or_expiry is not None:
+        _, expiry = unpack_duration(duration_or_expiry, current_time)
+        payload["expires_at"] = expiry.isoformat()
 
     # Try to apply the infraction. If it fails because the user doesn't exist, try to add it.
     for should_post_user in (True, False):
@@ -180,16 +186,16 @@ async def notify_infraction(
         expires_at = "Never"
         duration = "Permanent"
     else:
+        origin = arrow.get(infraction["last_applied"])
         expiry = arrow.get(infraction["expires_at"])
         expires_at = time.format_relative(expiry)
-        duration = time.humanize_delta(infraction["inserted_at"], expiry, max_units=2)
+        duration = time.humanize_delta(origin, expiry, max_units=2)
 
-        if infraction["active"]:
-            remaining = time.humanize_delta(expiry, arrow.utcnow(), max_units=2)
-            if duration != remaining:
-                duration += f" ({remaining} remaining)"
-        else:
+        if not infraction["active"]:
             expires_at += " (Inactive)"
+
+        if infraction["inserted_at"] != infraction["last_applied"]:
+            duration += " (Edited)"
 
     log.trace(f"Sending {user} a DM about their {infr_type} infraction.")
 

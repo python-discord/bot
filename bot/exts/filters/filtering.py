@@ -413,7 +413,7 @@ class Filtering(Cog):
                             await context.invoke(
                                 context.command,
                                 msg.author,
-                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                (arrow.utcnow() + AUTO_BAN_DURATION).datetime,
                                 reason=AUTO_BAN_REASON
                             )
 

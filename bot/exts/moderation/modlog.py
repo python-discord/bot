@@ -552,7 +552,7 @@ class ModLog(Cog, name="ModLog"):
         channel = self.bot.get_channel(channel_id)
 
         # Ignore not found channels, DMs, and messages outside of the main guild.
-        if not channel or not hasattr(channel, "guild") or channel.guild.id != GuildConstant.id:
+        if not channel or channel.guild is None or channel.guild.id != GuildConstant.id:
             return True
 
         # Look at the parent channel of a thread.

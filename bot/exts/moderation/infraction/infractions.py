@@ -1,6 +1,7 @@
 import textwrap
 import typing as t
 
+import arrow
 import discord
 from discord import Member
 from discord.ext import commands
@@ -9,8 +10,9 @@ from discord.ext.commands import Context, command
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Event
-from bot.converters import Age, Duration, Expiry, MemberOrUser, UnambiguousMemberOrUser
+from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
+from bot.exts.filters.filtering import AUTO_BAN_DURATION, AUTO_BAN_REASON
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -52,8 +54,9 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         if active_mutes:
             reason = f"Re-applying active mute: {active_mutes[0]['id']}"
-            action = member.add_roles(self._muted_role, reason=reason)
 
+            async def action() -> None:
+                await member.add_roles(self._muted_role, reason=reason)
             await self.reapply_infraction(active_mutes[0], action)
 
     # region: Permanent infractions
@@ -86,16 +89,18 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration_or_expiry: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
         """
-        Permanently ban a user for the given reason and stop watching them with Big Brother.
+        Permanently ban a `user` for the given `reason` and stop watching them with Big Brother.
 
-        If duration is specified, it temporarily bans that user for the given duration.
+        If a duration is specified, it temporarily bans the `user` for the given duration.
+        Alternatively, an ISO 8601 timestamp representing the expiry time can be provided
+        for `duration_or_expiry`.
         """
-        await self.apply_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
     @command(aliases=("cban", "purgeban", "pban"))
     @ensure_future_timestamp(timestamp_arg=3)
@@ -103,7 +108,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -115,10 +120,10 @@ class Infractions(InfractionScheduler, commands.Cog):
         clean_cog: t.Optional[Clean] = self.bot.get_cog("Clean")
         if clean_cog is None:
             # If we can't get the clean cog, fall back to native purgeban.
-            await self.apply_ban(ctx, user, reason, purge_days=1, expires_at=duration)
+            await self.apply_ban(ctx, user, reason, purge_days=1, duration_or_expiry=duration)
             return
 
-        infraction = await self.apply_ban(ctx, user, reason, expires_at=duration)
+        infraction = await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
         if not infraction or not infraction.get("id"):
             # Ban was unsuccessful, quit early.
             await ctx.send(":x: Failed to apply ban.")
@@ -151,6 +156,11 @@ class Infractions(InfractionScheduler, commands.Cog):
         ctx.send = send
         await infr_manage_cog.infraction_append(ctx, infraction, None, reason=f"[Clean log]({log_url})")
 
+    @command()
+    async def compban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+        """Same as cleanban, but specifically with the ban reason and duration used for compromised accounts."""
+        await self.cleanban(ctx, user, duration=(arrow.utcnow() + AUTO_BAN_DURATION).datetime, reason=AUTO_BAN_REASON)
+
     @command(aliases=("vban",))
     async def voiceban(self, ctx: Context) -> None:
         """
@@ -168,7 +178,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str]
     ) -> None:
@@ -177,7 +187,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         If duration is specified, it temporarily voice mutes that user for the given duration.
         """
-        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, duration_or_expiry=duration)
 
     # endregion
     # region: Temporary infractions
@@ -187,7 +197,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     async def tempmute(
         self, ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: t.Optional[Expiry] = None,
+        duration: t.Optional[DurationOrExpiry] = None,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -214,7 +224,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         if duration is None:
             duration = await Duration().convert(ctx, "1h")
-        await self.apply_mute(ctx, user, reason, expires_at=duration)
+        await self.apply_mute(ctx, user, reason, duration_or_expiry=duration)
 
     @command(aliases=("tban",))
     @ensure_future_timestamp(timestamp_arg=3)
@@ -222,7 +232,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: Expiry,
+        duration_or_expiry: DurationOrExpiry,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -241,7 +251,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_ban(ctx, user, reason, expires_at=duration)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
     @command(aliases=("tempvban", "tvban"))
     async def tempvoiceban(self, ctx: Context) -> None:
@@ -258,7 +268,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: Expiry,
+        duration: DurationOrExpiry,
         *,
         reason: t.Optional[str]
     ) -> None:
@@ -277,7 +287,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_voice_mute(ctx, user, reason, expires_at=duration)
+        await self.apply_voice_mute(ctx, user, reason, duration_or_expiry=duration)
 
     # endregion
     # region: Permanent shadow infractions
@@ -305,7 +315,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         self,
         ctx: Context,
         user: UnambiguousMemberOrUser,
-        duration: Expiry,
+        duration: DurationOrExpiry,
         *,
         reason: t.Optional[str] = None
     ) -> None:
@@ -324,7 +334,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
         """
-        await self.apply_ban(ctx, user, reason, expires_at=duration, hidden=True)
+        await self.apply_ban(ctx, user, reason, duration_or_expiry=duration, hidden=True)
 
     # endregion
     # region: Remove infractions (un- commands)
@@ -400,7 +410,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.trace(f"Attempting to kick {user} from voice because they've been muted.")
             await user.move_to(None, reason=reason)
 
-        await self.apply_infraction(ctx, infraction, user, action())
+        await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy(member_arg=2)
     async def apply_kick(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
@@ -418,7 +428,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = user.kick(reason=reason)
+        async def action() -> None:
+            await user.kick(reason=reason)
+
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy(member_arg=2)
@@ -440,7 +452,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             return None
 
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
-        is_temporary = kwargs.get("expires_at") is not None
+        is_temporary = kwargs.get("duration_or_expiry") is not None
         active_infraction = await _utils.get_active_infraction(ctx, user, "ban", is_temporary)
 
         if active_infraction:
@@ -448,7 +460,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 log.trace("Tempban ignored as it cannot overwrite an active ban.")
                 return None
 
-            if active_infraction.get('expires_at') is None:
+            if active_infraction.get("duration_or_expiry") is None:
                 log.trace("Permaban already exists, notify.")
                 await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
                 return None
@@ -467,7 +479,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         if reason:
             reason = textwrap.shorten(reason, width=512, placeholder="...")
 
-        action = ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
+        async def action() -> None:
+            await ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
+
         await self.apply_infraction(ctx, infraction, user, action)
 
         bb_cog: t.Optional[BigBrother] = self.bot.get_cog("Big Brother")
@@ -505,7 +519,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             await user.move_to(None, reason="Disconnected from voice to apply voice mute.")
             await user.remove_roles(self._voice_verified_role, reason=reason)
 
-        await self.apply_infraction(ctx, infraction, user, action())
+        await self.apply_infraction(ctx, infraction, user, action)
 
     # endregion
     # region: Base pardon functions
