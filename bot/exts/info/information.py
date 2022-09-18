@@ -529,16 +529,17 @@ class Information(Cog):
         keywords, rule_numbers = [], []
 
         full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
-        available_keywords = set()
+        keyword_to_rule_number = dict()
 
-        for _, rule_keywords in full_rules:
-            available_keywords = available_keywords | set(rule_keywords)
+        for rule_number, (_, rule_keywords) in enumerate(full_rules, start=1):
+            for rule_keyword in rule_keywords:
+                keyword_to_rule_number[rule_keyword] = rule_number
 
         for word in args:
             try:
                 rule_numbers.append(int(word))
             except ValueError:
-                if (kw := word.lower()) not in available_keywords:
+                if (kw := word.lower()) not in keyword_to_rule_number:
                     break
                 keywords.append(kw)
 
@@ -568,10 +569,7 @@ class Information(Cog):
         final_rule_numbers.extend(rule_numbers)
 
         for keyword in keywords:
-            for rule_number, rule in enumerate(full_rules, start=1):
-                if keyword in rule[1]:
-                    final_rule_numbers.append(rule_number)
-                    break
+            final_rule_numbers.append(keyword_to_rule_number.get(keyword))
 
         final_rules = []
         final_rule_numbers = set(final_rule_numbers)
