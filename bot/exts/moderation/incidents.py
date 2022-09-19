@@ -1,6 +1,6 @@
 import asyncio
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -13,6 +13,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks
 from bot.log import get_logger
 from bot.utils.messages import format_user, sub_clyde
+from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
@@ -25,9 +26,9 @@ CRAWL_LIMIT = 50
 CRAWL_SLEEP = 2
 
 DISCORD_MESSAGE_LINK_RE = re.compile(
-    r"(https?:\/\/(?:(ptb|canary|www)\.)?discord(?:app)?\.com\/channels\/"
+    r"(https?://(?:(ptb|canary|www)\.)?discord(?:app)?\.com/channels/"
     r"[0-9]{15,20}"
-    r"\/[0-9]{15,20}\/[0-9]{15,20})"
+    r"/[0-9]{15,20}/[0-9]{15,20})"
 )
 
 
@@ -97,10 +98,20 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         colour = Colours.soft_red
         footer = f"Rejected by {actioned_by}"
 
+    reported_timestamp = discord_timestamp(incident.created_at)
+    relative_timestamp = discord_timestamp(incident.created_at, TimestampFormats.RELATIVE)
+    reported_on_msg = f"*Reported {reported_timestamp} ({relative_timestamp}).*"
+
+    # If the description will be too long (>4096 total characters), truncate the incident content
+    if len(incident.content) > (allowed_content_chars := 4096-len(reported_on_msg)-2):  # -2 for the newlines
+        description = incident.content[:allowed_content_chars-3] + f"...\n\n{reported_on_msg}"
+    else:
+        description = incident.content + f"\n\n{reported_on_msg}"
+
     embed = discord.Embed(
-        description=incident.content,
-        timestamp=datetime.utcnow(),
+        description=description,
         colour=colour,
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 
@@ -381,7 +392,7 @@ class Incidents(Cog):
             webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
             await webhook.send(
                 embed=embed,
-                username=sub_clyde(incident.author.name),
+                username=sub_clyde(incident.author.display_name),
                 avatar_url=incident.author.display_avatar.url,
                 file=attachment_file,
             )

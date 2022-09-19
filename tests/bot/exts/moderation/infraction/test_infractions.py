@@ -35,16 +35,19 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
         self.cog.apply_infraction = AsyncMock()
         self.bot.get_cog.return_value = AsyncMock()
         self.cog.mod_log.ignore = Mock()
-        self.ctx.guild.ban = Mock()
+        self.ctx.guild.ban = AsyncMock()
 
         await self.cog.apply_ban(self.ctx, self.target, "foo bar" * 3000)
-        self.ctx.guild.ban.assert_called_once_with(
+        self.cog.apply_infraction.assert_awaited_once_with(
+            self.ctx, {"foo": "bar", "purge": ""}, self.target, ANY
+        )
+
+        action = self.cog.apply_infraction.call_args.args[-1]
+        await action()
+        self.ctx.guild.ban.assert_awaited_once_with(
             self.target,
             reason=textwrap.shorten("foo bar" * 3000, 512, placeholder="..."),
             delete_message_days=0
-        )
-        self.cog.apply_infraction.assert_awaited_once_with(
-            self.ctx, {"foo": "bar", "purge": ""}, self.target, self.ctx.guild.ban.return_value
         )
 
     @patch("bot.exts.moderation.infraction._utils.post_infraction")
@@ -54,13 +57,16 @@ class TruncationTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.apply_infraction = AsyncMock()
         self.cog.mod_log.ignore = Mock()
-        self.target.kick = Mock()
+        self.target.kick = AsyncMock()
 
         await self.cog.apply_kick(self.ctx, self.target, "foo bar" * 3000)
-        self.target.kick.assert_called_once_with(reason=textwrap.shorten("foo bar" * 3000, 512, placeholder="..."))
         self.cog.apply_infraction.assert_awaited_once_with(
-            self.ctx, {"foo": "bar"}, self.target, self.target.kick.return_value
+            self.ctx, {"foo": "bar"}, self.target, ANY
         )
+
+        action = self.cog.apply_infraction.call_args.args[-1]
+        await action()
+        self.target.kick.assert_awaited_once_with(reason=textwrap.shorten("foo bar" * 3000, 512, placeholder="..."))
 
 
 @patch("bot.exts.moderation.infraction.infractions.constants.Roles.voice_verified", new=123456)
@@ -79,13 +85,13 @@ class VoiceMuteTests(unittest.IsolatedAsyncioTestCase):
         """Should call voice mute applying function without expiry."""
         self.cog.apply_voice_mute = AsyncMock()
         self.assertIsNone(await self.cog.voicemute(self.cog, self.ctx, self.user, reason="foobar"))
-        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", expires_at=None)
+        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", duration_or_expiry=None)
 
     async def test_temporary_voice_mute(self):
         """Should call voice mute applying function with expiry."""
         self.cog.apply_voice_mute = AsyncMock()
         self.assertIsNone(await self.cog.tempvoicemute(self.cog, self.ctx, self.user, "baz", reason="foobar"))
-        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", expires_at="baz")
+        self.cog.apply_voice_mute.assert_awaited_once_with(self.ctx, self.user, "foobar", duration_or_expiry="baz")
 
     async def test_voice_unmute(self):
         """Should call infraction pardoning function."""
@@ -141,8 +147,8 @@ class VoiceMuteTests(unittest.IsolatedAsyncioTestCase):
 
     async def action_tester(self, action, reason: str) -> None:
         """Helper method to test voice mute action."""
-        self.assertTrue(inspect.iscoroutine(action))
-        await action
+        self.assertTrue(inspect.iscoroutinefunction(action))
+        await action()
 
         self.user.move_to.assert_called_once_with(None, reason=ANY)
         self.user.remove_roles.assert_called_once_with(self.cog._voice_verified_role, reason=reason)
@@ -189,13 +195,14 @@ class VoiceMuteTests(unittest.IsolatedAsyncioTestCase):
 
         user = MockUser()
         await self.cog.voicemute(self.cog, self.ctx, user, reason=None)
-        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_mute", None, active=True, expires_at=None)
+        post_infraction_mock.assert_called_once_with(self.ctx, user, "voice_mute", None, active=True,
+                                                     duration_or_expiry=None)
         apply_infraction_mock.assert_called_once_with(self.cog, self.ctx, infraction, user, ANY)
 
         # Test action
         action = self.cog.apply_infraction.call_args[0][-1]
-        self.assertTrue(inspect.iscoroutine(action))
-        await action
+        self.assertTrue(inspect.iscoroutinefunction(action))
+        await action()
 
     async def test_voice_unmute_user_not_found(self):
         """Should include info to return dict when user was not found from guild."""
@@ -273,7 +280,7 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
             self.user,
             "FooBar",
             purge_days=1,
-            expires_at=None,
+            duration_or_expiry=None,
         )
 
     async def test_cleanban_doesnt_purge_messages_if_clean_cog_available(self):
@@ -285,7 +292,7 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
             self.ctx,
             self.user,
             "FooBar",
-            expires_at=None,
+            duration_or_expiry=None,
         )
 
     @patch("bot.exts.moderation.infraction.infractions.Age")
