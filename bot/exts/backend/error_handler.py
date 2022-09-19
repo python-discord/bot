@@ -170,7 +170,7 @@ class ErrorHandler(Cog):
         tags_get_command = self.bot.get_command("tags get")
         if not tags_get_command:
             log.debug("Not attempting to parse message as a tag as could not find `tags get` command.")
-            return False
+            return
 
         ctx.invoked_from_error_handler = True
 
