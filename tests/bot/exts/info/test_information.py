@@ -610,16 +610,17 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         for raw_user_input, extracted_rule_numbers in test_cases:
-            invalid = ", ".join(
-                str(rule_number) for rule_number in extracted_rule_numbers
-                if rule_number < 1 or rule_number > len(self.full_rules))
+            with self.subTest(identifier=raw_user_input):
+                invalid = ", ".join(
+                    str(rule_number) for rule_number in extracted_rule_numbers
+                    if rule_number < 1 or rule_number > len(self.full_rules))
 
-            final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
 
-            self.assertEqual(
-                self.ctx.send.call_args,
-                unittest.mock.call(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ...")))
-            self.assertEqual(None, final_rule_numbers)
+                self.assertEqual(
+                    self.ctx.send.call_args,
+                    unittest.mock.call(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ...")))
+                self.assertEqual(None, final_rule_numbers)
 
     async def test_return_correct_rule_numbers(self):
 
@@ -630,8 +631,9 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         for raw_user_input, expected_matched_rule_numbers in test_cases:
-            final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
-            self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
+            with self.subTest(identifier=raw_user_input):
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+                self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
 
     async def test_return_default_rules_when_no_input_or_no_match_are_found(self):
         test_cases = [
@@ -641,7 +643,8 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         for raw_user_input, expected_matched_rule_numbers in test_cases:
-            final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
-            embed = self.ctx.send.call_args.kwargs['embed']
-            self.assertEqual(DEFAULT_RULES_DESCRIPTION, embed.description)
-            self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
+            with self.subTest(identifier=raw_user_input):
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+                embed = self.ctx.send.call_args.kwargs['embed']
+                self.assertEqual(DEFAULT_RULES_DESCRIPTION, embed.description)
+                self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
