@@ -619,3 +619,34 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.send.call_args,
                 unittest.mock.call(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ...")))
             self.assertEqual(None, final_rule_numbers)
+
+    async def test_return_correct_rule_numberstest_return_correct_rule_numbers(self):
+
+        test_cases = [
+            (("1", "2", "first"), {1, 2}),
+            (("1", "hello", "2", "second"), {1}),
+            (("second", "third", "unknown", "999"), {2, 3})
+        ]
+
+        for raw_user_input, expected_matched_rule_numbers in test_cases:
+            final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+            self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
+
+    async def test_return_default_rules_when_no_input_or_no_match_are_found(self):
+        test_cases = [
+            ((), None),
+            (("hello", "2", "second"), None),
+            (("hello", "999"), None),
+        ]
+
+        description = (
+            "The rules and guidelines that apply to this community can be found on"
+            " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
+            " all members of the community to have read and understood these."
+        )
+
+        for raw_user_input, expected_matched_rule_numbers in test_cases:
+            final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+            embed = self.ctx.send.call_args.kwargs['embed']
+            self.assertEqual(description, embed.description)
+            self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
