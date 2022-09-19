@@ -569,7 +569,7 @@ class Information(Cog):
         final_rule_numbers = {keyword_to_rule_number[keyword] for keyword in keywords}
         final_rule_numbers.update(rule_numbers)
 
-        for rule_number in final_rule_numbers:
+        for rule_number in sorted(final_rule_numbers):
             self.bot.stats.incr(f"rule_uses.{rule_number}")
             final_rules.append(f"**{rule_number}.** {full_rules[rule_number - 1][0]}")
 
