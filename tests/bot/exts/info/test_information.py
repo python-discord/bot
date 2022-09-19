@@ -620,7 +620,7 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
                 unittest.mock.call(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ...")))
             self.assertEqual(None, final_rule_numbers)
 
-    async def test_return_correct_rule_numberstest_return_correct_rule_numbers(self):
+    async def test_return_correct_rule_numbers(self):
 
         test_cases = [
             (("1", "2", "first"), {1, 2}),
