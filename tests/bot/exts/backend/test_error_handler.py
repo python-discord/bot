@@ -163,8 +163,8 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(await self.cog.on_command_error(self.ctx, case["error"]))
                 case["mock_function_to_call"].assert_awaited_once_with(self.ctx, case["error"].original)
 
-    async def test_error_handler_two_other_errors(self):
-        """Should call `handle_unexpected_error` if error is `MaxConcurrencyReached` or `ExtensionError`."""
+    async def test_error_handler_unexpected_errors(self):
+        """Should call `handle_unexpected_error` if error is `ExtensionError`."""
         self.cog.handle_unexpected_error = AsyncMock()
         errs = (
             errors.ExtensionError(name="foo"),
