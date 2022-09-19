@@ -3,7 +3,7 @@ import pprint
 import textwrap
 from collections import defaultdict
 from textwrap import shorten
-from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, List, Mapping, Optional, Tuple, Union
 
 import rapidfuzz
 from botcore.site_api import ResponseCodeError
@@ -518,7 +518,7 @@ class Information(Cog):
         await self.send_raw_content(ctx, message, json=True)
 
     @command(aliases=("rule",))
-    async def rules(self, ctx: Context, *args: Optional[str]) -> None:
+    async def rules(self, ctx: Context, *args: Optional[str]) -> Optional[List[int]]:
         """
         Provides a link to all rules or, if specified, displays specific rule(s).
 
@@ -574,6 +574,8 @@ class Information(Cog):
             final_rules.append(f"**{rule_number}.** {full_rules[rule_number - 1][0]}")
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
+
+        return final_rule_numbers
 
 
 async def setup(bot: Bot) -> None:
