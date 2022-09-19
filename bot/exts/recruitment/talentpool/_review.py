@@ -200,7 +200,7 @@ class Reviewer:
 
         reviewed_emoji = self._random_ducky(guild)
         vote_request = (
-            f"*Refer to their nomination and infraction histories for further details.*\n"
+            "*Refer to their nomination and infraction histories for further details.*\n"
             f"*Please react {reviewed_emoji} once you have reviewed this user,"
             " and react :+1: for approval, or :-1: for disapproval*."
         )
