@@ -7,6 +7,7 @@ from textwrap import shorten
 import discord
 
 from bot import constants
+from bot.constants import DEFAULT_RULES_DESCRIPTION
 from bot.exts.info import information
 from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
@@ -639,14 +640,8 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
             (("hello", "999"), None),
         ]
 
-        description = (
-            "The rules and guidelines that apply to this community can be found on"
-            " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
-            " all members of the community to have read and understood these."
-        )
-
         for raw_user_input, expected_matched_rule_numbers in test_cases:
             final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
             embed = self.ctx.send.call_args.kwargs['embed']
-            self.assertEqual(description, embed.description)
+            self.assertEqual(DEFAULT_RULES_DESCRIPTION, embed.description)
             self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)

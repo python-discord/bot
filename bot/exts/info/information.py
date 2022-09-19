@@ -13,6 +13,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import DEFAULT_RULES_DESCRIPTION
 from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
@@ -545,12 +546,7 @@ class Information(Cog):
 
         if not rule_numbers and not keywords:
             # Neither rules nor keywords were submitted. Return the default description.
-            rules_embed.description = (
-                "The rules and guidelines that apply to this community can be found on"
-                " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
-                " all members of the community to have read and understood these."
-            )
-
+            rules_embed.description = DEFAULT_RULES_DESCRIPTION
             await ctx.send(embed=rules_embed)
             return
 
