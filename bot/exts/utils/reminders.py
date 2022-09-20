@@ -353,7 +353,7 @@ class Reminders(Cog):
 
             mentions = ", ".join([
                 # Both Role and User objects have the `mention` attribute
-                mentionable.mention async for mentionable in self.get_mentionables(mentions)
+                f"{mentionable.mention} ({mentionable})" async for mentionable in self.get_mentionables(mentions)
             ])
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
