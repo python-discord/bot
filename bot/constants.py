@@ -774,9 +774,3 @@ ERROR_REPLIES = [
     "Noooooo!!",
     "I can't believe you've done this",
 ]
-
-DEFAULT_RULES_DESCRIPTION = (
-    "The rules and guidelines that apply to this community can be found on"
-    " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
-    " all members of the community to have read and understood these."
-)

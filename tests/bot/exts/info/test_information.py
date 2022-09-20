@@ -7,7 +7,6 @@ from textwrap import shorten
 import discord
 
 from bot import constants
-from bot.constants import DEFAULT_RULES_DESCRIPTION
 from bot.exts.info import information
 from bot.utils.checks import InWhitelistCheckFailure
 from tests import helpers
@@ -646,5 +645,5 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(identifier=raw_user_input):
                 final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
                 embed = self.ctx.send.call_args.kwargs['embed']
-                self.assertEqual(DEFAULT_RULES_DESCRIPTION, embed.description)
+                self.assertEqual(information.DEFAULT_RULES_DESCRIPTION, embed.description)
                 self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)

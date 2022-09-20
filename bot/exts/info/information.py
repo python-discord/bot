@@ -13,7 +13,6 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import DEFAULT_RULES_DESCRIPTION
 from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
@@ -25,6 +24,12 @@ from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_w
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
+
+DEFAULT_RULES_DESCRIPTION = (
+    "The rules and guidelines that apply to this community can be found on"
+    " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
+    " all members of the community to have read and understood these."
+)
 
 
 class Information(Cog):
