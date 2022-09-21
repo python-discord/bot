@@ -213,6 +213,29 @@ class Reminders(Cog):
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
+    @staticmethod
+    async def try_get_content_from_reply(ctx: Context) -> t.Optional[str]:
+        """
+        Attempts to get content from the referenced message, if applicable.
+
+        Differs from botcore.utils.commands.clean_text_or_reply as allows for messages with no content.
+        """
+        content = None
+        if reference := ctx.message.reference:
+            if isinstance((resolved_message := reference.resolved), discord.Message):
+                content = resolved_message.content
+
+        # If we weren't able to get the content of a replied message
+        if content is None:
+            await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
+            return
+
+        # If the replied message has no content (e.g. only attachments/embeds)
+        if content == "":
+            content = "*See referenced message.*"
+
+        return content
+
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
         self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
@@ -286,17 +309,10 @@ class Reminders(Cog):
 
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
-            if reference := ctx.message.reference:
-                if isinstance((resolved_message := reference.resolved), discord.Message):
-                    content = resolved_message.content
-            # If we weren't able to get the content of a replied message
-            if content is None:
-                await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
+            content = await self.try_get_content_from_reply(ctx)
+            if not content:
+                # Couldn't get content from reply
                 return
-
-            # If the replied message has no content (e.g. only attachments/embeds)
-            if content == "":
-                content = "See referenced message."
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
@@ -385,20 +401,7 @@ class Reminders(Cog):
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
     async def edit_reminder_group(self, ctx: Context) -> None:
-        """
-        Commands for modifying your current reminders.
-
-        The `expiration` duration supports the following symbols for each unit of time:
-        - years: `Y`, `y`, `year`, `years`
-        - months: `m`, `month`, `months`
-        - weeks: `w`, `W`, `week`, `weeks`
-        - days: `d`, `D`, `day`, `days`
-        - hours: `H`, `h`, `hour`, `hours`
-        - minutes: `M`, `minute`, `minutes`
-        - seconds: `S`, `s`, `second`, `seconds`
-
-        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
-        """
+        """Commands for modifying your current reminders."""
         await ctx.send_help(ctx.command)
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
@@ -420,8 +423,17 @@ class Reminders(Cog):
         await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
-    async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str) -> None:
-        """Edit one of your reminder's content."""
+    async def edit_reminder_content(self, ctx: Context, id_: int, *, content: t.Optional[str] = None) -> None:
+        """
+        Edit one of your reminder's content.
+
+        You can either supply the new content yourself, or reply to a message to use its content.
+        """
+        if not content:
+            content = await self.try_get_content_from_reply(ctx)
+            if not content:
+                # Message doesn't have a reply to get content from
+                return
         await self.edit_reminder(ctx, id_, {"content": content})
 
     @edit_reminder_group.command(name="mentions", aliases=("pings",))

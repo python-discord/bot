@@ -10,7 +10,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Duration, Expiry
+from bot.converters import Duration, DurationOrExpiry
 from bot.decorators import ensure_future_timestamp
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
@@ -96,11 +96,12 @@ class Superstarify(InfractionScheduler, Cog):
 
         if active_superstarifies:
             infraction = active_superstarifies[0]
-            action = member.edit(
-                nick=self.get_nick(infraction["id"], member.id),
-                reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
-            )
 
+            async def action() -> None:
+                await member.edit(
+                    nick=self.get_nick(infraction["id"], member.id),
+                    reason=f"Superstarified member tried to escape the prison: {infraction['id']}"
+                )
             await self.reapply_infraction(infraction, action)
 
     @command(name="superstarify", aliases=("force_nick", "star", "starify", "superstar"))
@@ -109,7 +110,7 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: t.Optional[Expiry],
+        duration: t.Optional[DurationOrExpiry],
         *,
         reason: str = '',
     ) -> None:
@@ -175,7 +176,7 @@ class Superstarify(InfractionScheduler, Cog):
         ).format
 
         successful = await self.apply_infraction(
-            ctx, infraction, member, action(),
+            ctx, infraction, member, action,
             user_reason=user_message(reason=f'**Additional details:** {reason}\n\n' if reason else ''),
             additional_info=nickname_info
         )
