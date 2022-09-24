@@ -2,6 +2,7 @@ import re
 import textwrap
 import typing as t
 
+import arrow
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -9,7 +10,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
+from bot.converters import DurationOrExpiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
 from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfraction
 from bot.exts.moderation.infraction import _utils
@@ -20,6 +21,7 @@ from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 from bot.utils.members import get_or_fetch_member
+from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
 
@@ -89,7 +91,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],
+        duration: t.Union[DurationOrExpiry, t.Literal["p", "permanent"], None],
         *,
         reason: str = None
     ) -> None:
@@ -129,7 +131,7 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, t.Literal["p", "permanent"], None],
+        duration: t.Union[DurationOrExpiry, t.Literal["p", "permanent"], None],
         *,
         reason: str = None
     ) -> None:
@@ -172,8 +174,11 @@ class ModManagement(commands.Cog):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
-            request_data['expires_at'] = duration.isoformat()
-            expiry = time.format_with_duration(duration)
+            origin, expiry = unpack_duration(duration)
+            # Update `last_applied` if expiry changes.
+            request_data['last_applied'] = origin.isoformat()
+            request_data['expires_at'] = expiry.isoformat()
+            expiry = time.format_with_duration(expiry, origin)
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
@@ -380,7 +385,10 @@ class ModManagement(commands.Cog):
         user = infraction["user"]
         expires_at = infraction["expires_at"]
         inserted_at = infraction["inserted_at"]
+        last_applied = infraction["last_applied"]
         created = time.discord_timestamp(inserted_at)
+        applied = time.discord_timestamp(last_applied)
+        duration_edited = arrow.get(last_applied) > arrow.get(inserted_at)
         dm_sent = infraction["dm_sent"]
 
         # Format the user string.
@@ -400,7 +408,11 @@ class ModManagement(commands.Cog):
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            duration = time.humanize_delta(inserted_at, expires_at)
+            duration = time.humanize_delta(last_applied, expires_at)
+
+        # Notice if infraction expiry was edited.
+        if duration_edited:
+            duration += f" (edited {applied})"
 
         # Format `dm_sent`
         if dm_sent is None:

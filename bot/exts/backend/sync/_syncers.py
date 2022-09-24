@@ -154,8 +154,8 @@ class UserSyncer(Syncer):
 
             def maybe_update(db_field: str, guild_value: t.Union[str, int]) -> None:
                 # Equalize DB user and guild user attributes.
-                if db_user[db_field] != guild_value:
-                    updated_fields[db_field] = guild_value
+                if db_user[db_field] != guild_value:  # noqa: B023
+                    updated_fields[db_field] = guild_value  # noqa: B023
 
             guild_user = guild.get_member(db_user["id"])
             if not guild_user and db_user["in_guild"]:

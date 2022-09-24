@@ -5,14 +5,18 @@ from datetime import datetime, timezone
 from operator import itemgetter
 
 import discord
+from botcore.site_api import ResponseCodeError
 from botcore.utils import scheduling
 from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import (
+    Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+)
 from bot.converters import Duration, UnambiguousUser
+from bot.errors import LockedResourceError
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
@@ -209,6 +213,29 @@ class Reminders(Cog):
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
+    @staticmethod
+    async def try_get_content_from_reply(ctx: Context) -> t.Optional[str]:
+        """
+        Attempts to get content from the referenced message, if applicable.
+
+        Differs from botcore.utils.commands.clean_text_or_reply as allows for messages with no content.
+        """
+        content = None
+        if reference := ctx.message.reference:
+            if isinstance((resolved_message := reference.resolved), discord.Message):
+                content = resolved_message.content
+
+        # If we weren't able to get the content of a replied message
+        if content is None:
+            await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
+            return
+
+        # If the replied message has no content (e.g. only attachments/embeds)
+        if content == "":
+            content = "*See referenced message.*"
+
+        return content
+
     @group(name="remind", aliases=("reminder", "reminders", "remindme"), invoke_without_command=True)
     async def remind_group(
         self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: t.Optional[str] = None
@@ -282,17 +309,10 @@ class Reminders(Cog):
 
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
-            if reference := ctx.message.reference:
-                if isinstance((resolved_message := reference.resolved), discord.Message):
-                    content = resolved_message.content
-            # If we weren't able to get the content of a replied message
-            if content is None:
-                await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
+            content = await self.try_get_content_from_reply(ctx)
+            if not content:
+                # Couldn't get content from reply
                 return
-
-            # If the replied message has no content (e.g. only attachments/embeds)
-            if content == "":
-                content = "See referenced message."
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
@@ -348,8 +368,8 @@ class Reminders(Cog):
             expiry = time.format_relative(remind_at)
 
             mentions = ", ".join([
-                # Both Role and User objects have the `name` attribute
-                mention.name async for mention in self.get_mentionables(mentions)
+                # Both Role and User objects have the `mention` attribute
+                f"{mentionable.mention} ({mentionable})" async for mentionable in self.get_mentionables(mentions)
             ])
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
@@ -377,25 +397,11 @@ class Reminders(Cog):
             lines,
             ctx, embed,
             max_lines=3,
-            empty=True
         )
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
     async def edit_reminder_group(self, ctx: Context) -> None:
-        """
-        Commands for modifying your current reminders.
-
-        The `expiration` duration supports the following symbols for each unit of time:
-        - years: `Y`, `y`, `year`, `years`
-        - months: `m`, `month`, `months`
-        - weeks: `w`, `W`, `week`, `weeks`
-        - days: `d`, `D`, `day`, `days`
-        - hours: `H`, `h`, `hour`, `hours`
-        - minutes: `M`, `minute`, `minutes`
-        - seconds: `S`, `s`, `second`, `seconds`
-
-        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
-        """
+        """Commands for modifying your current reminders."""
         await ctx.send_help(ctx.command)
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
@@ -417,8 +423,17 @@ class Reminders(Cog):
         await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
-    async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str) -> None:
-        """Edit one of your reminder's content."""
+    async def edit_reminder_content(self, ctx: Context, id_: int, *, content: t.Optional[str] = None) -> None:
+        """
+        Edit one of your reminder's content.
+
+        You can either supply the new content yourself, or reply to a message to use its content.
+        """
+        if not content:
+            content = await self.try_get_content_from_reply(ctx)
+            if not content:
+                # Message doesn't have a reply to get content from
+                return
         await self.edit_reminder(ctx, id_, {"content": content})
 
     @edit_reminder_group.command(name="mentions", aliases=("pings",))
@@ -450,35 +465,80 @@ class Reminders(Cog):
         )
         await self._reschedule_reminder(reminder)
 
-    @remind_group.command("delete", aliases=("remove", "cancel"))
     @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
-    async def delete_reminder(self, ctx: Context, id_: int) -> None:
-        """Delete one of your active reminders."""
-        if not await self._can_modify(ctx, id_):
-            return
+    async def _delete_reminder(self, ctx: Context, id_: int) -> bool:
+        """Acquires a lock on `id_` and returns `True` if reminder is deleted, otherwise `False`."""
+        if not await self._can_modify(ctx, id_, send_on_denial=False):
+            return False
 
         await self.bot.api_client.delete(f"bot/reminders/{id_}")
         self.scheduler.cancel(id_)
+        return True
 
-        await self._send_confirmation(
-            ctx,
-            on_success="That reminder has been deleted successfully!",
-            reminder_id=id_
+    @remind_group.command("delete", aliases=("remove", "cancel"))
+    async def delete_reminder(self, ctx: Context, ids: Greedy[int]) -> None:
+        """Delete up to (and including) 5 of your active reminders."""
+        if len(ids) > 5:
+            await send_denial(ctx, "You can only delete a maximum of 5 reminders at once.")
+            return
+
+        deleted_ids = []
+        for id_ in set(ids):
+            try:
+                reminder_deleted = await self._delete_reminder(ctx, id_)
+            except LockedResourceError:
+                continue
+            else:
+                if reminder_deleted:
+                    deleted_ids.append(str(id_))
+
+        if deleted_ids:
+            colour = discord.Colour.green()
+            title = random.choice(POSITIVE_REPLIES)
+            deletion_message = f"Successfully deleted the following reminder(s): {', '.join(deleted_ids)}"
+
+            if len(deleted_ids) != len(ids):
+                deletion_message += (
+                    "\n\nThe other reminder(s) could not be deleted as they're either locked, "
+                    "belong to someone else, or don't exist."
+                )
+        else:
+            colour = discord.Colour.red()
+            title = random.choice(NEGATIVE_REPLIES)
+            deletion_message = (
+                "Could not delete the reminder(s) as they're either locked, "
+                "belong to someone else, or don't exist."
+            )
+
+        embed = discord.Embed(
+            description=deletion_message,
+            colour=colour,
+            title=title
         )
+        await ctx.send(embed=embed)
 
-    async def _can_modify(self, ctx: Context, reminder_id: t.Union[str, int]) -> bool:
+    async def _can_modify(self, ctx: Context, reminder_id: t.Union[str, int], send_on_denial: bool = True) -> bool:
         """
         Check whether the reminder can be modified by the ctx author.
 
         The check passes when the user is an admin, or if they created the reminder.
         """
+        try:
+            api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
+        except ResponseCodeError as e:
+            # Override error-handling so that a 404 message isn't sent to Discord when `send_on_denial` is `False`
+            if not send_on_denial:
+                if e.status == 404:
+                    return False
+            raise e
+
         if await has_any_role_check(ctx, Roles.admins):
             return True
 
-        api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
         if not api_response["author"] == ctx.author.id:
             log.debug(f"{ctx.author} is not the reminder author and does not pass the check.")
-            await send_denial(ctx, "You can't modify reminders of other users!")
+            if send_on_denial:
+                await send_denial(ctx, "You can't modify reminders of other users!")
             return False
 
         log.debug(f"{ctx.author} is the reminder author and passes the check.")

@@ -1,4 +1,3 @@
-import asyncio
 import itertools
 import unittest
 from datetime import datetime, timezone
@@ -6,30 +5,14 @@ from typing import List, Tuple
 from unittest import mock
 from unittest.mock import AsyncMock, Mock
 
-from async_rediscache import RedisSession
 from discord import PermissionOverwrite
 
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.moderation import silence
+from tests.base import RedisTestCase
 from tests.helpers import (
     MockBot, MockContext, MockGuild, MockMember, MockRole, MockTextChannel, MockVoiceChannel, autospec
 )
-
-redis_session = None
-redis_loop = asyncio.get_event_loop()
-
-
-def setUpModule():  # noqa: N802
-    """Create and connect to the fakeredis session."""
-    global redis_session
-    redis_session = RedisSession(use_fakeredis=True)
-    redis_loop.run_until_complete(redis_session.connect())
-
-
-def tearDownModule():  # noqa: N802
-    """Close the fakeredis session."""
-    if redis_session:
-        redis_loop.run_until_complete(redis_session.close())
 
 
 # Have to subclass it because builtins can't be patched.
@@ -39,8 +22,24 @@ class PatchedDatetime(datetime):
     now = mock.create_autospec(datetime, "now")
 
 
-class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
+class SilenceTest(RedisTestCase):
+    """A base class for Silence tests that correctly sets up the cog and redis."""
+
+    @autospec(silence, "Scheduler", pass_mocks=False)
+    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
     def setUp(self) -> None:
+        self.bot = MockBot(get_channel=lambda _id: MockTextChannel(id=_id))
+        self.cog = silence.Silence(self.bot)
+
+    @autospec(silence, "SilenceNotifier", pass_mocks=False)
+    async def asyncSetUp(self) -> None:
+        await super().asyncSetUp()
+        await self.cog.cog_load()  # Populate instance attributes.
+
+
+class SilenceNotifierTests(SilenceTest):
+    def setUp(self) -> None:
+        super().setUp()
         self.alert_channel = MockTextChannel()
         self.notifier = silence.SilenceNotifier(self.alert_channel)
         self.notifier.stop = self.notifier_stop_mock = Mock()
@@ -105,34 +104,24 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
-class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
+class SilenceCogTests(SilenceTest):
     """Tests for the general functionality of the Silence cog."""
-
-    @autospec(silence, "Scheduler", pass_mocks=False)
-    def setUp(self) -> None:
-        self.bot = MockBot()
-        self.cog = silence.Silence(self.bot)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_cog_load_got_guild(self):
         """Bot got guild after it became available."""
-        await self.cog.cog_load()
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
     @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_cog_load_got_channels(self):
         """Got channels from bot."""
-        self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
-
         await self.cog.cog_load()
         self.assertEqual(self.cog._mod_alerts_channel.id, Channels.mod_alerts)
 
     @autospec(silence, "SilenceNotifier")
     async def test_cog_load_got_notifier(self, notifier):
         """Notifier was started with channel."""
-        self.bot.get_channel.side_effect = lambda id_: MockTextChannel(id=id_)
-
         await self.cog.cog_load()
         notifier.assert_called_once_with(MockTextChannel(id=Channels.mod_log))
         self.assertEqual(self.cog.notifier, notifier.return_value)
@@ -245,14 +234,8 @@ class SilenceCogTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(member.move_to.call_count, 1 if member == failing_member else 2)
 
 
-class SilenceArgumentParserTests(unittest.IsolatedAsyncioTestCase):
+class SilenceArgumentParserTests(SilenceTest):
     """Tests for the silence argument parser utility function."""
-
-    def setUp(self):
-        self.bot = MockBot()
-        self.cog = silence.Silence(self.bot)
-        self.cog._init_task = asyncio.Future()
-        self.cog._init_task.set_result(None)
 
     @autospec(silence.Silence, "send_message", pass_mocks=False)
     @autospec(silence.Silence, "_set_silence_overwrites", return_value=False, pass_mocks=False)
@@ -321,17 +304,19 @@ class SilenceArgumentParserTests(unittest.IsolatedAsyncioTestCase):
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
-class RescheduleTests(unittest.IsolatedAsyncioTestCase):
+class RescheduleTests(RedisTestCase):
     """Tests for the rescheduling of cached unsilences."""
 
-    @autospec(silence, "Scheduler", "SilenceNotifier", pass_mocks=False)
-    def setUp(self):
+    @autospec(silence, "Scheduler", pass_mocks=False)
+    def setUp(self) -> None:
         self.bot = MockBot()
         self.cog = silence.Silence(self.bot)
         self.cog._unsilence_wrapper = mock.create_autospec(self.cog._unsilence_wrapper)
 
-        with mock.patch.object(self.cog, "_reschedule", autospec=True):
-            asyncio.run(self.cog.cog_load())  # Populate instance attributes.
+    @autospec(silence, "SilenceNotifier", pass_mocks=False)
+    async def asyncSetUp(self) -> None:
+        await super().asyncSetUp()
+        await self.cog.cog_load()  # Populate instance attributes.
 
     async def test_skipped_missing_channel(self):
         """Did nothing because the channel couldn't be retrieved."""
@@ -406,22 +391,14 @@ def voice_sync_helper(function):
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
-class SilenceTests(unittest.IsolatedAsyncioTestCase):
+class SilenceTests(SilenceTest):
     """Tests for the silence command and its related helper methods."""
 
-    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
-    @autospec(silence, "Scheduler", "SilenceNotifier", pass_mocks=False)
     def setUp(self) -> None:
-        self.bot = MockBot(get_channel=lambda _: MockTextChannel())
-        self.cog = silence.Silence(self.bot)
-        self.cog._init_task = asyncio.Future()
-        self.cog._init_task.set_result(None)
+        super().setUp()
 
         # Avoid unawaited coroutine warnings.
         self.cog.scheduler.schedule_later.side_effect = lambda delay, task_id, coro: coro.close()
-
-        asyncio.run(self.cog.cog_load())  # Populate instance attributes.
-
         self.text_channel = MockTextChannel()
         self.text_overwrite = PermissionOverwrite(
             send_messages=True,
@@ -679,24 +656,13 @@ class SilenceTests(unittest.IsolatedAsyncioTestCase):
 
 
 @autospec(silence.Silence, "unsilence_timestamps", pass_mocks=False)
-class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
+class UnsilenceTests(SilenceTest):
     """Tests for the unsilence command and its related helper methods."""
 
-    @autospec(silence.Silence, "_reschedule", pass_mocks=False)
-    @autospec(silence, "Scheduler", "SilenceNotifier", pass_mocks=False)
     def setUp(self) -> None:
-        self.bot = MockBot(get_channel=lambda _: MockTextChannel())
-        self.cog = silence.Silence(self.bot)
-        self.cog._init_task = asyncio.Future()
-        self.cog._init_task.set_result(None)
-
-        overwrites_cache = mock.create_autospec(self.cog.previous_overwrites, spec_set=True)
-        self.cog.previous_overwrites = overwrites_cache
-
-        asyncio.run(self.cog.cog_load())  # Populate instance attributes.
+        super().setUp()
 
         self.cog.scheduler.__contains__.return_value = True
-        overwrites_cache.get.return_value = '{"send_messages": true, "add_reactions": false}'
         self.text_channel = MockTextChannel()
         self.text_overwrite = PermissionOverwrite(send_messages=False, add_reactions=False)
         self.text_channel.overwrites_for.return_value = self.text_overwrite
@@ -704,6 +670,13 @@ class UnsilenceTests(unittest.IsolatedAsyncioTestCase):
         self.voice_channel = MockVoiceChannel()
         self.voice_overwrite = PermissionOverwrite(connect=True, speak=True)
         self.voice_channel.overwrites_for.return_value = self.voice_overwrite
+
+    async def asyncSetUp(self) -> None:
+        await super().asyncSetUp()
+        overwrites_cache = mock.create_autospec(self.cog.previous_overwrites, spec_set=True)
+        self.cog.previous_overwrites = overwrites_cache
+
+        overwrites_cache.get.return_value = '{"send_messages": true, "add_reactions": false}'
 
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
