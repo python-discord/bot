@@ -650,12 +650,13 @@ class Filtering(Cog):
         if msg.embeds:
             for embed in msg.embeds:
                 if embed.type == "rich":
-                    urls = set(URL_RE.findall(msg.content))
+                    urls = URL_RE.findall(msg.content)
+                    final_urls = set(urls)
                     # This is due to way discord renders relative urls in Embdes
                     # if we send the following url: https://mobile.twitter.com/something
                     # Discord renders it as https://twitter.com/something
                     for url in urls:
-                        urls.add(remove_subdomain_from_url(url))
+                        final_urls.add(remove_subdomain_from_url(url))
                     if not embed.url or embed.url not in urls:
                         # If `embed.url` does not exist or if `embed.url` is not part of the content
                         # of the message, it's unlikely to be an auto-generated embed by Discord.
