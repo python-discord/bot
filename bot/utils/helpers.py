@@ -3,6 +3,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from discord.ext.commands import CogMeta
+from tldextract import extract
 
 
 class CogABCMeta(CogMeta, ABCMeta):
@@ -34,11 +35,10 @@ def pad_base64(data: str) -> str:
 
 
 def remove_subdomain_from_url(url: str) -> str:
-    """Transforms potential relative urls to absolute ones."""
+    """Removes subdomains from a URL whilst preserving the original URL composition."""
     parsed_url = urlparse(url)
-    netloc_components = parsed_url.netloc.split(".")
-    # Eliminate subdomain and use the second level domain and top level domain only
-    netloc_components[:] = netloc_components[-2:]
-    netloc = ".".join(netloc_components)
+    extracted_url = extract(url)
+    # Eliminate subdomain by using the registered domain only
+    netloc = extracted_url.registered_domain
     parsed_url = parsed_url._replace(netloc=netloc)
     return parsed_url.geturl()
