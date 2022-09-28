@@ -657,7 +657,7 @@ class Filtering(Cog):
                     # Discord renders it as https://twitter.com/something
                     for url in urls:
                         final_urls.add(remove_subdomain_from_url(url))
-                    if not embed.url or embed.url not in urls:
+                    if not embed.url or embed.url not in final_urls:
                         # If `embed.url` does not exist or if `embed.url` is not part of the content
                         # of the message, it's unlikely to be an auto-generated embed by Discord.
                         return msg.embeds
