@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from typing import Optional
+from urllib.parse import urlparse
 
 from discord.ext.commands import CogMeta
 
@@ -30,3 +31,14 @@ def has_lines(string: str, count: int) -> bool:
 def pad_base64(data: str) -> str:
     """Return base64 `data` with padding characters to ensure its length is a multiple of 4."""
     return data + "=" * (-len(data) % 4)
+
+
+def remove_subdomain_from_url(url: str) -> str:
+    """Transforms potential relative urls to absolute ones."""
+    parsed_url = urlparse(url)
+    netloc_components = parsed_url.netloc.split(".")
+    # Eliminate subdomain and use the second level domain and top level domain only
+    netloc_components[:] = netloc_components[-2:]
+    netloc = ".".join(netloc_components)
+    parsed_url = parsed_url._replace(netloc=netloc)
+    return parsed_url.geturl()
