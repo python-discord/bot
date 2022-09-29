@@ -1,4 +1,7 @@
 from abc import abstractmethod
+from typing import Optional
+
+from pydantic import ValidationError
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings import create_settings
@@ -31,6 +34,19 @@ class Filter(FieldRequiring):
     @abstractmethod
     def triggered_on(self, ctx: FilterContext) -> bool:
         """Search for the filter's content within a given context."""
+
+    @classmethod
+    def validate_filter_settings(cls, extra_fields: dict) -> tuple[bool, Optional[str]]:
+        """Validate whether the supplied fields are valid for the filter, and provide the error message if not."""
+        if cls.extra_fields_type is None:
+            return True, None
+
+        try:
+            cls.extra_fields_type(**extra_fields)
+        except ValidationError as e:
+            return False, repr(e)
+        else:
+            return True, None
 
     def __str__(self) -> str:
         """A string representation of the filter."""

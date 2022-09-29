@@ -44,6 +44,7 @@ class FilterList(FieldRequiring):
     name = FieldRequiring.MUST_SET_UNIQUE
 
     def __init__(self, filter_type: Type[Filter]):
+        self.list_ids = {}
         self.filter_lists: dict[ListType, dict[int, Filter]] = {}
         self.defaults = {}
 
@@ -54,14 +55,25 @@ class FilterList(FieldRequiring):
         actions, validations = create_settings(list_data["settings"], keep_empty=True)
         list_type = ListType(list_data["list_type"])
         self.defaults[list_type] = {"actions": actions, "validations": validations}
+        self.list_ids[list_type] = list_data["id"]
 
-        filters = {}
+        self.filter_lists[list_type] = {}
         for filter_data in list_data["filters"]:
-            try:
-                filters[filter_data["id"]] = self.filter_type(filter_data)
-            except TypeError as e:
-                log.warning(e)
-        self.filter_lists[list_type] = filters
+            self.add_filter(filter_data, list_type)
+
+    def add_filter(self, filter_data: dict, list_type: ListType) -> Filter:
+        """Add a filter to the list of the specified type."""
+        try:
+            new_filter = self.filter_type(filter_data)
+            self.filter_lists[list_type][filter_data["id"]] = new_filter
+        except TypeError as e:
+            log.warning(e)
+        else:
+            return new_filter
+
+    @abstractmethod
+    def get_filter_type(self, content: str) -> Type[Filter]:
+        """Get a subclass of filter matching the filter list and the filter's content."""
 
     @property
     @abstractmethod

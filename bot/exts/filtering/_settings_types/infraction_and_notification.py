@@ -1,7 +1,6 @@
-from collections import namedtuple
 from datetime import timedelta
 from enum import Enum, auto
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 import arrow
 from discord import Colour, Embed
@@ -25,23 +24,9 @@ class Infraction(Enum):
     WARNING = auto()
     WATCH = auto()
     NOTE = auto()
-    NONE = auto()  # Allows making operations on an entry with no infraction without checking for None.
-
-    def __bool__(self) -> bool:
-        """
-        Make the NONE value false-y.
-
-        This is useful for Settings.create to evaluate whether the entry contains anything.
-        """
-        return self != Infraction.NONE
 
     def __str__(self) -> str:
-        if self == Infraction.NONE:
-            return ""
         return self.name
-
-
-superstar = namedtuple("superstar", ["reason", "duration"])
 
 
 class InfractionAndNotification(ActionEntry):
@@ -66,23 +51,22 @@ class InfractionAndNotification(ActionEntry):
         "dm_embed": "The contents of the embed to be DMed to the offending user."
     }
 
-    dm_content: str
-    dm_embed: str
-    infraction_type: Optional[Infraction]
-    infraction_reason: Optional[str]
-    infraction_duration: Optional[float]
-    superstar: Optional[superstar] = None
+    dm_content: str | None
+    dm_embed: str | None
+    infraction_type: Infraction | None
+    infraction_reason: str | None
+    infraction_duration: float | None
 
     @validator("infraction_type", pre=True)
     @classmethod
     def convert_infraction_name(cls, infr_type: str) -> Infraction:
         """Convert the string to an Infraction by name."""
-        return Infraction[infr_type.replace(" ", "_").upper()] if infr_type else Infraction.NONE
+        return Infraction[infr_type.replace(" ", "_").upper()] if infr_type else None
 
     async def action(self, ctx: FilterContext) -> None:
         """Send the notification to the user, and apply any specified infractions."""
         # If there is no infraction to apply, any DM contents already provided in the context take precedence.
-        if self.infraction_type == Infraction.NONE and (ctx.dm_content or ctx.dm_embed):
+        if self.infraction_type is None and (ctx.dm_content or ctx.dm_embed):
             dm_content = ctx.dm_content
             dm_embed = ctx.dm_embed
         else:
@@ -107,21 +91,11 @@ class InfractionAndNotification(ActionEntry):
         msg_ctx.guild = bot.instance.get_guild(Guild.id)
         msg_ctx.author = ctx.author
         msg_ctx.channel = ctx.channel
-        if self.superstar:
-            msg_ctx.command = bot.instance.get_command("superstarify")
-            await msg_ctx.invoke(
-                msg_ctx.command,
-                ctx.author,
-                arrow.utcnow() + timedelta(seconds=self.superstar.duration)
-                if self.superstar.duration is not None else None,
-                reason=self.superstar.reason
-            )
-            ctx.action_descriptions.append("superstar")
 
-        if self.infraction_type != Infraction.NONE:
+        if self.infraction_type is not None:
             if self.infraction_type == Infraction.BAN or not hasattr(ctx.channel, "guild"):
                 msg_ctx.channel = bot.instance.get_channel(Channels.mod_alerts)
-            msg_ctx.command = bot.instance.get_command(self.infraction_type.name)
+            msg_ctx.command = bot.instance.get_command(self.infraction_type.name.lower())
             await msg_ctx.invoke(
                 msg_ctx.command,
                 ctx.author,
@@ -137,12 +111,6 @@ class InfractionAndNotification(ActionEntry):
 
         If the infractions are different, take the data of the one higher up the hierarchy.
 
-        A special case is made for superstar infractions. Even if we decide to auto-mute a user, if they have a
-        particularly problematic username we will still want to superstarify them.
-
-        This is a "best attempt" implementation. Trying to account for any type of combination would create an
-        extremely complex ruleset. For example, we could special-case watches as well.
-
         There is no clear way to properly combine several notification messages, especially when it's in two parts.
         To avoid bombarding the user with several notifications, the message with the more significant infraction
         is used.
@@ -151,42 +119,19 @@ class InfractionAndNotification(ActionEntry):
             return NotImplemented
 
         # Lower number -> higher in the hierarchy
-        if self.infraction_type.value < other.infraction_type.value and other.infraction_type != Infraction.SUPERSTAR:
-            result = self.copy()
-            result.superstar = self._merge_superstars(self.superstar, other.superstar)
-            return result
-        elif self.infraction_type.value > other.infraction_type.value and self.infraction_type != Infraction.SUPERSTAR:
-            result = other.copy()
-            result.superstar = self._merge_superstars(self.superstar, other.superstar)
-            return result
-
-        if self.infraction_type == other.infraction_type:
+        if self.infraction_type is None:
+            return other.copy()
+        elif other.infraction_type is None:
+            return self.copy()
+        elif self.infraction_type.value < other.infraction_type.value:
+            return self.copy()
+        elif self.infraction_type.value > other.infraction_type.value:
+            return other.copy()
+        else:
             if self.infraction_duration is None or (
-                    other.infraction_duration is not None and self.infraction_duration > other.infraction_duration
+                other.infraction_duration is not None and self.infraction_duration > other.infraction_duration
             ):
                 result = self.copy()
             else:
                 result = other.copy()
-            result.superstar = self._merge_superstars(self.superstar, other.superstar)
             return result
-
-        # At this stage the infraction types are different, and the lower one is a superstar.
-        if self.infraction_type.value < other.infraction_type.value:
-            result = self.copy()
-            result.superstar = superstar(other.infraction_reason, other.infraction_duration)
-        else:
-            result = other.copy()
-            result.superstar = superstar(self.infraction_reason, self.infraction_duration)
-        return result
-
-    @staticmethod
-    def _merge_superstars(superstar1: Optional[superstar], superstar2: Optional[superstar]) -> Optional[superstar]:
-        """Take the superstar with the greater duration."""
-        if not superstar1:
-            return superstar2
-        if not superstar2:
-            return superstar1
-
-        if superstar1.duration is None or superstar1.duration > superstar2.duration:
-            return superstar1
-        return superstar2

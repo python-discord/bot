@@ -1,32 +1,32 @@
+import json
 import operator
 import re
 from collections import defaultdict
 from functools import reduce
-from typing import Optional
+from typing import Literal, Optional, get_type_hints
 
 from discord import Colour, Embed, HTTPException, Message
 from discord.ext import commands
 from discord.ext.commands import BadArgument, Cog, Context, has_any_role
 from discord.utils import escape_markdown
 
+import bot
+import bot.exts.filtering._ui as filters_ui
 from bot.bot import Bot
 from bot.constants import Colours, MODERATION_ROLES, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
-from bot.exts.filtering._ui import ArgumentCompletionView
+from bot.exts.filtering._ui import (
+    ArgumentCompletionView, build_filter_repr_dict, description_and_settings_converter, populate_embed_from_dict
+)
 from bot.exts.filtering._utils import past_tense, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import format_channel, format_user
 
 log = get_logger(__name__)
-
-# Max number of characters in a Discord embed field value, minus 6 characters for a placeholder.
-MAX_FIELD_SIZE = 1018
-# Max number of characters for an embed field's value before it should take its own line.
-MAX_INLINE_SIZE = 50
 
 
 class Filtering(Cog):
@@ -111,15 +111,18 @@ class Filtering(Cog):
             settings_types.update(type(setting) for _, setting in list_defaults["actions"].items())
             settings_types.update(type(setting) for _, setting in list_defaults["validations"].items())
             for setting_type in settings_types:
+                type_hints = get_type_hints(setting_type)
                 # The description should be either a string or a dictionary.
                 if isinstance(setting_type.description, str):
                     # If it's a string, then the setting matches a single field in the DB,
                     # and its name is the setting type's name attribute.
-                    self.loaded_settings[setting_type.name] = setting_type.description, setting_type
+                    self.loaded_settings[setting_type.name] = (
+                        setting_type.description, setting_type, type_hints[setting_type.name]
+                    )
                 else:
                     # Otherwise, the setting type works with compound settings.
                     self.loaded_settings.update({
-                        subsetting: (description, setting_type)
+                        subsetting: (description, setting_type, type_hints[subsetting])
                         for subsetting, description in setting_type.description.items()
                     })
 
@@ -128,9 +131,14 @@ class Filtering(Cog):
             extra_fields_type = filter_type.extra_fields_type
             if not extra_fields_type:
                 continue
+            type_hints = get_type_hints(extra_fields_type)
             # A class var with a `_description` suffix is expected per field name.
             self.loaded_filter_settings[filter_name] = {
-                field_name: (getattr(extra_fields_type, f"{field_name}_description", ""), extra_fields_type)
+                field_name: (
+                    getattr(extra_fields_type, f"{field_name}_description", ""),
+                    extra_fields_type,
+                    type_hints[field_name]
+                )
                 for field_name in extra_fields_type.__fields__
             }
 
@@ -173,6 +181,31 @@ class Filtering(Cog):
         list_type, filter_list = result
         await self._send_list(ctx, filter_list, list_type)
 
+    @blocklist.command(name="add", aliases=("a",))
+    async def bl_add(
+        self,
+        ctx: Context,
+        noui: Optional[Literal["noui"]],
+        list_name: Optional[str],
+        content: str,
+        *,
+        description_and_settings: Optional[str] = None
+    ) -> None:
+        """
+        Add a blocked filter to the specified filter list.
+
+        Unless `noui` is specified, a UI will be provided to edit the content, description, and settings
+        before confirmation.
+
+        The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
+        equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
+        """
+        result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name)
+        if result is None:
+            return
+        list_type, filter_list = result
+        await self._add_filter(ctx, noui, list_type, filter_list, content, description_and_settings)
+
     # endregion
     # region: whitelist commands
 
@@ -190,6 +223,31 @@ class Filtering(Cog):
             return
         list_type, filter_list = result
         await self._send_list(ctx, filter_list, list_type)
+
+    @allowlist.command(name="add", aliases=("a",))
+    async def al_add(
+        self,
+        ctx: Context,
+        noui: Optional[Literal["noui"]],
+        list_name: Optional[str],
+        content: str,
+        *,
+        description_and_settings: Optional[str] = None
+    ) -> None:
+        """
+        Add an allowed filter to the specified filter list.
+
+        Unless `noui` is specified, a UI will be provided to edit the content, description, and settings
+        before confirmation.
+
+        The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
+        equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
+        """
+        result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name)
+        if result is None:
+            return
+        list_type, filter_list = result
+        await self._add_filter(ctx, noui, list_type, filter_list, content, description_and_settings)
 
     # endregion
     # region: filter commands
@@ -224,23 +282,16 @@ class Filtering(Cog):
                 for _, setting in settings.items():
                     overrides_values.update(to_serializable(setting.dict()))
 
-        # Combine them. It's done in this way to preserve field order, since the filter won't have all settings.
-        total_values = {}
-        for name, value in default_setting_values.items():
-            if name not in overrides_values:
-                total_values[name] = value
-            else:
-                total_values[f"{name}*"] = overrides_values[name]
-        # Add the filter-specific settings.
-        if hasattr(filter_.extra_fields, "dict"):
+        if filter_.extra_fields_type:
             extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
-            for name, value in filter_.extra_fields.dict().items():
-                if name not in extra_fields_overrides:
-                    total_values[f"{filter_.name}/{name}"] = value
-                else:
-                    total_values[f"{filter_.name}/{name}*"] = value
+        else:
+            extra_fields_overrides = {}
 
-        embed = self._build_embed_from_dict(total_values)
+        all_settings_repr_dict = build_filter_repr_dict(
+            filter_list, list_type, type(filter_), overrides_values, extra_fields_overrides
+        )
+        embed = Embed(colour=Colour.blue())
+        populate_embed_from_dict(embed, all_settings_repr_dict)
         embed.description = f"`{filter_.content}`"
         if filter_.description:
             embed.description += f" - {filter_.description}"
@@ -253,7 +304,7 @@ class Filtering(Cog):
 
     @filter.command(name="list", aliases=("get",))
     async def f_list(
-            self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
+        self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
     ) -> None:
         """List the contents of a specified list of filters."""
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -281,6 +332,34 @@ class Filtering(Cog):
             embed.set_author(name=f"Description of the {filter_name} filter")
         embed.colour = Colour.blue()
         await ctx.send(embed=embed)
+
+    @filter.command(name="add", aliases=("a",))
+    async def f_add(
+        self,
+        ctx: Context,
+        noui: Optional[Literal["noui"]],
+        list_type: Optional[list_type_converter],
+        list_name: Optional[str],
+        content: str,
+        *,
+        description_and_settings: Optional[str] = None
+    ) -> None:
+        """
+        Add a filter to the specified filter list.
+
+        Unless `noui` is specified, a UI will be provided to edit the content, description, and settings
+        before confirmation.
+
+        The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
+        equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
+
+        Example: `!filter add denied token "Scaleios is great" delete_messages=True send_alert=False`
+        """
+        result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
+        if result is None:
+            return
+        list_type, filter_list = result
+        await self._add_filter(ctx, noui, list_type, filter_list, content, description_and_settings)
 
     @filter.group(aliases=("settings",))
     async def setting(self, ctx: Context) -> None:
@@ -347,7 +426,8 @@ class Filtering(Cog):
             for _, setting in list_defaults[type_].items():
                 setting_values.update(to_serializable(setting.dict()))
 
-        embed = self._build_embed_from_dict(setting_values)
+        embed = Embed(colour=Colour.blue())
+        populate_embed_from_dict(embed, setting_values)
         # Use the class's docstring, and ignore single newlines.
         embed.description = re.sub(r"(?<!\n)\n(?!\n)", " ", filter_list.__doc__)
         embed.set_author(
@@ -473,18 +553,79 @@ class Filtering(Cog):
                 if id_ in sublist:
                     return sublist[id_], filter_list, list_type
 
+    async def _add_filter(
+        self,
+        ctx: Context,
+        noui: Optional[Literal["noui"]],
+        list_type: ListType,
+        filter_list: FilterList,
+        content: str,
+        description_and_settings: Optional[str] = None
+    ) -> None:
+        """Add a filter to the database."""
+        description, settings, filter_settings = description_and_settings_converter(
+            filter_list.name, self.loaded_settings, self.loaded_filter_settings, description_and_settings
+        )
+        filter_type = filter_list.get_filter_type(content)
+
+        if noui:
+            await self._post_new_filter(
+                ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
+            )
+
+        else:
+            embed = Embed(colour=Colour.blue())
+            embed.description = f"`{content}`" if content else "*No content*"
+            if description:
+                embed.description += f" - {description}"
+            embed.set_author(
+                name=f"New Filter - {past_tense(list_type.name.lower())} {filter_list.name}".title())
+            embed.set_footer(text=(
+                "Field names with an asterisk have values which override the defaults of the containing filter list. "
+                f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+            ))
+
+            view = filters_ui.SettingsEditView(
+                filter_list,
+                list_type,
+                filter_type,
+                content,
+                description,
+                settings,
+                filter_settings,
+                self.loaded_settings,
+                self.loaded_filter_settings,
+                ctx.author,
+                embed,
+                self._post_new_filter
+            )
+            await ctx.send(embed=embed, reference=ctx.message, view=view)
+
     @staticmethod
-    def _build_embed_from_dict(data: dict) -> Embed:
-        """Build a Discord embed by populating fields from the given dict."""
-        embed = Embed(description="", colour=Colour.blue())
-        for setting, value in data.items():
-            if setting.startswith("_"):
-                continue
-            value = str(value) if value not in ("", None) else "-"
-            if len(value) > MAX_FIELD_SIZE:
-                value = value[:MAX_FIELD_SIZE] + " [...]"
-            embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
-        return embed
+    async def _post_new_filter(
+        msg: Message,
+        filter_list: FilterList,
+        list_type: ListType,
+        filter_type: type[Filter],
+        content: str,
+        description: str | None,
+        settings: dict,
+        filter_settings: dict
+    ) -> None:
+        """POST the data of the new filter to the site API."""
+        valid, error_msg = filter_type.validate_filter_settings(filter_settings)
+        if not valid:
+            raise BadArgument(f"Error while validating filter-specific settings: {error_msg}")
+
+        list_id = filter_list.list_ids[list_type]
+        description = description or None
+        payload = {
+            "filter_list": list_id, "content": content, "description": description,
+            "additional_field": json.dumps(filter_settings), **settings
+        }
+        response = await bot.instance.api_client.post('bot/filter/filters', json=payload)
+        new_filter = filter_list.add_filter(response, list_type)
+        await msg.channel.send(f"✅ Added filter: {new_filter}", reference=msg)
 
     # endregion
 

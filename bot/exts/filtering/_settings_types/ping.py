@@ -45,7 +45,7 @@ class Ping(ActionEntry):
         if not isinstance(other, Ping):
             return NotImplemented
 
-        return Ping(ping_type=self.guild_pings | other.guild_pings, dm_ping_type=self.dm_pings | other.dm_pings)
+        return Ping(guild_pings=self.guild_pings | other.guild_pings, dm_pings=self.dm_pings | other.dm_pings)
 
     @staticmethod
     @cache
