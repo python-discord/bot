@@ -18,10 +18,11 @@ class RoleBypass(ValidationEntry):
     @validator("bypass_roles", pre=True, each_item=True)
     @classmethod
     def maybe_cast_to_int(cls, role: str) -> Union[int, str]:
-        """If the string is alphanumeric, cast it to int."""
-        if role.isdigit():
+        """If the string is numeric, cast it to int."""
+        try:
             return int(role)
-        return role
+        except ValueError:
+            return role
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """Return whether the filter should be triggered on this user given their roles."""
