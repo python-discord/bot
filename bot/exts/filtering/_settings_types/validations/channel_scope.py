@@ -49,6 +49,10 @@ class ChannelScope(ValidationEntry):
         If the channel is explicitly enabled, it bypasses the set disabled channels and categories.
         """
         channel = ctx.channel
+
+        if channel.guild is None:  # This is a DM channel, outside the scope of this setting.
+            return True
+
         enabled_id = (
             channel.id in self.enabled_channels
             or (

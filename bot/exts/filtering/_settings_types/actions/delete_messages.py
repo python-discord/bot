@@ -22,9 +22,11 @@ class DeleteMessages(ActionEntry):
         if not self.delete_messages or ctx.event not in (Event.MESSAGE, Event.MESSAGE_EDIT):
             return
 
+        if not ctx.message.guild:
+            return
+
         with suppress(NotFound):
-            if ctx.message.guild:
-                await ctx.message.delete()
+            await ctx.message.delete()
         ctx.action_descriptions.append("deleted")
 
     def __or__(self, other: ActionEntry):
