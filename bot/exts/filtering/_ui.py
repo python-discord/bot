@@ -302,7 +302,14 @@ class SequenceEditView(discord.ui.View):
 
     async def apply_removal(self, interaction: Interaction, select: discord.ui.Select) -> None:
         """Remove an item from the list."""
-        self.stored_value.remove(select.values[0])
+        # The value might not be stored as a string.
+        _i = len(self.stored_value)
+        for _i, element in enumerate(self.stored_value):
+            if str(element) == select.values[0]:
+                break
+        if _i != len(self.stored_value):
+            self.stored_value.pop(_i)
+
         select.options = [SelectOption(label=item) for item in self.stored_value[:MAX_SELECT_ITEMS]]
         if not self.stored_value:
             self.remove_item(self.removal_select)
