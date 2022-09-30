@@ -337,10 +337,9 @@ class SequenceEditView(discord.ui.View):
     @discord.ui.button(label="✅ Confirm", style=discord.ButtonStyle.green)
     async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Send the final value to the embed editor."""
-        final_value = self.type_(self.stored_value)
         # Edit first, it might time out otherwise.
         await interaction.response.edit_message(content="✅ Edit confirmed", view=None)
-        await self.update_callback(setting_name=self.setting_name, setting_value=final_value)
+        await self.update_callback(setting_name=self.setting_name, setting_value=self.stored_value)
         self.stop()
 
     @discord.ui.button(label="🚫 Cancel", style=discord.ButtonStyle.red)
