@@ -70,7 +70,7 @@ class Filtering(Cog):
         try:
             self.webhook = await self.bot.fetch_webhook(Webhooks.filters)
         except HTTPException:
-            log.error(f"Failed to fetch incidents webhook with ID `{Webhooks.incidents}`.")
+            log.error(f"Failed to fetch filters webhook with ID `{Webhooks.filters}`.")
 
         self.collect_loaded_types()
 
