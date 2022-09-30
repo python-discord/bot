@@ -11,7 +11,7 @@ class FilterTests(unittest.TestCase):
         """`create_settings` should return a tuple of two Nones when passed an empty dict."""
         result = create_settings({})
 
-        self.assertEquals(result, (None, None))
+        self.assertEqual(result, (None, None))
 
     def test_unrecognized_entry_makes_a_warning(self):
         """When an unrecognized entry name is passed to `create_settings`, it should be added to `_already_warned`."""

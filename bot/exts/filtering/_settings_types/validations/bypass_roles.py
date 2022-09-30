@@ -15,7 +15,7 @@ class RoleBypass(ValidationEntry):
 
     bypass_roles: set[Union[int, str]]
 
-    @validator("bypass_roles", each_item=True)
+    @validator("bypass_roles", pre=True, each_item=True)
     @classmethod
     def maybe_cast_to_int(cls, role: str) -> Union[int, str]:
         """If the string is alphanumeric, cast it to int."""

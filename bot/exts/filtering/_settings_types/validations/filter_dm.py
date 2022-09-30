@@ -14,4 +14,4 @@ class FilterDM(ValidationEntry):
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """Return whether the filter should be triggered even if it was triggered in DMs."""
-        return hasattr(ctx.channel, "guild") or self.filter_dm
+        return ctx.channel.guild is not None or self.filter_dm
