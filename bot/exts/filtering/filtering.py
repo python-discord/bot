@@ -2,7 +2,7 @@ import json
 import operator
 import re
 from collections import defaultdict
-from functools import reduce
+from functools import partial, reduce
 from typing import Literal, Optional, get_type_hints
 
 from discord import Colour, Embed, HTTPException, Message
@@ -269,23 +269,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
 
-        # Get filter list settings
-        default_setting_values = {}
-        for type_ in ("actions", "validations"):
-            for _, setting in filter_list.defaults[list_type][type_].items():
-                default_setting_values.update(to_serializable(setting.dict()))
-
-        # Get the filter's overridden settings
-        overrides_values = {}
-        for settings in (filter_.actions, filter_.validations):
-            if settings:
-                for _, setting in settings.items():
-                    overrides_values.update(to_serializable(setting.dict()))
-
-        if filter_.extra_fields_type:
-            extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
-        else:
-            extra_fields_overrides = {}
+        overrides_values, extra_fields_overrides = self._filter_overrides(filter_)
 
         all_settings_repr_dict = build_filter_repr_dict(
             filter_list, list_type, type(filter_), overrides_values, extra_fields_overrides
@@ -360,6 +344,76 @@ class Filtering(Cog):
             return
         list_type, filter_list = result
         await self._add_filter(ctx, noui, list_type, filter_list, content, description_and_settings)
+
+    @filter.command(name="edit", aliases=("e",))
+    async def f_edit(
+        self,
+        ctx: Context,
+        noui: Optional[Literal["noui"]],
+        filter_id: int,
+        *,
+        description_and_settings: Optional[str] = None
+    ) -> None:
+        """
+        Edit a filter specified by its ID.
+
+        Unless `noui` is specified, a UI will be provided to edit the content, description, and settings
+        before confirmation.
+
+        The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
+        equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
+
+        To edit the filter's content, use the UI.
+        """
+        result = self._get_filter_by_id(filter_id)
+        if result is None:
+            await ctx.send(f":x: Could not find a filter with ID `{filter_id}`.")
+            return
+        filter_, filter_list, list_type = result
+        filter_type = type(filter_)
+        settings, filter_settings = self._filter_overrides(filter_)
+        description, new_settings, new_filter_settings = description_and_settings_converter(
+            filter_list.name, self.loaded_settings, self.loaded_filter_settings, description_and_settings
+        )
+
+        content = filter_.content
+        description = description or filter_.description
+        settings.update(new_settings)
+        filter_settings.update(new_filter_settings)
+        patch_func = partial(self._patch_filter, filter_id)
+
+        if noui:
+            await patch_func(
+                ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
+            )
+
+        else:
+            embed = Embed(colour=Colour.blue())
+            embed.description = f"`{filter_.content}`"
+            if description:
+                embed.description += f" - {description}"
+            embed.set_author(
+                name=f"Filter #{filter_id} - {past_tense(list_type.name.lower())} {filter_list.name}".title())
+            embed.set_footer(text=(
+                "Field names with an asterisk have values which override the defaults of the containing filter list. "
+                f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+            ))
+
+            view = filters_ui.SettingsEditView(
+                filter_list,
+                list_type,
+                filter_type,
+                content,
+                description,
+                settings,
+                filter_settings,
+                self.loaded_settings,
+                self.loaded_filter_settings,
+                ctx.author,
+                embed,
+                patch_func
+            )
+            await ctx.send(embed=embed, reference=ctx.message, view=view)
 
     @filter.group(aliases=("settings",))
     async def setting(self, ctx: Context) -> None:
@@ -553,6 +607,22 @@ class Filtering(Cog):
                 if id_ in sublist:
                     return sublist[id_], filter_list, list_type
 
+    @staticmethod
+    def _filter_overrides(filter_: Filter) -> tuple[dict, dict]:
+        """Get the filter's overrides to the filter list settings and the extra fields settings."""
+        overrides_values = {}
+        for settings in (filter_.actions, filter_.validations):
+            if settings:
+                for _, setting in settings.items():
+                    overrides_values.update(to_serializable(setting.dict()))
+
+        if filter_.extra_fields_type:
+            extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
+        else:
+            extra_fields_overrides = {}
+
+        return overrides_values, extra_fields_overrides
+
     async def _add_filter(
         self,
         ctx: Context,
@@ -625,7 +695,34 @@ class Filtering(Cog):
         }
         response = await bot.instance.api_client.post('bot/filter/filters', json=payload)
         new_filter = filter_list.add_filter(response, list_type)
-        await msg.channel.send(f"✅ Added filter: {new_filter}", reference=msg)
+        await msg.reply(f"✅ Added filter: {new_filter}")
+
+    @staticmethod
+    async def _patch_filter(
+        filter_id: int,
+        msg: Message,
+        filter_list: FilterList,
+        list_type: ListType,
+        filter_type: type[Filter],
+        content: str,
+        description: str | None,
+        settings: dict,
+        filter_settings: dict
+    ) -> None:
+        """PATCH the new data of the filter to the site API."""
+        valid, error_msg = filter_type.validate_filter_settings(filter_settings)
+        if not valid:
+            raise BadArgument(f"Error while validating filter-specific settings: {error_msg}")
+
+        list_id = filter_list.list_ids[list_type]
+        description = description or None
+        payload = {
+            "filter_list": list_id, "content": content, "description": description,
+            "additional_field": json.dumps(filter_settings), **settings
+        }
+        response = await bot.instance.api_client.patch(f'bot/filter/filters/{filter_id}', json=payload)
+        edited_filter = filter_list.add_filter(response, list_type)
+        await msg.reply(f"✅ Edited filter: {edited_filter}")
 
     # endregion
 
