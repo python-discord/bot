@@ -415,6 +415,18 @@ class Filtering(Cog):
             )
             await ctx.send(embed=embed, reference=ctx.message, view=view)
 
+    @filter.command(name="delete", aliases=("d", "remove"))
+    async def f_delete(self, ctx: Context, filter_id: int) -> None:
+        """Delete the filter specified by its ID."""
+        result = self._get_filter_by_id(filter_id)
+        if result is None:
+            await ctx.send(f":x: Could not find a filter with ID `{filter_id}`.")
+            return
+        filter_, filter_list, list_type = result
+        await bot.instance.api_client.delete(f'bot/filter/filters/{filter_id}')
+        filter_list.filter_lists[list_type].pop(filter_id)
+        await ctx.reply(f"✅ Deleted filter: {filter_}")
+
     @filter.group(aliases=("settings",))
     async def setting(self, ctx: Context) -> None:
         """Group for settings-related commands."""
