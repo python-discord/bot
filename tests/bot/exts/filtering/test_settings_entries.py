@@ -1,12 +1,12 @@
 import unittest
 
 from bot.exts.filtering._filter_context import Event, FilterContext
-from bot.exts.filtering._settings_types.bypass_roles import RoleBypass
-from bot.exts.filtering._settings_types.channel_scope import ChannelScope
-from bot.exts.filtering._settings_types.filter_dm import FilterDM
-from bot.exts.filtering._settings_types.infraction_and_notification import (
+from bot.exts.filtering._settings_types.actions.infraction_and_notification import (
     Infraction, InfractionAndNotification, superstar
 )
+from bot.exts.filtering._settings_types.validations.bypass_roles import RoleBypass
+from bot.exts.filtering._settings_types.validations.channel_scope import ChannelScope
+from bot.exts.filtering._settings_types.validations.filter_dm import FilterDM
 from tests.helpers import MockCategoryChannel, MockDMChannel, MockMember, MockMessage, MockRole, MockTextChannel
 
 

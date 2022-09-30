@@ -31,7 +31,7 @@ def create_settings(
             action_data[entry_name] = entry_data
         elif entry_name in settings_types["ValidationEntry"]:
             validation_data[entry_name] = entry_data
-        else:
+        elif entry_name not in _already_warned:
             log.warning(
                 f"A setting named {entry_name} was loaded from the database, but no matching class."
             )
