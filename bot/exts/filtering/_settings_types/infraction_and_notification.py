@@ -19,7 +19,7 @@ class Infraction(Enum):
     BAN = auto()
     KICK = auto()
     MUTE = auto()
-    VOICE_BAN = auto()
+    VOICE_MUTE = auto()
     SUPERSTAR = auto()
     WARNING = auto()
     WATCH = auto()
