@@ -577,11 +577,15 @@ class SettingsEditView(discord.ui.View):
         self.embed.clear_fields()
         new_view = self.copy()
 
-        if isinstance(interaction_or_msg, discord.Interaction):
-            await interaction_or_msg.response.edit_message(embed=self.embed, view=new_view)
+        try:
+            if isinstance(interaction_or_msg, discord.Interaction):
+                await interaction_or_msg.response.edit_message(embed=self.embed, view=new_view)
+            else:
+                await interaction_or_msg.edit(embed=self.embed, view=new_view)
+        except discord.errors.HTTPException:  # Various error such as embed description being too long.
+            pass
         else:
-            await interaction_or_msg.edit(embed=self.embed, view=new_view)
-        self.stop()
+            self.stop()
 
     async def edit_setting_override(self, interaction: Interaction, setting_name: str, override_value: Any) -> None:
         """
