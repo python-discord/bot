@@ -34,6 +34,7 @@ MAX_MODAL_TITLE_LENGTH = 45
 MAX_MODAL_LABEL_LENGTH = 45
 # Max number of items in a select
 MAX_SELECT_ITEMS = 25
+MAX_EMBED_DESCRIPTION = 4000
 
 T = TypeVar('T')
 
@@ -485,9 +486,10 @@ class SettingsEditView(discord.ui.View):
                 self.filter_settings_overrides
             )
         except ResponseCodeError as e:
-            await interaction.message.channel.send(f"An error occurred: ```{e}```", reference=interaction.message)
-
-        self.stop()
+            await interaction.message.reply(embed=format_response_error(e))
+            await interaction.message.edit(view=self)
+        else:
+            self.stop()
 
     @discord.ui.button(label="🚫 Cancel", style=discord.ButtonStyle.red, row=4)
     async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
@@ -689,3 +691,19 @@ def description_and_settings_converter(
                 raise BadArgument(e)
 
     return description, settings, filter_settings
+
+
+def format_response_error(e: ResponseCodeError) -> Embed:
+    """Format the response error into an embed."""
+    description = ""
+    if "non_field_errors" in e.response_json:
+        non_field_errors = e.response_json.pop("non_field_errors")
+        description += "\n".join(f"• {error}" for error in non_field_errors) + "\n"
+    for field, errors in e.response_json.items():
+        description += "\n".join(f"• {field} - {error}" for error in errors) + "\n"
+    description = description.strip()
+    if len(description) > MAX_EMBED_DESCRIPTION:
+        description = description[:MAX_EMBED_DESCRIPTION] + "[...]"
+
+    embed = Embed(colour=discord.Colour.red(), title="Oops...", description=description)
+    return embed
