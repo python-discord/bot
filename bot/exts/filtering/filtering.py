@@ -380,7 +380,7 @@ class Filtering(Cog):
         description = description or filter_.description
         settings.update(new_settings)
         filter_settings.update(new_filter_settings)
-        patch_func = partial(self._patch_filter, filter_id)
+        patch_func = partial(self._patch_filter, filter_)
 
         if noui:
             await patch_func(
@@ -711,7 +711,7 @@ class Filtering(Cog):
 
     @staticmethod
     async def _patch_filter(
-        filter_id: int,
+        filter_: Filter,
         msg: Message,
         filter_list: FilterList,
         list_type: ListType,
@@ -726,13 +726,19 @@ class Filtering(Cog):
         if not valid:
             raise BadArgument(f"Error while validating filter-specific settings: {error_msg}")
 
+        # If the setting is not in `settings`, the override was either removed, or there wasn't one in the first place.
+        for current_settings in (filter_.actions, filter_.validations):
+            if current_settings:
+                for _, setting_entry in current_settings.items():
+                    settings.update({setting: None for setting in setting_entry.dict() if setting not in settings})
+
         list_id = filter_list.list_ids[list_type]
         description = description or None
         payload = {
             "filter_list": list_id, "content": content, "description": description,
             "additional_field": json.dumps(filter_settings), **settings
         }
-        response = await bot.instance.api_client.patch(f'bot/filter/filters/{filter_id}', json=payload)
+        response = await bot.instance.api_client.patch(f'bot/filter/filters/{filter_.id}', json=payload)
         edited_filter = filter_list.add_filter(response, list_type)
         await msg.reply(f"✅ Edited filter: {edited_filter}")
 
