@@ -37,9 +37,10 @@ class ChannelScope(ValidationEntry):
     @classmethod
     def maybe_cast_items(cls, channel_or_category: str) -> Union[str, int]:
         """Cast to int each value in each sequence if it is alphanumeric."""
-        if channel_or_category.isdigit():
+        try:
             return int(channel_or_category)
-        return channel_or_category
+        except ValueError:
+            return channel_or_category
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """
@@ -53,18 +54,10 @@ class ChannelScope(ValidationEntry):
         if channel.guild is None:  # This is a DM channel, outside the scope of this setting.
             return True
 
-        enabled_id = (
-            channel.id in self.enabled_channels
-            or (
-                channel.id not in self.disabled_channels
-                and (not channel.category or channel.category.id not in self.disabled_categories)
-            )
+        enabled_channel = channel.id in self.enabled_channels or channel.name in self.enabled_channels
+        disabled_channel = channel.id in self.disabled_channels or channel.name in self.disabled_channels
+        disabled_category = channel.category and (
+            channel.category.id in self.disabled_categories or channel.category.name in self.disabled_categories
         )
-        enabled_name = (
-            channel.name in self.enabled_channels
-            or (
-                channel.name not in self.disabled_channels
-                and (not channel.category or channel.category.name not in self.disabled_categories)
-            )
-        )
-        return enabled_id and enabled_name
+
+        return enabled_channel or (not disabled_channel and not disabled_category)
