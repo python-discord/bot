@@ -539,7 +539,7 @@ class Filtering(Cog):
         if ctx.channel.guild:
             triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}"
         else:
-            triggered_in = "**DM**"
+            triggered_in = "**Triggered in:** :warning:**DM**:warning:"
 
         filters = []
         for filter_list, list_message in triggered_filters.items():
