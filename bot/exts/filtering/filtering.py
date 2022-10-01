@@ -684,6 +684,17 @@ class Filtering(Cog):
             await ctx.send(embed=embed, reference=ctx.message, view=view)
 
     @staticmethod
+    def _identical_filters_message(content: str, filter_list: FilterList, list_type: ListType) -> str:
+        """Returns all the filters in the list with content identical to the content supplied."""
+        duplicates = [f for f in filter_list.filter_lists.get(list_type, {}).values() if f.content == content]
+        msg = ""
+        if duplicates:
+            msg = f"\n:warning: The filter(s) #{', #'.join(str(dup.id) for dup in duplicates)} have the same content. "
+            msg += "Please make sure this is intentional."
+
+        return msg
+
+    @staticmethod
     async def _post_new_filter(
         msg: Message,
         filter_list: FilterList,
@@ -706,8 +717,9 @@ class Filtering(Cog):
             "additional_field": json.dumps(filter_settings), **settings
         }
         response = await bot.instance.api_client.post('bot/filter/filters', json=payload)
+        extra_msg = Filtering._identical_filters_message(content, filter_list, list_type)
         new_filter = filter_list.add_filter(response, list_type)
-        await msg.reply(f"✅ Added filter: {new_filter}")
+        await msg.reply(f"✅ Added filter: {new_filter}" + extra_msg)
 
     @staticmethod
     async def _patch_filter(
@@ -739,8 +751,9 @@ class Filtering(Cog):
             "additional_field": json.dumps(filter_settings), **settings
         }
         response = await bot.instance.api_client.patch(f'bot/filter/filters/{filter_.id}', json=payload)
+        extra_msg = Filtering._identical_filters_message(content, filter_list, list_type)
         edited_filter = filter_list.add_filter(response, list_type)
-        await msg.reply(f"✅ Edited filter: {edited_filter}")
+        await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
 
     # endregion
 
