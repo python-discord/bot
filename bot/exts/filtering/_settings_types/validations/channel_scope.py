@@ -11,19 +11,28 @@ class ChannelScope(ValidationEntry):
 
     name: ClassVar[str] = "channel_scope"
     description: ClassVar[str] = {
-        "disabled_channels": "A list of channel IDs or channel names. The filter will not trigger in these channels.",
+        "disabled_channels": (
+            "A list of channel IDs or channel names. "
+            "The filter will not trigger in these channels even if the category is expressly enabled."
+        ),
         "disabled_categories": (
             "A list of category IDs or category names. The filter will not trigger in these categories."
         ),
         "enabled_channels": (
             "A list of channel IDs or channel names. "
-            "The filter can trigger in these channels even if the category is disabled."
+            "The filter can trigger in these channels even if the category is disabled or not expressly enabled."
+        ),
+        "enabled_categories": (
+            "A list of category IDs or category names. "
+            "If the list is not empty, filters will trigger only in channels of these categories, "
+            "unless the channel is expressly disabled."
         )
     }
 
-    disabled_channels: set[Union[str, int]]
-    disabled_categories: set[Union[str, int]]
-    enabled_channels: set[Union[str, int]]
+    disabled_channels: set[Union[int, str]]
+    disabled_categories: set[Union[int, str]]
+    enabled_channels: set[Union[int, str]]
+    enabled_categories: set[Union[int, str]]
 
     @validator("*", pre=True)
     @classmethod
@@ -32,15 +41,6 @@ class ChannelScope(ValidationEntry):
         if sequence is None:
             return []
         return sequence
-
-    @validator("*", each_item=True)
-    @classmethod
-    def maybe_cast_items(cls, channel_or_category: str) -> Union[str, int]:
-        """Cast to int each value in each sequence if it is alphanumeric."""
-        try:
-            return int(channel_or_category)
-        except ValueError:
-            return channel_or_category
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """
@@ -51,13 +51,16 @@ class ChannelScope(ValidationEntry):
         """
         channel = ctx.channel
 
-        if channel.guild is None:  # This is a DM channel, outside the scope of this setting.
+        if not hasattr(channel, "category"):  # This is not a guild channel, outside the scope of this setting.
             return True
 
         enabled_channel = channel.id in self.enabled_channels or channel.name in self.enabled_channels
         disabled_channel = channel.id in self.disabled_channels or channel.name in self.disabled_channels
+        enabled_category = channel.category and (not self.enabled_categories or (
+                channel.category.id in self.enabled_categories or channel.category.name in self.enabled_categories
+        ))
         disabled_category = channel.category and (
             channel.category.id in self.disabled_categories or channel.category.name in self.disabled_categories
         )
 
-        return enabled_channel or (not disabled_channel and not disabled_category)
+        return enabled_channel or (enabled_category and not disabled_channel and not disabled_category)
