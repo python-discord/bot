@@ -427,7 +427,7 @@ class SettingsEditView(discord.ui.View):
         add_select = CustomCallbackSelect(
             self._prompt_new_override,
             placeholder="Select a setting to edit",
-            options=[SelectOption(label=name) for name in self.type_per_setting_name],
+            options=[SelectOption(label=name) for name in sorted(self.type_per_setting_name)],
             row=1
         )
         self.add_item(add_select)
@@ -436,7 +436,7 @@ class SettingsEditView(discord.ui.View):
         remove_select = CustomCallbackSelect(
             self._remove_override,
             placeholder="Select an override to remove",
-            options=[SelectOption(label=name) for name in override_names],
+            options=[SelectOption(label=name) for name in sorted(override_names)],
             row=2
         )
         if remove_select.options:
