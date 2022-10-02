@@ -15,6 +15,7 @@ from bot.constants import Channels, Colours
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.channel import is_mod_channel
 
 log = get_logger(__name__)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
@@ -315,6 +316,9 @@ class FilterLists(Cog):
         seven_days_ago = arrow.utcnow().shift(days=-7)
         if not channel:
             channel = self.bot.get_channel(Channels.mod_meta)
+        elif not is_mod_channel(channel):
+            # Silently fail if output is going to be a non-mod channel.
+            return
 
         added_autobans = defaultdict(list)
         # Extract all autoban filters added in the past 7 days from each filter type
