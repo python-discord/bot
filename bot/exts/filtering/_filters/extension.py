@@ -14,3 +14,14 @@ class ExtensionFilter(Filter):
     def triggered_on(self, ctx: FilterContext) -> bool:
         """Searches for an attachment extension in the context content, given as a set of extensions."""
         return self.content in ctx.content
+
+    @classmethod
+    async def process_content(cls, content: str) -> str:
+        """
+        Process the content into a form which will work with the filtering.
+
+        A ValueError should be raised if the content can't be used.
+        """
+        if not content.startswith("."):
+            content = f".{content}"
+        return content

@@ -18,3 +18,16 @@ class TokenFilter(Filter):
             ctx.matches.append(match[0])
             return True
         return False
+
+    @classmethod
+    async def process_content(cls, content: str) -> str:
+        """
+        Process the content into a form which will work with the filtering.
+
+        A ValueError should be raised if the content can't be used.
+        """
+        try:
+            re.compile(content)
+        except re.error as e:
+            raise ValueError(str(e))
+        return content

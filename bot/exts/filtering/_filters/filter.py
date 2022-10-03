@@ -48,6 +48,15 @@ class Filter(FieldRequiring):
         else:
             return True, None
 
+    @classmethod
+    async def process_content(cls, content: str) -> str:
+        """
+        Process the content into a form which will work with the filtering.
+
+        A ValueError should be raised if the content can't be used.
+        """
+        return content
+
     def __str__(self) -> str:
         """A string representation of the filter."""
         string = f"#{self.id}. `{self.content}`"

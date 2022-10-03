@@ -1,3 +1,4 @@
+import re
 from typing import ClassVar, Optional
 
 import tldextract
@@ -5,6 +6,8 @@ from pydantic import BaseModel
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
+
+URL_RE = re.compile(r"(?:https?://)?(\S+?)[\\/]*", flags=re.IGNORECASE)
 
 
 class ExtraDomainSettings(BaseModel):
@@ -43,3 +46,15 @@ class DomainFilter(Filter):
                     ctx.notification_domain = self.content
                 return not self.extra_fields.exact or self.content == found_url
         return False
+
+    @classmethod
+    async def process_content(cls, content: str) -> str:
+        """
+        Process the content into a form which will work with the filtering.
+
+        A ValueError should be raised if the content can't be used.
+        """
+        match = URL_RE.fullmatch(content)
+        if not match or not match.group(1):
+            raise ValueError(f"`{content}` is not a URL.")
+        return match.group(1)

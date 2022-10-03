@@ -488,6 +488,11 @@ class SettingsEditView(discord.ui.View):
         except ResponseCodeError as e:
             await interaction.message.reply(embed=format_response_error(e))
             await interaction.message.edit(view=self)
+        except ValueError as e:
+            await interaction.message.reply(
+                embed=Embed(colour=discord.Colour.red(), title="Bad Content", description=str(e))
+            )
+            await interaction.message.edit(view=self)
         else:
             self.stop()
 
@@ -556,7 +561,7 @@ class SettingsEditView(discord.ui.View):
 
             # Update the embed with the new content and/or description.
             self.embed.description = f"`{content}`" if content else "*No content*"
-            if description is not None and description is not self._REMOVE:
+            if description and description is not self._REMOVE:
                 self.embed.description += f" - {description}"
 
         if setting_name:

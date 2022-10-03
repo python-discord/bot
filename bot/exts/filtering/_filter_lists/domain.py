@@ -16,7 +16,7 @@ from bot.exts.filtering._utils import clean_input
 if typing.TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
 
-URL_RE = re.compile(r"https?://([^\s]+)", flags=re.IGNORECASE)
+URL_RE = re.compile(r"https?://(\S+)", flags=re.IGNORECASE)
 
 
 class DomainsList(FilterList):

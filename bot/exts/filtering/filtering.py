@@ -651,9 +651,12 @@ class Filtering(Cog):
         filter_type = filter_list.get_filter_type(content)
 
         if noui:
-            await self._post_new_filter(
-                ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
-            )
+            try:
+                await self._post_new_filter(
+                    ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
+                )
+            except ValueError as e:
+                raise BadArgument(str(e))
 
         else:
             embed = Embed(colour=Colour.blue())
@@ -710,6 +713,8 @@ class Filtering(Cog):
         if not valid:
             raise BadArgument(f"Error while validating filter-specific settings: {error_msg}")
 
+        content = await filter_type.process_content(content)
+
         list_id = filter_list.list_ids[list_type]
         description = description or None
         payload = {
@@ -737,6 +742,9 @@ class Filtering(Cog):
         valid, error_msg = filter_type.validate_filter_settings(filter_settings)
         if not valid:
             raise BadArgument(f"Error while validating filter-specific settings: {error_msg}")
+
+        if content != filter_.content:
+            content = await filter_type.process_content(content)
 
         # If the setting is not in `settings`, the override was either removed, or there wasn't one in the first place.
         for current_settings in (filter_.actions, filter_.validations):
