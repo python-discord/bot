@@ -515,6 +515,10 @@ class Roles(metaclass=YAMLGetter):
 
     jammers: int
 
+    patreon_tier_1: int
+    patreon_tier_2: int
+    patreon_tier_3: int
+
 
 class Guild(metaclass=YAMLGetter):
     section = "guild"
