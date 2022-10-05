@@ -420,6 +420,7 @@ class Channels(metaclass=YAMLGetter):
     how_to_get_help: int
 
     attachment_log: int
+    filter_log: int
     message_log: int
     mod_log: int
     nomination_archive: int
