@@ -20,6 +20,7 @@ PATREON_INFORMATION = (
     "You can read more about how Patreon donations help us, and consider donating yourself, on our patreon page "
     "[here](https://pydis.com/patreon)!"
 )
+NO_PATRONS_MESSAGE = "*There are currently no patrons at this tier.*"
 
 # List of tuples containing tier number and Discord role ID.
 # Ordered from highest tier to lowest.
@@ -80,7 +81,7 @@ class Patreon(commands.Cog):
 
             embed = discord.Embed(
                 title=role.name,
-                description="\n".join(patron_names),
+                description="\n".join(patron_names) if patron_names else NO_PATRONS_MESSAGE,
                 colour=role.colour
             )
             embed_list.append(embed)
