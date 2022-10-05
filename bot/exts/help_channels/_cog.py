@@ -315,7 +315,7 @@ class HelpChannels(commands.Cog):
             )
         except discord.HTTPException:
             log.exception("Failed to get a category; cog will be removed")
-            self.bot.remove_cog(self.qualified_name)
+            await self.bot.remove_cog(self.qualified_name)
 
     async def cog_load(self) -> None:
         """Initialise the help channel system."""

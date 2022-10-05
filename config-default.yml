@@ -178,6 +178,7 @@ guild:
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
+        filter_log:         &FILTER_LOG     1014943924185473094
         message_log:        &MESSAGE_LOG    467752170159079424
         mod_log:            &MOD_LOG        282638479504965634
         nomination_archive:                 833371042046148738
@@ -257,6 +258,7 @@ guild:
         - *MESSAGE_LOG
         - *MOD_LOG
         - *STAFF_VOICE
+        - *FILTER_LOG
 
     reminder_whitelist:
         - *BOT_CMD

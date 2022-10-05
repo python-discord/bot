@@ -1,6 +1,7 @@
 import textwrap
 import typing as t
 from abc import abstractmethod
+from collections.abc import Awaitable, Callable
 from gettext import ngettext
 
 import arrow
@@ -79,9 +80,14 @@ class InfractionScheduler:
     async def reapply_infraction(
         self,
         infraction: _utils.Infraction,
-        apply_coro: t.Optional[t.Awaitable]
+        action: t.Optional[Callable[[], Awaitable[None]]]
     ) -> None:
-        """Reapply an infraction if it's still active or deactivate it if less than 60 sec left."""
+        """
+        Reapply an infraction if it's still active or deactivate it if less than 60 sec left.
+
+        Note: The `action` provided is an async function rather than a coroutine
+        to prevent getting a RuntimeWarning if it is not used (e.g. in mocked tests).
+        """
         if infraction["expires_at"] is not None:
             # Calculate the time remaining, in seconds, for the mute.
             expiry = dateutil.parser.isoparse(infraction["expires_at"])
@@ -101,7 +107,7 @@ class InfractionScheduler:
 
         # Allowing mod log since this is a passive action that should be logged.
         try:
-            await apply_coro
+            await action()
         except discord.HTTPException as e:
             # When user joined and then right after this left again before action completed, this can't apply roles
             if e.code == 10007 or e.status == 404:
@@ -111,7 +117,7 @@ class InfractionScheduler:
             else:
                 log.exception(
                     f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
-                    f"when awaiting {infraction['type']} coroutine for {infraction['user']}."
+                    f"when running {infraction['type']} action for {infraction['user']}."
                 )
         else:
             log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
@@ -121,24 +127,30 @@ class InfractionScheduler:
         ctx: Context,
         infraction: _utils.Infraction,
         user: MemberOrUser,
-        action_coro: t.Optional[t.Awaitable] = None,
+        action: t.Optional[Callable[[], Awaitable[None]]] = None,
         user_reason: t.Optional[str] = None,
         additional_info: str = "",
     ) -> bool:
         """
         Apply an infraction to the user, log the infraction, and optionally notify the user.
 
-        `action_coro`, if not provided, will result in the infraction not getting scheduled for deletion.
+        `action`, if not provided, will result in the infraction not getting scheduled for deletion.
         `user_reason`, if provided, will be sent to the user in place of the infraction reason.
         `additional_info` will be attached to the text field in the mod-log embed.
+
+        Note: The `action` provided is an async function rather than just a coroutine
+        to prevent getting a RuntimeWarning if it is not used (e.g. in mocked tests).
 
         Returns whether or not the infraction succeeded.
         """
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        expiry = time.format_with_duration(infraction["expires_at"])
         id_ = infraction['id']
+        expiry = time.format_with_duration(
+            infraction["expires_at"],
+            infraction["last_applied"]
+        )
 
         if user_reason is None:
             user_reason = reason
@@ -197,10 +209,10 @@ class InfractionScheduler:
         purge = infraction.get("purge", "")
 
         # Execute the necessary actions to apply the infraction on Discord.
-        if action_coro:
-            log.trace(f"Awaiting the infraction #{id_} application action coroutine.")
+        if action:
+            log.trace(f"Running the infraction #{id_} application action.")
             try:
-                await action_coro
+                await action()
                 if expiry:
                     # Schedule the expiration of the infraction.
                     self.schedule_expiration(infraction)
@@ -275,12 +287,16 @@ class InfractionScheduler:
             ctx: Context,
             infr_type: str,
             user: MemberOrUser,
+            pardon_reason: t.Optional[str] = None,
             *,
             send_msg: bool = True,
             notify: bool = True
     ) -> None:
         """
         Prematurely end an infraction for a user and log the action in the mod log.
+
+        If `pardon_reason` is None, then the database will not receive
+        appended text explaining why the infraction was pardoned.
 
         If `send_msg` is True, then a pardoning confirmation message will be sent to
         the context channel. Otherwise, no such message will be sent.
@@ -306,7 +322,7 @@ class InfractionScheduler:
             return
 
         # Deactivate the infraction and cancel its scheduled expiration task.
-        log_text = await self.deactivate_infraction(response[0], send_log=False, notify=notify)
+        log_text = await self.deactivate_infraction(response[0], pardon_reason, send_log=False, notify=notify)
 
         log_text["Member"] = messages.format_user(user)
         log_text["Actor"] = ctx.author.mention
@@ -359,6 +375,7 @@ class InfractionScheduler:
     async def deactivate_infraction(
         self,
         infraction: _utils.Infraction,
+        pardon_reason: t.Optional[str] = None,
         *,
         send_log: bool = True,
         notify: bool = True
@@ -367,8 +384,12 @@ class InfractionScheduler:
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
 
         The infraction is removed from Discord, marked as inactive in the database, and has its
-        expiration task cancelled. If `send_log` is True, a mod log is sent for the
-        deactivation of the infraction.
+        expiration task cancelled.
+
+        If `pardon_reason` is None, then the database will not receive
+        appended text explaining why the infraction was pardoned.
+
+        If `send_log` is True, a mod log is sent for the deactivation of the infraction.
 
         If `notify` is True, notify the user of the pardon via DM where applicable.
 
@@ -438,9 +459,20 @@ class InfractionScheduler:
         try:
             # Mark infraction as inactive in the database.
             log.trace(f"Marking infraction #{id_} as inactive in the database.")
+
+            data = {"active": False}
+
+            if pardon_reason is not None:
+                data["reason"] = ""
+                # Append pardon reason to infraction in database.
+                if (punish_reason := infraction["reason"]) is not None:
+                    data["reason"] = punish_reason + " | "
+
+                data["reason"] += f"Pardoned: {pardon_reason}"
+
             await self.bot.api_client.patch(
                 f"bot/infractions/{id_}",
-                json={"active": False}
+                json=data
             )
         except ResponseCodeError as e:
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
