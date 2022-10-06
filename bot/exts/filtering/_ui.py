@@ -433,7 +433,9 @@ class SettingsEditView(discord.ui.View):
         )
         self.add_item(add_select)
 
-        override_names = list(settings_overrides) + list(filter_settings_overrides)
+        override_names = (
+            list(settings_overrides) + [f"{filter_list.name}/{setting}" for setting in filter_settings_overrides]
+        )
         remove_select = CustomCallbackSelect(
             self._remove_override,
             placeholder="Select an override to remove",
@@ -568,13 +570,13 @@ class SettingsEditView(discord.ui.View):
             # Find the right dictionary to update.
             if "/" in setting_name:
                 filter_name, setting_name = setting_name.split("/", maxsplit=1)
-                dict_to_edit = self.filter_settings_overrides[filter_name]
+                dict_to_edit = self.filter_settings_overrides
             else:
                 dict_to_edit = self.settings_overrides
             # Update the setting override value or remove it
             if setting_value is not self._REMOVE:
                 dict_to_edit[setting_name] = setting_value
-            else:
+            elif setting_name in dict_to_edit:
                 del dict_to_edit[setting_name]
 
         # This is inefficient, but otherwise the selects go insane if the user attempts to edit the same setting
