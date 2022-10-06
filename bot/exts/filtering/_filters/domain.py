@@ -39,11 +39,7 @@ class DomainFilter(Filter):
         for found_url in ctx.content:
             if self.content in found_url and tldextract.extract(found_url).registered_domain == domain:
                 ctx.matches.append(self.content)
-                if (
-                        ("delete_messages" in self.actions and self.actions.get("delete_messages").delete_messages)
-                        or not ctx.notification_domain
-                ):  # Override this field only if this filter causes deletion.
-                    ctx.notification_domain = self.content
+                ctx.notification_domain = self.content
                 return not self.extra_fields.exact or self.content == found_url
         return False
 
