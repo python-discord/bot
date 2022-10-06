@@ -265,7 +265,7 @@ class CustomHelpCommand(HelpCommand):
     async def send_error_message(self, error: HelpQueryNotFound) -> None:
         """Send the error message to the channel."""
         # 2257 the title can be too big. so we trim it
-        embed = Embed(colour=Colour.red(), title=str(error)[256:])
+        embed = Embed(colour=Colour.red(), title=str(error)[:256])
 
         if getattr(error, "possible_matches", None):
             matches = "\n".join(f"`{match}`" for match in error.possible_matches)
