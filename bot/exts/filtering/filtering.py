@@ -537,9 +537,9 @@ class Filtering(Cog):
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         triggered_by = f"**Triggered by:** {format_user(ctx.author)}"
         if ctx.channel.guild:
-            triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}"
+            triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}\n"
         else:
-            triggered_in = "**Triggered in:** :warning:**DM**:warning:"
+            triggered_in = "**Triggered in:** :warning:**DM**:warning:\n"
 
         filters = []
         for filter_list, list_message in triggered_filters.items():
@@ -548,8 +548,8 @@ class Filtering(Cog):
         filters = "\n".join(filters)
 
         matches = "**Matches:** " + ", ".join(repr(match) for match in ctx.matches)
-        actions = "**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")
-        content = f"**[Original Content]({ctx.message.jump_url})**: {escape_markdown(ctx.content)}"
+        actions = "\n**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")
+        content = f"**[Original Content]({ctx.message.jump_url})**:\n{escape_markdown(ctx.content)}"
 
         embed_content = "\n".join(
             part for part in (triggered_by, triggered_in, filters, matches, actions, content) if part
