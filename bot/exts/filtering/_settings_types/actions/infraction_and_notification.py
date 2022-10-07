@@ -65,14 +65,16 @@ class Infraction(Enum):
     async def invoke(
         self,
         user: Member | User,
-        channel: discord.abc.Messageable | None,
-        duration: float | None = None,
-        reason: str | None = None
+        channel: int | None,
+        duration: float | None,
+        reason: str | None
     ) -> None:
         """Invokes the command matching the infraction name."""
         alerts_channel = bot_module.instance.get_channel(Channels.mod_alerts)
         if not channel:
             channel = alerts_channel
+        else:
+            channel = bot_module.instance.get_channel(channel)
 
         command_name = self.name.lower()
         command = bot_module.instance.get_command(command_name)
@@ -99,12 +101,12 @@ class InfractionAndNotification(ActionEntry):
         "infraction_type": (
             "The type of infraction to issue when the filter triggers, or 'NONE'. "
             "If two infractions are triggered for the same message, "
-            "the harsher one will be applied (by type or duration). "
-            "Superstars will be triggered even if there is a harsher infraction.\n\n"
+            "the harsher one will be applied (by type or duration).\n\n"
             "Valid infraction types in order of harshness: "
         ) + ", ".join(infraction.name for infraction in Infraction),
         "infraction_duration": "How long the infraction should last for in seconds, or 'None' for permanent.",
         "infraction_reason": "The reason delivered with the infraction.",
+        "infraction_channel": "The channel ID in which to invoke the infraction (and send the confirmation message).",
         "dm_content": "The contents of a message to be DMed to the offending user.",
         "dm_embed": "The contents of the embed to be DMed to the offending user."
     }
@@ -114,6 +116,7 @@ class InfractionAndNotification(ActionEntry):
     infraction_type: Infraction | None
     infraction_reason: str | None
     infraction_duration: float | None
+    infraction_channel: int | None
 
     @validator("infraction_type", pre=True)
     @classmethod
@@ -146,12 +149,8 @@ class InfractionAndNotification(ActionEntry):
                 ctx.action_descriptions.append("notified (failed)")
 
         if self.infraction_type is not None:
-            if self.infraction_type == Infraction.BAN or not hasattr(ctx.channel, "guild"):
-                infrac_channel = None
-            else:
-                infrac_channel = ctx.channel
             await self.infraction_type.invoke(
-                ctx.author, infrac_channel, self.infraction_duration, self.infraction_reason
+                ctx.author, self.infraction_channel, self.infraction_duration, self.infraction_reason
             )
             ctx.action_descriptions.append(self.infraction_type.name.lower())
 
