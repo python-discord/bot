@@ -79,7 +79,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     # region: Permanent infractions
 
-    @command()
+    @command(aliases=("warning",))
     async def warn(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: t.Optional[str] = None) -> None:
         """Warn a user for the given reason."""
         if not isinstance(user, Member):

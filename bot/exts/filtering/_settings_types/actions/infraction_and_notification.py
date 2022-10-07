@@ -1,16 +1,50 @@
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum, auto
 from typing import ClassVar
 
 import arrow
-from discord import Colour, Embed
+import discord.abc
+from discord import Colour, Embed, Member, User
 from discord.errors import Forbidden
 from pydantic import validator
 
-import bot
+import bot as bot_module
 from bot.constants import Channels, Guild
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
+
+
+@dataclass
+class FakeContext:
+    """
+    A class representing a context-like object that can be sent to infraction commands.
+
+    The goal is to be able to apply infractions without depending on the existence of a message or an interaction
+    (which are the two ways to create a Context), e.g. in API events which aren't message-driven, or in custom filtering
+    events.
+    """
+
+    channel: discord.abc.Messageable
+    bot: bot_module.bot.Bot | None = None
+    guild: discord.Guild | None = None
+    author: discord.Member | discord.User | None = None
+    me: discord.Member | None = None
+
+    def __post_init__(self):
+        """Initialize the missing information."""
+        if not self.bot:
+            self.bot = bot_module.instance
+        if not self.guild:
+            self.guild = self.bot.get_guild(Guild.id)
+        if not self.me:
+            self.me = self.guild.me
+        if not self.author:
+            self.author = self.me
+
+    async def send(self, *args, **kwargs) -> discord.Message:
+        """A wrapper for channel.send."""
+        return await self.channel.send(*args, **kwargs)
 
 
 class Infraction(Enum):
@@ -27,6 +61,30 @@ class Infraction(Enum):
 
     def __str__(self) -> str:
         return self.name
+
+    async def invoke(
+        self,
+        user: Member | User,
+        channel: discord.abc.Messageable | None,
+        duration: float | None = None,
+        reason: str | None = None
+    ) -> None:
+        """Invokes the command matching the infraction name."""
+        alerts_channel = bot_module.instance.get_channel(Channels.mod_alerts)
+        if not channel:
+            channel = alerts_channel
+
+        command_name = self.name.lower()
+        command = bot_module.instance.get_command(command_name)
+        if not command:
+            await alerts_channel.send(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
+
+        ctx = FakeContext(channel)
+        if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
+            await command(ctx, user, reason=reason)
+        else:
+            duration = arrow.utcnow() + timedelta(seconds=duration) if duration else None
+            await command(ctx, user, duration, reason=reason)
 
 
 class InfractionAndNotification(ActionEntry):
@@ -87,21 +145,13 @@ class InfractionAndNotification(ActionEntry):
             except Forbidden:
                 ctx.action_descriptions.append("notified (failed)")
 
-        msg_ctx = await bot.instance.get_context(ctx.message)
-        msg_ctx.guild = bot.instance.get_guild(Guild.id)
-        msg_ctx.author = ctx.author
-        msg_ctx.channel = ctx.channel
-
         if self.infraction_type is not None:
             if self.infraction_type == Infraction.BAN or not hasattr(ctx.channel, "guild"):
-                msg_ctx.channel = bot.instance.get_channel(Channels.mod_alerts)
-            msg_ctx.command = bot.instance.get_command(self.infraction_type.name.lower())
-            await msg_ctx.invoke(
-                msg_ctx.command,
-                ctx.author,
-                arrow.utcnow() + timedelta(seconds=self.infraction_duration)
-                if self.infraction_duration is not None else None,
-                reason=self.infraction_reason
+                infrac_channel = None
+            else:
+                infrac_channel = ctx.channel
+            await self.infraction_type.invoke(
+                ctx.author, infrac_channel, self.infraction_duration, self.infraction_reason
             )
             ctx.action_descriptions.append(self.infraction_type.name.lower())
 
