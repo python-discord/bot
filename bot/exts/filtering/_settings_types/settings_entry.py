@@ -33,7 +33,7 @@ class SettingsEntry(BaseModel, FieldRequiring):
         """
         if entry_data is None:
             return None
-        if not keep_empty and hasattr(entry_data, "values") and not any(value for value in entry_data.values()):
+        if not keep_empty and hasattr(entry_data, "values") and all(value is None for value in entry_data.values()):
             return None
 
         if not isinstance(entry_data, dict):

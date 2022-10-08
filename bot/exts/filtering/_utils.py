@@ -66,6 +66,22 @@ def to_serializable(item: Any) -> Union[bool, int, float, str, list, dict, None]
     return str(item)
 
 
+def repr_equals(override: Any, default: Any) -> bool:
+    """Return whether the override and the default have the same representation."""
+    if override is None:  # It's not an override
+        return True
+
+    override_is_sequence = isinstance(override, (tuple, list, set))
+    default_is_sequence = isinstance(default, (tuple, list, set))
+    if override_is_sequence != default_is_sequence:  # One is a sequence and the other isn't.
+        return False
+    if override_is_sequence:
+        if len(override) != len(default):
+            return False
+        return all(str(item1) == str(item2) for item1, item2 in zip(set(override), set(default)))
+    return str(override) == str(default)
+
+
 class FieldRequiring(ABC):
     """A mixin class that can force its concrete subclasses to set a value for specific class attributes."""
 

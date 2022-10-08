@@ -15,7 +15,7 @@ from discord.ui.select import MISSING, SelectOption
 
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter
-from bot.exts.filtering._utils import to_serializable
+from bot.exts.filtering._utils import repr_equals, to_serializable
 from bot.log import get_logger
 
 log = get_logger(__name__)
@@ -115,7 +115,7 @@ def build_filter_repr_dict(
     # Add overrides. It's done in this way to preserve field order, since the filter won't have all settings.
     total_values = {}
     for name, value in default_setting_values.items():
-        if name not in settings_overrides:
+        if name not in settings_overrides or repr_equals(settings_overrides[name], value):
             total_values[name] = value
         else:
             total_values[f"{name}*"] = settings_overrides[name]
@@ -124,7 +124,7 @@ def build_filter_repr_dict(
     if filter_type.extra_fields_type:
         # This iterates over the default values of the extra fields model.
         for name, value in filter_type.extra_fields_type().dict().items():
-            if name not in extra_fields_overrides:
+            if name not in extra_fields_overrides or repr_equals(extra_fields_overrides[name], value):
                 total_values[f"{filter_type.name}/{name}"] = value
             else:
                 total_values[f"{filter_type.name}/{name}*"] = value
@@ -248,7 +248,7 @@ class FreeInputModal(discord.ui.Modal):
     async def on_submit(self, interaction: Interaction) -> None:
         """Update the setting with the new value in the embed."""
         try:
-            value = self.type_(self.setting_input.value) or None
+            value = self.type_(self.setting_input.value)
         except (ValueError, TypeError):
             await interaction.response.send_message(
                 f"Could not process the input value for `{self.setting_name}`.", ephemeral=True
@@ -318,6 +318,10 @@ class SequenceEditView(discord.ui.View):
 
     async def apply_addition(self, interaction: Interaction, item: str) -> None:
         """Add an item to the list."""
+        if item in self.stored_value:  # Ignore duplicates
+            await interaction.response.defer()
+            return
+
         self.stored_value.append(item)
         self.removal_select.options = [SelectOption(label=item) for item in self.stored_value[:MAX_SELECT_ITEMS]]
         if len(self.stored_value) == 1:
@@ -326,7 +330,7 @@ class SequenceEditView(discord.ui.View):
 
     async def apply_edit(self, interaction: Interaction, new_list: str) -> None:
         """Change the contents of the list."""
-        self.stored_value = new_list.split(",")
+        self.stored_value = list(set(new_list.split(",")))
         self.removal_select.options = [SelectOption(label=item) for item in self.stored_value[:MAX_SELECT_ITEMS]]
         if len(self.stored_value) == 1:
             self.add_item(self.removal_select)
@@ -571,11 +575,17 @@ class SettingsEditView(discord.ui.View):
             if "/" in setting_name:
                 filter_name, setting_name = setting_name.split("/", maxsplit=1)
                 dict_to_edit = self.filter_settings_overrides
+                default_value = self.filter_type.extra_fields_type().dict()[setting_name]
             else:
                 dict_to_edit = self.settings_overrides
+                default_value = self.filter_list.default(self.list_type, setting_name)
             # Update the setting override value or remove it
             if setting_value is not self._REMOVE:
-                dict_to_edit[setting_name] = setting_value
+                if not repr_equals(setting_value, default_value):
+                    dict_to_edit[setting_name] = setting_value
+                # If there's already an override, remove it, since the new value is the same as the default.
+                elif setting_name in dict_to_edit:
+                    del dict_to_edit[setting_name]
             elif setting_name in dict_to_edit:
                 del dict_to_edit[setting_name]
 
@@ -657,7 +667,12 @@ def _parse_value(value: str, type_: type[T]) -> T:
 
 
 def description_and_settings_converter(
-    list_name: str, loaded_settings: dict, loaded_filter_settings: dict, input_data: str
+    filter_list: FilterList,
+    list_type: ListType,
+    filter_type: type[Filter],
+    loaded_settings: dict,
+    loaded_filter_settings: dict,
+    input_data: str
 ) -> tuple[str, dict[str, Any], dict[str, Any]]:
     """Parse a string representing a possible description and setting overrides, and validate the setting names."""
     if not input_data:
@@ -679,25 +694,32 @@ def description_and_settings_converter(
     filter_settings = {}
     for setting, _ in list(settings.items()):
         if setting not in loaded_settings:
+            # It's a filter setting
             if "/" in setting:
                 setting_list_name, filter_setting_name = setting.split("/", maxsplit=1)
-                if setting_list_name.lower() != list_name.lower():
+                if setting_list_name.lower() != filter_list.name.lower():
                     raise BadArgument(
-                        f"A setting for a {setting_list_name!r} filter was provided, but the list name is {list_name!r}"
+                        f"A setting for a {setting_list_name!r} filter was provided, "
+                        f"but the list name is {filter_list.name!r}"
                     )
-                if filter_setting_name not in loaded_filter_settings[list_name]:
+                if filter_setting_name not in loaded_filter_settings[filter_list.name]:
                     raise BadArgument(f"{setting!r} is not a recognized setting.")
-                type_ = loaded_filter_settings[list_name][filter_setting_name][2]
+                type_ = loaded_filter_settings[filter_list.name][filter_setting_name][2]
                 try:
-                    filter_settings[filter_setting_name] = _parse_value(settings.pop(setting), type_)
+                    parsed_value = _parse_value(settings.pop(setting), type_)
+                    if not repr_equals(parsed_value, getattr(filter_type.extra_fields_type(), filter_setting_name)):
+                        filter_settings[filter_setting_name] = parsed_value
                 except (TypeError, ValueError) as e:
                     raise BadArgument(e)
             else:
                 raise BadArgument(f"{setting!r} is not a recognized setting.")
+        # It's a filter list setting
         else:
             type_ = loaded_settings[setting][2]
             try:
-                settings[setting] = _parse_value(settings.pop(setting), type_)
+                parsed_value = _parse_value(settings.pop(setting), type_)
+                if not repr_equals(parsed_value, filter_list.default(list_type, setting)):
+                    settings[setting] = parsed_value
             except (TypeError, ValueError) as e:
                 raise BadArgument(e)
 

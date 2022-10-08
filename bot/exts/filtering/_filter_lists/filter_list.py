@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import Optional, Type
+from typing import Any, Optional, Type
 
 from discord.ext.commands import BadArgument
 
@@ -70,6 +70,16 @@ class FilterList(FieldRequiring):
             log.warning(e)
         else:
             return new_filter
+
+    def default(self, list_type: ListType, setting: str) -> Any:
+        """Get the default value of a specific setting."""
+        missing = object()
+        value = self.defaults[list_type]["actions"].get_setting(setting, missing)
+        if value is missing:
+            value = self.defaults[list_type]["validations"].get_setting(setting, missing)
+            if value is missing:
+                raise ValueError(f"Could find a setting named {setting}.")
+        return value
 
     @abstractmethod
     def get_filter_type(self, content: str) -> Type[Filter]:

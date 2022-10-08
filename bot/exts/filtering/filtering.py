@@ -21,7 +21,7 @@ from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui import (
     ArgumentCompletionView, build_filter_repr_dict, description_and_settings_converter, populate_embed_from_dict
 )
-from bot.exts.filtering._utils import past_tense, to_serializable
+from bot.exts.filtering._utils import past_tense, repr_equals, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import format_channel, format_user
@@ -269,7 +269,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
 
-        overrides_values, extra_fields_overrides = self._filter_overrides(filter_)
+        overrides_values, extra_fields_overrides = self._filter_overrides(filter_, filter_list, list_type)
 
         all_settings_repr_dict = build_filter_repr_dict(
             filter_list, list_type, type(filter_), overrides_values, extra_fields_overrides
@@ -371,9 +371,13 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
         filter_type = type(filter_)
-        settings, filter_settings = self._filter_overrides(filter_)
+        settings, filter_settings = self._filter_overrides(filter_, filter_list, list_type)
         description, new_settings, new_filter_settings = description_and_settings_converter(
-            filter_list.name, self.loaded_settings, self.loaded_filter_settings, description_and_settings
+            filter_list,
+            list_type, filter_type,
+            self.loaded_settings,
+            self.loaded_filter_settings,
+            description_and_settings
         )
 
         content = filter_.content
@@ -620,15 +624,18 @@ class Filtering(Cog):
                     return sublist[id_], filter_list, list_type
 
     @staticmethod
-    def _filter_overrides(filter_: Filter) -> tuple[dict, dict]:
+    def _filter_overrides(filter_: Filter, filter_list: FilterList, list_type: ListType) -> tuple[dict, dict]:
         """Get the filter's overrides to the filter list settings and the extra fields settings."""
         overrides_values = {}
         for settings in (filter_.actions, filter_.validations):
             if settings:
                 for _, setting in settings.items():
-                    overrides_values.update(to_serializable(setting.dict()))
+                    for setting_name, value in to_serializable(setting.dict()).items():
+                        if not repr_equals(value, filter_list.default(list_type, setting_name)):
+                            overrides_values[setting_name] = value
 
         if filter_.extra_fields_type:
+            # The values here can be safely used since overrides equal to the defaults won't be saved.
             extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
         else:
             extra_fields_overrides = {}
@@ -645,10 +652,15 @@ class Filtering(Cog):
         description_and_settings: Optional[str] = None
     ) -> None:
         """Add a filter to the database."""
-        description, settings, filter_settings = description_and_settings_converter(
-            filter_list.name, self.loaded_settings, self.loaded_filter_settings, description_and_settings
-        )
         filter_type = filter_list.get_filter_type(content)
+        description, settings, filter_settings = description_and_settings_converter(
+            filter_list,
+            list_type,
+            filter_type,
+            self.loaded_settings,
+            self.loaded_filter_settings,
+            description_and_settings
+        )
 
         if noui:
             try:

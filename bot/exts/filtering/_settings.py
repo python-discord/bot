@@ -107,6 +107,13 @@ class Settings(FieldRequiring):
         """Get the entry matching the key, or fall back to the default value if the key is missing."""
         return self._entries.get(key, default)
 
+    def get_setting(self, key: str, default: Optional[Any] = None) -> Any:
+        """Get the setting matching the key, or fall back to the default value if the key is missing."""
+        for entry in self._entries.values():
+            if hasattr(entry, key):
+                return getattr(entry, key)
+        return default
+
     @classmethod
     def create(cls, settings_data: dict, *, keep_empty: bool = False) -> Optional[Settings]:
         """
