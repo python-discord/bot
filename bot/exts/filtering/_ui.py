@@ -383,6 +383,21 @@ class EnumSelectView(discord.ui.View):
         self.add_item(self.EnumSelect(setting_name, enum_cls, update_callback))
 
 
+class TemplateModal(discord.ui.Modal, title="Template"):
+    """A modal to enter a filter ID to copy its overrides over."""
+
+    template = discord.ui.TextInput(label="Template Filter ID")
+
+    def __init__(self, embed_view: SettingsEditView, message: discord.Message):
+        super().__init__(timeout=COMPONENT_TIMEOUT)
+        self.embed_view = embed_view
+        self.message = message
+
+    async def on_submit(self, interaction: Interaction) -> None:
+        """Update the embed with the new description."""
+        await self.embed_view.apply_template(self.template.value, self.message, interaction)
+
+
 class SettingsEditView(discord.ui.View):
     """A view used to edit a filter's settings before updating the database."""
 
@@ -469,6 +484,12 @@ class SettingsEditView(discord.ui.View):
     async def empty_description(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """A button to empty the filter's description."""
         await self.update_embed(interaction, description=self._REMOVE)
+
+    @discord.ui.button(label="Template", row=3)
+    async def enter_template(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """A button to enter a filter template ID and copy its overrides over."""
+        modal = TemplateModal(self, interaction.message)
+        await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="✅ Confirm", style=discord.ButtonStyle.green, row=4)
     async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
@@ -599,7 +620,7 @@ class SettingsEditView(discord.ui.View):
                 await interaction_or_msg.response.edit_message(embed=self.embed, view=new_view)
             else:
                 await interaction_or_msg.edit(embed=self.embed, view=new_view)
-        except discord.errors.HTTPException:  # Various error such as embed description being too long.
+        except discord.errors.HTTPException:  # Various errors such as embed description being too long.
             pass
         else:
             self.stop()
@@ -611,6 +632,21 @@ class SettingsEditView(discord.ui.View):
         The interaction needs to be the selection of the setting attached to the embed.
         """
         await self.update_embed(interaction, setting_name=setting_name, setting_value=override_value)
+
+    async def apply_template(self, template_id: str, embed_message: discord.Message, interaction: Interaction) -> None:
+        """Replace any non-overridden settings with overrides from the given filter."""
+        try:
+            settings, filter_settings = template_settings(template_id, self.filter_list, self.list_type)
+        except ValueError as e:  # The interaction is necessary to send an ephemeral message.
+            await interaction.response.send_message(f":x: {e}", ephemeral=True)
+            return
+        else:
+            await interaction.response.defer()
+
+        self.settings_overrides = settings | self.settings_overrides
+        self.filter_settings_overrides = filter_settings | self.filter_settings_overrides
+        self.embed.clear_fields()
+        await embed_message.edit(embed=self.embed, view=self.copy())
 
     async def _remove_override(self, interaction: Interaction, select: discord.ui.Select) -> None:
         """
@@ -690,6 +726,9 @@ def description_and_settings_converter(
         description, *parsed = parsed
 
     settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}
+    template = None
+    if "--template" in settings:
+        template = settings.pop("--template")
 
     filter_settings = {}
     for setting, _ in list(settings.items()):
@@ -723,7 +762,54 @@ def description_and_settings_converter(
             except (TypeError, ValueError) as e:
                 raise BadArgument(e)
 
+    # Pull templates settings and apply them.
+    if template is not None:
+        try:
+            t_settings, t_filter_settings = template_settings(template, filter_list, list_type)
+        except ValueError as e:
+            raise BadArgument(str(e))
+        else:
+            # The specified settings go on top of the template
+            settings = t_settings | settings
+            filter_settings = t_filter_settings | filter_settings
+
     return description, settings, filter_settings
+
+
+def filter_overrides(filter_: Filter, filter_list: FilterList, list_type: ListType) -> tuple[dict, dict]:
+    """Get the filter's overrides to the filter list settings and the extra fields settings."""
+    overrides_values = {}
+    for settings in (filter_.actions, filter_.validations):
+        if settings:
+            for _, setting in settings.items():
+                for setting_name, value in to_serializable(setting.dict()).items():
+                    if not repr_equals(value, filter_list.default(list_type, setting_name)):
+                        overrides_values[setting_name] = value
+
+    if filter_.extra_fields_type:
+        # The values here can be safely used since overrides equal to the defaults won't be saved.
+        extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
+    else:
+        extra_fields_overrides = {}
+
+    return overrides_values, extra_fields_overrides
+
+
+def template_settings(filter_id: str, filter_list: FilterList, list_type: ListType) -> tuple[dict, dict]:
+    """Find the filter with specified ID, and return its settings."""
+    try:
+        filter_id = int(filter_id)
+        if filter_id < 0:
+            raise ValueError()
+    except ValueError:
+        raise ValueError("Template value must be a non-negative integer.")
+
+    if filter_id not in filter_list.filter_lists[list_type]:
+        raise ValueError(
+            f"Could not find filter with ID `{filter_id}` in the {list_type.name} {filter_list.name} list."
+        )
+    filter_ = filter_list.filter_lists[list_type][filter_id]
+    return filter_overrides(filter_, filter_list, list_type)
 
 
 def format_response_error(e: ResponseCodeError) -> Embed:

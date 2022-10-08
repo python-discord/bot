@@ -19,9 +19,10 @@ from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_t
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui import (
-    ArgumentCompletionView, build_filter_repr_dict, description_and_settings_converter, populate_embed_from_dict
+    ArgumentCompletionView, build_filter_repr_dict, description_and_settings_converter, filter_overrides,
+    populate_embed_from_dict
 )
-from bot.exts.filtering._utils import past_tense, repr_equals, to_serializable
+from bot.exts.filtering._utils import past_tense, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import format_channel, format_user
@@ -269,7 +270,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
 
-        overrides_values, extra_fields_overrides = self._filter_overrides(filter_, filter_list, list_type)
+        overrides_values, extra_fields_overrides = filter_overrides(filter_, filter_list, list_type)
 
         all_settings_repr_dict = build_filter_repr_dict(
             filter_list, list_type, type(filter_), overrides_values, extra_fields_overrides
@@ -337,7 +338,10 @@ class Filtering(Cog):
         The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
         equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
 
-        Example: `!filter add denied token "Scaleios is great" delete_messages=True send_alert=False`
+        A template filter can be specified in the settings area to copy overrides from. The setting name is "--template"
+        and the value is the filter ID. The template will be used before applying any other override.
+
+        Example: `!filter add denied token "Scaleios is great" delete_messages=True send_alert=False --template=100`
         """
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
         if result is None:
@@ -363,6 +367,9 @@ class Filtering(Cog):
         The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
         equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
 
+        A template filter can be specified in the settings area to copy overrides from. The setting name is "--template"
+        and the value is the filter ID. The template will be used before applying any other override.
+
         To edit the filter's content, use the UI.
         """
         result = self._get_filter_by_id(filter_id)
@@ -371,7 +378,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
         filter_type = type(filter_)
-        settings, filter_settings = self._filter_overrides(filter_, filter_list, list_type)
+        settings, filter_settings = filter_overrides(filter_, filter_list, list_type)
         description, new_settings, new_filter_settings = description_and_settings_converter(
             filter_list,
             list_type, filter_type,
@@ -623,25 +630,6 @@ class Filtering(Cog):
                 if id_ in sublist:
                     return sublist[id_], filter_list, list_type
 
-    @staticmethod
-    def _filter_overrides(filter_: Filter, filter_list: FilterList, list_type: ListType) -> tuple[dict, dict]:
-        """Get the filter's overrides to the filter list settings and the extra fields settings."""
-        overrides_values = {}
-        for settings in (filter_.actions, filter_.validations):
-            if settings:
-                for _, setting in settings.items():
-                    for setting_name, value in to_serializable(setting.dict()).items():
-                        if not repr_equals(value, filter_list.default(list_type, setting_name)):
-                            overrides_values[setting_name] = value
-
-        if filter_.extra_fields_type:
-            # The values here can be safely used since overrides equal to the defaults won't be saved.
-            extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
-        else:
-            extra_fields_overrides = {}
-
-        return overrides_values, extra_fields_overrides
-
     async def _add_filter(
         self,
         ctx: Context,
@@ -736,7 +724,7 @@ class Filtering(Cog):
             "filter_list": list_id, "content": content, "description": description,
             "additional_field": json.dumps(filter_settings), **settings
         }
-        response = await bot.instance.api_client.post('bot/filter/filters', json=payload)
+        response = await bot.instance.api_client.post('bot/filter/filters', json=to_serializable(payload))
         new_filter = filter_list.add_filter(response, list_type)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
         await msg.reply(f"✅ Added filter: {new_filter}" + extra_msg)
