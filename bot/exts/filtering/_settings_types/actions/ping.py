@@ -26,9 +26,9 @@ class Ping(ActionEntry):
     guild_pings: set[str]
     dm_pings: set[str]
 
-    @validator("*")
+    @validator("*", pre=True)
     @classmethod
-    def init_sequence_if_none(cls, pings: list[str]) -> list[str]:
+    def init_sequence_if_none(cls, pings: list[str] | None) -> list[str]:
         """Initialize an empty sequence if the value is None."""
         if pings is None:
             return []

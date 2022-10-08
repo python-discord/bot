@@ -36,7 +36,7 @@ class ChannelScope(ValidationEntry):
 
     @validator("*", pre=True)
     @classmethod
-    def init_if_sequence_none(cls, sequence: list[str]) -> list[str]:
+    def init_if_sequence_none(cls, sequence: list[str] | None) -> list[str]:
         """Initialize an empty sequence if the value is None."""
         if sequence is None:
             return []
