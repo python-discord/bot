@@ -3,25 +3,28 @@ import operator
 import re
 from collections import defaultdict
 from functools import partial, reduce
+from io import BytesIO
 from typing import Literal, Optional, get_type_hints
 
+import discord
 from discord import Colour, Embed, HTTPException, Message
 from discord.ext import commands
 from discord.ext.commands import BadArgument, Cog, Context, has_any_role
 from discord.utils import escape_markdown
 
 import bot
-import bot.exts.filtering._ui as filters_ui
+import bot.exts.filtering._ui.filter as filters_ui
 from bot.bot import Bot
 from bot.constants import Colours, MODERATION_ROLES, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
-from bot.exts.filtering._ui import (
+from bot.exts.filtering._ui.filter import (
     ArgumentCompletionView, build_filter_repr_dict, description_and_settings_converter, filter_overrides,
     populate_embed_from_dict
 )
+from bot.exts.filtering._ui.filter_list import DeleteConfirmationView
 from bot.exts.filtering._utils import past_tense, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -91,6 +94,15 @@ class Filtering(Cog):
         for event in events:
             if filter_list not in self._subscriptions[event]:
                 self._subscriptions[event].append(filter_list)
+
+    def unsubscribe(self, filter_list: FilterList, *events: Event) -> None:
+        """Unsubscribe a filter list from the given events. If no events given, unsubscribe from every event."""
+        if not events:
+            events = list(self._subscriptions)
+
+        for event in events:
+            if filter_list in self._subscriptions.get(event, []):
+                self._subscriptions[event].remove(filter_list)
 
     def collect_loaded_types(self) -> None:
         """
@@ -483,7 +495,7 @@ class Filtering(Cog):
 
     @filterlist.command(name="describe", aliases=("explain", "manual", "id"))
     async def fl_describe(
-            self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
+        self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
     ) -> None:
         """Show a description of the specified filter list, or a list of possible values if no values are provided."""
         if not list_type and not list_name:
@@ -511,6 +523,36 @@ class Filtering(Cog):
             name=f"Description of the {past_tense(list_type.name.lower())} {list_name.title()} filter list"
         )
         await ctx.send(embed=embed)
+
+    @filterlist.command(name="delete", aliases=("remove",))
+    async def fl_delete(
+        self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
+    ) -> None:
+        """Remove the filter list and all of its filters from the database."""
+        async def delete_list() -> None:
+            """The actual removal routine."""
+            list_data = await bot.instance.api_client.get(f"bot/filter/filter_lists/{list_id}")
+            file = discord.File(BytesIO(json.dumps(list_data, indent=4).encode("utf-8")), f"{list_description}.json")
+            message = await ctx.send("⏳ Annihilation in progress, please hold...", file=file)
+            # Unload the filter list.
+            filter_list.remove_list(list_type)
+            if not filter_list.filter_lists:  # There's nothing left, remove from the cog.
+                self.filter_lists.pop(filter_list.name)
+                self.unsubscribe(filter_list)
+
+            await bot.instance.api_client.delete(f"bot/filter/filter_lists/{list_id}")
+            await message.edit(content=f"✅ The {list_description} list has been deleted.")
+
+        result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
+        if result is None:
+            return
+        list_type, filter_list = result
+        list_id = filter_list.list_ids[list_type]
+        list_description = f"{past_tense(list_type.name.lower())} {filter_list.name}"
+        await ctx.reply(
+            f"Are you sure you want to delete the {list_description} list?",
+            view=DeleteConfirmationView(ctx.author, delete_list)
+        )
 
     # endregion
     # region: helper functions

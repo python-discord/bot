@@ -61,6 +61,14 @@ class FilterList(FieldRequiring):
         for filter_data in list_data["filters"]:
             self.add_filter(filter_data, list_type)
 
+    def remove_list(self, list_type: ListType) -> None:
+        """Remove the list associated with the given type from the FilterList object."""
+        if list_type not in self.filter_lists:
+            return
+        self.filter_lists.pop(list_type)
+        self.defaults.pop(list_type)
+        self.list_ids.pop(list_type)
+
     def add_filter(self, filter_data: dict, list_type: ListType) -> Filter:
         """Add a filter to the list of the specified type."""
         try:
