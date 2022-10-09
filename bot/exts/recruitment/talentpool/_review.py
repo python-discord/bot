@@ -32,7 +32,7 @@ MAX_MESSAGE_SIZE = 2000
 MAX_EMBED_SIZE = 4000
 
 # Maximum number of active reviews
-MAX_ONGOING_REVIEWS = 4
+MAX_ONGOING_REVIEWS = 3
 # Minimum time between reviews
 MIN_REVIEW_INTERVAL = timedelta(days=1)
 # Minimum time between nomination and sending a review
@@ -92,7 +92,8 @@ class Reviewer:
                 continue
 
             if is_first_message:
-                if msg.created_at > datetime.now(timezone.utc) - MIN_REVIEW_INTERVAL:
+                time_since_message_created = datetime.now(timezone.utc) - msg.created_at
+                if time_since_message_created < MIN_REVIEW_INTERVAL:
                     log.debug("Most recent review was less than %s ago, cancelling check", MIN_REVIEW_INTERVAL)
                     return False
 
@@ -120,9 +121,10 @@ class Reviewer:
         """
         possible = []
         for user_id, user_data in self._pool.cache.items():
+            time_since_nomination = datetime.now(timezone.utc) - isoparse(user_data["inserted_at"])
             if (
                 not user_data["reviewed"]
-                and isoparse(user_data["inserted_at"]) < datetime.now(timezone.utc) - MIN_NOMINATION_TIME
+                and time_since_nomination > MIN_NOMINATION_TIME
             ):
                 possible.append((user_id, user_data))
 
