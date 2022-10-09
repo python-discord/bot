@@ -29,7 +29,7 @@ DELETION_MESSAGE_TEMPLATE = (
     "token in your message and have removed your message. "
     "This means that your token has been **compromised**. "
     "Please change your token **immediately** at: "
-    "<https://discord.com/developers/applications/me>\n\n"
+    "<https://discord.com/developers/applications>\n\n"
     "Feel free to re-post it with the token removed. "
     "If you believe this was a mistake, please let us know!"
 )
