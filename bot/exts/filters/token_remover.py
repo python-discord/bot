@@ -44,10 +44,6 @@ TOKEN_EPOCH = 1_293_840_000
 # These regexes were taken from discord-developers, which are used by the client itself.
 TOKEN_RE = re.compile(r"([a-z0-9_-]{23,28})\.([a-z0-9_-]{6,7})\.([a-z0-9_-]{27})", re.IGNORECASE)
 
-# This checks for MFA tokens, and its not nearly as complex. if we match this, we don't check everything
-# because its not possible.
-MFA_TOKEN_RE = re.compile(r"(mfa\.[a-z0-9_-]{20,})", re.IGNORECASE)
-
 
 class Token(t.NamedTuple):
     """A Discord Bot token."""
@@ -82,9 +78,6 @@ class TokenRemover(Cog):
         found_token = self.find_token_in_message(msg)
         if found_token:
             await self.take_action(msg, found_token)
-
-        # check for mfa tokens
-        await self.handle_mfa_token(msg)
 
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
@@ -124,51 +117,7 @@ class TokenRemover(Cog):
 
         self.bot.stats.incr("tokens.removed_tokens")
 
-    async def handle_mfa_token(self, msg: Message) -> None:
-        """
-        Check all messages for a string that matches the mfa token pattern.
-
-        Due to how the mfa tokens work, there is no user information supplied for this token.
-        """
-        # Ignore DMs; can't delete messages in there anyway.
-        if not msg.guild or msg.author.bot:
-            return
-
-        was_valid = False
-        for match in MFA_TOKEN_RE.finditer(msg.content):
-
-            if self.is_maybe_valid_hmac(match.group()):
-                was_valid = True
-                break
-        if not was_valid:
-            return
-
-        token = match.group()
-        # since the token was probably valid, we can now delete the message and ping the moderators.
-        # the user is not informed, given the reasoning for deleting the message.
-        with contextlib.suppress(NotFound):
-            await msg.delete()
-
-        log_message = (
-            f"Deleted mfa token sent by {msg.author} in {msg.channel}: "
-            f"{token[:4]}{'x' * len(token[4:-3])}{token[-3:]}"
-        )
-
-        log.info(log_message)
-
-        await self.mod_log.send_log_message(
-            icon_url=Icons.token_removed,
-            colour=Colour(Colours.soft_red),
-            title="MFA Token removed!",
-            text=log_message,
-            thumbnail=msg.author.display_avatar.url,
-            channel_id=Channels.mod_alerts,
-            ping_everyone=True,
-        )
-
-        self.bot.stats.incr("tokens.removed_tokens")
-
-    @classmethod
+     @classmethod
     async def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
         """
         Format the portion of the log message that includes details about the detected user ID.
