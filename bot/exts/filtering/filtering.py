@@ -21,10 +21,10 @@ from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_t
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui.filter import (
-    ArgumentCompletionView, build_filter_repr_dict, description_and_settings_converter, filter_overrides,
-    populate_embed_from_dict
+    build_filter_repr_dict, description_and_settings_converter, filter_overrides, populate_embed_from_dict
 )
 from bot.exts.filtering._ui.filter_list import DeleteConfirmationView
+from bot.exts.filtering._ui.ui import ArgumentCompletionView
 from bot.exts.filtering._utils import past_tense, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
