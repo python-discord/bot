@@ -1,11 +1,10 @@
-from contextlib import suppress
 from typing import Optional
 
-from discord import Embed, Forbidden, TextChannel, Thread
+from discord import Embed, TextChannel
 from discord.ext.commands import Cog, Context, command, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Guild, MODERATION_ROLES, URLs
+from bot.constants import Bot as BotConfig, Guild, MODERATION_ROLES, URLs
 from bot.log import get_logger
 
 log = get_logger(__name__)
@@ -17,20 +16,6 @@ class BotCog(Cog, name="Bot"):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @Cog.listener()
-    async def on_thread_join(self, thread: Thread) -> None:
-        """
-        Try to join newly created threads.
-
-        Despite the event name being misleading, this is dispatched when new threads are created.
-        """
-        if thread.me:
-            # We have already joined this thread
-            return
-
-        with suppress(Forbidden):
-            await thread.join()
-
     @group(invoke_without_command=True, name="bot", hidden=True)
     async def botinfo_group(self, ctx: Context) -> None:
         """Bot informational commands."""
@@ -40,7 +25,10 @@ class BotCog(Cog, name="Bot"):
     async def about_command(self, ctx: Context) -> None:
         """Get information about the bot."""
         embed = Embed(
-            description="A utility bot designed just for the Python server! Try `!help` for more info.",
+            description=(
+                "A utility bot designed just for the Python server! "
+                f"Try `{BotConfig.prefix}help` for more info."
+            ),
             url="https://github.com/python-discord/bot"
         )
 
@@ -76,6 +64,6 @@ class BotCog(Cog, name="Bot"):
             await channel.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Bot cog."""
-    bot.add_cog(BotCog(bot))
+    await bot.add_cog(BotCog(bot))

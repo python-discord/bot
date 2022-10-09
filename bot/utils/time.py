@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import datetime
 import re
+from copy import copy
 from enum import Enum
-from typing import Optional, Union
+from time import struct_time
+from typing import Literal, Optional, TYPE_CHECKING, Union, overload
 
 import arrow
-import dateutil.parser
 from dateutil.relativedelta import relativedelta
 
-RFC1123_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-DISCORD_TIMESTAMP_REGEX = re.compile(r"<t:(\d+):f>")
+if TYPE_CHECKING:
+    from bot.converters import DurationOrExpiry
 
 _DURATION_REGEX = re.compile(
     r"((?P<years>\d+?) ?(years|year|Y|y) ?)?"
@@ -20,8 +23,19 @@ _DURATION_REGEX = re.compile(
     r"((?P<seconds>\d+?) ?(seconds|second|S|s))?"
 )
 
-
-ValidTimestamp = Union[int, datetime.datetime, datetime.date, datetime.timedelta, relativedelta]
+# All supported types for the single-argument overload of arrow.get(). tzinfo is excluded because
+# it's too implicit of a way for the caller to specify that they want the current time.
+Timestamp = Union[
+    arrow.Arrow,
+    datetime.datetime,
+    datetime.date,
+    struct_time,
+    int,  # POSIX timestamp
+    float,  # POSIX timestamp
+    str,  # ISO 8601-formatted string
+    tuple[int, int, int],  # ISO calendar tuple
+]
+_Precision = Literal["years", "months", "days", "hours", "minutes", "seconds"]
 
 
 class TimestampFormats(Enum):
@@ -42,7 +56,7 @@ class TimestampFormats(Enum):
 
 def _stringify_time_unit(value: int, unit: str) -> str:
     """
-    Returns a string to represent a value and time unit, ensuring that it uses the right plural form of the unit.
+    Return a string to represent a value and time unit, ensuring the unit's correct plural form is used.
 
     >>> _stringify_time_unit(1, "seconds")
     "1 second"
@@ -61,33 +75,140 @@ def _stringify_time_unit(value: int, unit: str) -> str:
         return f"{value} {unit}"
 
 
-def discord_timestamp(timestamp: ValidTimestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
-    """Create and format a Discord flavored markdown timestamp."""
-    if format not in TimestampFormats:
-        raise ValueError(f"Format can only be one of {', '.join(TimestampFormats.args)}, not {format}.")
-
-    # Convert each possible timestamp class to an integer.
-    if isinstance(timestamp, datetime.datetime):
-        timestamp = (timestamp - arrow.get(0)).total_seconds()
-    elif isinstance(timestamp, datetime.date):
-        timestamp = (timestamp - arrow.get(0)).total_seconds()
-    elif isinstance(timestamp, datetime.timedelta):
-        timestamp = timestamp.total_seconds()
-    elif isinstance(timestamp, relativedelta):
-        timestamp = timestamp.seconds
-
-    return f"<t:{int(timestamp)}:{format.value}>"
-
-
-def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: int = 6) -> str:
+def discord_timestamp(timestamp: Timestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
     """
-    Returns a human-readable version of the relativedelta.
+    Format a timestamp as a Discord-flavored Markdown timestamp.
 
-    precision specifies the smallest unit of time to include (e.g. "seconds", "minutes").
-    max_units specifies the maximum number of units of time to include (e.g. 1 may include days but not hours).
+    `timestamp` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
     """
+    timestamp = int(arrow.get(timestamp).timestamp())
+    return f"<t:{timestamp}:{format.value}>"
+
+
+# region humanize_delta overloads
+@overload
+def humanize_delta(
+    arg1: Union[relativedelta, Timestamp],
+    /,
+    *,
+    precision: _Precision = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+) -> str:
+    ...
+
+
+@overload
+def humanize_delta(
+    end: Timestamp,
+    start: Timestamp,
+    /,
+    *,
+    precision: _Precision = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+) -> str:
+    ...
+
+
+@overload
+def humanize_delta(
+    *,
+    years: int = 0,
+    months: int = 0,
+    weeks: float = 0,
+    days: float = 0,
+    hours: float = 0,
+    minutes: float = 0,
+    seconds: float = 0,
+    precision: _Precision = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+) -> str:
+    ...
+# endregion
+
+
+def humanize_delta(
+    *args,
+    precision: _Precision = "seconds",
+    max_units: int = 6,
+    absolute: bool = True,
+    **kwargs,
+) -> str:
+    """
+    Return a human-readable version of a time duration.
+
+    `precision` is the smallest unit of time to include (e.g. "seconds", "minutes").
+
+    `max_units` is the maximum number of units of time to include.
+    Count units from largest to smallest (e.g. count days before months).
+
+    Use the absolute value of the duration if `absolute` is True.
+
+    Usage:
+
+    Keyword arguments specifying values for time units, to construct a `relativedelta` and humanize
+    the duration represented by it:
+
+    >>> humanize_delta(days=2, hours=16, seconds=23)
+    '2 days, 16 hours and 23 seconds'
+
+    **One** `relativedelta` object, to humanize the duration represented by it:
+
+    >>> humanize_delta(relativedelta(years=12, months=6))
+    '12 years and 6 months'
+
+    Note that `leapdays` and absolute info (singular names) will be ignored during humanization.
+
+    **One** timestamp of a type supported by the single-arg `arrow.get()`, except for `tzinfo`,
+    to humanize the duration between it and the current time:
+
+    >>> humanize_delta('2021-08-06T12:43:01Z', absolute=True)  # now = 2021-08-06T12:33:33Z
+    '9 minutes and 28 seconds'
+
+    >>> humanize_delta('2021-08-06T12:43:01Z', absolute=False)  # now = 2021-08-06T12:33:33Z
+    '-9 minutes and -28 seconds'
+
+    **Two** timestamps, each of a type supported by the single-arg `arrow.get()`, except for
+    `tzinfo`, to humanize the duration between them:
+
+    >>> humanize_delta(datetime.datetime(2020, 1, 1), '2021-01-01T12:00:00Z', absolute=False)
+    '1 year and 12 hours'
+
+    >>> humanize_delta('2021-01-01T12:00:00Z', datetime.datetime(2020, 1, 1), absolute=False)
+    '-1 years and -12 hours'
+
+    Note that order of the arguments can result in a different output even if `absolute` is True:
+
+    >>> x = datetime.datetime(3000, 11, 1)
+    >>> y = datetime.datetime(3000, 9, 2)
+    >>> humanize_delta(y, x, absolute=True), humanize_delta(x, y, absolute=True)
+    ('1 month and 30 days', '1 month and 29 days')
+
+    This is due to the nature of `relativedelta`; it does not represent a fixed period of time.
+    Instead, it's relative to the `datetime` to which it's added to get the other `datetime`.
+    In the example, the difference arises because all months don't have the same number of days.
+    """
+    if args and kwargs:
+        raise ValueError("Unsupported combination of positional and keyword arguments.")
+
+    if len(args) == 0:
+        delta = relativedelta(**kwargs)
+    elif len(args) == 1 and isinstance(args[0], relativedelta):
+        delta = args[0]
+    elif len(args) <= 2:
+        end = arrow.get(args[0])
+        start = arrow.get(args[1]) if len(args) == 2 else arrow.utcnow()
+        delta = round_delta(relativedelta(end.datetime, start.datetime))
+
+        if absolute:
+            delta = abs(delta)
+    else:
+        raise ValueError(f"Received {len(args)} positional arguments, but expected 1 or 2.")
+
     if max_units <= 0:
-        raise ValueError("max_units must be positive")
+        raise ValueError("max_units must be positive.")
 
     units = (
         ("years", delta.years),
@@ -98,7 +219,7 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
         ("seconds", delta.seconds),
     )
 
-    # Add the time units that are >0, but stop at accuracy or max_units.
+    # Add the time units that are >0, but stop at precision or max_units.
     time_strings = []
     unit_count = 0
     for unit, value in units:
@@ -109,7 +230,7 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
         if unit == precision or unit_count >= max_units:
             break
 
-    # Add the 'and' between the last two units, if necessary
+    # Add the 'and' between the last two units, if necessary.
     if len(time_strings) > 1:
         time_strings[-1] = f"{time_strings[-2]} and {time_strings[-1]}"
         del time_strings[-2]
@@ -123,19 +244,12 @@ def humanize_delta(delta: relativedelta, precision: str = "seconds", max_units: 
     return humanized
 
 
-def get_time_delta(time_string: str) -> str:
-    """Returns the time in human-readable time delta format."""
-    date_time = dateutil.parser.isoparse(time_string)
-    time_delta = time_since(date_time)
-
-    return time_delta
-
-
 def parse_duration_string(duration: str) -> Optional[relativedelta]:
     """
-    Converts a `duration` string to a relativedelta object.
+    Convert a `duration` string to a relativedelta object.
 
-    The function supports the following symbols for each unit of time:
+    The following symbols are supported for each unit of time:
+
     - years: `Y`, `y`, `year`, `years`
     - months: `m`, `month`, `months`
     - weeks: `w`, `W`, `week`, `weeks`
@@ -143,8 +257,9 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
     - hours: `H`, `h`, `hour`, `hours`
     - minutes: `M`, `minute`, `minutes`
     - seconds: `S`, `s`, `second`, `seconds`
+
     The units need to be provided in descending order of magnitude.
-    If the string does represent a durationdelta object, it will return None.
+    Return None if the `duration` string cannot be parsed according to the symbols above.
     """
     match = _DURATION_REGEX.fullmatch(duration)
     if not match:
@@ -157,76 +272,97 @@ def parse_duration_string(duration: str) -> Optional[relativedelta]:
 
 
 def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
-    """Converts a relativedelta object to a timedelta object."""
+    """Convert a relativedelta object to a timedelta object."""
     utcnow = arrow.utcnow()
     return utcnow + delta - utcnow
 
 
-def time_since(past_datetime: datetime.datetime) -> str:
-    """Takes a datetime and returns a discord timestamp that describes how long ago that datetime was."""
-    return discord_timestamp(past_datetime, TimestampFormats.RELATIVE)
+def format_relative(timestamp: Timestamp) -> str:
+    """
+    Format `timestamp` as a relative Discord timestamp.
+
+    A relative timestamp describes how much time has elapsed since `timestamp` or how much time
+    remains until `timestamp` is reached.
+
+    `timestamp` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
+    """
+    return discord_timestamp(timestamp, TimestampFormats.RELATIVE)
 
 
-def parse_rfc1123(stamp: str) -> datetime.datetime:
-    """Parse RFC1123 time string into datetime."""
-    return datetime.datetime.strptime(stamp, RFC1123_FORMAT).replace(tzinfo=datetime.timezone.utc)
-
-
-def format_infraction(timestamp: str) -> str:
-    """Format an infraction timestamp to a discord timestamp."""
-    return discord_timestamp(dateutil.parser.isoparse(timestamp))
-
-
-def format_infraction_with_duration(
-    date_to: Optional[str],
-    date_from: Optional[datetime.datetime] = None,
+def format_with_duration(
+    timestamp: Optional[Timestamp],
+    other_timestamp: Optional[Timestamp] = None,
     max_units: int = 2,
-    absolute: bool = True
 ) -> Optional[str]:
     """
-    Return `date_to` formatted as a discord timestamp with the timestamp duration since `date_from`.
+    Return `timestamp` formatted as a discord timestamp with the timestamp duration since `other_timestamp`.
 
-    `max_units` specifies the maximum number of units of time to include in the duration. For
-    example, a value of 1 may include days but not hours.
+    `timestamp` and `other_timestamp` can be any type supported by the single-arg `arrow.get()`,
+    except for a `tzinfo`. Use the current time if `other_timestamp` is None or unspecified.
 
-    If `absolute` is True, the absolute value of the duration delta is used. This prevents negative
-    values in the case that `date_to` is in the past relative to `date_from`.
+    `max_units` is forwarded to `time.humanize_delta`. See its documentation for more information.
+
+    Return None if `timestamp` is None.
     """
-    if not date_to:
+    if timestamp is None:
         return None
 
-    date_to_formatted = format_infraction(date_to)
+    if other_timestamp is None:
+        other_timestamp = arrow.utcnow()
 
-    date_from = date_from or datetime.datetime.now(datetime.timezone.utc)
-    date_to = dateutil.parser.isoparse(date_to).replace(microsecond=0)
+    formatted_timestamp = discord_timestamp(timestamp)
+    duration = humanize_delta(timestamp, other_timestamp, max_units=max_units)
 
-    delta = relativedelta(date_to, date_from)
-    if absolute:
-        delta = abs(delta)
-
-    duration = humanize_delta(delta, max_units=max_units)
-    duration_formatted = f" ({duration})" if duration else ""
-
-    return f"{date_to_formatted}{duration_formatted}"
+    return f"{formatted_timestamp} ({duration})"
 
 
-def until_expiration(
-    expiry: Optional[str]
-) -> Optional[str]:
+def until_expiration(expiry: Optional[Timestamp]) -> str:
     """
-    Get the remaining time until infraction's expiration, in a discord timestamp.
+    Get the remaining time until an infraction's expiration as a Discord timestamp.
 
-    Returns a human-readable version of the remaining duration between arrow.utcnow() and an expiry.
-    Similar to time_since, except that this function doesn't error on a null input
-    and return null if the expiry is in the paste
+    `expiry` can be any type supported by the single-arg `arrow.get()`, except for a `tzinfo`.
+
+    Return "Permanent" if `expiry` is None. Return "Expired" if `expiry` is in the past.
     """
-    if not expiry:
-        return None
+    if expiry is None:
+        return "Permanent"
 
-    now = arrow.utcnow()
-    since = dateutil.parser.isoparse(expiry).replace(microsecond=0)
+    expiry = arrow.get(expiry)
+    if expiry < arrow.utcnow():
+        return "Expired"
 
-    if since < now:
-        return None
+    return format_relative(expiry)
 
-    return discord_timestamp(since, TimestampFormats.RELATIVE)
+
+def unpack_duration(
+        duration_or_expiry: DurationOrExpiry,
+        origin: Optional[Union[datetime.datetime, arrow.Arrow]] = None
+) -> tuple[datetime.datetime, datetime.datetime]:
+    """
+    Unpacks a DurationOrExpiry into a tuple of (origin, expiry).
+
+    The `origin` defaults to the current UTC time at function call.
+    """
+    if origin is None:
+        origin = datetime.datetime.now(tz=datetime.timezone.utc)
+
+    if isinstance(origin, arrow.Arrow):
+        origin = origin.datetime
+
+    if isinstance(duration_or_expiry, relativedelta):
+        return origin, origin + duration_or_expiry
+    else:
+        return origin, duration_or_expiry
+
+
+def round_delta(delta: relativedelta) -> relativedelta:
+    """
+    Rounds `delta` to the nearest second.
+
+    Returns a copy with microsecond values of 0.
+    """
+    delta = copy(delta)
+    if delta.microseconds >= 500000:
+        delta += relativedelta(seconds=1)
+    delta.microseconds = 0
+    return delta

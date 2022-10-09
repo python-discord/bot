@@ -1,28 +1,29 @@
 import asyncio
 import re
 import unicodedata
+import urllib.parse
 from datetime import timedelta
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, Union
 
 import arrow
 import dateutil.parser
-import discord.errors
 import regex
+import tldextract
 from async_rediscache import RedisCache
+from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
+from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
-from discord import Colour, HTTPException, Member, Message, NotFound, TextChannel
+from discord import ChannelType, Colour, Embed, Forbidden, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
 
-from bot.api import ResponseCodeError
 from bot.bot import Bot
-from bot.constants import Channels, Colours, Filter, Guild, Icons, URLs
+from bot.constants import Bot as BotConfig, Channels, Colours, Filter, Guild, Icons, URLs
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.messages import format_user
-from bot.utils.regex import INVITE_RE
 
 log = get_logger(__name__)
 
@@ -62,14 +63,14 @@ AUTO_BAN_REASON = (
 )
 AUTO_BAN_DURATION = timedelta(days=4)
 
-FilterMatch = Union[re.Match, dict, bool, List[discord.Embed]]
+FilterMatch = Union[re.Match, dict, bool, List[Embed]]
 
 
 class Stats(NamedTuple):
     """Additional stats on a triggered filter to append to a mod log."""
 
     message_content: str
-    additional_embeds: Optional[List[discord.Embed]]
+    additional_embeds: Optional[List[Embed]]
 
 
 class Filtering(Cog):
@@ -149,9 +150,7 @@ class Filtering(Cog):
             },
         }
 
-        scheduling.create_task(self.reschedule_offensive_msg_deletion(), event_loop=self.bot.loop)
-
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
 
@@ -206,6 +205,11 @@ class Filtering(Cog):
             delta = relativedelta(after.edited_at, before.edited_at).microseconds
         await self._filter_message(after, delta)
 
+    @Cog.listener()
+    async def on_voice_state_update(self, member: Member, *_) -> None:
+        """Checks for bad words in usernames when users join, switch or leave a voice channel."""
+        await self.check_bad_words_in_name(member)
+
     def get_name_match(self, name: str) -> Optional[re.Match]:
         """Check bad words from passed string (name). Return the first match found."""
         normalised_name = unicodedata.normalize("NFKC", name)
@@ -255,20 +259,22 @@ class Filtering(Cog):
             )
 
             await self.mod_log.send_log_message(
+                content=str(member.id),  # quality-of-life improvement for mobile moderators
                 icon_url=Icons.token_removed,
                 colour=Colours.soft_red,
                 title="Username filtering alert",
                 text=log_string,
                 channel_id=Channels.mod_alerts,
-                thumbnail=member.display_avatar.url
+                thumbnail=member.display_avatar.url,
+                ping_everyone=True
             )
 
             # Update time when alert sent
             await self.name_alerts.set(member.id, arrow.utcnow().timestamp())
 
-    async def filter_eval(self, result: str, msg: Message) -> bool:
+    async def filter_snekbox_output(self, result: str, msg: Message) -> bool:
         """
-        Filter the result of an !eval to see if it violates any of our rules, and then respond accordingly.
+        Filter the result of a snekbox command to see if it violates any of our rules, and then respond accordingly.
 
         Also requires the original message, to check whether to filter and for mod logs.
         Returns whether a filter was triggered or not.
@@ -337,7 +343,7 @@ class Filtering(Cog):
                         match = result
 
                     if match:
-                        is_private = msg.channel.type is discord.ChannelType.private
+                        is_private = msg.channel.type is ChannelType.private
 
                         # If this is a filter (not a watchlist) and not in a DM, delete the message.
                         if _filter["type"] == "filter" and not is_private:
@@ -352,7 +358,7 @@ class Filtering(Cog):
                                 # In addition, to avoid sending two notifications to the user, the
                                 # logs, and mod_alert, we return if the message no longer exists.
                                 await msg.delete()
-                            except discord.errors.NotFound:
+                            except NotFound:
                                 return
 
                             # Notify the user if the filter specifies
@@ -381,10 +387,20 @@ class Filtering(Cog):
                                 log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
 
                         stats = self._add_stats(filter_name, match, msg.content)
-                        await self._send_log(filter_name, _filter, msg, stats, reason)
 
-                        # If the filter reason contains `[autoban]`, we want to auto-ban the user
-                        if reason and "[autoban]" in reason.lower():
+                        # If the filter reason contains `[autoban]`, we want to auto-ban the user.
+                        # Also pass this to _send_log so mods are not pinged filter matches that are auto-actioned
+                        autoban = reason and "[autoban]" in reason.lower()
+                        if not autoban and filter_name == "filter_invites" and isinstance(result, dict):
+                            autoban = any(
+                                "[autoban]" in invite_info["reason"].lower()
+                                for invite_info in result.values()
+                                if invite_info.get("reason")
+                            )
+
+                        await self._send_log(filter_name, _filter, msg, stats, reason, autoban=autoban)
+
+                        if autoban:
                             # Create a new context, with the author as is the bot, and the channel as #mod-alerts.
                             # This sends the ban confirmation directly under watchlist trigger embed, to inform
                             # mods that the user was auto-banned for the message.
@@ -397,7 +413,7 @@ class Filtering(Cog):
                             await context.invoke(
                                 context.command,
                                 msg.author,
-                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                (arrow.utcnow() + AUTO_BAN_DURATION).datetime,
                                 reason=AUTO_BAN_REASON
                             )
 
@@ -407,14 +423,15 @@ class Filtering(Cog):
         self,
         filter_name: str,
         _filter: Dict[str, Any],
-        msg: discord.Message,
+        msg: Message,
         stats: Stats,
         reason: Optional[str] = None,
         *,
         is_eval: bool = False,
+        autoban: bool = False,
     ) -> None:
         """Send a mod log for a triggered filter."""
-        if msg.channel.type is discord.ChannelType.private:
+        if msg.channel.type is ChannelType.private:
             channel_str = "via DM"
             ping_everyone = False
         else:
@@ -422,11 +439,14 @@ class Filtering(Cog):
             # Allow specific filters to override ping_everyone
             ping_everyone = Filter.ping_everyone and _filter.get("ping_everyone", True)
 
-        # If we are going to autoban, we don't want to ping
-        if reason and "[autoban]" in reason:
-            ping_everyone = False
+        content = str(msg.author.id)  # quality-of-life improvement for mobile moderators
 
-        eval_msg = "using !eval " if is_eval else ""
+        # If we are going to autoban, we don't want to ping and don't need the user ID
+        if autoban:
+            ping_everyone = False
+            content = None
+
+        eval_msg = f"using {BotConfig.prefix}eval " if is_eval else ""
         footer = f"Reason: {reason}" if reason else None
         message = (
             f"The {filter_name} {_filter['type']} was triggered by {format_user(msg.author)} "
@@ -438,6 +458,7 @@ class Filtering(Cog):
 
         # Send pretty mod log embed to mod-alerts
         await self.mod_log.send_log_message(
+            content=content,
             icon_url=Icons.filtering,
             colour=Colour(Colours.soft_red),
             title=f"{_filter['type'].title()} triggered!",
@@ -472,7 +493,7 @@ class Filtering(Cog):
             additional_embeds = []
             for _, data in match.items():
                 reason = f"Reason: {data['reason']} | " if data.get('reason') else ""
-                embed = discord.Embed(description=(
+                embed = Embed(description=(
                     f"**Members:**\n{data['members']}\n"
                     f"**Active:**\n{data['active']}"
                 ))
@@ -535,7 +556,10 @@ class Filtering(Cog):
         for match in URL_RE.finditer(text):
             for url in domain_blacklist:
                 if url.lower() in match.group(1).lower():
-                    return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
+                    blacklisted_parsed = tldextract.extract(url.lower())
+                    url_parsed = tldextract.extract(match.group(1).lower())
+                    if blacklisted_parsed.registered_domain == url_parsed.registered_domain:
+                        return True, self._get_filterlist_value("domain_name", url, allowed=False)["comment"]
         return False, None
 
     @staticmethod
@@ -553,6 +577,7 @@ class Filtering(Cog):
 
         If any are detected, a dictionary of invite data is returned, with a key per invite.
         If none are detected, False is returned.
+        If we are unable to process an invite, True is returned.
 
         Attempts to catch some of common ways to try to cheat the system.
         """
@@ -562,9 +587,10 @@ class Filtering(Cog):
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
-        invites = [m.group("invite") for m in INVITE_RE.finditer(text)]
+        invites = [m.group("invite") for m in DISCORD_INVITE.finditer(text)]
         invite_data = dict()
         for invite in invites:
+            invite = urllib.parse.quote_plus(invite.rstrip("/"))
             if invite in invite_data:
                 continue
 
@@ -617,7 +643,7 @@ class Filtering(Cog):
         return invite_data if invite_data else False
 
     @staticmethod
-    async def _has_rich_embed(msg: Message) -> Union[bool, List[discord.Embed]]:
+    async def _has_rich_embed(msg: Message) -> Union[bool, List[Embed]]:
         """Determines if `msg` contains any rich embeds not auto-generated from a URL."""
         if msg.embeds:
             for embed in msg.embeds:
@@ -653,7 +679,7 @@ class Filtering(Cog):
         """
         try:
             await filtered_member.send(reason)
-        except discord.errors.Forbidden:
+        except Forbidden:
             await channel.send(f"{filtered_member.mention} {reason}")
 
     def schedule_msg_delete(self, msg: dict) -> None:
@@ -661,7 +687,7 @@ class Filtering(Cog):
         delete_at = dateutil.parser.isoparse(msg['delete_date'])
         self.scheduler.schedule_at(delete_at, msg['id'], self.delete_offensive_msg(msg))
 
-    async def reschedule_offensive_msg_deletion(self) -> None:
+    async def cog_load(self) -> None:
         """Get all the pending message deletion from the API and reschedule them."""
         await self.bot.wait_until_ready()
         response = await self.bot.api_client.get('bot/offensive-messages',)
@@ -704,6 +730,6 @@ class Filtering(Cog):
         return INVISIBLE_RE.sub("", no_zalgo)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Filtering cog."""
-    bot.add_cog(Filtering(bot))
+    await bot.add_cog(Filtering(bot))

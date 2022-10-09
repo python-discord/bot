@@ -57,16 +57,13 @@ class SubcommandButton(ui.Button):
 
     async def callback(self, interaction: Interaction) -> None:
         """Edits the help embed to that of the subcommand."""
-        message = interaction.message
-        if not message:
-            return
-
         subcommand = self.command
         if isinstance(subcommand, Group):
             embed, subcommand_view = await self.help_command.format_group_help(subcommand)
         else:
             embed, subcommand_view = await self.help_command.command_formatting(subcommand)
-        await message.edit(embed=embed, view=subcommand_view)
+
+        await interaction.response.edit_message(embed=embed, view=subcommand_view)
 
 
 class GroupButton(ui.Button):
@@ -98,12 +95,8 @@ class GroupButton(ui.Button):
 
     async def callback(self, interaction: Interaction) -> None:
         """Edits the help embed to that of the parent."""
-        message = interaction.message
-        if not message:
-            return
-
         embed, group_view = await self.help_command.format_group_help(self.command.parent)
-        await message.edit(embed=embed, view=group_view)
+        await interaction.response.edit_message(embed=embed, view=group_view)
 
 
 class CommandView(ui.View):
@@ -113,11 +106,27 @@ class CommandView(ui.View):
     If the command has a parent, a button is added to the view to show that parent's help embed.
     """
 
-    def __init__(self, help_command: CustomHelpCommand, command: Command):
+    def __init__(self, help_command: CustomHelpCommand, command: Command, context: Context):
+        self.context = context
         super().__init__()
 
         if command.parent:
-            self.children.append(GroupButton(help_command, command, emoji="↩️"))
+            self.add_item(GroupButton(help_command, command, emoji="↩️"))
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """
+        Ensures that the button only works for the user who spawned the help command.
+
+        Also allows moderators to access buttons even when not the author of message.
+        """
+        if interaction.user is not None:
+            if any(role.id in constants.MODERATION_ROLES for role in interaction.user.roles):
+                return True
+
+            elif interaction.user.id == self.context.author.id:
+                return True
+
+        return False
 
 
 class GroupView(CommandView):
@@ -130,8 +139,8 @@ class GroupView(CommandView):
     MAX_BUTTONS_IN_ROW = 5
     MAX_ROWS = 5
 
-    def __init__(self, help_command: CustomHelpCommand, group: Group, subcommands: list[Command]):
-        super().__init__(help_command, group)
+    def __init__(self, help_command: CustomHelpCommand, group: Group, subcommands: list[Command], context: Context):
+        super().__init__(help_command, group, context)
         # Don't add buttons if only a portion of the subcommands can be shown.
         if len(subcommands) + len(self.children) > self.MAX_ROWS * self.MAX_BUTTONS_IN_ROW:
             log.trace(f"Attempted to add navigation buttons for `{group.qualified_name}`, but there was no space.")
@@ -298,11 +307,11 @@ class CustomHelpCommand(HelpCommand):
         # Remove line breaks from docstrings, if not used to separate paragraphs.
         # Allow overriding this behaviour via putting \u2003 at the start of a line.
         formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help)
-        command_details += f"*{formatted_doc or 'No details provided.'}*\n"
+        command_details += f"{formatted_doc or 'No details provided.'}\n"
         embed.description = command_details
 
         # If the help is invoked in the context of an error, don't show subcommand navigation.
-        view = CommandView(self, command) if not self.context.command_failed else None
+        view = CommandView(self, command, self.context) if not self.context.command_failed else None
         return embed, view
 
     async def send_command_help(self, command: Command) -> None:
@@ -322,7 +331,7 @@ class CustomHelpCommand(HelpCommand):
         for command in commands_:
             signature = f" {command.signature}" if command.signature else ""
             details.append(
-                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n*{command.short_doc or 'No details provided'}*"
+                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n{command.short_doc or 'No details provided'}"
             )
         if return_as_list:
             return details
@@ -347,7 +356,7 @@ class CustomHelpCommand(HelpCommand):
             embed.description += f"\n**Subcommands:**\n{command_details}"
 
         # If the help is invoked in the context of an error, don't show subcommand navigation.
-        view = GroupView(self, group, commands_) if not self.context.command_failed else None
+        view = GroupView(self, group, commands_, self.context) if not self.context.command_failed else None
         return embed, view
 
     async def send_group_help(self, group: Group) -> None:
@@ -363,7 +372,7 @@ class CustomHelpCommand(HelpCommand):
 
         embed = Embed()
         embed.set_author(name="Command Help", icon_url=constants.Icons.questionmark)
-        embed.description = f"**{cog.qualified_name}**\n*{cog.description}*"
+        embed.description = f"**{cog.qualified_name}**\n{cog.description}"
 
         command_details = self.get_commands_brief_details(commands_)
         if command_details:
@@ -403,7 +412,7 @@ class CustomHelpCommand(HelpCommand):
         filtered_commands = await self.filter_commands(all_commands, sort=True)
 
         command_detail_lines = self.get_commands_brief_details(filtered_commands, return_as_list=True)
-        description = f"**{category.name}**\n*{category.description}*"
+        description = f"**{category.name}**\n{category.description}"
 
         if command_detail_lines:
             description += "\n\n**Commands:**"
@@ -473,12 +482,12 @@ class Help(Cog):
         bot.help_command = CustomHelpCommand()
         bot.help_command.cog = self
 
-    def cog_unload(self) -> None:
+    async def cog_unload(self) -> None:
         """Reset the help command when the cog is unloaded."""
         self.bot.help_command = self.old_help_command
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Help cog."""
-    bot.add_cog(Help(bot))
+    await bot.add_cog(Help(bot))
     log.info("Cog loaded: Help")

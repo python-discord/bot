@@ -6,18 +6,20 @@ from datetime import datetime, timezone
 from itertools import zip_longest
 
 import discord
+from botcore.site_api import ResponseCodeError
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
-from discord.utils import escape_markdown
+from discord.utils import escape_markdown, format_dt, snowflake_time
+from sentry_sdk import add_breadcrumb
 
 from bot.bot import Bot
 from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.messages import format_user
-from bot.utils.time import humanize_delta
 
 log = get_logger(__name__)
 
@@ -53,24 +55,35 @@ class ModLog(Cog, name="ModLog"):
         if attachments is None:
             attachments = []
 
-        response = await self.bot.api_client.post(
-            'bot/deleted-messages',
-            json={
-                'actor': actor_id,
-                'creation': datetime.now(timezone.utc).isoformat(),
-                'deletedmessage_set': [
-                    {
-                        'id': message.id,
-                        'author': message.author.id,
-                        'channel_id': message.channel.id,
-                        'content': message.content.replace("\0", ""),  # Null chars cause 400.
-                        'embeds': [embed.to_dict() for embed in message.embeds],
-                        'attachments': attachment,
-                    }
-                    for message, attachment in zip_longest(messages, attachments, fillvalue=[])
-                ]
+        deletedmessage_set = [
+            {
+                "id": message.id,
+                "author": message.author.id,
+                "channel_id": message.channel.id,
+                "content": message.content.replace("\0", ""),  # Null chars cause 400.
+                "embeds": [embed.to_dict() for embed in message.embeds],
+                "attachments": attachment,
             }
-        )
+            for message, attachment in zip_longest(messages, attachments, fillvalue=[])
+        ]
+
+        try:
+            response = await self.bot.api_client.post(
+                "bot/deleted-messages",
+                json={
+                    "actor": actor_id,
+                    "creation": datetime.now(timezone.utc).isoformat(),
+                    "deletedmessage_set": deletedmessage_set,
+                }
+            )
+        except ResponseCodeError as e:
+            add_breadcrumb(
+                category="api_error",
+                message=str(e),
+                level="error",
+                data=deletedmessage_set,
+            )
+            raise
 
         return f"{URLs.site_logs_view}/{response['id']}"
 
@@ -96,6 +109,7 @@ class ModLog(Cog, name="ModLog"):
         footer: t.Optional[str] = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
+        await self.bot.wait_until_guild_available()
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
             description=text[:4093] + "..." if len(text) > 4096 else text
@@ -115,7 +129,7 @@ class ModLog(Cog, name="ModLog"):
 
         if ping_everyone:
             if content:
-                content = f"<@&{Roles.moderators}>\n{content}"
+                content = f"<@&{Roles.moderators}> {content}"
             else:
                 content = f"<@&{Roles.moderators}>"
 
@@ -406,7 +420,7 @@ class ModLog(Cog, name="ModLog"):
         now = datetime.now(timezone.utc)
         difference = abs(relativedelta(now, member.created_at))
 
-        message = format_user(member) + "\n\n**Account age:** " + humanize_delta(difference)
+        message = format_user(member) + "\n\n**Account age:** " + time.humanize_delta(difference)
 
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
@@ -538,7 +552,7 @@ class ModLog(Cog, name="ModLog"):
         channel = self.bot.get_channel(channel_id)
 
         # Ignore not found channels, DMs, and messages outside of the main guild.
-        if not channel or not hasattr(channel, "guild") or channel.guild.id != GuildConstant.id:
+        if not channel or channel.guild is None or channel.guild.id != GuildConstant.id:
             return True
 
         # Look at the parent channel of a thread.
@@ -572,6 +586,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
@@ -580,6 +595,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Author:** {format_user(author)}\n"
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{message.id}`\n"
+                f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
                 "\n"
             )
@@ -614,6 +630,7 @@ class ModLog(Cog, name="ModLog"):
         This is called when a message absent from the cache is deleted.
         Hence, the message contents aren't logged.
         """
+        await self.bot.wait_until_guild_available()
         if self.is_channel_ignored(event.channel_id):
             return
 
@@ -627,6 +644,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** {channel.category}/#{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
+                f"**Sent at:** {format_dt(snowflake_time(event.message_id))}\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
@@ -634,6 +652,7 @@ class ModLog(Cog, name="ModLog"):
             response = (
                 f"**Channel:** #{channel.name} (`{channel.id}`)\n"
                 f"**Message ID:** `{event.message_id}`\n"
+                f"**Sent at:** {format_dt(snowflake_time(event.message_id))}\n"
                 "\n"
                 "This message was not cached, so the message content cannot be displayed."
             )
@@ -711,7 +730,7 @@ class ModLog(Cog, name="ModLog"):
             # datetime as the baseline and create a human-readable delta between this edit event
             # and the last time the message was edited
             timestamp = msg_before.edited_at
-            delta = humanize_delta(relativedelta(msg_after.edited_at, msg_before.edited_at))
+            delta = time.humanize_delta(msg_after.edited_at, msg_before.edited_at)
             footer = f"Last edited {delta} ago"
         else:
             # Message was not previously edited, use the created_at datetime as the baseline, no
@@ -727,6 +746,10 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_raw_message_edit(self, event: discord.RawMessageUpdateEvent) -> None:
         """Log raw message edit event to message change log."""
+        if event.guild_id is None:
+            return  # ignore DM edits
+
+        await self.bot.wait_until_guild_available()
         try:
             channel = self.bot.get_channel(int(event.data["channel_id"]))
             message = await channel.fetch_message(event.message_id)
@@ -830,13 +853,8 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_thread_join(self, thread: Thread) -> None:
+    async def on_thread_create(self, thread: Thread) -> None:
         """Log thread creation."""
-        # If we are in the thread already we can most probably assume we already logged it?
-        # We don't really have a better way of doing this since the API doesn't make any difference between the two
-        if thread.me:
-            return
-
         if self.is_channel_ignored(thread.id):
             log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
             return
@@ -926,6 +944,6 @@ class ModLog(Cog, name="ModLog"):
         )
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModLog cog."""
-    bot.add_cog(ModLog(bot))
+    await bot.add_cog(ModLog(bot))

@@ -1,18 +1,19 @@
 import asyncio
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
 import discord
 from async_rediscache import RedisCache
+from botcore.utils import scheduling
 from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.messages import format_user, sub_clyde
+from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)
 
@@ -25,9 +26,9 @@ CRAWL_LIMIT = 50
 CRAWL_SLEEP = 2
 
 DISCORD_MESSAGE_LINK_RE = re.compile(
-    r"(https?:\/\/(?:(ptb|canary|www)\.)?discord(?:app)?\.com\/channels\/"
+    r"(https?://(?:(ptb|canary|www)\.)?discord(?:app)?\.com/channels/"
     r"[0-9]{15,20}"
-    r"\/[0-9]{15,20}\/[0-9]{15,20})"
+    r"/[0-9]{15,20}/[0-9]{15,20})"
 )
 
 
@@ -97,10 +98,20 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
         colour = Colours.soft_red
         footer = f"Rejected by {actioned_by}"
 
+    reported_timestamp = discord_timestamp(incident.created_at)
+    relative_timestamp = discord_timestamp(incident.created_at, TimestampFormats.RELATIVE)
+    reported_on_msg = f"*Reported {reported_timestamp} ({relative_timestamp}).*"
+
+    # If the description will be too long (>4096 total characters), truncate the incident content
+    if len(incident.content) > (allowed_content_chars := 4096-len(reported_on_msg)-2):  # -2 for the newlines
+        description = incident.content[:allowed_content_chars-3] + f"...\n\n{reported_on_msg}"
+    else:
+        description = incident.content + f"\n\n{reported_on_msg}"
+
     embed = discord.Embed(
-        description=incident.content,
-        timestamp=datetime.utcnow(),
+        description=description,
         colour=colour,
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 
@@ -183,7 +194,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
     except MessageNotFound:
         mod_logs_channel = ctx.bot.get_channel(Channels.mod_log)
 
-        last_100_logs: list[discord.Message] = await mod_logs_channel.history(limit=100).flatten()
+        last_100_logs: list[discord.Message] = [message async for message in mod_logs_channel.history(limit=100)]
 
         for log_entry in last_100_logs:
             if not log_entry.embeds:
@@ -229,6 +240,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
             ),
             timestamp=message.created_at
         )
+        embed.set_author(name=message.author, icon_url=message.author.display_avatar.url)
         embed.add_field(
             name="Content",
             value=shorten_text(message.content) if message.content else "[No Message Content]"
@@ -380,7 +392,7 @@ class Incidents(Cog):
             webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
             await webhook.send(
                 embed=embed,
-                username=sub_clyde(incident.author.name),
+                username=sub_clyde(incident.author.display_name),
                 avatar_url=incident.author.display_avatar.url,
                 file=attachment_file,
             )
@@ -403,7 +415,7 @@ class Incidents(Cog):
         def check(payload: discord.RawReactionActionEvent) -> bool:
             return payload.message_id == incident.id
 
-        coroutine = self.bot.wait_for(event="raw_message_delete", check=check, timeout=timeout)
+        coroutine = self.bot.wait_for("raw_message_delete", check=check, timeout=timeout)
         return scheduling.create_task(coroutine, event_loop=self.bot.loop)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
@@ -657,6 +669,6 @@ class Incidents(Cog):
         log.trace("Successfully deleted discord links webhook message.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Incidents cog."""
-    bot.add_cog(Incidents(bot))
+    await bot.add_cog(Incidents(bot))

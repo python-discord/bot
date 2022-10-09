@@ -127,6 +127,6 @@ class Verification(Cog):
     # endregion
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the Verification cog."""
-    bot.add_cog(Verification(bot))
+    await bot.add_cog(Verification(bot))

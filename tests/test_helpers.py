@@ -14,7 +14,7 @@ class DiscordMocksTests(unittest.TestCase):
         """Test if the default initialization of MockRole results in the correct object."""
         role = helpers.MockRole()
 
-        # The `spec` argument makes sure `isistance` checks with `discord.Role` pass
+        # The `spec` argument makes sure `isinstance` checks with `discord.Role` pass
         self.assertIsInstance(role, discord.Role)
 
         self.assertEqual(role.name, "role")
@@ -327,7 +327,7 @@ class MockObjectTests(unittest.TestCase):
     def test_spec_propagation_of_mock_subclasses(self):
         """Test if the `spec` does not propagate to attributes of the mock object."""
         test_values = (
-            (helpers.MockGuild, "region"),
+            (helpers.MockGuild, "features"),
             (helpers.MockRole, "mentionable"),
             (helpers.MockMember, "display_name"),
             (helpers.MockBot, "owner_id"),

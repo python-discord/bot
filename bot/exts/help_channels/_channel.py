@@ -1,3 +1,4 @@
+import re
 import typing as t
 from datetime import timedelta
 from enum import Enum
@@ -16,13 +17,14 @@ log = get_logger(__name__)
 
 MAX_CHANNELS_PER_CATEGORY = 50
 EXCLUDED_CHANNELS = (constants.Channels.cooldown,)
+CLAIMED_BY_RE = re.compile(r"Channel claimed by <@!?(?P<user_id>\d{17,20})>\.$")
 
 
 class ClosingReason(Enum):
     """All possible closing reasons for help channels."""
 
     COMMAND = "command"
-    LATEST_MESSSAGE = "auto.latest_message"
+    LATEST_MESSAGE = "auto.latest_message"
     CLAIMANT_TIMEOUT = "auto.claimant_timeout"
     OTHER_TIMEOUT = "auto.other_timeout"
     DELETED = "auto.deleted"
@@ -75,7 +77,7 @@ async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.T
 
         # Use the greatest offset to avoid the possibility of prematurely closing the channel.
         time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
-        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSSAGE
+        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSAGE
         return time, reason
 
     claimant_time = Arrow.utcfromtimestamp(claimant_time)
@@ -157,3 +159,37 @@ async def move_to_bottom(channel: discord.TextChannel, category_id: int, **optio
     # Now that the channel is moved, we can edit the other attributes
     if options:
         await channel.edit(**options)
+
+
+async def ensure_cached_claimant(channel: discord.TextChannel) -> None:
+    """
+    Ensure there is a claimant cached for each help channel.
+
+    Check the redis cache first, return early if there is already a claimant cached.
+    If there isn't an entry in redis, search for the "Claimed by X." embed in channel history.
+        Stopping early if we discover a dormant message first.
+
+    If a claimant could not be found, send a warning to #helpers and set the claimant to the bot.
+    """
+    if await _caches.claimants.get(channel.id):
+        return
+
+    async for message in channel.history(limit=1000):
+        if message.author.id != bot.instance.user.id:
+            # We only care about bot messages
+            continue
+        if message.embeds:
+            if _message._match_bot_embed(message, _message.DORMANT_MSG):
+                log.info("Hit the dormant message embed before finding a claimant in %s (%d).", channel, channel.id)
+                break
+            # Only set the claimant if the first embed matches the claimed channel embed regex
+            description = message.embeds[0].description
+            if (description is not None) and (match := CLAIMED_BY_RE.match(description)):
+                await _caches.claimants.set(channel.id, int(match.group("user_id")))
+                return
+
+    await bot.instance.get_channel(constants.Channels.helpers).send(
+        f"I couldn't find a claimant for {channel.mention} in that last 1000 messages. "
+        "Please use your helper powers to close the channel if/when appropriate."
+    )
+    await _caches.claimants.set(channel.id, bot.instance.user.id)

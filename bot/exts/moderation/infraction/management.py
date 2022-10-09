@@ -1,18 +1,19 @@
+import re
 import textwrap
 import typing as t
-from datetime import datetime, timezone
 
-import dateutil.parser
+import arrow
 import discord
-from dateutil.relativedelta import relativedelta
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
-from bot.converters import Expiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser, allowed_strings
+from bot.converters import DurationOrExpiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
+from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfraction
+from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
@@ -20,7 +21,7 @@ from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
 from bot.utils.members import get_or_fetch_member
-from bot.utils.time import humanize_delta, until_expiration
+from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
 
@@ -43,12 +44,10 @@ class ModManagement(commands.Cog):
         """Get currently loaded Infractions cog instance."""
         return self.bot.get_cog("Infractions")
 
-    # region: Edit infraction commands
-
     @commands.group(name='infraction', aliases=('infr', 'infractions', 'inf', 'i'), invoke_without_command=True)
     async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
         """
-        Infraction manipulation commands.
+        Infraction management commands.
 
         If `infraction` is passed then this command fetches that infraction. The `Infraction` converter
         supports 'l', 'last' and 'recent' to get the most recent infraction made by `ctx.author`.
@@ -63,12 +62,36 @@ class ModManagement(commands.Cog):
         )
         await self.send_infraction_list(ctx, embed, [infraction])
 
+    @infraction_group.command(name="resend", aliases=("send", "rs", "dm"))
+    async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
+        """Resend a DM to a user about a given infraction of theirs."""
+        if infraction["hidden"]:
+            await ctx.send(f"{constants.Emojis.failmail} You may not resend hidden infractions.")
+            return
+
+        member_id = infraction["user"]["id"]
+        member = await get_or_fetch_member(ctx.guild, member_id)
+        if not member:
+            await ctx.send(f"{constants.Emojis.failmail} Cannot find member `{member_id}` in the guild.")
+            return
+
+        id_ = infraction["id"]
+        reason = infraction["reason"] or "No reason provided."
+        reason += "\n\n**This is a re-sent message for a previously applied infraction which may have been edited.**"
+
+        if await _utils.notify_infraction(infraction, member, reason):
+            await ctx.send(f":incoming_envelope: Resent DM for infraction `{id_}`.")
+        else:
+            await ctx.send(f"{constants.Emojis.failmail} Failed to resend DM for infraction `{id_}`.")
+
+    # region: Edit infraction commands
+
     @infraction_group.command(name="append", aliases=("amend", "add", "a"))
     async def infraction_append(
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[DurationOrExpiry, t.Literal["p", "permanent"], None],
         *,
         reason: str = None
     ) -> None:
@@ -103,11 +126,12 @@ class ModManagement(commands.Cog):
         await self.infraction_edit(ctx, infraction, duration, reason=reason)
 
     @infraction_group.command(name='edit', aliases=('e',))
+    @ensure_future_timestamp(timestamp_arg=3)
     async def infraction_edit(
         self,
         ctx: Context,
         infraction: Infraction,
-        duration: t.Union[Expiry, allowed_strings("p", "permanent"), None],   # noqa: F821
+        duration: t.Union[DurationOrExpiry, t.Literal["p", "permanent"], None],
         *,
         reason: str = None
     ) -> None:
@@ -150,8 +174,11 @@ class ModManagement(commands.Cog):
             request_data['expires_at'] = None
             confirm_messages.append("marked as permanent")
         elif duration is not None:
-            request_data['expires_at'] = duration.isoformat()
-            expiry = time.format_infraction_with_duration(request_data['expires_at'])
+            origin, expiry = unpack_duration(duration)
+            # Update `last_applied` if expiry changes.
+            request_data['last_applied'] = origin.isoformat()
+            request_data['expires_at'] = expiry.isoformat()
+            expiry = time.format_with_duration(expiry, origin)
             confirm_messages.append(f"set to expire on {expiry}")
         else:
             confirm_messages.append("expiry unchanged")
@@ -176,15 +203,15 @@ class ModManagement(commands.Cog):
         if 'expires_at' in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
             if infraction['expires_at']:
-                self.infractions_cog.scheduler.cancel(new_infraction['id'])
+                self.infractions_cog.scheduler.cancel(infraction_id)
 
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data['expires_at']:
                 self.infractions_cog.schedule_expiration(new_infraction)
 
             log_text += f"""
-                Previous expiry: {until_expiration(infraction['expires_at']) or "Permanent"}
-                New expiry: {until_expiration(new_infraction['expires_at']) or "Permanent"}
+                Previous expiry: {time.until_expiration(infraction['expires_at'])}
+                New expiry: {time.until_expiration(new_infraction['expires_at'])}
             """.rstrip()
 
         changes = ' & '.join(confirm_messages)
@@ -210,7 +237,8 @@ class ModManagement(commands.Cog):
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
                 Edited by: {ctx.message.author.mention}{log_text}
-            """)
+            """),
+            footer=f"ID: {infraction_id}"
         )
 
     # endregion
@@ -253,6 +281,11 @@ class ModManagement(commands.Cog):
     @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
     async def search_reason(self, ctx: Context, reason: str) -> None:
         """Search for infractions by their reason. Use Re2 for matching."""
+        try:
+            re.compile(reason)
+        except re.error as e:
+            raise commands.BadArgument(f"Invalid regular expression in `reason`: {e}")
+
         infraction_list = await self.bot.api_client.get(
             'bot/infractions/expanded',
             params={'search': reason}
@@ -351,7 +384,12 @@ class ModManagement(commands.Cog):
         active = infraction["active"]
         user = infraction["user"]
         expires_at = infraction["expires_at"]
-        created = time.format_infraction(infraction["inserted_at"])
+        inserted_at = infraction["inserted_at"]
+        last_applied = infraction["last_applied"]
+        created = time.discord_timestamp(inserted_at)
+        applied = time.discord_timestamp(last_applied)
+        duration_edited = arrow.get(last_applied) > arrow.get(inserted_at)
+        dm_sent = infraction["dm_sent"]
 
         # Format the user string.
         if user_obj := self.bot.get_user(user["id"]):
@@ -363,25 +401,31 @@ class ModManagement(commands.Cog):
             user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
         if active:
-            remaining = time.until_expiration(expires_at) or "Expired"
+            remaining = time.until_expiration(expires_at)
         else:
             remaining = "Inactive"
 
         if expires_at is None:
             duration = "*Permanent*"
         else:
-            date_from = datetime.fromtimestamp(
-                float(time.DISCORD_TIMESTAMP_REGEX.match(created).group(1)),
-                timezone.utc
-            )
-            date_to = dateutil.parser.isoparse(expires_at)
-            duration = humanize_delta(relativedelta(date_to, date_from))
+            duration = time.humanize_delta(last_applied, expires_at)
+
+        # Notice if infraction expiry was edited.
+        if duration_edited:
+            duration += f" (edited {applied})"
+
+        # Format `dm_sent`
+        if dm_sent is None:
+            dm_sent_text = "N/A"
+        else:
+            dm_sent_text = "Yes" if dm_sent else "No"
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
             Status: {"__**Active**__" if active else "Inactive"}
             User: {user_str}
             Type: **{infraction["type"]}**
+            DM Sent: {dm_sent_text}
             Shadow: {infraction["hidden"]}
             Created: {created}
             Expires: {remaining}
@@ -421,6 +465,6 @@ class ModManagement(commands.Cog):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the ModManagement cog."""
-    bot.add_cog(ModManagement(bot))
+    await bot.add_cog(ModManagement(bot))

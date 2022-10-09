@@ -54,11 +54,12 @@ class PyPi(Cog):
                     embed.url = info["package_url"]
                     embed.colour = next(PYPI_COLOURS)
 
-                    summary = escape_markdown(info["summary"])
+                    # Summary can be None if not provided by the package
+                    summary: str | None = info["summary"]
 
                     # Summary could be completely empty, or just whitespace.
                     if summary and not summary.isspace():
-                        embed.description = summary
+                        embed.description = escape_markdown(summary)
                     else:
                         embed.description = "No summary provided."
 
@@ -82,6 +83,6 @@ class PyPi(Cog):
             await ctx.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the PyPi cog."""
-    bot.add_cog(PyPi(bot))
+    await bot.add_cog(PyPi(bot))

@@ -9,13 +9,12 @@ from discord.ext.commands import Cog, Context, command
 from bot.bot import Bot
 from bot.constants import Keys
 from bot.log import get_logger
-from bot.utils import scheduling
 from bot.utils.caching import AsyncCache
 
 log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
-BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
+BASE_PEP_URL = "https://peps.python.org/pep-"
 PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=main"
 
 pep_cache = AsyncCache()
@@ -33,7 +32,10 @@ class PythonEnhancementProposals(Cog):
         self.peps: Dict[int, str] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
-        scheduling.create_task(self.refresh_peps_urls(), event_loop=self.bot.loop)
+
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self.refresh_peps_urls()
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
@@ -67,7 +69,7 @@ class PythonEnhancementProposals(Cog):
         """Get information embed about PEP 0."""
         pep_embed = Embed(
             title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            url="https://www.python.org/dev/peps/"
+            url="https://peps.python.org/"
         )
         pep_embed.set_thumbnail(url=ICON_URL)
         pep_embed.add_field(name="Status", value="Active")
@@ -144,7 +146,7 @@ class PythonEnhancementProposals(Cog):
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
         # Trigger typing in chat to show users that bot is responding
-        await ctx.trigger_typing()
+        await ctx.typing()
 
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if pep_number == 0:
@@ -163,6 +165,6 @@ class PythonEnhancementProposals(Cog):
             log.trace(f"Getting PEP {pep_number} failed. Error embed sent.")
 
 
-def setup(bot: Bot) -> None:
+async def setup(bot: Bot) -> None:
     """Load the PEP cog."""
-    bot.add_cog(PythonEnhancementProposals(bot))
+    await bot.add_cog(PythonEnhancementProposals(bot))
