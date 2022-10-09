@@ -1,6 +1,5 @@
 import base64
 import binascii
-import contextlib
 import re
 import typing as t
 
@@ -117,7 +116,7 @@ class TokenRemover(Cog):
 
         self.bot.stats.incr("tokens.removed_tokens")
 
-     @classmethod
+    @classmethod
     async def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
         """
         Format the portion of the log message that includes details about the detected user ID.
