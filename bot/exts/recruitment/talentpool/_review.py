@@ -38,6 +38,10 @@ MIN_REVIEW_INTERVAL = timedelta(days=1)
 # Minimum time between nomination and sending a review
 MIN_NOMINATION_TIME = timedelta(days=7)
 
+# A constant for weighting number of nomination entries against nomination age when selecting a user to review.
+# The higher this is, the lower the effect of review age. At 1, age and number of entries are weighted equally.
+REVIEW_SCORE_WEIGHT = 1.5
+
 # Regex for finding the first message of a nomination, and extracting the nominee.
 NOMINATION_MESSAGE_REGEX = re.compile(
     r"<@!?(\d+)> \(.+#\d{4}\) for Helper!\n\n",
@@ -126,13 +130,29 @@ class Reviewer:
             log.debug("No users ready to review.")
             return None
 
-        # Secondary sort key: creation of first entries on the nomination.
-        possible.sort(key=lambda x: isoparse(x[1]["inserted_at"]))
+        oldest_date = min(isoparse(x[1]["inserted_at"]) for x in possible)
+        max_entries = max(len(x[1]["entries"]) for x in possible)
 
-        # Primary sort key: number of entries on the nomination.
-        user = max(possible, key=lambda x: len(x[1]["entries"]))
+        def sort_key(nomination: dict) -> float:
+            return self.score_nomination(nomination[1], oldest_date, max_entries)
 
-        return user[0]  # user id
+        return max(possible, key=sort_key)[0]
+
+    @staticmethod
+    def score_nomination(nomination: dict, oldest_date: datetime, max_entries: int) -> float:
+        """
+        Scores a nomination based on age and number of nomination entries.
+
+        The higher the score, the higher the priority for being put up for review should be.
+        """
+        num_entries = len(nomination["entries"])
+        entries_score = num_entries / max_entries
+
+        nomination_date = isoparse(nomination["inserted_at"])
+        now = datetime.now(timezone.utc)
+        age_score = (nomination_date - now) / (oldest_date - now)
+
+        return entries_score * REVIEW_SCORE_WEIGHT + age_score
 
     async def post_review(self, user_id: int, update_database: bool) -> None:
         """Format the review of a user and post it to the nomination voting channel."""

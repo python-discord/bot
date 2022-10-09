@@ -26,9 +26,14 @@ class AsyncIterator:
             raise StopAsyncIteration
 
 
-def nomination(inserted_at, num_entries, reviewed=False):
+def nomination(
+    inserted_at: datetime,
+    num_entries: int,
+    reviewed: bool = False,
+    id: int | None = None
+) -> tuple[int, dict]:
     return (
-        MockMember().id,
+        id or MockMember().id,
         {"inserted_at": inserted_at.isoformat(), "entries": [Mock() for _ in range(num_entries)], "reviewed": reviewed},
     )
 
@@ -140,10 +145,10 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
             ),
         ]
 
-        for nominations, expected in cases:
+        for (case_num, (nominations, expected)) in enumerate(cases, 1):
             nomination_dict = dict(nominations)
 
-            with self.subTest(nominations=nominations, expected=expected):
+            with self.subTest(case_num=case_num):
                 self.pool.cache = nomination_dict
                 res = await self.reviewer.get_user_for_review()
 
@@ -151,3 +156,48 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     self.assertIsNone(res)
                 else:
                     self.assertEqual(res, nominations[expected][0])
+
+    @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=0))
+    async def test_get_user_for_review_order(self):
+        now = datetime.now(timezone.utc)
+
+        # Each case in cases is a list of nominations in the order they should be chosen from first to last
+        cases = [
+            [
+                nomination(now - timedelta(days=10), 3, id=1),
+                nomination(now - timedelta(days=50), 2, id=2),
+                nomination(now - timedelta(days=100), 1, id=3),
+            ],
+            [
+                nomination(now - timedelta(days=100), 2, id=1),
+                nomination(now - timedelta(days=10), 3, id=2),
+                nomination(now - timedelta(days=80), 1, id=3),
+                nomination(now - timedelta(days=79), 1, id=4),
+                nomination(now - timedelta(days=10), 2, id=5),
+            ],
+            [
+                nomination(now - timedelta(days=200), 8, id=1),
+                nomination(now - timedelta(days=359), 4, id=2),
+                nomination(now - timedelta(days=230), 5, id=3),
+                nomination(now - timedelta(days=331), 3, id=4),
+                nomination(now - timedelta(days=113), 5, id=5),
+                nomination(now - timedelta(days=186), 3, id=6),
+                nomination(now - timedelta(days=272), 2, id=7),
+                nomination(now - timedelta(days=30), 4, id=8),
+                nomination(now - timedelta(days=198), 2, id=9),
+                nomination(now - timedelta(days=270), 1, id=10),
+                nomination(now - timedelta(days=140), 1, id=11),
+                nomination(now - timedelta(days=19), 2, id=12),
+                nomination(now - timedelta(days=30), 1, id=13),
+            ]
+        ]
+
+        for case_num, case in enumerate(cases, 1):
+            with self.subTest(case_num=case_num):
+                for i in range(len(case)):
+                    with self.subTest(nomination_num=i+1):
+                        sub_case = dict(case[i:])
+                        self.pool.cache = sub_case
+
+                        res = await self.reviewer.get_user_for_review()
+                        self.assertEqual(res, case[i][0])
