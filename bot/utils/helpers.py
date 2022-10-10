@@ -4,7 +4,7 @@ from typing import Optional
 from discord.ext.commands import CogMeta
 
 
-class CogABCMeta(CogMeta, ABCMeta):
+class CogABCMeta(CogMeta, ABCMeta):  # noqa: B024 (Ignore abstract class with no abstract methods.)
     """Metaclass for ABCs meant to be implemented as Cogs."""
 
 
