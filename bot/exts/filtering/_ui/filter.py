@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import re
-from enum import EnumMeta
-from functools import partial
 from typing import Any, Callable
 
 import discord
 import discord.ui
 from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
 from discord import Embed, Interaction, User
 from discord.ext.commands import BadArgument
 from discord.ui.select import SelectOption
@@ -16,22 +12,13 @@ from discord.ui.select import SelectOption
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._ui.ui import (
-    BooleanSelectView, COMPONENT_TIMEOUT, CustomCallbackSelect, EnumSelectView, FreeInputModal, SequenceEditView,
-    format_response_error, parse_value, remove_optional
+    COMPONENT_TIMEOUT, CustomCallbackSelect, EditBaseView, MISSING, SETTINGS_DELIMITER, SINGLE_SETTING_PATTERN,
+    format_response_error, parse_value, populate_embed_from_dict
 )
 from bot.exts.filtering._utils import repr_equals, to_serializable
 from bot.log import get_logger
 
 log = get_logger(__name__)
-
-# Max number of characters in a Discord embed field value, minus 6 characters for a placeholder.
-MAX_FIELD_SIZE = 1018
-# Max number of characters for an embed field's value before it should take its own line.
-MAX_INLINE_SIZE = 50
-# Number of seconds before a settings editing view timeout.
-EDIT_TIMEOUT = 600
-# Max length of modal text component label
-MAX_MODAL_LABEL_LENGTH = 45
 
 
 def build_filter_repr_dict(
@@ -63,22 +50,9 @@ def build_filter_repr_dict(
             if name not in extra_fields_overrides or repr_equals(extra_fields_overrides[name], value):
                 total_values[f"{filter_type.name}/{name}"] = value
             else:
-                total_values[f"{filter_type.name}/{name}*"] = value
+                total_values[f"{filter_type.name}/{name}*"] = extra_fields_overrides[name]
 
     return total_values
-
-
-def populate_embed_from_dict(embed: Embed, data: dict) -> None:
-    """Populate a Discord embed by populating fields from the given dict."""
-    for setting, value in data.items():
-        if setting.startswith("_"):
-            continue
-        if type(value) in (set, tuple):
-            value = list(value)
-        value = str(value) if value not in ("", None) else "-"
-        if len(value) > MAX_FIELD_SIZE:
-            value = value[:MAX_FIELD_SIZE] + " [...]"
-        embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
 
 
 class EditContentModal(discord.ui.Modal, title="Edit Content"):
@@ -86,7 +60,7 @@ class EditContentModal(discord.ui.Modal, title="Edit Content"):
 
     content = discord.ui.TextInput(label="Content")
 
-    def __init__(self, embed_view: SettingsEditView, message: discord.Message):
+    def __init__(self, embed_view: FilterEditView, message: discord.Message):
         super().__init__(timeout=COMPONENT_TIMEOUT)
         self.embed_view = embed_view
         self.message = message
@@ -102,7 +76,7 @@ class EditDescriptionModal(discord.ui.Modal, title="Edit Description"):
 
     description = discord.ui.TextInput(label="Description")
 
-    def __init__(self, embed_view: SettingsEditView, message: discord.Message):
+    def __init__(self, embed_view: FilterEditView, message: discord.Message):
         super().__init__(timeout=COMPONENT_TIMEOUT)
         self.embed_view = embed_view
         self.message = message
@@ -118,7 +92,7 @@ class TemplateModal(discord.ui.Modal, title="Template"):
 
     template = discord.ui.TextInput(label="Template Filter ID")
 
-    def __init__(self, embed_view: SettingsEditView, message: discord.Message):
+    def __init__(self, embed_view: FilterEditView, message: discord.Message):
         super().__init__(timeout=COMPONENT_TIMEOUT)
         self.embed_view = embed_view
         self.message = message
@@ -128,7 +102,7 @@ class TemplateModal(discord.ui.Modal, title="Template"):
         await self.embed_view.apply_template(self.template.value, self.message, interaction)
 
 
-class SettingsEditView(discord.ui.View):
+class FilterEditView(EditBaseView):
     """A view used to edit a filter's settings before updating the database."""
 
     class _REMOVE:
@@ -149,7 +123,7 @@ class SettingsEditView(discord.ui.View):
         embed: Embed,
         confirm_callback: Callable
     ):
-        super().__init__(timeout=EDIT_TIMEOUT)
+        super().__init__(author)
         self.filter_list = filter_list
         self.list_type = list_type
         self.filter_type = filter_type
@@ -159,7 +133,6 @@ class SettingsEditView(discord.ui.View):
         self.filter_settings_overrides = filter_settings_overrides
         self.loaded_settings = loaded_settings
         self.loaded_filter_settings = loaded_filter_settings
-        self.author = author
         self.embed = embed
         self.confirm_callback = confirm_callback
 
@@ -175,7 +148,7 @@ class SettingsEditView(discord.ui.View):
         })
 
         add_select = CustomCallbackSelect(
-            self._prompt_new_override,
+            self._prompt_new_value,
             placeholder="Select a setting to edit",
             options=[SelectOption(label=name) for name in sorted(self.type_per_setting_name)],
             row=1
@@ -193,10 +166,6 @@ class SettingsEditView(discord.ui.View):
         )
         if remove_select.options:
             self.add_item(remove_select)
-
-    async def interaction_check(self, interaction: Interaction) -> bool:
-        """Only allow interactions from the command invoker."""
-        return interaction.user.id == self.author.id
 
     @discord.ui.button(label="Edit Content", row=3)
     async def edit_content(self, interaction: Interaction, button: discord.ui.Button) -> None:
@@ -259,44 +228,24 @@ class SettingsEditView(discord.ui.View):
         await interaction.response.edit_message(content="🚫 Operation canceled.", embed=None, view=None)
         self.stop()
 
-    async def _prompt_new_override(self, interaction: Interaction, select: discord.ui.Select) -> None:
-        """Prompt the user to give an override value for the setting they selected, and respond to the interaction."""
-        setting_name = select.values[0]
-        type_ = self.type_per_setting_name[setting_name]
-        is_optional, type_ = remove_optional(type_)
-        if hasattr(type_, "__origin__"):  # In case this is a types.GenericAlias or a typing._GenericAlias
-            type_ = type_.__origin__
-        new_view = self.copy()
-        # This is in order to not block the interaction response. There's a potential race condition here, since
-        # a view's method is used without guaranteeing the task completed, but since it depends on user input
-        # realistically it shouldn't happen.
-        scheduling.create_task(interaction.message.edit(view=new_view))
-        update_callback = partial(new_view.update_embed, interaction_or_msg=interaction.message)
-        if type_ is bool:
-            view = BooleanSelectView(setting_name, update_callback)
-            await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
-        elif type_ in (set, list, tuple):
-            current_value = self.settings_overrides.get(setting_name, [])
-            await interaction.response.send_message(
-                f"Current list: {current_value}",
-                view=SequenceEditView(setting_name, current_value, type_, update_callback),
-                ephemeral=True
-            )
-        elif isinstance(type_, EnumMeta):
-            view = EnumSelectView(setting_name, type_, update_callback)
-            await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
-        else:
-            await interaction.response.send_modal(FreeInputModal(setting_name, not is_optional, type_, update_callback))
-        self.stop()
+    def current_value(self, setting_name: str) -> Any:
+        """Get the current value stored for the setting or MISSING if none found."""
+        if setting_name in self.settings_overrides:
+            return self.settings_overrides[setting_name]
+        if "/" in setting_name:
+            _, setting_name = setting_name.split("/", maxsplit=1)
+            if setting_name in self.filter_settings_overrides:
+                return self.filter_settings_overrides[setting_name]
+        return MISSING
 
     async def update_embed(
         self,
         interaction_or_msg: discord.Interaction | discord.Message,
         *,
         content: str | None = None,
-        description: str | type[SettingsEditView._REMOVE] | None = None,
+        description: str | type[FilterEditView._REMOVE] | None = None,
         setting_name: str | None = None,
-        setting_value: str | type[SettingsEditView._REMOVE] | None = None,
+        setting_value: str | type[FilterEditView._REMOVE] | None = None,
     ) -> None:
         """
         Update the embed with the new information.
@@ -386,9 +335,9 @@ class SettingsEditView(discord.ui.View):
         """
         await self.update_embed(interaction, setting_name=select.values[0], setting_value=self._REMOVE)
 
-    def copy(self) -> SettingsEditView:
+    def copy(self) -> FilterEditView:
         """Create a copy of this view."""
-        return SettingsEditView(
+        return FilterEditView(
             self.filter_list,
             self.list_type,
             self.filter_type,
@@ -416,15 +365,12 @@ def description_and_settings_converter(
     if not input_data:
         return "", {}, {}
 
-    settings_pattern = re.compile(r"\s+(?=\S+=\S+)")
-    single_setting_pattern = re.compile(r"\w+=.+")
-
-    parsed = settings_pattern.split(input_data)
+    parsed = SETTINGS_DELIMITER.split(input_data)
     if not parsed:
         return "", {}, {}
 
     description = ""
-    if not single_setting_pattern.match(parsed[0]):
+    if not SINGLE_SETTING_PATTERN.match(parsed[0]):
         description, *parsed = parsed
 
     settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}

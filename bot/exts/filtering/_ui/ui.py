@@ -1,17 +1,28 @@
 from __future__ import annotations
 
+import re
+from abc import ABC, abstractmethod
 from enum import EnumMeta
+from functools import partial
 from typing import Any, Callable, Coroutine, Optional, TypeVar, Union
 
 import discord
 from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
 from botcore.utils.logging import get_logger
 from discord import Embed, Interaction
 from discord.ext.commands import Context
-from discord.ui.select import MISSING, SelectOption
+from discord.ui.select import MISSING as SELECT_MISSING, SelectOption
 
 log = get_logger(__name__)
 
+
+# Max number of characters in a Discord embed field value, minus 6 characters for a placeholder.
+MAX_FIELD_SIZE = 1018
+# Max number of characters for an embed field's value before it should take its own line.
+MAX_INLINE_SIZE = 50
+# Number of seconds before a settings editing view timeout.
+EDIT_TIMEOUT = 600
 # Number of seconds before timeout of an editing component.
 COMPONENT_TIMEOUT = 180
 # Max length of modal title
@@ -20,7 +31,26 @@ MAX_MODAL_TITLE_LENGTH = 45
 MAX_SELECT_ITEMS = 25
 MAX_EMBED_DESCRIPTION = 4000
 
+SETTINGS_DELIMITER = re.compile(r"\s+(?=\S+=\S+)")
+SINGLE_SETTING_PATTERN = re.compile(r"\w+=.+")
+
+# Sentinel value to denote that a value is missing
+MISSING = object()
+
 T = TypeVar('T')
+
+
+def populate_embed_from_dict(embed: Embed, data: dict) -> None:
+    """Populate a Discord embed by populating fields from the given dict."""
+    for setting, value in data.items():
+        if setting.startswith("_"):
+            continue
+        if type(value) in (set, tuple):
+            value = list(value)
+        value = str(value) if value not in ("", None) else "-"
+        if len(value) > MAX_FIELD_SIZE:
+            value = value[:MAX_FIELD_SIZE] + " [...]"
+        embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
 
 
 def remove_optional(type_: type) -> tuple[bool, type]:
@@ -133,11 +163,11 @@ class CustomCallbackSelect(discord.ui.Select):
         self,
         callback: Callable[[Interaction, discord.ui.Select], Coroutine[None]],
         *,
-        custom_id: str = MISSING,
+        custom_id: str = SELECT_MISSING,
         placeholder: str | None = None,
         min_values: int = 1,
         max_values: int = 1,
-        options: list[SelectOption] = MISSING,
+        options: list[SelectOption] = SELECT_MISSING,
         disabled: bool = False,
         row: int | None = None,
     ):
@@ -330,3 +360,64 @@ class EnumSelectView(discord.ui.View):
     def __init__(self, setting_name: str, enum_cls: EnumMeta, update_callback: Callable):
         super().__init__(timeout=COMPONENT_TIMEOUT)
         self.add_item(self.EnumSelect(setting_name, enum_cls, update_callback))
+
+
+class EditBaseView(ABC, discord.ui.View):
+    """A view used to edit embed fields based on a provided type."""
+
+    def __init__(self, author: discord.User):
+        super().__init__(timeout=EDIT_TIMEOUT)
+        self.author = author
+        self.type_per_setting_name = {}
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """Only allow interactions from the command invoker."""
+        return interaction.user.id == self.author.id
+
+    async def _prompt_new_value(self, interaction: Interaction, select: discord.ui.Select) -> None:
+        """Prompt the user to give an override value for the setting they selected, and respond to the interaction."""
+        setting_name = select.values[0]
+        type_ = self.type_per_setting_name[setting_name]
+        is_optional, type_ = remove_optional(type_)
+        if hasattr(type_, "__origin__"):  # In case this is a types.GenericAlias or a typing._GenericAlias
+            type_ = type_.__origin__
+        new_view = self.copy()
+        # This is in order to not block the interaction response. There's a potential race condition here, since
+        # a view's method is used without guaranteeing the task completed, but since it depends on user input
+        # realistically it shouldn't happen.
+        scheduling.create_task(interaction.message.edit(view=new_view))
+        update_callback = partial(new_view.update_embed, interaction_or_msg=interaction.message)
+        if type_ is bool:
+            view = BooleanSelectView(setting_name, update_callback)
+            await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
+        elif type_ in (set, list, tuple):
+            current_list = self.current_value(setting_name)
+            if current_list is MISSING:
+                current_list = []
+            await interaction.response.send_message(
+                f"Current list: {current_list}",
+                view=SequenceEditView(setting_name, current_list, type_, update_callback),
+                ephemeral=True
+            )
+        elif isinstance(type_, EnumMeta):
+            view = EnumSelectView(setting_name, type_, update_callback)
+            await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
+        else:
+            await interaction.response.send_modal(FreeInputModal(setting_name, not is_optional, type_, update_callback))
+        self.stop()
+
+    @abstractmethod
+    def current_value(self, setting_name: str) -> Any:
+        """Get the current value stored for the setting or MISSING if none found."""
+
+    @abstractmethod
+    async def update_embed(self, interaction_or_msg: Interaction | discord.Message) -> None:
+        """
+        Update the embed with the new information.
+
+        If `interaction_or_msg` is a Message, the invoking Interaction must be deferred before calling this function.
+        """
+
+    @abstractmethod
+    def copy(self) -> EditBaseView:
+        """Create a copy of this view."""

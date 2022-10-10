@@ -27,7 +27,7 @@ class DomainsList(FilterList):
     individual filters.
 
     Domains are found by looking for a URL schema (http or https).
-    Filters will also trigger for subdomains unless set otherwise.
+    Filters will also trigger for subdomains.
     """
 
     name = "domain"

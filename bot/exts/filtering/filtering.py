@@ -15,7 +15,7 @@ from discord.utils import escape_markdown
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot.bot import Bot
-from bot.constants import Colours, MODERATION_ROLES, Webhooks
+from bot.constants import Colours, MODERATION_ROLES, Roles, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
 from bot.exts.filtering._filters.filter import Filter
@@ -23,7 +23,7 @@ from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui.filter import (
     build_filter_repr_dict, description_and_settings_converter, filter_overrides, populate_embed_from_dict
 )
-from bot.exts.filtering._ui.filter_list import DeleteConfirmationView
+from bot.exts.filtering._ui.filter_list import DeleteConfirmationView, FilterListEditView, settings_converter
 from bot.exts.filtering._ui.ui import ArgumentCompletionView
 from bot.exts.filtering._utils import past_tense, to_serializable
 from bot.log import get_logger
@@ -409,34 +409,34 @@ class Filtering(Cog):
             await patch_func(
                 ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
             )
+            return
 
-        else:
-            embed = Embed(colour=Colour.blue())
-            embed.description = f"`{filter_.content}`"
-            if description:
-                embed.description += f" - {description}"
-            embed.set_author(
-                name=f"Filter #{filter_id} - {past_tense(list_type.name.lower())} {filter_list.name}".title())
-            embed.set_footer(text=(
-                "Field names with an asterisk have values which override the defaults of the containing filter list. "
-                f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
-            ))
+        embed = Embed(colour=Colour.blue())
+        embed.description = f"`{filter_.content}`"
+        if description:
+            embed.description += f" - {description}"
+        embed.set_author(
+            name=f"Filter #{filter_id} - {past_tense(list_type.name.lower())} {filter_list.name}".title())
+        embed.set_footer(text=(
+            "Field names with an asterisk have values which override the defaults of the containing filter list. "
+            f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+        ))
 
-            view = filters_ui.SettingsEditView(
-                filter_list,
-                list_type,
-                filter_type,
-                content,
-                description,
-                settings,
-                filter_settings,
-                self.loaded_settings,
-                self.loaded_filter_settings,
-                ctx.author,
-                embed,
-                patch_func
-            )
-            await ctx.send(embed=embed, reference=ctx.message, view=view)
+        view = filters_ui.FilterEditView(
+            filter_list,
+            list_type,
+            filter_type,
+            content,
+            description,
+            settings,
+            filter_settings,
+            self.loaded_settings,
+            self.loaded_filter_settings,
+            ctx.author,
+            embed,
+            patch_func
+        )
+        await ctx.send(embed=embed, reference=ctx.message, view=view)
 
     @filter.command(name="delete", aliases=("d", "remove"))
     async def f_delete(self, ctx: Context, filter_id: int) -> None:
@@ -524,7 +524,50 @@ class Filtering(Cog):
         )
         await ctx.send(embed=embed)
 
+    @filterlist.command(name="edit", aliases=("e",))
+    @has_any_role(Roles.admins)
+    async def fl_edit(
+        self,
+        ctx: Context,
+        noui: Optional[Literal["noui"]],
+        list_type: Optional[list_type_converter] = None,
+        list_name: Optional[str] = None,
+        *,
+        settings: str | None
+    ) -> None:
+        """
+        Edit the filter list.
+
+        Unless `noui` is specified, a UI will be provided to edit the settings before confirmation.
+
+        The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
+        equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
+        """
+        result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
+        if result is None:
+            return
+        list_type, filter_list = result
+        settings = settings_converter(self.loaded_settings, settings)
+        if noui:
+            await self._patch_filter_list(ctx.message, filter_list, list_type, settings)
+
+        embed = Embed(colour=Colour.blue())
+        embed.set_author(name=f"{past_tense(list_type.name.lower())} {filter_list.name} Filter List".title())
+        embed.set_footer(text="Field names with a ~ have values which change the existing value in the filter list.")
+
+        view = FilterListEditView(
+            filter_list,
+            list_type,
+            settings,
+            self.loaded_settings,
+            ctx.author,
+            embed,
+            self._patch_filter_list
+        )
+        await ctx.send(embed=embed, reference=ctx.message, view=view)
+
     @filterlist.command(name="delete", aliases=("remove",))
+    @has_any_role(Roles.admins)
     async def fl_delete(
         self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
     ) -> None:
@@ -699,34 +742,34 @@ class Filtering(Cog):
                 )
             except ValueError as e:
                 raise BadArgument(str(e))
+            return
 
-        else:
-            embed = Embed(colour=Colour.blue())
-            embed.description = f"`{content}`" if content else "*No content*"
-            if description:
-                embed.description += f" - {description}"
-            embed.set_author(
-                name=f"New Filter - {past_tense(list_type.name.lower())} {filter_list.name}".title())
-            embed.set_footer(text=(
-                "Field names with an asterisk have values which override the defaults of the containing filter list. "
-                f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
-            ))
+        embed = Embed(colour=Colour.blue())
+        embed.description = f"`{content}`" if content else "*No content*"
+        if description:
+            embed.description += f" - {description}"
+        embed.set_author(
+            name=f"New Filter - {past_tense(list_type.name.lower())} {filter_list.name}".title())
+        embed.set_footer(text=(
+            "Field names with an asterisk have values which override the defaults of the containing filter list. "
+            f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+        ))
 
-            view = filters_ui.SettingsEditView(
-                filter_list,
-                list_type,
-                filter_type,
-                content,
-                description,
-                settings,
-                filter_settings,
-                self.loaded_settings,
-                self.loaded_filter_settings,
-                ctx.author,
-                embed,
-                self._post_new_filter
-            )
-            await ctx.send(embed=embed, reference=ctx.message, view=view)
+        view = filters_ui.FilterEditView(
+            filter_list,
+            list_type,
+            filter_type,
+            content,
+            description,
+            settings,
+            filter_settings,
+            self.loaded_settings,
+            self.loaded_filter_settings,
+            ctx.author,
+            embed,
+            self._post_new_filter
+        )
+        await ctx.send(embed=embed, reference=ctx.message, view=view)
 
     @staticmethod
     def _identical_filters_message(content: str, filter_list: FilterList, list_type: ListType, filter_: Filter) -> str:
@@ -794,19 +837,26 @@ class Filtering(Cog):
         # If the setting is not in `settings`, the override was either removed, or there wasn't one in the first place.
         for current_settings in (filter_.actions, filter_.validations):
             if current_settings:
-                for _, setting_entry in current_settings.items():
+                for setting_entry in current_settings.values():
                     settings.update({setting: None for setting in setting_entry.dict() if setting not in settings})
 
-        list_id = filter_list.list_ids[list_type]
         description = description or None
         payload = {
-            "filter_list": list_id, "content": content, "description": description,
-            "additional_field": json.dumps(filter_settings), **settings
+            "content": content, "description": description, "additional_field": json.dumps(filter_settings), **settings
         }
         response = await bot.instance.api_client.patch(f'bot/filter/filters/{filter_.id}', json=payload)
         edited_filter = filter_list.add_filter(response, list_type)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
+
+    @staticmethod
+    async def _patch_filter_list(msg: Message, filter_list: FilterList, list_type: ListType, settings: dict) -> None:
+        """PATCH the new data of the filter list to the site API."""
+        list_id = filter_list.list_ids[list_type]
+        response = await bot.instance.api_client.patch(f'bot/filter/filter_lists/{list_id}', json=settings)
+        filter_list.remove_list(list_type)
+        filter_list.add_list(response)
+        await msg.reply(f"✅ Edited filter list: {past_tense(list_type.name.lower())} {filter_list.name}")
 
     # endregion
 
