@@ -1,5 +1,7 @@
 import re
 
+from discord.ext.commands import BadArgument
+
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
 
@@ -29,5 +31,5 @@ class TokenFilter(Filter):
         try:
             re.compile(content)
         except re.error as e:
-            raise ValueError(str(e))
+            raise BadArgument(str(e))
         return content

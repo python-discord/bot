@@ -3,6 +3,7 @@ from typing import ClassVar, Optional
 from urllib.parse import urlparse
 
 import tldextract
+from discord.ext.commands import BadArgument
 from pydantic import BaseModel
 
 from bot.exts.filtering._filter_context import FilterContext
@@ -57,5 +58,5 @@ class DomainFilter(Filter):
         """
         match = URL_RE.fullmatch(content)
         if not match or not match.group(1):
-            raise ValueError(f"`{content}` is not a URL.")
+            raise BadArgument(f"`{content}` is not a URL.")
         return match.group(1)

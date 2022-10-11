@@ -214,9 +214,9 @@ class FilterEditView(EditBaseView):
         except ResponseCodeError as e:
             await interaction.message.reply(embed=format_response_error(e))
             await interaction.message.edit(view=self)
-        except ValueError as e:
+        except BadArgument as e:
             await interaction.message.reply(
-                embed=Embed(colour=discord.Colour.red(), title="Bad Content", description=str(e))
+                embed=Embed(colour=discord.Colour.red(), title="Bad Argument", description=str(e))
             )
             await interaction.message.edit(view=self)
         else:

@@ -1,5 +1,6 @@
 from botcore.utils.regex import DISCORD_INVITE
 from discord import NotFound
+from discord.ext.commands import BadArgument
 
 import bot
 from bot.exts.filtering._filter_context import FilterContext
@@ -32,12 +33,12 @@ class InviteFilter(Filter):
         """
         match = DISCORD_INVITE.fullmatch(content)
         if not match or not match.group("invite"):
-            raise ValueError(f"`{content}` is not a valid Discord invite.")
+            raise BadArgument(f"`{content}` is not a valid Discord invite.")
         invite_code = match.group("invite")
         try:
             invite = await bot.instance.fetch_invite(invite_code)
         except NotFound:
-            raise ValueError(f"`{invite_code}` is not a valid Discord invite code.")
+            raise BadArgument(f"`{invite_code}` is not a valid Discord invite code.")
         if not invite.guild:
-            raise ValueError("Did you just try to add a group DM?")
+            raise BadArgument("Did you just try to add a group DM?")
         return str(invite.guild.id)

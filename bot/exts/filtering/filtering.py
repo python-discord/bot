@@ -7,6 +7,7 @@ from io import BytesIO
 from typing import Literal, Optional, get_type_hints
 
 import discord
+from botcore.site_api import ResponseCodeError
 from discord import Colour, Embed, HTTPException, Message
 from discord.ext import commands
 from discord.ext.commands import BadArgument, Cog, Context, has_any_role
@@ -25,7 +26,7 @@ from bot.exts.filtering._ui.filter import (
     build_filter_repr_dict, description_and_settings_converter, filter_overrides, populate_embed_from_dict
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
-from bot.exts.filtering._ui.ui import ArgumentCompletionView, DeleteConfirmationView
+from bot.exts.filtering._ui.ui import ArgumentCompletionView, DeleteConfirmationView, format_response_error
 from bot.exts.filtering._utils import past_tense, starting_value, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -403,9 +404,12 @@ class Filtering(Cog):
         patch_func = partial(self._patch_filter, filter_)
 
         if noui:
-            await patch_func(
-                ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
-            )
+            try:
+                await patch_func(
+                    ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
+                )
+            except ResponseCodeError as e:
+                await ctx.reply(embed=format_response_error(e))
             return
 
         embed = Embed(colour=Colour.blue())
@@ -578,7 +582,11 @@ class Filtering(Cog):
         list_type, filter_list = result
         settings = settings_converter(self.loaded_settings, settings)
         if noui:
-            await self._patch_filter_list(ctx.message, filter_list, list_type, settings)
+            try:
+                await self._patch_filter_list(ctx.message, filter_list, list_type, settings)
+            except ResponseCodeError as e:
+                await ctx.reply(embed=format_response_error(e))
+            return
 
         embed = Embed(colour=Colour.blue())
         embed.set_author(name=f"{filter_list[list_type].label.title()} Filter List")
@@ -782,6 +790,8 @@ class Filtering(Cog):
                 await self._post_new_filter(
                     ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
                 )
+            except ResponseCodeError as e:
+                await ctx.reply(embed=format_response_error(e))
             except ValueError as e:
                 raise BadArgument(str(e))
             return

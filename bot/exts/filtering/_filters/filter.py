@@ -53,7 +53,7 @@ class Filter(FieldRequiring):
         """
         Process the content into a form which will work with the filtering.
 
-        A ValueError should be raised if the content can't be used.
+        A BadArgument should be raised if the content can't be used.
         """
         return content
 
