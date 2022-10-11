@@ -266,18 +266,17 @@ class SequenceEditView(discord.ui.View):
             """Send the submitted value to be added to the list."""
             await self.view.apply_edit(interaction, self.new_value.value)
 
-    def __init__(self, setting_name: str, starting_value: list, type_: type, update_callback: Callable):
+    def __init__(self, setting_name: str, starting_value: list, update_callback: Callable):
         super().__init__(timeout=COMPONENT_TIMEOUT)
         self.setting_name = setting_name
         self.stored_value = starting_value
-        self.type_ = type_
         self.update_callback = update_callback
 
-        options = [SelectOption(label=item) for item in starting_value[:MAX_SELECT_ITEMS]]
+        options = [SelectOption(label=item) for item in self.stored_value[:MAX_SELECT_ITEMS]]
         self.removal_select = CustomCallbackSelect(
             self.apply_removal, placeholder="Enter an item to remove", options=options, row=1
         )
-        if starting_value:
+        if self.stored_value:
             self.add_item(self.removal_select)
 
     async def apply_removal(self, interaction: Interaction, select: discord.ui.Select) -> None:
@@ -391,12 +390,12 @@ class EditBaseView(ABC, discord.ui.View):
             view = BooleanSelectView(setting_name, update_callback)
             await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
         elif type_ in (set, list, tuple):
-            current_list = self.current_value(setting_name)
+            current_list = list(self.current_value(setting_name))
             if current_list is MISSING:
                 current_list = []
             await interaction.response.send_message(
                 f"Current list: {current_list}",
-                view=SequenceEditView(setting_name, current_list, type_, update_callback),
+                view=SequenceEditView(setting_name, current_list, update_callback),
                 ephemeral=True
             )
         elif isinstance(type_, EnumMeta):

@@ -61,8 +61,109 @@ def build_filterlist_repr_dict(filter_list: FilterList, list_type: ListType, new
     return total_values
 
 
+class FilterListAddView(EditBaseView):
+    """A view used to add a new filter list."""
+
+    def __init__(
+        self,
+        list_name: str,
+        list_type: ListType,
+        settings: dict,
+        loaded_settings: dict,
+        author: User,
+        embed: Embed,
+        confirm_callback: Callable
+    ):
+        super().__init__(author)
+        self.list_name = list_name
+        self.list_type = list_type
+        self.settings = settings
+        self.loaded_settings = loaded_settings
+        self.embed = embed
+        self.confirm_callback = confirm_callback
+
+        self.settings_repr_dict = {name: to_serializable(value) for name, value in settings.items()}
+        populate_embed_from_dict(embed, self.settings_repr_dict)
+
+        self.type_per_setting_name = {setting: info[2] for setting, info in loaded_settings.items()}
+
+        edit_select = CustomCallbackSelect(
+            self._prompt_new_value,
+            placeholder="Select a setting to edit",
+            options=[SelectOption(label=name) for name in sorted(settings)],
+            row=0
+        )
+        self.add_item(edit_select)
+
+    @discord.ui.button(label="✅ Confirm", style=discord.ButtonStyle.green, row=1)
+    async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Confirm the content, description, and settings, and update the filters database."""
+        await interaction.response.edit_message(view=None)  # Make sure the interaction succeeds first.
+        try:
+            await self.confirm_callback(interaction.message, self.list_name, self.list_type, self.settings)
+        except ResponseCodeError as e:
+            await interaction.message.reply(embed=format_response_error(e))
+            await interaction.message.edit(view=self)
+        else:
+            self.stop()
+
+    @discord.ui.button(label="🚫 Cancel", style=discord.ButtonStyle.red, row=1)
+    async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Cancel the operation."""
+        await interaction.response.edit_message(content="🚫 Operation canceled.", embed=None, view=None)
+        self.stop()
+
+    def current_value(self, setting_name: str) -> Any:
+        """Get the current value stored for the setting or MISSING if none found."""
+        if setting_name in self.settings:
+            return self.settings[setting_name]
+        return MISSING
+
+    async def update_embed(
+        self,
+        interaction_or_msg: discord.Interaction | discord.Message,
+        *,
+        setting_name: str | None = None,
+        setting_value: str | None = None,
+    ) -> None:
+        """
+        Update the embed with the new information.
+
+        If `interaction_or_msg` is a Message, the invoking Interaction must be deferred before calling this function.
+        """
+        if not setting_name:  # Obligatory check to match the signature in the parent class.
+            return
+
+        self.settings[setting_name] = setting_value
+
+        self.embed.clear_fields()
+        new_view = self.copy()
+
+        try:
+            if isinstance(interaction_or_msg, discord.Interaction):
+                await interaction_or_msg.response.edit_message(embed=self.embed, view=new_view)
+            else:
+                await interaction_or_msg.edit(embed=self.embed, view=new_view)
+        except discord.errors.HTTPException:  # Various errors such as embed description being too long.
+            pass
+        else:
+            self.stop()
+
+    def copy(self) -> FilterListAddView:
+        """Create a copy of this view."""
+        return FilterListAddView(
+            self.list_name,
+            self.list_type,
+            self.settings,
+            self.loaded_settings,
+            self.author,
+            self.embed,
+            self.confirm_callback
+        )
+
+
 class FilterListEditView(EditBaseView):
-    """A view used to edit a filter's settings before updating the database."""
+    """A view used to edit a filter list's settings before updating the database."""
 
     def __init__(
         self,

@@ -4,13 +4,16 @@ import inspect
 import pkgutil
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, Iterable, Union
+from typing import Any, Iterable, TypeVar, Union
 
 import regex
 
 VARIATION_SELECTORS = r"\uFE00-\uFE0F\U000E0100-\U000E01EF"
 INVISIBLE_RE = regex.compile(rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT}}\p{{CONTROL}}--\s]", regex.V1)
 ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIATION_SELECTORS}]]", regex.V1)
+
+
+T = TypeVar('T')
 
 
 def subclasses_in_package(package: str, prefix: str, parent: type) -> set[type]:
@@ -80,6 +83,22 @@ def repr_equals(override: Any, default: Any) -> bool:
             return False
         return all(str(item1) == str(item2) for item1, item2 in zip(set(override), set(default)))
     return str(override) == str(default)
+
+
+def starting_value(type_: type[T]) -> T:
+    """Return a value of the given type."""
+    if hasattr(type_, "__origin__"):
+        if type_.__origin__ is not Union:  # In case this is a types.GenericAlias or a typing._GenericAlias
+            type_ = type_.__origin__
+    if hasattr(type_, "__args__"):  # In case of a Union
+        if type(None) in type_.__args__:
+            return None
+        type_ = type_.__args__[0]  # Pick one, doesn't matter
+
+    try:
+        return type_()
+    except TypeError:  # In case it all fails, return a string and let the user handle it.
+        return ""
 
 
 class FieldRequiring(ABC):

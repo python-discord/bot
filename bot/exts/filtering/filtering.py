@@ -23,9 +23,11 @@ from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui.filter import (
     build_filter_repr_dict, description_and_settings_converter, filter_overrides, populate_embed_from_dict
 )
-from bot.exts.filtering._ui.filter_list import DeleteConfirmationView, FilterListEditView, settings_converter
+from bot.exts.filtering._ui.filter_list import (
+    DeleteConfirmationView, FilterListAddView, FilterListEditView, settings_converter
+)
 from bot.exts.filtering._ui.ui import ArgumentCompletionView
-from bot.exts.filtering._utils import past_tense, to_serializable
+from bot.exts.filtering._utils import past_tense, starting_value, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import format_channel, format_user
@@ -35,6 +37,9 @@ log = get_logger(__name__)
 
 class Filtering(Cog):
     """Filtering and alerting for content posted on the server."""
+
+    # A set of filter list names with missing implementations that already caused a warning.
+    already_warned = set()
 
     # region: init
 
@@ -55,21 +60,10 @@ class Filtering(Cog):
         Additionally, fetch the alerting webhook.
         """
         await self.bot.wait_until_guild_available()
-        already_warned = set()
 
         raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
         for raw_filter_list in raw_filter_lists:
-            list_name = raw_filter_list["name"]
-            if list_name not in self.filter_lists:
-                if list_name not in filter_list_types:
-                    if list_name not in already_warned:
-                        log.warning(
-                            f"A filter list named {list_name} was loaded from the database, but no matching class."
-                        )
-                        already_warned.add(list_name)
-                    continue
-                self.filter_lists[list_name] = filter_list_types[list_name](self)
-            self.filter_lists[list_name].add_list(raw_filter_list)
+            self._load_raw_filter_list(raw_filter_list)
 
         try:
             self.webhook = await self.bot.fetch_webhook(Webhooks.filters)
@@ -520,9 +514,35 @@ class Filtering(Cog):
         # Use the class's docstring, and ignore single newlines.
         embed.description = re.sub(r"(?<!\n)\n(?!\n)", " ", filter_list.__doc__)
         embed.set_author(
-            name=f"Description of the {past_tense(list_type.name.lower())} {list_name.title()} filter list"
+            name=f"Description of the {past_tense(list_type.name.lower())} {list_name.lower()} filter list"
         )
         await ctx.send(embed=embed)
+
+    @filterlist.command(name="add", aliases=("a",))
+    @has_any_role(Roles.admins)
+    async def fl_add(self, ctx: Context, list_type: list_type_converter, list_name: str) -> None:
+        """Add a new filter list."""
+        list_description = f"{past_tense(list_type.name.lower())} {list_name.lower()}"
+        if list_name in self.filter_lists:
+            filter_list = self.filter_lists[list_name]
+            if list_type in filter_list.filter_lists:
+                await ctx.reply(f":x: The {list_description} filter list already exists.")
+                return
+
+        embed = Embed(colour=Colour.blue())
+        embed.set_author(name=f"New Filter List - {list_description.title()}")
+        settings = {name: starting_value(value[2]) for name, value in self.loaded_settings.items()}
+
+        view = FilterListAddView(
+            list_name,
+            list_type,
+            settings,
+            self.loaded_settings,
+            ctx.author,
+            embed,
+            self._post_filter_list
+        )
+        await ctx.send(embed=embed, reference=ctx.message, view=view)
 
     @filterlist.command(name="edit", aliases=("e",))
     @has_any_role(Roles.admins)
@@ -599,6 +619,20 @@ class Filtering(Cog):
 
     # endregion
     # region: helper functions
+
+    def _load_raw_filter_list(self, list_data: dict) -> None:
+        """Load the raw list data to the cog."""
+        list_name = list_data["name"]
+        if list_name not in self.filter_lists:
+            if list_name not in filter_list_types:
+                if list_name not in self.already_warned:
+                    log.warning(
+                        f"A filter list named {list_name} was loaded from the database, but no matching class."
+                    )
+                    self.already_warned.add(list_name)
+                return
+            self.filter_lists[list_name] = filter_list_types[list_name](self)
+        self.filter_lists[list_name].add_list(list_data)
 
     async def _resolve_action(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], dict[FilterList, str]]:
         """
@@ -844,16 +878,27 @@ class Filtering(Cog):
         payload = {
             "content": content, "description": description, "additional_field": json.dumps(filter_settings), **settings
         }
-        response = await bot.instance.api_client.patch(f'bot/filter/filters/{filter_.id}', json=payload)
+        response = await bot.instance.api_client.patch(
+            f'bot/filter/filters/{filter_.id}', json=to_serializable(payload)
+        )
         edited_filter = filter_list.add_filter(response, list_type)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
+
+    async def _post_filter_list(self, msg: Message, list_name: str, list_type: ListType, settings: dict) -> None:
+        """POST the new data of the filter list to the site API."""
+        payload = {"name": list_name, "list_type": list_type.value, **to_serializable(settings)}
+        response = await bot.instance.api_client.post('bot/filter/filter_lists', json=payload)
+        self._load_raw_filter_list(response)
+        await msg.reply(f"✅ Added a new filter list: {past_tense(list_type.name.lower())} {list_name}")
 
     @staticmethod
     async def _patch_filter_list(msg: Message, filter_list: FilterList, list_type: ListType, settings: dict) -> None:
         """PATCH the new data of the filter list to the site API."""
         list_id = filter_list.list_ids[list_type]
-        response = await bot.instance.api_client.patch(f'bot/filter/filter_lists/{list_id}', json=settings)
+        response = await bot.instance.api_client.patch(
+            f'bot/filter/filter_lists/{list_id}', json=to_serializable(settings)
+        )
         filter_list.remove_list(list_type)
         filter_list.add_list(response)
         await msg.reply(f"✅ Edited filter list: {past_tense(list_type.name.lower())} {filter_list.name}")
