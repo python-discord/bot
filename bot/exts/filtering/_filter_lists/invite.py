@@ -3,7 +3,6 @@ from __future__ import annotations
 import typing
 from functools import reduce
 from operator import or_
-from typing import Optional, Type
 
 from botcore.utils.regex import DISCORD_INVITE
 from discord import Embed, Invite
@@ -42,20 +41,20 @@ class InviteList(FilterList):
         super().__init__()
         filtering_cog.subscribe(self, Event.MESSAGE)
 
-    def get_filter_type(self, content: str) -> Type[Filter]:
+    def get_filter_type(self, content: str) -> type[Filter]:
         """Get a subclass of filter matching the filter list and the filter's content."""
         return InviteFilter
 
     @property
-    def filter_types(self) -> set[Type[Filter]]:
+    def filter_types(self) -> set[type[Filter]]:
         """Return the types of filters used by this list."""
         return {InviteFilter}
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
-        """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
+    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+        """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
         if failed:  # There's no invite filtering in this context.
-            return None, ""
+            return None, []
 
         text = clean_input(ctx.content)
 
@@ -65,7 +64,7 @@ class InviteList(FilterList):
         matches = list(DISCORD_INVITE.finditer(text))
         invite_codes = {m.group("invite") for m in matches}
         if not invite_codes:
-            return None, ""
+            return None, []
 
         # Sort the invites into three categories:
         denied_by_default = dict()  # Denied unless whitelisted.
@@ -107,7 +106,7 @@ class InviteList(FilterList):
         })
 
         if not disallowed_invites:
-            return None, ""
+            return None, []
 
         actions = None
         if len(disallowed_invites) > len(triggered):  # There are invites which weren't allowed but aren't blacklisted.
@@ -124,7 +123,7 @@ class InviteList(FilterList):
             actions = reduce(or_, (filter_.actions for filter_ in triggered))
         ctx.matches += {match[0] for match in matches if match.group("invite") in disallowed_invites}
         ctx.alert_embeds += (self._guild_embed(invite) for invite in disallowed_invites.values() if invite)
-        return actions, ", ".join(f"`{invite}`" for invite in disallowed_invites)
+        return actions, [f"`{invite}`" for invite in disallowed_invites]
 
     @staticmethod
     def _guild_embed(invite: Invite) -> Embed:

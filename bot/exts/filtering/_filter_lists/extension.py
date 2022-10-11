@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import typing
 from os.path import splitext
-from typing import Optional, Type
 
 import bot
 from bot.constants import Channels, URLs
@@ -53,24 +52,24 @@ class ExtensionsList(FilterList):
         filtering_cog.subscribe(self, Event.MESSAGE)
         self._whitelisted_description = None
 
-    def get_filter_type(self, content: str) -> Type[Filter]:
+    def get_filter_type(self, content: str) -> type[Filter]:
         """Get a subclass of filter matching the filter list and the filter's content."""
         return ExtensionFilter
 
     @property
-    def filter_types(self) -> set[Type[Filter]]:
+    def filter_types(self) -> set[type[Filter]]:
         """Return the types of filters used by this list."""
         return {ExtensionFilter}
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
-        """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
+    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+        """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         # Return early if the message doesn't have attachments.
-        if not ctx.message.attachments:
-            return None, ""
+        if not ctx.message or not ctx.message.attachments:
+            return None, []
 
         _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
         if failed:  # There's no extension filtering in this context.
-            return None, ""
+            return None, []
 
         # Find all extensions in the message.
         all_ext = {
@@ -84,7 +83,7 @@ class ExtensionsList(FilterList):
         not_allowed = {ext: filename for ext, filename in all_ext if ext not in allowed_ext}
 
         if not not_allowed:  # Yes, it's a double negative. Meaning all attachments are allowed :)
-            return None, ""
+            return None, []
 
         # Something is disallowed.
         if ".py" in not_allowed:
@@ -110,4 +109,4 @@ class ExtensionsList(FilterList):
             )
 
         ctx.matches += not_allowed.values()
-        return self[ListType.ALLOW].defaults.actions, ", ".join(f"`{ext}`" for ext in not_allowed)
+        return self[ListType.ALLOW].defaults.actions, [f"`{ext}`" for ext in not_allowed]

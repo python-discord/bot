@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from collections.abc import Iterator
 from enum import Enum
-from typing import Any, ItemsView, NamedTuple, Optional, Type
+from typing import Any, ItemsView, NamedTuple
 
 from discord.ext.commands import BadArgument
 
@@ -128,17 +128,17 @@ class FilterList(FieldRequiring):
         return new_filter
 
     @abstractmethod
-    def get_filter_type(self, content: str) -> Type[Filter]:
+    def get_filter_type(self, content: str) -> type[Filter]:
         """Get a subclass of filter matching the filter list and the filter's content."""
 
     @property
     @abstractmethod
-    def filter_types(self) -> set[Type[Filter]]:
+    def filter_types(self) -> set[type[Filter]]:
         """Return the types of filters used by this list."""
 
     @abstractmethod
-    async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
-        """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
+    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+        """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
 
     @staticmethod
     def filter_list_result(

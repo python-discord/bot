@@ -4,7 +4,6 @@ import re
 import typing
 from functools import reduce
 from operator import or_
-from typing import Optional, Type
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
@@ -36,20 +35,20 @@ class DomainsList(FilterList):
         super().__init__()
         filtering_cog.subscribe(self, Event.MESSAGE, Event.MESSAGE_EDIT)
 
-    def get_filter_type(self, content: str) -> Type[Filter]:
+    def get_filter_type(self, content: str) -> type[Filter]:
         """Get a subclass of filter matching the filter list and the filter's content."""
         return DomainFilter
 
     @property
-    def filter_types(self) -> set[Type[Filter]]:
+    def filter_types(self) -> set[type[Filter]]:
         """Return the types of filters used by this list."""
         return {DomainFilter}
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
-        """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
+    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+        """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         text = ctx.content
         if not text:
-            return None, ""
+            return None, []
 
         text = clean_input(text)
         urls = {match.group(1).lower().rstrip("/") for match in URL_RE.finditer(text)}
@@ -60,7 +59,7 @@ class DomainsList(FilterList):
         )
         ctx.notification_domain = new_ctx.notification_domain
         actions = None
-        message = ""
+        messages = []
         if triggers:
             action_defaults = self[ListType.DENY].defaults.actions
             actions = reduce(
@@ -73,6 +72,7 @@ class DomainsList(FilterList):
                 message = f"#{triggers[0].id} (`{triggers[0].content}`)"
                 if triggers[0].description:
                     message += f" - {triggers[0].description}"
+                messages = [message]
             else:
-                message = ", ".join(f"#{filter_.id} (`{filter_.content}`)" for filter_ in triggers)
-        return actions, message
+                messages = [f"#{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
+        return actions, messages

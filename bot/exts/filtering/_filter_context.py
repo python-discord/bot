@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 from typing import Optional, Union
 
-from discord import DMChannel, Message, TextChannel, Thread, User
+from discord import DMChannel, Member, Message, TextChannel, Thread, User
 
 
 class Event(Enum):
@@ -20,7 +20,7 @@ class FilterContext:
 
     # Input context
     event: Event  # The type of event
-    author: User  # Who triggered the event
+    author: User | Member | None  # Who triggered the event
     channel: Union[TextChannel, Thread, DMChannel]  # The channel involved
     content: Union[str, set]  # What actually needs filtering
     message: Optional[Message]  # The message involved

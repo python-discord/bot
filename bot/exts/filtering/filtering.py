@@ -16,7 +16,7 @@ from discord.utils import escape_markdown
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot.bot import Bot
-from bot.constants import Colours, MODERATION_ROLES, Roles, Webhooks
+from bot.constants import Channels, Colours, MODERATION_ROLES, Roles, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
@@ -492,6 +492,37 @@ class Filtering(Cog):
         embed.colour = Colour.blue()
         await ctx.send(embed=embed)
 
+    @filter.command(name="match")
+    async def f_match(self, ctx: Context, message: Message | None, *, string: str | None) -> None:
+        """
+        Post any responses from the filter lists for the given message or string.
+
+        If there's a message the string will be ignored. Note that if a message is provided, it will go through all
+        validations appropriate to where it was sent and who sent it.
+
+        If a string is provided, it will be validated in the context of a user with no roles in python-general.
+        """
+        if not message and not string:
+            raise BadArgument(":x: Please provide input.")
+        if message:
+            filter_ctx = FilterContext(
+                Event.MESSAGE, message.author, message.channel, message.content, message, message.embeds
+            )
+        else:
+            filter_ctx = FilterContext(
+                Event.MESSAGE, None, ctx.guild.get_channel(Channels.python_general), string, None
+            )
+
+        _, list_messages = await self._resolve_action(filter_ctx)
+        lines = []
+        for filter_list, list_message_list in list_messages.items():
+            if list_message_list:
+                lines.extend([f"**{filter_list.name.title()}s**", *list_message_list, "\n"])
+        lines = lines[:-1]  # Remove last newline.
+
+        embed = Embed(colour=Colour.blue(), title="Match results")
+        await LinePaginator.paginate(lines, ctx, embed, max_lines=10, empty=False)
+
     # endregion
     # region: filterlist group
 
@@ -651,7 +682,7 @@ class Filtering(Cog):
             self.filter_lists[list_name] = filter_list_types[list_name](self)
         return self.filter_lists[list_name].add_list(list_data)
 
-    async def _resolve_action(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], dict[FilterList, str]]:
+    async def _resolve_action(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], dict[FilterList, list[str]]]:
         """
         Return the actions that should be taken for all filter lists in the given context.
 
@@ -673,7 +704,7 @@ class Filtering(Cog):
 
         return result_actions, messages
 
-    async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, str]) -> None:
+    async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, list[str]]) -> None:
         """Build an alert message from the filter context, and send it via the alert webhook."""
         if not self.webhook:
             return
@@ -691,7 +722,7 @@ class Filtering(Cog):
         filters = []
         for filter_list, list_message in triggered_filters.items():
             if list_message:
-                filters.append(f"**{filter_list.name.title()} Filters:** {list_message}")
+                filters.append(f"**{filter_list.name.title()} Filters:** {', '.join(list_message)}")
         filters = "\n".join(filters)
 
         matches = "**Matches:** " + ", ".join(repr(match) for match in ctx.matches)

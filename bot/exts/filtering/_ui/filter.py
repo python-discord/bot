@@ -452,9 +452,9 @@ def template_settings(filter_id: str, filter_list: FilterList, list_type: ListTy
     except ValueError:
         raise ValueError("Template value must be a non-negative integer.")
 
-    if filter_id not in filter_list.filter_lists[list_type]:
+    if filter_id not in filter_list[list_type].filters:
         raise ValueError(
             f"Could not find filter with ID `{filter_id}` in the {list_type.name} {filter_list.name} list."
         )
-    filter_ = filter_list.filter_lists[list_type][filter_id]
+    filter_ = filter_list[list_type].filters[filter_id]
     return filter_overrides(filter_, filter_list, list_type)
