@@ -24,10 +24,8 @@ from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui.filter import (
     build_filter_repr_dict, description_and_settings_converter, filter_overrides, populate_embed_from_dict
 )
-from bot.exts.filtering._ui.filter_list import (
-    DeleteConfirmationView, FilterListAddView, FilterListEditView, settings_converter
-)
-from bot.exts.filtering._ui.ui import ArgumentCompletionView
+from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
+from bot.exts.filtering._ui.ui import ArgumentCompletionView, DeleteConfirmationView
 from bot.exts.filtering._utils import past_tense, starting_value, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -440,14 +438,21 @@ class Filtering(Cog):
     @filter.command(name="delete", aliases=("d", "remove"))
     async def f_delete(self, ctx: Context, filter_id: int) -> None:
         """Delete the filter specified by its ID."""
+        async def delete_list() -> None:
+            """The actual removal routine."""
+            await bot.instance.api_client.delete(f'bot/filter/filters/{filter_id}')
+            filter_list[list_type].filters.pop(filter_id)
+            await ctx.reply(f"✅ Deleted filter: {filter_}")
+
         result = self._get_filter_by_id(filter_id)
         if result is None:
             await ctx.send(f":x: Could not find a filter with ID `{filter_id}`.")
             return
         filter_, filter_list, list_type = result
-        await bot.instance.api_client.delete(f'bot/filter/filters/{filter_id}')
-        filter_list[list_type].filters.pop(filter_id)
-        await ctx.reply(f"✅ Deleted filter: {filter_}")
+        await ctx.reply(
+            f"Are you sure you want to delete filter {filter_}?",
+            view=DeleteConfirmationView(ctx.author, delete_list)
+        )
 
     @filter.group(aliases=("settings",))
     async def setting(self, ctx: Context) -> None:

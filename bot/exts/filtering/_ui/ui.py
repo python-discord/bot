@@ -25,6 +25,8 @@ MAX_INLINE_SIZE = 50
 EDIT_TIMEOUT = 600
 # Number of seconds before timeout of an editing component.
 COMPONENT_TIMEOUT = 180
+# Amount of seconds to confirm the operation.
+DELETION_TIMEOUT = 60
 # Max length of modal title
 MAX_MODAL_TITLE_LENGTH = 45
 # Max number of items in a select
@@ -421,3 +423,27 @@ class EditBaseView(ABC, discord.ui.View):
     @abstractmethod
     def copy(self) -> EditBaseView:
         """Create a copy of this view."""
+
+
+class DeleteConfirmationView(discord.ui.View):
+    """A view to confirm a deletion."""
+
+    def __init__(self, author: discord.Member | discord.User, callback: Callable):
+        super().__init__(timeout=DELETION_TIMEOUT)
+        self.author = author
+        self.callback = callback
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """Only allow interactions from the command invoker."""
+        return interaction.user.id == self.author.id
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.red, row=0)
+    async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Invoke the filter list deletion."""
+        await interaction.response.edit_message(view=None)
+        await self.callback()
+
+    @discord.ui.button(label="Cancel", row=0)
+    async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Cancel the filter list deletion."""
+        await interaction.response.edit_message(content="🚫 Operation canceled.", view=None)
