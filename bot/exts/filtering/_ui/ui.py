@@ -390,8 +390,9 @@ class EditBaseView(ABC, discord.ui.View):
             view = BooleanSelectView(setting_name, update_callback)
             await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
         elif type_ in (set, list, tuple):
-            current_list = list(self.current_value(setting_name))
-            if current_list is MISSING:
+            if (current_value := self.current_value(setting_name)) is not MISSING:
+                current_list = list(current_value)
+            else:
                 current_list = []
             await interaction.response.send_message(
                 f"Current list: {current_list}",

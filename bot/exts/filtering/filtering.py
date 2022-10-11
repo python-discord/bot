@@ -18,6 +18,7 @@ from bot.bot import Bot
 from bot.constants import Colours, MODERATION_ROLES, Roles, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
+from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui.filter import (
@@ -62,15 +63,18 @@ class Filtering(Cog):
         await self.bot.wait_until_guild_available()
 
         raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
+        example_list = None
         for raw_filter_list in raw_filter_lists:
-            self._load_raw_filter_list(raw_filter_list)
+            loaded_list = self._load_raw_filter_list(raw_filter_list)
+            if not example_list and loaded_list:
+                example_list = loaded_list
 
         try:
             self.webhook = await self.bot.fetch_webhook(Webhooks.filters)
         except HTTPException:
             log.error(f"Failed to fetch filters webhook with ID `{Webhooks.filters}`.")
 
-        self.collect_loaded_types()
+        self.collect_loaded_types(example_list)
 
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
         """
@@ -98,12 +102,14 @@ class Filtering(Cog):
             if filter_list in self._subscriptions.get(event, []):
                 self._subscriptions[event].remove(filter_list)
 
-    def collect_loaded_types(self) -> None:
+    def collect_loaded_types(self, example_list: AtomicList) -> None:
         """
         Go over the classes used in initialization and collect them to dictionaries.
 
         The information that is collected is about the types actually used to load the API response, not all types
         available in the filtering extension.
+
+        Any filter list has the fields for all settings in the DB schema, so picking any one of them is enough.
         """
         # Get the filter types used by each filter list.
         for filter_list in self.filter_lists.values():
@@ -111,26 +117,25 @@ class Filtering(Cog):
 
         # Get the setting types used by each filter list.
         if self.filter_lists:
-            # Any filter list has the fields for all settings in the DB schema, so picking any one of them is enough.
-            list_defaults = list(list(self.filter_lists.values())[0].defaults.values())[0]
-            settings_types = set()
+            settings_entries = set()
             # The settings are split between actions and validations.
-            settings_types.update(type(setting) for _, setting in list_defaults["actions"].items())
-            settings_types.update(type(setting) for _, setting in list_defaults["validations"].items())
-            for setting_type in settings_types:
-                type_hints = get_type_hints(setting_type)
+            for settings_group in example_list.defaults:
+                settings_entries.update(type(setting) for _, setting in settings_group.items())
+
+            for setting_entry in settings_entries:
+                type_hints = get_type_hints(setting_entry)
                 # The description should be either a string or a dictionary.
-                if isinstance(setting_type.description, str):
-                    # If it's a string, then the setting matches a single field in the DB,
+                if isinstance(setting_entry.description, str):
+                    # If it's a string, then the settings entry matches a single field in the DB,
                     # and its name is the setting type's name attribute.
-                    self.loaded_settings[setting_type.name] = (
-                        setting_type.description, setting_type, type_hints[setting_type.name]
+                    self.loaded_settings[setting_entry.name] = (
+                        setting_entry.description, setting_entry, type_hints[setting_entry.name]
                     )
                 else:
-                    # Otherwise, the setting type works with compound settings.
+                    # Otherwise, the setting entry works with compound settings.
                     self.loaded_settings.update({
-                        subsetting: (description, setting_type, type_hints[subsetting])
-                        for subsetting, description in setting_type.description.items()
+                        subsetting: (description, setting_entry, type_hints[subsetting])
+                        for subsetting, description in setting_entry.description.items()
                     })
 
         # Get the settings per filter as well.
@@ -286,7 +291,7 @@ class Filtering(Cog):
         embed.description = f"`{filter_.content}`"
         if filter_.description:
             embed.description += f" - {filter_.description}"
-        embed.set_author(name=f"Filter #{id_} - " + f"{past_tense(list_type.name.lower())} {filter_list.name}".title())
+        embed.set_author(name=f"Filter #{id_} - " + f"{filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
@@ -410,7 +415,7 @@ class Filtering(Cog):
         if description:
             embed.description += f" - {description}"
         embed.set_author(
-            name=f"Filter #{filter_id} - {past_tense(list_type.name.lower())} {filter_list.name}".title())
+            name=f"Filter #{filter_id} - {filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
@@ -441,7 +446,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
         await bot.instance.api_client.delete(f'bot/filter/filters/{filter_id}')
-        filter_list.filter_lists[list_type].pop(filter_id)
+        filter_list[list_type].filters.pop(filter_id)
         await ctx.reply(f"✅ Deleted filter: {filter_}")
 
     @filter.group(aliases=("settings",))
@@ -503,10 +508,9 @@ class Filtering(Cog):
             return
         list_type, filter_list = result
 
-        list_defaults = filter_list.defaults[list_type]
         setting_values = {}
-        for type_ in ("actions", "validations"):
-            for _, setting in list_defaults[type_].items():
+        for settings_group in filter_list[list_type].defaults:
+            for _, setting in settings_group.items():
                 setting_values.update(to_serializable(setting.dict()))
 
         embed = Embed(colour=Colour.blue())
@@ -514,7 +518,7 @@ class Filtering(Cog):
         # Use the class's docstring, and ignore single newlines.
         embed.description = re.sub(r"(?<!\n)\n(?!\n)", " ", filter_list.__doc__)
         embed.set_author(
-            name=f"Description of the {past_tense(list_type.name.lower())} {list_name.lower()} filter list"
+            name=f"Description of the {filter_list[list_type].label} filter list"
         )
         await ctx.send(embed=embed)
 
@@ -525,7 +529,7 @@ class Filtering(Cog):
         list_description = f"{past_tense(list_type.name.lower())} {list_name.lower()}"
         if list_name in self.filter_lists:
             filter_list = self.filter_lists[list_name]
-            if list_type in filter_list.filter_lists:
+            if list_type in filter_list:
                 await ctx.reply(f":x: The {list_description} filter list already exists.")
                 return
 
@@ -572,7 +576,7 @@ class Filtering(Cog):
             await self._patch_filter_list(ctx.message, filter_list, list_type, settings)
 
         embed = Embed(colour=Colour.blue())
-        embed.set_author(name=f"{past_tense(list_type.name.lower())} {filter_list.name} Filter List".title())
+        embed.set_author(name=f"{filter_list[list_type].label.title()} Filter List")
         embed.set_footer(text="Field names with a ~ have values which change the existing value in the filter list.")
 
         view = FilterListEditView(
@@ -599,7 +603,7 @@ class Filtering(Cog):
             message = await ctx.send("⏳ Annihilation in progress, please hold...", file=file)
             # Unload the filter list.
             filter_list.remove_list(list_type)
-            if not filter_list.filter_lists:  # There's nothing left, remove from the cog.
+            if not filter_list:  # There's nothing left, remove from the cog.
                 self.filter_lists.pop(filter_list.name)
                 self.unsubscribe(filter_list)
 
@@ -610,8 +614,8 @@ class Filtering(Cog):
         if result is None:
             return
         list_type, filter_list = result
-        list_id = filter_list.list_ids[list_type]
-        list_description = f"{past_tense(list_type.name.lower())} {filter_list.name}"
+        list_id = filter_list[list_type].id
+        list_description = filter_list[list_type].label
         await ctx.reply(
             f"Are you sure you want to delete the {list_description} list?",
             view=DeleteConfirmationView(ctx.author, delete_list)
@@ -620,7 +624,7 @@ class Filtering(Cog):
     # endregion
     # region: helper functions
 
-    def _load_raw_filter_list(self, list_data: dict) -> None:
+    def _load_raw_filter_list(self, list_data: dict) -> AtomicList | None:
         """Load the raw list data to the cog."""
         list_name = list_data["name"]
         if list_name not in self.filter_lists:
@@ -630,9 +634,9 @@ class Filtering(Cog):
                         f"A filter list named {list_name} was loaded from the database, but no matching class."
                     )
                     self.already_warned.add(list_name)
-                return
+                return None
             self.filter_lists[list_name] = filter_list_types[list_name](self)
-        self.filter_lists[list_name].add_list(list_data)
+        return self.filter_lists[list_name].add_list(list_data)
 
     async def _resolve_action(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], dict[FilterList, str]]:
         """
@@ -703,7 +707,7 @@ class Filtering(Cog):
 
         filter_list = self._get_list_by_name(list_name)
         if list_type is None:
-            if len(filter_list.filter_lists) > 1:
+            if len(filter_list) > 1:
                 await ctx.send(
                     "The **list_type** argument is unspecified. Please pick a value from the options below:",
                     view=ArgumentCompletionView(
@@ -711,7 +715,7 @@ class Filtering(Cog):
                     )
                 )
                 return None
-            list_type = list(filter_list.filter_lists)[0]
+            list_type = list(filter_list)[0]
         return list_type, filter_list
 
     def _get_list_by_name(self, list_name: str) -> FilterList:
@@ -729,25 +733,24 @@ class Filtering(Cog):
     @staticmethod
     async def _send_list(ctx: Context, filter_list: FilterList, list_type: ListType) -> None:
         """Show the list of filters identified by the list name and type."""
-        type_filters = filter_list.filter_lists.get(list_type)
-        if type_filters is None:
+        if list_type not in filter_list:
             await ctx.send(f":x: There is no list of {past_tense(list_type.name.lower())} {filter_list.name}s.")
             return
 
-        lines = list(map(str, type_filters.values()))
+        lines = list(map(str, filter_list[list_type].filters.values()))
         log.trace(f"Sending a list of {len(lines)} filters.")
 
         embed = Embed(colour=Colour.blue())
-        embed.set_author(name=f"List of {past_tense(list_type.name.lower())} {filter_list.name}s ({len(lines)} total)")
+        embed.set_author(name=f"List of {filter_list[list_type].label}s ({len(lines)} total)")
 
         await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False)
 
     def _get_filter_by_id(self, id_: int) -> Optional[tuple[Filter, FilterList, ListType]]:
         """Get the filter object corresponding to the provided ID, along with its containing list and list type."""
         for filter_list in self.filter_lists.values():
-            for list_type, sublist in filter_list.filter_lists.items():
-                if id_ in sublist:
-                    return sublist[id_], filter_list, list_type
+            for list_type, sublist in filter_list.items():
+                if id_ in sublist.filters:
+                    return sublist.filters[id_], filter_list, list_type
 
     async def _add_filter(
         self,
@@ -783,7 +786,7 @@ class Filtering(Cog):
         if description:
             embed.description += f" - {description}"
         embed.set_author(
-            name=f"New Filter - {past_tense(list_type.name.lower())} {filter_list.name}".title())
+            name=f"New Filter - {filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
@@ -808,8 +811,10 @@ class Filtering(Cog):
     @staticmethod
     def _identical_filters_message(content: str, filter_list: FilterList, list_type: ListType, filter_: Filter) -> str:
         """Returns all the filters in the list with content identical to the content supplied."""
+        if list_type not in filter_list:
+            return ""
         duplicates = [
-            f for f in filter_list.filter_lists.get(list_type, {}).values()
+            f for f in filter_list[list_type].filters.values()
             if f.content == content and f.id != filter_.id
         ]
         msg = ""
@@ -837,14 +842,14 @@ class Filtering(Cog):
 
         content = await filter_type.process_content(content)
 
-        list_id = filter_list.list_ids[list_type]
+        list_id = filter_list[list_type].id
         description = description or None
         payload = {
             "filter_list": list_id, "content": content, "description": description,
             "additional_field": json.dumps(filter_settings), **settings
         }
         response = await bot.instance.api_client.post('bot/filter/filters', json=to_serializable(payload))
-        new_filter = filter_list.add_filter(response, list_type)
+        new_filter = filter_list.add_filter(list_type, response)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
         await msg.reply(f"✅ Added filter: {new_filter}" + extra_msg)
 
@@ -881,7 +886,7 @@ class Filtering(Cog):
         response = await bot.instance.api_client.patch(
             f'bot/filter/filters/{filter_.id}', json=to_serializable(payload)
         )
-        edited_filter = filter_list.add_filter(response, list_type)
+        edited_filter = filter_list.add_filter(list_type, response)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
 
@@ -895,13 +900,13 @@ class Filtering(Cog):
     @staticmethod
     async def _patch_filter_list(msg: Message, filter_list: FilterList, list_type: ListType, settings: dict) -> None:
         """PATCH the new data of the filter list to the site API."""
-        list_id = filter_list.list_ids[list_type]
+        list_id = filter_list[list_type].id
         response = await bot.instance.api_client.patch(
             f'bot/filter/filter_lists/{list_id}', json=to_serializable(settings)
         )
         filter_list.remove_list(list_type)
         filter_list.add_list(response)
-        await msg.reply(f"✅ Edited filter list: {past_tense(list_type.name.lower())} {filter_list.name}")
+        await msg.reply(f"✅ Edited filter list: {filter_list[list_type].label}")
 
     # endregion
 

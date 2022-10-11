@@ -33,7 +33,7 @@ class DomainsList(FilterList):
     name = "domain"
 
     def __init__(self, filtering_cog: Filtering):
-        super().__init__(DomainFilter)
+        super().__init__()
         filtering_cog.subscribe(self, Event.MESSAGE, Event.MESSAGE_EDIT)
 
     def get_filter_type(self, content: str) -> Type[Filter]:
@@ -56,13 +56,13 @@ class DomainsList(FilterList):
         new_ctx = ctx.replace(content=urls)
 
         triggers = self.filter_list_result(
-            new_ctx, self.filter_lists[ListType.DENY], self.defaults[ListType.DENY]["validations"]
+            new_ctx, self[ListType.DENY].filters, self[ListType.DENY].defaults.validations
         )
         ctx.notification_domain = new_ctx.notification_domain
         actions = None
         message = ""
         if triggers:
-            action_defaults = self.defaults[ListType.DENY]["actions"]
+            action_defaults = self[ListType.DENY].defaults.actions
             actions = reduce(
                 or_,
                 (filter_.actions.fallback_to(action_defaults) if filter_.actions else action_defaults

@@ -31,8 +31,8 @@ def build_filter_repr_dict(
     """Build a dictionary of field names and values to pass to `_build_embed_from_dict`."""
     # Get filter list settings
     default_setting_values = {}
-    for type_ in ("actions", "validations"):
-        for _, setting in filter_list.defaults[list_type][type_].items():
+    for settings_group in filter_list[list_type].defaults:
+        for _, setting in settings_group.items():
             default_setting_values.update(to_serializable(setting.dict()))
 
     # Add overrides. It's done in this way to preserve field order, since the filter won't have all settings.

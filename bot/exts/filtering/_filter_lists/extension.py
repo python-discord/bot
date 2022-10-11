@@ -49,7 +49,7 @@ class ExtensionsList(FilterList):
     name = "extension"
 
     def __init__(self, filtering_cog: Filtering):
-        super().__init__(ExtensionFilter)
+        super().__init__()
         filtering_cog.subscribe(self, Event.MESSAGE)
         self._whitelisted_description = None
 
@@ -68,7 +68,7 @@ class ExtensionsList(FilterList):
         if not ctx.message.attachments:
             return None, ""
 
-        _, failed = self.defaults[ListType.ALLOW]["validations"].evaluate(ctx)
+        _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
         if failed:  # There's no extension filtering in this context.
             return None, ""
 
@@ -77,7 +77,7 @@ class ExtensionsList(FilterList):
             (splitext(attachment.filename.lower())[1], attachment.filename) for attachment in ctx.message.attachments
         }
         new_ctx = ctx.replace(content={ext for ext, _ in all_ext})  # And prepare the context for the filters to read.
-        triggered = [filter_ for filter_ in self.filter_lists[ListType.ALLOW].values() if filter_.triggered_on(new_ctx)]
+        triggered = [filter_ for filter_ in self[ListType.ALLOW].filters.values() if filter_.triggered_on(new_ctx)]
         allowed_ext = {filter_.content for filter_ in triggered}  # Get the extensions in the message that are allowed.
 
         # See if there are any extensions left which aren't allowed.
@@ -101,7 +101,7 @@ class ExtensionsList(FilterList):
             meta_channel = bot.instance.get_channel(Channels.meta)
             if not self._whitelisted_description:
                 self._whitelisted_description = ', '.join(
-                    filter_.content for filter_ in self.filter_lists[ListType.ALLOW].values()
+                    filter_.content for filter_ in self[ListType.ALLOW].filters.values()
                 )
             ctx.dm_embed = DISALLOWED_EMBED_DESCRIPTION.format(
                 joined_whitelist=self._whitelisted_description,
@@ -110,4 +110,4 @@ class ExtensionsList(FilterList):
             )
 
         ctx.matches += not_allowed.values()
-        return self.defaults[ListType.ALLOW]["actions"], ", ".join(f"`{ext}`" for ext in not_allowed)
+        return self[ListType.ALLOW].defaults.actions, ", ".join(f"`{ext}`" for ext in not_allowed)

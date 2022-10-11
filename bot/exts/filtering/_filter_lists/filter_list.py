@@ -1,6 +1,7 @@
 from abc import abstractmethod
+from collections.abc import Iterator
 from enum import Enum
-from typing import Any, Optional, Type
+from typing import Any, ItemsView, NamedTuple, Optional, Type
 
 from discord.ext.commands import BadArgument
 
@@ -36,6 +37,32 @@ def list_type_converter(argument: str) -> ListType:
     raise BadArgument(f"No matching list type found for {argument!r}.")
 
 
+class Defaults(NamedTuple):
+    """Represents an atomic list's default settings."""
+
+    actions: ActionSettings
+    validations: ValidationSettings
+
+
+class AtomicList(NamedTuple):
+    """
+    Represents the atomic structure of a single filter list as it appears in the database.
+
+    This is as opposed to the FilterList class which is a combination of several list types.
+    """
+
+    id: int
+    name: str
+    list_type: ListType
+    defaults: Defaults
+    filters: dict[int, Filter]
+
+    @property
+    def label(self) -> str:
+        """Provide a short description identifying the list with its name and type."""
+        return f"{past_tense(self.list_type.name.lower())} {self.name.lower()}"
+
+
 class FilterList(FieldRequiring):
     """Dispatches events to lists of _filters, and aggregates the responses into a single list of actions to take."""
 
@@ -43,51 +70,62 @@ class FilterList(FieldRequiring):
     # Names must be unique across all filter lists.
     name = FieldRequiring.MUST_SET_UNIQUE
 
-    def __init__(self, filter_type: Type[Filter]):
-        self.list_ids = {}
-        self.filter_lists: dict[ListType, dict[int, Filter]] = {}
-        self.defaults = {}
+    def __init__(self):
+        self._filter_lists: dict[ListType, AtomicList] = {}
 
-        self.filter_type = filter_type
+    def __iter__(self) -> Iterator[ListType]:
+        return iter(self._filter_lists)
 
-    def add_list(self, list_data: dict) -> None:
+    def __getitem__(self, list_type: ListType) -> AtomicList:
+        return self._filter_lists[list_type]
+
+    def __contains__(self, list_type: ListType) -> bool:
+        return list_type in self._filter_lists
+
+    def __bool__(self) -> bool:
+        return bool(self._filter_lists)
+
+    def __len__(self) -> int:
+        return len(self._filter_lists)
+
+    def items(self) -> ItemsView[ListType, AtomicList]:
+        """Return an iterator for the lists' types and values."""
+        return self._filter_lists.items()
+
+    def add_list(self, list_data: dict) -> AtomicList:
         """Add a new type of list (such as a whitelist or a blacklist) this filter list."""
         actions, validations = create_settings(list_data["settings"], keep_empty=True)
         list_type = ListType(list_data["list_type"])
-        self.defaults[list_type] = {"actions": actions, "validations": validations}
-        self.list_ids[list_type] = list_data["id"]
+        defaults = Defaults(actions, validations)
 
-        self.filter_lists[list_type] = {}
+        filters = {}
         for filter_data in list_data["filters"]:
-            self.add_filter(filter_data, list_type)
+            filters[filter_data["id"]] = self._create_filter(filter_data)
+
+        self._filter_lists[list_type] = AtomicList(list_data["id"], self.name, list_type, defaults, filters)
+        return self._filter_lists[list_type]
 
     def remove_list(self, list_type: ListType) -> None:
         """Remove the list associated with the given type from the FilterList object."""
-        if list_type not in self.filter_lists:
+        if list_type not in self._filter_lists:
             return
-        self.filter_lists.pop(list_type)
-        self.defaults.pop(list_type)
-        self.list_ids.pop(list_type)
-
-    def add_filter(self, filter_data: dict, list_type: ListType) -> Filter:
-        """Add a filter to the list of the specified type."""
-        try:
-            new_filter = self.filter_type(filter_data)
-            self.filter_lists[list_type][filter_data["id"]] = new_filter
-        except TypeError as e:
-            log.warning(e)
-        else:
-            return new_filter
+        self._filter_lists.pop(list_type)
 
     def default(self, list_type: ListType, setting: str) -> Any:
         """Get the default value of a specific setting."""
         missing = object()
-        value = self.defaults[list_type]["actions"].get_setting(setting, missing)
+        value = self._filter_lists[list_type].defaults.actions.get_setting(setting, missing)
         if value is missing:
-            value = self.defaults[list_type]["validations"].get_setting(setting, missing)
+            value = self._filter_lists[list_type].defaults.validations.get_setting(setting, missing)
             if value is missing:
                 raise ValueError(f"Could find a setting named {setting}.")
         return value
+
+    def add_filter(self, list_type: ListType, filter_data: dict) -> Filter:
+        """Add a filter to the list of the specified type."""
+        new_filter = self._create_filter(filter_data)
+        self[list_type].filters[filter_data["id"]] = new_filter
+        return new_filter
 
     @abstractmethod
     def get_filter_type(self, content: str) -> Type[Filter]:
@@ -104,7 +142,7 @@ class FilterList(FieldRequiring):
 
     @staticmethod
     def filter_list_result(
-            ctx: FilterContext, filters: dict[int, Filter], defaults: ValidationSettings
+        ctx: FilterContext, filters: dict[int, Filter], defaults: ValidationSettings
     ) -> list[Filter]:
         """
         Sift through the list of filters, and return only the ones which apply to the given context.
@@ -134,3 +172,13 @@ class FilterList(FieldRequiring):
                         relevant_filters.append(filter_)
 
         return relevant_filters
+
+    def _create_filter(self, filter_data: dict) -> Filter:
+        """Create a filter from the given data."""
+        try:
+            filter_type = self.get_filter_type(filter_data["content"])
+            new_filter = filter_type(filter_data)
+        except TypeError as e:
+            log.warning(e)
+        else:
+            return new_filter

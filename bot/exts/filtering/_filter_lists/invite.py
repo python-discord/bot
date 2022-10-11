@@ -39,7 +39,7 @@ class InviteList(FilterList):
     name = "invite"
 
     def __init__(self, filtering_cog: Filtering):
-        super().__init__(InviteFilter)
+        super().__init__()
         filtering_cog.subscribe(self, Event.MESSAGE)
 
     def get_filter_type(self, content: str) -> Type[Filter]:
@@ -53,7 +53,7 @@ class InviteList(FilterList):
 
     async def actions_for(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], Optional[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and a message to relay to mods."""
-        _, failed = self.defaults[ListType.ALLOW]["validations"].evaluate(ctx)
+        _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
         if failed:  # There's no invite filtering in this context.
             return None, ""
 
@@ -89,7 +89,7 @@ class InviteList(FilterList):
         guilds_for_inspection = {invite.guild.id for invite in denied_by_default.values()}
         new_ctx = ctx.replace(content=guilds_for_inspection)
         allowed = {
-            filter_.content for filter_ in self.filter_lists[ListType.ALLOW].values() if filter_.triggered_on(new_ctx)
+            filter_.content for filter_ in self[ListType.ALLOW].filters.values() if filter_.triggered_on(new_ctx)
         }
         disallowed_invites.update({
             invite_code: invite for invite_code, invite in denied_by_default.items() if invite.guild.id not in allowed
@@ -99,7 +99,7 @@ class InviteList(FilterList):
         guilds_for_inspection = {invite.guild.id for invite in allowed_by_default.values()}
         new_ctx = ctx.replace(content=guilds_for_inspection)
         triggered = self.filter_list_result(
-            new_ctx, self.filter_lists[ListType.ALLOW], self.defaults[ListType.DENY]["validations"]
+            new_ctx, self[ListType.ALLOW].filters, self[ListType.DENY].defaults.validations
         )
         disallowed_invites.update({
             invite_code: invite for invite_code, invite in allowed_by_default.items()
@@ -111,14 +111,14 @@ class InviteList(FilterList):
 
         actions = None
         if len(disallowed_invites) > len(triggered):  # There are invites which weren't allowed but aren't blacklisted.
-            deny_defaults = self.defaults[ListType.DENY]["actions"]
+            deny_defaults = self[ListType.DENY].defaults.actions
             actions = reduce(
                 or_,
                 (
                     filter_.actions.fallback_to(deny_defaults) if filter_.actions else deny_defaults
                     for filter_ in triggered
                 ),
-                self.defaults[ListType.ALLOW]["actions"]
+                self[ListType.ALLOW].defaults.actions
             )
         elif triggered:
             actions = reduce(or_, (filter_.actions for filter_ in triggered))
