@@ -40,7 +40,7 @@ TOKEN_EPOCH = 1_293_840_000
 # The HMAC isn't parsed further, but it's in the regex to ensure it at least exists in the string.
 # Each part only matches base64 URL-safe characters.
 # These regexes were taken from discord-developers, which are used by the client itself.
-TOKEN_RE = re.compile(r"([\w-]{10,})\.([\w-]{5,})\.([\w-]{10,})", re.IGNORECASE)
+TOKEN_RE = re.compile(r"([\w-]{10,})\.([\w-]{5,})\.([\w-]{10,})")
 
 
 class Token(t.NamedTuple):
