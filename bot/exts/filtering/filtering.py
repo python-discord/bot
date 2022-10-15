@@ -646,7 +646,7 @@ class Filtering(Cog):
             file = discord.File(BytesIO(json.dumps(list_data, indent=4).encode("utf-8")), f"{list_description}.json")
             message = await ctx.send("⏳ Annihilation in progress, please hold...", file=file)
             # Unload the filter list.
-            filter_list.remove_list(list_type)
+            filter_list.pop(list_type)
             if not filter_list:  # There's nothing left, remove from the cog.
                 self.filter_lists.pop(filter_list.name)
                 self.unsubscribe(filter_list)
@@ -950,7 +950,7 @@ class Filtering(Cog):
         response = await bot.instance.api_client.patch(
             f'bot/filter/filter_lists/{list_id}', json=to_serializable(settings)
         )
-        filter_list.remove_list(list_type)
+        filter_list.pop(list_type, None)
         filter_list.add_list(response)
         await msg.reply(f"✅ Edited filter list: {filter_list[list_type].label}")
 

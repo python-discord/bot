@@ -234,7 +234,7 @@ class FilterListEditView(EditBaseView):
         if not setting_name:  # Obligatory check to match the signature in the parent class.
             return
 
-        default_value = self.filter_list.default(self.list_type, setting_name)
+        default_value = self.filter_list[self.list_type].default(setting_name)
         if not repr_equals(setting_value, default_value):
             self.settings[setting_name] = setting_value
         # If there's already a new value, remove it, since the new value is the same as the default.

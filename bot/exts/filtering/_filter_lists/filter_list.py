@@ -1,7 +1,6 @@
 from abc import abstractmethod
-from collections.abc import Iterator
 from enum import Enum
-from typing import Any, ItemsView, NamedTuple
+from typing import Any, NamedTuple
 
 from discord.ext.commands import BadArgument
 
@@ -62,35 +61,53 @@ class AtomicList(NamedTuple):
         """Provide a short description identifying the list with its name and type."""
         return f"{past_tense(self.list_type.name.lower())} {self.name.lower()}"
 
+    def filter_list_result(self, ctx: FilterContext) -> list[Filter]:
+        """
+        Sift through the list of filters, and return only the ones which apply to the given context.
 
-class FilterList(FieldRequiring):
+        The strategy is as follows:
+        1. The default settings are evaluated on the given context. The default answer for whether the filter is
+        relevant in the given context is whether there aren't any validation settings which returned False.
+        2. For each filter, its overrides are considered:
+            - If there are no overrides, then the filter is relevant if that is the default answer.
+            - Otherwise it is relevant if there are no failed overrides, and any failing default is overridden by a
+            successful override.
+
+        If the filter is relevant in context, see if it actually triggers.
+        """
+        passed_by_default, failed_by_default = self.defaults.validations.evaluate(ctx)
+        default_answer = not bool(failed_by_default)
+
+        relevant_filters = []
+        for filter_ in self.filters.values():
+            if not filter_.validations:
+                if default_answer and filter_.triggered_on(ctx):
+                    relevant_filters.append(filter_)
+            else:
+                passed, failed = filter_.validations.evaluate(ctx)
+                if not failed and failed_by_default < passed:
+                    if filter_.triggered_on(ctx):
+                        relevant_filters.append(filter_)
+
+        return relevant_filters
+
+    def default(self, setting: str) -> Any:
+        """Get the default value of a specific setting."""
+        missing = object()
+        value = self.defaults.actions.get_setting(setting, missing)
+        if value is missing:
+            value = self.defaults.validations.get_setting(setting, missing)
+            if value is missing:
+                raise ValueError(f"Couldn't find a setting named {setting!r}.")
+        return value
+
+
+class FilterList(FieldRequiring, dict[ListType, AtomicList]):
     """Dispatches events to lists of _filters, and aggregates the responses into a single list of actions to take."""
 
     # Each subclass must define a name matching the filter_list name we're expecting to receive from the database.
     # Names must be unique across all filter lists.
     name = FieldRequiring.MUST_SET_UNIQUE
-
-    def __init__(self):
-        self._filter_lists: dict[ListType, AtomicList] = {}
-
-    def __iter__(self) -> Iterator[ListType]:
-        return iter(self._filter_lists)
-
-    def __getitem__(self, list_type: ListType) -> AtomicList:
-        return self._filter_lists[list_type]
-
-    def __contains__(self, list_type: ListType) -> bool:
-        return list_type in self._filter_lists
-
-    def __bool__(self) -> bool:
-        return bool(self._filter_lists)
-
-    def __len__(self) -> int:
-        return len(self._filter_lists)
-
-    def items(self) -> ItemsView[ListType, AtomicList]:
-        """Return an iterator for the lists' types and values."""
-        return self._filter_lists.items()
 
     def add_list(self, list_data: dict) -> AtomicList:
         """Add a new type of list (such as a whitelist or a blacklist) this filter list."""
@@ -102,24 +119,8 @@ class FilterList(FieldRequiring):
         for filter_data in list_data["filters"]:
             filters[filter_data["id"]] = self._create_filter(filter_data)
 
-        self._filter_lists[list_type] = AtomicList(list_data["id"], self.name, list_type, defaults, filters)
-        return self._filter_lists[list_type]
-
-    def remove_list(self, list_type: ListType) -> None:
-        """Remove the list associated with the given type from the FilterList object."""
-        if list_type not in self._filter_lists:
-            return
-        self._filter_lists.pop(list_type)
-
-    def default(self, list_type: ListType, setting: str) -> Any:
-        """Get the default value of a specific setting."""
-        missing = object()
-        value = self._filter_lists[list_type].defaults.actions.get_setting(setting, missing)
-        if value is missing:
-            value = self._filter_lists[list_type].defaults.validations.get_setting(setting, missing)
-            if value is missing:
-                raise ValueError(f"Could find a setting named {setting}.")
-        return value
+        self[list_type] = AtomicList(list_data["id"], self.name, list_type, defaults, filters)
+        return self[list_type]
 
     def add_filter(self, list_type: ListType, filter_data: dict) -> Filter:
         """Add a filter to the list of the specified type."""
@@ -140,39 +141,6 @@ class FilterList(FieldRequiring):
     async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
 
-    @staticmethod
-    def filter_list_result(
-        ctx: FilterContext, filters: dict[int, Filter], defaults: ValidationSettings
-    ) -> list[Filter]:
-        """
-        Sift through the list of filters, and return only the ones which apply to the given context.
-
-        The strategy is as follows:
-        1. The default settings are evaluated on the given context. The default answer for whether the filter is
-        relevant in the given context is whether there aren't any validation settings which returned False.
-        2. For each filter, its overrides are considered:
-            - If there are no overrides, then the filter is relevant if that is the default answer.
-            - Otherwise it is relevant if there are no failed overrides, and any failing default is overridden by a
-            successful override.
-
-        If the filter is relevant in context, see if it actually triggers.
-        """
-        passed_by_default, failed_by_default = defaults.evaluate(ctx)
-        default_answer = not bool(failed_by_default)
-
-        relevant_filters = []
-        for filter_ in filters.values():
-            if not filter_.validations:
-                if default_answer and filter_.triggered_on(ctx):
-                    relevant_filters.append(filter_)
-            else:
-                passed, failed = filter_.validations.evaluate(ctx)
-                if not failed and failed_by_default < passed:
-                    if filter_.triggered_on(ctx):
-                        relevant_filters.append(filter_)
-
-        return relevant_filters
-
     def _create_filter(self, filter_data: dict) -> Filter:
         """Create a filter from the given data."""
         try:
@@ -182,3 +150,6 @@ class FilterList(FieldRequiring):
             log.warning(e)
         else:
             return new_filter
+
+    def __hash__(self):
+        return hash(id(self))

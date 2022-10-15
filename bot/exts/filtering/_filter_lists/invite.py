@@ -97,9 +97,7 @@ class InviteList(FilterList):
         # Add the allowed by default only if they're blacklisted.
         guilds_for_inspection = {invite.guild.id for invite in allowed_by_default.values()}
         new_ctx = ctx.replace(content=guilds_for_inspection)
-        triggered = self.filter_list_result(
-            new_ctx, self[ListType.ALLOW].filters, self[ListType.DENY].defaults.validations
-        )
+        triggered = self[ListType.ALLOW].filter_list_result(new_ctx)
         disallowed_invites.update({
             invite_code: invite for invite_code, invite in allowed_by_default.items()
             if invite.guild.id in {filter_.content for filter_ in triggered}

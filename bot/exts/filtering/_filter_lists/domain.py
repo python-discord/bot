@@ -54,9 +54,7 @@ class DomainsList(FilterList):
         urls = {match.group(1).lower().rstrip("/") for match in URL_RE.finditer(text)}
         new_ctx = ctx.replace(content=urls)
 
-        triggers = self.filter_list_result(
-            new_ctx, self[ListType.DENY].filters, self[ListType.DENY].defaults.validations
-        )
+        triggers = self[ListType.DENY].filter_list_result(new_ctx)
         ctx.notification_domain = new_ctx.notification_domain
         actions = None
         messages = []

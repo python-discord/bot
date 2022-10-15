@@ -55,9 +55,7 @@ class TokensList(FilterList):
         text = clean_input(text)
         ctx = ctx.replace(content=text)
 
-        triggers = self.filter_list_result(
-            ctx, self[ListType.DENY].filters, self[ListType.DENY].defaults.validations
-        )
+        triggers = self[ListType.DENY].filter_list_result(ctx)
         actions = None
         messages = []
         if triggers:

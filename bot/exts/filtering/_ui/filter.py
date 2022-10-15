@@ -278,7 +278,7 @@ class FilterEditView(EditBaseView):
                 default_value = self.filter_type.extra_fields_type().dict()[setting_name]
             else:
                 dict_to_edit = self.settings_overrides
-                default_value = self.filter_list.default(self.list_type, setting_name)
+                default_value = self.filter_list[self.list_type].default(setting_name)
             # Update the setting override value or remove it
             if setting_value is not self._REMOVE:
                 if not repr_equals(setting_value, default_value):
@@ -405,7 +405,7 @@ def description_and_settings_converter(
             type_ = loaded_settings[setting][2]
             try:
                 parsed_value = parse_value(settings.pop(setting), type_)
-                if not repr_equals(parsed_value, filter_list.default(list_type, setting)):
+                if not repr_equals(parsed_value, filter_list[list_type].default(setting)):
                     settings[setting] = parsed_value
             except (TypeError, ValueError) as e:
                 raise BadArgument(e)
@@ -431,7 +431,7 @@ def filter_overrides(filter_: Filter, filter_list: FilterList, list_type: ListTy
         if settings:
             for _, setting in settings.items():
                 for setting_name, value in to_serializable(setting.dict()).items():
-                    if not repr_equals(value, filter_list.default(list_type, setting_name)):
+                    if not repr_equals(value, filter_list[list_type].default(setting_name)):
                         overrides_values[setting_name] = value
 
     if filter_.extra_fields_type:
