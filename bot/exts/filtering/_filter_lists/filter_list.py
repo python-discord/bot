@@ -6,7 +6,7 @@ from discord.ext.commands import BadArgument
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
-from bot.exts.filtering._settings import ActionSettings, ValidationSettings, create_settings
+from bot.exts.filtering._settings import ActionSettings, Defaults, create_settings
 from bot.exts.filtering._utils import FieldRequiring, past_tense
 from bot.log import get_logger
 
@@ -34,13 +34,6 @@ def list_type_converter(argument: str) -> ListType:
         if argument in list_aliases or argument in map(past_tense, list_aliases):
             return list_type
     raise BadArgument(f"No matching list type found for {argument!r}.")
-
-
-class Defaults(NamedTuple):
-    """Represents an atomic list's default settings."""
-
-    actions: ActionSettings
-    validations: ValidationSettings
 
 
 class AtomicList(NamedTuple):
@@ -117,14 +110,14 @@ class FilterList(FieldRequiring, dict[ListType, AtomicList]):
 
         filters = {}
         for filter_data in list_data["filters"]:
-            filters[filter_data["id"]] = self._create_filter(filter_data)
+            filters[filter_data["id"]] = self._create_filter(filter_data, defaults)
 
         self[list_type] = AtomicList(list_data["id"], self.name, list_type, defaults, filters)
         return self[list_type]
 
     def add_filter(self, list_type: ListType, filter_data: dict) -> Filter:
         """Add a filter to the list of the specified type."""
-        new_filter = self._create_filter(filter_data)
+        new_filter = self._create_filter(filter_data, self[list_type].defaults)
         self[list_type].filters[filter_data["id"]] = new_filter
         return new_filter
 
@@ -141,11 +134,11 @@ class FilterList(FieldRequiring, dict[ListType, AtomicList]):
     async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
 
-    def _create_filter(self, filter_data: dict) -> Filter:
+    def _create_filter(self, filter_data: dict, defaults: Defaults) -> Filter:
         """Create a filter from the given data."""
         try:
             filter_type = self.get_filter_type(filter_data["content"])
-            new_filter = filter_type(filter_data)
+            new_filter = filter_type(filter_data, defaults)
         except TypeError as e:
             log.warning(e)
         else:

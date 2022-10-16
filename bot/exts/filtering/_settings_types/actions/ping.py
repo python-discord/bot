@@ -1,9 +1,10 @@
 from functools import cache
 from typing import ClassVar
 
-from discord import Guild
 from pydantic import validator
 
+import bot
+from bot.constants import Guild
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
 
@@ -37,7 +38,7 @@ class Ping(ActionEntry):
     async def action(self, ctx: FilterContext) -> None:
         """Add the stored pings to the alert message content."""
         mentions = self.guild_pings if ctx.channel.guild else self.dm_pings
-        new_content = " ".join([self._resolve_mention(mention, ctx.channel.guild) for mention in mentions])
+        new_content = " ".join([self._resolve_mention(mention) for mention in mentions])
         ctx.alert_content = f"{new_content} {ctx.alert_content}"
 
     def __or__(self, other: ActionEntry):
@@ -49,12 +50,16 @@ class Ping(ActionEntry):
 
     @staticmethod
     @cache
-    def _resolve_mention(mention: str, guild: Guild) -> str:
+    def _resolve_mention(mention: str) -> str:
         """Return the appropriate formatting for the formatting, be it a literal, a user ID, or a role ID."""
+        guild = bot.instance.get_guild(Guild.id)
         if mention in ("here", "everyone"):
             return f"@{mention}"
-        if mention.isdigit():  # It's an ID.
-            mention = int(mention)
+        try:
+            mention = int(mention)  # It's an ID.
+        except ValueError:
+            pass
+        else:
             if any(mention == role.id for role in guild.roles):
                 return f"<@&{mention}>"
             else:

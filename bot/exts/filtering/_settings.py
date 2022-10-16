@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import operator
 from abc import abstractmethod
-from typing import Any, Iterator, Mapping, Optional, TypeVar
+from functools import reduce
+from typing import Any, NamedTuple, Optional, TypeVar
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types import settings_types
-from bot.exts.filtering._settings_types.settings_entry import ActionEntry, ValidationEntry
+from bot.exts.filtering._settings_types.settings_entry import ActionEntry, SettingsEntry, ValidationEntry
 from bot.exts.filtering._utils import FieldRequiring
 from bot.log import get_logger
 
@@ -15,14 +17,18 @@ log = get_logger(__name__)
 
 _already_warned: set[str] = set()
 
+T = TypeVar("T", bound=SettingsEntry)
+
 
 def create_settings(
-        settings_data: dict, *, keep_empty: bool = False
+    settings_data: dict, *, defaults: Defaults | None = None, keep_empty: bool = False
 ) -> tuple[Optional[ActionSettings], Optional[ValidationSettings]]:
     """
     Create and return instances of the Settings subclasses from the given data.
 
     Additionally, warn for data entries with no matching class.
+
+    In case these are setting overrides, the defaults can be provided to keep track of the correct values.
     """
     action_data = {}
     validation_data = {}
@@ -36,13 +42,18 @@ def create_settings(
                 f"A setting named {entry_name} was loaded from the database, but no matching class."
             )
             _already_warned.add(entry_name)
+    if defaults is None:
+        default_actions = None
+        default_validations = None
+    else:
+        default_actions, default_validations = defaults
     return (
-        ActionSettings.create(action_data, keep_empty=keep_empty),
-        ValidationSettings.create(validation_data, keep_empty=keep_empty)
+        ActionSettings.create(action_data, defaults=default_actions, keep_empty=keep_empty),
+        ValidationSettings.create(validation_data, defaults=default_validations, keep_empty=keep_empty)
     )
 
 
-class Settings(FieldRequiring):
+class Settings(FieldRequiring, dict[str, T]):
     """
     A collection of settings.
 
@@ -54,13 +65,13 @@ class Settings(FieldRequiring):
     the filter list which contains the filter.
     """
 
-    entry_type = FieldRequiring.MUST_SET
+    entry_type = T
 
     _already_warned: set[str] = set()
 
     @abstractmethod
-    def __init__(self, settings_data: dict, *, keep_empty: bool = False):
-        self._entries: dict[str, Settings.entry_type] = {}
+    def __init__(self, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False):
+        super().__init__()
 
         entry_classes = settings_types.get(self.entry_type.__name__)
         for entry_name, entry_data in settings_data.items():
@@ -75,63 +86,55 @@ class Settings(FieldRequiring):
                     self._already_warned.add(entry_name)
             else:
                 try:
-                    new_entry = entry_cls.create(entry_data, keep_empty=keep_empty)
+                    entry_defaults = None if defaults is None else defaults[entry_name]
+                    new_entry = entry_cls.create(
+                        entry_data, defaults=entry_defaults, keep_empty=keep_empty
+                    )
                     if new_entry:
-                        self._entries[entry_name] = new_entry
+                        self[entry_name] = new_entry
                 except TypeError as e:
                     raise TypeError(
                         f"Attempted to load a {entry_name} setting, but the response is malformed: {entry_data}"
                     ) from e
 
-    def __contains__(self, item: str) -> bool:
-        return item in self._entries
-
-    def __setitem__(self, key: str, value: entry_type) -> None:
-        self._entries[key] = value
+    @property
+    def overrides(self) -> dict[str, Any]:
+        """Return a dictionary of overrides across all entries."""
+        return reduce(operator.or_, (entry.overrides for entry in self.values() if entry), {})
 
     def copy(self: TSettings) -> TSettings:
         """Create a shallow copy of the object."""
         copy = self.__class__({})
-        copy._entries = self._entries.copy()
+        copy.update(super().copy())  # Copy the internal dict.
         return copy
-
-    def items(self) -> Iterator[tuple[str, entry_type]]:
-        """Return an iterator for the items in the entries dictionary."""
-        yield from self._entries.items()
-
-    def update(self, mapping: Mapping[str, entry_type], **kwargs: entry_type) -> None:
-        """Update the entries with items from `mapping` and the kwargs."""
-        self._entries.update(mapping, **kwargs)
-
-    def get(self, key: str, default: Optional[Any] = None) -> entry_type:
-        """Get the entry matching the key, or fall back to the default value if the key is missing."""
-        return self._entries.get(key, default)
 
     def get_setting(self, key: str, default: Optional[Any] = None) -> Any:
         """Get the setting matching the key, or fall back to the default value if the key is missing."""
-        for entry in self._entries.values():
+        for entry in self.values():
             if hasattr(entry, key):
                 return getattr(entry, key)
         return default
 
     @classmethod
-    def create(cls, settings_data: dict, *, keep_empty: bool = False) -> Optional[Settings]:
+    def create(
+        cls, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False
+    ) -> Optional[Settings]:
         """
         Returns a Settings object from `settings_data` if it holds any value, None otherwise.
 
         Use this method to create Settings objects instead of the init.
         The None value is significant for how a filter list iterates over its filters.
         """
-        settings = cls(settings_data, keep_empty=keep_empty)
+        settings = cls(settings_data, defaults=defaults, keep_empty=keep_empty)
         # If an entry doesn't hold any values, its `create` method will return None.
         # If all entries are None, then the settings object holds no values.
-        if not keep_empty and not any(settings._entries.values()):
+        if not keep_empty and not any(settings.values()):
             return None
 
         return settings
 
 
-class ValidationSettings(Settings):
+class ValidationSettings(Settings[ValidationEntry]):
     """
     A collection of validation settings.
 
@@ -141,16 +144,15 @@ class ValidationSettings(Settings):
 
     entry_type = ValidationEntry
 
-    def __init__(self, settings_data: dict, *, keep_empty: bool = False):
-        super().__init__(settings_data, keep_empty=keep_empty)
+    def __init__(self, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False):
+        super().__init__(settings_data, defaults=defaults, keep_empty=keep_empty)
 
     def evaluate(self, ctx: FilterContext) -> tuple[set[str], set[str]]:
         """Evaluates for each setting whether the context is relevant to the filter."""
         passed = set()
         failed = set()
 
-        self._entries: dict[str, ValidationEntry]
-        for name, validation in self._entries.items():
+        for name, validation in self.items():
             if validation:
                 if validation.triggers_on(ctx):
                     passed.add(name)
@@ -160,7 +162,7 @@ class ValidationSettings(Settings):
         return passed, failed
 
 
-class ActionSettings(Settings):
+class ActionSettings(Settings[ActionEntry]):
     """
     A collection of action settings.
 
@@ -170,21 +172,21 @@ class ActionSettings(Settings):
 
     entry_type = ActionEntry
 
-    def __init__(self, settings_data: dict, *, keep_empty: bool = False):
-        super().__init__(settings_data, keep_empty=keep_empty)
+    def __init__(self, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False):
+        super().__init__(settings_data, defaults=defaults, keep_empty=keep_empty)
 
     def __or__(self, other: ActionSettings) -> ActionSettings:
         """Combine the entries of two collections of settings into a new ActionsSettings."""
         actions = {}
         # A settings object doesn't necessarily have all types of entries (e.g in the case of filter overrides).
-        for entry in self._entries:
-            if entry in other._entries:
-                actions[entry] = self._entries[entry] | other._entries[entry]
+        for entry in self:
+            if entry in other:
+                actions[entry] = self[entry] | other[entry]
             else:
-                actions[entry] = self._entries[entry]
-        for entry in other._entries:
+                actions[entry] = self[entry]
+        for entry in other:
             if entry not in actions:
-                actions[entry] = other._entries[entry]
+                actions[entry] = other[entry]
 
         result = ActionSettings({})
         result.update(actions)
@@ -192,13 +194,20 @@ class ActionSettings(Settings):
 
     async def action(self, ctx: FilterContext) -> None:
         """Execute the action of every action entry stored."""
-        for entry in self._entries.values():
+        for entry in self.values():
             await entry.action(ctx)
 
     def fallback_to(self, fallback: ActionSettings) -> ActionSettings:
         """Fill in missing entries from `fallback`."""
         new_actions = self.copy()
         for entry_name, entry_value in fallback.items():
-            if entry_name not in self._entries:
-                new_actions._entries[entry_name] = entry_value
+            if entry_name not in self:
+                new_actions[entry_name] = entry_value
         return new_actions
+
+
+class Defaults(NamedTuple):
+    """Represents an atomic list's default settings."""
+
+    actions: ActionSettings
+    validations: ValidationSettings

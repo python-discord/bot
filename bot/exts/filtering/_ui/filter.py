@@ -424,23 +424,10 @@ def description_and_settings_converter(
     return description, settings, filter_settings
 
 
-def filter_overrides(filter_: Filter, filter_list: FilterList, list_type: ListType) -> tuple[dict, dict]:
-    """Get the filter's overrides to the filter list settings and the extra fields settings."""
-    overrides_values = {}
-    for settings in (filter_.actions, filter_.validations):
-        if settings:
-            for _, setting in settings.items():
-                for setting_name, value in to_serializable(setting.dict()).items():
-                    if not repr_equals(value, filter_list[list_type].default(setting_name)):
-                        overrides_values[setting_name] = value
-
-    if filter_.extra_fields_type:
-        # The values here can be safely used since overrides equal to the defaults won't be saved.
-        extra_fields_overrides = filter_.extra_fields.dict(exclude_unset=True)
-    else:
-        extra_fields_overrides = {}
-
-    return overrides_values, extra_fields_overrides
+def filter_serializable_overrides(filter_: Filter) -> tuple[dict, dict]:
+    """Get a serializable version of the filter's overrides."""
+    overrides_values, extra_fields_overrides = filter_.overrides
+    return to_serializable(overrides_values), to_serializable(extra_fields_overrides)
 
 
 def template_settings(filter_id: str, filter_list: FilterList, list_type: ListType) -> tuple[dict, dict]:
@@ -457,4 +444,4 @@ def template_settings(filter_id: str, filter_list: FilterList, list_type: ListTy
             f"Could not find filter with ID `{filter_id}` in the {list_type.name} {filter_list.name} list."
         )
     filter_ = filter_list[list_type].filters[filter_id]
-    return filter_overrides(filter_, filter_list, list_type)
+    return filter_serializable_overrides(filter_)

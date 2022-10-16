@@ -291,10 +291,8 @@ class SequenceEditView(discord.ui.View):
         if _i != len(self.stored_value):
             self.stored_value.pop(_i)
 
-        select.options = [SelectOption(label=item) for item in self.stored_value[:MAX_SELECT_ITEMS]]
-        if not self.stored_value:
-            self.remove_item(self.removal_select)
-        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self)
+        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self.copy())
+        self.stop()
 
     async def apply_addition(self, interaction: Interaction, item: str) -> None:
         """Add an item to the list."""
@@ -303,18 +301,14 @@ class SequenceEditView(discord.ui.View):
             return
 
         self.stored_value.append(item)
-        self.removal_select.options = [SelectOption(label=item) for item in self.stored_value[:MAX_SELECT_ITEMS]]
-        if len(self.stored_value) == 1:
-            self.add_item(self.removal_select)
-        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self)
+        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self.copy())
+        self.stop()
 
     async def apply_edit(self, interaction: Interaction, new_list: str) -> None:
         """Change the contents of the list."""
-        self.stored_value = list(set(new_list.split(",")))
-        self.removal_select.options = [SelectOption(label=item) for item in self.stored_value[:MAX_SELECT_ITEMS]]
-        if len(self.stored_value) == 1:
-            self.add_item(self.removal_select)
-        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self)
+        self.stored_value = list(set(part.strip() for part in new_list.split(",") if part.strip()))
+        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self.copy())
+        self.stop()
 
     @discord.ui.button(label="Add Value")
     async def add_value(self, interaction: Interaction, button: discord.ui.Button) -> None:
@@ -339,6 +333,10 @@ class SequenceEditView(discord.ui.View):
         """Cancel the list editing."""
         await interaction.response.edit_message(content="🚫 Canceled", view=None)
         self.stop()
+
+    def copy(self) -> SequenceEditView:
+        """Return a copy of this view."""
+        return SequenceEditView(self.setting_name, self.stored_value, self.update_callback)
 
 
 class EnumSelectView(discord.ui.View):

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._utils import FieldRequiring
@@ -19,12 +19,33 @@ class SettingsEntry(BaseModel, FieldRequiring):
     # Each subclass must define a name matching the entry name we're expecting to receive from the database.
     # Names must be unique across all filter lists.
     name: ClassVar[str] = FieldRequiring.MUST_SET_UNIQUE
-    # Each subclass must define a description of what it does. If the data an entry type receives is comprised of
+    # Each subclass must define a description of what it does. If the data an entry type receives comprises
     # several DB fields, the value should a dictionary of field names and their descriptions.
     description: ClassVar[Union[str, dict[str, str]]] = FieldRequiring.MUST_SET
 
+    _overrides: set[str] = PrivateAttr(default_factory=set)
+
+    def __init__(self, defaults: SettingsEntry | None = None, /, **data):
+        overrides = set()
+        if defaults:
+            defaults_dict = defaults.dict()
+            for field_name, field_value in list(data.items()):
+                if field_value is None:
+                    data[field_name] = defaults_dict[field_name]
+                else:
+                    overrides.add(field_name)
+        super().__init__(**data)
+        self._overrides |= overrides
+
+    @property
+    def overrides(self) -> dict[str, Any]:
+        """Return a dictionary of overrides."""
+        return {name: getattr(self, name) for name in self._overrides}
+
     @classmethod
-    def create(cls, entry_data: Optional[dict[str, Any]], *, keep_empty: bool = False) -> Optional[SettingsEntry]:
+    def create(
+        cls, entry_data: dict[str, Any] | None, *, defaults: SettingsEntry | None = None, keep_empty: bool = False
+    ) -> SettingsEntry | None:
         """
         Returns a SettingsEntry object from `entry_data` if it holds any value, None otherwise.
 
@@ -38,7 +59,7 @@ class SettingsEntry(BaseModel, FieldRequiring):
 
         if not isinstance(entry_data, dict):
             entry_data = {cls.name: entry_data}
-        return cls(**entry_data)
+        return cls(defaults, **entry_data)
 
 
 class ValidationEntry(SettingsEntry):

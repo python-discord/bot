@@ -23,7 +23,7 @@ from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._ui.filter import (
-    build_filter_repr_dict, description_and_settings_converter, filter_overrides, populate_embed_from_dict
+    build_filter_repr_dict, description_and_settings_converter, filter_serializable_overrides, populate_embed_from_dict
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
 from bot.exts.filtering._ui.ui import ArgumentCompletionView, DeleteConfirmationView, format_response_error
@@ -280,7 +280,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
 
-        overrides_values, extra_fields_overrides = filter_overrides(filter_, filter_list, list_type)
+        overrides_values, extra_fields_overrides = filter_serializable_overrides(filter_)
 
         all_settings_repr_dict = build_filter_repr_dict(
             filter_list, list_type, type(filter_), overrides_values, extra_fields_overrides
@@ -388,7 +388,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
         filter_type = type(filter_)
-        settings, filter_settings = filter_overrides(filter_, filter_list, list_type)
+        settings, filter_settings = filter_serializable_overrides(filter_)
         description, new_settings, new_filter_settings = description_and_settings_converter(
             filter_list,
             list_type, filter_type,

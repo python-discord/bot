@@ -16,8 +16,8 @@ class InviteFilter(Filter):
 
     name = "invite"
 
-    def __init__(self, filter_data: dict):
-        super().__init__(filter_data)
+    def __init__(self, filter_data: dict, defaults_data: dict | None = None):
+        super().__init__(filter_data, defaults_data)
         self.content = int(self.content)
 
     def triggered_on(self, ctx: FilterContext) -> bool:
