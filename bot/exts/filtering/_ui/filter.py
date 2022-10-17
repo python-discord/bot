@@ -28,7 +28,7 @@ def build_filter_repr_dict(
     settings_overrides: dict,
     extra_fields_overrides: dict
 ) -> dict:
-    """Build a dictionary of field names and values to pass to `_build_embed_from_dict`."""
+    """Build a dictionary of field names and values to pass to `populate_embed_from_dict`."""
     # Get filter list settings
     default_setting_values = {}
     for settings_group in filter_list[list_type].defaults:
@@ -155,16 +155,16 @@ class FilterEditView(EditBaseView):
         )
         self.add_item(add_select)
 
-        override_names = (
-            list(settings_overrides) + [f"{filter_list.name}/{setting}" for setting in filter_settings_overrides]
-        )
-        remove_select = CustomCallbackSelect(
-            self._remove_override,
-            placeholder="Select an override to remove",
-            options=[SelectOption(label=name) for name in sorted(override_names)],
-            row=2
-        )
-        if remove_select.options:
+        if settings_overrides or filter_settings_overrides:
+            override_names = (
+                list(settings_overrides) + [f"{filter_list.name}/{setting}" for setting in filter_settings_overrides]
+            )
+            remove_select = CustomCallbackSelect(
+                self._remove_override,
+                placeholder="Select an override to remove",
+                options=[SelectOption(label=name) for name in sorted(override_names)],
+                row=2
+            )
             self.add_item(remove_select)
 
     @discord.ui.button(label="Edit Content", row=3)
@@ -285,9 +285,9 @@ class FilterEditView(EditBaseView):
                     dict_to_edit[setting_name] = setting_value
                 # If there's already an override, remove it, since the new value is the same as the default.
                 elif setting_name in dict_to_edit:
-                    del dict_to_edit[setting_name]
+                    dict_to_edit.pop(setting_name)
             elif setting_name in dict_to_edit:
-                del dict_to_edit[setting_name]
+                dict_to_edit.pop(setting_name)
 
         # This is inefficient, but otherwise the selects go insane if the user attempts to edit the same setting
         # multiple times, even when replacing the select with a new one.
@@ -315,8 +315,10 @@ class FilterEditView(EditBaseView):
     async def apply_template(self, template_id: str, embed_message: discord.Message, interaction: Interaction) -> None:
         """Replace any non-overridden settings with overrides from the given filter."""
         try:
-            settings, filter_settings = template_settings(template_id, self.filter_list, self.list_type)
-        except ValueError as e:  # The interaction is necessary to send an ephemeral message.
+            settings, filter_settings = template_settings(
+                template_id, self.filter_list, self.list_type, self.filter_type
+            )
+        except BadArgument as e:  # The interaction object is necessary to send an ephemeral message.
             await interaction.response.send_message(f":x: {e}", ephemeral=True)
             return
         else:
@@ -326,6 +328,7 @@ class FilterEditView(EditBaseView):
         self.filter_settings_overrides = filter_settings | self.filter_settings_overrides
         self.embed.clear_fields()
         await embed_message.edit(embed=self.embed, view=self.copy())
+        self.stop()
 
     async def _remove_override(self, interaction: Interaction, select: discord.ui.Select) -> None:
         """
@@ -380,28 +383,7 @@ def description_and_settings_converter(
 
     filter_settings = {}
     for setting, _ in list(settings.items()):
-        if setting not in loaded_settings:
-            # It's a filter setting
-            if "/" in setting:
-                setting_list_name, filter_setting_name = setting.split("/", maxsplit=1)
-                if setting_list_name.lower() != filter_list.name.lower():
-                    raise BadArgument(
-                        f"A setting for a {setting_list_name!r} filter was provided, "
-                        f"but the list name is {filter_list.name!r}"
-                    )
-                if filter_setting_name not in loaded_filter_settings[filter_list.name]:
-                    raise BadArgument(f"{setting!r} is not a recognized setting.")
-                type_ = loaded_filter_settings[filter_list.name][filter_setting_name][2]
-                try:
-                    parsed_value = parse_value(settings.pop(setting), type_)
-                    if not repr_equals(parsed_value, getattr(filter_type.extra_fields_type(), filter_setting_name)):
-                        filter_settings[filter_setting_name] = parsed_value
-                except (TypeError, ValueError) as e:
-                    raise BadArgument(e)
-            else:
-                raise BadArgument(f"{setting!r} is not a recognized setting.")
-        # It's a filter list setting
-        else:
+        if setting in loaded_settings:  # It's a filter list setting
             type_ = loaded_settings[setting][2]
             try:
                 parsed_value = parse_value(settings.pop(setting), type_)
@@ -409,11 +391,28 @@ def description_and_settings_converter(
                     settings[setting] = parsed_value
             except (TypeError, ValueError) as e:
                 raise BadArgument(e)
+        elif "/" not in setting:
+            raise BadArgument(f"{setting!r} is not a recognized setting.")
+        else:  # It's a filter setting
+            filter_name, filter_setting_name = setting.split("/", maxsplit=1)
+            if filter_name.lower() != filter_type.name.lower():
+                raise BadArgument(
+                    f"A setting for a {filter_name!r} filter was provided, but the filter name is {filter_type.name!r}"
+                )
+            if filter_setting_name not in loaded_filter_settings[filter_type.name]:
+                raise BadArgument(f"{setting!r} is not a recognized setting.")
+            type_ = loaded_filter_settings[filter_type.name][filter_setting_name][2]
+            try:
+                parsed_value = parse_value(settings.pop(setting), type_)
+                if not repr_equals(parsed_value, getattr(filter_type.extra_fields_type(), filter_setting_name)):
+                    filter_settings[filter_setting_name] = parsed_value
+            except (TypeError, ValueError) as e:
+                raise BadArgument(e)
 
     # Pull templates settings and apply them.
     if template is not None:
         try:
-            t_settings, t_filter_settings = template_settings(template, filter_list, list_type)
+            t_settings, t_filter_settings = template_settings(template, filter_list, list_type, filter_type)
         except ValueError as e:
             raise BadArgument(str(e))
         else:
@@ -430,18 +429,25 @@ def filter_serializable_overrides(filter_: Filter) -> tuple[dict, dict]:
     return to_serializable(overrides_values), to_serializable(extra_fields_overrides)
 
 
-def template_settings(filter_id: str, filter_list: FilterList, list_type: ListType) -> tuple[dict, dict]:
+def template_settings(
+    filter_id: str, filter_list: FilterList, list_type: ListType, filter_type: type[Filter]
+) -> tuple[dict, dict]:
     """Find the filter with specified ID, and return its settings."""
     try:
         filter_id = int(filter_id)
         if filter_id < 0:
             raise ValueError()
     except ValueError:
-        raise ValueError("Template value must be a non-negative integer.")
+        raise BadArgument("Template value must be a non-negative integer.")
 
     if filter_id not in filter_list[list_type].filters:
-        raise ValueError(
+        raise BadArgument(
             f"Could not find filter with ID `{filter_id}` in the {list_type.name} {filter_list.name} list."
         )
     filter_ = filter_list[list_type].filters[filter_id]
+
+    if not isinstance(filter_, filter_type):
+        raise BadArgument(
+            f"The template filter name is {filter_.name!r}, but the target filter is {filter_type.name!r}"
+        )
     return filter_serializable_overrides(filter_)

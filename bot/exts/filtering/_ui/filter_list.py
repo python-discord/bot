@@ -24,7 +24,11 @@ def settings_converter(loaded_settings: dict, input_data: str) -> dict[str, Any]
     if not parsed:
         return {}
 
-    settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}
+    try:
+        settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}
+    except ValueError:
+        raise BadArgument("The settings provided are not in the correct format.")
+
     for setting in settings:
         if setting not in loaded_settings:
             raise BadArgument(f"{setting!r} is not a recognized setting.")

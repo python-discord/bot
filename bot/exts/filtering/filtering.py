@@ -26,8 +26,9 @@ from bot.exts.filtering._ui.filter import (
     build_filter_repr_dict, description_and_settings_converter, filter_serializable_overrides, populate_embed_from_dict
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
+from bot.exts.filtering._ui.search import SearchEditView, search_criteria_converter
 from bot.exts.filtering._ui.ui import ArgumentCompletionView, DeleteConfirmationView, format_response_error
-from bot.exts.filtering._utils import past_tense, starting_value, to_serializable
+from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.messages import format_channel, format_user
@@ -523,6 +524,63 @@ class Filtering(Cog):
         embed = Embed(colour=Colour.blue(), title="Match results")
         await LinePaginator.paginate(lines, ctx, embed, max_lines=10, empty=False)
 
+    @filter.command(name="search")
+    async def f_search(
+        self,
+        ctx: Context,
+        noui: Literal["noui"] | None,
+        filter_type_name: str | None,
+        *,
+        settings: str = ""
+    ) -> None:
+        """
+        Find filters with the provided settings. The format is identical to that of the add and edit commands.
+
+        If a list type and/or a list name are provided, the search will be limited to those parameters. A list name must
+        be provided in order to search by filter-specific settings.
+        """
+        filter_type = None
+        if filter_type_name:
+            filter_type_name = filter_type_name.lower()
+            filter_type = self.loaded_filters.get(filter_type_name)
+            if not filter_type:
+                self.loaded_filters.get(filter_type_name[:-1])  # In case the user tried to specify the plural form.
+        # If settings were provided with no filter_type, discord.py will capture the first word as the filter type.
+        if filter_type is None and filter_type_name is not None:
+            if settings:
+                settings = f"{filter_type_name} {settings}"
+            else:
+                settings = filter_type_name
+            filter_type_name = None
+
+        settings, filter_settings, filter_type = search_criteria_converter(
+            self.filter_lists,
+            self.loaded_filters,
+            self.loaded_settings,
+            self.loaded_filter_settings,
+            filter_type,
+            settings
+        )
+
+        if noui:
+            await self._search_filters(ctx.message, filter_type, settings, filter_settings)
+            return
+
+        embed = Embed(colour=Colour.blue())
+        view = SearchEditView(
+            filter_type,
+            settings,
+            filter_settings,
+            self.filter_lists,
+            self.loaded_filters,
+            self.loaded_settings,
+            self.loaded_filter_settings,
+            ctx.author,
+            embed,
+            self._search_filters
+        )
+        await ctx.send(embed=embed, reference=ctx.message, view=view)
+
     # endregion
     # region: filterlist group
 
@@ -787,7 +845,7 @@ class Filtering(Cog):
         embed = Embed(colour=Colour.blue())
         embed.set_author(name=f"List of {filter_list[list_type].label}s ({len(lines)} total)")
 
-        await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False)
+        await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
 
     def _get_filter_by_id(self, id_: int) -> Optional[tuple[Filter, FilterList, ListType]]:
         """Get the filter object corresponding to the provided ID, along with its containing list and list type."""
@@ -953,6 +1011,71 @@ class Filtering(Cog):
         filter_list.pop(list_type, None)
         filter_list.add_list(response)
         await msg.reply(f"✅ Edited filter list: {filter_list[list_type].label}")
+
+    def _filter_match_query(
+        self, filter_: Filter, settings_query: dict, filter_settings_query: dict, differ_by_default: set[str]
+    ) -> bool:
+        """Return whether the given filter matches the query."""
+        override_matches = set()
+        overrides, _ = filter_.overrides
+        for setting_name, setting_value in settings_query.items():
+            if setting_name not in overrides:
+                continue
+            if repr_equals(overrides[setting_name], setting_value):
+                override_matches.add(setting_name)
+            else:  # If an override doesn't match then the filter doesn't match.
+                return False
+        if not (differ_by_default <= override_matches):  # The overrides didn't cover for the default mismatches.
+            return False
+
+        filter_settings = filter_.extra_fields.dict() if filter_.extra_fields else {}
+        # If the dict changes then some fields were not the same.
+        return (filter_settings | filter_settings_query) == filter_settings
+
+    def _search_filter_list(
+        self, atomic_list: AtomicList, filter_type: type[Filter] | None, settings: dict, filter_settings: dict
+    ) -> list[Filter]:
+        """Find all filters in the filter list which match the settings."""
+        # If the default answers are known, only the overrides need to be checked for each filter.
+        all_defaults = atomic_list.defaults.dict()
+        match_by_default = set()
+        differ_by_default = set()
+        for setting_name, setting_value in settings.items():
+            if repr_equals(all_defaults[setting_name], setting_value):
+                match_by_default.add(setting_name)
+            else:
+                differ_by_default.add(setting_name)
+
+        result_filters = []
+        for filter_ in atomic_list.filters.values():
+            if filter_type and not isinstance(filter_, filter_type):
+                continue
+            if self._filter_match_query(filter_, settings, filter_settings, differ_by_default):
+                result_filters.append(filter_)
+
+        return result_filters
+
+    async def _search_filters(
+        self, message: Message, filter_type: type[Filter] | None, settings: dict, filter_settings: dict
+    ) -> None:
+        """Find all filters which match the settings and display them."""
+        lines = []
+        result_count = 0
+        for filter_list in self.filter_lists.values():
+            if filter_type and filter_type not in filter_list.filter_types:
+                continue
+            for atomic_list in filter_list.values():
+                list_results = self._search_filter_list(atomic_list, filter_type, settings, filter_settings)
+                if list_results:
+                    lines.append(f"**{atomic_list.label.title()}**")
+                    lines.extend(map(str, list_results))
+                    lines.append("")
+                    result_count += len(list_results)
+
+        embed = Embed(colour=Colour.blue())
+        embed.set_author(name=f"Search Results ({result_count} total)")
+        ctx = await bot.instance.get_context(message)
+        await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
 
     # endregion
 

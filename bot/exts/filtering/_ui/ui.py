@@ -34,7 +34,7 @@ MAX_SELECT_ITEMS = 25
 MAX_EMBED_DESCRIPTION = 4000
 
 SETTINGS_DELIMITER = re.compile(r"\s+(?=\S+=\S+)")
-SINGLE_SETTING_PATTERN = re.compile(r"\w+=.+")
+SINGLE_SETTING_PATTERN = re.compile(r"[\w/]+=.+")
 
 # Sentinel value to denote that a value is missing
 MISSING = object()
@@ -76,7 +76,7 @@ def parse_value(value: str, type_: type[T]) -> T:
     if type_ in (tuple, list, set):
         return type_(value.split(","))
     if type_ is bool:
-        return value == "True"
+        return value.lower() == "true" or value == "1"
     if isinstance(type_, EnumMeta):
         return type_[value.upper()]
 

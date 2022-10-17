@@ -84,14 +84,14 @@ class AtomicList(NamedTuple):
 
         return relevant_filters
 
-    def default(self, setting: str) -> Any:
+    def default(self, setting_name: str) -> Any:
         """Get the default value of a specific setting."""
         missing = object()
-        value = self.defaults.actions.get_setting(setting, missing)
+        value = self.defaults.actions.get_setting(setting_name, missing)
         if value is missing:
-            value = self.defaults.validations.get_setting(setting, missing)
+            value = self.defaults.validations.get_setting(setting_name, missing)
             if value is missing:
-                raise ValueError(f"Couldn't find a setting named {setting!r}.")
+                raise ValueError(f"Couldn't find a setting named {setting_name!r}.")
         return value
 
 

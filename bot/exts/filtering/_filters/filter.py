@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -28,7 +28,7 @@ class Filter(FieldRequiring):
         self.description = filter_data["description"]
         self.actions, self.validations = create_settings(filter_data["settings"], defaults=defaults)
         if self.extra_fields_type:
-            self.extra_fields = self.extra_fields_type.parse_raw(filter_data["additional_field"])
+            self.extra_fields = self.extra_fields_type.parse_raw(filter_data["additional_field"] or "{}")  # noqa: P103
         else:
             self.extra_fields = None
 
@@ -52,7 +52,7 @@ class Filter(FieldRequiring):
         """Search for the filter's content within a given context."""
 
     @classmethod
-    def validate_filter_settings(cls, extra_fields: dict) -> tuple[bool, Optional[str]]:
+    def validate_filter_settings(cls, extra_fields: dict) -> tuple[bool, str | None]:
         """Validate whether the supplied fields are valid for the filter, and provide the error message if not."""
         if cls.extra_fields_type is None:
             return True, None
