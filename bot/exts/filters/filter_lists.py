@@ -1,18 +1,24 @@
+import datetime
 import re
+from collections import defaultdict
 from typing import Optional
 
+import arrow
+import discord
 from botcore.site_api import ResponseCodeError
-from discord import Colour, Embed
-from discord.ext.commands import BadArgument, Cog, Context, IDConverter, group, has_any_role
+from discord.ext import tasks
+from discord.ext.commands import BadArgument, Cog, Context, IDConverter, command, group, has_any_role
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels
+from bot.constants import Channels, Colours
 from bot.converters import ValidDiscordServerInvite, ValidFilterListType
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.channel import is_mod_channel
 
 log = get_logger(__name__)
+WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 
 
 class FilterLists(Cog):
@@ -33,6 +39,7 @@ class FilterLists(Cog):
     async def cog_load(self) -> None:
         """Add the valid FilterList types to the docstrings, so they'll appear in !help invocations."""
         await self.bot.wait_until_guild_available()
+        self.weekly_autoban_report_task.start()
 
         # Add valid filterlist types to the docstrings
         valid_types = await ValidFilterListType.get_valid_types(self.bot)
@@ -117,9 +124,9 @@ class FilterLists(Cog):
                 )
             raise
 
-        # If it is an autoban trigger we send a warning in #mod-meta
+        # If it is an autoban trigger we send a warning in #filter-log
         if comment and "[autoban]" in comment:
-            await self.bot.get_channel(Channels.mod_meta).send(
+            await self.bot.get_channel(Channels.filter_log).send(
                 f":warning: Heads-up! The new `{list_type}` filter "
                 f"`{content}` (`{comment}`) will automatically ban users."
             )
@@ -179,9 +186,9 @@ class FilterLists(Cog):
 
         # Build the embed
         list_type_plural = list_type.lower().replace("_", " ").title() + "s"
-        embed = Embed(
+        embed = discord.Embed(
             title=f"{allow_type.title()}ed {list_type_plural} ({len(result)} total)",
-            colour=Colour.blue()
+            colour=Colours.blue
         )
         log.trace(f"Trying to list {len(result)} items from the {list_type.lower()} {allow_type}")
 
@@ -287,9 +294,64 @@ class FilterLists(Cog):
         """Syncs both allowlists and denylists with the API."""
         await self._sync_data(ctx)
 
+    @command(name="filter_report")
+    async def force_send_weekly_report(self, ctx: Context) -> None:
+        """Respond with a list of autobans added in the last 7 days."""
+        await self.send_weekly_autoban_report(ctx.channel)
+
+    @tasks.loop(time=datetime.time(hour=18))
+    async def weekly_autoban_report_task(self) -> None:
+        """Trigger autoban report to be sent if it is the desired day of the week (WEEKLY_REPORT_ISO_DAY)."""
+        if arrow.utcnow().isoweekday() != WEEKLY_REPORT_ISO_DAY:
+            return
+
+        await self.send_weekly_autoban_report()
+
+    async def send_weekly_autoban_report(self, channel: discord.abc.Messageable = None) -> None:
+        """
+        Send a list of autobans added in the last 7 days to the specified channel.
+
+        If chanel is not specified, it is sent to #mod-meta.
+        """
+        seven_days_ago = arrow.utcnow().shift(days=-7)
+        if not channel:
+            channel = self.bot.get_channel(Channels.mod_meta)
+        elif not is_mod_channel(channel):
+            # Silently fail if output is going to be a non-mod channel.
+            return
+
+        added_autobans = defaultdict(list)
+        # Extract all autoban filters added in the past 7 days from each filter type
+        for filter_list, filters in self.bot.filter_list_cache.items():
+            filter_type, allow = filter_list.split(".")
+            allow_type = "Allow list" if allow.lower() == "true" else "Deny list"
+
+            for filter_content, filter_details in filters.items():
+                created_at = arrow.get(filter_details["created_at"])
+                updated_at = arrow.get(filter_details["updated_at"])
+                # Default to empty string so that the in check below doesn't error on None type
+                comment = filter_details["comment"] or ""
+                if max(created_at, updated_at) > seven_days_ago and "[autoban]" in comment:
+                    line = f"`{filter_content}`: {comment}"
+                    added_autobans[f"**{filter_type} {allow_type}**"].append(line)
+
+        # Nicely format the output so each filter list type is grouped
+        lines = [f"**Autoban filters added since {seven_days_ago.format('YYYY-MM-DD')}**"]
+        for filter_list, recently_added_autobans in added_autobans.items():
+            lines.append("\n".join([filter_list]+recently_added_autobans))
+
+        if len(lines) == 1:
+            lines.append("Nothing to show")
+
+        await channel.send("\n\n".join(lines))
+
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
+
+    async def cog_unload(self) -> None:
+        """Cancel the weekly autoban filter report on cog unload."""
+        self.weekly_autoban_report_task.cancel()
 
 
 async def setup(bot: Bot) -> None:
