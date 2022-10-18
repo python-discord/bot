@@ -9,52 +9,52 @@ license = "MIT"
 python = "3.10.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
-bot-core = { url = "https://github.com/python-discord/bot-core/archive/refs/tags/v8.0.0.zip", extras = ["async-rediscache"] }
+bot-core = { url = "https://github.com/python-discord/bot-core/archive/refs/tags/v8.2.1.zip", extras = ["async-rediscache"] }
 redis = "4.3.4"
-fakeredis = { version = "1.8.2", extras = ["lua"] }
+fakeredis = { version = "1.9.3", extras = ["lua"] }
 
-aiohttp = "3.8.1"
-arrow = "1.2.2"
+aiohttp = "3.8.3"
+arrow = "1.2.3"
 beautifulsoup4 = "4.11.1"
 colorama = { version = "0.4.5", markers = "sys_platform == 'win32'" }
 coloredlogs = "15.0.1"
 deepdiff = "5.8.1"
-emoji = "2.0.0"
+emoji = "2.1.0"
 feedparser = "6.0.10"
-rapidfuzz = "2.3.0"
 lxml = "4.9.1"
 
 # Must be kept on this version unless doc command output is fixed
 # See https://github.com/python-discord/bot/pull/2156
 markdownify = "0.6.1"
 
-more_itertools = "8.13.0"
+more-itertools = "8.14.0"
 python-dateutil = "2.8.2"
 python-frontmatter = "1.0.0"
 pyyaml = "6.0"
-regex = "2022.7.25"
-sentry-sdk = "1.8.0"
+rapidfuzz = "2.11.1"
+regex = "2022.9.13"
+sentry-sdk = "1.9.10"
 statsd = "3.3.0"
-tldextract = "3.3.1"
+tldextract = "3.4.0"
 
 [tool.poetry.dev-dependencies]
-coverage = "6.4.2"
-flake8 = "4.0.1"
-flake8-annotations = "2.9.0"
-flake8-bugbear = "22.7.1"
+coverage = "6.5.0"
+flake8 = "5.0.4"
+flake8-annotations = "2.9.1"
+flake8-bugbear = "22.9.23"
 flake8-docstrings = "1.6.0"
 flake8-string-format = "0.3.0"
 flake8-tidy-imports = "4.8.0"
 flake8-todo = "0.7"
-flake8-isort = "4.1.2.post0"
-pep8-naming = "0.13.1"
+flake8-isort = "5.0.0"
+pep8-naming = "0.13.2"
 pre-commit = "2.20.0"
-taskipy = "1.10.2"
 pip-licenses = "3.5.4"
-python-dotenv = "0.20.0"
-pytest = "7.1.2"
-pytest-cov = "3.0.0"
+pytest = "7.1.3"
+pytest-cov = "4.0.0"
+python-dotenv = "0.21.0"
 pytest-xdist = "2.5.0"
+taskipy = "1.10.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -85,3 +85,9 @@ case_sensitive = true
 combine_as_imports = true
 line_length = 120
 atomic = true
+
+[tool.pytest.ini_options]
+# We don't use nose style tests so disable them in pytest.
+# This stops pytest from running functions named `setup` in test files.
+# See https://github.com/python-discord/bot/pull/2229#issuecomment-1204436420
+addopts = "-p no:nose"
