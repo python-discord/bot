@@ -1,7 +1,9 @@
 from abc import ABCMeta
 from typing import Optional
+from urllib.parse import urlparse
 
 from discord.ext.commands import CogMeta
+from tldextract import extract
 
 
 class CogABCMeta(CogMeta, ABCMeta):  # noqa: B024 (Ignore abstract class with no abstract methods.)
@@ -30,3 +32,13 @@ def has_lines(string: str, count: int) -> bool:
 def pad_base64(data: str) -> str:
     """Return base64 `data` with padding characters to ensure its length is a multiple of 4."""
     return data + "=" * (-len(data) % 4)
+
+
+def remove_subdomain_from_url(url: str) -> str:
+    """Removes subdomains from a URL whilst preserving the original URL composition."""
+    parsed_url = urlparse(url)
+    extracted_url = extract(url)
+    # Eliminate subdomain by using the registered domain only
+    netloc = extracted_url.registered_domain
+    parsed_url = parsed_url._replace(netloc=netloc)
+    return parsed_url.geturl()
