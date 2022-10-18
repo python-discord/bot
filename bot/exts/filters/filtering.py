@@ -585,7 +585,7 @@ class Filtering(Cog):
         """
         text = self.clean_input(text)
 
-        # Remove backslashes to prevent escape character around fuckery like
+        # Remove backslashes to prevent escape character fuckaroundery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
