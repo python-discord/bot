@@ -119,9 +119,11 @@ class Reviewer:
         (more nominations = higher priority).
         For users with equal priority the oldest nomination will be reviewed first.
         """
+        now = datetime.now(timezone.utc)
+
         possible = []
         for user_id, user_data in self._pool.cache.items():
-            time_since_nomination = datetime.now(timezone.utc) - isoparse(user_data["inserted_at"])
+            time_since_nomination = now - isoparse(user_data["inserted_at"])
             if (
                 not user_data["reviewed"]
                 and time_since_nomination > MIN_NOMINATION_TIME
@@ -136,12 +138,12 @@ class Reviewer:
         max_entries = max(len(x[1]["entries"]) for x in possible)
 
         def sort_key(nomination: dict) -> float:
-            return self.score_nomination(nomination[1], oldest_date, max_entries)
+            return self.score_nomination(nomination[1], oldest_date, now, max_entries)
 
         return max(possible, key=sort_key)[0]
 
     @staticmethod
-    def score_nomination(nomination: dict, oldest_date: datetime, max_entries: int) -> float:
+    def score_nomination(nomination: dict, oldest_date: datetime, now: datetime, max_entries: int) -> float:
         """
         Scores a nomination based on age and number of nomination entries.
 
@@ -151,7 +153,6 @@ class Reviewer:
         entries_score = num_entries / max_entries
 
         nomination_date = isoparse(nomination["inserted_at"])
-        now = datetime.now(timezone.utc)
         age_score = (nomination_date - now) / (oldest_date - now)
 
         return entries_score * REVIEW_SCORE_WEIGHT + age_score
