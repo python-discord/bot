@@ -92,8 +92,8 @@ class Utils(Cog):
         Show the Zen of Python.
 
         Without any arguments, the full Zen will be produced.
-        If an integer is provided, the line with that index will be produced.
-        If a string is provided, the line which matches best will be produced.
+        If zen_rule_index is provided, the line with that index will be produced.
+        If only a string is provided, the line which matches best will be produced.
         """
         embed = Embed(
             colour=Colour.og_blurple(),
