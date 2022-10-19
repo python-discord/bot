@@ -126,8 +126,6 @@ class Infractions(InfractionScheduler, commands.Cog):
         infraction = await self.apply_ban(ctx, user, reason, duration_or_expiry=duration)
         if not infraction or not infraction.get("id"):
             # Ban was unsuccessful, quit early.
-            await ctx.send(":x: Failed to apply ban.")
-            log.error("Failed to apply ban to user %d", user.id)
             return
 
         # Calling commands directly skips discord.py's convertors, so we need to convert args manually.
@@ -340,14 +338,20 @@ class Infractions(InfractionScheduler, commands.Cog):
     # region: Remove infractions (un- commands)
 
     @command()
-    async def unmute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+    async def unmute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        *,
+        pardon_reason: t.Optional[str] = None
+    ) -> None:
         """Prematurely end the active mute infraction for the user."""
-        await self.pardon_infraction(ctx, "mute", user)
+        await self.pardon_infraction(ctx, "mute", user, pardon_reason)
 
     @command()
-    async def unban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+    async def unban(self, ctx: Context, user: UnambiguousMemberOrUser, *, pardon_reason: str) -> None:
         """Prematurely end the active ban infraction for the user."""
-        await self.pardon_infraction(ctx, "ban", user)
+        await self.pardon_infraction(ctx, "ban", user, pardon_reason)
 
     @command(aliases=("uvban",))
     async def unvoiceban(self, ctx: Context) -> None:
@@ -359,9 +363,15 @@ class Infractions(InfractionScheduler, commands.Cog):
         await ctx.send(":x: This command is not yet implemented. Maybe you meant to use `unvoicemute`?")
 
     @command(aliases=("uvmute",))
-    async def unvoicemute(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
+    async def unvoicemute(
+        self,
+        ctx: Context,
+        user: UnambiguousMemberOrUser,
+        *,
+        pardon_reason: t.Optional[str] = None
+    ) -> None:
         """Prematurely end the active voice mute infraction for the user."""
-        await self.pardon_infraction(ctx, "voice_mute", user)
+        await self.pardon_infraction(ctx, "voice_mute", user, pardon_reason)
 
     # endregion
     # region: Base apply functions

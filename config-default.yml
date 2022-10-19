@@ -178,6 +178,7 @@ guild:
 
         # Logs
         attachment_log:     &ATTACH_LOG     649243850006855680
+        filter_log:         &FILTER_LOG     1014943924185473094
         message_log:        &MESSAGE_LOG    467752170159079424
         mod_log:            &MOD_LOG        282638479504965634
         nomination_archive:                 833371042046148738
@@ -257,6 +258,7 @@ guild:
         - *MESSAGE_LOG
         - *MOD_LOG
         - *STAFF_VOICE
+        - *FILTER_LOG
 
     reminder_whitelist:
         - *BOT_CMD
@@ -297,6 +299,11 @@ guild:
 
         # Streaming
         video:          764245844798079016
+
+        # Patreon
+        patreon_tier_1: 505040943800516611
+        patreon_tier_2: 743399725914390631
+        patreon_tier_3: 743400204367036520
 
     moderation_roles:
         - *ADMINS_ROLE

@@ -5,14 +5,18 @@ from datetime import datetime, timezone
 from operator import itemgetter
 
 import discord
+from botcore.site_api import ResponseCodeError
 from botcore.utils import scheduling
 from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import (
+    Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+)
 from bot.converters import Duration, UnambiguousUser
+from bot.errors import LockedResourceError
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
@@ -364,8 +368,8 @@ class Reminders(Cog):
             expiry = time.format_relative(remind_at)
 
             mentions = ", ".join([
-                # Both Role and User objects have the `name` attribute
-                mention.name async for mention in self.get_mentionables(mentions)
+                # Both Role and User objects have the `mention` attribute
+                f"{mentionable.mention} ({mentionable})" async for mentionable in self.get_mentionables(mentions)
             ])
             mention_string = f"\n**Mentions:** {mentions}" if mentions else ""
 
@@ -393,7 +397,6 @@ class Reminders(Cog):
             lines,
             ctx, embed,
             max_lines=3,
-            empty=True
         )
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
@@ -462,35 +465,80 @@ class Reminders(Cog):
         )
         await self._reschedule_reminder(reminder)
 
-    @remind_group.command("delete", aliases=("remove", "cancel"))
     @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
-    async def delete_reminder(self, ctx: Context, id_: int) -> None:
-        """Delete one of your active reminders."""
-        if not await self._can_modify(ctx, id_):
-            return
+    async def _delete_reminder(self, ctx: Context, id_: int) -> bool:
+        """Acquires a lock on `id_` and returns `True` if reminder is deleted, otherwise `False`."""
+        if not await self._can_modify(ctx, id_, send_on_denial=False):
+            return False
 
         await self.bot.api_client.delete(f"bot/reminders/{id_}")
         self.scheduler.cancel(id_)
+        return True
 
-        await self._send_confirmation(
-            ctx,
-            on_success="That reminder has been deleted successfully!",
-            reminder_id=id_
+    @remind_group.command("delete", aliases=("remove", "cancel"))
+    async def delete_reminder(self, ctx: Context, ids: Greedy[int]) -> None:
+        """Delete up to (and including) 5 of your active reminders."""
+        if len(ids) > 5:
+            await send_denial(ctx, "You can only delete a maximum of 5 reminders at once.")
+            return
+
+        deleted_ids = []
+        for id_ in set(ids):
+            try:
+                reminder_deleted = await self._delete_reminder(ctx, id_)
+            except LockedResourceError:
+                continue
+            else:
+                if reminder_deleted:
+                    deleted_ids.append(str(id_))
+
+        if deleted_ids:
+            colour = discord.Colour.green()
+            title = random.choice(POSITIVE_REPLIES)
+            deletion_message = f"Successfully deleted the following reminder(s): {', '.join(deleted_ids)}"
+
+            if len(deleted_ids) != len(ids):
+                deletion_message += (
+                    "\n\nThe other reminder(s) could not be deleted as they're either locked, "
+                    "belong to someone else, or don't exist."
+                )
+        else:
+            colour = discord.Colour.red()
+            title = random.choice(NEGATIVE_REPLIES)
+            deletion_message = (
+                "Could not delete the reminder(s) as they're either locked, "
+                "belong to someone else, or don't exist."
+            )
+
+        embed = discord.Embed(
+            description=deletion_message,
+            colour=colour,
+            title=title
         )
+        await ctx.send(embed=embed)
 
-    async def _can_modify(self, ctx: Context, reminder_id: t.Union[str, int]) -> bool:
+    async def _can_modify(self, ctx: Context, reminder_id: t.Union[str, int], send_on_denial: bool = True) -> bool:
         """
         Check whether the reminder can be modified by the ctx author.
 
         The check passes when the user is an admin, or if they created the reminder.
         """
+        try:
+            api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
+        except ResponseCodeError as e:
+            # Override error-handling so that a 404 message isn't sent to Discord when `send_on_denial` is `False`
+            if not send_on_denial:
+                if e.status == 404:
+                    return False
+            raise e
+
         if await has_any_role_check(ctx, Roles.admins):
             return True
 
-        api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
         if not api_response["author"] == ctx.author.id:
             log.debug(f"{ctx.author} is not the reminder author and does not pass the check.")
-            await send_denial(ctx, "You can't modify reminders of other users!")
+            if send_on_denial:
+                await send_denial(ctx, "You can't modify reminders of other users!")
             return False
 
         log.debug(f"{ctx.author} is the reminder author and passes the check.")

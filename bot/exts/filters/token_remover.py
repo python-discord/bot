@@ -29,7 +29,7 @@ DELETION_MESSAGE_TEMPLATE = (
     "token in your message and have removed your message. "
     "This means that your token has been **compromised**. "
     "Please change your token **immediately** at: "
-    "<https://discordapp.com/developers/applications/me>\n\n"
+    "<https://discord.com/developers/applications>\n\n"
     "Feel free to re-post it with the token removed. "
     "If you believe this was a mistake, please let us know!"
 )
@@ -39,8 +39,8 @@ TOKEN_EPOCH = 1_293_840_000
 # Three parts delimited by dots: user ID, creation timestamp, HMAC.
 # The HMAC isn't parsed further, but it's in the regex to ensure it at least exists in the string.
 # Each part only matches base64 URL-safe characters.
-# Padding has never been observed, but the padding character '=' is matched just in case.
-TOKEN_RE = re.compile(r"([\w\-=]+)\.([\w\-=]+)\.([\w\-=]+)", re.ASCII)
+# These regexes were taken from discord-developers, which are used by the client itself.
+TOKEN_RE = re.compile(r"([\w-]{10,})\.([\w-]{5,})\.([\w-]{10,})")
 
 
 class Token(t.NamedTuple):
@@ -52,7 +52,7 @@ class Token(t.NamedTuple):
 
 
 class TokenRemover(Cog):
-    """Scans messages for potential discord.py bot tokens and removes them."""
+    """Scans messages for potential discord client tokens and removes them."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -166,7 +166,7 @@ class TokenRemover(Cog):
                 return token
 
         # No matching substring
-        return
+        return None
 
     @staticmethod
     def extract_user_id(b64_content: str) -> t.Optional[int]:
