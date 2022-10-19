@@ -86,7 +86,8 @@ class Utils(Cog):
         await LinePaginator.paginate(char_list, ctx, embed, max_lines=10, max_size=2000, empty=False)
 
     @command()
-    async def zen(self, ctx: Context, *, search_value: Union[int, str, None] = None) -> None:
+    async def zen(self, ctx: Context, zen_rule_index: int | None,
+                  *, search_value: Union[int, str, None] = None) -> None:
         """
         Show the Zen of Python.
 
@@ -100,22 +101,23 @@ class Utils(Cog):
             description=ZEN_OF_PYTHON
         )
 
-        if search_value is None:
+        if zen_rule_index is None and search_value is None:
             embed.title += ", by Tim Peters"
             await ctx.send(embed=embed)
             return
 
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
-        # handle if it's an index int
-        if isinstance(search_value, int):
+        # Prioritize passing the zen rule index
+        if zen_rule_index is not None:
+
             upper_bound = len(zen_lines) - 1
             lower_bound = -1 * len(zen_lines)
-            if not (lower_bound <= search_value <= upper_bound):
+            if not (lower_bound <= zen_rule_index <= upper_bound):
                 raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
 
-            embed.title += f" (line {search_value % len(zen_lines)}):"
-            embed.description = zen_lines[search_value]
+            embed.title += f" (line {zen_rule_index % len(zen_lines)}):"
+            embed.description = zen_lines[zen_rule_index]
             await ctx.send(embed=embed)
             return
 
