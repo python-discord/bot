@@ -75,7 +75,7 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.CheckFailure):
             log.debug(debug_message)
             await self.handle_check_failure(ctx, e)
-        elif isinstance(e, errors.CommandOnCooldown):
+        elif isinstance(e, (errors.CommandOnCooldown, errors.MaxConcurrencyReached)):
             log.debug(debug_message)
             await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):
@@ -95,7 +95,7 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.DisabledCommand):
             log.debug(debug_message)
         else:
-            # MaxConcurrencyReached, ExtensionError
+            # ExtensionError
             await self.handle_unexpected_error(ctx, e)
 
     async def send_command_help(self, ctx: Context) -> None:
