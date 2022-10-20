@@ -86,8 +86,13 @@ class Utils(Cog):
         await LinePaginator.paginate(char_list, ctx, embed, max_lines=10, max_size=2000, empty=False)
 
     @command()
-    async def zen(self, ctx: Context, zen_rule_index: int | None,
-                  *, search_value: Union[int, str, None] = None) -> None:
+    async def zen(
+            self,
+            ctx: Context,
+            zen_rule_index: int | None,
+            *,
+            search_value: Union[int, str, None] = None
+    ) -> None:
         """
         Show the Zen of Python.
 
