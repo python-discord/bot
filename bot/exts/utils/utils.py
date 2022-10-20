@@ -1,7 +1,7 @@
 import difflib
 import re
 import unicodedata
-from typing import Tuple, Union
+from typing import Tuple
 
 from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
@@ -87,11 +87,11 @@ class Utils(Cog):
 
     @command()
     async def zen(
-            self,
-            ctx: Context,
-            zen_rule_index: int | None,
-            *,
-            search_value: Union[int, str, None] = None
+        self,
+        ctx: Context,
+        zen_rule_index: int | None,
+        *,
+        search_value: str | None = None
     ) -> None:
         """
         Show the Zen of Python.
