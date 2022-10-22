@@ -1,11 +1,18 @@
+import dataclasses
+import typing
 from abc import abstractmethod
+from collections import defaultdict
+from collections.abc import Iterable
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, NamedTuple
+from functools import reduce
+from operator import or_
+from typing import Any
 
 from discord.ext.commands import BadArgument
 
-from bot.exts.filtering._filter_context import FilterContext
-from bot.exts.filtering._filters.filter import Filter
+from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings, Defaults, create_settings
 from bot.exts.filtering._utils import FieldRequiring, past_tense
 from bot.log import get_logger
@@ -36,7 +43,8 @@ def list_type_converter(argument: str) -> ListType:
     raise BadArgument(f"No matching list type found for {argument!r}.")
 
 
-class AtomicList(NamedTuple):
+@dataclass(frozen=True)
+class AtomicList:
     """
     Represents the atomic structure of a single filter list as it appears in the database.
 
@@ -68,11 +76,16 @@ class AtomicList(NamedTuple):
 
         If the filter is relevant in context, see if it actually triggers.
         """
-        passed_by_default, failed_by_default = self.defaults.validations.evaluate(ctx)
+        return self._create_filter_list_result(ctx, self.defaults, self.filters.values())
+
+    @staticmethod
+    def _create_filter_list_result(ctx: FilterContext, defaults: Defaults, filters: Iterable[Filter]) -> list[Filter]:
+        """A helper function to evaluate the result of `filter_list_result`."""
+        passed_by_default, failed_by_default = defaults.validations.evaluate(ctx)
         default_answer = not bool(failed_by_default)
 
         relevant_filters = []
-        for filter_ in self.filters.values():
+        for filter_ in filters:
             if not filter_.validations:
                 if default_answer and filter_.triggered_on(ctx):
                     relevant_filters.append(filter_)
@@ -94,8 +107,36 @@ class AtomicList(NamedTuple):
                 raise ValueError(f"Couldn't find a setting named {setting_name!r}.")
         return value
 
+    def merge_actions(self, filters: list[Filter]) -> ActionSettings | None:
+        """
+        Merge the settings of the given filters, with the list's defaults as fallback.
 
-class FilterList(FieldRequiring, dict[ListType, AtomicList]):
+        If `merge_default` is True, include it in the merge instead of using it as a fallback.
+        """
+        try:
+            result = reduce(or_, (filter_.actions for filter_ in filters if filter_.actions))
+        except TypeError:  # The sequence fed to reduce is empty.
+            return None
+
+        return result.fallback_to(self.defaults.actions)
+
+    @staticmethod
+    def format_messages(triggers: list[Filter], *, expand_single_filter: bool = True) -> list[str]:
+        """Convert the filters into strings that can be added to the alert embed."""
+        if len(triggers) == 1 and expand_single_filter:
+            message = f"#{triggers[0].id} (`{triggers[0].content}`)"
+            if triggers[0].description:
+                message += f" - {triggers[0].description}"
+            messages = [message]
+        else:
+            messages = [f"#{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
+        return messages
+
+
+T = typing.TypeVar("T", bound=Filter)
+
+
+class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
     """Dispatches events to lists of _filters, and aggregates the responses into a single list of actions to take."""
 
     # Each subclass must define a name matching the filter_list name we're expecting to receive from the database.
@@ -110,39 +151,70 @@ class FilterList(FieldRequiring, dict[ListType, AtomicList]):
 
         filters = {}
         for filter_data in list_data["filters"]:
-            filters[filter_data["id"]] = self._create_filter(filter_data, defaults)
+            new_filter = self._create_filter(filter_data, defaults)
+            if new_filter:
+                filters[filter_data["id"]] = new_filter
 
         self[list_type] = AtomicList(list_data["id"], self.name, list_type, defaults, filters)
         return self[list_type]
 
-    def add_filter(self, list_type: ListType, filter_data: dict) -> Filter:
+    def add_filter(self, list_type: ListType, filter_data: dict) -> T | None:
         """Add a filter to the list of the specified type."""
         new_filter = self._create_filter(filter_data, self[list_type].defaults)
-        self[list_type].filters[filter_data["id"]] = new_filter
+        if new_filter:
+            self[list_type].filters[filter_data["id"]] = new_filter
         return new_filter
 
     @abstractmethod
-    def get_filter_type(self, content: str) -> type[Filter]:
+    def get_filter_type(self, content: str) -> type[T]:
         """Get a subclass of filter matching the filter list and the filter's content."""
 
     @property
     @abstractmethod
-    def filter_types(self) -> set[type[Filter]]:
+    def filter_types(self) -> set[type[T]]:
         """Return the types of filters used by this list."""
 
     @abstractmethod
     async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
 
-    def _create_filter(self, filter_data: dict, defaults: Defaults) -> Filter:
+    def _create_filter(self, filter_data: dict, defaults: Defaults) -> T | None:
         """Create a filter from the given data."""
         try:
             filter_type = self.get_filter_type(filter_data["content"])
-            new_filter = filter_type(filter_data, defaults)
+            if filter_type:
+                return filter_type(filter_data, defaults)
+            else:
+                return None
         except TypeError as e:
             log.warning(e)
-        else:
-            return new_filter
 
     def __hash__(self):
         return hash(id(self))
+
+
+@dataclass(frozen=True)
+class SubscribingAtomicList(AtomicList):
+    """
+    A base class for a list of unique filters.
+
+    Unique filters are ones that should only be run once in a given context.
+    Each unique filter is subscribed to a subset of events to respond to.
+    """
+
+    subscriptions: defaultdict[Event, list[Filter]] = dataclasses.field(default_factory=lambda: defaultdict(list))
+
+    def subscribe(self, filter_: UniqueFilter, *events: Event) -> None:
+        """
+        Subscribe a unique filter to the given events.
+
+        The filter is added to a list for each event. When the event is triggered, the filter context will be
+        dispatched to the subscribed filters.
+        """
+        for event in events:
+            if filter_ not in self.subscriptions[event]:
+                self.subscriptions[event].append(filter_)
+
+    def filter_list_result(self, ctx: FilterContext) -> list[Filter]:
+        """Sift through the list of filters, and return only the ones which apply to the given context."""
+        return self._create_filter_list_result(ctx, self.defaults, self.subscriptions[ctx.event])

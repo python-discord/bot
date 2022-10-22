@@ -954,8 +954,11 @@ class Filtering(Cog):
         }
         response = await bot.instance.api_client.post('bot/filter/filters', json=to_serializable(payload))
         new_filter = filter_list.add_filter(list_type, response)
-        extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
-        await msg.reply(f"✅ Added filter: {new_filter}" + extra_msg)
+        if new_filter:
+            extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
+            await msg.reply(f"✅ Added filter: {new_filter}" + extra_msg)
+        else:
+            await msg.reply(":x: Could not create the filter. Are you sure it's implemented?")
 
     @staticmethod
     async def _patch_filter(
@@ -990,6 +993,7 @@ class Filtering(Cog):
         response = await bot.instance.api_client.patch(
             f'bot/filter/filters/{filter_.id}', json=to_serializable(payload)
         )
+        # Return type can be None, but if it's being edited then it's not supposed to be.
         edited_filter = filter_list.add_filter(list_type, response)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)

@@ -1,9 +1,9 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any
 
 from pydantic import ValidationError
 
-from bot.exts.filtering._filter_context import FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._settings import Defaults, create_settings
 from bot.exts.filtering._utils import FieldRequiring
 
@@ -79,3 +79,13 @@ class Filter(FieldRequiring):
         if self.description:
             string += f" - {self.description}"
         return string
+
+
+class UniqueFilter(Filter, ABC):
+    """
+    Unique filters are ones that should only be run once in a given context.
+
+    This is as opposed to say running many domain filters on the same message.
+    """
+
+    events: tuple[Event, ...] = FieldRequiring.MUST_SET

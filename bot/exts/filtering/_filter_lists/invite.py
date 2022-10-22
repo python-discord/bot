@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import typing
-from functools import reduce
-from operator import or_
 
 from botcore.utils.regex import DISCORD_INVITE
 from discord import Embed, Invite
@@ -20,7 +18,7 @@ if typing.TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
 
 
-class InviteList(FilterList):
+class InviteList(FilterList[InviteFilter]):
     """
     A list of filters, each looking for guild invites to a specific guild.
 
@@ -52,10 +50,6 @@ class InviteList(FilterList):
 
     async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
-        _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
-        if failed:  # There's no invite filtering in this context.
-            return None, []
-
         text = clean_input(ctx.content)
 
         # Avoid escape characters
@@ -66,62 +60,73 @@ class InviteList(FilterList):
         if not invite_codes:
             return None, []
 
-        # Sort the invites into three categories:
-        denied_by_default = dict()  # Denied unless whitelisted.
-        allowed_by_default = dict()  # Allowed unless blacklisted (partnered or verified servers).
-        disallowed_invites = dict()  # Always denied (invalid invites).
+        _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
+        # If the allowed list doesn't operate in the context, unknown invites are allowed.
+        check_if_allowed = not failed
+
+        # Sort the invites into two categories:
+        invites_for_inspection = dict()  # Found guild invites requiring further inspection.
+        unknown_invites = dict()  # Either don't resolve or group DMs.
         for invite_code in invite_codes:
             try:
                 invite = await bot.instance.fetch_invite(invite_code)
             except NotFound:
-                disallowed_invites[invite_code] = None
+                if check_if_allowed:
+                    unknown_invites[invite_code] = None
             else:
-                if not invite.guild:
-                    disallowed_invites[invite_code] = invite
-                else:
-                    if "PARTNERED" in invite.guild.features or "VERIFIED" in invite.guild.features:
-                        allowed_by_default[invite_code] = invite
-                    else:
-                        denied_by_default[invite_code] = invite
+                if invite.guild:
+                    invites_for_inspection[invite_code] = invite
+                elif check_if_allowed:  # Group DM
+                    unknown_invites[invite_code] = invite
 
-        # Add the disallowed by default unless they're whitelisted.
-        guilds_for_inspection = {invite.guild.id for invite in denied_by_default.values()}
-        new_ctx = ctx.replace(content=guilds_for_inspection)
-        allowed = {
-            filter_.content for filter_ in self[ListType.ALLOW].filters.values() if filter_.triggered_on(new_ctx)
+        # Find any blocked invites
+        new_ctx = ctx.replace(content={invite.guild.id for invite in invites_for_inspection.values()})
+        triggered = self[ListType.DENY].filter_list_result(new_ctx)
+        blocked_guilds = {filter_.content for filter_ in triggered}
+        blocked_invites = {
+            code: invite for code, invite in invites_for_inspection.items() if invite.guild.id in blocked_guilds
         }
-        disallowed_invites.update({
-            invite_code: invite for invite_code, invite in denied_by_default.items() if invite.guild.id not in allowed
-        })
 
-        # Add the allowed by default only if they're blacklisted.
-        guilds_for_inspection = {invite.guild.id for invite in allowed_by_default.values()}
-        new_ctx = ctx.replace(content=guilds_for_inspection)
-        triggered = self[ListType.ALLOW].filter_list_result(new_ctx)
-        disallowed_invites.update({
-            invite_code: invite for invite_code, invite in allowed_by_default.items()
-            if invite.guild.id in {filter_.content for filter_ in triggered}
-        })
+        # Remove the ones which are already confirmed as blocked, or otherwise ones which are partnered or verified.
+        invites_for_inspection = {
+            code: invite for code, invite in invites_for_inspection.items()
+            if invite.guild.id not in blocked_guilds
+            and "PARTNERED" not in invite.guild.features and "VERIFIED" not in invite.guild.features
+        }
 
-        if not disallowed_invites:
+        # Remove any remaining invites which are allowed
+        guilds_for_inspection = {invite.guild.id for invite in invites_for_inspection.values()}
+
+        if check_if_allowed:  # Whether unknown invites need to be checked.
+            new_ctx = ctx.replace(content=guilds_for_inspection)
+            allowed = {
+                filter_.content for filter_ in self[ListType.ALLOW].filters.values() if filter_.triggered_on(new_ctx)
+            }
+            unknown_invites.update({
+                code: invite for code, invite in invites_for_inspection.items() if invite.guild.id not in allowed
+            })
+
+        if not triggered and not unknown_invites:
             return None, []
 
         actions = None
-        if len(disallowed_invites) > len(triggered):  # There are invites which weren't allowed but aren't blacklisted.
-            deny_defaults = self[ListType.DENY].defaults.actions
-            actions = reduce(
-                or_,
-                (
-                    filter_.actions.fallback_to(deny_defaults) if filter_.actions else deny_defaults
-                    for filter_ in triggered
-                ),
-                self[ListType.ALLOW].defaults.actions
-            )
-        elif triggered:
-            actions = reduce(or_, (filter_.actions for filter_ in triggered))
-        ctx.matches += {match[0] for match in matches if match.group("invite") in disallowed_invites}
-        ctx.alert_embeds += (self._guild_embed(invite) for invite in disallowed_invites.values() if invite)
-        return actions, [f"`{invite}`" for invite in disallowed_invites]
+        if unknown_invites:  # There are invites which weren't allowed but aren't explicitly blocked.
+            actions = self[ListType.ALLOW].defaults.actions
+        # Blocked invites come second so that their actions have preference.
+        if triggered:
+            if actions:
+                actions |= self[ListType.DENY].merge_actions(triggered)
+            else:
+                actions = self[ListType.DENY].merge_actions(triggered)
+
+        blocked_invites |= unknown_invites
+        ctx.matches += {match[0] for match in matches if match.group("invite") in blocked_invites}
+        ctx.alert_embeds += (self._guild_embed(invite) for invite in blocked_invites.values() if invite)
+        messages = self[ListType.DENY].format_messages(triggered)
+        messages += [
+            f"`{code} - {invite.guild.id}`" if invite else f"`{code}`" for code, invite in unknown_invites.items()
+        ]
+        return actions, messages
 
     @staticmethod
     def _guild_embed(invite: Invite) -> Embed:

@@ -16,7 +16,7 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 T = TypeVar('T')
 
 
-def subclasses_in_package(package: str, prefix: str, parent: type) -> set[type]:
+def subclasses_in_package(package: str, prefix: str, parent: T) -> set[T]:
     """Return all the subclasses of class `parent`, found in the top-level of `package`, given by absolute path."""
     subclasses = set()
 

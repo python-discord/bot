@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import re
 import typing
-from functools import reduce
-from operator import or_
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
@@ -18,7 +16,7 @@ if typing.TYPE_CHECKING:
 URL_RE = re.compile(r"https?://(\S+)", flags=re.IGNORECASE)
 
 
-class DomainsList(FilterList):
+class DomainsList(FilterList[DomainFilter]):
     """
     A list of filters, each looking for a specific domain given by URL.
 
@@ -59,18 +57,6 @@ class DomainsList(FilterList):
         actions = None
         messages = []
         if triggers:
-            action_defaults = self[ListType.DENY].defaults.actions
-            actions = reduce(
-                or_,
-                (filter_.actions.fallback_to(action_defaults) if filter_.actions else action_defaults
-                 for filter_ in triggers
-                 )
-            )
-            if len(triggers) == 1:
-                message = f"#{triggers[0].id} (`{triggers[0].content}`)"
-                if triggers[0].description:
-                    message += f" - {triggers[0].description}"
-                messages = [message]
-            else:
-                messages = [f"#{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
+            actions = self[ListType.DENY].merge_actions(triggers)
+            messages = self[ListType.DENY].format_messages(triggers)
         return actions, messages

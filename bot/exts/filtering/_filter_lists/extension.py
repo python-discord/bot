@@ -33,7 +33,7 @@ DISALLOWED_EMBED_DESCRIPTION = (
 )
 
 
-class ExtensionsList(FilterList):
+class ExtensionsList(FilterList[ExtensionFilter]):
     """
     A list of filters, each looking for a file attachment with a specific extension.
 
