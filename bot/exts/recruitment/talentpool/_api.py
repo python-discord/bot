@@ -89,5 +89,20 @@ class NominationAPI:
         reason: str,
     ) -> None:
         """Edit a nomination entry."""
-        data = {"actor_id": str(actor_id), "reason": reason}
+        data = {"actor": str(actor_id), "reason": reason}
         await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
+
+    async def post_nomination(
+        self,
+        user_id: int,
+        actor_id: int,
+        reason: str,
+    ) -> Nomination:
+        """Post a nomination to site."""
+        data = {
+            "actor": actor_id,
+            "reason": reason,
+            "user": user_id,
+        }
+        result = await self.site_api.post("bot/nominations", json=data)
+        return Nomination.parse_obj(result)

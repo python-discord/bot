@@ -10,7 +10,6 @@ from typing import List, Optional, Union
 
 from botcore.site_api import ResponseCodeError
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
-from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
@@ -68,7 +67,7 @@ class Reviewer:
         if not nomination:
             return False
 
-        await self.post_review(nomination, True)
+        await self.post_review(nomination)
         return True
 
     async def is_ready_for_review(self) -> bool:
@@ -121,7 +120,7 @@ class Reviewer:
         now = datetime.now(timezone.utc)
 
         possible: list[Nomination] = []
-        nominations = await self.api.get_nominations()
+        nominations = await self.api.get_nominations(active=True)
         for nomination in nominations:
             time_since_nomination = now - nomination.inserted_at
             if (
@@ -157,7 +156,7 @@ class Reviewer:
 
         return entries_score * REVIEW_SCORE_WEIGHT + age_score
 
-    async def post_review(self, nomination: Nomination, update_database: bool) -> None:
+    async def post_review(self, nomination: Nomination) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
         review, reviewed_emoji, nominee = await self.make_review(nomination)
         if not nominee:
@@ -181,8 +180,7 @@ class Reviewer:
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
-        if update_database:
-            await self.api.edit_nomination(nomination.id, reviewed=True)
+        await self.api.edit_nomination(nomination.id, reviewed=True)
 
         bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
         if bump_cog:
@@ -469,26 +467,3 @@ class Reviewer:
             results.append(await channel.send(message))
 
         return results
-
-    async def mark_reviewed(self, ctx: Context, user_id: int) -> bool:
-        """
-        Mark an active nomination as reviewed, updating the database and canceling the review task.
-
-        Returns True if the user was successfully marked as reviewed, False otherwise.
-        """
-        # TODO: Remove this function or update it
-        log.trace(f"Updating user {user_id} as reviewed")
-        await self._pool.refresh_cache()
-        if user_id not in self._pool.cache:
-            log.trace(f"Can't find a nominated user with id {user_id}")
-            await ctx.send(f":x: Can't find a currently nominated user with id `{user_id}`")
-            return False
-
-        nomination = self._pool.cache.get(user_id)
-        if nomination["reviewed"]:
-            await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
-            return False
-
-        await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
-
-        return True

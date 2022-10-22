@@ -234,29 +234,17 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
 
-        # Manual request with `raise_for_status` as False because we want the actual response
-        session = self.bot.api_client.session
-        url = self.bot.api_client._url_for('bot/nominations')
-        kwargs = {
-            'json': {
-                'actor': ctx.author.id,
-                'reason': reason,
-                'user': user.id
-            },
-            'raise_for_status': False,
-        }
-        async with session.post(url, **kwargs) as resp:
-            response_data = await resp.json()
-
-            if resp.status == 400:
-                if response_data.get('user', False):
+        try:
+            await self.api.post_nomination(user.id, ctx.author.id, reason)
+        except ResponseCodeError as err:
+            if err.status == 400:
+                if err.response_json.get("user", False):
                     await ctx.send(f":x: {user.mention} can't be found in the database tables.")
-                elif response_data.get('actor', False):
+                    return
+                elif err.response_json.get('actor', False):
                     await ctx.send(f":x: You have already nominated {user.mention}.")
-
-                return
-            else:
-                resp.raise_for_status()
+                    return
+            raise
 
         await ctx.send(f"✅ The nomination for {user.mention} has been added to the talent pool.")
 
@@ -264,7 +252,7 @@ class TalentPool(Cog, name="Talentpool"):
     @has_any_role(*MODERATION_ROLES)
     async def history_command(self, ctx: Context, user: MemberOrUser) -> None:
         """Shows the specified user's nomination history."""
-        result = await self.api.get_nominations(user_id=user.id, ordering="-active,-inserted_at")
+        result = await self.api.get_nominations(user.id, ordering="-active,-inserted_at")
 
         if not result:
             await ctx.send(f":warning: {user.mention} has never been nominated.")
@@ -425,21 +413,14 @@ class TalentPool(Cog, name="Talentpool"):
         await self.api.edit_nomination(nomination_id, end_reason=reason)
         await ctx.send(f":white_check_mark: Updated the nomination end reason for <@{nomination.user_id}>.")
 
-    @nomination_group.command(aliases=('mr',))
-    @has_any_role(*MODERATION_ROLES)
-    async def mark_reviewed(self, ctx: Context, user_id: int) -> None:
-        """Mark a user's nomination as reviewed and cancel the review task."""
-        if not await self.reviewer.mark_reviewed(ctx, user_id):
-            return
-        await ctx.send(f"{Emojis.check_mark} The user with ID `{user_id}` was marked as reviewed.")
-
     @nomination_group.command(aliases=('gr',))
     @has_any_role(*MODERATION_ROLES)
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
-        nominations = await self.api.get_nominations(user_id=user_id)
+        nominations = await self.api.get_nominations(user_id, active=True)
         if not nominations:
             await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
+            return
 
         review, _, _ = await self.reviewer.make_review(nominations[0])
         file = discord.File(StringIO(review), f"{user_id}_review.md")
@@ -449,10 +430,16 @@ class TalentPool(Cog, name="Talentpool"):
     @has_any_role(*MODERATION_ROLES)
     async def post_review(self, ctx: Context, user_id: int) -> None:
         """Post the automatic review for the user ahead of time."""
-        if not await self.reviewer.mark_reviewed(ctx, user_id):
+        nominations = await self.api.get_nominations(user_id, active=True)
+        if not nominations:
+            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
             return
 
-        await self.reviewer.post_review(user_id, update_database=False)
+        nomination = nominations[0]
+        if nomination.reviewed:
+            await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
+
+        await self.reviewer.post_review(nomination)
         await ctx.message.add_reaction(Emojis.check_mark)
 
     @Cog.listener()
@@ -485,7 +472,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def end_nomination(self, user_id: int, reason: str) -> bool:
         """End the active nomination of a user with the given reason and return True on success."""
-        active_nominations = await self.api.get_nominations(user_id=user_id)
+        active_nominations = await self.api.get_nominations(user_id, active=True)
 
         if not active_nominations:
             log.debug(f"No active nominate exists for {user_id=}")
