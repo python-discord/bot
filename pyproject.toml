@@ -36,6 +36,7 @@ regex = "2022.9.13"
 sentry-sdk = "1.9.10"
 statsd = "3.3.0"
 tldextract = "3.4.0"
+pydantic = "^1.10.2"
 
 [tool.poetry.dev-dependencies]
 coverage = "6.5.0"
