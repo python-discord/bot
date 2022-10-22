@@ -8,6 +8,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
+from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
 from dateutil.parser import isoparse
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
@@ -52,6 +53,11 @@ NOMINATION_MESSAGE_REGEX = re.compile(
 class Reviewer:
     """Manages, formats, and publishes reviews of helper nominees."""
 
+    # RedisCache[
+    #    "last_vote_date": float   | POSIX UTC timestamp.
+    # ]
+    status_cache = RedisCache()
+
     def __init__(self, bot: Bot, pool: 'TalentPool'):
         self.bot = bot
         self._pool = pool
@@ -82,22 +88,24 @@ class Reviewer:
         """
         voting_channel = self.bot.get_channel(Channels.nomination_voting)
 
+        last_vote_timestamp = await self.status_cache.get("last_vote_date")
+        if last_vote_timestamp:
+            last_vote_date = datetime.fromtimestamp(last_vote_timestamp, tz=timezone.utc)
+            time_since_last_vote = datetime.now(timezone.utc) - last_vote_date
+
+            if time_since_last_vote < MIN_REVIEW_INTERVAL:
+                log.debug("Most recent review was less than %s ago, cancelling check", MIN_REVIEW_INTERVAL)
+                return False
+        else:
+            log.info("Date of last vote not found in cache, a vote may be sent early")
+
         review_count = 0
-        is_first_message = True
         async for msg in voting_channel.history():
             # Try and filter out any non-review messages. We also only want to count
             # one message from reviews split over multiple messages. We use fixed text
             # from the start as any later text could be split over messages.
             if not msg.author.bot or "for Helper!" not in msg.content:
                 continue
-
-            if is_first_message:
-                time_since_message_created = datetime.now(timezone.utc) - msg.created_at
-                if time_since_message_created < MIN_REVIEW_INTERVAL:
-                    log.debug("Most recent review was less than %s ago, cancelling check", MIN_REVIEW_INTERVAL)
-                    return False
-
-                is_first_message = False
 
             review_count += 1
 
@@ -180,6 +188,9 @@ class Reviewer:
             name=f"Nomination - {nominee}",
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
+
+        now = datetime.now(tz=timezone.utc)
+        await self.status_cache.set("last_vote_date", now.timestamp())
 
         if update_database:
             nomination = self._pool.cache.get(user_id)
