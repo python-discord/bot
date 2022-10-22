@@ -149,7 +149,7 @@ class InfractionAndNotification(ActionEntry):
                 await ctx.author.send(dm_content, embed=dm_embed)
                 ctx.action_descriptions.append("notified")
             except Forbidden:
-                ctx.action_descriptions.append("notified (failed)")
+                ctx.action_descriptions.append("failed to notify")
 
         if self.infraction_type is not None:
             await self.infraction_type.invoke(

@@ -1,4 +1,3 @@
-from contextlib import suppress
 from typing import ClassVar
 
 from discord.errors import NotFound
@@ -25,9 +24,12 @@ class DeleteMessages(ActionEntry):
         if not ctx.message.guild:
             return
 
-        with suppress(NotFound):
+        try:
             await ctx.message.delete()
-        ctx.action_descriptions.append("deleted")
+        except NotFound:
+            ctx.action_descriptions.append("failed to delete")
+        else:
+            ctx.action_descriptions.append("deleted")
 
     def __or__(self, other: ActionEntry):
         """Combines two actions of the same type. Each type of action is executed once per filter."""

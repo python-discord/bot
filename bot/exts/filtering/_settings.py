@@ -193,9 +193,18 @@ class ActionSettings(Settings[ActionEntry]):
         return result
 
     async def action(self, ctx: FilterContext) -> None:
-        """Execute the action of every action entry stored."""
+        """Execute the action of every action entry stored, as well as any additional actions in the context."""
         for entry in self.values():
             await entry.action(ctx)
+
+        _i = len(ctx.additional_actions)
+        try:
+            for _i, action in enumerate(ctx.additional_actions):
+                await action
+        except Exception:
+            for action in ctx.additional_actions[_i+1:]:
+                action.close()
+            raise
 
     def fallback_to(self, fallback: ActionSettings) -> ActionSettings:
         """Fill in missing entries from `fallback`."""

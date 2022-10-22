@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Coroutine
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 from typing import Optional, Union
@@ -34,6 +35,7 @@ class FilterContext:
     action_descriptions: list = field(default_factory=list)  # What actions were taken
     matches: list = field(default_factory=list)  # What exactly was found
     notification_domain: str = field(default_factory=str)  # A domain to send the user for context
+    additional_actions: list[Coroutine] = field(default_factory=list)  # Additional actions to perform
 
     def replace(self, **changes) -> FilterContext:
         """Return a new context object assigning new values to the specified fields."""
