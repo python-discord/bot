@@ -524,22 +524,24 @@ class Information(Cog):
         await self.send_raw_content(ctx, message, json=True)
 
     async def _set_rules_command_help(self) -> None:
-        help_string = """
-        Provides a link to all rules or, if specified, displays specific rule(s).\n
-        It accepts either rule numbers or particular keywords that map to a particular rule.\n
-        Rule numbers and keywords can be sent in any order.\n\n
-        Available keywords per rule:\n
-        """
+        help_string = f"{self.rules.help}\n\n"
+        help_string += "__Available keywords per rule__:\n\n"
 
         full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
 
         for index, (_, keywords) in enumerate(full_rules, start=1):
             help_string += f"**Rule n°{index}**: {', '.join(keywords)}\n\n"
 
-        self._rules.help = help_string
+        self.rules.help = help_string
 
     @command(aliases=("rule",))
-    async def _rules(self, ctx: Context, *args: Optional[str]) -> Optional[Set[int]]:
+    async def rules(self, ctx: Context, *args: Optional[str]) -> Optional[Set[int]]:
+        """
+        Provides a link to all rules or, if specified, displays specific rule(s).
+
+        It accepts either rule numbers or particular keywords that map to a particular rule.
+        Rule numbers and keywords can be sent in any order.
+        """
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
         keywords, rule_numbers = [], []
 
