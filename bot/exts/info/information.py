@@ -523,14 +523,23 @@ class Information(Cog):
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await self.send_raw_content(ctx, message, json=True)
 
-    @command(aliases=("rule",))
-    async def rules(self, ctx: Context, *args: Optional[str]) -> Optional[Set[int]]:
+    async def _set_rules_command_help(self) -> None:
+        help_string = """
+        Provides a link to all rules or, if specified, displays specific rule(s).\n
+        It accepts either rule numbers or particular keywords that map to a particular rule.\n
+        Rule numbers and keywords can be sent in any order.\n\n
+        Available keywords per rule:\n
         """
-        Provides a link to all rules or, if specified, displays specific rule(s).
 
-        It accepts either rule numbers or particular keywords that map to a particular rule.
-        Rule numbers and keywords can be sent in any order.
-        """
+        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+
+        for index, (_, keywords) in enumerate(full_rules, start=1):
+            help_string += f"**Rule n°{index}**: {', '.join(keywords)}\n\n"
+
+        self._rules.help = help_string
+
+    @command(aliases=("rule",))
+    async def _rules(self, ctx: Context, *args: Optional[str]) -> Optional[Set[int]]:
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
         keywords, rule_numbers = [], []
 
@@ -578,7 +587,12 @@ class Information(Cog):
 
         return final_rule_numbers
 
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self._set_rules_command_help()
+
 
 async def setup(bot: Bot) -> None:
     """Load the Information cog."""
     await bot.add_cog(Information(bot))
+    log.info("Cog loaded: Information")
