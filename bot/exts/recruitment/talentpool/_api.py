@@ -67,7 +67,7 @@ class NominationAPI:
         reviewed: bool | None = None,
     ) -> Nomination:
         """
-        Edit a nomination entry.
+        Edit a nomination.
 
         Passing a value of `None` indicates it shouldn't be updated.
         """

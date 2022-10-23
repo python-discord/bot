@@ -119,7 +119,7 @@ class Reviewer:
         """
         now = datetime.now(timezone.utc)
 
-        possible: list[Nomination] = []
+        possible_nominations: list[Nomination] = []
         nominations = await self.api.get_nominations(active=True)
         for nomination in nominations:
             time_since_nomination = now - nomination.inserted_at
@@ -127,19 +127,19 @@ class Reviewer:
                 not nomination.reviewed
                 and time_since_nomination > MIN_NOMINATION_TIME
             ):
-                possible.append(nomination)
+                possible_nominations.append(nomination)
 
-        if not possible:
+        if not possible_nominations:
             log.debug("No users ready to review.")
             return None
 
-        oldest_date = min(nom.inserted_at for nom in possible)
-        max_entries = max(len(nom.entries) for nom in possible)
+        oldest_date = min(nomination.inserted_at for nomination in possible_nominations)
+        max_entries = max(len(nomination.entries) for nomination in possible_nominations)
 
         def sort_key(nomination: Nomination) -> float:
             return self.score_nomination(nomination, oldest_date, now, max_entries)
 
-        return max(possible, key=sort_key)
+        return max(possible_nominations, key=sort_key)
 
     @staticmethod
     def score_nomination(nomination: Nomination, oldest_date: datetime, now: datetime, max_entries: int) -> float:

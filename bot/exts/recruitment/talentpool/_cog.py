@@ -236,12 +236,12 @@ class TalentPool(Cog, name="Talentpool"):
 
         try:
             await self.api.post_nomination(user.id, ctx.author.id, reason)
-        except ResponseCodeError as err:
-            if err.status == 400:
-                if err.response_json.get("user", False):
+        except ResponseCodeError as e:
+            match (e.status, e.response_json):
+                case (400, {"user": _}):
                     await ctx.send(f":x: {user.mention} can't be found in the database tables.")
                     return
-                elif err.response_json.get('actor', False):
+                case (400, {"actor": _}):
                     await ctx.send(f":x: You have already nominated {user.mention}.")
                     return
             raise
@@ -351,6 +351,7 @@ class TalentPool(Cog, name="Talentpool"):
         if len(reason) > REASON_MAX_CHARS:
             await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
+
         if isinstance(target, int):
             nomination_id = target
         else:
@@ -361,27 +362,20 @@ class TalentPool(Cog, name="Talentpool"):
                 await ctx.send(f":x: {target.mention} doesn't have an active nomination.")
                 return
 
-        try:
-            nomination = await self.api.get_nomination(nomination_id)
-        except ResponseCodeError as e:
-            if e.response.status == 404:
-                log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
-                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
-                return
-            else:
-                raise
-
-        if not nomination.active:
-            await ctx.send(f":x: <@{nomination.user_id}> doesn't have an active nomination.")
-            return
-
-        if not any(entry.actor_id == actor.id for entry in nomination.entries):
-            await ctx.send(f":x: {actor.mention} doesn't have an entry in this nomination.")
-            return
-
         log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {repr(reason)}")
 
-        await self.api.edit_nomination_entry(nomination_id, actor_id=actor.id, reason=reason)
+        try:
+            nomination = await self.api.edit_nomination_entry(nomination_id, actor_id=actor.id, reason=reason)
+        except ResponseCodeError as e:
+            match (e.status, e.response_json):
+                case (400, {"actor": _}):
+                    await ctx.send(f":x: {actor.mention} doesn't have an entry in this nomination.")
+                    return
+                case (404, _):
+                    await ctx.send(f":x: Can't find a nomination with id `{target}`.")
+                    return
+            raise
+
         await ctx.send(f":white_check_mark: Updated the nomination reason for <@{nomination.user_id}>.")
 
     @nomination_edit_group.command(name='end_reason')
@@ -392,25 +386,19 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
 
-        try:
-            nomination = await self.api.get_nomination(nomination_id)
-        except ResponseCodeError as e:
-            if e.response.status == 404:
-                log.trace(f"Nomination API 404: Can't find a nomination with id {nomination_id}")
-                await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
-                return
-            else:
-                raise
-
-        if nomination.active:
-            await ctx.send(
-                f":x: Can't edit the nomination end reason for <@{nomination.user_id}> because it's still active."
-            )
-            return
-
         log.trace(f"Changing end reason for nomination with id {nomination_id} to {repr(reason)}")
+        try:
+            nomination = await self.api.edit_nomination(nomination_id, end_reason=reason)
+        except ResponseCodeError as e:
+            match (e.status, e.response_json):
+                case (400, {"end_reason": _}):
+                    await ctx.send(f":x: Can't edit nomination with id `{nomination_id}` because it's still active.")
+                    return
+                case (404, _):
+                    await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
+                    return
+            raise
 
-        await self.api.edit_nomination(nomination_id, end_reason=reason)
         await ctx.send(f":white_check_mark: Updated the nomination end reason for <@{nomination.user_id}>.")
 
     @nomination_group.command(aliases=('gr',))
@@ -500,10 +488,8 @@ class TalentPool(Cog, name="Talentpool"):
 
         entries_string = "\n\n".join(entries)
 
-        active = nomination.active
-
         start_date = time.discord_timestamp(nomination.inserted_at)
-        if active:
+        if nomination.active:
             lines = textwrap.dedent(
                 f"""
                 ===============
