@@ -19,7 +19,7 @@ class Nomination(BaseModel):
     active: bool
     user_id: int = Field(alias="user")
     inserted_at: datetime
-    end_reason: str | None
+    end_reason: str
     ended_at: datetime | None
     entries: list[NominationEntry]
     reviewed: bool
@@ -35,7 +35,7 @@ class NominationAPI:
         self,
         user_id: int | None = None,
         active: bool | None = None,
-        ordering: str = '-inserted_at'
+        ordering: str = "-inserted_at"
     ) -> list[Nomination]:
         """
         Fetch a list of nominations.
@@ -48,7 +48,7 @@ class NominationAPI:
         if user_id is not None:
             params["user__id"] = str(user_id)
 
-        data = await self.site_api.get('bot/nominations', params=params)
+        data = await self.site_api.get("bot/nominations", params=params)
         nominations = parse_obj_as(list[Nomination], data)
         return nominations
 
@@ -65,7 +65,7 @@ class NominationAPI:
         end_reason: str | None = None,
         active: bool | None = None,
         reviewed: bool | None = None,
-    ) -> None:
+    ) -> Nomination:
         """
         Edit a nomination entry.
 
@@ -75,11 +75,12 @@ class NominationAPI:
         if end_reason is not None:
             data["end_reason"] = end_reason
         if active is not None:
-            data["active"] = str(active)
+            data["active"] = active
         if reviewed is not None:
-            data["reviewed"] = str(reviewed)
+            data["reviewed"] = reviewed
 
-        await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
+        result = await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
+        return Nomination.parse_obj(result)
 
     async def edit_nomination_entry(
         self,
@@ -87,10 +88,11 @@ class NominationAPI:
         *,
         actor_id: int,
         reason: str,
-    ) -> None:
+    ) -> Nomination:
         """Edit a nomination entry."""
-        data = {"actor": str(actor_id), "reason": reason}
-        await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
+        data = {"actor": actor_id, "reason": reason}
+        result = await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
+        return Nomination.parse_obj(result)
 
     async def post_nomination(
         self,

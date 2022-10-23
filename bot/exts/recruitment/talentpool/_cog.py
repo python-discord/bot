@@ -152,7 +152,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         The optional kwarg `oldest_first` orders the list by oldest entry.
         """
-        nominations = await self.api.get_nominations()
+        nominations = await self.api.get_nominations(active=True)
         if oldest_first:
             nominations = reversed(nominations)
 
@@ -182,8 +182,8 @@ class TalentPool(Cog, name="Talentpool"):
     @nomination_group.command(name='oldest')
     @has_any_role(*MODERATION_ROLES)
     async def oldest_command(self, ctx: Context) -> None:
-        """Shows talent pool users ordered by oldest nomination."""
-        await ctx.invoke(self.list_command, oldest_first=True)
+        """Shows the users that are currently in the talent pool, ordered by oldest nomination."""
+        await self.list_nominated_users(ctx, oldest_first=True)
 
     @nomination_group.command(
         name="forcenominate",
@@ -419,7 +419,7 @@ class TalentPool(Cog, name="Talentpool"):
         """Get the user's review as a markdown file."""
         nominations = await self.api.get_nominations(user_id, active=True)
         if not nominations:
-            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
+            await ctx.send(f":x: There doesn't appear to be an active nomination for {user_id}")
             return
 
         review, _, _ = await self.reviewer.make_review(nominations[0])
@@ -432,12 +432,13 @@ class TalentPool(Cog, name="Talentpool"):
         """Post the automatic review for the user ahead of time."""
         nominations = await self.api.get_nominations(user_id, active=True)
         if not nominations:
-            await ctx.send(f"There doesn't appear to be an active nomination for {user_id}")
+            await ctx.send(f":x: There doesn't appear to be an active nomination for {user_id}")
             return
 
         nomination = nominations[0]
         if nomination.reviewed:
             await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
+            return
 
         await self.reviewer.post_review(nomination)
         await ctx.message.add_reaction(Emojis.check_mark)
@@ -475,7 +476,7 @@ class TalentPool(Cog, name="Talentpool"):
         active_nominations = await self.api.get_nominations(user_id, active=True)
 
         if not active_nominations:
-            log.debug(f"No active nominate exists for {user_id=}")
+            log.debug(f"No active nomination exists for {user_id=}")
             return False
 
         log.info(f"Ending nomination: {user_id=} {reason=}")
@@ -537,4 +538,4 @@ class TalentPool(Cog, name="Talentpool"):
         """Cancels the autoreview loop on cog unload."""
         # Only cancel the loop task when the autoreview code is not running
         async with self.autoreview_lock:
-            self.autoreview_loop_lock.cancel()
+            self.autoreview_loop.cancel()
