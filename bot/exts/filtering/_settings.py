@@ -197,14 +197,8 @@ class ActionSettings(Settings[ActionEntry]):
         for entry in self.values():
             await entry.action(ctx)
 
-        _i = len(ctx.additional_actions)
-        try:
-            for _i, action in enumerate(ctx.additional_actions):
-                await action
-        except Exception:
-            for action in ctx.additional_actions[_i+1:]:
-                action.close()
-            raise
+        for action in ctx.additional_actions:
+            await action(ctx)
 
     def fallback_to(self, fallback: ActionSettings) -> ActionSettings:
         """Fill in missing entries from `fallback`."""
