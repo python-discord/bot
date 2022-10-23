@@ -420,6 +420,7 @@ class Channels(metaclass=YAMLGetter):
     how_to_get_help: int
 
     attachment_log: int
+    filter_log: int
     message_log: int
     mod_log: int
     nomination_archive: int
@@ -514,6 +515,10 @@ class Roles(metaclass=YAMLGetter):
     project_leads: int
 
     jammers: int
+
+    patreon_tier_1: int
+    patreon_tier_2: int
+    patreon_tier_3: int
 
 
 class Guild(metaclass=YAMLGetter):

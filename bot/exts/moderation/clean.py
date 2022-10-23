@@ -1,4 +1,5 @@
 import contextlib
+import itertools
 import re
 import time
 from collections import defaultdict
@@ -130,7 +131,7 @@ class Clean(Cog):
         else:
             if channels == "*":
                 channels = {
-                    channel for channel in ctx.guild.channels + ctx.guild.threads
+                    channel for channel in itertools.chain(ctx.guild.channels, ctx.guild.threads)
                     if isinstance(channel, (TextChannel, Thread))
                     # Assume that non-public channels are not needed to optimize for speed.
                     and channel.permissions_for(ctx.guild.default_role).view_channel
