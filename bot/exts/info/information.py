@@ -597,4 +597,3 @@ class Information(Cog):
 async def setup(bot: Bot) -> None:
     """Load the Information cog."""
     await bot.add_cog(Information(bot))
-    log.info("Cog loaded: Information")
