@@ -530,7 +530,7 @@ class Information(Cog):
         full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
 
         for index, (_, keywords) in enumerate(full_rules, start=1):
-            help_string += f"**Rule n°{index}**: {', '.join(keywords)}\n\n"
+            help_string += f"**Rule {index}**: {', '.join(keywords)}\n\n"
 
         self.rules.help = help_string
 
