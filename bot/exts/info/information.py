@@ -524,7 +524,7 @@ class Information(Cog):
         await self.send_raw_content(ctx, message, json=True)
 
     @command(aliases=("rule",))
-    async def rules(self, ctx: Context, arg: Optional[str]) -> Optional[Set[int]]:
+    async def rules(self, ctx: Context, args: Optional[str]) -> Optional[Set[int]]:
         """
         Provides a link to all rules or, if specified, displays specific rule(s).
 
@@ -532,7 +532,8 @@ class Information(Cog):
         Rule numbers and keywords can be sent in any order.
         """
         # Temporary fix for discord.py greedy string quote conversion bug
-        args = (arg or "",)
+        if not args:
+            args = ("",)
 
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
         keywords, rule_numbers = [], []
