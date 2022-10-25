@@ -542,7 +542,7 @@ class Information(Cog):
                 keyword_to_rule_number[rule_keyword] = rule_number
 
         if args:
-            for word in args.split():
+            for word in args.split(maxsplit=100):
                 try:
                     rule_numbers.append(int(word))
                 except ValueError:
