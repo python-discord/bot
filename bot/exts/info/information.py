@@ -531,9 +531,6 @@ class Information(Cog):
         It accepts either rule numbers or particular keywords that map to a particular rule.
         Rule numbers and keywords can be sent in any order.
         """
-        # Note: *args cannot be used due to a discord.py bug
-        # causing infinite loops during greedy string parsing.
-
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
         keywords, rule_numbers = [], []
 
