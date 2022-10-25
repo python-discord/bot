@@ -603,9 +603,9 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_return_none_if_one_rule_number_is_invalid(self):
 
         test_cases = [
-            (('1', '6', '7', '8'), (6, 7, 8)),
-            (('10', "first"), (10, )),
-            (("first", 10), (10, ))
+            ("1 6 7 8", (6, 7, 8)),
+            ("10 first", (10,)),
+            ("first 10", (10,))
         ]
 
         for raw_user_input, extracted_rule_numbers in test_cases:
@@ -614,7 +614,7 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
                     str(rule_number) for rule_number in extracted_rule_numbers
                     if rule_number < 1 or rule_number > len(self.full_rules))
 
-                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, args=raw_user_input)
 
                 self.assertEqual(
                     self.ctx.send.call_args,
@@ -624,26 +624,26 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_return_correct_rule_numbers(self):
 
         test_cases = [
-            (("1", "2", "first"), {1, 2}),
-            (("1", "hello", "2", "second"), {1}),
-            (("second", "third", "unknown", "999"), {2, 3})
+            ("1 2 first", {1, 2}),
+            ("1 hello 2 second", {1}),
+            ("second third unknown 999", {2, 3})
         ]
 
         for raw_user_input, expected_matched_rule_numbers in test_cases:
             with self.subTest(identifier=raw_user_input):
-                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, args=raw_user_input)
                 self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
 
     async def test_return_default_rules_when_no_input_or_no_match_are_found(self):
         test_cases = [
-            ((), None),
-            (("hello", "2", "second"), None),
-            (("hello", "999"), None),
+            ("", None),
+            ("hello 2 second", None),
+            ("hello 999", None),
         ]
 
         for raw_user_input, expected_matched_rule_numbers in test_cases:
             with self.subTest(identifier=raw_user_input):
-                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, *raw_user_input)
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, args=raw_user_input)
                 embed = self.ctx.send.call_args.kwargs['embed']
                 self.assertEqual(information.DEFAULT_RULES_DESCRIPTION, embed.description)
                 self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
