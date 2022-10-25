@@ -546,9 +546,8 @@ class Information(Cog):
                 try:
                     rule_numbers.append(int(word))
                 except ValueError:
-                    if (kw := word.lower()) not in keyword_to_rule_number:
-                        break
-                    keywords.append(kw)
+                    if (kw := word.lower()) in keyword_to_rule_number:
+                        keywords.append(kw)
 
         if not rule_numbers and not keywords:
             # Neither rules nor keywords were submitted. Return the default description.
