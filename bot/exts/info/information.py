@@ -533,7 +533,13 @@ class Information(Cog):
         """
         # Temporary fix for discord.py greedy string quote conversion bug
         if not args:
-            args = ("",)
+            args = ()
+        elif isinstance(args, str):
+            msg = ctx.message.content
+            # Remove the command
+            if len(msg := msg.split()) > 1:
+                msg.pop(0)
+            args = tuple(msg)
 
         rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
         keywords, rule_numbers = [], []
