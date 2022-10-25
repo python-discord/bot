@@ -625,8 +625,8 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
 
         test_cases = [
             ("1 2 first", {1, 2}),
-            ("1 hello 2 second", {1}),
-            ("second third unknown 999", {2, 3})
+            ("1 hello 2 second", {1, 2}),
+            ("second third unknown 999", None)
         ]
 
         for raw_user_input, expected_matched_rule_numbers in test_cases:
@@ -637,8 +637,7 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_return_default_rules_when_no_input_or_no_match_are_found(self):
         test_cases = [
             ("", None),
-            ("hello 2 second", None),
-            ("hello 999", None),
+            ("hello abc", None),
         ]
 
         for raw_user_input, expected_matched_rule_numbers in test_cases:
