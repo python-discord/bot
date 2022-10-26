@@ -202,7 +202,7 @@ class SubscribingAtomicList(AtomicList):
     Each unique filter is subscribed to a subset of events to respond to.
     """
 
-    subscriptions: defaultdict[Event, list[Filter]] = dataclasses.field(default_factory=lambda: defaultdict(list))
+    subscriptions: defaultdict[Event, list[int]] = dataclasses.field(default_factory=lambda: defaultdict(list))
 
     def subscribe(self, filter_: UniqueFilter, *events: Event) -> None:
         """
@@ -213,8 +213,9 @@ class SubscribingAtomicList(AtomicList):
         """
         for event in events:
             if filter_ not in self.subscriptions[event]:
-                self.subscriptions[event].append(filter_)
+                self.subscriptions[event].append(filter_.id)
 
     def filter_list_result(self, ctx: FilterContext) -> list[Filter]:
         """Sift through the list of filters, and return only the ones which apply to the given context."""
-        return self._create_filter_list_result(ctx, self.defaults, self.subscriptions[ctx.event])
+        event_filters = [self.filters[id_] for id_ in self.subscriptions[ctx.event]]
+        return self._create_filter_list_result(ctx, self.defaults, event_filters)

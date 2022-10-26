@@ -4,9 +4,13 @@ import inspect
 import pkgutil
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from functools import cache
 from typing import Any, Iterable, TypeVar, Union
 
 import regex
+
+import bot
+from bot.constants import Guild
 
 VARIATION_SELECTORS = r"\uFE00-\uFE0F\U000E0100-\U000E01EF"
 INVISIBLE_RE = regex.compile(rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT}}\p{{CONTROL}}--\s]", regex.V1)
@@ -67,6 +71,32 @@ def to_serializable(item: Any) -> Union[bool, int, float, str, list, dict, None]
     if isinstance(item, Iterable):
         return [to_serializable(subitem) for subitem in item]
     return str(item)
+
+
+@cache
+def resolve_mention(mention: str) -> str:
+    """Return the appropriate formatting for the mention, be it a literal, a user ID, or a role ID."""
+    guild = bot.instance.get_guild(Guild.id)
+    if mention in ("here", "everyone"):
+        return f"@{mention}"
+    try:
+        mention = int(mention)  # It's an ID.
+    except ValueError:
+        pass
+    else:
+        if any(mention == role.id for role in guild.roles):
+            return f"<@&{mention}>"
+        else:
+            return f"<@{mention}>"
+
+    # It's a name
+    for role in guild.roles:
+        if role.name == mention:
+            return role.mention
+    for member in guild.members:
+        if str(member) == mention:
+            return member.mention
+    return mention
 
 
 def repr_equals(override: Any, default: Any) -> bool:

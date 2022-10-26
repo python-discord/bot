@@ -15,7 +15,7 @@ URL_RE = re.compile(r"(?:https?://)?(\S+?)[\\/]*", flags=re.IGNORECASE)
 class ExtraDomainSettings(BaseModel):
     """Extra settings for how domains should be matched in a message."""
 
-    exact_description: ClassVar[str] = (
+    subdomains_description: ClassVar[str] = (
         "A boolean. If True, will will only trigger for subdomains and subpaths, and not for the domain itself."
     )
 

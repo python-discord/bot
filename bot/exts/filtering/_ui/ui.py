@@ -74,7 +74,7 @@ def parse_value(value: str, type_: type[T]) -> T:
     if hasattr(type_, "__origin__"):  # In case this is a types.GenericAlias or a typing._GenericAlias
         type_ = type_.__origin__
     if type_ in (tuple, list, set):
-        return type_(value.split(","))
+        return list(value.split(","))
     if type_ is bool:
         return value.lower() == "true" or value == "1"
     if isinstance(type_, EnumMeta):
