@@ -2,7 +2,7 @@ from typing import ClassVar
 
 from discord.errors import NotFound
 
-from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
 
 
@@ -18,7 +18,7 @@ class DeleteMessages(ActionEntry):
 
     async def action(self, ctx: FilterContext) -> None:
         """Delete the context message(s)."""
-        if not self.delete_messages or ctx.event not in (Event.MESSAGE, Event.MESSAGE_EDIT):
+        if not self.delete_messages or not ctx.message:
             return
 
         if not ctx.message.guild:

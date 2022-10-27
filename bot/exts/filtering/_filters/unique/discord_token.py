@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 import bot
 from bot import constants, utils
+from bot.constants import Guild
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
 from bot.exts.filtering._utils import resolve_mention
@@ -74,7 +75,7 @@ class DiscordTokenFilter(UniqueFilter):
         if not found_token:
             return False
 
-        if mod_log := self.mod_log:
+        if ctx.message and (mod_log := self.mod_log):
             mod_log.ignore(constants.Event.message_delete, ctx.message.id)
         ctx.content = ctx.content.replace(found_token.hmac, self.censor_hmac(found_token.hmac))
         ctx.additional_actions.append(self._create_token_alert_embed_wrapper(found_token))
@@ -84,8 +85,8 @@ class DiscordTokenFilter(UniqueFilter):
         """Create the action to perform when an alert should be sent for a message containing a Discord token."""
         async def _create_token_alert_embed(ctx: FilterContext) -> None:
             """Add an alert embed to the context with info about the token sent."""
-            userid_message, is_user = await self.format_userid_log_message(ctx.message, found_token)
-            log_message = self.format_log_message(ctx.message, found_token)
+            userid_message, is_user = await self.format_userid_log_message(found_token)
+            log_message = self.format_log_message(ctx.author, ctx.channel, found_token)
             log.debug(log_message)
 
             if is_user:
@@ -102,7 +103,7 @@ class DiscordTokenFilter(UniqueFilter):
         return _create_token_alert_embed
 
     @classmethod
-    async def format_userid_log_message(cls, msg: discord.Message, token: Token) -> tuple[str, bool]:
+    async def format_userid_log_message(cls, token: Token) -> tuple[str, bool]:
         """
         Format the portion of the log message that includes details about the detected user ID.
 
@@ -112,7 +113,8 @@ class DiscordTokenFilter(UniqueFilter):
         Returns a tuple of (log_message, is_user)
         """
         user_id = cls.extract_user_id(token.user_id)
-        user = await get_or_fetch_member(msg.guild, user_id)
+        guild = bot.instance.get_guild(Guild.id)
+        user = await get_or_fetch_member(guild, user_id)
 
         if user:
             return KNOWN_USER_LOG_MESSAGE.format(
@@ -129,11 +131,11 @@ class DiscordTokenFilter(UniqueFilter):
         return 'x' * (len(hmac) - 3) + hmac[-3:]
 
     @classmethod
-    def format_log_message(cls, msg: discord.Message, token: Token) -> str:
+    def format_log_message(cls, author: discord.User, channel: discord.abc.GuildChannel, token: Token) -> str:
         """Return the generic portion of the log message to send for `token` being censored in `msg`."""
         return LOG_MESSAGE.format(
-            author=format_user(msg.author),
-            channel=msg.channel.mention,
+            author=format_user(author),
+            channel=channel.mention,
             user_id=token.user_id,
             timestamp=token.timestamp,
             hmac=cls.censor_hmac(token.hmac),

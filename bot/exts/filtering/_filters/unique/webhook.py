@@ -36,7 +36,7 @@ class WebhookFilter(UniqueFilter):
             return False
 
         # Don't log this.
-        if mod_log := self.mod_log:
+        if ctx.message and (mod_log := self.mod_log):
             mod_log.ignore(constants.Event.message_delete, ctx.message.id)
 
         for i, match in enumerate(matches, start=1):

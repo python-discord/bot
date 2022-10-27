@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
-from typing import Optional, Union
 
 from discord import DMChannel, Member, Message, TextChannel, Thread, User
 
@@ -22,9 +21,9 @@ class FilterContext:
     # Input context
     event: Event  # The type of event
     author: User | Member | None  # Who triggered the event
-    channel: Union[TextChannel, Thread, DMChannel]  # The channel involved
-    content: Union[str, set]  # What actually needs filtering
-    message: Optional[Message]  # The message involved
+    channel: TextChannel | Thread | DMChannel  # The channel involved
+    content: str | set  # What actually needs filtering
+    message: Message | None  # The message involved
     embeds: list = field(default_factory=list)  # Any embeds involved
     # Output context
     dm_content: str = field(default_factory=str)  # The content to DM the invoker
