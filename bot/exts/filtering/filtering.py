@@ -459,21 +459,17 @@ class Filtering(Cog):
             view=DeleteConfirmationView(ctx.author, delete_list)
         )
 
-    @filter.group(aliases=("settings",))
-    async def setting(self, ctx: Context) -> None:
-        """Group for settings-related commands."""
-        if not ctx.invoked_subcommand:
-            await ctx.send_help(ctx.command)
-
-    @setting.command(name="describe", aliases=("explain", "manual"))
-    async def s_describe(self, ctx: Context, setting_name: Optional[str]) -> None:
+    @filter.command(aliases=("settings",))
+    async def setting(self, ctx: Context, setting_name: str | None) -> None:
         """Show a description of the specified setting, or a list of possible settings if no name is specified."""
         if not setting_name:
-            settings_list = list(self.loaded_settings)
+            settings_list = [f"» {setting_name}" for setting_name in self.loaded_settings]
             for filter_name, filter_settings in self.loaded_filter_settings.items():
-                settings_list.extend(f"{filter_name}/{setting}" for setting in filter_settings)
-            embed = Embed(description="\n".join(settings_list))
+                settings_list.extend(f"» {filter_name}/{setting}" for setting in filter_settings)
+            embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of setting names")
+            await LinePaginator.paginate(settings_list, ctx, embed, max_lines=10, empty=False)
+
         else:
             # The setting is either in a SettingsEntry subclass, or a pydantic model.
             setting_data = self.loaded_settings.get(setting_name)
@@ -488,10 +484,9 @@ class Filtering(Cog):
             if description is None:
                 await ctx.send(f":x: There's no setting type named {setting_name!r}.")
                 return
-            embed = Embed(description=description)
+            embed = Embed(colour=Colour.blue(), description=description)
             embed.set_author(name=f"Description of the {setting_name} setting")
-        embed.colour = Colour.blue()
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
     @filter.command(name="match")
     async def f_match(self, ctx: Context, message: Message | None, *, string: str | None) -> None:
