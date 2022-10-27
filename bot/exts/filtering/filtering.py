@@ -15,6 +15,7 @@ from discord.utils import escape_markdown
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
+from bot import constants
 from bot.bot import Bot
 from bot.constants import Channels, Colours, MODERATION_ROLES, Roles, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
@@ -294,7 +295,8 @@ class Filtering(Cog):
         embed.set_author(name=f"Filter #{id_} - " + f"{filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
-            f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+            f"To view all defaults of the list, "
+            f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
         ))
         await ctx.send(embed=embed)
 
@@ -421,7 +423,8 @@ class Filtering(Cog):
             name=f"Filter #{filter_id} - {filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
-            f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+            f"To view all defaults of the list, "
+            f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
         ))
 
         view = filters_ui.FilterEditView(
@@ -888,7 +891,8 @@ class Filtering(Cog):
             name=f"New Filter - {filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
-            f"To view all defaults of the list, run `!filterlist describe {list_type.name} {filter_list.name}`."
+            f"To view all defaults of the list, "
+            f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
         ))
 
         view = filters_ui.FilterEditView(
