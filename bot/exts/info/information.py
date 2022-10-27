@@ -524,7 +524,7 @@ class Information(Cog):
         await self.send_raw_content(ctx, message, json=True)
 
     @command(aliases=("rule",))
-    async def rules(self, ctx: Context, *args: Optional[str]) -> Optional[Set[int]]:
+    async def rules(self, ctx: Context, *, args: Optional[str]) -> Optional[Set[int]]:
         """
         Provides a link to all rules or, if specified, displays specific rule(s).
 
@@ -541,13 +541,15 @@ class Information(Cog):
             for rule_keyword in rule_keywords:
                 keyword_to_rule_number[rule_keyword] = rule_number
 
-        for word in args:
-            try:
-                rule_numbers.append(int(word))
-            except ValueError:
-                if (kw := word.lower()) not in keyword_to_rule_number:
-                    break
-                keywords.append(kw)
+        if args:
+            for word in args.split(maxsplit=100):
+                try:
+                    rule_numbers.append(int(word))
+                except ValueError:
+                    # Stop on first invalid keyword/index to allow for normal messaging after
+                    if (kw := word.lower()) not in keyword_to_rule_number:
+                        break
+                    keywords.append(kw)
 
         if not rule_numbers and not keywords:
             # Neither rules nor keywords were submitted. Return the default description.
