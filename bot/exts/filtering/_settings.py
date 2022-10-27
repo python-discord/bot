@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+import traceback
 from abc import abstractmethod
 from functools import reduce
 from typing import Any, NamedTuple, Optional, TypeVar
@@ -195,10 +196,18 @@ class ActionSettings(Settings[ActionEntry]):
     async def action(self, ctx: FilterContext) -> None:
         """Execute the action of every action entry stored, as well as any additional actions in the context."""
         for entry in self.values():
-            await entry.action(ctx)
+            try:
+                await entry.action(ctx)
+            # Filtering should not stop even if one type of action raised an exception.
+            # For example, if deleting the message raised somehow, it should still try to infract the user.
+            except Exception:
+                log.exception(traceback.format_exc())
 
         for action in ctx.additional_actions:
-            await action(ctx)
+            try:
+                await action(ctx)
+            except Exception:
+                log.exception(traceback.format_exc())
 
     def fallback_to(self, fallback: ActionSettings) -> ActionSettings:
         """Fill in missing entries from `fallback`."""

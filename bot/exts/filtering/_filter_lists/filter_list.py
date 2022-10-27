@@ -113,12 +113,16 @@ class AtomicList:
 
         If `merge_default` is True, include it in the merge instead of using it as a fallback.
         """
-        try:
-            result = reduce(or_, (filter_.actions for filter_ in filters if filter_.actions))
-        except TypeError:  # The sequence fed to reduce is empty.
+        if not filters:  # Nothing to action.
             return None
-
-        return result.fallback_to(self.defaults.actions)
+        try:
+            return reduce(
+                or_, (filter_.actions or self.defaults.actions for filter_ in filters)
+            ).fallback_to(self.defaults.actions)
+        except TypeError:
+            # The sequence fed to reduce is empty, meaning none of the filters have actions,
+            # meaning they all use the defaults.
+            return self.defaults.actions
 
     @staticmethod
     def format_messages(triggers: list[Filter], *, expand_single_filter: bool = True) -> list[str]:
