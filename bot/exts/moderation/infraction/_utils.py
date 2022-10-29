@@ -3,7 +3,10 @@ import typing as t
 import arrow
 import discord
 from botcore.site_api import ResponseCodeError
+from botcore.utils import interactions
+from discord import ButtonStyle, Interaction, Message, TextChannel
 from discord.ext.commands import Context
+from discord.ui import Button
 
 import bot
 from bot.constants import Colours, Icons
@@ -269,3 +272,43 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
             "The user either could not be retrieved or probably disabled their DMs."
         )
         return False
+
+
+class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
+    """The confirmation view that is sent when a moderator attempts to ban a staff member."""
+
+    def __init__(
+        self,
+        *,
+        allowed_users: t.Sequence[int],
+        allowed_roles: t.Sequence[int],
+        timeout: t.Optional[float] = 180,
+        message: t.Optional[Message] = None
+    ) -> None:
+        super().__init__(
+            allowed_users=allowed_users,
+            allowed_roles=allowed_roles,
+            timeout=timeout,
+            message=message
+        )
+
+        self.value: t.Optional[bool] = None
+
+    async def send(self, channel: TextChannel, *, message_content: str) -> None:
+        """Send this view to the given channel with the given message content."""
+        self.message = await channel.send(message_content, view=self)
+
+    @discord.ui.button(label="Confirm", style=ButtonStyle.green)
+    async def confirm(self, interaction: Interaction, button: Button) -> None:
+        """Callback coroutine that is called when the "confirm" button is pressed."""
+        await interaction.response.defer()
+        self.value = True
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=ButtonStyle.red)
+    async def cancel(self, interaction: Interaction, button: Button) -> None:
+        """Callback coroutine that is called when the "cancel" button is pressed."""
+        await interaction.response.defer()
+        self.value = False
+        await super().on_timeout()
+        self.stop()

@@ -466,12 +466,6 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.trace("Old tempban is being replaced by new permaban.")
             await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
 
-        infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
-        if infraction is None:
-            return None
-
-        infraction["purge"] = "purge " if purge_days else ""
-
         self.mod_log.ignore(Event.member_remove, user.id)
 
         if reason:
@@ -480,19 +474,55 @@ class Infractions(InfractionScheduler, commands.Cog):
         async def action() -> None:
             await ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
 
-        await self.apply_infraction(ctx, infraction, user, action)
+        if any(role.id in constants.STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
+            confirmation_view = _utils.StaffBanConfirmationView(
+                allowed_users=(ctx.author.id,),
+                allowed_roles=constants.MODERATION_ROLES,
+                timeout=10,
+            )
 
-        bb_cog: t.Optional[BigBrother] = self.bot.get_cog("Big Brother")
-        if infraction.get('expires_at') is not None:
-            log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
-        elif not bb_cog:
-            log.error(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
-        else:
-            log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
-            bb_reason = "User has been permanently banned from the server. Automatically removed."
-            await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
+            await confirmation_view.send(
+                ctx.channel,
+                message_content="That user is a Helper. Are you sure you want to ban them?",
+            )
 
-        return infraction
+            await confirmation_view.wait()
+            if confirmation_view.value is None:
+                log.trace(
+                    "Attempted ban of user %s by moderator %s cancelled due to timeout.",
+                    str(user),
+                    str(ctx.author),
+                )
+
+                return None
+            elif confirmation_view.value is True:
+                infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
+                if infraction is None:
+                    return None
+
+                infraction["purge"] = "purge " if purge_days else ""
+
+                await self.apply_infraction(ctx, infraction, user, action)
+
+                bb_cog: t.Optional[BigBrother] = self.bot.get_cog("Big Brother")
+                if infraction.get('expires_at') is not None:
+                    log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
+                elif not bb_cog:
+                    log.error(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
+                else:
+                    log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
+                    bb_reason = "User has been permanently banned from the server. Automatically removed."
+                    await bb_cog.apply_unwatch(ctx, user, bb_reason, send_message=False)
+
+                return infraction
+            elif confirmation_view.value is False:
+                log.trace(
+                    "Attempted ban of user %s by moderator %s cancelled due to manual cancel.",
+                    str(user),
+                    str(ctx.author),
+                )
+
+                return None
 
     @respect_role_hierarchy(member_arg=2)
     async def apply_voice_mute(self, ctx: Context, user: MemberOrUser, reason: t.Optional[str], **kwargs) -> None:
