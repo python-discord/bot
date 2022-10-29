@@ -494,6 +494,8 @@ class Infractions(InfractionScheduler, commands.Cog):
                     str(ctx.author),
                 )
 
+                return None
+
             elif confirmation_view.value is False:
                 log.trace(
                     "Attempted ban of user %s by moderator %s cancelled due to manual cancel.",
@@ -501,7 +503,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                     str(ctx.author),
                 )
 
-            return None
+                return None
 
         # There are a few ways we could get here:
         # The user was not a member, which means they can't be staff
