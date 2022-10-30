@@ -483,7 +483,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
             await confirmation_view.send(
                 ctx.channel,
-                message_content="That user is a Helper. Are you sure you want to ban them?",
+                message_content=f"{user} has an elevated role. Are you sure you want to ban them?",
             )
 
             await confirmation_view.wait()
