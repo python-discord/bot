@@ -8,16 +8,15 @@ from typing import Literal, Optional, get_type_hints
 
 import discord
 from botcore.site_api import ResponseCodeError
-from discord import Colour, Embed, HTTPException, Message
+from discord import Colour, Embed, HTTPException, Message, MessageType
 from discord.ext import commands
 from discord.ext.commands import BadArgument, Cog, Context, has_any_role
-from discord.utils import escape_markdown
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Colours, MODERATION_ROLES, Roles, Webhooks
+from bot.constants import Channels, MODERATION_ROLES, Roles, Webhooks
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
@@ -28,13 +27,17 @@ from bot.exts.filtering._ui.filter import (
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
 from bot.exts.filtering._ui.search import SearchEditView, search_criteria_converter
-from bot.exts.filtering._ui.ui import ArgumentCompletionView, DeleteConfirmationView, format_response_error
+from bot.exts.filtering._ui.ui import (
+    ArgumentCompletionView, DeleteConfirmationView, build_mod_alert, format_response_error
+)
 from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.messages import format_channel, format_user
+from bot.utils.message_cache import MessageCache
 
 log = get_logger(__name__)
+
+CACHE_SIZE = 100
 
 
 class Filtering(Cog):
@@ -54,6 +57,8 @@ class Filtering(Cog):
         self.loaded_settings = {}
         self.loaded_filters = {}
         self.loaded_filter_settings = {}
+
+        self.message_cache = MessageCache(CACHE_SIZE, newest_first=True)
 
     async def cog_load(self) -> None:
         """
@@ -165,8 +170,9 @@ class Filtering(Cog):
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Filter the contents of a sent message."""
-        if msg.author.bot or msg.webhook_id:
+        if msg.author.bot or msg.webhook_id or msg.type == MessageType.auto_moderation_action:
             return
+        self.message_cache.append(msg)
 
         ctx = FilterContext(Event.MESSAGE, msg.author, msg.channel, msg.content, msg, msg.embeds)
 
@@ -766,32 +772,8 @@ class Filtering(Cog):
             return
 
         name = f"{ctx.event.name.replace('_', ' ').title()} Filter"
-
-        embed = Embed(color=Colours.soft_orange)
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        triggered_by = f"**Triggered by:** {format_user(ctx.author)}"
-        if ctx.channel.guild:
-            triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}\n"
-        else:
-            triggered_in = "**Triggered in:** :warning:**DM**:warning:\n"
-
-        filters = []
-        for filter_list, list_message in triggered_filters.items():
-            if list_message:
-                filters.append(f"**{filter_list.name.title()} Filters:** {', '.join(list_message)}")
-        filters = "\n".join(filters)
-
-        matches = "**Matches:** " + ", ".join(repr(match) for match in ctx.matches)
-        actions = "\n**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")
-        content = f"**[Original Content]({ctx.message.jump_url})**:\n{escape_markdown(ctx.content)}"
-
-        embed_content = "\n".join(
-            part for part in (triggered_by, triggered_in, filters, matches, actions, content) if part
-        )
-        if len(embed_content) > 4000:
-            embed_content = embed_content[:4000] + " [...]"
-        embed.description = embed_content
-
+        embed = await build_mod_alert(ctx, triggered_filters)
+        # There shouldn't be more than 10, but if there are it's not very useful to send them all.
         await self.webhook.send(username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10])
 
     async def _resolve_list_type_and_name(

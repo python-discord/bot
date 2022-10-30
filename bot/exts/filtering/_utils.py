@@ -31,7 +31,7 @@ def subclasses_in_package(package: str, prefix: str, parent: T) -> set[T]:
             # Find all classes in each module...
             for _, class_ in inspect.getmembers(module, inspect.isclass):
                 # That are a subclass of the given class.
-                if parent in class_.__bases__:
+                if parent in class_.__mro__:
                     subclasses.add(class_)
 
     return subclasses

@@ -13,6 +13,13 @@ from botcore.utils.logging import get_logger
 from discord import Embed, Interaction
 from discord.ext.commands import Context
 from discord.ui.select import MISSING as SELECT_MISSING, SelectOption
+from discord.utils import escape_markdown
+
+import bot
+from bot.constants import Colours
+from bot.exts.filtering._filter_context import FilterContext
+from bot.exts.filtering._filter_lists import FilterList
+from bot.utils.messages import format_channel, format_user, upload_log
 
 log = get_logger(__name__)
 
@@ -31,7 +38,7 @@ DELETION_TIMEOUT = 60
 MAX_MODAL_TITLE_LENGTH = 45
 # Max number of items in a select
 MAX_SELECT_ITEMS = 25
-MAX_EMBED_DESCRIPTION = 4000
+MAX_EMBED_DESCRIPTION = 4080
 
 SETTINGS_DELIMITER = re.compile(r"\s+(?=\S+=\S+)")
 SINGLE_SETTING_PATTERN = re.compile(r"[\w/]+=.+")
@@ -40,6 +47,58 @@ SINGLE_SETTING_PATTERN = re.compile(r"[\w/]+=.+")
 MISSING = object()
 
 T = TypeVar('T')
+
+
+async def _build_alert_message_content(ctx: FilterContext, current_message_length: int) -> str:
+    """Build the content section of the alert."""
+    # For multiple messages and those with attachments or excessive newlines, use the logs API
+    if any((
+        ctx.related_messages,
+        len(ctx.attachments) > 0,
+        ctx.content.count('\n') > 15
+    )):
+        url = await upload_log(ctx.related_messages, bot.instance.user.id, ctx.attachments)
+        alert_content = f"A complete log of the offending messages can be found [here]({url})"
+    else:
+        alert_content = escape_markdown(ctx.content)
+        remaining_chars = MAX_EMBED_DESCRIPTION - current_message_length
+
+        if len(alert_content) > remaining_chars:
+            url = await upload_log([ctx.message], bot.instance.user.id, ctx.attachments)
+            log_site_msg = f"The full message can be found [here]({url})"
+            # 7 because that's the length of "[...]\n\n"
+            alert_content = alert_content[:remaining_chars - (7 + len(log_site_msg))] + "[...]\n\n" + log_site_msg
+
+    return alert_content
+
+
+async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList, list[str]]) -> Embed:
+    """Build an alert message from the filter context."""
+    embed = Embed(color=Colours.soft_orange)
+    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+    triggered_by = f"**Triggered by:** {format_user(ctx.author)}"
+    if ctx.channel.guild:
+        triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}\n"
+    else:
+        triggered_in = "**Triggered in:** :warning:**DM**:warning:\n"
+    if len(ctx.related_channels) > 1:
+        triggered_in += f"**Channels:** {', '.join(channel.mention for channel in ctx.related_channels)}\n"
+
+    filters = []
+    for filter_list, list_message in triggered_filters.items():
+        if list_message:
+            filters.append(f"**{filter_list.name.title()} Filters:** {', '.join(list_message)}")
+    filters = "\n".join(filters)
+
+    matches = "**Matches:** " + ", ".join(repr(match) for match in ctx.matches) if ctx.matches else ""
+    actions = "\n**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")
+
+    mod_alert_message = "\n".join(part for part in (triggered_by, triggered_in, filters, matches, actions) if part)
+    mod_alert_message += f"\n**[Original Content]({ctx.message.jump_url})**:\n"
+    mod_alert_message += await _build_alert_message_content(ctx, len(mod_alert_message))
+
+    embed.description = mod_alert_message
+    return embed
 
 
 def populate_embed_from_dict(embed: Embed, data: dict) -> None:

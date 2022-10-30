@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import arrow
 import discord.abc
+from botcore.utils.logging import get_logger
 from discord import Colour, Embed, Member, User
 from discord.errors import Forbidden
 from pydantic import validator
@@ -13,6 +14,8 @@ import bot as bot_module
 from bot.constants import Channels, Guild
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
+
+log = get_logger(__name__)
 
 
 @dataclass
@@ -65,17 +68,12 @@ class Infraction(Enum):
     async def invoke(
         self,
         user: Member | User,
-        channel: int | None,
+        channel: discord.abc.Messageable,
+        alerts_channel: discord.TextChannel,
         duration: float | None,
         reason: str | None
     ) -> None:
         """Invokes the command matching the infraction name."""
-        alerts_channel = bot_module.instance.get_channel(Channels.mod_alerts)
-        if not channel:
-            channel = alerts_channel
-        else:
-            channel = bot_module.instance.get_channel(channel)
-
         command_name = self.name.lower()
         command = bot_module.instance.get_command(command_name)
         if not command:
@@ -108,7 +106,8 @@ class InfractionAndNotification(ActionEntry):
         "infraction_reason": "The reason delivered with the infraction.",
         "infraction_channel": (
             "The channel ID in which to invoke the infraction (and send the confirmation message). "
-            "If blank, the infraction will be sent in the context channel."
+            "If blank, the infraction will be sent in the context channel. If the ID fails to resolve, it will default "
+            "to the mod-alerts channel."
         ),
         "dm_content": "The contents of a message to be DMed to the offending user.",
         "dm_embed": "The contents of the embed to be DMed to the offending user."
@@ -152,8 +151,16 @@ class InfractionAndNotification(ActionEntry):
                 ctx.action_descriptions.append("failed to notify")
 
         if self.infraction_type is not None:
+            alerts_channel = bot_module.instance.get_channel(Channels.mod_alerts)
+            if self.infraction_channel:
+                channel = bot_module.instance.get_channel(self.infraction_channel)
+                if not channel:
+                    log.info(f"Could not find a channel with ID {self.infraction_channel}, infracting in mod-alerts.")
+                    channel = alerts_channel
+            else:
+                channel = ctx.channel
             await self.infraction_type.invoke(
-                ctx.author, self.infraction_channel, self.infraction_duration, self.infraction_reason
+                ctx.author, channel, alerts_channel, self.infraction_duration, self.infraction_reason
             )
             ctx.action_descriptions.append(self.infraction_type.name.lower())
 

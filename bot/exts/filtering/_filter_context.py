@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Coroutine
+import typing
+from collections.abc import Callable, Coroutine, Iterable
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 
 from discord import DMChannel, Member, Message, TextChannel, Thread, User
+
+if typing.TYPE_CHECKING:
+    from bot.exts.filtering._filters.filter import Filter
 
 
 class Event(Enum):
@@ -22,7 +26,7 @@ class FilterContext:
     event: Event  # The type of event
     author: User | Member | None  # Who triggered the event
     channel: TextChannel | Thread | DMChannel  # The channel involved
-    content: str | set  # What actually needs filtering
+    content: str | Iterable  # What actually needs filtering
     message: Message | None  # The message involved
     embeds: list = field(default_factory=list)  # Any embeds involved
     # Output context
@@ -32,10 +36,14 @@ class FilterContext:
     alert_content: str = field(default_factory=str)  # The content of the alert
     alert_embeds: list = field(default_factory=list)  # Any embeds to add to the alert
     action_descriptions: list = field(default_factory=list)  # What actions were taken
-    matches: list = field(default_factory=list)  # What exactly was found
+    matches: list[str] = field(default_factory=list)  # What exactly was found
     notification_domain: str = field(default_factory=str)  # A domain to send the user for context
+    filter_info: dict['Filter', str] = field(default_factory=dict)  # Additional info from a filter.
     # Additional actions to perform
     additional_actions: list[Callable[[FilterContext], Coroutine]] = field(default_factory=list)
+    related_messages: set[Message] = field(default_factory=set)
+    related_channels: set[TextChannel | Thread | DMChannel] = field(default_factory=set)
+    attachments: dict[int, list[str]] = field(default_factory=dict)  # Message ID to attachment URLs.
 
     def replace(self, **changes) -> FilterContext:
         """Return a new context object assigning new values to the specified fields."""
