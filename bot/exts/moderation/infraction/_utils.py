@@ -303,6 +303,7 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
         """Callback coroutine that is called when the "confirm" button is pressed."""
         await interaction.response.defer()
         self.value = True
+        await super().on_timeout()
         self.stop()
 
     @discord.ui.button(label="Cancel", style=ButtonStyle.red)
