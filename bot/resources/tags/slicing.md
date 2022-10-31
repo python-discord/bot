@@ -8,8 +8,6 @@ embed:
 **Examples**
 ```py
 >>> letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
->>> letters
-['a', 'b', 'c', 'd', 'e', 'f', 'g']
 >>> letters[2:]  # from element 2 to the end
 ['c', 'd', 'e', 'f', 'g']
 >>> letters[:4]  # up to element 4
