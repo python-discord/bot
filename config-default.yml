@@ -327,45 +327,6 @@ guild:
         filters:                            926442964463521843
 
 
-filter:
-    # What do we filter?
-    filter_domains:        true
-    filter_everyone_ping:  true
-    filter_invites:        true
-    filter_zalgo:          false
-    watch_regex:           true
-    watch_rich_embeds:     true
-
-    # Notify user on filter?
-    # Notifications are not expected for "watchlist" type filters
-    notify_user_domains:        false
-    notify_user_everyone_ping:  true
-    notify_user_invites:        true
-    notify_user_zalgo:          false
-
-    # Filter configuration
-    offensive_msg_delete_days: 7     # How many days before deleting an offensive message?
-    ping_everyone:             true
-
-    # Censor doesn't apply to these
-    channel_whitelist:
-        - *ADMINS
-        - *BB_LOGS
-        - *DEV_LOG
-        - *MESSAGE_LOG
-        - *MOD_LOG
-        - *STAFF_LOUNGE
-
-    role_whitelist:
-        - *ADMINS_ROLE
-        - *HELPERS_ROLE
-        - *MODS_ROLE
-        - *OWNERS_ROLE
-        - *PY_COMMUNITY_ROLE
-        - *SPRINTERS
-        - *PY_PARTNER_ROLE
-
-
 keys:
     github:      !ENV "GITHUB_API_KEY"
     site_api:    !ENV "BOT_API_KEY"
@@ -396,64 +357,6 @@ urls:
     # Misc URLsw
     bot_avatar:      "https://raw.githubusercontent.com/python-discord/branding/main/logos/logo_circle/logo_circle.png"
     github_bot_repo: "https://github.com/python-discord/bot"
-
-
-anti_spam:
-    cache_size: 100
-
-    # Clean messages that violate a rule.
-    clean_offending: true
-    ping_everyone: true
-
-    punishment:
-        remove_after: 600
-        role_id: *MUTED_ROLE
-
-    rules:
-        attachments:
-            interval: 10
-            max: 6
-
-        burst:
-            interval: 10
-            max: 7
-
-        # Burst shared it (temporarily) disabled to prevent
-        # the bug that triggers multiple infractions/DMs per
-        # user. It also tends to catch a lot of innocent users
-        # now that we're so big.
-        # burst_shared:
-        #    interval: 10
-        #    max: 20
-
-        chars:
-            interval: 5
-            max: 4_200
-
-        discord_emojis:
-            interval: 10
-            max: 20
-
-        duplicates:
-            interval: 10
-            max: 3
-
-        links:
-            interval: 10
-            max: 10
-
-        mentions:
-            interval: 10
-            max: 5
-
-        newlines:
-            interval: 10
-            max: 100
-            max_consecutive: 10
-
-        role_mentions:
-            interval: 10
-            max: 3
 
 
 metabase:

@@ -213,30 +213,6 @@ class Redis(metaclass=YAMLGetter):
     use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
 
 
-class Filter(metaclass=YAMLGetter):
-    section = "filter"
-
-    filter_domains: bool
-    filter_everyone_ping: bool
-    filter_invites: bool
-    filter_zalgo: bool
-    watch_regex: bool
-    watch_rich_embeds: bool
-
-    # Notifications are not expected for "watchlist" type filters
-
-    notify_user_domains: bool
-    notify_user_everyone_ping: bool
-    notify_user_invites: bool
-    notify_user_zalgo: bool
-
-    offensive_msg_delete_days: int
-    ping_everyone: bool
-
-    channel_whitelist: List[int]
-    role_whitelist: List[int]
-
-
 class Cooldowns(metaclass=YAMLGetter):
     section = "bot"
     subsection = "cooldowns"
@@ -578,18 +554,6 @@ class Metabase(metaclass=YAMLGetter):
     base_url: str
     public_url: str
     max_session_age: int
-
-
-class AntiSpam(metaclass=YAMLGetter):
-    section = 'anti_spam'
-
-    cache_size: int
-
-    clean_offending: bool
-    ping_everyone: bool
-
-    punishment: Dict[str, Dict[str, int]]
-    rules: Dict[str, Dict[str, int]]
 
 
 class BigBrother(metaclass=YAMLGetter):
