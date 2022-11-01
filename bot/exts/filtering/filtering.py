@@ -193,7 +193,7 @@ class Filtering(Cog):
     @blocklist.command(name="list", aliases=("get",))
     async def bl_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
         """List the contents of a specified blacklist."""
-        result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name)
+        result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
         if not result:
             return
         list_type, filter_list = result
@@ -218,7 +218,7 @@ class Filtering(Cog):
         The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
         equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
         """
-        result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name)
+        result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
         if result is None:
             return
         list_type, filter_list = result
@@ -236,7 +236,7 @@ class Filtering(Cog):
     @allowlist.command(name="list", aliases=("get",))
     async def al_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
         """List the contents of a specified whitelist."""
-        result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name)
+        result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name, exclude="list_type")
         if not result:
             return
         list_type, filter_list = result
@@ -261,7 +261,7 @@ class Filtering(Cog):
         The settings can be provided in the command itself, in the format of `setting_name=value` (no spaces around the
         equal sign). The value doesn't need to (shouldn't) be surrounded in quotes even if it contains spaces.
         """
-        result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name)
+        result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name, exclude="list_type")
         if result is None:
             return
         list_type, filter_list = result
@@ -776,23 +776,25 @@ class Filtering(Cog):
         await self.webhook.send(username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10])
 
     async def _resolve_list_type_and_name(
-        self, ctx: Context, list_type: Optional[ListType] = None, list_name: Optional[str] = None
-    ) -> Optional[tuple[ListType, FilterList]]:
+        self, ctx: Context, list_type: ListType | None = None, list_name: str | None = None, *, exclude: str = ""
+    ) -> tuple[ListType, FilterList] | None:
         """Prompt the user to complete the list type or list name if one of them is missing."""
         if list_name is None:
+            args = [list_type] if exclude != "list_type" else []
             await ctx.send(
                 "The **list_name** argument is unspecified. Please pick a value from the options below:",
-                view=ArgumentCompletionView(ctx, [list_type], "list_name", list(self.filter_lists), 1, None)
+                view=ArgumentCompletionView(ctx, args, "list_name", list(self.filter_lists), 1, None)
             )
             return None
 
         filter_list = self._get_list_by_name(list_name)
         if list_type is None:
             if len(filter_list) > 1:
+                args = [list_name] if exclude != "list_name" else []
                 await ctx.send(
                     "The **list_type** argument is unspecified. Please pick a value from the options below:",
                     view=ArgumentCompletionView(
-                        ctx, [list_name], "list_type", [option.name for option in ListType], 0, list_type_converter
+                        ctx, args, "list_type", [option.name for option in ListType], 0, list_type_converter
                     )
                 )
                 return None
