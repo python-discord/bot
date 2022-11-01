@@ -321,8 +321,10 @@ class Filtering(Cog):
     async def f_describe(self, ctx: Context, filter_name: Optional[str]) -> None:
         """Show a description of the specified filter, or a list of possible values if no name is specified."""
         if not filter_name:
-            embed = Embed(description="\n".join(self.loaded_filters))
+            filter_names = [f"» {f}" for f in self.loaded_filters]
+            embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of filter names")
+            await LinePaginator.paginate(filter_names, ctx, embed, max_lines=10, empty=False)
         else:
             filter_type = self.loaded_filters.get(filter_name)
             if not filter_type:
@@ -331,10 +333,9 @@ class Filtering(Cog):
                     await ctx.send(f":x: There's no filter type named {filter_name!r}.")
                     return
             # Use the class's docstring, and ignore single newlines.
-            embed = Embed(description=re.sub(r"(?<!\n)\n(?!\n)", " ", filter_type.__doc__))
+            embed = Embed(description=re.sub(r"(?<!\n)\n(?!\n)", " ", filter_type.__doc__), colour=Colour.blue())
             embed.set_author(name=f"Description of the {filter_name} filter")
-        embed.colour = Colour.blue()
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
     @filter.command(name="add", aliases=("a",))
     async def f_add(
@@ -599,9 +600,10 @@ class Filtering(Cog):
     ) -> None:
         """Show a description of the specified filter list, or a list of possible values if no values are provided."""
         if not list_type and not list_name:
-            embed = Embed(description="\n".join(f"\u2003 {fl}" for fl in self.filter_lists), colour=Colour.blue())
+            list_names = [f"» {fl}" for fl in self.filter_lists]
+            embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of filter lists names")
-            await ctx.send(embed=embed)
+            await LinePaginator.paginate(list_names, ctx, embed, max_lines=10, empty=False)
             return
 
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
