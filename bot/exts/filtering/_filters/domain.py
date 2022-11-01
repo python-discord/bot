@@ -34,7 +34,7 @@ class DomainFilter(Filter):
     name = "domain"
     extra_fields_type = ExtraDomainSettings
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Searches for a domain within a given context."""
         domain = tldextract.extract(self.content).registered_domain
 

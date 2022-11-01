@@ -76,7 +76,9 @@ class ExtensionsList(FilterList[ExtensionFilter]):
             (splitext(attachment.filename.lower())[1], attachment.filename) for attachment in ctx.message.attachments
         }
         new_ctx = ctx.replace(content={ext for ext, _ in all_ext})  # And prepare the context for the filters to read.
-        triggered = [filter_ for filter_ in self[ListType.ALLOW].filters.values() if filter_.triggered_on(new_ctx)]
+        triggered = [
+            filter_ for filter_ in self[ListType.ALLOW].filters.values() if await filter_.triggered_on(new_ctx)
+        ]
         allowed_ext = {filter_.content for filter_ in triggered}  # Get the extensions in the message that are allowed.
 
         # See if there are any extensions left which aren't allowed.

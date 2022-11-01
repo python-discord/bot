@@ -18,7 +18,7 @@ class EveryoneFilter(UniqueFilter):
     name = "everyone"
     events = (Event.MESSAGE, Event.MESSAGE_EDIT)
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Search for the filter's content within a given context."""
         # First pass to avoid running re.sub on every message
         if not EVERYONE_PING_RE.search(ctx.content):

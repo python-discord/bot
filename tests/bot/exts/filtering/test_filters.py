@@ -5,7 +5,7 @@ from bot.exts.filtering._filters.token import TokenFilter
 from tests.helpers import MockMember, MockMessage, MockTextChannel
 
 
-class FilterTests(unittest.TestCase):
+class FilterTests(unittest.IsolatedAsyncioTestCase):
     """Test functionality of the token filter."""
 
     def setUp(self) -> None:
@@ -14,7 +14,7 @@ class FilterTests(unittest.TestCase):
         message = MockMessage(author=member, channel=channel)
         self.ctx = FilterContext(Event.MESSAGE, member, channel, "", message)
 
-    def test_token_filter_triggers(self):
+    async def test_token_filter_triggers(self):
         """The filter should evaluate to True only if its token is found in the context content."""
         test_cases = (
             (r"hi", "oh hi there", True),
@@ -37,5 +37,5 @@ class FilterTests(unittest.TestCase):
                     "additional_field": "{}"  # noqa: P103
                 })
                 self.ctx.content = content
-                result = filter_.triggered_on(self.ctx)
+                result = await filter_.triggered_on(self.ctx)
                 self.assertEqual(result, expected)

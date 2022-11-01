@@ -11,7 +11,7 @@ class ExtensionFilter(Filter):
 
     name = "extension"
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Searches for an attachment extension in the context content, given as a set of extensions."""
         return self.content in ctx.content
 

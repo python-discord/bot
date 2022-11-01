@@ -69,7 +69,7 @@ class DiscordTokenFilter(UniqueFilter):
         """Get currently loaded ModLog cog instance."""
         return bot.instance.get_cog("ModLog")
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Return whether the message contains Discord client tokens."""
         found_token = self.find_token_in_message(ctx.content)
         if not found_token:

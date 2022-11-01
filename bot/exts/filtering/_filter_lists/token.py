@@ -53,7 +53,7 @@ class TokensList(FilterList[TokenFilter]):
         text = clean_input(text)
         ctx = ctx.replace(content=text)
 
-        triggers = self[ListType.DENY].filter_list_result(ctx)
+        triggers = await self[ListType.DENY].filter_list_result(ctx)
         actions = None
         messages = []
         if triggers:

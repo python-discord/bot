@@ -65,7 +65,7 @@ class AtomicList:
         """Provide a short description identifying the list with its name and type."""
         return f"{past_tense(self.list_type.name.lower())} {self.name.lower()}"
 
-    def filter_list_result(self, ctx: FilterContext) -> list[Filter]:
+    async def filter_list_result(self, ctx: FilterContext) -> list[Filter]:
         """
         Sift through the list of filters, and return only the ones which apply to the given context.
 
@@ -79,10 +79,12 @@ class AtomicList:
 
         If the filter is relevant in context, see if it actually triggers.
         """
-        return self._create_filter_list_result(ctx, self.defaults, self.filters.values())
+        return await self._create_filter_list_result(ctx, self.defaults, self.filters.values())
 
     @staticmethod
-    def _create_filter_list_result(ctx: FilterContext, defaults: Defaults, filters: Iterable[Filter]) -> list[Filter]:
+    async def _create_filter_list_result(
+        ctx: FilterContext, defaults: Defaults, filters: Iterable[Filter]
+    ) -> list[Filter]:
         """A helper function to evaluate the result of `filter_list_result`."""
         passed_by_default, failed_by_default = defaults.validations.evaluate(ctx)
         default_answer = not bool(failed_by_default)
@@ -90,12 +92,12 @@ class AtomicList:
         relevant_filters = []
         for filter_ in filters:
             if not filter_.validations:
-                if default_answer and filter_.triggered_on(ctx):
+                if default_answer and await filter_.triggered_on(ctx):
                     relevant_filters.append(filter_)
             else:
                 passed, failed = filter_.validations.evaluate(ctx)
                 if not failed and failed_by_default < passed:
-                    if filter_.triggered_on(ctx):
+                    if await filter_.triggered_on(ctx):
                         relevant_filters.append(filter_)
 
         return relevant_filters
@@ -222,10 +224,10 @@ class SubscribingAtomicList(AtomicList):
             if filter_ not in self.subscriptions[event]:
                 self.subscriptions[event].append(filter_.id)
 
-    def filter_list_result(self, ctx: FilterContext) -> list[Filter]:
+    async def filter_list_result(self, ctx: FilterContext) -> list[Filter]:
         """Sift through the list of filters, and return only the ones which apply to the given context."""
         event_filters = [self.filters[id_] for id_ in self.subscriptions[ctx.event]]
-        return self._create_filter_list_result(ctx, self.defaults, event_filters)
+        return await self._create_filter_list_result(ctx, self.defaults, event_filters)
 
 
 class UniquesListBase(FilterList[UniqueFilter]):

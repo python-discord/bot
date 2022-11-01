@@ -31,7 +31,7 @@ class UniquesList(UniquesListBase):
 
     async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
-        triggers = self[ListType.DENY].filter_list_result(ctx)
+        triggers = await self[ListType.DENY].filter_list_result(ctx)
         actions = None
         messages = []
         if triggers:

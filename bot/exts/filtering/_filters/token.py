@@ -11,7 +11,7 @@ class TokenFilter(Filter):
 
     name = "token"
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Searches for a regex pattern within a given context."""
         pattern = self.content
 

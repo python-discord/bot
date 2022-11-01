@@ -81,7 +81,7 @@ class InviteList(FilterList[InviteFilter]):
 
         # Find any blocked invites
         new_ctx = ctx.replace(content={invite.guild.id for invite in invites_for_inspection.values()})
-        triggered = self[ListType.DENY].filter_list_result(new_ctx)
+        triggered = await self[ListType.DENY].filter_list_result(new_ctx)
         blocked_guilds = {filter_.content for filter_ in triggered}
         blocked_invites = {
             code: invite for code, invite in invites_for_inspection.items() if invite.guild.id in blocked_guilds
@@ -100,7 +100,8 @@ class InviteList(FilterList[InviteFilter]):
         if check_if_allowed:  # Whether unknown invites need to be checked.
             new_ctx = ctx.replace(content=guilds_for_inspection)
             allowed = {
-                filter_.content for filter_ in self[ListType.ALLOW].filters.values() if filter_.triggered_on(new_ctx)
+                filter_.content for filter_ in self[ListType.ALLOW].filters.values()
+                if await filter_.triggered_on(new_ctx)
             }
             unknown_invites.update({
                 code: invite for code, invite in invites_for_inspection.items() if invite.guild.id not in allowed

@@ -17,7 +17,7 @@ class RichEmbedFilter(UniqueFilter):
     name = "rich_embed"
     events = (Event.MESSAGE, Event.MESSAGE_EDIT)
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Determine if `msg` contains any rich embeds not auto-generated from a URL."""
         if ctx.embeds:
             for embed in ctx.embeds:

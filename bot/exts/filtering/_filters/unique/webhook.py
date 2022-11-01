@@ -29,7 +29,7 @@ class WebhookFilter(UniqueFilter):
         """Get current instance of `ModLog`."""
         return bot.instance.get_cog("ModLog")
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Search for a webhook in the given content. If found, attempt to delete it."""
         matches = set(WEBHOOK_URL_RE.finditer(ctx.content))
         if not matches:

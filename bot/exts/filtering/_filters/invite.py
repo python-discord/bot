@@ -20,7 +20,7 @@ class InviteFilter(Filter):
         super().__init__(filter_data, defaults_data)
         self.content = int(self.content)
 
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Searches for a guild ID in the context content, given as a set of IDs."""
         return self.content in ctx.content
 

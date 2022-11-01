@@ -34,7 +34,9 @@ class AntispamList(UniquesListBase):
     """
     A list of anti-spam rules.
 
-    Messages from the last X seconds is passed to each rule, which decide whether it triggers across those messages.
+    Messages from the last X seconds are passed to each rule, which decides whether it triggers across those messages.
+
+    The infraction reason is set dynamically.
     """
 
     name = "antispam"
@@ -67,7 +69,7 @@ class AntispamList(UniquesListBase):
             takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.filtering_cog.message_cache)
         )
         new_ctx = ctx.replace(content=relevant_messages)
-        triggers = sublist.filter_list_result(new_ctx)
+        triggers = await sublist.filter_list_result(new_ctx)
         if not triggers:
             return None, []
 
@@ -88,7 +90,9 @@ class AntispamList(UniquesListBase):
         # Smaller infraction value = higher in hierarchy.
         if not current_infraction or new_infraction.infraction_type.value < current_infraction.value:
             # Pick the first triggered filter for the reason, there's no good way to decide between them.
-            new_infraction.infraction_reason = f"{triggers[0].name} spam - {ctx.filter_info[triggers[0]]}"
+            new_infraction.infraction_reason = (
+                f"{triggers[0].name.replace('_', ' ')} spam – {ctx.filter_info[triggers[0]]}"
+            )
             current_actions["infraction_and_notification"] = new_infraction
             self.message_deletion_queue[ctx.author].current_infraction = new_infraction.infraction_type
         else:

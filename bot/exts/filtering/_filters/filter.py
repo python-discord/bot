@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
 from pydantic import ValidationError
@@ -48,7 +48,7 @@ class Filter(FieldRequiring):
         return settings, filter_settings
 
     @abstractmethod
-    def triggered_on(self, ctx: FilterContext) -> bool:
+    async def triggered_on(self, ctx: FilterContext) -> bool:
         """Search for the filter's content within a given context."""
 
     @classmethod
@@ -81,7 +81,7 @@ class Filter(FieldRequiring):
         return string
 
 
-class UniqueFilter(Filter, ABC):
+class UniqueFilter(Filter):
     """
     Unique filters are ones that should only be run once in a given context.
 

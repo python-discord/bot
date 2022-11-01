@@ -175,7 +175,6 @@ class Filtering(Cog):
         self.message_cache.append(msg)
 
         ctx = FilterContext(Event.MESSAGE, msg.author, msg.channel, msg.content, msg, msg.embeds)
-
         result_actions, list_messages = await self._resolve_action(ctx)
         if result_actions:
             await result_actions.action(ctx)
@@ -194,7 +193,7 @@ class Filtering(Cog):
     @blocklist.command(name="list", aliases=("get",))
     async def bl_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
         """List the contents of a specified blacklist."""
-        result = self._resolve_list_type_and_name(ctx, ListType.DENY, list_name)
+        result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name)
         if not result:
             return
         list_type, filter_list = result
@@ -237,7 +236,7 @@ class Filtering(Cog):
     @allowlist.command(name="list", aliases=("get",))
     async def al_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
         """List the contents of a specified whitelist."""
-        result = self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name)
+        result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name)
         if not result:
             return
         list_type, filter_list = result
