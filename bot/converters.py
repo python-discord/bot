@@ -574,5 +574,6 @@ if t.TYPE_CHECKING:
     Infraction = t.Optional[dict]  # noqa: F811
 
 Expiry = t.Union[Duration, ISODateTime]
+DurationOrExpiry = t.Union[DurationDelta, ISODateTime]
 MemberOrUser = t.Union[discord.Member, discord.User]
 UnambiguousMemberOrUser = t.Union[UnambiguousMember, UnambiguousUser]

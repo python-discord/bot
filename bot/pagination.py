@@ -236,7 +236,7 @@ class LinePaginator(Paginator):
                 raise EmptyPaginatorEmbedError("No lines to paginate")
 
             log.debug("No lines to add to paginator, adding '(nothing to display)' message")
-            lines.append("(nothing to display)")
+            lines.append("*(nothing to display)*")
 
         for line in lines:
             try:

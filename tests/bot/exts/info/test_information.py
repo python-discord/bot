@@ -2,6 +2,7 @@ import textwrap
 import unittest
 import unittest.mock
 from datetime import datetime
+from textwrap import shorten
 
 import discord
 
@@ -573,3 +574,76 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
 
         create_embed.assert_called_once_with(ctx, self.target, False)
         ctx.send.assert_called_once()
+
+
+class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for the `!rule` command."""
+
+    def setUp(self) -> None:
+        """Set up steps executed before each test is run."""
+        self.bot = helpers.MockBot()
+        self.cog = information.Information(self.bot)
+        self.ctx = helpers.MockContext(author=helpers.MockMember(id=1, name="Bellaluma"))
+        self.full_rules = [
+            (
+                "First rule",
+                ["first", "number_one"]
+            ),
+            (
+                "Second rule",
+                ["second", "number_two"]
+            ),
+            (
+                "Third rule",
+                ["third", "number_three"]
+            )
+        ]
+        self.bot.api_client.get.return_value = self.full_rules
+
+    async def test_return_none_if_one_rule_number_is_invalid(self):
+
+        test_cases = [
+            ("1 6 7 8", (6, 7, 8)),
+            ("10 first", (10,)),
+            ("first 10", (10,))
+        ]
+
+        for raw_user_input, extracted_rule_numbers in test_cases:
+            with self.subTest(identifier=raw_user_input):
+                invalid = ", ".join(
+                    str(rule_number) for rule_number in extracted_rule_numbers
+                    if rule_number < 1 or rule_number > len(self.full_rules))
+
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, args=raw_user_input)
+
+                self.assertEqual(
+                    self.ctx.send.call_args,
+                    unittest.mock.call(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ...")))
+                self.assertEqual(None, final_rule_numbers)
+
+    async def test_return_correct_rule_numbers(self):
+
+        test_cases = [
+            ("1 2 first", {1, 2}),
+            ("1 hello 2 second", {1}),
+            ("second third unknown 999", {2, 3}),
+        ]
+
+        for raw_user_input, expected_matched_rule_numbers in test_cases:
+            with self.subTest(identifier=raw_user_input):
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, args=raw_user_input)
+                self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)
+
+    async def test_return_default_rules_when_no_input_or_no_match_are_found(self):
+        test_cases = [
+            ("", None),
+            ("hello 2 second", None),
+            ("hello 999", None),
+        ]
+
+        for raw_user_input, expected_matched_rule_numbers in test_cases:
+            with self.subTest(identifier=raw_user_input):
+                final_rule_numbers = await self.cog.rules(self.cog, self.ctx, args=raw_user_input)
+                embed = self.ctx.send.call_args.kwargs['embed']
+                self.assertEqual(information.DEFAULT_RULES_DESCRIPTION, embed.description)
+                self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)

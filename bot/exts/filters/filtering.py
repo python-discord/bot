@@ -23,9 +23,11 @@ from bot.constants import Bot as BotConfig, Channels, Colours, Filter, Guild, Ic
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
+from bot.utils.helpers import remove_subdomain_from_url
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
+
 
 # Regular expressions
 CODE_BLOCK_RE = re.compile(
@@ -413,7 +415,7 @@ class Filtering(Cog):
                             await context.invoke(
                                 context.command,
                                 msg.author,
-                                arrow.utcnow() + AUTO_BAN_DURATION,
+                                (arrow.utcnow() + AUTO_BAN_DURATION).datetime,
                                 reason=AUTO_BAN_REASON
                             )
 
@@ -583,7 +585,7 @@ class Filtering(Cog):
         """
         text = self.clean_input(text)
 
-        # Remove backslashes to prevent escape character aroundfuckery like
+        # Remove backslashes to prevent escape character fuckaroundery like
         # discord\.gg/gdudes-pony-farm
         text = text.replace("\\", "")
 
@@ -649,7 +651,13 @@ class Filtering(Cog):
             for embed in msg.embeds:
                 if embed.type == "rich":
                     urls = URL_RE.findall(msg.content)
-                    if not embed.url or embed.url not in urls:
+                    final_urls = set(urls)
+                    # This is due to way discord renders relative urls in Embdes
+                    # if we send the following url: https://mobile.twitter.com/something
+                    # Discord renders it as https://twitter.com/something
+                    for url in urls:
+                        final_urls.add(remove_subdomain_from_url(url))
+                    if not embed.url or embed.url not in final_urls:
                         # If `embed.url` does not exist or if `embed.url` is not part of the content
                         # of the message, it's unlikely to be an auto-generated embed by Discord.
                         return msg.embeds

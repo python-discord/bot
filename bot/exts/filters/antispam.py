@@ -156,7 +156,7 @@ class AntiSpam(Cog):
                 colour=Colour.red()
             )
 
-            self.bot.remove_cog(self.__class__.__name__)
+            await self.bot.remove_cog(self.__class__.__name__)
             return
 
     @Cog.listener()
@@ -185,7 +185,7 @@ class AntiSpam(Cog):
             # Create a list of messages that were sent in the interval that the rule cares about.
             latest_interesting_stamp = arrow.utcnow() - timedelta(seconds=rule_config['interval'])
             messages_for_rule = list(
-                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)
+                takewhile(lambda msg: msg.created_at > latest_interesting_stamp, relevant_messages)  # noqa: B023
             )
 
             result = await rule_function(message, messages_for_rule, rule_config)

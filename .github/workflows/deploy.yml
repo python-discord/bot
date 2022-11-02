@@ -30,7 +30,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: python-discord/kubernetes
-          token: ${{ secrets.REPO_TOKEN }}
 
       - name: Authenticate with Kubernetes
         uses: azure/k8s-set-context@v1
