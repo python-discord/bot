@@ -9,7 +9,7 @@ from bot.exts.backend import error_handler
 from bot.exts.info.tags import Tags
 from bot.exts.moderation.silence import Silence
 from bot.utils.checks import InWhitelistCheckFailure
-from tests.helpers import MockBot, MockContext, MockGuild, MockRole, MockTextChannel
+from tests.helpers import MockBot, MockContext, MockGuild, MockRole, MockTextChannel, MockVoiceChannel
 
 
 class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
@@ -163,12 +163,11 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(await self.cog.on_command_error(self.ctx, case["error"]))
                 case["mock_function_to_call"].assert_awaited_once_with(self.ctx, case["error"].original)
 
-    async def test_error_handler_two_other_errors(self):
-        """Should call `handle_unexpected_error` if error is `MaxConcurrencyReached` or `ExtensionError`."""
+    async def test_error_handler_unexpected_errors(self):
+        """Should call `handle_unexpected_error` if error is `ExtensionError`."""
         self.cog.handle_unexpected_error = AsyncMock()
         errs = (
-            errors.MaxConcurrencyReached(1, MagicMock()),
-            errors.ExtensionError(name="foo")
+            errors.ExtensionError(name="foo"),
         )
 
         for err in errs:
@@ -192,7 +191,16 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.silence = Silence(self.bot)
         self.bot.get_command.return_value = self.silence.silence
-        self.ctx = MockContext(bot=self.bot)
+
+        # Use explicit mock channels so that discord.utils.get doesn't think
+        # guild.text_channels is an async iterable due to the MagicMock having
+        # a __aiter__ attr.
+        guild_overrides = {
+            "text_channels": [MockTextChannel(), MockTextChannel()],
+            "voice_channels": [MockVoiceChannel(), MockVoiceChannel()],
+        }
+        self.guild = MockGuild(**guild_overrides)
+        self.ctx = MockContext(bot=self.bot, guild=self.guild)
         self.cog = error_handler.ErrorHandler(self.bot)
 
     async def test_try_silence_context_invoked_from_error_handler(self):

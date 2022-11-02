@@ -300,6 +300,11 @@ guild:
         # Streaming
         video:          764245844798079016
 
+        # Patreon
+        patreon_tier_1: 505040943800516611
+        patreon_tier_2: 743399725914390631
+        patreon_tier_3: 743400204367036520
+
     moderation_roles:
         - *ADMINS_ROLE
         - *MOD_TEAM_ROLE

@@ -156,7 +156,7 @@ class AntiSpam(Cog):
                 colour=Colour.red()
             )
 
-            self.bot.remove_cog(self.__class__.__name__)
+            await self.bot.remove_cog(self.__class__.__name__)
             return
 
     @Cog.listener()
