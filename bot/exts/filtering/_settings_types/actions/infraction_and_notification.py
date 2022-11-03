@@ -61,6 +61,7 @@ class Infraction(Enum):
     WARNING = auto()
     WATCH = auto()
     NOTE = auto()
+    NONE = auto()
 
     def __str__(self) -> str:
         return self.name
@@ -70,8 +71,8 @@ class Infraction(Enum):
         user: Member | User,
         channel: discord.abc.Messageable,
         alerts_channel: discord.TextChannel,
-        duration: float | None,
-        reason: str | None
+        duration: float,
+        reason: str
     ) -> None:
         """Invokes the command matching the infraction name."""
         command_name = self.name.lower()
@@ -81,10 +82,10 @@ class Infraction(Enum):
 
         ctx = FakeContext(channel)
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
-            await command(ctx, user, reason=reason)
+            await command(ctx, user, reason=reason or None)
         else:
             duration = arrow.utcnow() + timedelta(seconds=duration) if duration else None
-            await command(ctx, user, duration, reason=reason)
+            await command(ctx, user, duration, reason=reason or None)
 
 
 class InfractionAndNotification(ActionEntry):
@@ -102,29 +103,31 @@ class InfractionAndNotification(ActionEntry):
             "the harsher one will be applied (by type or duration).\n\n"
             "Valid infraction types in order of harshness: "
         ) + ", ".join(infraction.name for infraction in Infraction),
-        "infraction_duration": "How long the infraction should last for in seconds, or 'None' for permanent.",
+        "infraction_duration": "How long the infraction should last for in seconds. 0 for permanent.",
         "infraction_reason": "The reason delivered with the infraction.",
         "infraction_channel": (
             "The channel ID in which to invoke the infraction (and send the confirmation message). "
-            "If blank, the infraction will be sent in the context channel. If the ID fails to resolve, it will default "
-            "to the mod-alerts channel."
+            "If 0, the infraction will be sent in the context channel. If the ID otherwise fails to resolve, "
+            "it will default to the mod-alerts channel."
         ),
         "dm_content": "The contents of a message to be DMed to the offending user.",
         "dm_embed": "The contents of the embed to be DMed to the offending user."
     }
 
-    dm_content: str | None
-    dm_embed: str | None
-    infraction_type: Infraction | None
-    infraction_reason: str | None
-    infraction_duration: float | None
-    infraction_channel: int | None
+    dm_content: str
+    dm_embed: str
+    infraction_type: Infraction
+    infraction_reason: str
+    infraction_duration: float
+    infraction_channel: int
 
     @validator("infraction_type", pre=True)
     @classmethod
-    def convert_infraction_name(cls, infr_type: str) -> Infraction:
+    def convert_infraction_name(cls, infr_type: str | Infraction) -> Infraction:
         """Convert the string to an Infraction by name."""
-        return Infraction[infr_type.replace(" ", "_").upper()] if infr_type else None
+        if isinstance(infr_type, Infraction):
+            return infr_type
+        return Infraction[infr_type.replace(" ", "_").upper()]
 
     async def action(self, ctx: FilterContext) -> None:
         """Send the notification to the user, and apply any specified infractions."""
@@ -150,7 +153,7 @@ class InfractionAndNotification(ActionEntry):
             except Forbidden:
                 ctx.action_descriptions.append("failed to notify")
 
-        if self.infraction_type is not None:
+        if self.infraction_type != Infraction.NONE:
             alerts_channel = bot_module.instance.get_channel(Channels.mod_alerts)
             if self.infraction_channel:
                 channel = bot_module.instance.get_channel(self.infraction_channel)

@@ -4,7 +4,7 @@ import re
 from abc import ABC, abstractmethod
 from enum import EnumMeta
 from functools import partial
-from typing import Any, Callable, Coroutine, Optional, TypeVar, Union
+from typing import Any, Callable, Coroutine, Optional, TypeVar
 
 import discord
 from botcore.site_api import ResponseCodeError
@@ -114,24 +114,12 @@ def populate_embed_from_dict(embed: Embed, data: dict) -> None:
         embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
 
 
-def remove_optional(type_: type) -> tuple[bool, type]:
-    """Return whether the type is Optional, and the Union of types which aren't None."""
-    if not hasattr(type_, "__args__"):
-        return False, type_
-    args = list(type_.__args__)
-    if type(None) not in args:
-        return False, type_
-    args.remove(type(None))
-    return True, Union[tuple(args)]
-
-
 def parse_value(value: str, type_: type[T]) -> T:
     """Parse the value and attempt to convert it to the provided type."""
-    is_optional, type_ = remove_optional(type_)
-    if is_optional and value == '""':
-        return None
     if hasattr(type_, "__origin__"):  # In case this is a types.GenericAlias or a typing._GenericAlias
         type_ = type_.__origin__
+    if value == '""':
+        return type_()
     if type_ in (tuple, list, set):
         return list(value.split(","))
     if type_ is bool:
@@ -273,7 +261,7 @@ class BooleanSelectView(discord.ui.View):
 class FreeInputModal(discord.ui.Modal):
     """A modal to freely enter a value for a setting."""
 
-    def __init__(self, setting_name: str, required: bool, type_: type, update_callback: Callable):
+    def __init__(self, setting_name: str, type_: type, update_callback: Callable):
         title = f"{setting_name} Input" if len(setting_name) < MAX_MODAL_TITLE_LENGTH - 6 else "Setting Input"
         super().__init__(timeout=COMPONENT_TIMEOUT, title=title)
 
@@ -282,13 +270,16 @@ class FreeInputModal(discord.ui.Modal):
         self.update_callback = update_callback
 
         label = setting_name if len(setting_name) < MAX_MODAL_TITLE_LENGTH else "Value"
-        self.setting_input = discord.ui.TextInput(label=label, style=discord.TextStyle.paragraph, required=required)
+        self.setting_input = discord.ui.TextInput(label=label, style=discord.TextStyle.paragraph, required=False)
         self.add_item(self.setting_input)
 
     async def on_submit(self, interaction: Interaction) -> None:
         """Update the setting with the new value in the embed."""
         try:
-            value = self.type_(self.setting_input.value)
+            if not self.setting_input.value:
+                value = self.type_()
+            else:
+                value = self.type_(self.setting_input.value)
         except (ValueError, TypeError):
             await interaction.response.send_message(
                 f"Could not process the input value for `{self.setting_name}`.", ephemeral=True
@@ -436,7 +427,6 @@ class EditBaseView(ABC, discord.ui.View):
         """Prompt the user to give an override value for the setting they selected, and respond to the interaction."""
         setting_name = select.values[0]
         type_ = self.type_per_setting_name[setting_name]
-        is_optional, type_ = remove_optional(type_)
         if hasattr(type_, "__origin__"):  # In case this is a types.GenericAlias or a typing._GenericAlias
             type_ = type_.__origin__
         new_view = self.copy()
@@ -462,7 +452,7 @@ class EditBaseView(ABC, discord.ui.View):
             view = EnumSelectView(setting_name, type_, update_callback)
             await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
         else:
-            await interaction.response.send_modal(FreeInputModal(setting_name, not is_optional, type_, update_callback))
+            await interaction.response.send_modal(FreeInputModal(setting_name, type_, update_callback))
         self.stop()
 
     @abstractmethod
