@@ -48,7 +48,9 @@ class InviteList(FilterList[InviteFilter]):
         """Return the types of filters used by this list."""
         return {InviteFilter}
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+    async def actions_for(
+        self, ctx: FilterContext
+    ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         text = clean_input(ctx.content)
 
@@ -58,7 +60,8 @@ class InviteList(FilterList[InviteFilter]):
         matches = list(DISCORD_INVITE.finditer(text))
         invite_codes = {m.group("invite") for m in matches}
         if not invite_codes:
-            return None, []
+            return None, [], {}
+        all_triggers = {}
 
         _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
         # If the allowed list doesn't operate in the context, unknown invites are allowed.
@@ -99,16 +102,17 @@ class InviteList(FilterList[InviteFilter]):
 
         if check_if_allowed:  # Whether unknown invites need to be checked.
             new_ctx = ctx.replace(content=guilds_for_inspection)
-            allowed = {
-                filter_.content for filter_ in self[ListType.ALLOW].filters.values()
+            all_triggers[ListType.ALLOW] = [
+                filter_ for filter_ in self[ListType.ALLOW].filters.values()
                 if await filter_.triggered_on(new_ctx)
-            }
+            ]
+            allowed = {filter_.content for filter_ in all_triggers[ListType.ALLOW]}
             unknown_invites.update({
                 code: invite for code, invite in invites_for_inspection.items() if invite.guild.id not in allowed
             })
 
         if not triggered and not unknown_invites:
-            return None, []
+            return None, [], all_triggers
 
         actions = None
         if unknown_invites:  # There are invites which weren't allowed but aren't explicitly blocked.
@@ -119,6 +123,7 @@ class InviteList(FilterList[InviteFilter]):
                 actions |= self[ListType.DENY].merge_actions(triggered)
             else:
                 actions = self[ListType.DENY].merge_actions(triggered)
+            all_triggers[ListType.DENY] = triggered
 
         blocked_invites |= unknown_invites
         ctx.matches += {match[0] for match in matches if match.group("invite") in blocked_invites}
@@ -127,7 +132,7 @@ class InviteList(FilterList[InviteFilter]):
         messages += [
             f"`{code} - {invite.guild.id}`" if invite else f"`{code}`" for code, invite in unknown_invites.items()
         ]
-        return actions, messages
+        return actions, messages, all_triggers
 
     @staticmethod
     def _guild_embed(invite: Invite) -> Embed:

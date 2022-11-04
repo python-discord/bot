@@ -184,7 +184,9 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
         """Return the types of filters used by this list."""
 
     @abstractmethod
-    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+    async def actions_for(
+        self, ctx: FilterContext
+    ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
 
     def _create_filter(self, filter_data: dict, defaults: Defaults) -> T | None:

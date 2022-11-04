@@ -175,7 +175,7 @@ class Filtering(Cog):
         self.message_cache.append(msg)
 
         ctx = FilterContext(Event.MESSAGE, msg.author, msg.channel, msg.content, msg, msg.embeds)
-        result_actions, list_messages = await self._resolve_action(ctx)
+        result_actions, list_messages, _ = await self._resolve_action(ctx)
         if result_actions:
             await result_actions.action(ctx)
         if ctx.send_alert:
@@ -498,31 +498,37 @@ class Filtering(Cog):
             await ctx.send(embed=embed)
 
     @filter.command(name="match")
-    async def f_match(self, ctx: Context, message: Message | None, *, string: str | None) -> None:
+    async def f_match(
+        self, ctx: Context, no_user: bool | None, message: Message | None, *, string: str | None
+    ) -> None:
         """
         Post any responses from the filter lists for the given message or string.
 
-        If there's a message the string will be ignored. Note that if a message is provided, it will go through all
-        validations appropriate to where it was sent and who sent it.
+        If there's a `message`, the `string` will be ignored. Note that if a `message` is provided, it will go through
+        all validations appropriate to where it was sent and who sent it. To check for matches regardless of the author
+        (for example if the message was sent by another staff member or yourself) set `no_user` to '1' or 'True'.
 
-        If a string is provided, it will be validated in the context of a user with no roles in python-general.
+        If a `string` is provided, it will be validated in the context of a user with no roles in python-general.
         """
         if not message and not string:
-            raise BadArgument(":x: Please provide input.")
+            raise BadArgument("Please provide input.")
         if message:
+            user = None if no_user else message.author
             filter_ctx = FilterContext(
-                Event.MESSAGE, message.author, message.channel, message.content, message, message.embeds
+                Event.MESSAGE, user, message.channel, message.content, message, message.embeds
             )
         else:
             filter_ctx = FilterContext(
                 Event.MESSAGE, None, ctx.guild.get_channel(Channels.python_general), string, None
             )
 
-        _, list_messages = await self._resolve_action(filter_ctx)
+        _, _, triggers = await self._resolve_action(filter_ctx)
         lines = []
-        for filter_list, list_message_list in list_messages.items():
-            if list_message_list:
-                lines.extend([f"**{filter_list.name.title()}s**", *list_message_list, "\n"])
+        for filter_list, list_triggers in triggers.items():
+            for sublist_type, sublist_triggers in list_triggers.items():
+                if sublist_triggers:
+                    triggers_repr = map(str, sublist_triggers)
+                    lines.extend([f"**{filter_list[sublist_type].label.title()}s**", *triggers_repr, "\n"])
         lines = lines[:-1]  # Remove last newline.
 
         embed = Embed(colour=Colour.blue(), title="Match results")
@@ -745,7 +751,9 @@ class Filtering(Cog):
             self.filter_lists[list_name] = filter_list_types[list_name](self)
         return self.filter_lists[list_name].add_list(list_data)
 
-    async def _resolve_action(self, ctx: FilterContext) -> tuple[Optional[ActionSettings], dict[FilterList, list[str]]]:
+    async def _resolve_action(
+        self, ctx: FilterContext
+    ) -> tuple[Optional[ActionSettings], dict[FilterList, list[str]], dict[FilterList, dict[ListType, list[Filter]]]]:
         """
         Return the actions that should be taken for all filter lists in the given context.
 
@@ -754,8 +762,9 @@ class Filtering(Cog):
         """
         actions = []
         messages = {}
+        triggers = {}
         for filter_list in self._subscriptions[ctx.event]:
-            list_actions, list_message = await filter_list.actions_for(ctx)
+            list_actions, list_message, triggers[filter_list] = await filter_list.actions_for(ctx)
             if list_actions:
                 actions.append(list_actions)
             if list_message:
@@ -765,7 +774,7 @@ class Filtering(Cog):
         if actions:
             result_actions = reduce(operator.or_, (action for action in actions))
 
-        return result_actions, messages
+        return result_actions, messages, triggers
 
     async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, list[str]]) -> None:
         """Build an alert message from the filter context, and send it via the alert webhook."""

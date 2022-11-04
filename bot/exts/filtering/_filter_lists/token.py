@@ -43,11 +43,13 @@ class TokensList(FilterList[TokenFilter]):
         """Return the types of filters used by this list."""
         return {TokenFilter}
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+    async def actions_for(
+        self, ctx: FilterContext
+    ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         text = ctx.content
         if not text:
-            return None, []
+            return None, [], {}
         if SPOILER_RE.search(text):
             text = self._expand_spoilers(text)
         text = clean_input(text)
@@ -59,7 +61,7 @@ class TokensList(FilterList[TokenFilter]):
         if triggers:
             actions = self[ListType.DENY].merge_actions(triggers)
             messages = self[ListType.DENY].format_messages(triggers)
-        return actions, messages
+        return actions, messages, {ListType.DENY: triggers}
 
     @staticmethod
     def _expand_spoilers(text: str) -> str:

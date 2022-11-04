@@ -61,15 +61,17 @@ class ExtensionsList(FilterList[ExtensionFilter]):
         """Return the types of filters used by this list."""
         return {ExtensionFilter}
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+    async def actions_for(
+        self, ctx: FilterContext
+    ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         # Return early if the message doesn't have attachments.
         if not ctx.message or not ctx.message.attachments:
-            return None, []
+            return None, [], {}
 
         _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
         if failed:  # There's no extension filtering in this context.
-            return None, []
+            return None, [], {}
 
         # Find all extensions in the message.
         all_ext = {
@@ -85,7 +87,7 @@ class ExtensionsList(FilterList[ExtensionFilter]):
         not_allowed = {ext: filename for ext, filename in all_ext if ext not in allowed_ext}
 
         if not not_allowed:  # Yes, it's a double negative. Meaning all attachments are allowed :)
-            return None, []
+            return None, [], {ListType.ALLOW: triggered}
 
         # Something is disallowed.
         if ".py" in not_allowed:
@@ -111,4 +113,4 @@ class ExtensionsList(FilterList[ExtensionFilter]):
             )
 
         ctx.matches += not_allowed.values()
-        return self[ListType.ALLOW].defaults.actions, [f"`{ext}`" for ext in not_allowed]
+        return self[ListType.ALLOW].defaults.actions, [f"`{ext}`" for ext in not_allowed], {ListType.ALLOW: triggered}

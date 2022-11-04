@@ -17,7 +17,7 @@ from bot.constants import Webhooks
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filter_lists.filter_list import ListType, SubscribingAtomicList, UniquesListBase
 from bot.exts.filtering._filters.antispam import antispam_filter_types
-from bot.exts.filtering._filters.filter import UniqueFilter
+from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.ui import build_mod_alert
@@ -55,10 +55,12 @@ class AntispamList(UniquesListBase):
                 self._already_warned.add(content)
             return None
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+    async def actions_for(
+        self, ctx: FilterContext
+    ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         if not ctx.message:
-            return None, []
+            return None, [], {}
 
         sublist: SubscribingAtomicList = self[ListType.DENY]
         potential_filters = [sublist.filters[id_] for id_ in sublist.subscriptions[ctx.event]]
@@ -71,7 +73,7 @@ class AntispamList(UniquesListBase):
         new_ctx = ctx.replace(content=relevant_messages)
         triggers = await sublist.filter_list_result(new_ctx)
         if not triggers:
-            return None, []
+            return None, [], {}
 
         if ctx.author not in self.message_deletion_queue:
             self.message_deletion_queue[ctx.author] = DeletionContext()
@@ -99,7 +101,7 @@ class AntispamList(UniquesListBase):
             current_actions.pop("infraction_and_notification", None)
 
         # Provide some message in case another filter list wants there to be an alert.
-        return current_actions, ["Handling spam event..."]
+        return current_actions, ["Handling spam event..."], {ListType.DENY: triggers}
 
     def _create_deletion_context_handler(self, context_id: Member) -> Callable[[FilterContext], Coroutine]:
         async def schedule_processing(ctx: FilterContext) -> None:

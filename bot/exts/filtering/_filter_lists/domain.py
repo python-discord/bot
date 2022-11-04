@@ -42,11 +42,13 @@ class DomainsList(FilterList[DomainFilter]):
         """Return the types of filters used by this list."""
         return {DomainFilter}
 
-    async def actions_for(self, ctx: FilterContext) -> tuple[ActionSettings | None, list[str]]:
+    async def actions_for(
+        self, ctx: FilterContext
+    ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         text = ctx.content
         if not text:
-            return None, []
+            return None, [], {}
 
         text = clean_input(text)
         urls = {match.group(1).lower().rstrip("/") for match in URL_RE.finditer(text)}
@@ -59,4 +61,4 @@ class DomainsList(FilterList[DomainFilter]):
         if triggers:
             actions = self[ListType.DENY].merge_actions(triggers)
             messages = self[ListType.DENY].format_messages(triggers)
-        return actions, messages
+        return actions, messages, {ListType.DENY: triggers}
