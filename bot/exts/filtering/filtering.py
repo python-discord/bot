@@ -857,6 +857,9 @@ class Filtering(Cog):
     ) -> None:
         """Add a filter to the database."""
         filter_type = filter_list.get_filter_type(content)
+        if not filter_type:
+            await ctx.reply(f":x: Could not find a filter type appropriate for `{content}`.")
+            return
         description, settings, filter_settings = description_and_settings_converter(
             filter_list,
             list_type,
@@ -937,7 +940,7 @@ class Filtering(Cog):
         if not valid:
             raise BadArgument(f"Error while validating filter-specific settings: {error_msg}")
 
-        content = await filter_type.process_content(content)
+        content, description = await filter_type.process_input(content, description)
 
         list_id = filter_list[list_type].id
         description = description or None
@@ -971,7 +974,7 @@ class Filtering(Cog):
             raise BadArgument(f"Error while validating filter-specific settings: {error_msg}")
 
         if content != filter_.content:
-            content = await filter_type.process_content(content)
+            content, description = await filter_type.process_input(content, description)
 
         # If the setting is not in `settings`, the override was either removed, or there wasn't one in the first place.
         for current_settings in (filter_.actions, filter_.validations):

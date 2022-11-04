@@ -24,9 +24,6 @@ class UniquesList(UniquesListBase):
         try:
             return unique_filter_types[content]
         except KeyError:
-            if content not in self._already_warned:
-                log.warn(f"A unique filter named {content} was supplied, but no matching implementation found.")
-                self._already_warned.add(content)
             return None
 
     async def actions_for(

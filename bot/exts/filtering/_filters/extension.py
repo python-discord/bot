@@ -16,12 +16,12 @@ class ExtensionFilter(Filter):
         return self.content in ctx.content
 
     @classmethod
-    async def process_content(cls, content: str) -> str:
+    async def process_input(cls, content: str, description: str) -> tuple[str, str]:
         """
-        Process the content into a form which will work with the filtering.
+        Process the content and description into a form which will work with the filtering.
 
-        A ValueError should be raised if the content can't be used.
+        A BadArgument should be raised if the content can't be used.
         """
         if not content.startswith("."):
             content = f".{content}"
-        return content
+        return content, description

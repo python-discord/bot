@@ -25,11 +25,11 @@ class InviteFilter(Filter):
         return self.content in ctx.content
 
     @classmethod
-    async def process_content(cls, content: str) -> str:
+    async def process_input(cls, content: str, description: str) -> tuple[str, str]:
         """
-        Process the content into a form which will work with the filtering.
+        Process the content and description into a form which will work with the filtering.
 
-        A ValueError should be raised if the content can't be used.
+        A BadArgument should be raised if the content can't be used.
         """
         match = DISCORD_INVITE.fullmatch(content)
         if not match or not match.group("invite"):
@@ -41,4 +41,8 @@ class InviteFilter(Filter):
             raise BadArgument(f"`{invite_code}` is not a valid Discord invite code.")
         if not invite.guild:
             raise BadArgument("Did you just try to add a group DM?")
-        return str(invite.guild.id)
+
+        guild_name = invite.guild.name if hasattr(invite.guild, "name") else ""
+        if guild_name.lower() not in description.lower():
+            description = " - ".join(part for part in (f'Guild "{guild_name}"', description) if part)
+        return str(invite.guild.id), description

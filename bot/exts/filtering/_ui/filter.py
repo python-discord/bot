@@ -255,7 +255,16 @@ class FilterEditView(EditBaseView):
         """
         if content is not None or description is not None:
             if content is not None:
+                filter_type = self.filter_list.get_filter_type(content)
+                if not filter_type:
+                    if isinstance(interaction_or_msg, discord.Message):
+                        send_method = interaction_or_msg.channel.send
+                    else:
+                        send_method = interaction_or_msg.response.send_message
+                    await send_method(f":x: Could not find a filter type appropriate for `{content}`.")
+                    return
                 self.content = content
+                self.filter_type = filter_type
             else:
                 content = self.content  # If there's no content or description, use the existing values.
             if description is self._REMOVE:

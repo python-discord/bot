@@ -50,13 +50,13 @@ class DomainFilter(Filter):
         return False
 
     @classmethod
-    async def process_content(cls, content: str) -> str:
+    async def process_input(cls, content: str, description: str) -> tuple[str, str]:
         """
-        Process the content into a form which will work with the filtering.
+        Process the content and description into a form which will work with the filtering.
 
-        A ValueError should be raised if the content can't be used.
+        A BadArgument should be raised if the content can't be used.
         """
         match = URL_RE.fullmatch(content)
         if not match or not match.group(1):
             raise BadArgument(f"`{content}` is not a URL.")
-        return match.group(1)
+        return match.group(1), description

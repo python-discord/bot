@@ -152,6 +152,8 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
     # Names must be unique across all filter lists.
     name = FieldRequiring.MUST_SET_UNIQUE
 
+    _already_warned = set()
+
     def add_list(self, list_data: dict) -> AtomicList:
         """Add a new type of list (such as a whitelist or a blacklist) this filter list."""
         actions, validations = create_settings(list_data["settings"], keep_empty=True)
@@ -192,11 +194,14 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
     def _create_filter(self, filter_data: dict, defaults: Defaults) -> T | None:
         """Create a filter from the given data."""
         try:
-            filter_type = self.get_filter_type(filter_data["content"])
+            content = filter_data["content"]
+            filter_type = self.get_filter_type(content)
             if filter_type:
                 return filter_type(filter_data, defaults)
-            else:
-                return None
+            elif content not in self._already_warned:
+                log.warn(f"A filter named {content} was supplied, but no matching implementation found.")
+                self._already_warned.add(content)
+            return None
         except TypeError as e:
             log.warning(e)
 
@@ -239,8 +244,6 @@ class UniquesListBase(FilterList[UniqueFilter]):
     Unique filters are ones that should only be run once in a given context.
     Each unique filter subscribes to a subset of events to respond to.
     """
-
-    _already_warned = set()
 
     def __init__(self, filtering_cog: 'Filtering'):
         super().__init__()
