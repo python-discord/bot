@@ -9,19 +9,17 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
 from botcore.site_api import ResponseCodeError
-from dateutil.parser import isoparse
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
-from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
+from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 
 if typing.TYPE_CHECKING:
-    from bot.exts.recruitment.talentpool._cog import TalentPool
     from bot.exts.utils.thread_bumper import ThreadBumper
 
 log = get_logger(__name__)
@@ -52,9 +50,9 @@ NOMINATION_MESSAGE_REGEX = re.compile(
 class Reviewer:
     """Manages, formats, and publishes reviews of helper nominees."""
 
-    def __init__(self, bot: Bot, pool: 'TalentPool'):
+    def __init__(self, bot: Bot, nomination_api: NominationAPI):
         self.bot = bot
-        self._pool = pool
+        self.api = nomination_api
 
     async def maybe_review_user(self) -> bool:
         """
@@ -65,11 +63,11 @@ class Reviewer:
         if not await self.is_ready_for_review():
             return False
 
-        user = await self.get_user_for_review()
-        if not user:
+        nomination = await self.get_nomination_to_review()
+        if not nomination:
             return False
 
-        await self.post_review(user, True)
+        await self.post_review(nomination)
         return True
 
     async def is_ready_for_review(self) -> bool:
@@ -107,9 +105,9 @@ class Reviewer:
 
         return True
 
-    async def get_user_for_review(self) -> Optional[int]:
+    async def get_nomination_to_review(self) -> Optional[Nomination]:
         """
-        Returns the user ID of the next user to review, or None if there are no users ready.
+        Returns the Nomination of the next user to review, or None if there are no users ready.
 
         Users will only be selected for review if:
          - They have not already been reviewed.
@@ -121,45 +119,46 @@ class Reviewer:
         """
         now = datetime.now(timezone.utc)
 
-        possible = []
-        for user_id, user_data in self._pool.cache.items():
-            time_since_nomination = now - isoparse(user_data["inserted_at"])
+        possible_nominations: list[Nomination] = []
+        nominations = await self.api.get_nominations(active=True)
+        for nomination in nominations:
+            time_since_nomination = now - nomination.inserted_at
             if (
-                not user_data["reviewed"]
+                not nomination.reviewed
                 and time_since_nomination > MIN_NOMINATION_TIME
             ):
-                possible.append((user_id, user_data))
+                possible_nominations.append(nomination)
 
-        if not possible:
+        if not possible_nominations:
             log.debug("No users ready to review.")
             return None
 
-        oldest_date = min(isoparse(x[1]["inserted_at"]) for x in possible)
-        max_entries = max(len(x[1]["entries"]) for x in possible)
+        oldest_date = min(nomination.inserted_at for nomination in possible_nominations)
+        max_entries = max(len(nomination.entries) for nomination in possible_nominations)
 
-        def sort_key(nomination: dict) -> float:
-            return self.score_nomination(nomination[1], oldest_date, now, max_entries)
+        def sort_key(nomination: Nomination) -> float:
+            return self.score_nomination(nomination, oldest_date, now, max_entries)
 
-        return max(possible, key=sort_key)[0]
+        return max(possible_nominations, key=sort_key)
 
     @staticmethod
-    def score_nomination(nomination: dict, oldest_date: datetime, now: datetime, max_entries: int) -> float:
+    def score_nomination(nomination: Nomination, oldest_date: datetime, now: datetime, max_entries: int) -> float:
         """
         Scores a nomination based on age and number of nomination entries.
 
         The higher the score, the higher the priority for being put up for review should be.
         """
-        num_entries = len(nomination["entries"])
+        num_entries = len(nomination.entries)
         entries_score = num_entries / max_entries
 
-        nomination_date = isoparse(nomination["inserted_at"])
+        nomination_date = nomination.inserted_at
         age_score = (nomination_date - now) / (oldest_date - now)
 
         return entries_score * REVIEW_SCORE_WEIGHT + age_score
 
-    async def post_review(self, user_id: int, update_database: bool) -> None:
+    async def post_review(self, nomination: Nomination) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
-        review, reviewed_emoji, nominee = await self.make_review(user_id)
+        review, reviewed_emoji, nominee = await self.make_review(nomination)
         if not nominee:
             return
 
@@ -181,41 +180,31 @@ class Reviewer:
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
-        if update_database:
-            nomination = self._pool.cache.get(user_id)
-            await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
+        await self.api.edit_nomination(nomination.id, reviewed=True)
 
         bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
         if bump_cog:
             context = await self.bot.get_context(message)
             await bump_cog.add_thread_to_bump_list(context, thread)
 
-    async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
+    async def make_review(self, nomination: Nomination) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
         """Format a generic review of a user and return it with the reviewed emoji and the user themselves."""
-        log.trace(f"Formatting the review of {user_id}")
-
-        # Since `cache` is a defaultdict, we should take care
-        # not to accidentally insert the IDs of users that have no
-        # active nominated by using the `cache.get(user_id)`
-        # instead of `cache[user_id]`.
-        nomination = self._pool.cache.get(user_id)
-        if not nomination:
-            log.trace(f"There doesn't appear to be an active nomination for {user_id}")
-            return f"There doesn't appear to be an active nomination for {user_id}", None, None
+        log.trace(f"Formatting the review of {nomination.user_id}")
 
         guild = self.bot.get_guild(Guild.id)
-        nominee = await get_or_fetch_member(guild, user_id)
+        nominee = await get_or_fetch_member(guild, nomination.user_id)
 
         if not nominee:
             return (
-                f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
+                f"I tried to review the user with ID `{nomination.user_id}`,"
+                " but they don't appear to be on the server :pensive:"
             ), None, None
 
         opening = f"{nominee.mention} ({nominee}) for Helper!"
 
         current_nominations = "\n\n".join(
-            f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}"
-            for entry in nomination['entries'][::-1]
+            f"**<@{entry.actor_id}>:** {entry.reason or '*no reason given*'}"
+            for entry in nomination.entries[::-1]
         )
         current_nominations = f"**Nominated by:**\n{current_nominations}"
 
@@ -434,29 +423,22 @@ class Reviewer:
         The number of previous nominations and unnominations are shown, as well as the reason the last one ended.
         """
         log.trace(f"Fetching the nomination history data for {member.id}'s review")
-        history = await self.bot.api_client.get(
-            "bot/nominations",
-            params={
-                "user__id": str(member.id),
-                "active": "false",
-                "ordering": "-inserted_at"
-            }
-        )
+        history = await self.api.get_nominations(user_id=member.id, active=False)
 
         log.trace(f"{len(history)} previous nominations found for {member.id}, formatting review.")
         if not history:
             return
 
-        num_entries = sum(len(nomination["entries"]) for nomination in history)
+        num_entries = sum(len(nomination.entries) for nomination in history)
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time.format_relative(history[0]['ended_at'])
+        end_time = time.format_relative(history[0].ended_at)
 
         review = (
             f"They were nominated **{nomination_times}** before"
             f", but their nomination was called off **{rejection_times}**."
-            f"\nThe last one ended {end_time} with the reason: {history[0]['end_reason']}"
+            f"\nThe last one ended {end_time} with the reason: {history[0].end_reason}"
         )
 
         return review
@@ -485,25 +467,3 @@ class Reviewer:
             results.append(await channel.send(message))
 
         return results
-
-    async def mark_reviewed(self, ctx: Context, user_id: int) -> bool:
-        """
-        Mark an active nomination as reviewed, updating the database and canceling the review task.
-
-        Returns True if the user was successfully marked as reviewed, False otherwise.
-        """
-        log.trace(f"Updating user {user_id} as reviewed")
-        await self._pool.refresh_cache()
-        if user_id not in self._pool.cache:
-            log.trace(f"Can't find a nominated user with id {user_id}")
-            await ctx.send(f":x: Can't find a currently nominated user with id `{user_id}`")
-            return False
-
-        nomination = self._pool.cache.get(user_id)
-        if nomination["reviewed"]:
-            await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
-            return False
-
-        await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
-
-        return True
