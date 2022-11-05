@@ -180,8 +180,30 @@ class Filtering(Cog):
             return
         self.message_cache.append(msg)
 
-        ctx = FilterContext(Event.MESSAGE, msg.author, msg.channel, msg.content, msg, msg.embeds)
-        result_actions, list_messages, _ = await self._resolve_action(ctx)
+        ctx = FilterContext.from_message(Event.MESSAGE, msg, None, self.message_cache)
+        result_actions, list_messages, triggers = await self._resolve_action(ctx)
+        self.message_cache.update(msg, metadata=triggers)
+        if result_actions:
+            await result_actions.action(ctx)
+        if ctx.send_alert:
+            await self._send_alert(ctx, list_messages)
+
+    @Cog.listener()
+    async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
+        """Filter the contents of an edited message. Don't reinvoke filters already invoked on the `before` version."""
+        # Only check changes to the message contents/attachments and embed additions, not pin status etc.
+        if all((
+            before.content == after.content,  # content hasn't changed
+            before.attachments == after.attachments,  # attachments haven't changed
+            len(before.embeds) >= len(after.embeds)  # embeds haven't been added
+        )):
+            return
+
+        # Update the cache first, it might be used by the antispam filter.
+        # No need to update the triggers, they're going to be updated inside the sublists if necessary.
+        self.message_cache.update(after)
+        ctx = FilterContext.from_message(Event.MESSAGE_EDIT, after, before, self.message_cache)
+        result_actions, list_messages, triggers = await self._resolve_action(ctx)
         if result_actions:
             await result_actions.action(ctx)
         if ctx.send_alert:
@@ -520,21 +542,17 @@ class Filtering(Cog):
             raise BadArgument("Please provide input.")
         if message:
             user = None if no_user else message.author
-            filter_ctx = FilterContext(
-                Event.MESSAGE, user, message.channel, message.content, message, message.embeds
-            )
+            filter_ctx = FilterContext(Event.MESSAGE, user, message.channel, message.content, message, message.embeds)
         else:
-            filter_ctx = FilterContext(
-                Event.MESSAGE, None, ctx.guild.get_channel(Channels.python_general), string, None
-            )
+            python_general = ctx.guild.get_channel(Channels.python_general)
+            filter_ctx = FilterContext(Event.MESSAGE, None, python_general, string, None)
 
         _, _, triggers = await self._resolve_action(filter_ctx)
         lines = []
-        for filter_list, list_triggers in triggers.items():
-            for sublist_type, sublist_triggers in list_triggers.items():
-                if sublist_triggers:
-                    triggers_repr = map(str, sublist_triggers)
-                    lines.extend([f"**{filter_list[sublist_type].label.title()}s**", *triggers_repr, "\n"])
+        for sublist, sublist_triggers in triggers.items():
+            if sublist_triggers:
+                triggers_repr = map(str, sublist_triggers)
+                lines.extend([f"**{sublist.label.title()}s**", *triggers_repr, "\n"])
         lines = lines[:-1]  # Remove last newline.
 
         embed = Embed(colour=Colour.blue(), title="Match results")
@@ -767,7 +785,7 @@ class Filtering(Cog):
 
     async def _resolve_action(
         self, ctx: FilterContext
-    ) -> tuple[Optional[ActionSettings], dict[FilterList, list[str]], dict[FilterList, dict[ListType, list[Filter]]]]:
+    ) -> tuple[ActionSettings | None, dict[FilterList, list[str]], dict[AtomicList, list[Filter]]]:
         """
         Return the actions that should be taken for all filter lists in the given context.
 
@@ -778,7 +796,8 @@ class Filtering(Cog):
         messages = {}
         triggers = {}
         for filter_list in self._subscriptions[ctx.event]:
-            list_actions, list_message, triggers[filter_list] = await filter_list.actions_for(ctx)
+            list_actions, list_message, list_triggers = await filter_list.actions_for(ctx)
+            triggers.update({filter_list[list_type]: filters for list_type, filters in list_triggers.items()})
             if list_actions:
                 actions.append(list_actions)
             if list_message:
@@ -945,11 +964,11 @@ class Filtering(Cog):
         """If the filter is new and applies an auto-infraction, or was edited to apply a different one, log it."""
         infraction_type = filter_.overrides[0].get("infraction_type")
         if not infraction_type:
-            infraction_type = filter_list[list_type].defaults.actions.get_setting("infraction_type")
+            infraction_type = filter_list[list_type].default("infraction_type")
         if old_filter:
             old_infraction_type = old_filter.overrides[0].get("infraction_type")
             if not old_infraction_type:
-                old_infraction_type = filter_list[list_type].defaults.actions.get_setting("infraction_type")
+                old_infraction_type = filter_list[list_type].default("infraction_type")
             if infraction_type == old_infraction_type:
                 return
 
@@ -1146,7 +1165,7 @@ class Filtering(Cog):
         # Extract all auto-infraction filters added in the past 7 days from each filter type
         for filter_list in self.filter_lists.values():
             for sublist in filter_list.values():
-                default_infraction_type = sublist.defaults.actions.get_setting("infraction_type")
+                default_infraction_type = sublist.default("infraction_type")
                 for filter_ in sublist.filters.values():
                     if max(filter_.created_at, filter_.updated_at) < seven_days_ago:
                         continue

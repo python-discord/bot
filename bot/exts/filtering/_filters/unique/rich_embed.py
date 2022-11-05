@@ -20,6 +20,12 @@ class RichEmbedFilter(UniqueFilter):
     async def triggered_on(self, ctx: FilterContext) -> bool:
         """Determine if `msg` contains any rich embeds not auto-generated from a URL."""
         if ctx.embeds:
+            if ctx.event == Event.MESSAGE_EDIT:
+                # If the edit delta is less than 100 microseconds, it's probably a double filter trigger.
+                delta = ctx.message.edited_at - (ctx.before_message.edited_at or ctx.before_message.created_at)
+                if delta.total_seconds() < 0.0001:
+                    return False
+
             for embed in ctx.embeds:
                 if embed.type == "rich":
                     urls = URL_RE.findall(ctx.content)

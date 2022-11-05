@@ -68,7 +68,7 @@ class AntispamList(UniquesListBase):
 
         earliest_relevant_at = arrow.utcnow() - timedelta(seconds=max_interval)
         relevant_messages = list(
-            takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.filtering_cog.message_cache)
+            takewhile(lambda msg: msg.created_at > earliest_relevant_at, ctx.message_cache)
         )
         new_ctx = ctx.replace(content=relevant_messages)
         triggers = await sublist.filter_list_result(new_ctx)

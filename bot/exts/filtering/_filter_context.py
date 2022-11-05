@@ -7,6 +7,8 @@ from enum import Enum, auto
 
 from discord import DMChannel, Member, Message, TextChannel, Thread, User
 
+from bot.utils.message_cache import MessageCache
+
 if typing.TYPE_CHECKING:
     from bot.exts.filtering._filters.filter import Filter
 
@@ -29,6 +31,8 @@ class FilterContext:
     content: str | Iterable  # What actually needs filtering
     message: Message | None  # The message involved
     embeds: list = field(default_factory=list)  # Any embeds involved
+    before_message: Message | None = None
+    message_cache: MessageCache | None = None
     # Output context
     dm_content: str = field(default_factory=str)  # The content to DM the invoker
     dm_embed: str = field(default_factory=str)  # The embed description to DM the invoker
@@ -44,6 +48,13 @@ class FilterContext:
     related_messages: set[Message] = field(default_factory=set)
     related_channels: set[TextChannel | Thread | DMChannel] = field(default_factory=set)
     attachments: dict[int, list[str]] = field(default_factory=dict)  # Message ID to attachment URLs.
+
+    @classmethod
+    def from_message(
+        cls, event: Event, message: Message, before: Message | None = None, cache: MessageCache | None = None
+    ) -> FilterContext:
+        """Create a filtering context from the attributes of a message."""
+        return cls(event, message.author, message.channel, message.content, message, message.embeds, before, cache)
 
     def replace(self, **changes) -> FilterContext:
         """Return a new context object assigning new values to the specified fields."""

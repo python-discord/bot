@@ -47,7 +47,8 @@ def list_type_converter(argument: str) -> ListType:
     raise BadArgument(f"No matching list type found for {argument!r}.")
 
 
-@dataclass(frozen=True)
+# AtomicList and its subclasses must have eq=False, otherwise the dataclass deco will replace the hash function.
+@dataclass(frozen=True, eq=False)
 class AtomicList:
     """
     Represents the atomic structure of a single filter list as it appears in the database.
@@ -84,9 +85,8 @@ class AtomicList:
         """
         return await self._create_filter_list_result(ctx, self.defaults, self.filters.values())
 
-    @staticmethod
     async def _create_filter_list_result(
-        ctx: FilterContext, defaults: Defaults, filters: Iterable[Filter]
+        self, ctx: FilterContext, defaults: Defaults, filters: Iterable[Filter]
     ) -> list[Filter]:
         """A helper function to evaluate the result of `filter_list_result`."""
         passed_by_default, failed_by_default = defaults.validations.evaluate(ctx)
@@ -103,6 +103,13 @@ class AtomicList:
                     if await filter_.triggered_on(ctx):
                         relevant_filters.append(filter_)
 
+        if ctx.event == Event.MESSAGE_EDIT and ctx.message and self.list_type == ListType.DENY:
+            previously_triggered = ctx.message_cache.get_message_metadata(ctx.message.id)
+            if previously_triggered and self in previously_triggered:
+                ignore_filters = previously_triggered[self]
+                # This updates the cache. Some filters are ignored, but they're necessary if there's another edit.
+                previously_triggered[self] = relevant_filters
+                relevant_filters = [filter_ for filter_ in relevant_filters if filter_ not in ignore_filters]
         return relevant_filters
 
     def default(self, setting_name: str) -> Any:
@@ -143,6 +150,9 @@ class AtomicList:
         else:
             messages = [f"#{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
         return messages
+
+    def __hash__(self):
+        return hash(id(self))
 
 
 T = typing.TypeVar("T", bound=Filter)
@@ -220,7 +230,7 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
         return hash(id(self))
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class SubscribingAtomicList(AtomicList):
     """
     A base class for a list of unique filters.
