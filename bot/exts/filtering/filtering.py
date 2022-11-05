@@ -1,3 +1,4 @@
+import datetime
 import json
 import operator
 import re
@@ -6,11 +7,12 @@ from functools import partial, reduce
 from io import BytesIO
 from typing import Literal, Optional, get_type_hints
 
+import arrow
 import discord
 from botcore.site_api import ResponseCodeError
 from discord import Colour, Embed, HTTPException, Message, MessageType
-from discord.ext import commands
-from discord.ext.commands import BadArgument, Cog, Context, has_any_role
+from discord.ext import commands, tasks
+from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
@@ -22,6 +24,7 @@ from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_t
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings import ActionSettings
+from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
     build_filter_repr_dict, description_and_settings_converter, filter_serializable_overrides, populate_embed_from_dict
 )
@@ -33,11 +36,13 @@ from bot.exts.filtering._ui.ui import (
 from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.channel import is_mod_channel
 from bot.utils.message_cache import MessageCache
 
 log = get_logger(__name__)
 
 CACHE_SIZE = 100
+WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 
 
 class Filtering(Cog):
@@ -81,6 +86,7 @@ class Filtering(Cog):
             log.error(f"Failed to fetch filters webhook with ID `{Webhooks.filters}`.")
 
         self.collect_loaded_types(example_list)
+        self.weekly_auto_infraction_report_task.start()
 
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
         """
@@ -735,6 +741,14 @@ class Filtering(Cog):
         )
 
     # endregion
+    # region: utility commands
+
+    @command(name="filter_report")
+    async def force_send_weekly_report(self, ctx: Context) -> None:
+        """Respond with a list of auto-infractions added in the last 7 days."""
+        await self.send_weekly_auto_infraction_report(ctx.channel)
+
+    # endregion
     # region: helper functions
 
     def _load_raw_filter_list(self, list_data: dict) -> AtomicList | None:
@@ -925,7 +939,30 @@ class Filtering(Cog):
         return msg
 
     @staticmethod
+    async def _maybe_alert_auto_infraction(
+        filter_list: FilterList, list_type: ListType, filter_: Filter, old_filter: Filter | None = None
+    ) -> None:
+        """If the filter is new and applies an auto-infraction, or was edited to apply a different one, log it."""
+        infraction_type = filter_.overrides[0].get("infraction_type")
+        if not infraction_type:
+            infraction_type = filter_list[list_type].defaults.actions.get_setting("infraction_type")
+        if old_filter:
+            old_infraction_type = old_filter.overrides[0].get("infraction_type")
+            if not old_infraction_type:
+                old_infraction_type = filter_list[list_type].defaults.actions.get_setting("infraction_type")
+            if infraction_type == old_infraction_type:
+                return
+
+        if infraction_type != Infraction.NONE:
+            filter_log = bot.instance.get_channel(Channels.filter_log)
+            if filter_log:
+                await filter_log.send(
+                    f":warning: Heads up! The new {filter_list[list_type].label} filter "
+                    f"({filter_}) will automatically {infraction_type.name.lower()} users."
+                )
+
     async def _post_new_filter(
+        self,
         msg: Message,
         filter_list: FilterList,
         list_type: ListType,
@@ -951,13 +988,14 @@ class Filtering(Cog):
         response = await bot.instance.api_client.post('bot/filter/filters', json=to_serializable(payload))
         new_filter = filter_list.add_filter(list_type, response)
         if new_filter:
+            await self._maybe_alert_auto_infraction(filter_list, list_type, new_filter)
             extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
             await msg.reply(f"✅ Added filter: {new_filter}" + extra_msg)
         else:
             await msg.reply(":x: Could not create the filter. Are you sure it's implemented?")
 
-    @staticmethod
     async def _patch_filter(
+        self,
         filter_: Filter,
         msg: Message,
         filter_list: FilterList,
@@ -991,6 +1029,7 @@ class Filtering(Cog):
         )
         # Return type can be None, but if it's being edited then it's not supposed to be.
         edited_filter = filter_list.add_filter(list_type, response)
+        await self._maybe_alert_auto_infraction(filter_list, list_type, edited_filter, filter_)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
 
@@ -1078,6 +1117,62 @@ class Filtering(Cog):
         await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
 
     # endregion
+    # region: tasks
+
+    @tasks.loop(time=datetime.time(hour=18))
+    async def weekly_auto_infraction_report_task(self) -> None:
+        """Trigger an auto-infraction report to be sent if it is the desired day of the week (WEEKLY_REPORT_ISO_DAY)."""
+        if arrow.utcnow().isoweekday() != WEEKLY_REPORT_ISO_DAY:
+            return
+
+        await self.send_weekly_auto_infraction_report()
+
+    async def send_weekly_auto_infraction_report(self, channel: discord.TextChannel | discord.Thread = None) -> None:
+        """
+        Send a list of auto-infractions added in the last 7 days to the specified channel.
+
+        If `channel` is not specified, it is sent to #mod-meta.
+        """
+        seven_days_ago = arrow.utcnow().shift(days=-7)
+        if not channel:
+            log.info("Auto-infraction report: the channel to report to is missing.")
+            channel = self.bot.get_channel(Channels.mod_meta)
+        elif not is_mod_channel(channel):
+            # Silently fail if output is going to be a non-mod channel.
+            log.info(f"Auto-infraction report: the channel {channel} is not a mod channel.")
+            return
+
+        found_filters = defaultdict(list)
+        # Extract all auto-infraction filters added in the past 7 days from each filter type
+        for filter_list in self.filter_lists.values():
+            for sublist in filter_list.values():
+                default_infraction_type = sublist.defaults.actions.get_setting("infraction_type")
+                for filter_ in sublist.filters.values():
+                    if max(filter_.created_at, filter_.updated_at) < seven_days_ago:
+                        continue
+                    infraction_type = filter_.overrides[0].get("infraction_type")
+                    if (
+                        (infraction_type and infraction_type != Infraction.NONE)
+                        or (not infraction_type and default_infraction_type != Infraction.NONE)
+                    ):
+                        found_filters[sublist.label].append((filter_, infraction_type or default_infraction_type))
+
+        # Nicely format the output so each filter list type is grouped
+        lines = [f"**Auto-infraction filters added since {seven_days_ago.format('YYYY-MM-DD')}**"]
+        for list_label, filters in found_filters.items():
+            lines.append("\n".join([f"**{list_label.title()}**"]+[f"{filter_} ({infr})" for filter_, infr in filters]))
+
+        if len(lines) == 1:
+            lines.append("Nothing to show")
+
+        await channel.send("\n\n".join(lines))
+        log.info("Successfully sent auto-infraction report.")
+
+    # endregion
+
+    async def cog_unload(self) -> None:
+        """Cancel the weekly auto-infraction filter report on cog unload."""
+        self.weekly_auto_infraction_report_task.cancel()
 
 
 async def setup(bot: Bot) -> None:

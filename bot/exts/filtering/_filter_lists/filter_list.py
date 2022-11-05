@@ -9,6 +9,7 @@ from functools import reduce
 from operator import or_
 from typing import Any
 
+import arrow
 from discord.ext.commands import BadArgument
 
 from bot.exts.filtering._filter_context import Event, FilterContext
@@ -55,6 +56,8 @@ class AtomicList:
     """
 
     id: int
+    created_at: arrow.Arrow
+    updated_at: arrow.Arrow
     name: str
     list_type: ListType
     defaults: Defaults
@@ -166,7 +169,15 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
             if new_filter:
                 filters[filter_data["id"]] = new_filter
 
-        self[list_type] = AtomicList(list_data["id"], self.name, list_type, defaults, filters)
+        self[list_type] = AtomicList(
+            list_data["id"],
+            arrow.get(list_data["created_at"]),
+            arrow.get(list_data["updated_at"]),
+            self.name,
+            list_type,
+            defaults,
+            filters
+        )
         return self[list_type]
 
     def add_filter(self, list_type: ListType, filter_data: dict) -> T | None:
@@ -255,7 +266,15 @@ class UniquesListBase(FilterList[UniqueFilter]):
         actions, validations = create_settings(list_data["settings"], keep_empty=True)
         list_type = ListType(list_data["list_type"])
         defaults = Defaults(actions, validations)
-        new_list = SubscribingAtomicList(list_data["id"], self.name, list_type, defaults, {})
+        new_list = SubscribingAtomicList(
+            list_data["id"],
+            arrow.get(list_data["created_at"]),
+            arrow.get(list_data["updated_at"]),
+            self.name,
+            list_type,
+            defaults,
+            {}
+        )
         self[list_type] = new_list
 
         filters = {}

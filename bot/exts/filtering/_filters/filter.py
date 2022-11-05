@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Any
 
+import arrow
 from pydantic import ValidationError
 
 from bot.exts.filtering._filter_context import Event, FilterContext
@@ -26,6 +27,8 @@ class Filter(FieldRequiring):
         self.id = filter_data["id"]
         self.content = filter_data["content"]
         self.description = filter_data["description"]
+        self.created_at = arrow.get(filter_data["created_at"])
+        self.updated_at = arrow.get(filter_data["updated_at"])
         self.actions, self.validations = create_settings(filter_data["settings"], defaults=defaults)
         if self.extra_fields_type:
             self.extra_fields = self.extra_fields_type.parse_raw(filter_data["additional_field"] or "{}")  # noqa: P103
