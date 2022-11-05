@@ -53,6 +53,8 @@ class ChannelScope(ValidationEntry):
 
         if not hasattr(channel, "category"):  # This is not a guild channel, outside the scope of this setting.
             return True
+        if hasattr(channel, "parent"):
+            channel = channel.parent
 
         enabled_channel = channel.id in self.enabled_channels or channel.name in self.enabled_channels
         disabled_channel = channel.id in self.disabled_channels or channel.name in self.disabled_channels
