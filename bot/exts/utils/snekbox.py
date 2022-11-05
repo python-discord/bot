@@ -125,7 +125,8 @@ class PythonVersionSwitcherButton(ui.Button):
         version_to_switch_to: Literal["3.10", "3.11"],
         snekbox_cog: "Snekbox",
         ctx: Context,
-        code: str
+        code: str,
+        args: Optional[list[str]] = None
     ) -> None:
         self.version_to_switch_to = version_to_switch_to
         super().__init__(label=f"Run in {self.version_to_switch_to}", style=enums.ButtonStyle.primary)
@@ -134,6 +135,7 @@ class PythonVersionSwitcherButton(ui.Button):
         self.ctx = ctx
         self.job_name = job_name
         self.code = code
+        self.args = args
 
     async def callback(self, interaction: Interaction) -> None:
         """
@@ -150,7 +152,9 @@ class PythonVersionSwitcherButton(ui.Button):
             # The log arg on send_job will stop the actual job from running.
             await interaction.message.delete()
 
-        await self.snekbox_cog.run_job(self.job_name, self.ctx, self.version_to_switch_to, self.code)
+        await self.snekbox_cog.run_job(
+            self.job_name, self.ctx, self.version_to_switch_to, self.code, args=self.args
+        )
 
 
 class Snekbox(Cog):
@@ -165,7 +169,8 @@ class Snekbox(Cog):
         job_name: str,
         current_python_version: Literal["3.10", "3.11"],
         ctx: Context,
-        code: str
+        code: str,
+        args: Optional[list[str]] = None
     ) -> None:
         """Return a view that allows the user to change what version of Python their code is run on."""
         if current_python_version == "3.10":
@@ -177,7 +182,7 @@ class Snekbox(Cog):
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
         )
-        view.add_item(PythonVersionSwitcherButton(job_name, alt_python_version, self, ctx, code))
+        view.add_item(PythonVersionSwitcherButton(job_name, alt_python_version, self, ctx, code, args))
         view.add_item(interactions.DeleteMessageButton())
 
         return view
@@ -357,7 +362,7 @@ class Snekbox(Cog):
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
                 allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
-                view = self.build_python_version_switcher_view(job_name, python_version, ctx, code)
+                view = self.build_python_version_switcher_view(job_name, python_version, ctx, code, args)
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view)
                 view.message = response
 
