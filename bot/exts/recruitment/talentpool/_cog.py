@@ -49,7 +49,11 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def cog_load(self) -> None:
         """Start autoreview loop if enabled."""
-        self.track_forgotten_nominations.start()
+        if not GithubAdminRepo.token:
+            log.warning(f"No token for the {GithubAdminRepo.name} repository was provided, skipping issue creation.")
+        else:
+            self.track_forgotten_nominations.start()
+
         if await self.autoreview_enabled():
             self.autoreview_loop.start()
 
@@ -183,10 +187,6 @@ class TalentPool(Cog, name="Talentpool"):
 
         Returns True when the issue has been created, False otherwise.
         """
-        if not GithubAdminRepo.token:
-            log.warning(f"No token for the {GithubAdminRepo.name} repository was provided, skipping issue creation.")
-            return False
-
         url = f"https://api.github.com/repos/{GithubAdminRepo.owner}/{GithubAdminRepo.name}/issues"
         headers = {
             "Accept": "application/vnd.github.v3+json",
