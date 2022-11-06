@@ -23,6 +23,7 @@ class Nomination(BaseModel):
     ended_at: datetime | None
     entries: list[NominationEntry]
     reviewed: bool
+    thread_id: int | None
 
 
 class NominationAPI:
@@ -65,6 +66,7 @@ class NominationAPI:
         end_reason: str | None = None,
         active: bool | None = None,
         reviewed: bool | None = None,
+        thread_id: int | None = None,
     ) -> Nomination:
         """
         Edit a nomination.
@@ -78,6 +80,8 @@ class NominationAPI:
             data["active"] = active
         if reviewed is not None:
             data["reviewed"] = reviewed
+        if thread_id is not None:
+            data["thread_id"] = thread_id
 
         result = await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
         return Nomination.parse_obj(result)
