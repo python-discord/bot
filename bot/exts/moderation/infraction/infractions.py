@@ -481,13 +481,14 @@ class Infractions(InfractionScheduler, commands.Cog):
                 timeout=10,
             )
 
-            await confirmation_view.send(
-                ctx.channel,
-                message_content=f"{user} has an elevated role. Are you sure you want to ban them?",
+            message = await ctx.send(
+                f"{user} has an elevated role. Are you sure you want to ban them?",
+                view=confirmation_view
             )
+            confirmation_view.message = message
 
             await confirmation_view.wait()
-            if confirmation_view.value is None:
+            if confirmation_view.confirmed is None:
                 log.trace(
                     "Attempted ban of user %s by moderator %s cancelled due to timeout.",
                     str(user),
@@ -496,7 +497,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
                 return None
 
-            elif confirmation_view.value is False:
+            elif confirmation_view.confirmed is False:
                 log.trace(
                     "Attempted ban of user %s by moderator %s cancelled due to manual cancel.",
                     str(user),

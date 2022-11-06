@@ -292,17 +292,13 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
             message=message
         )
 
-        self.value: t.Optional[bool] = None
-
-    async def send(self, channel: TextChannel, *, message_content: str) -> None:
-        """Send this view to the given channel with the given message content."""
-        self.message = await channel.send(message_content, view=self)
+        self.confirmed: t.Optional[bool] = None
 
     @discord.ui.button(label="Confirm", style=ButtonStyle.green)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "confirm" button is pressed."""
         await interaction.response.defer()
-        self.value = True
+        self.confirmed = True
         await super().on_timeout()
         self.stop()
 
@@ -310,6 +306,6 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
     async def cancel(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "cancel" button is pressed."""
         await interaction.response.defer()
-        self.value = False
+        self.confirmed = False
         await super().on_timeout()
         self.stop()
