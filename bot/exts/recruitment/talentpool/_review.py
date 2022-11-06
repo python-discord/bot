@@ -180,7 +180,7 @@ class Reviewer:
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
-        await self.api.edit_nomination(nomination.id, reviewed=True)
+        await self.api.edit_nomination(nomination.id, reviewed=True, thread_id=thread.id)
 
         bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
         if bump_cog:
@@ -433,11 +433,15 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
+        nomination_vote_threads = ", ".join(
+            [f"<#{nomination.thread_id}>" if nomination.thread_id else '' for nomination in history]
+        )
         end_time = time.format_relative(history[0].ended_at)
 
         review = (
             f"They were nominated **{nomination_times}** before"
             f", but their nomination was called off **{rejection_times}**."
+            f"\nList of all of their nomination threads: {nomination_vote_threads}"
             f"\nThe last one ended {end_time} with the reason: {history[0].end_reason}"
         )
 
