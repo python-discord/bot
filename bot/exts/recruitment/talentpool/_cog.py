@@ -494,7 +494,7 @@ class TalentPool(Cog, name="Talentpool"):
             thread = await self.bot.fetch_channel(nomination.thread_id)
             thread_jump_url = f'[Jump to thread!]({thread.jump_url})'
         else:
-            thread_jump_url = "Thread hasn't been created yet or has been deleted"
+            thread_jump_url = "**Thread hasn't been created yet or has been deleted**"
 
         if nomination.active:
             lines = textwrap.dedent(
