@@ -17,6 +17,7 @@ from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
+from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 
 from ._api import Nomination, NominationAPI
@@ -490,11 +491,12 @@ class TalentPool(Cog, name="Talentpool"):
 
         start_date = time.discord_timestamp(nomination.inserted_at)
 
+        thread = None
+
         if nomination.thread_id:
-            thread = await self.bot.fetch_channel(nomination.thread_id)
-            thread_jump_url = f'[Jump to thread!]({thread.jump_url})'
-        else:
-            thread_jump_url = "**Thread hasn't been created yet or has been deleted**"
+            thread = await get_or_fetch_channel(nomination.thread_id)
+
+        thread_jump_url = f'[Jump to thread!]({thread.jump_url})' if thread else "*Not created*"
 
         if nomination.active:
             lines = textwrap.dedent(
