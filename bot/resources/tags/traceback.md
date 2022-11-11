@@ -10,6 +10,7 @@ Traceback (most recent call last):
     add_three("6")
   File "my_file.py", line 2, in add_three
     a = num + 3
+        ~~~~^~~
 TypeError: can only concatenate str (not "int") to str
 ```
 If the traceback is long, use [our pastebin](https://paste.pythondiscord.com/).

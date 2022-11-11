@@ -5,8 +5,8 @@ The main purpose of Python [virtual environments](https://docs.Python.org/3/libr
 To see the current environment in use by Python, you can run:
 ```py
 >>> import sys
->>> print(sys.executable)
-/usr/bin/python3
+>>> sys.executable
+'/usr/bin/python3'
 ```
 
 To see the environment in use by pip, you can do `pip debug` (`pip3 debug` for Linux/macOS). The 3rd line of the output will contain the path in use e.g. `sys.executable: /usr/bin/python3`.
