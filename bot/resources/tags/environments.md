@@ -1,4 +1,8 @@
-**Python Environments**
+---
+aliases: ["envs"]
+embed:
+    title: "Python Environments"
+---
 
 The main purpose of Python [virtual environments](https://docs.Python.org/3/library/venv.html#venv-def) is to create an isolated environment for Python projects. This means that each project can have its own dependencies, such as third party packages installed using pip, regardless of what dependencies every other project has.
 
