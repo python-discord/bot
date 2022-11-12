@@ -23,6 +23,7 @@ from ._api import Nomination, NominationAPI
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
+OLD_NOMINATIONS_THRESHOLD_IN_DAYS = 14
 
 log = get_logger(__name__)
 
@@ -110,6 +111,15 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send("Autoreview is currently enabled.")
         else:
             await ctx.send("Autoreview is currently disabled.")
+
+    @tasks.loop(seconds=30)
+    async def track_forgotten_nominations(self) -> None:
+        """Track active nominations who are more than 2 weeks old."""
+        # 1. Fetch all active nominations that are more than 2 weeks old from site
+        # 2. Run checks on whether they've already been tracked or not
+        # 3. Create GitHub task
+        # 4. Add emojis
+        return
 
     @tasks.loop(hours=1)
     async def autoreview_loop(self) -> None:
