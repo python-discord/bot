@@ -24,7 +24,7 @@ from bot.utils.members import get_or_fetch_member
 from ._api import Nomination, NominationAPI
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
-FLAG_EMOJI = "🚩"
+FLAG_EMOJI = "🎫"
 REASON_MAX_CHARS = 1000
 OLD_NOMINATIONS_THRESHOLD_IN_DAYS = 14
 
