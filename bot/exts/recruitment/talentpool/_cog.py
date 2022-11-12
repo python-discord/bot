@@ -1,7 +1,7 @@
 import asyncio
 import textwrap
 from io import StringIO
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import arrow
 import discord
@@ -136,7 +136,10 @@ class TalentPool(Cog, name="Talentpool"):
         ]
         return nominations
 
-    async def _filter_out_tracked_nominations(self, nominations: List[Nomination]) -> List[Nomination]:
+    async def _filter_out_tracked_nominations(
+            self,
+            nominations: List[Nomination]
+    ) -> List[Tuple[Nomination, discord.Message]]:
         """Filter the forgotten nominations that are still untracked in GitHub."""
         untracked_nominations = []
 
@@ -163,8 +166,7 @@ class TalentPool(Cog, name="Talentpool"):
                 # Nomination has been already tracked in GitHub
                 continue
 
-            untracked_nominations.append(nomination)
-
+            untracked_nominations.append((nomination, starter_message))
         return untracked_nominations
 
     @tasks.loop(hours=1)
