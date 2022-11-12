@@ -120,11 +120,10 @@ class TalentPool(Cog, name="Talentpool"):
     async def track_forgotten_nominations(self) -> None:
         """Track active nominations who are more than 2 weeks old."""
         old_nominations = await self._get_forgotten_nominations()
-        await self._filter_out_tracked_nominations(old_nominations)
-        # 2. Run checks on whether they've already been tracked or not
-        # 3. Create GitHub task
-        # 4. Add emojis
-        return
+        nomination_details = await self._filter_out_tracked_nominations(old_nominations)
+        for nomination, nomination_vote_message in nomination_details:
+            await self._track_vote_in_github(nomination)
+            await nomination_vote_message.add_reaction(FLAG_EMOJI)
 
     async def _get_forgotten_nominations(self) -> List[Nomination]:
         """Get active nominations that are more than 2 weeks old."""
@@ -169,7 +168,11 @@ class TalentPool(Cog, name="Talentpool"):
             untracked_nominations.append((nomination, starter_message))
         return untracked_nominations
 
-    @tasks.loop(hours=1)
+    async def _track_vote_in_github(self, nomination: Nomination) -> None:
+        """Adds an issue in GitHub to track dormant vote."""
+        return
+
+    @tasks.loop(seconds=10)
     async def autoreview_loop(self) -> None:
         """Send request to `reviewer` to send a nomination if ready."""
         if not await self.autoreview_enabled():
