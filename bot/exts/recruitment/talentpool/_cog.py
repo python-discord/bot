@@ -1,9 +1,9 @@
 import asyncio
 import textwrap
-from datetime import datetime
 from io import StringIO
 from typing import List, Optional, Union
 
+import arrow
 import discord
 from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
@@ -24,6 +24,7 @@ from bot.utils.members import get_or_fetch_member
 from ._api import Nomination, NominationAPI
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
+FLAG_EMOJI = "🚩"
 REASON_MAX_CHARS = 1000
 OLD_NOMINATIONS_THRESHOLD_IN_DAYS = 14
 
@@ -46,6 +47,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def cog_load(self) -> None:
         """Start autoreview loop if enabled."""
+        self.track_forgotten_nominations.start()
         if await self.autoreview_enabled():
             self.autoreview_loop.start()
 
@@ -114,9 +116,11 @@ class TalentPool(Cog, name="Talentpool"):
         else:
             await ctx.send("Autoreview is currently disabled.")
 
-    @tasks.loop(seconds=30)
+    @tasks.loop(seconds=5)
     async def track_forgotten_nominations(self) -> None:
         """Track active nominations who are more than 2 weeks old."""
+        old_nominations = await self._get_forgotten_nominations()
+        await self._filter_out_tracked_nominations(old_nominations)
         # 2. Run checks on whether they've already been tracked or not
         # 3. Create GitHub task
         # 4. Add emojis
@@ -124,7 +128,7 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def _get_forgotten_nominations(self) -> List[Nomination]:
         """Get active nominations that are more than 2 weeks old."""
-        now = datetime.utcnow()
+        now = arrow.utcnow()
         nominations = [
             nomination
             for nomination in await self.api.get_nominations(active=True)
@@ -142,12 +146,21 @@ class TalentPool(Cog, name="Talentpool"):
                 continue
 
             thread = await get_or_fetch_channel(nomination.thread_id)
-            if not thread or not thread.starter_message:
-                # Thread was deleted or starter_message has been deleted
+            if not thread:
+                # Thread was deleted
                 continue
 
-            if "custom_emoji" in [reaction.emoji for reaction in thread.starter_message.reactions]:
-                # Nomination has been already tracked in github
+            starter_message = thread.starter_message
+            if not starter_message:
+                # Starter message will be null if it's not cached
+                starter_message = await self.bot.get_channel(Channels.nomination_voting).fetch_message(thread.id)
+
+            if not starter_message:
+                # Starter message deleted
+                continue
+
+            if FLAG_EMOJI in [reaction.emoji for reaction in starter_message.reactions]:
+                # Nomination has been already tracked in GitHub
                 continue
 
             untracked_nominations.append(nomination)
