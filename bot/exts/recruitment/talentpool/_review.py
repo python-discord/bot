@@ -16,6 +16,7 @@ from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 
@@ -180,7 +181,7 @@ class Reviewer:
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
-        await self.api.edit_nomination(nomination.id, reviewed=True)
+        await self.api.edit_nomination(nomination.id, reviewed=True, thread_id=thread.id)
 
         bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
         if bump_cog:
@@ -433,11 +434,20 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
+        threads = [await get_or_fetch_channel(nomination.thread_id) for nomination in history]
+
+        nomination_vote_threads = ", ".join(
+            [
+                f"[Thread-{thread_number}]({thread.jump_url})" if thread else ''
+                for thread_number, thread in enumerate(threads, start=1)
+            ]
+        )
         end_time = time.format_relative(history[0].ended_at)
 
         review = (
             f"They were nominated **{nomination_times}** before"
             f", but their nomination was called off **{rejection_times}**."
+            f"\nList of all of their nomination threads: {nomination_vote_threads}"
             f"\nThe last one ended {end_time} with the reason: {history[0].end_reason}"
         )
 

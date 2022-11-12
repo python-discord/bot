@@ -532,6 +532,14 @@ class TalentPool(Cog, name="Talentpool"):
         entries_string = "\n\n".join(entries)
 
         start_date = time.discord_timestamp(nomination.inserted_at)
+
+        thread = None
+
+        if nomination.thread_id:
+            thread = await get_or_fetch_channel(nomination.thread_id)
+
+        thread_jump_url = f'[Jump to thread!]({thread.jump_url})' if thread else "*Not created*"
+
         if nomination.active:
             lines = textwrap.dedent(
                 f"""
@@ -539,6 +547,7 @@ class TalentPool(Cog, name="Talentpool"):
                 Status: **Active**
                 Date: {start_date}
                 Nomination ID: `{nomination.id}`
+                Nomination vote thread: {thread_jump_url}
 
                 {entries_string}
                 ===============
@@ -552,6 +561,7 @@ class TalentPool(Cog, name="Talentpool"):
                 Status: Inactive
                 Date: {start_date}
                 Nomination ID: `{nomination.id}`
+                Nomination vote thread: {thread_jump_url}
 
                 {entries_string}
 
