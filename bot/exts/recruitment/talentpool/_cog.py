@@ -18,6 +18,7 @@ from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
+from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 
 from ._api import Nomination, NominationAPI
@@ -130,6 +131,28 @@ class TalentPool(Cog, name="Talentpool"):
             if (now - nomination.inserted_at).days >= OLD_NOMINATIONS_THRESHOLD_IN_DAYS
         ]
         return nominations
+
+    async def _filter_out_tracked_nominations(self, nominations: List[Nomination]) -> List[Nomination]:
+        """Filter the forgotten nominations that are still untracked in GitHub."""
+        untracked_nominations = []
+
+        for nomination in nominations:
+            # We avoid the scenario of this task run & nomination created at the same time
+            if not nomination.thread_id:
+                continue
+
+            thread = await get_or_fetch_channel(nomination.thread_id)
+            if not thread or not thread.starter_message:
+                # Thread was deleted or starter_message has been deleted
+                continue
+
+            if "custom_emoji" in [reaction.emoji for reaction in thread.starter_message.reactions]:
+                # Nomination has been already tracked in github
+                continue
+
+            untracked_nominations.append(nomination)
+
+        return untracked_nominations
 
     @tasks.loop(hours=1)
     async def autoreview_loop(self) -> None:
