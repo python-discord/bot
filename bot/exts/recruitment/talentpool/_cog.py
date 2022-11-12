@@ -1,7 +1,8 @@
 import asyncio
 import textwrap
+from datetime import datetime
 from io import StringIO
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import discord
 from async_rediscache import RedisCache
@@ -115,11 +116,20 @@ class TalentPool(Cog, name="Talentpool"):
     @tasks.loop(seconds=30)
     async def track_forgotten_nominations(self) -> None:
         """Track active nominations who are more than 2 weeks old."""
-        # 1. Fetch all active nominations that are more than 2 weeks old from site
         # 2. Run checks on whether they've already been tracked or not
         # 3. Create GitHub task
         # 4. Add emojis
         return
+
+    async def _get_forgotten_nominations(self) -> List[Nomination]:
+        """Get active nominations that are more than 2 weeks old."""
+        now = datetime.utcnow()
+        nominations = [
+            nomination
+            for nomination in await self.api.get_nominations(active=True)
+            if (now - nomination.inserted_at).days >= OLD_NOMINATIONS_THRESHOLD_IN_DAYS
+        ]
+        return nominations
 
     @tasks.loop(hours=1)
     async def autoreview_loop(self) -> None:
