@@ -8,6 +8,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
+import discord
 from botcore.site_api import ResponseCodeError
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
 
@@ -434,14 +435,28 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        threads = [await get_or_fetch_channel(nomination.thread_id) for nomination in history]
+        thread_jump_urls = []
 
-        nomination_vote_threads = ", ".join(
-            [
-                f"[Thread-{thread_number}]({thread.jump_url})" if thread else ''
-                for thread_number, thread in enumerate(threads, start=1)
-            ]
-        )
+        for nomination in history:
+            try:
+                thread = await get_or_fetch_channel(nomination.thread_id)
+            except discord.HTTPException:
+                # Nothing to do here
+                pass
+            else:
+                thread_jump_urls.append(thread.jump_url)
+
+        if not thread_jump_urls:
+            nomination_vote_threads = "No nomination threads have been found for this user."
+        else:
+            nomination_vote_threads = ", ".join(
+                [
+                    f"[Thread-{thread_number}]({thread_jump_url})"
+                    for thread_number, thread_jump_url in enumerate(thread_jump_urls, start=1)
+                    if thread_jump_url
+                ]
+            )
+
         end_time = time.format_relative(history[0].ended_at)
 
         review = (

@@ -491,12 +491,15 @@ class TalentPool(Cog, name="Talentpool"):
 
         start_date = time.discord_timestamp(nomination.inserted_at)
 
-        thread = None
+        thread_jump_url = "*Not created*"
 
         if nomination.thread_id:
-            thread = await get_or_fetch_channel(nomination.thread_id)
-
-        thread_jump_url = f'[Jump to thread!]({thread.jump_url})' if thread else "*Not created*"
+            try:
+                thread = await get_or_fetch_channel(nomination.thread_id)
+            except discord.HTTPException:
+                thread_jump_url = "*Not found*"
+            else:
+                thread_jump_url = f'[Jump to thread!]({thread.jump_url})'
 
         if nomination.active:
             lines = textwrap.dedent(
