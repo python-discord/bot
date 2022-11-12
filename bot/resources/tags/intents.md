@@ -16,4 +16,4 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 ```
-For more info about using intents, see [discord.py's related guide](https://discordpy.readthedocs.io/en/latest/intents.html), and for general information about them, see the [Discord developer documentation on intents](https://discord.com/developers/docs/topics/gateway#gateway-intents).
+For more info about using intents, see [discord.py's related guide](https://discordpy.readthedocs.io/en/stable/intents.html), and for general information about them, see the [Discord developer documentation on intents](https://discord.com/developers/docs/topics/gateway#gateway-intents).
