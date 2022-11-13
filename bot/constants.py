@@ -697,6 +697,14 @@ class VideoPermission(metaclass=YAMLGetter):
     default_permission_duration: int
 
 
+class GithubAdminRepo(metaclass=YAMLGetter):
+    section = "github_admin_repo"
+
+    owner: str
+    name: str
+    token: str
+
+
 class ThreadArchiveTimes(Enum):
     HOUR = 60
     DAY = 1440
