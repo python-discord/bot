@@ -16,7 +16,7 @@ from discord.utils import escape_markdown, format_dt, snowflake_time
 from sentry_sdk import add_breadcrumb
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
+from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles, URLs
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user
@@ -207,12 +207,6 @@ class ModLog(Cog, name="ModLog"):
 
         if before.id in self._ignored[Event.guild_channel_update]:
             self._ignored[Event.guild_channel_update].remove(before.id)
-            return
-
-        # Two channel updates are sent for a single edit: 1 for topic and 1 for category change.
-        # TODO: remove once support is added for ignoring multiple occurrences for the same channel.
-        help_categories = (Categories.help_available, Categories.help_dormant, Categories.help_in_use)
-        if after.category and after.category.id in help_categories:
             return
 
         diff = DeepDiff(before, after)
