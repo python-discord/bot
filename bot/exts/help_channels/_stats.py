@@ -5,6 +5,7 @@ import discord
 
 import bot
 from bot import constants
+from bot.exts.help_channels import _caches
 from bot.log import get_logger
 
 log = get_logger(__name__)
@@ -37,8 +38,7 @@ async def report_complete_session(help_session_post: discord.Thread, closed_on: 
     in_use_time = arrow.utcnow() - open_time
     bot.instance.stats.timing("help_forum.in_use_time", in_use_time)
 
-    if set(help_session_post.members)-{help_session_post.owner_id} == set():
-        # Can't use len(help_session_post.members) as the claimant (owner) may have left the thread.
-        bot.instance.stats.incr("help_forum.sessions.unanswered")
-    else:
+    if await _caches.posts_with_non_claimant_messages.get(help_session_post.id):
         bot.instance.stats.incr("help_forum.sessions.answered")
+    else:
+        bot.instance.stats.incr("help_forum.sessions.unanswered")
