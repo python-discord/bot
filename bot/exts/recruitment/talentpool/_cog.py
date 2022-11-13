@@ -12,7 +12,9 @@ from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import (
+    Bot as BotConfig, Channels, Emojis, GithubAdminRepo, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+)
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
@@ -122,8 +124,9 @@ class TalentPool(Cog, name="Talentpool"):
         old_nominations = await self._get_forgotten_nominations()
         nomination_details = await self._filter_out_tracked_nominations(old_nominations)
         for nomination, nomination_vote_message in nomination_details:
-            await self._track_vote_in_github(nomination)
-            await nomination_vote_message.add_reaction(FLAG_EMOJI)
+            issue_created = await self._track_vote_in_github(nomination)
+            if issue_created:
+                await nomination_vote_message.add_reaction(FLAG_EMOJI)
 
     async def _get_forgotten_nominations(self) -> List[Nomination]:
         """Get active nominations that are more than 2 weeks old."""
@@ -168,9 +171,27 @@ class TalentPool(Cog, name="Talentpool"):
             untracked_nominations.append((nomination, starter_message))
         return untracked_nominations
 
-    async def _track_vote_in_github(self, nomination: Nomination) -> None:
-        """Adds an issue in GitHub to track dormant vote."""
-        return
+    async def _track_vote_in_github(self, nomination: Nomination) -> bool:
+        """
+        Adds an issue in GitHub to track dormant vote.
+
+        Returns True when the issue has been created, False otherwise.
+        """
+        if not GithubAdminRepo.token:
+            log.warn(f"No token for the {GithubAdminRepo.name} repository was provided, skipping issue creation.")
+            return False
+
+        url = f"https://api.github.com/repos/{GithubAdminRepo.owner}/{GithubAdminRepo.name}/issues"
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": f"Bearer {GithubAdminRepo.token}"
+        }
+        member = await get_or_fetch_member(self.bot.get_guild(Guild.id), nomination.user_id)
+        data = {"title": f"Nomination review needed. Id: {nomination.id}. User: {member.name}"}
+
+        async with self.bot.http_session.post(url=url, raise_for_status=True, headers=headers, json=data) as response:
+            # REVIEW: Might be useful to add logs here ?
+            return response.status == 201
 
     @tasks.loop(seconds=10)
     async def autoreview_loop(self) -> None:
