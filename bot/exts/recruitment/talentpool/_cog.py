@@ -118,7 +118,7 @@ class TalentPool(Cog, name="Talentpool"):
         else:
             await ctx.send("Autoreview is currently disabled.")
 
-    @tasks.loop(seconds=5)
+    @tasks.loop(hours=72)
     async def track_forgotten_nominations(self) -> None:
         """Track active nominations who are more than 2 weeks old."""
         old_nominations = await self._get_forgotten_nominations()
@@ -193,7 +193,7 @@ class TalentPool(Cog, name="Talentpool"):
             # REVIEW: Might be useful to add logs here ?
             return response.status == 201
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(hours=1)
     async def autoreview_loop(self) -> None:
         """Send request to `reviewer` to send a nomination if ready."""
         if not await self.autoreview_enabled():
