@@ -29,7 +29,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(await self.cog.post_job("import random", "3.10"), "return")
         self.bot.http_session.post.assert_called_with(
-            constants.URLs.snekbox_eval_api,
+            constants.URLs.snekbox_310_eval_api,
             json={"input": "import random"},
             raise_for_status=True
         )

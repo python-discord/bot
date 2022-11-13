@@ -196,9 +196,9 @@ class Snekbox(Cog):
     ) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         if python_version == "3.10":
-            url = URLs.snekbox_eval_api
+            url = URLs.snekbox_310_eval_api
         else:
-            url = URLs.snekbox_311_eval_api
+            url = URLs.snekbox_eval_api
 
         data = {"input": code}
 

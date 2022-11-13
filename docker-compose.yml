@@ -61,18 +61,18 @@ services:
     ports:
      - "127.0.0.1:8060:8060"
     privileged: true
-    profiles:
-      - "3.10"
 
-  snekbox-311:
+  snekbox-310:
     << : *logging
     << : *restart_policy
-    image: ghcr.io/python-discord/snekbox:3.11-dev
+    image: ghcr.io/python-discord/snekbox:2022.8.14.2  # Most recent 3.10 image
     init: true
     ipc: none
     ports:
      - "127.0.0.1:8065:8060"
     privileged: true
+    profiles:
+      - "3.10"
 
   web:
     << : *logging
@@ -108,7 +108,7 @@ services:
     depends_on:
       - web
       - redis
-      - snekbox-311
+      - snekbox
     env_file:
       - .env
     environment:
