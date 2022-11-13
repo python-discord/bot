@@ -574,7 +574,7 @@ voice_gate:
 
 
 branding:
-    cycle_frequency: 3  # How many days bot wait before refreshing server icon
+    cycle_frequency: 3  # How many days the bot waits before refreshing server icon
 
 
 config:
@@ -583,3 +583,9 @@ config:
 
 video_permission:
     default_permission_duration: 5  # Default duration for stream command in minutes
+
+
+github_admin_repo:
+    owner: 'python-discord'
+    name: 'admin'
+    token: !ENV ["ADMIN_GITHUB_REPO_TOKEN", ""]
