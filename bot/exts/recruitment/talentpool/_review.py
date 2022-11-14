@@ -449,13 +449,7 @@ class Reviewer:
         if not thread_jump_urls:
             nomination_vote_threads = "No nomination threads have been found for this user."
         else:
-            nomination_vote_threads = ", ".join(
-                [
-                    f"[Thread-{thread_number}]({thread_jump_url})"
-                    for thread_number, thread_jump_url in enumerate(thread_jump_urls, start=1)
-                    if thread_jump_url
-                ]
-            )
+            nomination_vote_threads = ", ".join(thread_jump_urls)
 
         end_time = time.format_relative(history[0].ended_at)
 
