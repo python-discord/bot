@@ -109,6 +109,10 @@ async def help_thread_opened(opened_thread: discord.Thread, *, reopen: bool = Fa
         await _close_help_thread(opened_thread, _stats.ClosingReason.CLEANUP)
         return
 
+    if opened_thread.starter_message:
+        # To cover the case where the user deletes their starter message before code execution reaches this line.
+        await opened_thread.starter_message.pin()
+
     await send_opened_post_message(opened_thread)
     await send_opened_post_dm(opened_thread)
 
