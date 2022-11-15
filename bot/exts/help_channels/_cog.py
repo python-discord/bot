@@ -58,7 +58,7 @@ class HelpForum(commands.Cog):
                 f"**Match:** {match.group()}"
             )
 
-    @commands.group(name="help-forum")
+    @commands.group(name="help-forum", aliases=("hf",))
     async def help_forum_group(self,  ctx: commands.Context) -> None:
         """A group of commands that help manage our help forum system."""
         if not ctx.invoked_subcommand:
