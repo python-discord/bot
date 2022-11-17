@@ -3,7 +3,7 @@ aliases: ["slice", "seqslice", "seqslicing", "sequence-slice", "sequence-slicing
 embed:
     title: "Sequence slicing"
 ---
-*Slicing* is a way of accessing a part of a sequence by specifying a start, stop, and step. As with normal indexing, negative numbers can be used to count backwards.
+**Slicing** is a way of accessing a part of a sequence by specifying a start, stop, and step. As with normal indexing, negative numbers can be used to count backwards.
 
 **Examples**
 ```py

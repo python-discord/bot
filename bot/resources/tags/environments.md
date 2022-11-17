@@ -1,12 +1,16 @@
-**Python Environments**
+---
+aliases: ["envs"]
+embed:
+    title: "Python Environments"
+---
 
 The main purpose of Python [virtual environments](https://docs.Python.org/3/library/venv.html#venv-def) is to create an isolated environment for Python projects. This means that each project can have its own dependencies, such as third party packages installed using pip, regardless of what dependencies every other project has.
 
 To see the current environment in use by Python, you can run:
 ```py
 >>> import sys
->>> print(sys.executable)
-/usr/bin/python3
+>>> sys.executable
+'/usr/bin/python3'
 ```
 
 To see the environment in use by pip, you can do `pip debug` (`pip3 debug` for Linux/macOS). The 3rd line of the output will contain the path in use e.g. `sys.executable: /usr/bin/python3`.
