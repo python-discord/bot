@@ -438,6 +438,8 @@ class Reviewer:
         thread_jump_urls = []
 
         for nomination in history:
+            if nomination.thread_id is None:
+                continue
             try:
                 thread = await get_or_fetch_channel(nomination.thread_id)
             except discord.HTTPException:
