@@ -140,9 +140,11 @@ class FileAttachment(Generic[T]):
         if isinstance(self.content, bytes):
             content = b64encode(self.content).decode("ascii")
             encoding = "base64"
-        else:
+        elif isinstance(self.content, str):
             content = self.content
-            encoding = ""
+            encoding = "utf-8"
+        else:
+            raise TypeError(f"Unexpected type for content: {type(self.content)}")
 
         return {
             "name": self.name,
@@ -335,7 +337,7 @@ class Snekbox(Cog):
 
         attachments: list[FileAttachment] = []
         failed_attachments: list[str] = []
-        for attachment in results["attachments"]:
+        for attachment in results.get("attachments", []):
             try:
                 attachments.append(FileAttachment.from_dict(attachment))
             except ValueError:
@@ -373,7 +375,8 @@ class Snekbox(Cog):
     @staticmethod
     def get_status_emoji(results: dict) -> str:
         """Return an emoji corresponding to the status code or lack of output in result."""
-        if not results["stdout"].strip() and not results["attachments"]:  # No output
+        # If there are attachments, skip empty output warning
+        if not results["stdout"].strip() and not results.get("attachments"):  # No output
             return ":warning:"
         elif results["returncode"] == 0:  # No error
             return ":white_check_mark:"
@@ -485,12 +488,12 @@ class Snekbox(Cog):
 
     async def continue_job(
         self, ctx: Context, response: Message, job_name: str
-    ) -> tuple[Optional[str], Optional[list[str]]]:
+    ) -> EvalJob | None:
         """
         Check if the job's session should continue.
 
-        If the code is to be re-evaluated, return the new code, and the args if the command is the timeit command.
-        Otherwise return (None, None) if the job's session should be terminated.
+        If the code is to be re-evaluated, return the new EvalJob.
+        Otherwise, return None if the job's session should be terminated.
         """
         _predicate_message_edit = partial(predicate_message_edit, ctx)
         _predicate_emoji_reaction = partial(predicate_emoji_reaction, ctx)
@@ -512,7 +515,7 @@ class Snekbox(Cog):
                 # Ensure the response that's about to be edited is still the most recent.
                 # This could have already been updated via a button press to switch to an alt Python version.
                 if self.jobs[ctx.message.id] != response.id:
-                    return None, None
+                    return None
 
                 code = await self.get_code(new_message, ctx.command)
                 await ctx.message.clear_reaction(REDO_EMOJI)
@@ -520,20 +523,20 @@ class Snekbox(Cog):
                     await response.delete()
 
                 if code is None:
-                    return None, None
+                    return None
 
             except asyncio.TimeoutError:
                 await ctx.message.clear_reaction(REDO_EMOJI)
-                return None, None
+                return None
 
             codeblocks = await CodeblockConverter.convert(ctx, code)
 
             if job_name == "timeit":
-                return self.prepare_timeit_input(codeblocks)
+                return EvalJob(self.prepare_timeit_input(codeblocks))
             else:
-                return "\n".join(codeblocks), None
+                return EvalJob.from_code("\n".join(codeblocks))
 
-        return None, None
+        return None
 
     async def get_code(self, message: Message, command: Command) -> Optional[str]:
         """
@@ -592,10 +595,10 @@ class Snekbox(Cog):
             # This can happen when a button is pressed and then original code is edited and re-run.
             self.jobs[ctx.message.id] = response.id
 
-            code, args = await self.continue_job(ctx, response, job_name)
-            if not code:
+            job = await self.continue_job(ctx, response, job_name)
+            if not job:
                 break
-            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
+            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{job}")
 
     @command(name="eval", aliases=("e",), usage="[python_version] <code, ...>")
     @guild_only()
