@@ -162,7 +162,7 @@ class EvalJob:
     args: list[str]
     files: list[FileAttachment] = field(default_factory=list)
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         """Return the job as a string."""
         return f"EvalJob(args={self.args}, files={self.files})"
 
