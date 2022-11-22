@@ -38,8 +38,8 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> Optional[str]:
 
     valid_ticks = f"\\{_parsing.BACKTICK}" * 3
     instructions = (
-        "It looks like you are trying to paste code into this channel.\n\n"
-        "You seem to be using the wrong symbols to indicate where the code block should start. "
+        "It looks like you are trying to paste code, but you seem to be using the wrong symbols "
+        "for the start of the code block.\n\n"
         f"The correct symbols would be {valid_ticks}, not `{code_block.tick * 3}`."
     )
 
@@ -73,11 +73,9 @@ def _get_no_ticks_message(content: str) -> Optional[str]:
     if _parsing.is_python_code(content):
         example_blocks = _get_example("py")
         return (
-            "It looks like you're trying to paste code into this channel.\n\n"
-            "Discord has support for Markdown, which allows you to post code with full "
-            "syntax highlighting. Please use these whenever you paste code, as this "
-            "helps improve the legibility and makes it easier for us to help you.\n\n"
-            f"**To do this, use the following method:**\n{example_blocks}"
+            "Here's how to format Python code on Discord:\n\n"
+            "\`\`\`py\nprint('Hello world!')\n\`\`\`\n\n"
+            "**These are backticks, not quotes.** Check [this](https://superuser.com/questions/254076/how-do-i-type-the-tick-and-backtick-characters-on-windows/254077#254077) out if you can't find the backtick key."
         )
     else:
         log.trace("Aborting missing code block instructions: content is not Python code.")
@@ -137,10 +135,9 @@ def _get_no_lang_message(content: str) -> Optional[str]:
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.
         return (
-            "It looks like you pasted Python code without syntax highlighting.\n\n"
-            "Please use syntax highlighting to improve the legibility of your code and make "
-            "it easier for us to help you.\n\n"
-            f"**To do this, use the following method:**\n{example_blocks}"
+            "It looks like you pasted a code block without syntax highlighting. "
+            "Please add a `py` after the three backticks so it's easier for others to read your code, like this:\n\n"
+            "\`\`\`py\nprint('Hello world!')\n\`\`\`\n\n"
         )
     else:
         log.trace("Aborting missing language instructions: content is not Python code.")
