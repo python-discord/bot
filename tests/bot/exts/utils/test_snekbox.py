@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from base64 import b64encode
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
 from discord import AllowedMentions
@@ -39,9 +40,8 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             "args": ["main.py"],
             "files": [
                 {
-                    "name": "main.py",
-                    "content-encoding": "utf-8",
-                    "content": "import random"
+                    "path": "main.py",
+                    "content": b64encode("import random".encode()).decode()
                 }
             ]
         }
