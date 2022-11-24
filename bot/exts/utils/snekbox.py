@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
-import zlib
 from base64 import b64decode, b64encode
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import partial
 from io import BytesIO
 from operator import attrgetter
+from pathlib import Path
 from signal import Signals
 from textwrap import dedent
 from typing import Generic, Literal, Optional, TYPE_CHECKING, Tuple, TypeVar
@@ -107,13 +107,13 @@ def sizeof_fmt(num: int, suffix: str = "B") -> str:
 class FileAttachment(Generic[T]):
     """File Attachment from Snekbox eval."""
 
-    name: str
+    path: str
     content: T
 
     def __repr__(self) -> str:
         """Return the content as a string."""
         content = self.content if isinstance(self.content, str) else "(...)"
-        return f"FileAttachment(name={self.name}, content={content})"
+        return f"FileAttachment(path={self.path}, content={content})"
 
     @classmethod
     def from_dict(cls, data: dict, size_limit: int = FILE_SIZE_LIMIT) -> FileAttachment[bytes]:
@@ -122,39 +122,28 @@ class FileAttachment(Generic[T]):
         if (size and size > size_limit) or (len(data["content"]) > size_limit):
             raise ValueError("File size exceeds limit")
 
-        match data.get("content-encoding"):
-            case "base64+zlib":
-                content = zlib.decompress(b64decode(data["content"]))
-            case "base64":
-                content = b64decode(data["content"])
-            case _:
-                content = data["content"]
+        content = b64decode(data["content"])
 
         if len(content) > size_limit:
             raise ValueError("File size exceeds limit")
 
-        return cls(data["name"], content)
+        return cls(data["path"], content)
 
     def to_json(self) -> dict[str, str]:
         """Convert the attachment to a json dict."""
-        if isinstance(self.content, bytes):
-            content = b64encode(self.content).decode("ascii")
-            encoding = "base64"
-        elif isinstance(self.content, str):
-            content = self.content
-            encoding = "utf-8"
-        else:
-            raise TypeError(f"Unexpected type for content: {type(self.content)}")
+        content = self.content
+        if isinstance(content, str):
+            content = content.encode("utf-8")
 
         return {
-            "name": self.name,
-            "content-encoding": encoding,
-            "content": content,
+            "path": self.path,
+            "content": b64encode(content).decode("ascii"),
         }
 
     def to_file(self) -> File:
         """Convert to a discord.File."""
-        return File(BytesIO(self.content), filename=self.name)
+        name = Path(self.path).name
+        return File(BytesIO(self.content), filename=name)
 
 
 @dataclass
@@ -337,11 +326,11 @@ class Snekbox(Cog):
 
         attachments: list[FileAttachment] = []
         failed_attachments: list[str] = []
-        for attachment in results.get("attachments", []):
+        for attachment in results.get("files", []):
             try:
                 attachments.append(FileAttachment.from_dict(attachment))
             except ValueError:
-                failed_attachments.append(attachment["name"])
+                failed_attachments.append(attachment["path"])
 
         msg = f"Your {python_version} {job_name} job has completed with return code {returncode}"
         error = ""
@@ -376,7 +365,7 @@ class Snekbox(Cog):
     def get_status_emoji(results: dict) -> str:
         """Return an emoji corresponding to the status code or lack of output in result."""
         # If there are attachments, skip empty output warning
-        if not results["stdout"].strip() and not results.get("attachments"):  # No output
+        if not results["stdout"].strip() and not results.get("files"):  # No output
             return ":warning:"
         elif results["returncode"] == 0:  # No error
             return ":white_check_mark:"
