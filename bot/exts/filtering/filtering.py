@@ -4,7 +4,7 @@ import operator
 import re
 import unicodedata
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from functools import partial, reduce
 from io import BytesIO
 from operator import attrgetter
@@ -14,6 +14,7 @@ import arrow
 import discord
 from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
+from botcore.utils import scheduling
 from discord import Colour, Embed, HTTPException, Message, MessageType
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
@@ -48,6 +49,7 @@ log = get_logger(__name__)
 
 CACHE_SIZE = 100
 HOURS_BETWEEN_NICKNAME_ALERTS = 1
+OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 
 
@@ -66,6 +68,7 @@ class Filtering(Cog):
         self.bot = bot
         self.filter_lists: dict[str, FilterList] = {}
         self._subscriptions: defaultdict[Event, list[FilterList]] = defaultdict(list)
+        self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.webhook = None
 
         self.loaded_settings = {}
@@ -95,6 +98,7 @@ class Filtering(Cog):
             log.error(f"Failed to fetch filters webhook with ID `{Webhooks.filters}`.")
 
         self.collect_loaded_types(example_list)
+        await self.schedule_offending_messages_deletion()
         self.weekly_auto_infraction_report_task.start()
 
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
@@ -175,6 +179,18 @@ class Filtering(Cog):
                 for field_name in extra_fields_type.__fields__
             }
 
+    async def schedule_offending_messages_deletion(self) -> None:
+        """Load the messages that need to be scheduled for deletion from the database."""
+        response = await self.bot.api_client.get('bot/offensive-messages')
+
+        now = arrow.utcnow()
+        for msg in response:
+            delete_at = arrow.get(msg['delete_date'])
+            if delete_at < now:
+                await self._delete_offensive_msg(msg)
+            else:
+                self._schedule_msg_delete(msg)
+
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
         return await has_any_role(*MODERATION_ROLES).predicate(ctx)
@@ -197,9 +213,11 @@ class Filtering(Cog):
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
 
-        ctx = FilterContext.from_message(Event.NICKNAME, msg)
-        ctx.content = msg.author.display_name
-        await self._check_bad_name(ctx)
+        nick_ctx = FilterContext.from_message(Event.NICKNAME, msg)
+        nick_ctx.content = msg.author.display_name
+        await self._check_bad_name(nick_ctx)
+
+        await self._maybe_schedule_msg_delete(ctx, result_actions)
 
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
@@ -221,6 +239,7 @@ class Filtering(Cog):
             await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
+        await self._maybe_schedule_msg_delete(ctx, result_actions)
 
     @Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
@@ -1187,6 +1206,53 @@ class Filtering(Cog):
         ctx = await bot.instance.get_context(message)
         await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
 
+    async def _delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
+        """Delete an offensive message, and then delete it from the DB."""
+        try:
+            channel = self.bot.get_channel(msg['channel_id'])
+            if channel:
+                msg_obj = await channel.fetch_message(msg['id'])
+                await msg_obj.delete()
+        except discord.NotFound:
+            log.info(
+                f"Tried to delete message {msg['id']}, but the message can't be found "
+                f"(it has been probably already deleted)."
+            )
+        except HTTPException as e:
+            log.warning(f"Failed to delete message {msg['id']}: status {e.status}")
+
+        await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
+        log.info(f"Deleted the offensive message with id {msg['id']}.")
+
+    def _schedule_msg_delete(self, msg: dict) -> None:
+        """Delete an offensive message once its deletion date is reached."""
+        delete_at = arrow.get(msg['delete_date']).datetime
+        self.delete_scheduler.schedule_at(delete_at, msg['id'], self._delete_offensive_msg(msg))
+
+    async def _maybe_schedule_msg_delete(self, ctx: FilterContext, actions: ActionSettings | None) -> None:
+        """Post the message to the database and schedule it for deletion if it's not set to be deleted already."""
+        msg = ctx.message
+        if not msg or not actions or actions.get_setting("remove_context", True):
+            return
+
+        delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
+        data = {
+            'id': msg.id,
+            'channel_id': msg.channel.id,
+            'delete_date': delete_date
+        }
+
+        try:
+            await self.bot.api_client.post('bot/offensive-messages', json=data)
+        except ResponseCodeError as e:
+            if e.status == 400 and "already exists" in e.response_json.get("id", [""])[0]:
+                log.debug(f"Offensive message {msg.id} already exists.")
+            else:
+                log.error(f"Offensive message {msg.id} failed to post: {e}")
+        else:
+            self._schedule_msg_delete(data)
+            log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
+
     # endregion
     # region: tasks
 
@@ -1242,8 +1308,9 @@ class Filtering(Cog):
     # endregion
 
     async def cog_unload(self) -> None:
-        """Cancel the weekly auto-infraction filter report on cog unload."""
+        """Cancel the weekly auto-infraction filter report and deletion scheduling on cog unload."""
         self.weekly_auto_infraction_report_task.cancel()
+        self.delete_scheduler.cancel_all()
 
 
 async def setup(bot: Bot) -> None:
