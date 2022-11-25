@@ -18,6 +18,7 @@ class Event(Enum):
 
     MESSAGE = auto()
     MESSAGE_EDIT = auto()
+    NICKNAME = auto()
 
 
 @dataclass
@@ -27,7 +28,7 @@ class FilterContext:
     # Input context
     event: Event  # The type of event
     author: User | Member | None  # Who triggered the event
-    channel: TextChannel | Thread | DMChannel  # The channel involved
+    channel: TextChannel | Thread | DMChannel | None  # The channel involved
     content: str | Iterable  # What actually needs filtering
     message: Message | None  # The message involved
     embeds: list = field(default_factory=list)  # Any embeds involved

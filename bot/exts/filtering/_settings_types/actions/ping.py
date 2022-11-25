@@ -35,7 +35,7 @@ class Ping(ActionEntry):
 
     async def action(self, ctx: FilterContext) -> None:
         """Add the stored pings to the alert message content."""
-        mentions = self.guild_pings if ctx.channel.guild else self.dm_pings
+        mentions = self.guild_pings if not ctx.channel or ctx.channel.guild else self.dm_pings
         new_content = " ".join([resolve_mention(mention) for mention in mentions])
         ctx.alert_content = f"{new_content} {ctx.alert_content}"
 

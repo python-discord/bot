@@ -2,13 +2,17 @@ import datetime
 import json
 import operator
 import re
+import unicodedata
 from collections import defaultdict
+from collections.abc import Iterable
 from functools import partial, reduce
 from io import BytesIO
+from operator import attrgetter
 from typing import Literal, Optional, get_type_hints
 
 import arrow
 import discord
+from async_rediscache import RedisCache
 from botcore.site_api import ResponseCodeError
 from discord import Colour, Embed, HTTPException, Message, MessageType
 from discord.ext import commands, tasks
@@ -37,11 +41,13 @@ from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, t
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
+from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
 
 log = get_logger(__name__)
 
 CACHE_SIZE = 100
+HOURS_BETWEEN_NICKNAME_ALERTS = 1
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 
 
@@ -50,6 +56,9 @@ class Filtering(Cog):
 
     # A set of filter list names with missing implementations that already caused a warning.
     already_warned = set()
+
+    # Redis cache mapping a user ID to the last timestamp a bad nickname alert was sent.
+    name_alerts = RedisCache()
 
     # region: init
 
@@ -188,6 +197,10 @@ class Filtering(Cog):
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
 
+        ctx = FilterContext.from_message(Event.NICKNAME, msg)
+        ctx.content = msg.author.display_name
+        await self._check_bad_name(ctx)
+
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         """Filter the contents of an edited message. Don't reinvoke filters already invoked on the `before` version."""
@@ -208,6 +221,12 @@ class Filtering(Cog):
             await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
+
+    @Cog.listener()
+    async def on_voice_state_update(self, member: discord.Member, *_) -> None:
+        """Checks for bad words in usernames when users join, switch or leave a voice channel."""
+        ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
+        await self._check_bad_name(ctx)
 
     # endregion
     # region: blacklist commands
@@ -388,7 +407,7 @@ class Filtering(Cog):
         A template filter can be specified in the settings area to copy overrides from. The setting name is "--template"
         and the value is the filter ID. The template will be used before applying any other override.
 
-        Example: `!filter add denied token "Scaleios is great" delete_messages=True send_alert=False --template=100`
+        Example: `!filter add denied token "Scaleios is great" remove_context=True send_alert=False --template=100`
         """
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
         if result is None:
@@ -809,7 +828,7 @@ class Filtering(Cog):
 
         return result_actions, messages, triggers
 
-    async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, list[str]]) -> None:
+    async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, Iterable[str]]) -> None:
         """Build an alert message from the filter context, and send it via the alert webhook."""
         if not self.webhook:
             return
@@ -818,6 +837,39 @@ class Filtering(Cog):
         embed = await build_mod_alert(ctx, triggered_filters)
         # There shouldn't be more than 10, but if there are it's not very useful to send them all.
         await self.webhook.send(username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10])
+
+    async def _recently_alerted_name(self, member: discord.Member) -> bool:
+        """When it hasn't been `HOURS_BETWEEN_NICKNAME_ALERTS` since last alert, return False, otherwise True."""
+        if last_alert := await self.name_alerts.get(member.id):
+            last_alert = arrow.get(last_alert)
+            if arrow.utcnow() - last_alert < datetime.timedelta(days=HOURS_BETWEEN_NICKNAME_ALERTS):
+                log.trace(f"Last alert was too recent for {member}'s nickname.")
+                return True
+
+        return False
+
+    @lock_arg("filtering.check_bad_name", "ctx", attrgetter("author.id"))
+    async def _check_bad_name(self, ctx: FilterContext) -> None:
+        """Check filter triggers in the passed context - a member's display name."""
+        if await self._recently_alerted_name(ctx.author):
+            return
+
+        name = ctx.content
+        normalised_name = unicodedata.normalize("NFKC", name)
+        cleaned_normalised_name = "".join([c for c in normalised_name if not unicodedata.combining(c)])
+
+        # Run filters against normalised, cleaned normalised and the original name,
+        # in case there are filters for one but not another.
+        names_to_check = (name, normalised_name, cleaned_normalised_name)
+
+        new_ctx = ctx.replace(content=" ".join(names_to_check))
+        result_actions, list_messages, _ = await self._resolve_action(new_ctx)
+        if result_actions:
+            await result_actions.action(ctx)
+        if ctx.send_alert:
+            await self._send_alert(ctx, list_messages)  # `ctx` has the original content.
+            # Update time when alert sent
+            await self.name_alerts.set(ctx.author.id, arrow.utcnow().timestamp())
 
     async def _resolve_list_type_and_name(
         self, ctx: Context, list_type: ListType | None = None, list_name: str | None = None, *, exclude: str = ""

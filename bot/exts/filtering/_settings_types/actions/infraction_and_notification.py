@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum, auto
 from typing import ClassVar
@@ -11,43 +10,12 @@ from discord.errors import Forbidden
 from pydantic import validator
 
 import bot as bot_module
-from bot.constants import Channels, Guild
+from bot.constants import Channels
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
+from bot.exts.filtering._utils import FakeContext
 
 log = get_logger(__name__)
-
-
-@dataclass
-class FakeContext:
-    """
-    A class representing a context-like object that can be sent to infraction commands.
-
-    The goal is to be able to apply infractions without depending on the existence of a message or an interaction
-    (which are the two ways to create a Context), e.g. in API events which aren't message-driven, or in custom filtering
-    events.
-    """
-
-    channel: discord.abc.Messageable
-    bot: bot_module.bot.Bot | None = None
-    guild: discord.Guild | None = None
-    author: discord.Member | discord.User | None = None
-    me: discord.Member | None = None
-
-    def __post_init__(self):
-        """Initialize the missing information."""
-        if not self.bot:
-            self.bot = bot_module.instance
-        if not self.guild:
-            self.guild = self.bot.get_guild(Guild.id)
-        if not self.me:
-            self.me = self.guild.me
-        if not self.author:
-            self.author = self.me
-
-    async def send(self, *args, **kwargs) -> discord.Message:
-        """A wrapper for channel.send."""
-        return await self.channel.send(*args, **kwargs)
 
 
 class Infraction(Enum):
@@ -79,6 +47,8 @@ class Infraction(Enum):
         command = bot_module.instance.get_command(command_name)
         if not command:
             await alerts_channel.send(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
+            log.warning(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
+            return
 
         ctx = FakeContext(channel)
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
@@ -160,8 +130,14 @@ class InfractionAndNotification(ActionEntry):
                 if not channel:
                     log.info(f"Could not find a channel with ID {self.infraction_channel}, infracting in mod-alerts.")
                     channel = alerts_channel
+            elif not ctx.channel:
+                channel = alerts_channel
             else:
                 channel = ctx.channel
+            if not channel:  # If somehow it's set to `alerts_channel` and it can't be found.
+                log.error(f"Unable to apply infraction as the context channel {channel} can't be found.")
+                return
+
             await self.infraction_type.invoke(
                 ctx.author, channel, alerts_channel, self.infraction_duration, self.infraction_reason
             )

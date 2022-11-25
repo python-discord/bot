@@ -4,12 +4,15 @@ import inspect
 import pkgutil
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from dataclasses import dataclass
 from functools import cache
 from typing import Any, Iterable, TypeVar, Union
 
+import discord
 import regex
 
 import bot
+from bot.bot import Bot
 from bot.constants import Guild
 
 VARIATION_SELECTORS = r"\uFE00-\uFE0F\U000E0100-\U000E01EF"
@@ -183,3 +186,35 @@ class FieldRequiring(ABC):
                         else:
                             # Add to the set of unique values for that field.
                             FieldRequiring.__unique_attributes[parent][attribute].add(value)
+
+
+@dataclass
+class FakeContext:
+    """
+    A class representing a context-like object that can be sent to infraction commands.
+
+    The goal is to be able to apply infractions without depending on the existence of a message or an interaction
+    (which are the two ways to create a Context), e.g. in API events which aren't message-driven, or in custom filtering
+    events.
+    """
+
+    channel: discord.abc.Messageable
+    bot: Bot | None = None
+    guild: discord.Guild | None = None
+    author: discord.Member | discord.User | None = None
+    me: discord.Member | None = None
+
+    def __post_init__(self):
+        """Initialize the missing information."""
+        if not self.bot:
+            self.bot = bot.instance
+        if not self.guild:
+            self.guild = self.bot.get_guild(Guild.id)
+        if not self.me:
+            self.me = self.guild.me
+        if not self.author:
+            self.author = self.me
+
+    async def send(self, *args, **kwargs) -> discord.Message:
+        """A wrapper for channel.send."""
+        return await self.channel.send(*args, **kwargs)

@@ -2,13 +2,23 @@ from collections import defaultdict
 from typing import ClassVar
 
 from botcore.utils import scheduling
+from botcore.utils.logging import get_logger
 from discord import Message
 from discord.errors import HTTPException
 
+import bot
 from bot.constants import Channels
-from bot.exts.filtering._filter_context import FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
+from bot.exts.filtering._utils import FakeContext
 from bot.utils.messages import send_attachments
+
+log = get_logger(__name__)
+
+SUPERSTAR_REASON = (
+    "Your nickname was found to be in violation of our code of conduct. "
+    "If you believe this is a mistake, please let us know."
+)
 
 
 async def upload_messages_attachments(ctx: FilterContext, messages: list[Message]) -> None:
@@ -21,22 +31,31 @@ async def upload_messages_attachments(ctx: FilterContext, messages: list[Message
             ctx.attachments[message.id] = await send_attachments(message, destination, link_large=False)
 
 
-class DeleteMessages(ActionEntry):
+class RemoveContext(ActionEntry):
     """A setting entry which tells whether to delete the offending message(s)."""
 
-    name: ClassVar[str] = "delete_messages"
+    name: ClassVar[str] = "remove_context"
     description: ClassVar[str] = (
-        "A boolean field. If True, the filter being triggered will cause the offending message to be deleted."
+        "A boolean field. If True, the filter being triggered will cause the offending context to be removed. "
+        "An offending message will be deleted, while an offending nickname will be superstarified."
     )
 
-    delete_messages: bool
+    remove_context: bool
 
     async def action(self, ctx: FilterContext) -> None:
-        """Delete the context message(s)."""
-        if not self.delete_messages or not ctx.message:
+        """Remove the offending context."""
+        if not self.remove_context:
             return
 
-        if not ctx.message.guild:
+        if ctx.event in (Event.MESSAGE, Event.MESSAGE_EDIT):
+            await self._handle_messages(ctx)
+        elif ctx.event == Event.NICKNAME:
+            await self._handle_nickname(ctx)
+
+    @staticmethod
+    async def _handle_messages(ctx: FilterContext) -> None:
+        """Delete any messages involved in this context."""
+        if not ctx.message or not ctx.message.guild:
             return
 
         channel_messages = defaultdict(set)  # Duplicates will cause batch deletion to fail.
@@ -68,9 +87,27 @@ class DeleteMessages(ActionEntry):
         else:
             ctx.action_descriptions.append(f"{success} deleted, {fail} failed to delete")
 
+    @staticmethod
+    async def _handle_nickname(ctx: FilterContext) -> None:
+        """Apply a superstar infraction to remove the user's nickname."""
+        alerts_channel = bot.instance.get_channel(Channels.mod_alerts)
+        if not alerts_channel:
+            log.error(f"Unable to apply superstar as the context channel {alerts_channel} can't be found.")
+            return
+        command = bot.instance.get_command("superstar")
+        if not command:
+            user = ctx.author
+            await alerts_channel.send(f":warning: Could not apply superstar to {user.mention}: command not found.")
+            log.warning(f":warning: Could not apply superstar to {user.mention}: command not found.")
+            ctx.action_descriptions.append("failed to superstar")
+            return
+
+        await command(FakeContext(alerts_channel), ctx.author, None, reason=SUPERSTAR_REASON)
+        ctx.action_descriptions.append("superstar")
+
     def __or__(self, other: ActionEntry):
         """Combines two actions of the same type. Each type of action is executed once per filter."""
-        if not isinstance(other, DeleteMessages):
+        if not isinstance(other, RemoveContext):
             return NotImplemented
 
-        return DeleteMessages(delete_messages=self.delete_messages or other.delete_messages)
+        return RemoveContext(delete_messages=self.remove_context or other.remove_context)

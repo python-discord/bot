@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from enum import EnumMeta
 from functools import partial
 from typing import Any, Callable, Coroutine, Optional, TypeVar
@@ -72,17 +73,21 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
     return alert_content
 
 
-async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList, list[str]]) -> Embed:
+async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList, Iterable[str]]) -> Embed:
     """Build an alert message from the filter context."""
     embed = Embed(color=Colours.soft_orange)
     embed.set_thumbnail(url=ctx.author.display_avatar.url)
     triggered_by = f"**Triggered by:** {format_user(ctx.author)}"
-    if ctx.channel.guild:
-        triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}\n"
+    if ctx.channel:
+        if ctx.channel.guild:
+            triggered_in = f"**Triggered in:** {format_channel(ctx.channel)}\n"
+        else:
+            triggered_in = "**Triggered in:** :warning:**DM**:warning:\n"
+        if len(ctx.related_channels) > 1:
+            triggered_in += f"**Channels:** {', '.join(channel.mention for channel in ctx.related_channels)}\n"
     else:
-        triggered_in = "**Triggered in:** :warning:**DM**:warning:\n"
-    if len(ctx.related_channels) > 1:
-        triggered_in += f"**Channels:** {', '.join(channel.mention for channel in ctx.related_channels)}\n"
+        triggered_by += "\n"
+        triggered_in = ""
 
     filters = []
     for filter_list, list_message in triggered_filters.items():
@@ -94,7 +99,10 @@ async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList
     actions = "\n**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")
 
     mod_alert_message = "\n".join(part for part in (triggered_by, triggered_in, filters, matches, actions) if part)
-    mod_alert_message += f"\n**[Original Content]({ctx.message.jump_url})**:\n"
+    if ctx.message:
+        mod_alert_message += f"\n**[Original Content]({ctx.message.jump_url})**:\n"
+    else:
+        mod_alert_message += "\n**Original Content**:\n"
     mod_alert_message += await _build_alert_message_content(ctx, len(mod_alert_message))
 
     embed.description = mod_alert_message

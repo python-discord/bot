@@ -51,6 +51,8 @@ class ChannelScope(ValidationEntry):
         """
         channel = ctx.channel
 
+        if not channel:
+            return True
         if not hasattr(channel, "category"):  # This is not a guild channel, outside the scope of this setting.
             return True
         if hasattr(channel, "parent"):

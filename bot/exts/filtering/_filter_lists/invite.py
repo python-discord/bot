@@ -37,7 +37,7 @@ class InviteList(FilterList[InviteFilter]):
 
     def __init__(self, filtering_cog: Filtering):
         super().__init__()
-        filtering_cog.subscribe(self, Event.MESSAGE)
+        filtering_cog.subscribe(self, Event.MESSAGE, Event.MESSAGE_EDIT)
 
     def get_filter_type(self, content: str) -> type[Filter]:
         """Get a subclass of filter matching the filter list and the filter's content."""
