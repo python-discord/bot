@@ -13,8 +13,9 @@ from discord import AllowedMentions, HTTPException, Interaction, Message, NotFou
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 
 from bot.bot import Bot
-from bot.constants import Categories, Channels, MODERATION_ROLES, Roles, URLs
+from bot.constants import Channels, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
+from bot.exts.help_channels._channel import is_help_forum_post
 from bot.log import get_logger
 from bot.utils import send_to_paste_service
 from bot.utils.lock import LockedResourceError, lock_arg
@@ -456,7 +457,7 @@ class Snekbox(Cog):
         else:
             self.bot.stats.incr("snekbox_usages.roles.developers")
 
-        if ctx.channel.category_id == Categories.help_in_use:
+        if is_help_forum_post(ctx.channel):
             self.bot.stats.incr("snekbox_usages.channels.help")
         elif ctx.channel.id == Channels.bot_commands:
             self.bot.stats.incr("snekbox_usages.channels.bot_commands")

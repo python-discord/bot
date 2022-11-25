@@ -1,40 +1,44 @@
-from more_itertools import ilen
+from enum import Enum
+
+import arrow
+import discord
 
 import bot
 from bot import constants
-from bot.exts.help_channels import _caches, _channel
+from bot.exts.help_channels import _caches
 from bot.log import get_logger
 
 log = get_logger(__name__)
 
 
-def report_counts() -> None:
-    """Report channel count stats of each help category."""
-    for name in ("in_use", "available", "dormant"):
-        id_ = getattr(constants.Categories, f"help_{name}")
-        category = bot.instance.get_channel(id_)
+class ClosingReason(Enum):
+    """All possible closing reasons for help channels."""
 
-        if category:
-            total = ilen(_channel.get_category_channels(category))
-            bot.instance.stats.gauge(f"help.total.{name}", total)
-        else:
-            log.warning(f"Couldn't find category {name!r} to track channel count stats.")
+    COMMAND = "command"
+    INACTIVE = "auto.inactive"
+    DELETED = "auto.deleted"
+    CLEANUP = "auto.cleanup"
 
 
-async def report_complete_session(channel_id: int, closed_on: _channel.ClosingReason) -> None:
+def report_post_count() -> None:
+    """Report post count stats of the help forum."""
+    help_forum = bot.instance.get_channel(constants.Channels.help_system_forum)
+    bot.instance.stats.gauge("help_forum.total.in_use", len(help_forum.threads))
+
+
+async def report_complete_session(help_session_post: discord.Thread, closed_on: ClosingReason) -> None:
     """
-    Report stats for a completed help session channel `channel_id`.
+    Report stats for a completed help session post `help_session_post`.
 
-    `closed_on` is the reason why the channel was closed. See `_channel.ClosingReason` for possible reasons.
+    `closed_on` is the reason why the post was closed. See `ClosingReason` for possible reasons.
     """
-    bot.instance.stats.incr(f"help.dormant_calls.{closed_on.value}")
+    bot.instance.stats.incr(f"help_forum.dormant_calls.{closed_on.value}")
 
-    in_use_time = await _channel.get_in_use_time(channel_id)
-    if in_use_time:
-        bot.instance.stats.timing("help.in_use_time", in_use_time)
+    open_time = discord.utils.snowflake_time(help_session_post.id)
+    in_use_time = arrow.utcnow() - open_time
+    bot.instance.stats.timing("help_forum.in_use_time", in_use_time)
 
-    non_claimant_last_message_time = await _caches.non_claimant_last_message_times.get(channel_id)
-    if non_claimant_last_message_time is None:
-        bot.instance.stats.incr("help.sessions.unanswered")
+    if await _caches.posts_with_non_claimant_messages.get(help_session_post.id):
+        bot.instance.stats.incr("help_forum.sessions.answered")
     else:
-        bot.instance.stats.incr("help.sessions.answered")
+        bot.instance.stats.incr("help_forum.sessions.unanswered")

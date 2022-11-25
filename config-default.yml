@@ -139,9 +139,6 @@ guild:
     invite: "https://discord.gg/python"
 
     categories:
-        help_available:                     691405807388196926
-        help_dormant:                       691405908919451718
-        help_in_use:                        696958401460043776
         logs:               &LOGS           468520609152892958
         moderators:         &MODS_CATEGORY  749736277464842262
         modmail:            &MODMAIL        714494672835444826
@@ -169,9 +166,8 @@ guild:
         meta:                               429409067623251969
         python_general:     &PY_GENERAL     267624335836053506
 
-        # Python Help: Available
-        cooldown:           720603994149486673
-        how_to_get_help:    704250143020417084
+        # Python Help
+        help_system_forum:  1035199133436354600
 
         # Topical
         discord_bots:         343944376055103488
@@ -500,38 +496,6 @@ help_channels:
     # Roles which are allowed to use the command which makes channels dormant
     cmd_whitelist:
         - *HELPERS_ROLE
-
-    # Allowed duration of inactivity by claimant before making a channel dormant
-    idle_minutes_claimant: 30
-
-    # Allowed duration of inactivity by others before making a channel dormant
-    # `idle_minutes_claimant` must also be met, before a channel is closed
-    idle_minutes_others: 10
-
-    # Allowed duration of inactivity when channel is empty (due to deleted messages)
-    # before message making a channel dormant
-    deleted_idle_minutes: 5
-
-    # Maximum number of channels to put in the available category
-    max_available: 3
-
-    # Maximum number of channels across all 3 categories
-    # Note Discord has a hard limit of 50 channels per category, so this shouldn't be > 50
-    max_total_channels: 42
-
-    # Prefix for help channel names
-    name_prefix: 'help-'
-
-    notify_channel:                *HELPERS  # Channel in which to send notifications messages
-    notify_minutes:                15        # Minimum interval between none_remaining or running_low notifications
-
-    notify_none_remaining:         true      # Pinging notification for the Helper role when no dormant channels remain
-    notify_none_remaining_roles:             # Mention these roles in the none_remaining notification
-        - *HELPERS_ROLE
-
-    notify_running_low:            true      # Non-pinging notification which is triggered when the channel count is equal or less than the threshold
-    notify_running_low_threshold:  4         # The amount of channels at which a running_low notification will be sent
-
 
 redirect_output:
     delete_delay: 15
