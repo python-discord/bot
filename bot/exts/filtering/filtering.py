@@ -39,6 +39,7 @@ from bot.exts.filtering._ui.ui import (
     ArgumentCompletionView, DeleteConfirmationView, build_mod_alert, format_response_error
 )
 from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
+from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_BAN_REASON
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
@@ -670,6 +671,27 @@ class Filtering(Cog):
             self._search_filters
         )
         await ctx.send(embed=embed, reference=ctx.message, view=view)
+
+    @filter.command(root_aliases=("compfilter", "compf"))
+    async def compadd(
+        self, ctx: Context, list_name: Optional[str], content: str, *, description: Optional[str] = "Phishing"
+    ) -> None:
+        """Add a filter to detect a compromised account. Will apply the equivalent of a compban if triggered."""
+        result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
+        if result is None:
+            return
+        list_type, filter_list = result
+
+        settings = (
+            "remove_context=True "
+            "dm_pings=Moderators "
+            "infraction_type=BAN "
+            "infraction_channel=1 "  # Post the ban in #mod-alerts
+            f"infraction_duration={COMP_BAN_DURATION.total_seconds()} "
+            f"infraction_reason={COMP_BAN_REASON}"
+        )
+        description_and_settings = f"{description} {settings}"
+        await self._add_filter(ctx, "noui", list_type, filter_list, content, description_and_settings)
 
     # endregion
     # region: filterlist group

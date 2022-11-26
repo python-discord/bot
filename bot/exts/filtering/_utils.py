@@ -10,6 +10,7 @@ from typing import Any, Iterable, TypeVar, Union
 
 import discord
 import regex
+from discord.ext.commands import Command
 
 import bot
 from bot.bot import Bot
@@ -199,6 +200,7 @@ class FakeContext:
     """
 
     channel: discord.abc.Messageable
+    command: Command | None
     bot: Bot | None = None
     guild: discord.Guild | None = None
     author: discord.Member | discord.User | None = None

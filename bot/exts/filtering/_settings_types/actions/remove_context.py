@@ -102,7 +102,7 @@ class RemoveContext(ActionEntry):
             ctx.action_descriptions.append("failed to superstar")
             return
 
-        await command(FakeContext(alerts_channel), ctx.author, None, reason=SUPERSTAR_REASON)
+        await command(FakeContext(alerts_channel, command), ctx.author, None, reason=SUPERSTAR_REASON)
         ctx.action_descriptions.append("superstar")
 
     def __or__(self, other: ActionEntry):

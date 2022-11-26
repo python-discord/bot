@@ -50,7 +50,7 @@ class Infraction(Enum):
             log.warning(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
             return
 
-        ctx = FakeContext(channel)
+        ctx = FakeContext(channel, command)
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
             await command(ctx, user, reason=reason or None)
         else:
