@@ -4,6 +4,7 @@ import typing as t
 
 import discord
 from discord.ext import commands
+from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot
@@ -28,12 +29,20 @@ class HelpForum(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.help_forum_channel: discord.ForumChannel = None
+
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks on unload."""
+        self.scheduler.cancel_all()
 
     async def cog_load(self) -> None:
         """Archive all idle open posts, schedule check for later for active open posts."""
         log.trace("Initialising help forum cog.")
         self.help_forum_channel = self.bot.get_channel(constants.Channels.help_system_forum)
+
+        for post in self.help_forum_channel.channels:
+            await _channel.maybe_archive_idle_post(post, self.scheduler, has_task=False)
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is a help post, and the user is the claimant or has a whitelisted role."""

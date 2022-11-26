@@ -1,9 +1,11 @@
 """Contains all logic to handle changes to posts in the help forum."""
 import asyncio
 import textwrap
+from datetime import timedelta
 
+import arrow
 import discord
-from pydis_core.utils import members
+from pydis_core.utils import members, scheduling
 
 import bot
 from bot import constants
@@ -168,3 +170,60 @@ async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) ->
     if cached_post and not cached_post.archived:
         # If the post is in the bot's cache, and it was not archived before deleting, report a complete session.
         await _stats.report_complete_session(cached_post, _stats.ClosingReason.DELETED)
+
+
+async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.ClosingReason]:
+    """
+    Return the time at which the given help `post` should be closed along with the reason.
+
+    The time is calculated by first checking if the opening message is deleted.
+    If it is, then get the last 100 messages (the most that can be fetched in one API call).
+    If less than 100 message are returned, and none are from the post owner, then assume the poster
+        has sent no further messages and close deleted_idle_minutes after the post creation time.
+
+    Otherwise, use the most recent message's create_at date and add `idle_minutes_claimant`.
+    """
+    try:
+        starter_message = post.starter_message or await post.fetch_message(post.id)
+    except discord.NotFound:
+        starter_message = None
+
+    last_100_messages = [message async for message in post.history(limit=100, oldest_first=False)]
+
+    if starter_message is None and len(last_100_messages) < 100:
+        if not discord.utils.get(last_100_messages, author__id=post.owner_id):
+            time = arrow.Arrow.fromdatetime(post.created_at)
+            time += timedelta(minutes=constants.HelpChannels.deleted_idle_minutes)
+            return time, _stats.ClosingReason.DELETED
+
+    time = arrow.Arrow.fromdatetime(last_100_messages[0].created_at)
+    time += timedelta(minutes=constants.HelpChannels.idle_minutes)
+    return time, _stats.ClosingReason.INACTIVE
+
+
+async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler, has_task: bool = True) -> None:
+    """
+    Archive the `post` if idle, or schedule the archive for later if still active.
+
+    If `has_task` is True and rescheduling is required, the extant task to make the post
+    dormant will first be cancelled.
+    """
+    log.trace(f"Handling open post #{post} ({post.id}).")
+
+    closing_time, closing_reason = await get_closing_time(post)
+
+    if closing_time < (arrow.utcnow() + timedelta(seconds=1)):
+        # Closing time is in the past.
+        # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
+        log.info(
+            f"#{post} ({post.id}) is idle past {closing_time} and will be archived. Reason: {closing_reason.value}"
+        )
+        await _close_help_post(post, closing_reason)
+        return
+
+    if has_task:
+        scheduler.cancel(post.id)
+    delay = (closing_time - arrow.utcnow()).seconds
+    log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
+
+    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler, has_task=True))
