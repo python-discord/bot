@@ -72,13 +72,14 @@ class ClaimAllSelfAssignableRolesButton(discord.ui.Button):
 
     CUSTOM_ID = "gotta-claim-them-all"
 
-    def __init__(self):
+    def __init__(self, assignable_roles: list[AssignableRole]):
         super().__init__(
             style=discord.ButtonStyle.success,
             label="Claim all available roles",
             custom_id=self.CUSTOM_ID,
             row=1
         )
+        self.assignable_roles = assignable_roles
 
 
 class RoleButtonView(discord.ui.View):
@@ -232,7 +233,7 @@ class Subscribe(commands.Cog):
 
         log.debug("Self assignable roles view message hasn't been found, creating a new one.")
         view = AllSelfAssignableRolesView()
-        view.add_item(ClaimAllSelfAssignableRolesButton())
+        view.add_item(ClaimAllSelfAssignableRolesButton(self.assignable_roles))
         return await roles_channel.send(self.SELF_ASSIGNABLE_ROLES_MESSAGE, view=view)
 
     def __attach_view_to_initial_self_assignable_roles_message(self, message: discord.Message) -> None:
@@ -242,7 +243,7 @@ class Subscribe(commands.Cog):
         The message is searched for/created upon loading the Cog.
         """
         view = AllSelfAssignableRolesView()
-        view.add_item(ClaimAllSelfAssignableRolesButton())
+        view.add_item(ClaimAllSelfAssignableRolesButton(self.assignable_roles))
         self.bot.add_view(view, message_id=message.id)
 
 
