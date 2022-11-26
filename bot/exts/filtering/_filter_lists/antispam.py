@@ -10,17 +10,15 @@ from operator import add, or_
 import arrow
 from botcore.utils import scheduling
 from botcore.utils.logging import get_logger
-from discord import HTTPException, Member
+from discord import Member
 
-import bot
-from bot.constants import Webhooks
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filter_lists.filter_list import ListType, SubscribingAtomicList, UniquesListBase
 from bot.exts.filtering._filters.antispam import antispam_filter_types
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
-from bot.exts.filtering._ui.ui import build_mod_alert
+from bot.exts.filtering._ui.ui import AlertView, build_mod_alert
 
 if typing.TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
@@ -147,9 +145,9 @@ class DeletionContext:
         """Post the mod alert."""
         if not self.contexts or not self.rules:
             return
-        try:
-            webhook = await bot.instance.fetch_webhook(Webhooks.filters)
-        except HTTPException:
+
+        webhook = antispam_list.filtering_cog.webhook
+        if not webhook:
             return
 
         ctx, *other_contexts = self.contexts
@@ -182,4 +180,4 @@ class DeletionContext:
             embed.set_footer(
                 text="The list of actions taken includes actions from additional contexts after deletion began."
             )
-        await webhook.send(username="Anti-Spam", content=ctx.alert_content, embeds=[embed])
+        await webhook.send(username="Anti-Spam", content=ctx.alert_content, embeds=[embed], view=AlertView(new_ctx))

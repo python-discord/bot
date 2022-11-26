@@ -455,7 +455,6 @@ class Webhooks(metaclass=YAMLGetter):
     duck_pond: int
     incidents: int
     incidents_archive: int
-    filters: int
 
 
 class Roles(metaclass=YAMLGetter):

@@ -324,7 +324,6 @@ guild:
         incidents:                          816650601844572212
         incidents_archive:                  720671599790915702
         python_news:        &PYNEWS_WEBHOOK 704381182279942324
-        filters:                            926442964463521843
 
 
 keys:

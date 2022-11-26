@@ -20,6 +20,7 @@ import bot
 from bot.constants import Colours
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filter_lists import FilterList
+from bot.exts.filtering._utils import FakeContext
 from bot.utils.messages import format_channel, format_user, upload_log
 
 log = get_logger(__name__)
@@ -40,6 +41,8 @@ MAX_MODAL_TITLE_LENGTH = 45
 # Max number of items in a select
 MAX_SELECT_ITEMS = 25
 MAX_EMBED_DESCRIPTION = 4080
+# Number of seconds before timeout of the alert view
+ALERT_VIEW_TIMEOUT = 3600
 
 SETTINGS_DELIMITER = re.compile(r"\s+(?=\S+=\S+)")
 SINGLE_SETTING_PATTERN = re.compile(r"[\w/]+=.+")
@@ -502,3 +505,40 @@ class DeleteConfirmationView(discord.ui.View):
     async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Cancel the filter list deletion."""
         await interaction.response.edit_message(content="🚫 Operation canceled.", view=None)
+
+
+class AlertView(discord.ui.View):
+    """A view providing info about the offending user."""
+
+    def __init__(self, ctx: FilterContext):
+        super().__init__(timeout=ALERT_VIEW_TIMEOUT)
+        self.ctx = ctx
+
+    @discord.ui.button(label="ID")
+    async def user_id(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Reply with the ID of the offending user."""
+        await interaction.response.send_message(self.ctx.author.id, ephemeral=True)
+
+    @discord.ui.button(emoji="👤")
+    async def user_info(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Send the info embed of the offending user."""
+        command = bot.instance.get_command("user")
+        if not command:
+            await interaction.response.send_message("The command `user` is not loaded.", ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        fake_ctx = FakeContext(interaction.channel, command, author=interaction.user)
+        await command(fake_ctx, self.ctx.author)
+
+    @discord.ui.button(emoji="⚠")
+    async def user_infractions(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Send the infractions embed of the offending user."""
+        command = bot.instance.get_command("infraction search")
+        if not command:
+            await interaction.response.send_message("The command `infraction search` is not loaded.", ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        fake_ctx = FakeContext(interaction.channel, command, author=interaction.user)
+        await command(fake_ctx, self.ctx.author)
