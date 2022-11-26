@@ -402,15 +402,16 @@ class Snekbox(Cog):
                     return None, None
 
                 code = await self.get_code(new_message, ctx.command)
-                await ctx.message.clear_reaction(REDO_EMOJI)
                 with contextlib.suppress(HTTPException):
+                    await ctx.message.clear_reaction(REDO_EMOJI)
                     await response.delete()
 
                 if code is None:
                     return None, None
 
             except asyncio.TimeoutError:
-                await ctx.message.clear_reaction(REDO_EMOJI)
+                with contextlib.suppress(HTTPException):
+                    await ctx.message.clear_reaction(REDO_EMOJI)
                 return None, None
 
             codeblocks = await CodeblockConverter.convert(ctx, code)
