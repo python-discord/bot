@@ -1,5 +1,5 @@
 """Contains all logic to handle changes to posts in the help forum."""
-
+import asyncio
 import textwrap
 
 import discord
@@ -52,6 +52,15 @@ async def _close_help_thread(closed_thread: discord.Thread, closed_on: _stats.Cl
 
     poster = closed_thread.owner
     cooldown_role = closed_thread.guild.get_role(constants.Roles.help_cooldown)
+
+    if poster is None:
+        # We can't include the owner ID/name here since the thread only contains None
+        log.info(
+            f"Failed to remove cooldown role for owner of thread ({closed_thread.id}). "
+            f"The user is likely no longer on the server."
+        )
+        return
+
     await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
 
 
@@ -80,10 +89,14 @@ async def send_opened_post_dm(thread: discord.Thread) -> None:
         try:
             message = await thread.fetch_message(thread.id)
         except discord.HTTPException:
-            log.warning(f"Could not fetch message for thread {thread.name} ({thread.id})")
+            log.warning(f"Could not fetch message for thread {thread.id}")
             return
 
-    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...")
+    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...").strip()
+    if formatted_message is None:
+        # This most likely means the initial message is only an image or similar
+        formatted_message = "No text content."
+
     embed.add_field(name="Your message", value=formatted_message, inline=False)
     embed.add_field(
         name="Conversation",
@@ -109,11 +122,19 @@ async def help_thread_opened(opened_thread: discord.Thread, *, reopen: bool = Fa
         await _close_help_thread(opened_thread, _stats.ClosingReason.CLEANUP)
         return
 
+    # Discord sends the open event long before the thread is ready for actions in the API.
+    # This causes actions such as fetching the message, pinning message, etc to fail.
+    # We sleep here to try and delay our code enough so the thread is ready in the API.
+    await asyncio.sleep(2)
+
     await send_opened_post_dm(opened_thread)
 
-    if opened_thread.starter_message:
-        # To cover the case where the user deletes their starter message before code execution reaches this line.
+    try:
         await opened_thread.starter_message.pin()
+    except discord.HTTPException as e:
+        # Suppress if the message was not found, most likely deleted
+        if e.code != 10008:
+            raise e
 
     await send_opened_post_message(opened_thread)
 

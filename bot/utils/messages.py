@@ -101,8 +101,14 @@ async def wait_for_deletion(
             await message.clear_reactions()
         else:
             await message.delete()
+
     except discord.NotFound:
         log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
+
+    except discord.HTTPException:
+        if not isinstance(message.channel, discord.Thread):
+            # Threads might not be accessible by the time the timeout expires
+            raise
 
 
 async def send_attachments(
