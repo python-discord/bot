@@ -98,7 +98,14 @@ async def wait_for_deletion(
         try:
             await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
         except asyncio.TimeoutError:
-            await message.clear_reactions()
+            try:
+                await message.clear_reactions()
+            except discord.HTTPException as e:
+                if isinstance(message.channel, discord.Thread):
+                    # Threads might not be accessible by the time we try to remove the reaction.
+                    pass
+                else:
+                    raise e
         else:
             await message.delete()
     except discord.NotFound:
