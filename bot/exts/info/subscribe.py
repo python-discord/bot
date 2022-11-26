@@ -81,6 +81,40 @@ class ClaimAllSelfAssignableRolesButton(discord.ui.Button):
         )
         self.assignable_roles = assignable_roles
 
+    async def callback(self, interaction: Interaction) -> t.Any:
+        """Assigns all missing available roles to the interactor."""
+        await interaction.response.defer()
+
+        if isinstance(interaction.user, discord.User):
+            log.trace("User %s is not a member", interaction.user)
+            await interaction.message.delete()
+            self.view.stop()
+            return
+
+        author_roles = [role.id for role in interaction.user.roles]
+        assigned_roles = []
+
+        for role in self.assignable_roles:
+            if role.role_id in author_roles:
+                continue
+            if not role.is_currently_available():
+                continue
+
+            log.debug(f"Assigning role {role.name} to {interaction.user.display_name}")
+            await members.handle_role_change(
+                interaction.user,
+                interaction.user.add_roles,
+                discord.Object(role.role_id),
+            )
+
+            assigned_roles.append(role.name)
+
+        if assigned_roles:
+            await interaction.followup.send(
+                f"The following roles have been assigned to you: {', '.join(assigned_roles)}",
+                ephemeral=True,
+            )
+
 
 class RoleButtonView(discord.ui.View):
     """A list of SingleRoleButtons to show to the member."""
