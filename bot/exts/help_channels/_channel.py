@@ -80,7 +80,7 @@ async def send_opened_post_dm(thread: discord.Thread) -> None:
         try:
             message = await thread.fetch_message(thread.id)
         except discord.HTTPException:
-            log.warning(f"Could not fetch message for thread {thread.name} ({thread.id})")
+            log.warning(f"Could not fetch message for thread {thread.id}")
             return
 
     formatted_message = textwrap.shorten(message.content, width=100, placeholder="...")
