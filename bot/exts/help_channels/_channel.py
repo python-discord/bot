@@ -127,9 +127,11 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
 
     try:
         await opened_post.starter_message.pin()
-    except discord.HTTPException as e:
+    except (discord.HTTPException, AttributeError) as e:
         # Suppress if the message was not found, most likely deleted
-        if e.code != 10008:
+        # The message being deleted could be surfaced as an AttributeError on .starter_message,
+        # or as an exception from the Discord API, depending on timing and cache status.
+        if isinstance(e, discord.HTTPException) and e.code != 10008:
             raise e
 
     await send_opened_post_message(opened_post)
