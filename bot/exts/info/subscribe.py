@@ -59,6 +59,27 @@ DELETE_MESSAGE_AFTER = 300  # Seconds
 log = get_logger(__name__)
 
 
+class AllSelfAssignableRolesView(discord.ui.View):
+    """A view that'll hold one button allowing interactors to get all available self-assignable roles."""
+
+    def __init__(self):
+        super(AllSelfAssignableRolesView, self).__init__(timeout=None)
+
+
+class ClaimAllSelfAssignableRolesButton(discord.ui.Button):
+    """A button that adds all self assignable roles to the interactor."""
+
+    CUSTOM_ID = "gotta-claim-them-all"
+
+    def __init__(self):
+        super().__init__(
+            style=discord.ButtonStyle.success,
+            label="Assign me a",
+            custom_id=self.CUSTOM_ID,
+            row=1
+        )
+
+
 class RoleButtonView(discord.ui.View):
     """A list of SingleRoleButtons to show to the member."""
 
@@ -150,7 +171,6 @@ class Subscribe(commands.Cog):
     async def cog_load(self) -> None:
         """Initialise the cog by resolving the role IDs in ASSIGNABLE_ROLES to role names."""
         await self.bot.wait_until_guild_available()
-
         self.guild = self.bot.get_guild(constants.Guild.id)
 
         for role in ASSIGNABLE_ROLES:
