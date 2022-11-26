@@ -52,6 +52,15 @@ async def _close_help_thread(closed_thread: discord.Thread, closed_on: _stats.Cl
 
     poster = closed_thread.owner
     cooldown_role = closed_thread.guild.get_role(constants.Roles.help_cooldown)
+
+    if poster is None:
+        # We can't include the owner ID/name here since the thread only contains None
+        log.info(
+            f"Failed to remove cooldown role for owner of thread ({closed_thread.id}). "
+            f"The user is likely no longer on the server."
+        )
+        return
+
     await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
 
 
