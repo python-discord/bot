@@ -92,7 +92,11 @@ async def send_opened_post_dm(thread: discord.Thread) -> None:
             log.warning(f"Could not fetch message for thread {thread.id}")
             return
 
-    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...")
+    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...").strip()
+    if formatted_message is None:
+        # This most likely means the initial message is only an image or similar
+        formatted_message = "No text content."
+
     embed.add_field(name="Your message", value=formatted_message, inline=False)
     embed.add_field(
         name="Conversation",
