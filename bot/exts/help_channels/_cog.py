@@ -28,7 +28,12 @@ class HelpForum(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.help_forum_channel_id = constants.Channels.help_system_forum
+        self.help_forum_channel: discord.ForumChannel = None
+
+    async def cog_load(self) -> None:
+        """Schedule the auto-archive check for all open posts."""
+        log.trace("Initialising help forum cog.")
+        self.help_forum_channel = self.bot.get_channel(constants.Channels.help_system_forum)
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is a help post, and the user is the claimant or has a whitelisted role."""
@@ -116,7 +121,7 @@ class HelpForum(commands.Cog):
     @commands.Cog.listener()
     async def on_thread_create(self, thread: discord.Thread) -> None:
         """Defer application of new post logic for posts the help forum to the _channel helper."""
-        if thread.parent_id != self.help_forum_channel_id:
+        if thread.parent_id != self.help_forum_channel.id:
             return
 
         await self.post_with_disallowed_title_check(thread)
@@ -125,7 +130,7 @@ class HelpForum(commands.Cog):
     @commands.Cog.listener()
     async def on_thread_update(self, before: discord.Thread, after: discord.Thread) -> None:
         """Defer application archive logic for posts in the help forum to the _channel helper."""
-        if after.parent_id != self.help_forum_channel_id:
+        if after.parent_id != self.help_forum_channel.id:
             return
         if not before.archived and after.archived:
             await _channel.help_thread_archived(after)
@@ -135,7 +140,7 @@ class HelpForum(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_thread_delete(self, deleted_thread_event: discord.RawThreadDeleteEvent) -> None:
         """Defer application of new post logic for posts the help forum to the _channel helper."""
-        if deleted_thread_event.parent_id == self.help_forum_channel_id:
+        if deleted_thread_event.parent_id == self.help_forum_channel.id:
             await _channel.help_thread_deleted(deleted_thread_event)
 
     @commands.Cog.listener()
