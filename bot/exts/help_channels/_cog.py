@@ -119,9 +119,8 @@ class HelpForum(commands.Cog):
         if thread.parent_id != self.help_forum_channel_id:
             return
 
-        await _channel.help_thread_opened(thread)
-
         await self.post_with_disallowed_title_check(thread)
+        await _channel.help_thread_opened(thread)
 
     @commands.Cog.listener()
     async def on_thread_update(self, before: discord.Thread, after: discord.Thread) -> None:
