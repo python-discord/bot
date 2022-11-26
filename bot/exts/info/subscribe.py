@@ -13,6 +13,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.decorators import redirect_output
 from bot.log import get_logger
+from bot.utils.channel import get_or_fetch_channel
 
 
 @dataclass(frozen=True)
@@ -74,7 +75,7 @@ class ClaimAllSelfAssignableRolesButton(discord.ui.Button):
     def __init__(self):
         super().__init__(
             style=discord.ButtonStyle.success,
-            label="Assign me a",
+            label="Claim all available roles",
             custom_id=self.CUSTOM_ID,
             row=1
         )
@@ -163,6 +164,8 @@ class SingleRoleButton(discord.ui.Button):
 class Subscribe(commands.Cog):
     """Cog to allow user to self-assign & remove the roles present in ASSIGNABLE_ROLES."""
 
+    SELF_ASSIGNABLE_ROLES_MESSAGE = "Click on this button to earn all the currently available server roles"
+
     def __init__(self, bot: Bot):
         self.bot = bot
         self.assignable_roles: list[AssignableRole] = []
@@ -190,6 +193,9 @@ class Subscribe(commands.Cog):
         self.assignable_roles.sort(key=operator.attrgetter("name"))
         self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
+        initial_self_assignable_roles_message = await self.__search_for_self_assignable_roles_message()
+        self.__attach_view_to_initial_self_assignable_roles_message(initial_self_assignable_roles_message)
+
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe", aliases=("unsubscribe",))
     @redirect_output(
@@ -209,6 +215,35 @@ class Subscribe(commands.Cog):
             view=button_view,
             delete_after=DELETE_MESSAGE_AFTER,
         )
+
+    async def __search_for_self_assignable_roles_message(self) -> discord.Message:
+        """
+        Searches for the message that holds the self assignable roles view.
+
+        If the initial message isn't found, a new one will be created.
+        This message will always be needed to attach the persistent view to it
+        """
+        roles_channel = await get_or_fetch_channel(constants.Channels.roles)
+
+        async for message in roles_channel.history(limit=30):
+            if message.content == self.SELF_ASSIGNABLE_ROLES_MESSAGE:
+                log.debug(f"Found self assignable roles view message: {message.id}")
+                return message
+
+        log.debug("Self assignable roles view message hasn't been found, creating a new one.")
+        view = AllSelfAssignableRolesView()
+        view.add_item(ClaimAllSelfAssignableRolesButton())
+        return await roles_channel.send(self.SELF_ASSIGNABLE_ROLES_MESSAGE, view=view)
+
+    def __attach_view_to_initial_self_assignable_roles_message(self, message: discord.Message) -> None:
+        """
+        Attaches the persistent self assignable roles view.
+
+        The message is searched for/created upon loading the Cog.
+        """
+        view = AllSelfAssignableRolesView()
+        view.add_item(ClaimAllSelfAssignableRolesButton())
+        self.bot.add_view(view, message_id=message.id)
 
 
 async def setup(bot: Bot) -> None:
