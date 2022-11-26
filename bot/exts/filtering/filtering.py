@@ -196,7 +196,7 @@ class Filtering(Cog):
         return await has_any_role(*MODERATION_ROLES).predicate(ctx)
 
     # endregion
-    # region: listeners
+    # region: listeners and event handlers
 
     @Cog.listener()
     async def on_message(self, msg: Message) -> None:
@@ -246,6 +246,24 @@ class Filtering(Cog):
         """Checks for bad words in usernames when users join, switch or leave a voice channel."""
         ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
         await self._check_bad_name(ctx)
+
+    async def filter_snekbox_output(self, snekbox_result: str, msg: Message) -> bool:
+        """
+        Filter the result of a snekbox command to see if it violates any of our rules, and then respond accordingly.
+
+        Also requires the original message, to check whether to filter and for alerting.
+        Any action (deletion, infraction) will be applied in the context of the original message.
+
+        Returns whether a filter was triggered or not.
+        """
+        ctx = FilterContext.from_message(Event.MESSAGE, msg).replace(content=snekbox_result)
+        result_actions, list_messages, triggers = await self._resolve_action(ctx)
+        if result_actions:
+            await result_actions.action(ctx)
+        if ctx.send_alert:
+            await self._send_alert(ctx, list_messages)
+
+        return result_actions is not None
 
     # endregion
     # region: blacklist commands

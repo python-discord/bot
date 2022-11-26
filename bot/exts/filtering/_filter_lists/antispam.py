@@ -59,7 +59,7 @@ class AntispamList(UniquesListBase):
         self, ctx: FilterContext
     ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
-        if not ctx.message:
+        if not ctx.message or not ctx.message_cache:
             return None, [], {}
 
         sublist: SubscribingAtomicList = self[ListType.DENY]
