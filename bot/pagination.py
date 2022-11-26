@@ -303,7 +303,12 @@ class LinePaginator(Paginator):
                 return await message.delete()
             elif reaction.emoji in PAGINATION_EMOJI:
                 total_pages = len(paginator.pages)
-                await message.remove_reaction(reaction.emoji, user)
+                try:
+                    await message.remove_reaction(reaction.emoji, user)
+                except discord.HTTPException as e:
+                    # Suppress if trying to act on an archived thread.
+                    if e.code != 50083:
+                        raise e
 
                 if reaction.emoji == FIRST_EMOJI:
                     current_page = 0
@@ -347,8 +352,6 @@ class LinePaginator(Paginator):
             try:
                 await message.clear_reactions()
             except discord.HTTPException as e:
-                if e.code == 50083:
-                    # Trying to act on an archived thread, just ignore
-                    pass
-                else:
+                # Suppress if trying to act on an archived thread.
+                if e.code != 50083:
                     raise e

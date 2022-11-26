@@ -98,18 +98,17 @@ async def wait_for_deletion(
         try:
             await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
         except asyncio.TimeoutError:
-            try:
-                await message.clear_reactions()
-            except discord.HTTPException as e:
-                if isinstance(message.channel, discord.Thread):
-                    # Threads might not be accessible by the time we try to remove the reaction.
-                    pass
-                else:
-                    raise e
+            await message.clear_reactions()
         else:
             await message.delete()
+
     except discord.NotFound:
         log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
+
+    except discord.HTTPException:
+        if not isinstance(message.channel, discord.Thread):
+            # Threads might not be accessible by the time the timeout expires
+            raise
 
 
 async def send_attachments(

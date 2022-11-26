@@ -132,10 +132,8 @@ async def help_thread_opened(opened_thread: discord.Thread, *, reopen: bool = Fa
     try:
         await opened_thread.starter_message.pin()
     except discord.HTTPException as e:
-        if e.code == 10008:
-            # The message was not found, most likely deleted
-            pass
-        else:
+        # Suppress if the message was not found, most likely deleted
+        if e.code != 10008:
             raise e
 
     await send_opened_post_message(opened_thread)
