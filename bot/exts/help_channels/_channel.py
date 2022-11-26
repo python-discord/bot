@@ -1,9 +1,10 @@
 """Contains all logic to handle changes to posts in the help forum."""
-import asyncio
 import textwrap
+from datetime import timedelta
 
+import arrow
 import discord
-from pydis_core.utils import members
+from pydis_core.utils import members, scheduling
 
 import bot
 from bot import constants
@@ -41,22 +42,22 @@ def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
     return getattr(channel, "parent_id", None) == constants.Channels.help_system_forum
 
 
-async def _close_help_thread(closed_thread: discord.Thread, closed_on: _stats.ClosingReason) -> None:
-    """Close the help thread and record stats."""
+async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:
+    """Close the help post and record stats."""
     embed = discord.Embed(description=DORMANT_MSG)
-    await closed_thread.send(embed=embed)
-    await closed_thread.edit(archived=True, locked=True, reason="Locked a dormant help channel")
+    await closed_post.send(embed=embed)
+    await closed_post.edit(archived=True, locked=True, reason="Locked a dormant help post")
 
     _stats.report_post_count()
-    await _stats.report_complete_session(closed_thread, closed_on)
+    await _stats.report_complete_session(closed_post, closing_reason)
 
-    poster = closed_thread.owner
-    cooldown_role = closed_thread.guild.get_role(constants.Roles.help_cooldown)
+    poster = closed_post.owner
+    cooldown_role = closed_post.guild.get_role(constants.Roles.help_cooldown)
 
     if poster is None:
         # We can't include the owner ID/name here since the thread only contains None
         log.info(
-            f"Failed to remove cooldown role for owner of thread ({closed_thread.id}). "
+            f"Failed to remove cooldown role for owner of post ({closed_post.id}). "
             f"The user is likely no longer on the server."
         )
         return
@@ -64,7 +65,7 @@ async def _close_help_thread(closed_thread: discord.Thread, closed_on: _stats.Cl
     await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
 
 
-async def send_opened_post_message(thread: discord.Thread) -> None:
+async def send_opened_post_message(post: discord.Thread) -> None:
     """Send the opener message in the new help post."""
     embed = discord.Embed(
         color=constants.Colours.bright_green,
@@ -72,24 +73,24 @@ async def send_opened_post_message(thread: discord.Thread) -> None:
     )
     embed.set_author(name=POST_TITLE)
     embed.set_footer(text=POST_FOOTER)
-    await thread.send(embed=embed)
+    await post.send(embed=embed)
 
 
-async def send_opened_post_dm(thread: discord.Thread) -> None:
+async def send_opened_post_dm(post: discord.Thread) -> None:
     """Send the opener a DM message with a jump link to their new post."""
     embed = discord.Embed(
-        title="Help channel opened",
-        description=f"You opened {thread.mention}.",
+        title="Help post opened",
+        description=f"You opened {post.mention}.",
         colour=constants.Colours.bright_green,
-        timestamp=thread.created_at,
+        timestamp=post.created_at,
     )
     embed.set_thumbnail(url=constants.Icons.green_questionmark)
-    message = thread.starter_message
+    message = post.starter_message
     if not message:
         try:
-            message = await thread.fetch_message(thread.id)
+            message = await post.fetch_message(post.id)
         except discord.HTTPException:
-            log.warning(f"Could not fetch message for thread {thread.id}")
+            log.warning(f"Could not fetch message for post {post.id}")
             return
 
     formatted_message = textwrap.shorten(message.content, width=100, placeholder="...").strip()
@@ -105,52 +106,49 @@ async def send_opened_post_dm(thread: discord.Thread) -> None:
     )
 
     try:
-        await thread.owner.send(embed=embed)
-        log.trace(f"Sent DM to {thread.owner} ({thread.owner_id}) after posting in help forum.")
+        await post.owner.send(embed=embed)
+        log.trace(f"Sent DM to {post.owner} ({post.owner_id}) after posting in help forum.")
     except discord.errors.Forbidden:
         log.trace(
-            f"Ignoring to send DM to {thread.owner} ({thread.owner_id}) after posting in help forum: DMs disabled.",
+            f"Ignoring to send DM to {post.owner} ({post.owner_id}) after posting in help forum: DMs disabled.",
         )
 
 
-async def help_thread_opened(opened_thread: discord.Thread, *, reopen: bool = False) -> None:
+async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False) -> None:
     """Apply new post logic to a new help forum post."""
     _stats.report_post_count()
 
-    if not isinstance(opened_thread.owner, discord.Member):
-        log.debug(f"{opened_thread.owner_id} isn't a member. Closing post.")
-        await _close_help_thread(opened_thread, _stats.ClosingReason.CLEANUP)
+    if not isinstance(opened_post.owner, discord.Member):
+        log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
+        await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP)
         return
 
-    # Discord sends the open event long before the thread is ready for actions in the API.
-    # This causes actions such as fetching the message, pinning message, etc to fail.
-    # We sleep here to try and delay our code enough so the thread is ready in the API.
-    await asyncio.sleep(2)
-
-    await send_opened_post_dm(opened_thread)
+    await send_opened_post_dm(opened_post)
 
     try:
-        await opened_thread.starter_message.pin()
-    except discord.HTTPException as e:
+        await opened_post.starter_message.pin()
+    except (discord.HTTPException, AttributeError) as e:
         # Suppress if the message was not found, most likely deleted
-        if e.code != 10008:
+        # The message being deleted could be surfaced as an AttributeError on .starter_message,
+        # or as an exception from the Discord API, depending on timing and cache status.
+        if isinstance(e, discord.HTTPException) and e.code != 10008:
             raise e
 
-    await send_opened_post_message(opened_thread)
+    await send_opened_post_message(opened_post)
 
-    cooldown_role = opened_thread.guild.get_role(constants.Roles.help_cooldown)
-    await members.handle_role_change(opened_thread.owner, opened_thread.owner.add_roles, cooldown_role)
+    cooldown_role = opened_post.guild.get_role(constants.Roles.help_cooldown)
+    await members.handle_role_change(opened_post.owner, opened_post.owner.add_roles, cooldown_role)
 
 
-async def help_thread_closed(closed_thread: discord.Thread) -> None:
+async def help_post_closed(closed_post: discord.Thread) -> None:
     """Apply archive logic to a manually closed help forum post."""
-    await _close_help_thread(closed_thread, _stats.ClosingReason.COMMAND)
+    await _close_help_post(closed_post, _stats.ClosingReason.COMMAND)
 
 
-async def help_thread_archived(archived_thread: discord.Thread) -> None:
+async def help_post_archived(archived_post: discord.Thread) -> None:
     """Apply archive logic to an archived help forum post."""
-    async for thread_update in archived_thread.guild.audit_logs(limit=50, action=discord.AuditLogAction.thread_update):
-        if thread_update.target.id != archived_thread.id:
+    async for thread_update in archived_post.guild.audit_logs(limit=50, action=discord.AuditLogAction.thread_update):
+        if thread_update.target.id != archived_post.id:
             continue
 
         # Don't apply close logic if the post was archived by the bot, as it
@@ -158,13 +156,70 @@ async def help_thread_archived(archived_thread: discord.Thread) -> None:
         if thread_update.user.id == bot.instance.user.id:
             return
 
-    await _close_help_thread(archived_thread, _stats.ClosingReason.INACTIVE)
+    await _close_help_post(archived_post, _stats.ClosingReason.INACTIVE)
 
 
-async def help_thread_deleted(deleted_thread_event: discord.RawThreadDeleteEvent) -> None:
-    """Record appropriate stats when a help thread is deleted."""
+async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) -> None:
+    """Record appropriate stats when a help post is deleted."""
     _stats.report_post_count()
-    cached_thread = deleted_thread_event.thread
-    if cached_thread and not cached_thread.archived:
-        # If the thread is in the bot's cache, and it was not archived before deleting, report a complete session.
-        await _stats.report_complete_session(cached_thread, _stats.ClosingReason.DELETED)
+    cached_post = deleted_post_event.thread
+    if cached_post and not cached_post.archived:
+        # If the post is in the bot's cache, and it was not archived before deleting, report a complete session.
+        await _stats.report_complete_session(cached_post, _stats.ClosingReason.DELETED)
+
+
+async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.ClosingReason]:
+    """
+    Return the time at which the given help `post` should be closed along with the reason.
+
+    The time is calculated by first checking if the opening message is deleted.
+    If it is, then get the last 100 messages (the most that can be fetched in one API call).
+    If less than 100 message are returned, and none are from the post owner, then assume the poster
+        has sent no further messages and close deleted_idle_minutes after the post creation time.
+
+    Otherwise, use the most recent message's create_at date and add `idle_minutes_claimant`.
+    """
+    try:
+        starter_message = post.starter_message or await post.fetch_message(post.id)
+    except discord.NotFound:
+        starter_message = None
+
+    last_100_messages = [message async for message in post.history(limit=100, oldest_first=False)]
+
+    if starter_message is None and len(last_100_messages) < 100:
+        if not discord.utils.get(last_100_messages, author__id=post.owner_id):
+            time = arrow.Arrow.fromdatetime(post.created_at)
+            time += timedelta(minutes=constants.HelpChannels.deleted_idle_minutes)
+            return time, _stats.ClosingReason.DELETED
+
+    time = arrow.Arrow.fromdatetime(last_100_messages[0].created_at)
+    time += timedelta(minutes=constants.HelpChannels.idle_minutes)
+    return time, _stats.ClosingReason.INACTIVE
+
+
+async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler, has_task: bool = True) -> None:
+    """
+    Archive the `post` if idle, or schedule the archive for later if still active.
+
+    If `has_task` is True and rescheduling is required, the extant task to make the post
+    dormant will first be cancelled.
+    """
+    log.trace(f"Handling open post #{post} ({post.id}).")
+
+    closing_time, closing_reason = await get_closing_time(post)
+
+    if closing_time < (arrow.utcnow() + timedelta(seconds=1)):
+        # Closing time is in the past.
+        # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
+        log.info(
+            f"#{post} ({post.id}) is idle past {closing_time} and will be archived. Reason: {closing_reason.value}"
+        )
+        await _close_help_post(post, closing_reason)
+        return
+
+    if has_task:
+        scheduler.cancel(post.id)
+    delay = (closing_time - arrow.utcnow()).seconds
+    log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
+
+    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler, has_task=True))
