@@ -301,42 +301,30 @@ class LinePaginator(Paginator):
             if str(reaction.emoji) == DELETE_EMOJI:
                 log.debug("Got delete reaction")
                 return await message.delete()
-
-            if reaction.emoji == FIRST_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
-                current_page = 0
-
-                log.debug(f"Got first page reaction - changing to page 1/{len(paginator.pages)}")
-
-                embed.description = paginator.pages[current_page]
-                if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
-                else:
-                    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-                await message.edit(embed=embed)
-
-            if reaction.emoji == LAST_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
-                current_page = len(paginator.pages) - 1
-
-                log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
-
-                embed.description = paginator.pages[current_page]
-                if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
-                else:
-                    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-                await message.edit(embed=embed)
-
-            if reaction.emoji == LEFT_EMOJI:
+            elif reaction.emoji in PAGINATION_EMOJI:
+                total_pages = len(paginator.pages)
                 await message.remove_reaction(reaction.emoji, user)
 
-                if current_page <= 0:
-                    log.debug("Got previous page reaction, but we're on the first page - ignoring")
-                    continue
+                if reaction.emoji == FIRST_EMOJI:
+                    current_page = 0
+                    log.debug(f"Got first page reaction - changing to page 1/{total_pages}")
+                elif reaction.emoji == LAST_EMOJI:
+                    current_page = len(paginator.pages) - 1
+                    log.debug(f"Got last page reaction - changing to page {current_page + 1}/{total_pages}")
+                elif reaction.emoji == LEFT_EMOJI:
+                    if current_page <= 0:
+                        log.debug("Got previous page reaction, but we're on the first page - ignoring")
+                        continue
 
-                current_page -= 1
-                log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
+                    current_page -= 1
+                    log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{total_pages}")
+                elif reaction.emoji == RIGHT_EMOJI:
+                    if current_page >= len(paginator.pages) - 1:
+                        log.debug("Got next page reaction, but we're on the last page - ignoring")
+                        continue
+
+                    current_page += 1
+                    log.debug(f"Got next page reaction - changing to page {current_page + 1}/{total_pages}")
 
                 embed.description = paginator.pages[current_page]
 
@@ -345,27 +333,22 @@ class LinePaginator(Paginator):
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
-                await message.edit(embed=embed)
-
-            if reaction.emoji == RIGHT_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
-
-                if current_page >= len(paginator.pages) - 1:
-                    log.debug("Got next page reaction, but we're on the last page - ignoring")
-                    continue
-
-                current_page += 1
-                log.debug(f"Got next page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
-
-                embed.description = paginator.pages[current_page]
-
-                if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
-                else:
-                    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-
-                await message.edit(embed=embed)
+                try:
+                    await message.edit(embed=embed)
+                except discord.HTTPException as e:
+                    if e.code == 50083:
+                        # Trying to act on an archived thread, just ignore and abort
+                        break
+                    else:
+                        raise e
 
         log.debug("Ending pagination and clearing reactions.")
         with suppress(discord.NotFound):
-            await message.clear_reactions()
+            try:
+                await message.clear_reactions()
+            except discord.HTTPException as e:
+                if e.code == 50083:
+                    # Trying to act on an archived thread, just ignore
+                    pass
+                else:
+                    raise e
