@@ -235,6 +235,9 @@ guild:
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
 
+        # Roles
+        roles:                              851270062434156586
+
     moderation_categories:
         - *MODS_CATEGORY
         - *MODMAIL
