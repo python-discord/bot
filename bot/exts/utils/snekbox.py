@@ -7,10 +7,10 @@ from signal import Signals
 from textwrap import dedent
 from typing import Literal, Optional, Tuple
 
-from botcore.utils import interactions
-from botcore.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
+from pydis_core.utils import interactions
+from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Roles, URLs
@@ -402,15 +402,16 @@ class Snekbox(Cog):
                     return None, None
 
                 code = await self.get_code(new_message, ctx.command)
-                await ctx.message.clear_reaction(REDO_EMOJI)
                 with contextlib.suppress(HTTPException):
+                    await ctx.message.clear_reaction(REDO_EMOJI)
                     await response.delete()
 
                 if code is None:
                     return None, None
 
             except asyncio.TimeoutError:
-                await ctx.message.clear_reaction(REDO_EMOJI)
+                with contextlib.suppress(HTTPException):
+                    await ctx.message.clear_reaction(REDO_EMOJI)
                 return None, None
 
             codeblocks = await CodeblockConverter.convert(ctx, code)

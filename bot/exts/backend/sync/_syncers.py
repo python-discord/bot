@@ -3,10 +3,10 @@ import typing as t
 from collections import namedtuple
 
 import discord.errors
-from botcore.site_api import ResponseCodeError
 from discord import Guild
 from discord.ext.commands import Context
 from more_itertools import chunked
+from pydis_core.site_api import ResponseCodeError
 
 import bot
 from bot.log import get_logger

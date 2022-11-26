@@ -5,10 +5,10 @@ import typing as t
 from contextlib import suppress
 
 import arrow
-from botcore.utils import scheduling
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
+from pydis_core.utils import scheduling
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger

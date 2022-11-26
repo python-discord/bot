@@ -2,7 +2,7 @@ import asyncio
 import os
 from typing import TYPE_CHECKING
 
-from botcore.utils import apply_monkey_patches
+from pydis_core.utils import apply_monkey_patches
 
 from bot import log
 

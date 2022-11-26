@@ -9,17 +9,17 @@ license = "MIT"
 python = "3.10.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
-bot-core = { url = "https://github.com/python-discord/bot-core/archive/refs/tags/v8.2.1.zip", extras = ["async-rediscache"] }
-redis = "4.3.4"
-fakeredis = { version = "1.9.3", extras = ["lua"] }
+pydis_core = { version = "9.1.1", extras = ["async-rediscache"] }
+redis = "4.3.5"
+fakeredis = { version = "2.0.0", extras = ["lua"] }
 
 aiohttp = "3.8.3"
 arrow = "1.2.3"
 beautifulsoup4 = "4.11.1"
-colorama = { version = "0.4.5", markers = "sys_platform == 'win32'" }
+colorama = { version = "0.4.6", markers = "sys_platform == 'win32'" }
 coloredlogs = "15.0.1"
-deepdiff = "5.8.1"
-emoji = "2.1.0"
+deepdiff = "6.2.1"
+emoji = "2.2.0"
 feedparser = "6.0.10"
 lxml = "4.9.1"
 
@@ -27,35 +27,34 @@ lxml = "4.9.1"
 # See https://github.com/python-discord/bot/pull/2156
 markdownify = "0.6.1"
 
-more-itertools = "8.14.0"
+more-itertools = "9.0.0"
 python-dateutil = "2.8.2"
 python-frontmatter = "1.0.0"
 pyyaml = "6.0"
-rapidfuzz = "2.11.1"
-regex = "2022.9.13"
-sentry-sdk = "1.9.10"
-statsd = "3.3.0"
+rapidfuzz = "2.13.2"
+regex = "2022.10.31"
+sentry-sdk = "1.11.1"
 tldextract = "3.4.0"
 pydantic = "1.10.2"
 
 [tool.poetry.dev-dependencies]
 coverage = "6.5.0"
-flake8 = "5.0.4"
+flake8 = "6.0.0"
 flake8-annotations = "2.9.1"
-flake8-bugbear = "22.9.23"
+flake8-bugbear = "22.10.27"
 flake8-docstrings = "1.6.0"
 flake8-string-format = "0.3.0"
 flake8-tidy-imports = "4.8.0"
 flake8-todo = "0.7"
-flake8-isort = "5.0.0"
+flake8-isort = "5.0.3"
 pep8-naming = "0.13.2"
 pre-commit = "2.20.0"
-pip-licenses = "3.5.4"
-pytest = "7.1.3"
+pip-licenses = "4.0.1"
+pytest = "7.2.0"
 pytest-cov = "4.0.0"
 python-dotenv = "0.21.0"
-pytest-xdist = "2.5.0"
-pytest-subtests = "0.8.0"
+pytest-xdist = "3.0.2"
+pytest-subtests = "0.9.0"
 taskipy = "1.10.3"
 
 

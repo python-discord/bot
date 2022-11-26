@@ -1,10 +1,10 @@
 import asyncio
 from typing import Any, Dict
 
-from botcore.site_api import ResponseCodeError
 from discord import Member, Role, User
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot

@@ -6,8 +6,8 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
-from botcore.utils import scheduling
 from discord.ext.commands import Context
+from pydis_core.utils import scheduling
 
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
