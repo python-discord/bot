@@ -2,9 +2,9 @@ import time
 from typing import Optional
 
 import discord
-from botcore.utils import scheduling
 from discord import Message, RawMessageUpdateEvent
 from discord.ext.commands import Cog
+from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot

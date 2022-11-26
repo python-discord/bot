@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import discord
-from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
 from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import scheduling
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons

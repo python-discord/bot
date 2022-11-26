@@ -5,9 +5,9 @@ from datetime import timedelta
 import arrow
 import discord
 from async_rediscache import RedisCache
-from botcore.site_api import ResponseCodeError
 from discord import Colour, Member, VoiceState
 from discord.ext.commands import Cog, Context, command
+from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf

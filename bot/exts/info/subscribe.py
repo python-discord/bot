@@ -5,9 +5,9 @@ from dataclasses import dataclass
 
 import arrow
 import discord
-from botcore.utils import members
 from discord.ext import commands
 from discord.interactions import Interaction
+from pydis_core.utils import members
 
 from bot import constants
 from bot.bot import Bot

@@ -6,13 +6,13 @@ from datetime import datetime, timezone
 from itertools import zip_longest
 
 import discord
-from botcore.site_api import ResponseCodeError
 from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog, Context
 from discord.utils import escape_markdown, format_dt, snowflake_time
+from pydis_core.site_api import ResponseCodeError
 from sentry_sdk import add_breadcrumb
 
 from bot.bot import Bot

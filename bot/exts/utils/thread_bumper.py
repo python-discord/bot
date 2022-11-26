@@ -1,8 +1,8 @@
 import typing as t
 
 import discord
-from botcore.site_api import ResponseCodeError
 from discord.ext import commands
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot

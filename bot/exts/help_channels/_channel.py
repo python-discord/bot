@@ -3,7 +3,7 @@ import asyncio
 import textwrap
 
 import discord
-from botcore.utils import members
+from pydis_core.utils import members
 
 import bot
 from bot import constants
