@@ -31,7 +31,7 @@ class HelpForum(commands.Cog):
         self.help_forum_channel: discord.ForumChannel = None
 
     async def cog_load(self) -> None:
-        """Schedule the auto-archive check for all open posts."""
+        """Archive all idle open posts, schedule check for later for active open posts."""
         log.trace("Initialising help forum cog.")
         self.help_forum_channel = self.bot.get_channel(constants.Channels.help_system_forum)
 
@@ -58,7 +58,7 @@ class HelpForum(commands.Cog):
             mod_alerts = self.bot.get_channel(constants.Channels.mod_alerts)
             await mod_alerts.send(
                 f"<@&{constants.Roles.moderators}>\n"
-                f"<@{post.owner_id}> ({post.owner_id}) opened the thread {post.mention} ({post.id}), "
+                f"<@{post.owner_id}> ({post.owner_id}) opened the post {post.mention} ({post.id}), "
                 "which triggered the token filter with its name!\n"
                 f"**Match:** {match.group()}"
             )
@@ -79,7 +79,7 @@ class HelpForum(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await _channel.help_thread_closed(ctx.channel)
+            await _channel.help_post_closed(ctx.channel)
 
     @help_forum_group.command(name="dm", root_aliases=("helpdm",))
     async def help_dm_command(
@@ -125,7 +125,7 @@ class HelpForum(commands.Cog):
             return
 
         await self.post_with_disallowed_title_check(thread)
-        await _channel.help_thread_opened(thread)
+        await _channel.help_post_opened(thread)
 
     @commands.Cog.listener()
     async def on_thread_update(self, before: discord.Thread, after: discord.Thread) -> None:
@@ -133,7 +133,7 @@ class HelpForum(commands.Cog):
         if after.parent_id != self.help_forum_channel.id:
             return
         if not before.archived and after.archived:
-            await _channel.help_thread_archived(after)
+            await _channel.help_post_archived(after)
         if before.name != after.name:
             await self.post_with_disallowed_title_check(after)
 
@@ -141,7 +141,7 @@ class HelpForum(commands.Cog):
     async def on_raw_thread_delete(self, deleted_thread_event: discord.RawThreadDeleteEvent) -> None:
         """Defer application of new post logic for posts the help forum to the _channel helper."""
         if deleted_thread_event.parent_id == self.help_forum_channel.id:
-            await _channel.help_thread_deleted(deleted_thread_event)
+            await _channel.help_post_deleted(deleted_thread_event)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
