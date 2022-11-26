@@ -125,9 +125,14 @@ async def help_thread_opened(opened_thread: discord.Thread, *, reopen: bool = Fa
 
     await send_opened_post_dm(opened_thread)
 
-    if opened_thread.starter_message:
-        # To cover the case where the user deletes their starter message before code execution reaches this line.
+    try:
         await opened_thread.starter_message.pin()
+    except discord.HTTPException as e:
+        if e.code == 10008:
+            # The message was not found, most likely deleted
+            pass
+        else:
+            raise e
 
     await send_opened_post_message(opened_thread)
 
