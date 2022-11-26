@@ -1,5 +1,4 @@
 """Contains all logic to handle changes to posts in the help forum."""
-import asyncio
 import textwrap
 from datetime import timedelta
 
@@ -123,11 +122,6 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
         log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
         await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP)
         return
-
-    # Discord sends the open event long before the thread is ready for actions in the API.
-    # This causes actions such as fetching the message, pinning message, etc to fail.
-    # We sleep here to try and delay our code enough so the thread is ready in the API.
-    await asyncio.sleep(2)
 
     await send_opened_post_dm(opened_post)
 

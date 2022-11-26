@@ -127,14 +127,29 @@ class HelpForum(commands.Cog):
 
         await ctx.channel.edit(name=title)
 
-    @commands.Cog.listener()
-    async def on_thread_create(self, thread: discord.Thread) -> None:
+    @commands.Cog.listener("on_message")
+    async def new_post_listener(self, message: discord.Message) -> None:
         """Defer application of new post logic for posts the help forum to the _channel helper."""
+        if not isinstance(message.channel, discord.Thread):
+            return
+        thread = message.channel
+
+        if not message.id == thread.id:
+            # Opener messages have the same ID as the thread
+            return
+
         if thread.parent_id != self.help_forum_channel.id:
             return
 
         await self.post_with_disallowed_title_check(thread)
         await _channel.help_post_opened(thread)
+
+        delay = min(constants.HelpChannels.deleted_idle_minutes, constants.HelpChannels.idle_minutes) * 60
+        self.scheduler.schedule_later(
+            delay,
+            thread.id,
+            _channel.maybe_archive_idle_post(thread, self.scheduler)
+        )
 
     @commands.Cog.listener()
     async def on_thread_update(self, before: discord.Thread, after: discord.Thread) -> None:
@@ -152,8 +167,8 @@ class HelpForum(commands.Cog):
         if deleted_thread_event.parent_id == self.help_forum_channel.id:
             await _channel.help_post_deleted(deleted_thread_event)
 
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    @commands.Cog.listener("on_message")
+    async def new_post_message_listener(self, message: discord.Message) -> None:
         """Defer application of new message logic for messages in the help forum to the _message helper."""
         if not _channel.is_help_forum_post(message.channel):
             return None
