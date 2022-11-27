@@ -187,6 +187,10 @@ class TalentPool(Cog, name="Talentpool"):
             "Authorization": f"Bearer {GithubAdminRepo.token}"
         }
         member = await get_or_fetch_member(self.bot.get_guild(Guild.id), nomination.user_id)
+        if not member:
+            log.debug(f"Couldn't find member: {nomination.user_id}")
+            return False
+
         data = {"title": f"Nomination review needed. Id: {nomination.id}. User: {member.name}"}
 
         async with self.bot.http_session.post(url=url, raise_for_status=True, headers=headers, json=data) as response:
