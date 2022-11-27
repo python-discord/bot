@@ -81,12 +81,12 @@ class Information(Cog):
         )
         return role_stats
 
-    def get_extended_server_info(self, ctx: Context) -> str:
+    async def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
         talentpool_cog: TalentPool | None = self.bot.get_cog("Talentpool")
         if talentpool_cog:
-            num_nominated = len(talentpool_cog.cache) if talentpool_cog.cache else "-"
+            num_nominated = len(await talentpool_cog.api.get_nominations(active=True))
             talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
@@ -232,7 +232,7 @@ class Information(Cog):
 
         # Additional info if ran in moderation channels
         if is_mod_channel(ctx.channel):
-            embed.add_field(name="Moderation:", value=self.get_extended_server_info(ctx))
+            embed.add_field(name="Moderation:", value=await self.get_extended_server_info(ctx))
 
         await ctx.send(embed=embed)
 
