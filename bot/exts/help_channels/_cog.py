@@ -4,6 +4,7 @@ import typing as t
 
 import discord
 from discord.ext import commands
+from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot
@@ -28,7 +29,22 @@ class HelpForum(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.help_forum_channel_id = constants.Channels.help_system_forum
+        self.scheduler = scheduling.Scheduler(self.__class__.__name__)
+        self.help_forum_channel: discord.ForumChannel = None
+
+    async def cog_unload(self) -> None:
+        """Cancel all scheduled tasks on unload."""
+        self.scheduler.cancel_all()
+
+    async def cog_load(self) -> None:
+        """Archive all idle open posts, schedule check for later for active open posts."""
+        log.trace("Initialising help forum cog.")
+        self.help_forum_channel = self.bot.get_channel(constants.Channels.help_system_forum)
+        if not isinstance(self.help_forum_channel, discord.ForumChannel):
+            raise TypeError("Channels.help_system_forum is not a forum channel!")
+
+        for post in self.help_forum_channel.threads:
+            await _channel.maybe_archive_idle_post(post, self.scheduler, has_task=False)
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is a help post, and the user is the claimant or has a whitelisted role."""
@@ -53,7 +69,7 @@ class HelpForum(commands.Cog):
             mod_alerts = self.bot.get_channel(constants.Channels.mod_alerts)
             await mod_alerts.send(
                 f"<@&{constants.Roles.moderators}>\n"
-                f"<@{post.owner_id}> ({post.owner_id}) opened the thread {post.mention} ({post.id}), "
+                f"<@{post.owner_id}> ({post.owner_id}) opened the post {post.mention} ({post.id}), "
                 "which triggered the token filter with its name!\n"
                 f"**Match:** {match.group()}"
             )
@@ -74,7 +90,9 @@ class HelpForum(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await _channel.help_thread_closed(ctx.channel)
+            await _channel.help_post_closed(ctx.channel)
+            if ctx.channel.id in self.scheduler:
+                self.scheduler.cancel(ctx.channel.id)
 
     @help_forum_group.command(name="dm", root_aliases=("helpdm",))
     async def help_dm_command(
@@ -113,33 +131,48 @@ class HelpForum(commands.Cog):
 
         await ctx.channel.edit(name=title)
 
-    @commands.Cog.listener()
-    async def on_thread_create(self, thread: discord.Thread) -> None:
+    @commands.Cog.listener("on_message")
+    async def new_post_listener(self, message: discord.Message) -> None:
         """Defer application of new post logic for posts the help forum to the _channel helper."""
-        if thread.parent_id != self.help_forum_channel_id:
+        if not isinstance(message.channel, discord.Thread):
+            return
+        thread = message.channel
+
+        if not message.id == thread.id:
+            # Opener messages have the same ID as the thread
+            return
+
+        if thread.parent_id != self.help_forum_channel.id:
             return
 
         await self.post_with_disallowed_title_check(thread)
-        await _channel.help_thread_opened(thread)
+        await _channel.help_post_opened(thread)
+
+        delay = min(constants.HelpChannels.deleted_idle_minutes, constants.HelpChannels.idle_minutes) * 60
+        self.scheduler.schedule_later(
+            delay,
+            thread.id,
+            _channel.maybe_archive_idle_post(thread, self.scheduler)
+        )
 
     @commands.Cog.listener()
     async def on_thread_update(self, before: discord.Thread, after: discord.Thread) -> None:
         """Defer application archive logic for posts in the help forum to the _channel helper."""
-        if after.parent_id != self.help_forum_channel_id:
+        if after.parent_id != self.help_forum_channel.id:
             return
         if not before.archived and after.archived:
-            await _channel.help_thread_archived(after)
+            await _channel.help_post_archived(after)
         if before.name != after.name:
             await self.post_with_disallowed_title_check(after)
 
     @commands.Cog.listener()
     async def on_raw_thread_delete(self, deleted_thread_event: discord.RawThreadDeleteEvent) -> None:
         """Defer application of new post logic for posts the help forum to the _channel helper."""
-        if deleted_thread_event.parent_id == self.help_forum_channel_id:
-            await _channel.help_thread_deleted(deleted_thread_event)
+        if deleted_thread_event.parent_id == self.help_forum_channel.id:
+            await _channel.help_post_deleted(deleted_thread_event)
 
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    @commands.Cog.listener("on_message")
+    async def new_post_message_listener(self, message: discord.Message) -> None:
         """Defer application of new message logic for messages in the help forum to the _message helper."""
         if not _channel.is_help_forum_post(message.channel):
             return None

@@ -617,6 +617,8 @@ class HelpChannels(metaclass=YAMLGetter):
     section = 'help_channels'
 
     enable: bool
+    idle_minutes: int
+    deleted_idle_minutes: int
     cmd_whitelist: List[int]
 
 

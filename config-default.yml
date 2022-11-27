@@ -496,6 +496,13 @@ free:
 help_channels:
     enable: true
 
+    # Allowed duration of inactivity before archiving a help post
+    idle_minutes: 30
+
+    # Allowed duration of inactivity when post is empty (due to deleted messages)
+    # before archiving a help post
+    deleted_idle_minutes: 5
+
     # Roles which are allowed to use the command which makes channels dormant
     cmd_whitelist:
         - *HELPERS_ROLE
