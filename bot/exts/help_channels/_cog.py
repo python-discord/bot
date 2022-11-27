@@ -91,6 +91,8 @@ class HelpForum(commands.Cog):
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
             await _channel.help_post_closed(ctx.channel)
+            if ctx.channel.id in self.scheduler:
+                self.scheduler.cancel(ctx.channel.id)
 
     @help_forum_group.command(name="dm", root_aliases=("helpdm",))
     async def help_dm_command(
