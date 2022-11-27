@@ -1,195 +1,225 @@
-import re
-import typing as t
+"""Contains all logic to handle changes to posts in the help forum."""
+import textwrap
 from datetime import timedelta
-from enum import Enum
 
 import arrow
 import discord
-from arrow import Arrow
+from pydis_core.utils import members, scheduling
 
 import bot
 from bot import constants
-from bot.exts.help_channels import _caches, _message
+from bot.exts.help_channels import _stats
 from bot.log import get_logger
-from bot.utils.channel import get_or_fetch_channel
 
 log = get_logger(__name__)
 
-MAX_CHANNELS_PER_CATEGORY = 50
-EXCLUDED_CHANNELS = (constants.Channels.cooldown,)
-CLAIMED_BY_RE = re.compile(r"Channel claimed by <@!?(?P<user_id>\d{17,20})>\.$")
+ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
+
+POST_TITLE = "Python help channel"
+NEW_POST_MSG = f"""
+**Remember to:**
+• **Ask** your Python question, not if you can ask or if there's an expert who can help.
+• **Show** a code sample as text (rather than a screenshot) and the error message, if you got one.
+• **Explain** what you expect to happen and what actually happens.
+
+For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
+"""
+POST_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
+
+DORMANT_MSG = f"""
+This help channel has been marked as **dormant** and locked. \
+It is no longer possible to send messages in this channel.
+
+If your question wasn't answered yet, you can create a new post in <#{constants.Channels.help_system_forum}>. \
+Consider rephrasing the question to maximize your chance of getting a good answer. \
+If you're not sure how, have a look through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
+"""
 
 
-class ClosingReason(Enum):
-    """All possible closing reasons for help channels."""
-
-    COMMAND = "command"
-    LATEST_MESSAGE = "auto.latest_message"
-    CLAIMANT_TIMEOUT = "auto.claimant_timeout"
-    OTHER_TIMEOUT = "auto.other_timeout"
-    DELETED = "auto.deleted"
-    CLEANUP = "auto.cleanup"
+def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
+    """Return True if `channel` is a post in the help forum."""
+    log.trace(f"Checking if #{channel} is a help channel.")
+    return getattr(channel, "parent_id", None) == constants.Channels.help_system_forum
 
 
-def get_category_channels(category: discord.CategoryChannel) -> t.Iterable[discord.TextChannel]:
-    """Yield the text channels of the `category` in an unsorted manner."""
-    log.trace(f"Getting text channels in the category '{category}' ({category.id}).")
+async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:
+    """Close the help post and record stats."""
+    embed = discord.Embed(description=DORMANT_MSG)
+    await closed_post.send(embed=embed)
+    await closed_post.edit(archived=True, locked=True, reason="Locked a dormant help post")
 
-    # This is faster than using category.channels because the latter sorts them.
-    for channel in category.guild.channels:
-        if channel.category_id == category.id and not is_excluded_channel(channel):
-            yield channel
+    _stats.report_post_count()
+    await _stats.report_complete_session(closed_post, closing_reason)
 
+    poster = closed_post.owner
+    cooldown_role = closed_post.guild.get_role(constants.Roles.help_cooldown)
 
-async def get_closing_time(channel: discord.TextChannel, init_done: bool) -> t.Tuple[Arrow, ClosingReason]:
-    """
-    Return the time at which the given help `channel` should be closed along with the reason.
-
-    `init_done` is True if the cog has finished loading and False otherwise.
-
-    The time is calculated as follows:
-
-    * If `init_done` is True or the cached time for the claimant's last message is unavailable,
-      add the configured `idle_minutes_claimant` to the time the most recent message was sent.
-    * If the help session is empty (see `is_empty`), do the above but with `deleted_idle_minutes`.
-    * If either of the above is attempted but the channel is completely empty, close the channel
-      immediately.
-    * Otherwise, retrieve the times of the claimant's and non-claimant's last messages from the
-      cache. Add the configured `idle_minutes_claimant` and idle_minutes_others`, respectively, and
-      choose the time which is furthest in the future.
-    """
-    log.trace(f"Getting the closing time for #{channel} ({channel.id}).")
-
-    is_empty = await _message.is_empty(channel)
-    if is_empty:
-        idle_minutes_claimant = constants.HelpChannels.deleted_idle_minutes
-    else:
-        idle_minutes_claimant = constants.HelpChannels.idle_minutes_claimant
-
-    claimant_time = await _caches.claimant_last_message_times.get(channel.id)
-
-    # The current session lacks messages, the cog is still starting, or the cache is empty.
-    if is_empty or not init_done or claimant_time is None:
-        msg = await _message.get_last_message(channel)
-        if not msg:
-            log.debug(f"No idle time available; #{channel} ({channel.id}) has no messages, closing now.")
-            return Arrow.min, ClosingReason.DELETED
-
-        # Use the greatest offset to avoid the possibility of prematurely closing the channel.
-        time = Arrow.fromdatetime(msg.created_at) + timedelta(minutes=idle_minutes_claimant)
-        reason = ClosingReason.DELETED if is_empty else ClosingReason.LATEST_MESSAGE
-        return time, reason
-
-    claimant_time = Arrow.utcfromtimestamp(claimant_time)
-    others_time = await _caches.non_claimant_last_message_times.get(channel.id)
-
-    if others_time:
-        others_time = Arrow.utcfromtimestamp(others_time)
-    else:
-        # The help session hasn't received any answers (messages from non-claimants) yet.
-        # Set to min value so it isn't considered when calculating the closing time.
-        others_time = Arrow.min
-
-    # Offset the cached times by the configured values.
-    others_time += timedelta(minutes=constants.HelpChannels.idle_minutes_others)
-    claimant_time += timedelta(minutes=idle_minutes_claimant)
-
-    # Use the time which is the furthest into the future.
-    if claimant_time >= others_time:
-        closing_time = claimant_time
-        reason = ClosingReason.CLAIMANT_TIMEOUT
-    else:
-        closing_time = others_time
-        reason = ClosingReason.OTHER_TIMEOUT
-
-    log.trace(f"#{channel} ({channel.id}) should be closed at {closing_time} due to {reason}.")
-    return closing_time, reason
-
-
-async def get_in_use_time(channel_id: int) -> t.Optional[timedelta]:
-    """Return the duration `channel_id` has been in use. Return None if it's not in use."""
-    log.trace(f"Calculating in use time for channel {channel_id}.")
-
-    claimed_timestamp = await _caches.claim_times.get(channel_id)
-    if claimed_timestamp:
-        claimed = Arrow.utcfromtimestamp(claimed_timestamp)
-        return arrow.utcnow() - claimed
-
-
-def is_excluded_channel(channel: discord.abc.GuildChannel) -> bool:
-    """Check if a channel should be excluded from the help channel system."""
-    return not isinstance(channel, discord.TextChannel) or channel.id in EXCLUDED_CHANNELS
-
-
-async def move_to_bottom(channel: discord.TextChannel, category_id: int, **options) -> None:
-    """
-    Move the `channel` to the bottom position of `category` and edit channel attributes.
-
-    To ensure "stable sorting", we use the `bulk_channel_update` endpoint and provide the current
-    positions of the other channels in the category as-is. This should make sure that the channel
-    really ends up at the bottom of the category.
-
-    If `options` are provided, the channel will be edited after the move is completed. This is the
-    same order of operations that `discord.TextChannel.edit` uses. For information on available
-    options, see the documentation on `discord.TextChannel.edit`. While possible, position-related
-    options should be avoided, as it may interfere with the category move we perform.
-    """
-    # Get a fresh copy of the category from the bot to avoid the cache mismatch issue we had.
-    category = await get_or_fetch_channel(category_id)
-
-    payload = [{"id": c.id, "position": c.position} for c in category.channels]
-
-    # Calculate the bottom position based on the current highest position in the category. If the
-    # category is currently empty, we simply use the current position of the channel to avoid making
-    # unnecessary changes to positions in the guild.
-    bottom_position = payload[-1]["position"] + 1 if payload else channel.position
-
-    payload.append(
-        {
-            "id": channel.id,
-            "position": bottom_position,
-            "parent_id": category.id,
-            "lock_permissions": True,
-        }
-    )
-
-    # We use d.py's method to ensure our request is processed by d.py's rate limit manager
-    await bot.instance.http.bulk_channel_update(category.guild.id, payload)
-
-    # Now that the channel is moved, we can edit the other attributes
-    if options:
-        await channel.edit(**options)
-
-
-async def ensure_cached_claimant(channel: discord.TextChannel) -> None:
-    """
-    Ensure there is a claimant cached for each help channel.
-
-    Check the redis cache first, return early if there is already a claimant cached.
-    If there isn't an entry in redis, search for the "Claimed by X." embed in channel history.
-        Stopping early if we discover a dormant message first.
-
-    If a claimant could not be found, send a warning to #helpers and set the claimant to the bot.
-    """
-    if await _caches.claimants.get(channel.id):
+    if poster is None:
+        # We can't include the owner ID/name here since the thread only contains None
+        log.info(
+            f"Failed to remove cooldown role for owner of post ({closed_post.id}). "
+            f"The user is likely no longer on the server."
+        )
         return
 
-    async for message in channel.history(limit=1000):
-        if message.author.id != bot.instance.user.id:
-            # We only care about bot messages
-            continue
-        if message.embeds:
-            if _message._match_bot_embed(message, _message.DORMANT_MSG):
-                log.info("Hit the dormant message embed before finding a claimant in %s (%d).", channel, channel.id)
-                break
-            # Only set the claimant if the first embed matches the claimed channel embed regex
-            description = message.embeds[0].description
-            if (description is not None) and (match := CLAIMED_BY_RE.match(description)):
-                await _caches.claimants.set(channel.id, int(match.group("user_id")))
-                return
+    await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
 
-    await bot.instance.get_channel(constants.Channels.helpers).send(
-        f"I couldn't find a claimant for {channel.mention} in that last 1000 messages. "
-        "Please use your helper powers to close the channel if/when appropriate."
+
+async def send_opened_post_message(post: discord.Thread) -> None:
+    """Send the opener message in the new help post."""
+    embed = discord.Embed(
+        color=constants.Colours.bright_green,
+        description=NEW_POST_MSG,
     )
-    await _caches.claimants.set(channel.id, bot.instance.user.id)
+    embed.set_author(name=POST_TITLE)
+    embed.set_footer(text=POST_FOOTER)
+    await post.send(embed=embed)
+
+
+async def send_opened_post_dm(post: discord.Thread) -> None:
+    """Send the opener a DM message with a jump link to their new post."""
+    embed = discord.Embed(
+        title="Help post opened",
+        description=f"You opened {post.mention}.",
+        colour=constants.Colours.bright_green,
+        timestamp=post.created_at,
+    )
+    embed.set_thumbnail(url=constants.Icons.green_questionmark)
+    message = post.starter_message
+    if not message:
+        try:
+            message = await post.fetch_message(post.id)
+        except discord.HTTPException:
+            log.warning(f"Could not fetch message for post {post.id}")
+            return
+
+    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...").strip()
+    if formatted_message is None:
+        # This most likely means the initial message is only an image or similar
+        formatted_message = "No text content."
+
+    embed.add_field(name="Your message", value=formatted_message, inline=False)
+    embed.add_field(
+        name="Conversation",
+        value=f"[Jump to message!]({message.jump_url})",
+        inline=False,
+    )
+
+    try:
+        await post.owner.send(embed=embed)
+        log.trace(f"Sent DM to {post.owner} ({post.owner_id}) after posting in help forum.")
+    except discord.errors.Forbidden:
+        log.trace(
+            f"Ignoring to send DM to {post.owner} ({post.owner_id}) after posting in help forum: DMs disabled.",
+        )
+
+
+async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False) -> None:
+    """Apply new post logic to a new help forum post."""
+    _stats.report_post_count()
+
+    if not isinstance(opened_post.owner, discord.Member):
+        log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
+        await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP)
+        return
+
+    await send_opened_post_dm(opened_post)
+
+    try:
+        await opened_post.starter_message.pin()
+    except (discord.HTTPException, AttributeError) as e:
+        # Suppress if the message was not found, most likely deleted
+        # The message being deleted could be surfaced as an AttributeError on .starter_message,
+        # or as an exception from the Discord API, depending on timing and cache status.
+        if isinstance(e, discord.HTTPException) and e.code != 10008:
+            raise e
+
+    await send_opened_post_message(opened_post)
+
+    cooldown_role = opened_post.guild.get_role(constants.Roles.help_cooldown)
+    await members.handle_role_change(opened_post.owner, opened_post.owner.add_roles, cooldown_role)
+
+
+async def help_post_closed(closed_post: discord.Thread) -> None:
+    """Apply archive logic to a manually closed help forum post."""
+    await _close_help_post(closed_post, _stats.ClosingReason.COMMAND)
+
+
+async def help_post_archived(archived_post: discord.Thread) -> None:
+    """Apply archive logic to an archived help forum post."""
+    async for thread_update in archived_post.guild.audit_logs(limit=50, action=discord.AuditLogAction.thread_update):
+        if thread_update.target.id != archived_post.id:
+            continue
+
+        # Don't apply close logic if the post was archived by the bot, as it
+        # would have been done so via _close_help_thread.
+        if thread_update.user.id == bot.instance.user.id:
+            return
+
+    await _close_help_post(archived_post, _stats.ClosingReason.INACTIVE)
+
+
+async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) -> None:
+    """Record appropriate stats when a help post is deleted."""
+    _stats.report_post_count()
+    cached_post = deleted_post_event.thread
+    if cached_post and not cached_post.archived:
+        # If the post is in the bot's cache, and it was not archived before deleting, report a complete session.
+        await _stats.report_complete_session(cached_post, _stats.ClosingReason.DELETED)
+
+
+async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.ClosingReason]:
+    """
+    Return the time at which the given help `post` should be closed along with the reason.
+
+    The time is calculated by first checking if the opening message is deleted.
+    If it is, then get the last 100 messages (the most that can be fetched in one API call).
+    If less than 100 message are returned, and none are from the post owner, then assume the poster
+        has sent no further messages and close deleted_idle_minutes after the post creation time.
+
+    Otherwise, use the most recent message's create_at date and add `idle_minutes_claimant`.
+    """
+    try:
+        starter_message = post.starter_message or await post.fetch_message(post.id)
+    except discord.NotFound:
+        starter_message = None
+
+    last_100_messages = [message async for message in post.history(limit=100, oldest_first=False)]
+
+    if starter_message is None and len(last_100_messages) < 100:
+        if not discord.utils.get(last_100_messages, author__id=post.owner_id):
+            time = arrow.Arrow.fromdatetime(post.created_at)
+            time += timedelta(minutes=constants.HelpChannels.deleted_idle_minutes)
+            return time, _stats.ClosingReason.DELETED
+
+    time = arrow.Arrow.fromdatetime(last_100_messages[0].created_at)
+    time += timedelta(minutes=constants.HelpChannels.idle_minutes)
+    return time, _stats.ClosingReason.INACTIVE
+
+
+async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler, has_task: bool = True) -> None:
+    """
+    Archive the `post` if idle, or schedule the archive for later if still active.
+
+    If `has_task` is True and rescheduling is required, the extant task to make the post
+    dormant will first be cancelled.
+    """
+    log.trace(f"Handling open post #{post} ({post.id}).")
+
+    closing_time, closing_reason = await get_closing_time(post)
+
+    if closing_time < (arrow.utcnow() + timedelta(seconds=1)):
+        # Closing time is in the past.
+        # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
+        log.info(
+            f"#{post} ({post.id}) is idle past {closing_time} and will be archived. Reason: {closing_reason.value}"
+        )
+        await _close_help_post(post, closing_reason)
+        return
+
+    if has_task:
+        scheduler.cancel(post.id)
+    delay = (closing_time - arrow.utcnow()).seconds
+    log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
+
+    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler, has_task=True))

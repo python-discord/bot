@@ -6,10 +6,10 @@ from textwrap import shorten
 from typing import Any, DefaultDict, Mapping, Optional, Set, Tuple, Union
 
 import rapidfuzz
-from botcore.site_api import ResponseCodeError
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot

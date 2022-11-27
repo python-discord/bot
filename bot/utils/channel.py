@@ -4,18 +4,9 @@ import discord
 
 import bot
 from bot import constants
-from bot.constants import Categories
 from bot.log import get_logger
 
 log = get_logger(__name__)
-
-
-def is_help_channel(channel: discord.TextChannel) -> bool:
-    """Return True if `channel` is in one of the help categories (excluding dormant)."""
-    log.trace(f"Checking if #{channel} is a help channel.")
-    categories = (Categories.help_available, Categories.help_in_use)
-
-    return any(is_in_category(channel, category) for category in categories)
 
 
 def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:

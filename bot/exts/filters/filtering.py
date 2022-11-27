@@ -10,13 +10,13 @@ import dateutil.parser
 import regex
 import tldextract
 from async_rediscache import RedisCache
-from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
-from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord import ChannelType, Colour, Embed, Forbidden, HTTPException, Member, Message, NotFound, TextChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import scheduling
+from pydis_core.utils.regex import DISCORD_INVITE
 
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, Colours, Filter, Guild, Icons, URLs
