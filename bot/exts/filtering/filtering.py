@@ -1020,10 +1020,15 @@ class Filtering(Cog):
         description_and_settings: Optional[str] = None
     ) -> None:
         """Add a filter to the database."""
+        # Validations.
+        if list_type not in filter_list:
+            await ctx.reply(f":x: There is no list of {past_tense(list_type.name.lower())} {filter_list.name}s.")
+            return
         filter_type = filter_list.get_filter_type(content)
         if not filter_type:
             await ctx.reply(f":x: Could not find a filter type appropriate for `{content}`.")
             return
+        # Parse the description and settings.
         description, settings, filter_settings = description_and_settings_converter(
             filter_list,
             list_type,
@@ -1033,7 +1038,7 @@ class Filtering(Cog):
             description_and_settings
         )
 
-        if noui:
+        if noui:  # Add directly with no UI.
             try:
                 await self._post_new_filter(
                     ctx.message, filter_list, list_type, filter_type, content, description, settings, filter_settings
@@ -1043,7 +1048,7 @@ class Filtering(Cog):
             except ValueError as e:
                 raise BadArgument(str(e))
             return
-
+        # Bring up the UI.
         embed = Embed(colour=Colour.blue())
         embed.description = f"`{content}`" if content else "*No content*"
         if description:
