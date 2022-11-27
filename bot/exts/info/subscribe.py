@@ -55,7 +55,7 @@ ASSIGNABLE_ROLES = (
 )
 
 ITEMS_PER_ROW = 3
-DELETE_MESSAGE_AFTER = 20  # Seconds
+DELETE_MESSAGE_AFTER = 300  # Seconds
 
 log = get_logger(__name__)
 
