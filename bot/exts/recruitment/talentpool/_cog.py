@@ -190,7 +190,7 @@ class TalentPool(Cog, name="Talentpool"):
         data = {"title": f"Nomination review needed. Id: {nomination.id}. User: {member.name}"}
 
         async with self.bot.http_session.post(url=url, raise_for_status=True, headers=headers, json=data) as response:
-            # REVIEW: Might be useful to add logs here ?
+            log.debug(f"Creating a review reminder issue for user {member.name}")
             return response.status == 201
 
     @tasks.loop(hours=1)
