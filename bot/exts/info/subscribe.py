@@ -147,14 +147,14 @@ class SingleRoleButton(discord.ui.Button):
 
 
 class AllSelfAssignableRolesView(discord.ui.View):
-    """A view that'll hold one button allowing interactors to get all available self-assignable roles."""
+    """A persistent view that'll hold one button allowing interactors to toggle all available self-assignable roles."""
 
     def __init__(self):
         super(AllSelfAssignableRolesView, self).__init__(timeout=None)
 
 
 class ShowAllSelfAssignableRolesButton(discord.ui.Button):
-    """A button that sends a view containing all the different roles a user can self assign at that time."""
+    """A button that, when clicked, sends a view a user can interact with to assign one or all the available roles."""
 
     CUSTOM_ID = "gotta-claim-them-all"
 
