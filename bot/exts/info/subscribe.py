@@ -286,7 +286,7 @@ def prepare_self_assignable_roles_view(
 
 
 async def setup(bot: Bot) -> None:
-    """Load the Subscribe cog."""
+    """Load the 'Subscribe' cog."""
     if len(ASSIGNABLE_ROLES) > ITEMS_PER_ROW*5:  # Discord limits views to 5 rows of buttons.
         log.error("Too many roles for 5 rows, not loading the Subscribe cog.")
     else:
