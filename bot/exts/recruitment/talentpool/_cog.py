@@ -123,10 +123,10 @@ class TalentPool(Cog, name="Talentpool"):
         """Track active nominations who are more than 2 weeks old."""
         old_nominations = await self._get_forgotten_nominations()
         untracked_nominations = await self._find_untracked_nominations(old_nominations)
-        for nomination, nomination_vote_message in untracked_nominations:
-            issue_created = await self._track_vote_in_github(nomination)
+        for nomination, thread in untracked_nominations:
+            issue_created = await self._track_vote_in_github(nomination, thread.jump_url)
             if issue_created:
-                await nomination_vote_message.add_reaction(FLAG_EMOJI)
+                await thread.starter_message.add_reaction(FLAG_EMOJI)
 
     async def _get_forgotten_nominations(self) -> list[Nomination]:
         """Get active nominations that are more than 2 weeks old."""
@@ -141,7 +141,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def _find_untracked_nominations(
             self,
             nominations: list[Nomination]
-    ) -> list[Tuple[Nomination, discord.Message]]:
+    ) -> list[Tuple[Nomination, discord.Thread]]:
         """
         Returns a list of tuples representing a nomination and its vote message.
 
@@ -174,10 +174,10 @@ class TalentPool(Cog, name="Talentpool"):
                 # Nomination has been already tracked in GitHub
                 continue
 
-            untracked_nominations.append((nomination, starter_message))
+            untracked_nominations.append((nomination, thread))
         return untracked_nominations
 
-    async def _track_vote_in_github(self, nomination: Nomination) -> bool:
+    async def _track_vote_in_github(self, nomination: Nomination, vote_jump_url: str | None = None) -> bool:
         """
         Adds an issue in GitHub to track dormant vote.
 
@@ -198,6 +198,8 @@ class TalentPool(Cog, name="Talentpool"):
             return False
 
         data = {"title": f"Nomination review needed. Id: {nomination.id}. User: {member.name}"}
+        if vote_jump_url:
+            data["body"] = f"Jump to the [vote message]({vote_jump_url})"
 
         async with self.bot.http_session.post(url=url, raise_for_status=True, headers=headers, json=data) as response:
             log.debug(f"Creating a review reminder issue for user {member.name}")
