@@ -61,12 +61,23 @@ log = get_logger(__name__)
 
 
 class RoleButtonView(discord.ui.View):
-    """A list of SingleRoleButtons to show to the member."""
+    """
+    A view that holds the list of SingleRoleButtons to show to the member.
+
+    Attributes
+    __________
+    anchor_message : discord.Message
+        The message to which this view will be attached
+    interaction_owner: discord.Member
+        The member that initiated the interaction
+    """
+
+    anchor_message: discord.Message
 
     def __init__(self, member: discord.Member):
         super().__init__(timeout=DELETE_MESSAGE_AFTER)
         # We can't obtain the reference to the message before the view is sent
-        self.original_message = None
+        self.anchor_message = None
         self.interaction_owner = member
 
     async def interaction_check(self, interaction: Interaction) -> bool:
@@ -81,7 +92,7 @@ class RoleButtonView(discord.ui.View):
 
     async def on_timeout(self) -> None:
         """Delete the original message that the view was sent along with."""
-        await self.original_message.delete()
+        await self.anchor_message.delete()
 
 
 class SingleRoleButton(discord.ui.Button):
@@ -175,7 +186,7 @@ class ShowAllSelfAssignableRolesButton(discord.ui.Button):
             view=view,
         )
         # Keep reference of the message that contains the view to be deleted
-        view.original_message = message
+        view.anchor_message = message
 
 
 class Subscribe(commands.Cog):
@@ -228,7 +239,7 @@ class Subscribe(commands.Cog):
             view=view,
         )
         # Keep reference of the message that contains the view to be deleted
-        view.original_message = message
+        view.anchor_message = message
 
     async def __search_for_self_assignable_roles_message(self) -> discord.Message:
         """
@@ -276,7 +287,7 @@ def prepare_self_assignable_roles_view(
     author = trigger_action.author if isinstance(trigger_action, commands.Context) else trigger_action.user
     author_roles = [role.id for role in author.roles]
     button_view = RoleButtonView(member=author)
-    button_view.original_message = trigger_action.message
+    button_view.anchor_message = trigger_action.message
 
     for index, role in enumerate(assignable_roles):
         row = index // ITEMS_PER_ROW
