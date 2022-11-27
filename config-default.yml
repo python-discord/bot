@@ -587,5 +587,5 @@ video_permission:
 
 github_admin_repo:
     owner: 'python-discord'
-    name: 'admin'
+    name: 'admin-tasks'
     token: !ENV ["ADMIN_GITHUB_REPO_TOKEN", ""]
