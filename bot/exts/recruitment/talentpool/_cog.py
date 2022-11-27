@@ -179,7 +179,7 @@ class TalentPool(Cog, name="Talentpool"):
         Returns True when the issue has been created, False otherwise.
         """
         if not GithubAdminRepo.token:
-            log.warn(f"No token for the {GithubAdminRepo.name} repository was provided, skipping issue creation.")
+            log.warning(f"No token for the {GithubAdminRepo.name} repository was provided, skipping issue creation.")
             return False
 
         url = f"https://api.github.com/repos/{GithubAdminRepo.owner}/{GithubAdminRepo.name}/issues"
