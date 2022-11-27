@@ -150,9 +150,10 @@ class TalentPool(Cog, name="Talentpool"):
             if not nomination.thread_id:
                 continue
 
-            thread = await get_or_fetch_channel(nomination.thread_id)
-            if not thread:
-                # Thread was deleted
+            try:
+                thread = await get_or_fetch_channel(nomination.thread_id)
+            except discord.NotFound:
+                log.debug(f"Couldn't find thread {nomination.thread_id}")
                 continue
 
             starter_message = thread.starter_message
