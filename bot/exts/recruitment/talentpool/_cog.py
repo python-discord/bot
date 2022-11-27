@@ -122,8 +122,8 @@ class TalentPool(Cog, name="Talentpool"):
     async def track_forgotten_nominations(self) -> None:
         """Track active nominations who are more than 2 weeks old."""
         old_nominations = await self._get_forgotten_nominations()
-        nomination_details = await self._filter_out_tracked_nominations(old_nominations)
-        for nomination, nomination_vote_message in nomination_details:
+        untracked_nominations = await self._find_untracked_nominations(old_nominations)
+        for nomination, nomination_vote_message in untracked_nominations:
             issue_created = await self._track_vote_in_github(nomination)
             if issue_created:
                 await nomination_vote_message.add_reaction(FLAG_EMOJI)
@@ -138,11 +138,16 @@ class TalentPool(Cog, name="Talentpool"):
         ]
         return nominations
 
-    async def _filter_out_tracked_nominations(
+    async def _find_untracked_nominations(
             self,
             nominations: list[Nomination]
     ) -> list[Tuple[Nomination, discord.Message]]:
-        """Filter the forgotten nominations that are still untracked in GitHub."""
+        """
+        Returns a list of tuples representing a nomination and its vote message.
+
+        All active nominations are iterated over to identify whether they're tracked or not
+        by checking whether the nomination message has the "🎫" emoji or not
+        """
         untracked_nominations = []
 
         for nomination in nominations:
