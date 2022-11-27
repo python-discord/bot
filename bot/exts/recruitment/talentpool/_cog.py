@@ -159,11 +159,11 @@ class TalentPool(Cog, name="Talentpool"):
             starter_message = thread.starter_message
             if not starter_message:
                 # Starter message will be null if it's not cached
-                starter_message = await self.bot.get_channel(Channels.nomination_voting).fetch_message(thread.id)
-
-            if not starter_message:
-                # Starter message deleted
-                continue
+                try:
+                    starter_message = await self.bot.get_channel(Channels.nomination_voting).fetch_message(thread.id)
+                except discord.NotFound:
+                    log.debug(f"Couldn't find message {thread.id} in channel: {Channels.nomination_voting}")
+                    continue
 
             if FLAG_EMOJI in [reaction.emoji for reaction in starter_message.reactions]:
                 # Nomination has been already tracked in GitHub
