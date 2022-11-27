@@ -85,7 +85,7 @@ class RoleButtonView(discord.ui.View):
 
 
 class SingleRoleButton(discord.ui.Button):
-    """A button that adds or removes a role from the member depending on it's current state."""
+    """A button that adds or removes a role from the member depending on its current state."""
 
     ADD_STYLE = discord.ButtonStyle.success
     REMOVE_STYLE = discord.ButtonStyle.red
@@ -237,7 +237,7 @@ class Subscribe(commands.Cog):
         If the initial message isn't found, a new one will be created.
         This message will always be needed to attach the persistent view to it
         """
-        roles_channel = await get_or_fetch_channel(constants.Channels.roles)
+        roles_channel: discord.TextChannel = await get_or_fetch_channel(constants.Channels.roles)
 
         async for message in roles_channel.history(limit=30):
             if message.content == self.SELF_ASSIGNABLE_ROLES_MESSAGE:
@@ -287,7 +287,7 @@ def prepare_self_assignable_roles_view(
 
 async def setup(bot: Bot) -> None:
     """Load the 'Subscribe' cog."""
-    if len(ASSIGNABLE_ROLES) > ITEMS_PER_ROW*5:  # Discord limits views to 5 rows of buttons.
+    if len(ASSIGNABLE_ROLES) > ITEMS_PER_ROW * 5:  # Discord limits views to 5 rows of buttons.
         log.error("Too many roles for 5 rows, not loading the Subscribe cog.")
     else:
         await bot.add_cog(Subscribe(bot))
