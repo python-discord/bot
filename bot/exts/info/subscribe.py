@@ -168,7 +168,7 @@ class ShowAllSelfAssignableRolesButton(discord.ui.Button):
         self.assignable_roles = assignable_roles
 
     async def callback(self, interaction: Interaction) -> t.Any:
-        """Assigns all missing available roles to the interactor."""
+        """Sends the original subscription view containing the available self assignable roles."""
         await interaction.response.defer()
         view = prepare_available_role_subscription_view(interaction, self.assignable_roles)
         message = await interaction.followup.send(
