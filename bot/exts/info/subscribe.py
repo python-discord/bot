@@ -211,7 +211,7 @@ class Subscribe(commands.Cog):
         self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
         initial_self_assignable_roles_message = await self.__search_for_self_assignable_roles_message()
-        self.__attach_view_to_initial_self_assignable_roles_message(initial_self_assignable_roles_message)
+        self.__attach_persistent_roles_view(initial_self_assignable_roles_message)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe", aliases=("unsubscribe",))
@@ -249,15 +249,23 @@ class Subscribe(commands.Cog):
         view.add_item(ShowAllSelfAssignableRolesButton(self.assignable_roles))
         return await roles_channel.send(self.SELF_ASSIGNABLE_ROLES_MESSAGE, view=view)
 
-    def __attach_view_to_initial_self_assignable_roles_message(self, message: discord.Message) -> None:
+    def __attach_persistent_roles_view(
+            self,
+            placeholder_message: discord.Message
+    ) -> None:
         """
-        Attaches the persistent self assignable roles view.
+        Attaches the persistent view that toggles self assignable roles to its placeholder message.
 
         The message is searched for/created upon loading the Cog.
+
+        Parameters
+        __________
+            :param placeholder_message: The message that will hold the persistent view allowing
+            users to toggle the RoleButtonView
         """
         view = AllSelfAssignableRolesView()
         view.add_item(ShowAllSelfAssignableRolesButton(self.assignable_roles))
-        self.bot.add_view(view, message_id=message.id)
+        self.bot.add_view(view, message_id=placeholder_message.id)
 
 
 def prepare_self_assignable_roles_view(
