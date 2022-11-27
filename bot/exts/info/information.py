@@ -3,7 +3,7 @@ import pprint
 import textwrap
 from collections import defaultdict
 from textwrap import shorten
-from typing import Any, DefaultDict, Mapping, Optional, Set, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
@@ -30,6 +30,11 @@ DEFAULT_RULES_DESCRIPTION = (
     " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
     " all members of the community to have read and understood these."
 )
+
+if TYPE_CHECKING:
+    from bot.exts.moderation.defcon import Defcon
+    from bot.exts.moderation.watchchannels.bigbrother import BigBrother
+    from bot.exts.recruitment.talentpool._cog import TalentPool
 
 
 class Information(Cog):
@@ -79,17 +84,20 @@ class Information(Cog):
     def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
-        if cog := self.bot.get_cog("Talentpool"):
-            num_nominated = len(cog.cache) if cog.cache else "-"
+        talentpool_cog: TalentPool | None = self.bot.get_cog("Talentpool")
+        if talentpool_cog:
+            num_nominated = len(talentpool_cog.cache) if talentpool_cog.cache else "-"
             talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
-        if cog := self.bot.get_cog("Big Brother"):
-            bb_info = f"BB-watched: {len(cog.watched_users)}\n"
+        bb_cog: BigBrother | None = self.bot.get_cog("Big Brother")
+        if bb_cog:
+            bb_info = f"BB-watched: {len(bb_cog.watched_users)}\n"
 
         defcon_info = ""
-        if cog := self.bot.get_cog("Defcon"):
-            threshold = time.humanize_delta(cog.threshold) if cog.threshold else "-"
+        defcon_cog: Defcon | None = self.bot.get_cog("Defcon")
+        if defcon_cog:
+            threshold = time.humanize_delta(defcon_cog.threshold) if defcon_cog.threshold else "-"
             defcon_info = f"Defcon threshold: {threshold}\n"
 
         verification = f"Verification level: {ctx.guild.verification_level.name}\n"
