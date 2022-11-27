@@ -151,7 +151,7 @@ class SingleRoleButton(discord.ui.Button):
         self.style = self.REMOVE_STYLE if self.assigned else self.ADD_STYLE
         self.label = self.LABEL_FORMAT.format(action="Remove" if self.assigned else "Add", role_name=self.role.name)
         try:
-            await interaction.message.edit(view=self.view)
+            await self.view.anchor_message.edit(view=self.view)
         except discord.NotFound:
             log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
             self.view.stop()
@@ -184,6 +184,7 @@ class ShowAllSelfAssignableRolesButton(discord.ui.Button):
         view = prepare_self_assignable_roles_view(interaction, self.assignable_roles)
         message = await interaction.followup.send(
             view=view,
+            ephemeral=True
         )
         # Keep reference of the message that contains the view to be deleted
         view.anchor_message = message
