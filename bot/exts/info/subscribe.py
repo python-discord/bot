@@ -161,7 +161,7 @@ class ShowAllSelfAssignableRolesButton(discord.ui.Button):
     def __init__(self, assignable_roles: list[AssignableRole]):
         super().__init__(
             style=discord.ButtonStyle.success,
-            label="Show available roles",
+            label="Show all self assignable roles",
             custom_id=self.CUSTOM_ID,
             row=1
         )
@@ -181,7 +181,7 @@ class ShowAllSelfAssignableRolesButton(discord.ui.Button):
 class Subscribe(commands.Cog):
     """Cog to allow user to self-assign & remove the roles present in ASSIGNABLE_ROLES."""
 
-    SELF_ASSIGNABLE_ROLES_MESSAGE = "Click on this button to earn all the currently available server roles"
+    SELF_ASSIGNABLE_ROLES_MESSAGE = "Click on this button to show all self assignable roles"
 
     def __init__(self, bot: Bot):
         self.bot = bot
