@@ -1,7 +1,7 @@
 import asyncio
 import textwrap
 from io import StringIO
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import arrow
 import discord
@@ -128,7 +128,7 @@ class TalentPool(Cog, name="Talentpool"):
             if issue_created:
                 await nomination_vote_message.add_reaction(FLAG_EMOJI)
 
-    async def _get_forgotten_nominations(self) -> List[Nomination]:
+    async def _get_forgotten_nominations(self) -> list[Nomination]:
         """Get active nominations that are more than 2 weeks old."""
         now = arrow.utcnow()
         nominations = [
@@ -140,8 +140,8 @@ class TalentPool(Cog, name="Talentpool"):
 
     async def _filter_out_tracked_nominations(
             self,
-            nominations: List[Nomination]
-    ) -> List[Tuple[Nomination, discord.Message]]:
+            nominations: list[Nomination]
+    ) -> list[Tuple[Nomination, discord.Message]]:
         """Filter the forgotten nominations that are still untracked in GitHub."""
         untracked_nominations = []
 
