@@ -170,7 +170,7 @@ class ShowAllSelfAssignableRolesButton(discord.ui.Button):
     async def callback(self, interaction: Interaction) -> t.Any:
         """Sends the original subscription view containing the available self assignable roles."""
         await interaction.response.defer()
-        view = prepare_available_role_subscription_view(interaction, self.assignable_roles)
+        view = prepare_self_assignable_roles_view(interaction, self.assignable_roles)
         message = await interaction.followup.send(
             view=view,
         )
@@ -221,7 +221,7 @@ class Subscribe(commands.Cog):
     )
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
         """Display the member's current state for each role, and allow them to add/remove the roles."""
-        view = prepare_available_role_subscription_view(ctx, self.assignable_roles)
+        view = prepare_self_assignable_roles_view(ctx, self.assignable_roles)
 
         message = await ctx.send(
             "Click the buttons below to add or remove your roles!",
@@ -260,7 +260,7 @@ class Subscribe(commands.Cog):
         self.bot.add_view(view, message_id=message.id)
 
 
-def prepare_available_role_subscription_view(
+def prepare_self_assignable_roles_view(
         trigger_action: commands.Context | Interaction,
         assignable_roles: list[AssignableRole]
 ) -> discord.ui.View:
