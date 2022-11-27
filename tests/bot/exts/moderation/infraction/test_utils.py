@@ -3,8 +3,8 @@ from collections import namedtuple
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from botcore.site_api import ResponseCodeError
 from discord import Embed, Forbidden, HTTPException, NotFound
+from pydis_core.site_api import ResponseCodeError
 
 from bot.constants import Colours, Icons
 from bot.exts.moderation.infraction import _utils as utils

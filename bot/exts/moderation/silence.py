@@ -5,11 +5,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, OrderedDict, Union
 
 from async_rediscache import RedisCache
-from botcore.utils.scheduling import Scheduler
 from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from discord.utils import MISSING
+from pydis_core.utils.scheduling import Scheduler
 
 from bot import constants
 from bot.bot import Bot

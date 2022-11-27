@@ -5,8 +5,8 @@ import arrow
 import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
-from botcore.utils import scheduling
 from discord.ext import commands
+from pydis_core.utils import scheduling
 
 from bot.bot import Bot
 from bot.constants import (

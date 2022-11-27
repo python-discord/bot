@@ -2,8 +2,8 @@ import typing as t
 
 import arrow
 import discord
-from botcore.site_api import ResponseCodeError
 from discord.ext.commands import Context
+from pydis_core.site_api import ResponseCodeError
 
 import bot
 from bot.constants import Colours, Icons
