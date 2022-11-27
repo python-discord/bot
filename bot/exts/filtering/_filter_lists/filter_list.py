@@ -105,10 +105,11 @@ class AtomicList:
 
         if ctx.event == Event.MESSAGE_EDIT and ctx.message and self.list_type == ListType.DENY:
             previously_triggered = ctx.message_cache.get_message_metadata(ctx.message.id)
-            ignore_filters = previously_triggered[self]
-            # This updates the cache. Some filters are ignored, but they're necessary if there's another edit.
-            previously_triggered[self] = relevant_filters
-            if previously_triggered and self in previously_triggered:
+            # The message might not be cached.
+            if previously_triggered:
+                ignore_filters = previously_triggered[self]
+                # This updates the cache. Some filters are ignored, but they're necessary if there's another edit.
+                previously_triggered[self] = relevant_filters
                 relevant_filters = [filter_ for filter_ in relevant_filters if filter_ not in ignore_filters]
         return relevant_filters
 

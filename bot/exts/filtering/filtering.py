@@ -50,7 +50,7 @@ from bot.utils.message_cache import MessageCache
 log = get_logger(__name__)
 
 WEBHOOK_ICON_URL = r"https://github.com/python-discord/branding/raw/main/icons/filter/filter_pfp.png"
-CACHE_SIZE = 100
+CACHE_SIZE = 1000
 HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
