@@ -5,6 +5,7 @@ from typing import ClassVar
 import arrow
 import discord.abc
 from botcore.utils.logging import get_logger
+from botcore.utils.members import get_or_fetch_member
 from discord import Colour, Embed, Member, User
 from discord.errors import Forbidden
 from pydantic import validator
@@ -37,7 +38,7 @@ class Infraction(Enum):
     async def invoke(
         self,
         user: Member | User,
-        channel: discord.abc.Messageable,
+        channel: discord.abc.GuildChannel | discord.DMChannel,
         alerts_channel: discord.TextChannel,
         duration: float,
         reason: str
@@ -50,6 +51,10 @@ class Infraction(Enum):
             log.warning(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
             return
 
+        if isinstance(user, discord.User):  # For example because a message was sent in a DM.
+            member = await get_or_fetch_member(channel.guild, user.id)
+            if member:
+                user = member
         ctx = FakeContext(channel, command)
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
             await command(ctx, user, reason=reason or None)

@@ -11,6 +11,7 @@ import discord
 from botcore.site_api import ResponseCodeError
 from botcore.utils import scheduling
 from botcore.utils.logging import get_logger
+from botcore.utils.members import get_or_fetch_member
 from discord import Embed, Interaction
 from discord.ext.commands import Context
 from discord.ui.select import MISSING as SELECT_MISSING, SelectOption
@@ -529,7 +530,11 @@ class AlertView(discord.ui.View):
 
         await interaction.response.defer()
         fake_ctx = FakeContext(interaction.channel, command, author=interaction.user)
-        await command(fake_ctx, self.ctx.author)
+        # Get the most updated user/member object every time the button is pressed.
+        author = await get_or_fetch_member(interaction.guild, self.ctx.author.id)
+        if author is None:
+            author = await bot.instance.fetch_user(self.ctx.author.id)
+        await command(fake_ctx, author)
 
     @discord.ui.button(emoji="⚠")
     async def user_infractions(self, interaction: Interaction, button: discord.ui.Button) -> None:
