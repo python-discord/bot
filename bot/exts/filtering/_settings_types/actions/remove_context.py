@@ -110,4 +110,4 @@ class RemoveContext(ActionEntry):
         if not isinstance(other, RemoveContext):
             return NotImplemented
 
-        return RemoveContext(delete_messages=self.remove_context or other.remove_context)
+        return RemoveContext(remove_context=self.remove_context or other.remove_context)
