@@ -383,7 +383,7 @@ class Filtering(Cog):
         embed.description = f"`{filter_.content}`"
         if filter_.description:
             embed.description += f" - {filter_.description}"
-        embed.set_author(name=f"Filter #{id_} - " + f"{filter_list[list_type].label}".title())
+        embed.set_author(name=f"Filter {id_} - " + f"{filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, "
@@ -512,7 +512,7 @@ class Filtering(Cog):
         if description:
             embed.description += f" - {description}"
         embed.set_author(
-            name=f"Filter #{filter_id} - {filter_list[list_type].label}".title())
+            name=f"Filter {filter_id} - {filter_list[list_type].label}".title())
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, "

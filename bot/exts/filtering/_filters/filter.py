@@ -78,7 +78,7 @@ class Filter(FieldRequiring):
 
     def __str__(self) -> str:
         """A string representation of the filter."""
-        string = f"#{self.id}. `{self.content}`"
+        string = f"{self.id}. `{self.content}`"
         if self.description:
             string += f" - {self.description}"
         return string

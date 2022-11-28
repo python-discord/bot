@@ -149,7 +149,7 @@ class AtomicList:
                 message += f" - {triggers[0].description}"
             messages = [message]
         else:
-            messages = [f"#{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
+            messages = [f"{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
         return messages
 
     def __hash__(self):
