@@ -117,6 +117,7 @@ async def send_opened_post_dm(post: discord.Thread) -> None:
 async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False) -> None:
     """Apply new post logic to a new help forum post."""
     _stats.report_post_count()
+    bot.instance.stats.incr("help.claimed")
 
     if not isinstance(opened_post.owner, discord.Member):
         log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
