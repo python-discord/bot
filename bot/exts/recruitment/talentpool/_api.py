@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from botcore.site_api import APIClient
 from pydantic import BaseModel, Field, parse_obj_as
+from pydis_core.site_api import APIClient
 
 
 class NominationEntry(BaseModel):

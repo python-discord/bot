@@ -1,4 +1,5 @@
 ---
+aliases: ["print-return", "return-jif"]
 embed:
     title: Print and Return
     image:

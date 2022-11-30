@@ -9,8 +9,8 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
 from async_rediscache import RedisCache
-from botcore.site_api import ResponseCodeError
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
+from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
