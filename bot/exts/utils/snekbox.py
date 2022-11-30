@@ -18,8 +18,8 @@ from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
-from bot.exts.utils.snekio import FileAttachment, sizeof_fmt, FILE_SIZE_LIMIT
 from bot.exts.help_channels._channel import is_help_forum_post
+from bot.exts.utils.snekio import FILE_SIZE_LIMIT, FileAttachment, sizeof_fmt
 from bot.log import get_logger
 from bot.utils import send_to_paste_service
 from bot.utils.lock import LockedResourceError, lock_arg
@@ -133,7 +133,7 @@ class EvalResult:
     err_files: list[str] = field(default_factory=list)
 
     @property
-    def status_emoji(self):
+    def status_emoji(self) -> str:
         """Return an emoji corresponding to the status code or lack of output in result."""
         # If there are attachments, skip empty output warning
         if not self.stdout.strip() and not self.files:  # No output

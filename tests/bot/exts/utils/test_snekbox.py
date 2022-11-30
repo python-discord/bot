@@ -9,7 +9,7 @@ from discord.ext import commands
 from bot import constants
 from bot.errors import LockedResourceError
 from bot.exts.utils import snekbox
-from bot.exts.utils.snekbox import EvalJob, Snekbox, EvalResult
+from bot.exts.utils.snekbox import EvalJob, EvalResult, Snekbox
 from tests.helpers import MockBot, MockContext, MockMember, MockMessage, MockReaction, MockUser
 
 
