@@ -7,9 +7,9 @@ from gettext import ngettext
 import arrow
 import dateutil.parser
 import discord
-from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
 from discord.ext.commands import Context
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot

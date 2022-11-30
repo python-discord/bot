@@ -3,10 +3,10 @@ import datetime
 
 import arrow
 from async_rediscache import RedisCache
-from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse, parse as dateutil_parse
 from discord import Member
 from discord.ext.commands import Cog, Context, group, has_any_role
+from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import Emojis, Guild, MODERATION_ROLES, Roles

@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
-from botcore.site_api import ResponseCodeError
 from discord.ext.commands import errors
+from pydis_core.site_api import ResponseCodeError
 
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.exts.backend import error_handler
