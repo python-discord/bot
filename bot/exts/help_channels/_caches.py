@@ -9,6 +9,6 @@ help_dm = RedisCache(namespace="HelpChannels.help_dm")
 # RedisCache[discord.TextChannel.id, str[set[discord.User.id]]]
 session_participants = RedisCache(namespace="HelpChannels.session_participants")
 
-# Stores posts that have had a non-claimant reply.
+# Stores posts that have had a non-claimant, non-bot, reply.
 # Currently only used to determine whether the post was answered or not when collecting stats.
 posts_with_non_claimant_messages = RedisCache(namespace="HelpChannels.posts_with_non_claimant_messages")
