@@ -300,7 +300,7 @@ class Snekbox(Cog):
         data = job.to_dict()
 
         async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
-            return await resp.json()
+            return EvalResult.from_dict(await resp.json())
 
     @staticmethod
     async def upload_output(output: str) -> Optional[str]:
