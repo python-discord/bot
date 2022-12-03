@@ -222,7 +222,7 @@ class Subscribe(commands.Cog):
         self.assignable_roles.sort(key=operator.attrgetter("name"))
         self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
-        initial_self_assignable_roles_message = await self.__search_for_self_assignable_roles_message()
+        initial_self_assignable_roles_message = await self._fetch_or_create_self_assignable_roles_message()
         self.__attach_persistent_roles_view(initial_self_assignable_roles_message)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
@@ -242,9 +242,9 @@ class Subscribe(commands.Cog):
         # Keep reference of the message that contains the view to be deleted
         view.anchor_message = message
 
-    async def __search_for_self_assignable_roles_message(self) -> discord.Message:
+    async def _fetch_or_create_self_assignable_roles_message(self) -> discord.Message:
         """
-        Searches for the message that holds the self assignable roles view.
+        Fetches the message that holds the self assignable roles view.
 
         If the initial message isn't found, a new one will be created.
         This message will always be needed to attach the persistent view to it
