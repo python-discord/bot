@@ -161,7 +161,7 @@ class AllSelfAssignableRolesView(discord.ui.View):
     """A persistent view that'll hold one button allowing interactors to toggle all available self-assignable roles."""
 
     def __init__(self):
-        super(AllSelfAssignableRolesView, self).__init__(timeout=None)
+        super().__init__(timeout=None)
 
 
 class ShowAllSelfAssignableRolesButton(discord.ui.Button):
