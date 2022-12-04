@@ -138,7 +138,7 @@ class SingleRoleButton(discord.ui.Button):
 
         self.assigned = not self.assigned
         await self.update_view(interaction)
-        await interaction.response.send_message(
+        await interaction.followup.send(
             self.LABEL_FORMAT.format(action="Added" if self.assigned else "Removed", role_name=self.role.name),
             ephemeral=True,
         )
