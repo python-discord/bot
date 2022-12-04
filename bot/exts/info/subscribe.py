@@ -214,7 +214,7 @@ class Subscribe(commands.Cog):
 
         placeholder_message_view_tuple = await self._fetch_or_create_self_assignable_roles_message()
         self_assignable_roles_message, self_assignable_roles_view = placeholder_message_view_tuple
-        self.__attach_persistent_roles_view(self_assignable_roles_message, self_assignable_roles_view)
+        self._attach_persistent_roles_view(self_assignable_roles_message, self_assignable_roles_view)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe", aliases=("unsubscribe",))
@@ -250,7 +250,7 @@ class Subscribe(commands.Cog):
         placeholder_message = await roles_channel.send(self.SELF_ASSIGNABLE_ROLES_MESSAGE, view=view)
         return placeholder_message, view
 
-    def __attach_persistent_roles_view(
+    def _attach_persistent_roles_view(
             self,
             placeholder_message: discord.Message,
             persistent_roles_view: discord.ui.View | None = None
