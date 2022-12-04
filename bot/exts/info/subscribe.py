@@ -74,11 +74,17 @@ class RoleButtonView(discord.ui.View):
 
     anchor_message: discord.Message
 
-    def __init__(self, member: discord.Member):
+    def __init__(self, member: discord.Member, assignable_roles: list[AssignableRole]):
         super().__init__(timeout=DELETE_MESSAGE_AFTER)
         # We can't obtain the reference to the message before the view is sent
         self.anchor_message = None
         self.interaction_owner = member
+
+        author_roles = [role.id for role in member.roles]
+
+        for index, role in enumerate(assignable_roles):
+            row = index // ITEMS_PER_ROW
+            self.add_item(SingleRoleButton(role, role.role_id in author_roles, row))
 
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Ensure that the user clicking the button is the member who invoked the command."""
@@ -173,7 +179,7 @@ class AllSelfAssignableRolesView(discord.ui.View):
     async def show_all_self_assignable_roles(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Sends the original subscription view containing the available self assignable roles."""
         await interaction.response.defer()
-        view = prepare_self_assignable_roles_view(interaction, self.assignable_roles)
+        view = RoleButtonView(interaction.user, self.assignable_roles)
         message = await interaction.followup.send(
             view=view,
             ephemeral=True
@@ -229,8 +235,7 @@ class Subscribe(commands.Cog):
     )
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
         """Display the member's current state for each role, and allow them to add/remove the roles."""
-        view = prepare_self_assignable_roles_view(ctx, self.assignable_roles)
-
+        view = RoleButtonView(ctx.author, self.assignable_roles)
         message = await ctx.send(
             "Click the buttons below to add or remove your roles!",
             view=view,
@@ -272,23 +277,6 @@ class Subscribe(commands.Cog):
         """
         view = AllSelfAssignableRolesView(self.assignable_roles)
         self.bot.add_view(view, message_id=placeholder_message.id)
-
-
-def prepare_self_assignable_roles_view(
-        trigger_action: commands.Context | Interaction,
-        assignable_roles: list[AssignableRole]
-) -> discord.ui.View:
-    """Prepares the view containing the self assignable roles before its sent."""
-    author = trigger_action.author if isinstance(trigger_action, commands.Context) else trigger_action.user
-    author_roles = [role.id for role in author.roles]
-    button_view = RoleButtonView(member=author)
-    button_view.anchor_message = trigger_action.message
-
-    for index, role in enumerate(assignable_roles):
-        row = index // ITEMS_PER_ROW
-        button_view.add_item(SingleRoleButton(role, role.role_id in author_roles, row))
-
-    return button_view
 
 
 async def setup(bot: Bot) -> None:
