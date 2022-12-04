@@ -185,7 +185,11 @@ class AllSelfAssignableRolesView(discord.ui.View):
 class Subscribe(commands.Cog):
     """Cog to allow user to self-assign & remove the roles present in ASSIGNABLE_ROLES."""
 
-    SELF_ASSIGNABLE_ROLES_MESSAGE = "Click on this button to show all self assignable roles"
+    GREETING_EMOJI = ":wave:"
+
+    SELF_ASSIGNABLE_ROLES_MESSAGE = f"Hi there {GREETING_EMOJI}," \
+                                    "\nDid you know we had various self-assignable roles for server updates an events?"\
+                                    "\nClick the button below to toggle them."
 
     def __init__(self, bot: Bot):
         self.bot = bot
