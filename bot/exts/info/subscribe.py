@@ -66,20 +66,15 @@ class RoleButtonView(discord.ui.View):
 
     Attributes
     __________
-    anchor_message : discord.Message
-        The message to which this view will be attached
     interaction_owner: discord.Member
         The member that initiated the interaction
     """
 
-    anchor_message: discord.Message
+    interaction_owner: discord.Member
 
     def __init__(self, member: discord.Member, assignable_roles: list[AssignableRole]):
         super().__init__(timeout=DELETE_MESSAGE_AFTER)
-        # We can't obtain the reference to the message before the view is sent
-        self.anchor_message = None
         self.interaction_owner = member
-
         author_roles = [role.id for role in member.roles]
 
         for index, role in enumerate(assignable_roles):
@@ -95,10 +90,6 @@ class RoleButtonView(discord.ui.View):
             )
             return False
         return True
-
-    async def on_timeout(self) -> None:
-        """Delete the original message that the view was sent along with."""
-        await self.anchor_message.delete()
 
 
 class SingleRoleButton(discord.ui.Button):
@@ -157,7 +148,7 @@ class SingleRoleButton(discord.ui.Button):
         self.style = self.REMOVE_STYLE if self.assigned else self.ADD_STYLE
         self.label = self.LABEL_FORMAT.format(action="Remove" if self.assigned else "Add", role_name=self.role.name)
         try:
-            await self.view.anchor_message.edit(view=self.view)
+            await interaction.response.edit_message(view=self.view)
         except discord.NotFound:
             log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
             self.view.stop()
@@ -178,14 +169,11 @@ class AllSelfAssignableRolesView(discord.ui.View):
     )
     async def show_all_self_assignable_roles(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Sends the original subscription view containing the available self assignable roles."""
-        await interaction.response.defer()
         view = RoleButtonView(interaction.user, self.assignable_roles)
-        message = await interaction.followup.send(
+        await interaction.response.send_message(
             view=view,
             ephemeral=True
         )
-        # Keep reference of the message that contains the view to be deleted
-        view.anchor_message = message
 
 
 class Subscribe(commands.Cog):
@@ -237,12 +225,11 @@ class Subscribe(commands.Cog):
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
         """Display the member's current state for each role, and allow them to add/remove the roles."""
         view = RoleButtonView(ctx.author, self.assignable_roles)
-        message = await ctx.send(
+        await ctx.send(
             "Click the buttons below to add or remove your roles!",
             view=view,
+            delete_after=DELETE_MESSAGE_AFTER
         )
-        # Keep reference of the message that contains the view to be deleted
-        view.anchor_message = message
 
     async def _fetch_or_create_self_assignable_roles_message(self) -> tuple[discord.Message, discord.ui.View | None]:
         """
