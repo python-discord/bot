@@ -160,25 +160,17 @@ class SingleRoleButton(discord.ui.Button):
 class AllSelfAssignableRolesView(discord.ui.View):
     """A persistent view that'll hold one button allowing interactors to toggle all available self-assignable roles."""
 
-    def __init__(self):
-        super().__init__(timeout=None)
-
-
-class ShowAllSelfAssignableRolesButton(discord.ui.Button):
-    """A button that, when clicked, sends a view a user can interact with to assign one or all the available roles."""
-
-    CUSTOM_ID = "gotta-claim-them-all"
-
     def __init__(self, assignable_roles: list[AssignableRole]):
-        super().__init__(
-            style=discord.ButtonStyle.success,
-            label="Show all self assignable roles",
-            custom_id=self.CUSTOM_ID,
-            row=1
-        )
+        super().__init__(timeout=None)
         self.assignable_roles = assignable_roles
 
-    async def callback(self, interaction: Interaction) -> t.Any:
+    @discord.ui.button(
+        style=discord.ButtonStyle.success,
+        label="Show all self assignable roles",
+        custom_id="gotta-claim-them-all",
+        row=1
+    )
+    async def show_all_self_assignable_roles(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Sends the original subscription view containing the available self assignable roles."""
         await interaction.response.defer()
         view = prepare_self_assignable_roles_view(interaction, self.assignable_roles)
@@ -257,8 +249,7 @@ class Subscribe(commands.Cog):
                 return message
 
         log.debug("Self assignable roles view message hasn't been found, creating a new one.")
-        view = AllSelfAssignableRolesView()
-        view.add_item(ShowAllSelfAssignableRolesButton(self.assignable_roles))
+        view = AllSelfAssignableRolesView(self.assignable_roles)
         return await roles_channel.send(self.SELF_ASSIGNABLE_ROLES_MESSAGE, view=view)
 
     def __attach_persistent_roles_view(
@@ -275,8 +266,7 @@ class Subscribe(commands.Cog):
             :param placeholder_message: The message that will hold the persistent view allowing
             users to toggle the RoleButtonView
         """
-        view = AllSelfAssignableRolesView()
-        view.add_item(ShowAllSelfAssignableRolesButton(self.assignable_roles))
+        view = AllSelfAssignableRolesView(self.assignable_roles)
         self.bot.add_view(view, message_id=placeholder_message.id)
 
 
