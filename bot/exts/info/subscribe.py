@@ -224,8 +224,9 @@ class Subscribe(commands.Cog):
         self.assignable_roles.sort(key=operator.attrgetter("name"))
         self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
-        initial_self_assignable_roles_message = await self._fetch_or_create_self_assignable_roles_message()
-        self.__attach_persistent_roles_view(initial_self_assignable_roles_message)
+        placeholder_message_view_tuple = await self._fetch_or_create_self_assignable_roles_message()
+        self_assignable_roles_message, self_assignable_roles_view = placeholder_message_view_tuple
+        self.__attach_persistent_roles_view(self_assignable_roles_message, self_assignable_roles_view)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe", aliases=("unsubscribe",))
@@ -243,7 +244,7 @@ class Subscribe(commands.Cog):
         # Keep reference of the message that contains the view to be deleted
         view.anchor_message = message
 
-    async def _fetch_or_create_self_assignable_roles_message(self) -> discord.Message:
+    async def _fetch_or_create_self_assignable_roles_message(self) -> tuple[discord.Message, discord.ui.View | None]:
         """
         Fetches the message that holds the self assignable roles view.
 
@@ -255,15 +256,17 @@ class Subscribe(commands.Cog):
         async for message in roles_channel.history(limit=30):
             if message.content == self.SELF_ASSIGNABLE_ROLES_MESSAGE:
                 log.debug(f"Found self assignable roles view message: {message.id}")
-                return message
+                return message, None
 
         log.debug("Self assignable roles view message hasn't been found, creating a new one.")
         view = AllSelfAssignableRolesView(self.assignable_roles)
-        return await roles_channel.send(self.SELF_ASSIGNABLE_ROLES_MESSAGE, view=view)
+        placeholder_message = await roles_channel.send(self.SELF_ASSIGNABLE_ROLES_MESSAGE, view=view)
+        return placeholder_message, view
 
     def __attach_persistent_roles_view(
             self,
-            placeholder_message: discord.Message
+            placeholder_message: discord.Message,
+            persistent_roles_view: discord.ui.View | None = None
     ) -> None:
         """
         Attaches the persistent view that toggles self assignable roles to its placeholder message.
@@ -274,9 +277,13 @@ class Subscribe(commands.Cog):
         __________
             :param placeholder_message: The message that will hold the persistent view allowing
             users to toggle the RoleButtonView
+            :param persistent_roles_view: The view attached to the placeholder_message
+            If none, a new view will be created
         """
-        view = AllSelfAssignableRolesView(self.assignable_roles)
-        self.bot.add_view(view, message_id=placeholder_message.id)
+        if not persistent_roles_view:
+            persistent_roles_view = AllSelfAssignableRolesView(self.assignable_roles)
+
+        self.bot.add_view(persistent_roles_view, message_id=placeholder_message.id)
 
 
 async def setup(bot: Bot) -> None:
