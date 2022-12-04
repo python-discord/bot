@@ -167,7 +167,7 @@ class AllSelfAssignableRolesView(discord.ui.View):
     @discord.ui.button(
         style=discord.ButtonStyle.success,
         label="Show all self assignable roles",
-        custom_id="gotta-claim-them-all",
+        custom_id="toggle-available-roles-button",
         row=1
     )
     async def show_all_self_assignable_roles(self, interaction: Interaction, button: discord.ui.Button) -> None:
