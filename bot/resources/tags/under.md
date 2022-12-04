@@ -1,5 +1,5 @@
 ## UseCases of Underscore in Python
-- **Dunders** Double Underscore(Dunder) methods are special methods defined in a class that are invoked implicitly. example- `__name__`,`__init__`,`__repr__`,`__str__`  
+- **Dunders** Double Underscore(Dunder) methods are special methods defined in a class that are invoked implicitly. example- `__name__`,`__init__`,`__repr__`,`__str__`
 Use `!dunder-methods` command to know more about these methods
 - **Single leading Underscore**  in front of a variable, a function, or a method name means that these objects are used internally.Remember that these objects can be accessed outside or other script. example-`_name`
 - **Single Trailing Underscores** are used to avoid naming conflict while using a variable which is a reserved keyword.
