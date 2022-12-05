@@ -94,7 +94,7 @@ async def send_opened_post_dm(post: discord.Thread) -> None:
             return
 
     formatted_message = textwrap.shorten(message.content, width=100, placeholder="...").strip()
-    if formatted_message is None:
+    if not formatted_message:
         # This most likely means the initial message is only an image or similar
         formatted_message = "No text content."
 
