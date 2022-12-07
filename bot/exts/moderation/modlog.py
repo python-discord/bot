@@ -826,7 +826,8 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {after.mention} ({after.name}, `{after.id}`) from {after.parent.mention} "
                 f"(`{after.parent.id}`) was {action}"
-            )
+            ),
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
@@ -843,7 +844,8 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
                 f"(`{thread.parent.id}`) deleted"
-            )
+            ),
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
