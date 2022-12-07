@@ -847,23 +847,6 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @Cog.listener()
-    async def on_thread_create(self, thread: Thread) -> None:
-        """Log thread creation."""
-        if self.is_channel_ignored(thread.id):
-            log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
-            return
-
-        await self.send_log_message(
-            Icons.hash_green,
-            Colours.soft_green,
-            "Thread created",
-            (
-                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
-                f"(`{thread.parent.id}`) created"
-            )
-        )
-
-    @Cog.listener()
     async def on_voice_state_update(
         self,
         member: discord.Member,
