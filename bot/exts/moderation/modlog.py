@@ -826,7 +826,8 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {after.mention} ({after.name}, `{after.id}`) from {after.parent.mention} "
                 f"(`{after.parent.id}`) was {action}"
-            )
+            ),
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
@@ -843,24 +844,8 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
                 f"(`{thread.parent.id}`) deleted"
-            )
-        )
-
-    @Cog.listener()
-    async def on_thread_create(self, thread: Thread) -> None:
-        """Log thread creation."""
-        if self.is_channel_ignored(thread.id):
-            log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
-            return
-
-        await self.send_log_message(
-            Icons.hash_green,
-            Colours.soft_green,
-            "Thread created",
-            (
-                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
-                f"(`{thread.parent.id}`) created"
-            )
+            ),
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
