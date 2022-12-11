@@ -3,8 +3,7 @@
 - **Dunders**: Double Underscore (Dunder) methods are special methods defined in a class that are invoked implicitly. For example, `__name__`,`__init__`,`__repr__`, and `__str__`.
 Use `!dunder-methods` command to know more about these methods
 - **Single leading Underscore**  in front of a variable, a function, or a method name means that these objects are used internally.Remember that these objects can be accessed outside or other script. example-`_name`
-- **Single Trailing Underscores** are used to avoid naming conflict while using a variable which is a reserved keyword.
-example- using a variable name as `class` will produce an error,to avoid this conflict, you can add a trailing underscore as a naming convention i.e. `class_`.
+- **Single Trailing Underscores**: Avoid naming conflict while using a variable which is a reserved keyword. Using a variable name as `class` will produce an error. To avoid this conflict, you can add a trailing underscore as a naming convention i.e. `class_`.
 -  **Double leading underscores** Double leading underscores are typically used for name mangling.
 Name mangling is a process by which the interpreter changes the attribute name to avoid naming collisions in subclasses.
 - **Store Expression Value** Underscore(**_**) is used to store the value of last expression in an interpreter and can be used as a variable.example-
