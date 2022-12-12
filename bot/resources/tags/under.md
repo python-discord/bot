@@ -1,4 +1,4 @@
-**UseCases of Underscore in Python**
+**Use cases of Underscore in Python**
 
 - **Dunders**: Double Underscore (Dunder) methods are special methods defined in a class that are invoked implicitly. For example, `__name__`,`__init__`,`__repr__`, and `__str__`.
 Use `!dunder-methods` command to know more about these methods
