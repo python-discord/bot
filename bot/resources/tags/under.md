@@ -1,12 +1,12 @@
 **Use cases of Underscore in Python**
 
 - **Dunders**: Double Underscore (Dunder) methods are special methods defined in a class that are invoked implicitly. For example, `__name__`,`__init__`,`__repr__`, and `__str__`.
-Use `!dunder-methods` command to know more about these methods
+Use the `!dunder-methods` tag to know more about these methods
 - **Single leading Underscore**:  In front of a variable, a function, or a method name means that these objects are used internally, such as `_name`. Remember that these objects can be accessed outside or other script.
-- **Single Trailing Underscores**: Avoid naming conflict while using a variable which is a reserved keyword. Using a variable name as `class` will produce an error. To avoid this conflict, you can add a trailing underscore as a naming convention i.e. `class_`.
+- **Single leading Underscore**:  In front of a variable, a function, or a method name means that these objects are used internally, such as `_name`. However, remember that these objects **can** be accessed outside.
 -  **Double leading underscores**: Double leading underscores are typically used for name mangling.
-Name mangling is a process by which the interpreter changes the attribute name to avoid naming collisions in subclasses.
-- **Store Expression Value** Underscore(**_**) is used to store the value of last expression in an interpreter and can be used as a variable.example-
+Name mangling is a process by which the interpreter changes the attribute name to avoid naming collisions in subclasses.[GeeksforGeeks](https://www.geeksforgeeks.org/name-mangling-in-python/)
+- **Store Expression Value** Underscore(**_**) is used to store the value of last expression in an interpreter and can be used as a variable. Example:
 ```python
 >>> 1 + 1
     2
@@ -15,15 +15,13 @@ Name mangling is a process by which the interpreter changes the attribute name t
 >>> _ + 2
     4
 ```
--  **Ignore Values**: An underscore can be used to ignore values and as a variable in looping.
+-  **Ignore Values**: Underscores can also be used for variable assignments, but they are generally used to store values that will not be needed.It is known as `throwaway variable`
  ```python
->>> a, *_, b = (3, 5, 2, 6, 2)
+>>> a, *_, b = (3, 5, 2, 6, 2) # Ignore values when unpacking
 >>> print(a, b, _)
-     3 2 [5, 2, 6]
->>> for _ in range(2):  # variable in looping
-          print(_)
-       0
-       1
+    3 2 [5, 2, 6]
+>>> for _ in range(10):  # Ignoring the Index
+        do_something()
 ```
 -  **Improve Readability**: they can also be used with numeric literals to improve readability of long numbers.
  ```python
