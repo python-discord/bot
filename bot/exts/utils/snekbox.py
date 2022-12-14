@@ -391,10 +391,9 @@ class Snekbox(Cog):
                 log.trace("Formatting output...")
                 output, paste_link = await self.format_output(result.stdout)
 
-            if result.files and output in ("[No output]", ""):
-                msg = f"{ctx.author.mention} {result.status_emoji} {msg}.\n"
-            else:
-                msg = f"{ctx.author.mention} {result.status_emoji} {msg}.\n\n```\n{output}\n```"
+            msg = f"{ctx.author.mention} {result.status_emoji} {msg}.\n"
+            if not result.files or output not in ("[No output]", ""):
+                msg += f"\n```\n{output}\n```"
 
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
