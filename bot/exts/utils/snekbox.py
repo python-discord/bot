@@ -143,7 +143,7 @@ class EvalResult:
         else:  # Exception
             return ":x:"
 
-    def message(self, job: EvalJob) -> tuple[str, str]:
+    def get_message(self, job: EvalJob) -> tuple[str, str]:
         """Return a user-friendly message and error corresponding to the process's return code."""
         msg = f"Your {job.version} {job.name} job has completed with return code {self.returncode}"
         error = ""
@@ -383,7 +383,7 @@ class Snekbox(Cog):
         """
         async with ctx.typing():
             result = await self.post_job(job)
-            msg, error = result.message(job)
+            msg, error = result.get_message(job)
 
             if error:
                 output, paste_link = error, None

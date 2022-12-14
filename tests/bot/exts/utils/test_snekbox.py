@@ -111,13 +111,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(stdout=stdout, returncode=returncode, expected=expected):
                 result = EvalResult(stdout=stdout, returncode=returncode)
                 job = EvalJob([])
-                self.assertEqual(result.message(job), expected)
+                self.assertEqual(result.get_message(job), expected)
 
     @patch('bot.exts.utils.snekbox.Signals', side_effect=ValueError)
     def test_eval_result_message_invalid_signal(self, _mock_signals: Mock):
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
-            result.message(EvalJob([], version="3.10")),
+            result.get_message(EvalJob([], version="3.10")),
             ("Your 3.10 eval job has completed with return code 127", "")
         )
 
@@ -126,7 +126,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mock_signals.return_value.name = "SIGTEST"
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
-            result.message(EvalJob([], version="3.11")),
+            result.get_message(EvalJob([], version="3.11")),
             ("Your 3.11 eval job has completed with return code 127 (SIGTEST)", "")
         )
 
