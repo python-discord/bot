@@ -317,7 +317,7 @@ class Snekbox(Cog):
     @staticmethod
     def prepare_timeit_input(codeblocks: list[str]) -> list[str]:
         """
-        Join the codeblocks into a single string, then return the code and the arguments in a tuple.
+        Join the codeblocks into a single string, then return the arguments in a list.
 
         If there are multiple codeblocks, insert the first one into the wrapped setup code.
         """
