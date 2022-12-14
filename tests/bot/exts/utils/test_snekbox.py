@@ -28,14 +28,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_post_job(self):
         """Post the eval code to the URLs.snekbox_eval_api endpoint."""
         resp = MagicMock()
-        resp.json = AsyncMock(return_value="return")
+        resp.json = AsyncMock(return_value={"stdout": "Hi", "returncode": 137})
 
         context_manager = MagicMock()
         context_manager.__aenter__.return_value = resp
         self.bot.http_session.post.return_value = context_manager
 
         job = EvalJob.from_code("import random")
-        self.assertEqual(await self.cog.post_job(job), "return")
+        self.assertEqual(await self.cog.post_job(job), EvalResult("Hi", 137))
 
         expected = {
             "args": ["main.py"],
