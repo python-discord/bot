@@ -286,12 +286,12 @@ class Snekbox(Cog):
                 log.trace("Formatting output...")
                 output, paste_link = await self.format_output(result.stdout)
 
-            msg = f"{ctx.author.mention} {result.status_emoji} {msg}.\n"
+            msg = f"{ctx.author.mention} {result.status_emoji} {msg}.\n\n"
             if not result.files or output not in ("[No output]", ""):
-                msg += f"\n```\n{output}\n```"
+                msg += f"```\n{output}\n```"
 
             if paste_link:
-                msg = f"{msg}\nFull output: {paste_link}"
+                msg += f"Full output: {paste_link}"
 
             # Collect stats of job fails + successes
             if result.returncode != 0:

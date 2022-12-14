@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from signal import Signals
 from typing import TYPE_CHECKING
 
-from bot.exts.utils.snekbox._io import FILE_SIZE_LIMIT, FileAttachment, sizeof_fmt
+from bot.exts.utils.snekbox._io import FILE_COUNT_LIMIT, FILE_SIZE_LIMIT, FileAttachment, sizeof_fmt
 from bot.log import get_logger
 
 if TYPE_CHECKING:
@@ -92,10 +92,17 @@ class EvalResult:
         # Add error message for failed attachments
         if self.failed_files:
             failed_files = f"({', '.join(self.failed_files)})"
-            msg += (
-                f".\n\n> Some attached files were not able to be uploaded {failed_files}."
-                f" Check that the file size is less than {sizeof_fmt(FILE_SIZE_LIMIT)}"
-            )
+            # Case for over 10
+            if len(self.failed_files) + len(self.files) > FILE_COUNT_LIMIT:
+                msg += (
+                    f".\n\n> Some files were not able to be uploaded, as they exceeded"
+                    f" the {FILE_COUNT_LIMIT} file upload limit {failed_files}"
+                )
+            else:
+                msg += (
+                    f".\n\n> Some files were not able to be uploaded {failed_files}."
+                    f" Check that the file size is less than {sizeof_fmt(FILE_SIZE_LIMIT)}"
+                )
 
         return msg, error
 
@@ -107,7 +114,12 @@ class EvalResult:
             returncode=data["returncode"],
         )
 
-        for file in data.get("files", []):
+        files = iter(data["files"])
+        for i, file in enumerate(files):
+            # Limit to FILE_COUNT_LIMIT files
+            if i >= FILE_COUNT_LIMIT:
+                res.failed_files.extend(file["path"] for file in files)
+                break
             try:
                 res.files.append(FileAttachment.from_dict(file))
             except ValueError as e:

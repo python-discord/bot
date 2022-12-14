@@ -12,6 +12,9 @@ from discord import File
 # or 50 MiB for lvl 2 boosted servers
 FILE_SIZE_LIMIT = 8 * 1024 * 1024
 
+# Discord currently has a 10-file limit per message
+FILE_COUNT_LIMIT = 10
+
 
 def sizeof_fmt(num: int, suffix: str = "B") -> str:
     """Return a human-readable file size."""
