@@ -463,7 +463,8 @@ class Snekbox(Cog):
                     return None
 
             except asyncio.TimeoutError:
-                await ctx.message.clear_reaction(REDO_EMOJI)
+                with contextlib.suppress(HTTPException):
+                    await ctx.message.clear_reaction(REDO_EMOJI)
                 return None
 
             codeblocks = await CodeblockConverter.convert(ctx, code)
