@@ -34,7 +34,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         context_manager.__aenter__.return_value = resp
         self.bot.http_session.post.return_value = context_manager
 
-        job = EvalJob.from_code("import random")
+        job = EvalJob.from_code("import random").as_version("3.10")
         self.assertEqual(await self.cog.post_job(job), EvalResult("Hi", 137))
 
         expected = {
