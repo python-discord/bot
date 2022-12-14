@@ -525,7 +525,7 @@ class Snekbox(Cog):
                 )
                 return
 
-            # Store the bots response message id per invocation, to ensure the `wait_for`s in `continue_job`
+            # Store the bot's response message id per invocation, to ensure the `wait_for`s in `continue_job`
             # don't trigger if the response has already been replaced by a new response.
             # This can happen when a button is pressed and then original code is edited and re-run.
             self.jobs[ctx.message.id] = response.id
