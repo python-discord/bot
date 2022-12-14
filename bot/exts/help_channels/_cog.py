@@ -179,5 +179,5 @@ class HelpForum(commands.Cog):
 
         await _message.notify_session_participants(message)
 
-        if message.author.id != message.channel.owner_id:
+        if not message.author.bot and message.author.id != message.channel.owner_id:
             await _caches.posts_with_non_claimant_messages.set(message.channel.id, "sentinel")
