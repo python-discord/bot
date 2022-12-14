@@ -8,8 +8,9 @@ from pathlib import Path
 
 from discord import File
 
-# Note discord upload limit is 8 MB, or 50 MB for lvl 2 boosted servers
-FILE_SIZE_LIMIT = 8 * 1024 * 1024  # 8 MiB
+# Note discord bot upload limit is 8 MiB per file,
+# or 50 MiB for lvl 2 boosted servers
+FILE_SIZE_LIMIT = 8 * 1024 * 1024
 
 
 def sizeof_fmt(num: int, suffix: str = "B") -> str:
