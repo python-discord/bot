@@ -57,7 +57,7 @@ class EvalResult:
     stdout: str
     returncode: int | None
     files: list[FileAttachment] = field(default_factory=list)
-    err_files: list[str] = field(default_factory=list)
+    failed_files: list[str] = field(default_factory=list)
 
     @property
     def status_emoji(self) -> str:
@@ -90,8 +90,8 @@ class EvalResult:
                 msg = f"{msg} ({name})"
 
         # Add error message for failed attachments
-        if self.err_files:
-            failed_files = f"({', '.join(self.err_files)})"
+        if self.failed_files:
+            failed_files = f"({', '.join(self.failed_files)})"
             msg += (
                 f".\n\n> Some attached files were not able to be uploaded {failed_files}."
                 f" Check that the file size is less than {sizeof_fmt(FILE_SIZE_LIMIT)}"
@@ -112,6 +112,6 @@ class EvalResult:
                 res.files.append(FileAttachment.from_dict(file))
             except ValueError as e:
                 log.info(f"Failed to parse file from snekbox response: {e}")
-                res.err_files.append(file["path"])
+                res.failed_files.append(file["path"])
 
         return res
