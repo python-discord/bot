@@ -55,14 +55,18 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_upload_output_reject_too_long(self):
         """Reject output longer than MAX_PASTE_LENGTH."""
-        result = await self.cog.upload_output("-" * (snekbox.MAX_PASTE_LENGTH + 1))
+        result = await self.cog.upload_output("-" * (snekbox._cog.MAX_PASTE_LENGTH + 1))
         self.assertEqual(result, "too long to upload")
 
-    @patch("bot.exts.utils.snekbox.send_to_paste_service")
+    @patch("bot.exts.utils.snekbox._cog.send_to_paste_service")
     async def test_upload_output(self, mock_paste_util):
         """Upload the eval output to the URLs.paste_service.format(key="documents") endpoint."""
         await self.cog.upload_output("Test output.")
-        mock_paste_util.assert_called_once_with("Test output.", extension="txt", max_length=snekbox.MAX_PASTE_LENGTH)
+        mock_paste_util.assert_called_once_with(
+            "Test output.",
+            extension="txt",
+            max_length=snekbox._cog.MAX_PASTE_LENGTH
+        )
 
     async def test_codeblock_converter(self):
         ctx = MockContext()
@@ -95,7 +99,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         )
 
         for case, setup_code, test_name in cases:
-            setup = snekbox.TIMEIT_SETUP_WRAPPER.format(setup=setup_code)
+            setup = snekbox._cog.TIMEIT_SETUP_WRAPPER.format(setup=setup_code)
             expected = [*base_args, setup, '\n'.join(case[1:] if setup_code else case)]
             with self.subTest(msg=f'Test with {test_name} and expected return {expected}'):
                 self.assertEqual(self.cog.prepare_timeit_input(case), expected)
@@ -104,7 +108,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """EvalResult.message, should return error and message."""
         cases = (
             ('ERROR', None, ('Your 3.11 eval job has failed', 'ERROR')),
-            ('', 128 + snekbox.SIGKILL, ('Your 3.11 eval job timed out or ran out of memory', '')),
+            ('', 128 + snekbox._eval.SIGKILL, ('Your 3.11 eval job timed out or ran out of memory', '')),
             ('', 255, ('Your 3.11 eval job has failed', 'A fatal NsJail error occurred'))
         )
         for stdout, returncode, expected in cases:
@@ -113,7 +117,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 job = EvalJob([])
                 self.assertEqual(result.get_message(job), expected)
 
-    @patch('bot.exts.utils.snekbox.Signals', side_effect=ValueError)
+    @patch('bot.exts.utils.snekbox._eval.Signals', side_effect=ValueError)
     def test_eval_result_message_invalid_signal(self, _mock_signals: Mock):
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
@@ -121,7 +125,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             ("Your 3.10 eval job has completed with return code 127", "")
         )
 
-    @patch('bot.exts.utils.snekbox.Signals')
+    @patch('bot.exts.utils.snekbox._eval.Signals')
     def test_eval_result_message_valid_signal(self, mock_signals: Mock):
         mock_signals.return_value.name = "SIGTEST"
         result = EvalResult(stdout="", returncode=127)
@@ -328,7 +332,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.post_job.assert_called_once_with(job)
         self.cog.upload_output.assert_not_called()
 
-    @patch("bot.exts.utils.snekbox.partial")
+    @patch("bot.exts.utils.snekbox._cog.partial")
     async def test_continue_job_does_continue(self, partial_mock):
         """Test that the continue_job function does continue if required conditions are met."""
         ctx = MockContext(
@@ -353,14 +357,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             (
                 call(
                     'message_edit',
-                    check=partial_mock(snekbox.predicate_message_edit, ctx),
-                    timeout=snekbox.REDO_TIMEOUT,
+                    check=partial_mock(snekbox._cog.predicate_message_edit, ctx),
+                    timeout=snekbox._cog.REDO_TIMEOUT,
                 ),
-                call('reaction_add', check=partial_mock(snekbox.predicate_emoji_reaction, ctx), timeout=10)
+                call('reaction_add', check=partial_mock(snekbox._cog.predicate_emoji_reaction, ctx), timeout=10)
             )
         )
-        ctx.message.add_reaction.assert_called_once_with(snekbox.REDO_EMOJI)
-        ctx.message.clear_reaction.assert_called_once_with(snekbox.REDO_EMOJI)
+        ctx.message.add_reaction.assert_called_once_with(snekbox._cog.REDO_EMOJI)
+        ctx.message.clear_reaction.assert_called_once_with(snekbox._cog.REDO_EMOJI)
         response.delete.assert_called_once()
 
     async def test_continue_job_does_not_continue(self):
@@ -369,7 +373,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         actual = await self.cog.continue_job(ctx, MockMessage(), self.cog.eval_command)
         self.assertEqual(actual, None)
-        ctx.message.clear_reaction.assert_called_once_with(snekbox.REDO_EMOJI)
+        ctx.message.clear_reaction.assert_called_once_with(snekbox._cog.REDO_EMOJI)
 
     async def test_get_code(self):
         """Should return 1st arg (or None) if eval cmd in message, otherwise return full content."""
@@ -411,18 +415,18 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         for ctx_msg, new_msg, expected, testname in cases:
             with self.subTest(msg=f'Messages with {testname} return {expected}'):
                 ctx = MockContext(message=ctx_msg)
-                actual = snekbox.predicate_message_edit(ctx, ctx_msg, new_msg)
+                actual = snekbox._cog.predicate_message_edit(ctx, ctx_msg, new_msg)
                 self.assertEqual(actual, expected)
 
     def test_predicate_emoji_reaction(self):
         """Test the predicate_emoji_reaction function."""
         valid_reaction = MockReaction(message=MockMessage(id=1))
-        valid_reaction.__str__.return_value = snekbox.REDO_EMOJI
+        valid_reaction.__str__.return_value = snekbox._cog.REDO_EMOJI
         valid_ctx = MockContext(message=MockMessage(id=1), author=MockUser(id=2))
         valid_user = MockUser(id=2)
 
         invalid_reaction_id = MockReaction(message=MockMessage(id=42))
-        invalid_reaction_id.__str__.return_value = snekbox.REDO_EMOJI
+        invalid_reaction_id.__str__.return_value = snekbox._cog.REDO_EMOJI
         invalid_user_id = MockUser(id=42)
         invalid_reaction_str = MockReaction(message=MockMessage(id=1))
         invalid_reaction_str.__str__.return_value = ':longbeard:'
@@ -435,7 +439,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         )
         for reaction, user, expected, testname in cases:
             with self.subTest(msg=f'Test with {testname} and expected return {expected}'):
-                actual = snekbox.predicate_emoji_reaction(valid_ctx, reaction, user)
+                actual = snekbox._cog.predicate_emoji_reaction(valid_ctx, reaction, user)
                 self.assertEqual(actual, expected)
 
 
