@@ -28,7 +28,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_post_job(self):
         """Post the eval code to the URLs.snekbox_eval_api endpoint."""
         resp = MagicMock()
-        resp.json = AsyncMock(return_value={"stdout": "Hi", "returncode": 137})
+        resp.json = AsyncMock(return_value={"stdout": "Hi", "returncode": 137, "files": []})
 
         context_manager = MagicMock()
         context_manager.__aenter__.return_value = resp
@@ -107,23 +107,32 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     def test_eval_result_message(self):
         """EvalResult.message, should return error and message."""
         cases = (
-            ('ERROR', None, ('Your 3.11 eval job has failed', 'ERROR')),
-            ('', 128 + snekbox._eval.SIGKILL, ('Your 3.11 eval job timed out or ran out of memory', '')),
-            ('', 255, ('Your 3.11 eval job has failed', 'A fatal NsJail error occurred'))
+            ('ERROR', None, ('Your 3.11 eval job has failed', 'ERROR', '')),
+            ('', 128 + snekbox._eval.SIGKILL, ('Your 3.11 eval job timed out or ran out of memory', '', '')),
+            ('', 255, ('Your 3.11 eval job has failed', 'A fatal NsJail error occurred', ''))
         )
         for stdout, returncode, expected in cases:
+            exp_msg, exp_err, exp_files_err = expected
             with self.subTest(stdout=stdout, returncode=returncode, expected=expected):
                 result = EvalResult(stdout=stdout, returncode=returncode)
                 job = EvalJob([])
-                self.assertEqual(result.get_message(job), expected)
+                # Check all 3 message types
+                msg = result.get_message(job)
+                self.assertEqual(msg, exp_msg)
+                error = result.error_message
+                self.assertEqual(error, exp_err)
+                files_error = result.files_error_message
+                self.assertEqual(files_error, exp_files_err)
 
     @patch('bot.exts.utils.snekbox._eval.Signals', side_effect=ValueError)
     def test_eval_result_message_invalid_signal(self, _mock_signals: Mock):
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
             result.get_message(EvalJob([], version="3.10")),
-            ("Your 3.10 eval job has completed with return code 127", "")
+            "Your 3.10 eval job has completed with return code 127"
         )
+        self.assertEqual(result.error_message, "")
+        self.assertEqual(result.files_error_message, "")
 
     @patch('bot.exts.utils.snekbox._eval.Signals')
     def test_eval_result_message_valid_signal(self, mock_signals: Mock):
@@ -131,7 +140,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
             result.get_message(EvalJob([], version="3.11")),
-            ("Your 3.11 eval job has completed with return code 127 (SIGTEST)", "")
+            "Your 3.11 eval job has completed with return code 127 (SIGTEST)"
         )
 
     def test_eval_result_status_emoji(self):
