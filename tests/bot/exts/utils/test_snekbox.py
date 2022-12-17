@@ -105,7 +105,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self.cog.prepare_timeit_input(case), expected)
 
     def test_eval_result_message(self):
-        """EvalResult.message, should return error and message."""
+        """EvalResult.get_message(), should return message."""
         cases = (
             ('ERROR', None, ('Your 3.11 eval job has failed', 'ERROR', '')),
             ('', 128 + snekbox._eval.SIGKILL, ('Your 3.11 eval job timed out or ran out of memory', '', '')),
@@ -123,6 +123,33 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(error, exp_err)
                 files_error = result.files_error_message
                 self.assertEqual(files_error, exp_files_err)
+
+    @patch("bot.exts.utils.snekbox._eval.FILE_COUNT_LIMIT", 2)
+    def test_eval_result_files_error_message(self):
+        """EvalResult.files_error_message, should return files error message."""
+        cases = [
+            ([], ["abc"], (
+                "Failed to upload 1 file (abc)."
+                " File sizes should each not exceed 8 MiB."
+            )),
+            ([], ["file1.bin", "f2.bin"], (
+                "Failed to upload 2 files (file1.bin, f2.bin)."
+                " File sizes should each not exceed 8 MiB."
+            )),
+            (["a", "b"], ["c"], (
+                "Failed to upload 1 file (c)"
+                " as it exceeded the 2 file limit."
+            )),
+            (["a"], ["b", "c"], (
+                "Failed to upload 2 files (b, c)"
+                " as they exceeded the 2 file limit."
+            )),
+        ]
+        for files, failed_files, expected_msg in cases:
+            with self.subTest(files=files, failed_files=failed_files, expected_msg=expected_msg):
+                result = EvalResult("", 0, files, failed_files)
+                msg = result.files_error_message
+                self.assertEqual(msg, expected_msg)
 
     @patch('bot.exts.utils.snekbox._eval.Signals', side_effect=ValueError)
     def test_eval_result_message_invalid_signal(self, _mock_signals: Mock):
