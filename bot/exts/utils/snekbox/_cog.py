@@ -278,7 +278,9 @@ class Snekbox(Cog):
         """
         async with ctx.typing():
             result = await self.post_job(job)
-            msg, error = result.get_message(job)
+            msg = result.get_message(job)
+            error = result.error_message
+            files_error = result.files_error_message
 
             if error:
                 output, paste_link = error, None
@@ -292,6 +294,10 @@ class Snekbox(Cog):
 
             if paste_link:
                 msg += f"Full output: {paste_link}"
+
+            # Additional files error message after output
+            if files_error:
+                msg += f"\n{files_error}"
 
             # Collect stats of job fails + successes
             if result.returncode != 0:
