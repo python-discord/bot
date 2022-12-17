@@ -105,7 +105,7 @@ class EvalResult:
         names = []
         for file in self.failed_files:
             char_max -= len(file)
-            if char_max <= 0 or len(names) >= file_max:
+            if char_max < 0 or len(names) >= file_max:
                 names.append("...")
                 break
             names.append(file)
