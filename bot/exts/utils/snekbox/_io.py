@@ -16,13 +16,16 @@ FILE_SIZE_LIMIT = 8 * 1024 * 1024
 FILE_COUNT_LIMIT = 10
 
 
-def sizeof_fmt(num: int, suffix: str = "B") -> str:
+def sizeof_fmt(num: int | float, suffix: str = "B") -> str:
     """Return a human-readable file size."""
+    num = float(num)
     for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
         if abs(num) < 1024:
-            return f"{num:3.1f}{unit}{suffix}"
+            num_str = f"{int(num)}" if num.is_integer() else f"{num:3.1f}"
+            return f"{num_str} {unit}{suffix}"
         num /= 1024
-    return f"{num:.1f}Yi{suffix}"
+    num_str = f"{int(num)}" if num.is_integer() else f"{num:3.1f}"
+    return f"{num_str} Yi{suffix}"
 
 
 @dataclass
