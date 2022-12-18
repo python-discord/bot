@@ -98,7 +98,7 @@ class SingleRoleButton(discord.ui.Button):
     ADD_STYLE = discord.ButtonStyle.success
     REMOVE_STYLE = discord.ButtonStyle.red
     UNAVAILABLE_STYLE = discord.ButtonStyle.secondary
-    LABEL_FORMAT = "{action} role {role_name}."
+    LABEL_FORMAT = "{action} role {role_name}"
     CUSTOM_ID_FORMAT = "subscribe-{role_id}"
 
     def __init__(self, role: AssignableRole, assigned: bool, row: int):
@@ -181,9 +181,11 @@ class Subscribe(commands.Cog):
 
     GREETING_EMOJI = ":wave:"
 
-    SELF_ASSIGNABLE_ROLES_MESSAGE = f"Hi there {GREETING_EMOJI}," \
-                                    "\nDid you know we had various self-assignable roles for server updates an events?"\
-                                    "\nClick the button below to toggle them."
+    SELF_ASSIGNABLE_ROLES_MESSAGE = (
+        f"Hi there {GREETING_EMOJI},"
+        "\nWe have self-assignable roles for server updates an events!"
+        "\nClick the button below to toggle them:"
+    )
 
     def __init__(self, bot: Bot):
         self.bot = bot
