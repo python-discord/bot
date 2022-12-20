@@ -18,7 +18,7 @@ FILE_COUNT_LIMIT = 10
 
 
 # ANSI escape sequences
-RE_ANSI = regex.compile(r"\x1b[^m]*m")
+RE_ANSI = regex.compile(r"\\u.*\[(.*?)m")
 # Characters with a leading backslash
 RE_BACKSLASH = regex.compile(r"\\.")
 # Discord disallowed file name characters
