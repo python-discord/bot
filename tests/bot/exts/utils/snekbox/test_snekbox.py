@@ -154,23 +154,21 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.utils.snekbox._eval.FILE_COUNT_LIMIT", 2)
     def test_eval_result_files_error_str(self):
         """EvalResult.files_error_message, should return files error message."""
-        max_file_name = "a" * 32
         cases = [
+            # Normal
             (["x.ini"], "x.ini"),
-            (["dog.py", "cat.py"], "dog.py, cat.py"),
-            # 3 files limit
-            (["a", "b", "c"], "a, b, c"),
-            (["a", "b", "c", "d"], "a, b, c, ..."),
-            (["x", "y", "z"] + ["a"] * 100, "x, y, z, ..."),
-            # 32 char limit
-            ([max_file_name], max_file_name),
-            ([max_file_name, "b"], f"{max_file_name}, ..."),
-            ([max_file_name + "a"], "...")
+            (["123456", "879"], "123456, 879"),
+            # Break on whole name if less than 3 characters remaining
+            (["12345678", "9"], "12345678, ..."),
+            # Otherwise break on max chars
+            (["123", "345", "67890000"], "123, 345, 6789..."),
+            (["abcdefg1234567"], "abcdefg123..."),
         ]
         for failed_files, expected in cases:
-            result = EvalResult("", 0, [], failed_files)
-            msg = result.get_failed_files_str(char_max=32, file_max=3)
-            self.assertEqual(msg, expected)
+            with self.subTest(failed_files=failed_files, expected=expected):
+                result = EvalResult("", 0, [], failed_files)
+                msg = result.get_failed_files_str(char_max=10)
+                self.assertEqual(msg, expected)
 
     @patch('bot.exts.utils.snekbox._eval.Signals', side_effect=ValueError)
     def test_eval_result_message_invalid_signal(self, _mock_signals: Mock):

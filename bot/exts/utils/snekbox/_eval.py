@@ -102,15 +102,30 @@ class EvalResult:
 
         return msg
 
-    def get_failed_files_str(self, char_max: int = 85, file_max: int = 5) -> str:
-        """Return a string containing the names of failed files, truncated to lower of char_max and file_max."""
+    def get_failed_files_str(self, char_max: int = 85) -> str:
+        """
+        Return a string containing the names of failed files, truncated char_max.
+
+        Will truncate on whole file names if less than 3 characters remaining.
+        """
         names = []
         for file in self.failed_files:
-            char_max -= len(file)
-            if char_max < 0 or len(names) >= file_max:
+            # Only attempt to truncate name if more than 3 chars remaining
+            if char_max < 3:
                 names.append("...")
                 break
+
+            to_display = min(char_max, len(file))
+            name_short = file[:to_display]
+            # Add ellipsis if name was truncated
+            if to_display < len(file):
+                name_short += "..."
+                names.append(name_short)
+                break
+
+            char_max -= len(file)
             names.append(file)
+
         text = ", ".join(names)
         # Since the file names are provided by user
         text = escape_markdown(text)
