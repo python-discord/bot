@@ -86,7 +86,7 @@ class EvalResult:
         if not self.failed_files:
             return ""
 
-        failed_files = f"({self.failed_files_str()})"
+        failed_files = f"({self.get_failed_files_str()})"
 
         n_failed = len(self.failed_files)
         files = f"file{'s' if n_failed > 1 else ''}"
@@ -100,7 +100,7 @@ class EvalResult:
 
         return msg
 
-    def failed_files_str(self, char_max: int = 85, file_max: int = 5) -> str:
+    def get_failed_files_str(self, char_max: int = 85, file_max: int = 5) -> str:
         """Return a string containing the names of failed files, truncated to lower of char_max and file_max."""
         names = []
         for file in self.failed_files:

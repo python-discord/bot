@@ -169,7 +169,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ]
         for failed_files, expected in cases:
             result = EvalResult("", 0, [], failed_files)
-            msg = result.failed_files_str(char_max=32, file_max=3)
+            msg = result.get_failed_files_str(char_max=32, file_max=3)
             self.assertEqual(msg, expected)
 
     @patch('bot.exts.utils.snekbox._eval.Signals', side_effect=ValueError)
