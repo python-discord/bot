@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from signal import Signals
 from typing import TYPE_CHECKING
 
+from discord.utils import escape_markdown, escape_mentions
+
 from bot.exts.utils.snekbox._io import FILE_COUNT_LIMIT, FILE_SIZE_LIMIT, FileAttachment, sizeof_fmt
 from bot.log import get_logger
 
@@ -110,6 +112,9 @@ class EvalResult:
                 break
             names.append(file)
         text = ", ".join(names)
+        # Since the file names are provided by user
+        text = escape_markdown(text)
+        text = escape_mentions(text)
         return text
 
     def get_message(self, job: EvalJob) -> str:
