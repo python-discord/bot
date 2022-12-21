@@ -86,3 +86,5 @@ class Bot(BotBase):
             scope.set_extra("kwargs", kwargs)
 
             log.exception(f"Unhandled exception in {event}.")
+
+print("Hello!")
