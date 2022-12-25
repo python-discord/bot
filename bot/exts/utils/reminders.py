@@ -13,7 +13,7 @@ from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import (
-    Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+    Channels, Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 )
 from bot.converters import Duration, UnambiguousUser
 from bot.errors import LockedResourceError
@@ -280,7 +280,8 @@ class Reminders(Cog):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                await send_denial(ctx, "Sorry, you can't do that here!")
+                bot_commands = ctx.guild.get_channel(Channels.bot_commands)
+                await send_denial(ctx, f"Sorry, you can only do that in {bot_commands.mention}!")
                 return
 
             # Get their current active reminders
