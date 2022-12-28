@@ -5,15 +5,15 @@ from datetime import datetime, timezone
 from operator import itemgetter
 
 import discord
-from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
-from botcore.utils.scheduling import Scheduler
 from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import scheduling
+from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import (
-    Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+    Channels, Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 )
 from bot.converters import Duration, UnambiguousUser
 from bot.errors import LockedResourceError
@@ -218,7 +218,7 @@ class Reminders(Cog):
         """
         Attempts to get content from the referenced message, if applicable.
 
-        Differs from botcore.utils.commands.clean_text_or_reply as allows for messages with no content.
+        Differs from pydis_core.utils.commands.clean_text_or_reply as allows for messages with no content.
         """
         content = None
         if reference := ctx.message.reference:
@@ -280,7 +280,8 @@ class Reminders(Cog):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
-                await send_denial(ctx, "Sorry, you can't do that here!")
+                bot_commands = ctx.guild.get_channel(Channels.bot_commands)
+                await send_denial(ctx, f"Sorry, you can only do that in {bot_commands.mention}!")
                 return
 
             # Get their current active reminders

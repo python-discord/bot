@@ -8,16 +8,14 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
-import discord
-from botcore.site_api import ResponseCodeError
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
+from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 
@@ -182,7 +180,7 @@ class Reviewer:
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
-        await self.api.edit_nomination(nomination.id, reviewed=True, thread_id=thread.id)
+        await self.api.edit_nomination(nomination.id, reviewed=True)
 
         bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
         if bump_cog:
@@ -435,30 +433,11 @@ class Reviewer:
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        thread_jump_urls = []
-
-        for nomination in history:
-            if nomination.thread_id is None:
-                continue
-            try:
-                thread = await get_or_fetch_channel(nomination.thread_id)
-            except discord.HTTPException:
-                # Nothing to do here
-                pass
-            else:
-                thread_jump_urls.append(thread.jump_url)
-
-        if not thread_jump_urls:
-            nomination_vote_threads = "No nomination threads have been found for this user."
-        else:
-            nomination_vote_threads = ", ".join(thread_jump_urls)
-
         end_time = time.format_relative(history[0].ended_at)
 
         review = (
             f"They were nominated **{nomination_times}** before"
             f", but their nomination was called off **{rejection_times}**."
-            f"\nList of all of their nomination threads: {nomination_vote_threads}"
             f"\nThe last one ended {end_time} with the reason: {history[0].end_reason}"
         )
 

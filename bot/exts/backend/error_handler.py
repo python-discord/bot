@@ -1,9 +1,9 @@
 import copy
 import difflib
 
-from botcore.site_api import ResponseCodeError
 from discord import Embed
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
+from pydis_core.site_api import ResponseCodeError
 from sentry_sdk import push_scope
 
 from bot.bot import Bot

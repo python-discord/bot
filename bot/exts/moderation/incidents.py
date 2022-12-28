@@ -6,8 +6,8 @@ from typing import Optional
 
 import discord
 from async_rediscache import RedisCache
-from botcore.utils import scheduling
 from discord.ext.commands import Cog, Context, MessageConverter, MessageNotFound
+from pydis_core.utils import scheduling
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles, Webhooks

@@ -10,9 +10,9 @@ from typing import Dict, Literal, NamedTuple, Optional, Tuple, Union
 
 import aiohttp
 import discord
-from botcore.site_api import ResponseCodeError
-from botcore.utils.scheduling import Scheduler
 from discord.ext import commands
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, RedirectOutput

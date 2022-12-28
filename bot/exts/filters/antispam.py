@@ -8,9 +8,9 @@ from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
 import arrow
-from botcore.utils import scheduling
 from discord import Colour, Member, Message, MessageType, NotFound, Object, TextChannel
 from discord.ext.commands import Cog
+from pydis_core.utils import scheduling
 
 from bot import rules
 from bot.bot import Bot
