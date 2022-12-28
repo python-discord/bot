@@ -5,7 +5,7 @@ file_logs: !ENV ["FILE_LOGS", "false"]
 bot:
     prefix:         "!"
     sentry_dsn:     !ENV "BOT_SENTRY_DSN"
-    token:          !ENV "BOT_TOKEN"
+    token:          !ENV "MTA1NzMzNTQxOTg1NzAzMTI0OQ.G8ruc5.SDaus21lLSn_N97ZpJzMf06Najj4gE4FRgnwDE"
     trace_loggers:  !ENV "BOT_TRACE_LOGGERS"
 
     clean:
