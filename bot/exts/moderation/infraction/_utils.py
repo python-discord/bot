@@ -6,11 +6,12 @@ from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
 
 import bot
-from bot.constants import Colours, Icons
+from bot.constants import Categories, Colours, Icons
 from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.channel import is_in_category
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -94,6 +95,11 @@ async def post_infraction(
 
     current_time = arrow.utcnow()
 
+    if is_in_category(ctx.channel, Categories.modmail):
+        jump_url_text = "Infraction issued in a ModMail channel."
+    else:
+        jump_url_text = f"[Click here]({ctx.message.jump_url})"
+
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
         "hidden": hidden,
@@ -102,6 +108,7 @@ async def post_infraction(
         "user": user.id,
         "active": active,
         "dm_sent": dm_sent,
+        "jump_url_text": jump_url_text,
         "inserted_at": current_time.isoformat(),
         "last_applied": current_time.isoformat(),
     }
