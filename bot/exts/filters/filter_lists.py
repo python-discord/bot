@@ -5,9 +5,9 @@ from typing import Optional
 
 import arrow
 import discord
-from botcore.site_api import ResponseCodeError
 from discord.ext import tasks
 from discord.ext.commands import BadArgument, Cog, Context, IDConverter, command, group, has_any_role
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot

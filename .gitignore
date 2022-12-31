@@ -114,7 +114,7 @@ log.*
 !log.py
 
 # Custom user configuration
-config.yml
+*config.yml
 docker-compose.override.yml
 metricity-config.toml
 

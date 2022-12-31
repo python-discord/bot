@@ -2,7 +2,7 @@ import unittest
 from unittest import mock
 
 import discord
-from botcore.site_api import ResponseCodeError
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.exts.backend import sync
