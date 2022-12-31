@@ -147,6 +147,7 @@ class InfractionScheduler:
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         id_ = infraction['id']
+        jump_url_text = infraction['jump_url_text']
         expiry = time.format_with_duration(
             infraction["expires_at"],
             infraction["last_applied"]
@@ -273,6 +274,7 @@ class InfractionScheduler:
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
+                Jump url: {jump_url_text}
                 {additional_info}
             """),
             content=log_content,
