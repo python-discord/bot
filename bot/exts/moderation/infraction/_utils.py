@@ -31,12 +31,13 @@ RULES_URL = "https://pythondiscord.com/pages/rules"
 Infraction = t.Dict[str, t.Union[str, int, bool]]
 
 APPEAL_SERVER_INVITE = "https://discord.gg/WXrCJxWBnm"
+MODMAIL_ACCOUNT_ID = "683001325440860340"
 
 INFRACTION_TITLE = "Please review our rules"
 INFRACTION_APPEAL_SERVER_FOOTER = f"\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
 INFRACTION_APPEAL_MODMAIL_FOOTER = (
     '\nIf you would like to discuss or appeal this infraction, '
-    'send a message to the ModMail bot.'
+    f'send a message to <@{MODMAIL_ACCOUNT_ID}>.'
 )
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
