@@ -6,10 +6,10 @@ from typing import Optional, Tuple, Union
 import arrow
 import discord
 from async_rediscache import RedisCache
-from botcore.site_api import ResponseCodeError
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
 from bot.constants import (
@@ -584,12 +584,15 @@ class TalentPool(Cog, name="Talentpool"):
 
         start_date = time.discord_timestamp(nomination.inserted_at)
 
-        thread = None
+        thread_jump_url = "*Not created*"
 
         if nomination.thread_id:
-            thread = await get_or_fetch_channel(nomination.thread_id)
-
-        thread_jump_url = f'[Jump to thread!]({thread.jump_url})' if thread else "*Not created*"
+            try:
+                thread = await get_or_fetch_channel(nomination.thread_id)
+            except discord.HTTPException:
+                thread_jump_url = "*Not found*"
+            else:
+                thread_jump_url = f'[Jump to thread!]({thread.jump_url})'
 
         if nomination.active:
             lines = textwrap.dedent(

@@ -1,286 +1,73 @@
-import textwrap
-import typing as t
+from operator import attrgetter
 
-import arrow
 import discord
-from arrow import Arrow
 
 import bot
 from bot import constants
 from bot.exts.help_channels import _caches
 from bot.log import get_logger
+from bot.utils import lock
 
 log = get_logger(__name__)
-
-ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
-
-AVAILABLE_MSG = f"""
-Send your question here to claim the channel.
-
-**Remember to:**
-• **Ask** your Python question, not if you can ask or if there's an expert who can help.
-• **Show** a code sample as text (rather than a screenshot) and the error message, if you got one.
-• **Explain** what you expect to happen and what actually happens.
-
-For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
-"""
-
-AVAILABLE_TITLE = "Available help channel"
-
-AVAILABLE_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
-
-DORMANT_MSG = f"""
-This help channel has been marked as **dormant**, and has been moved into the **{{dormant}}** \
-category at the bottom of the channel list. It is no longer possible to send messages in this \
-channel until it becomes available again.
-
-If your question wasn't answered yet, you can claim a new help channel from the \
-**{{available}}** category by simply asking your question again. Consider rephrasing the \
-question to maximize your chance of getting a good answer. If you're not sure how, have a look \
-through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
-"""
+NAMESPACE = "help"
 
 
-async def update_message_caches(message: discord.Message) -> None:
-    """Checks the source of new content in a help channel and updates the appropriate cache."""
-    channel = message.channel
-
-    log.trace(f"Checking if #{channel} ({channel.id}) has had a reply.")
-
-    claimant_id = await _caches.claimants.get(channel.id)
-    if not claimant_id:
-        # The mapping for this channel doesn't exist, we can't do anything.
-        return
-
-    # datetime.timestamp() would assume it's local, despite d.py giving a (naïve) UTC time.
-    timestamp = Arrow.fromdatetime(message.created_at).timestamp()
-
-    # Overwrite the appropriate last message cache depending on the author of the message
-    if message.author.id == claimant_id:
-        await _caches.claimant_last_message_times.set(channel.id, timestamp)
-    else:
-        await _caches.non_claimant_last_message_times.set(channel.id, timestamp)
+def _serialise_session_participants(participants: set[int]) -> str:
+    """Convert a set to a comma separated string."""
+    return ','.join(str(p) for p in participants)
 
 
-async def get_last_message(channel: discord.TextChannel) -> t.Optional[discord.Message]:
-    """Return the last message sent in the channel or None if no messages exist."""
-    log.trace(f"Getting the last message in #{channel} ({channel.id}).")
-
-    async for message in channel.history(limit=1):
-        return message
-
-    log.debug(f"No last message available; #{channel} ({channel.id}) has no messages.")
-    return None
+def _deserialise_session_participants(s: str) -> set[int]:
+    """Convert a comma separated string into a set."""
+    return set(int(user_id) for user_id in s.split(",") if user_id != "")
 
 
-async def is_empty(channel: discord.TextChannel) -> bool:
-    """Return True if there's an AVAILABLE_MSG and the messages leading up are bot messages."""
-    log.trace(f"Checking if #{channel} ({channel.id}) is empty.")
-
-    # A limit of 100 results in a single API call.
-    # If AVAILABLE_MSG isn't found within 100 messages, then assume the channel is not empty.
-    # Not gonna do an extensive search for it cause it's too expensive.
-    async for msg in channel.history(limit=100):
-        if not msg.author.bot:
-            log.trace(f"#{channel} ({channel.id}) has a non-bot message.")
-            return False
-
-        if _match_bot_embed(msg, AVAILABLE_MSG):
-            log.trace(f"#{channel} ({channel.id}) has the available message embed.")
-            return True
-
-    return False
-
-
-async def dm_on_open(message: discord.Message) -> None:
+@lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))
+@lock.lock_arg(NAMESPACE, "message", attrgetter("author.id"))
+async def notify_session_participants(message: discord.Message) -> None:
     """
-    DM claimant with a link to the claimed channel's first message, with a 100 letter preview of the message.
+    Check if the message author meets the requirements to be notified.
 
-    Does nothing if the user has DMs disabled.
+    If they meet the requirements they are notified.
     """
-    embed = discord.Embed(
-        title="Help channel opened",
-        description=f"You claimed {message.channel.mention}.",
-        colour=bot.constants.Colours.bright_green,
-        timestamp=message.created_at,
+    if message.channel.owner_id == message.author.id:
+        return  # Ignore messages sent by claimants
+
+    if not await _caches.help_dm.get(message.author.id):
+        return  # Ignore message if user is opted out of help dms
+
+    session_participants = _deserialise_session_participants(
+        await _caches.session_participants.get(message.channel.id) or "",
     )
 
-    embed.set_thumbnail(url=constants.Icons.green_questionmark)
-    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...")
-    if formatted_message:
-        embed.add_field(name="Your message", value=formatted_message, inline=False)
-    embed.add_field(
-        name="Conversation",
-        value=f"[Jump to message!]({message.jump_url})",
-        inline=False,
-    )
+    if message.author.id not in session_participants:
+        session_participants.add(message.author.id)
 
-    try:
-        await message.author.send(embed=embed)
-        log.trace(f"Sent DM to {message.author.id} after claiming help channel.")
-    except discord.errors.Forbidden:
-        log.trace(
-            f"Ignoring to send DM to {message.author.id} after claiming help channel: DMs disabled."
+        embed = discord.Embed(
+            title="Currently Helping",
+            description=f"You're currently helping in {message.channel.mention}",
+            color=constants.Colours.bright_green,
+            timestamp=message.created_at,
         )
+        embed.add_field(name="Conversation", value=f"[Jump to message]({message.jump_url})")
 
-
-async def notify_none_remaining(last_notification: Arrow) -> t.Optional[Arrow]:
-    """
-    Send a pinging message in `channel` notifying about there being no dormant channels remaining.
-
-    If a notification was sent, return the time at which the message was sent.
-    Otherwise, return None.
-
-    Configuration:
-        * `HelpChannels.notify_minutes`              - minimum interval between notifications
-        * `HelpChannels.notify_none_remaining`       - toggle none_remaining notifications
-        * `HelpChannels.notify_none_remaining_roles` - roles mentioned in notifications
-    """
-    if not constants.HelpChannels.notify_none_remaining:
-        return None
-
-    if (arrow.utcnow() - last_notification).total_seconds() < (constants.HelpChannels.notify_minutes * 60):
-        log.trace("Did not send none_remaining notification as it hasn't been enough time since the last one.")
-        return None
-
-    log.trace("Notifying about lack of channels.")
-
-    mentions = " ".join(f"<@&{role}>" for role in constants.HelpChannels.notify_none_remaining_roles)
-    allowed_roles = [discord.Object(id_) for id_ in constants.HelpChannels.notify_none_remaining_roles]
-
-    channel = bot.instance.get_channel(constants.HelpChannels.notify_channel)
-    if channel is None:
-        log.trace("Did not send none_remaining notification as the notification channel couldn't be gathered.")
-
-    try:
-        await channel.send(
-            f"{mentions} A new available help channel is needed but there "
-            "are no more dormant ones. Consider freeing up some in-use channels manually by "
-            f"using the `{constants.Bot.prefix}dormant` command within the channels.",
-            allowed_mentions=discord.AllowedMentions(everyone=False, roles=allowed_roles)
-        )
-    except Exception:
-        # Handle it here cause this feature isn't critical for the functionality of the system.
-        log.exception("Failed to send notification about lack of dormant channels!")
-    else:
-        bot.instance.stats.incr("help.out_of_channel_alerts")
-        return arrow.utcnow()
-
-
-async def notify_running_low(number_of_channels_left: int, last_notification: Arrow) -> t.Optional[Arrow]:
-    """
-    Send a non-pinging message in `channel` notifying about there being a low amount of dormant channels.
-
-    This will include the number of dormant channels left `number_of_channels_left`
-
-    If a notification was sent, return the time at which the message was sent.
-    Otherwise, return None.
-
-    Configuration:
-        * `HelpChannels.notify_minutes`               - minimum interval between notifications
-        * `HelpChannels.notify_running_low`           - toggle running_low notifications
-        * `HelpChannels.notify_running_low_threshold` - minimum amount of channels to trigger running_low notifications
-    """
-    if not constants.HelpChannels.notify_running_low:
-        return None
-
-    if number_of_channels_left > constants.HelpChannels.notify_running_low_threshold:
-        log.trace("Did not send notify_running_low notification as the threshold was not met.")
-        return None
-
-    if (arrow.utcnow() - last_notification).total_seconds() < (constants.HelpChannels.notify_minutes * 60):
-        log.trace("Did not send notify_running_low notification as it hasn't been enough time since the last one.")
-        return None
-
-    log.trace("Notifying about getting close to no dormant channels.")
-
-    channel = bot.instance.get_channel(constants.HelpChannels.notify_channel)
-    if channel is None:
-        log.trace("Did not send notify_running notification as the notification channel couldn't be gathered.")
-
-    try:
-        if number_of_channels_left == 1:
-            message = f"There is only {number_of_channels_left} dormant channel left. "
-        else:
-            message = f"There are only {number_of_channels_left} dormant channels left. "
-        message += "Consider participating in some help channels so that we don't run out."
-        await channel.send(message)
-    except Exception:
-        # Handle it here cause this feature isn't critical for the functionality of the system.
-        log.exception("Failed to send notification about running low of dormant channels!")
-    else:
-        bot.instance.stats.incr("help.running_low_alerts")
-        return arrow.utcnow()
-
-
-async def pin(message: discord.Message) -> None:
-    """Pin an initial question `message`."""
-    await _pin_wrapper(message, pin=True)
-
-
-async def send_available_message(channel: discord.TextChannel) -> None:
-    """Send the available message by editing a dormant message or sending a new message."""
-    channel_info = f"#{channel} ({channel.id})"
-    log.trace(f"Sending available message in {channel_info}.")
-
-    embed = discord.Embed(
-        color=constants.Colours.bright_green,
-        description=AVAILABLE_MSG,
-    )
-    embed.set_author(name=AVAILABLE_TITLE, icon_url=constants.Icons.green_checkmark)
-    embed.set_footer(text=AVAILABLE_FOOTER)
-
-    msg = await get_last_message(channel)
-    if _match_bot_embed(msg, DORMANT_MSG):
-        log.trace(f"Found dormant message {msg.id} in {channel_info}; editing it.")
-        await msg.edit(embed=embed)
-    else:
-        log.trace(f"Dormant message not found in {channel_info}; sending a new message.")
-        await channel.send(embed=embed)
-
-
-async def unpin_all(channel: discord.TextChannel) -> int:
-    """Unpin all pinned messages in `channel` and return the amount of unpinned messages."""
-    count = 0
-    for message in await channel.pins():
-        if await _pin_wrapper(message, pin=False):
-            count += 1
-
-    return count
-
-
-def _match_bot_embed(message: t.Optional[discord.Message], description: str) -> bool:
-    """Return `True` if the bot's `message`'s embed description matches `description`."""
-    if not message or not message.embeds:
-        return False
-
-    bot_msg_desc = message.embeds[0].description
-    if bot_msg_desc is None:
-        log.trace("Last message was a bot embed but it was empty.")
-        return False
-    return message.author == bot.instance.user and bot_msg_desc.strip() == description.strip()
-
-
-async def _pin_wrapper(message: discord.Message, *, pin: bool) -> bool:
-    """
-    Pin `message` if `pin` is True or unpin if it's False.
-
-    Return True if successful and False otherwise.
-    """
-    channel_str = f"#{message.channel} ({message.channel.id})"
-    func = message.pin if pin else message.unpin
-
-    try:
-        await func()
-    except discord.HTTPException as e:
-        if e.code == 10008:
-            log.debug(f"Message {message.id} in {channel_str} doesn't exist; can't {func.__name__}.")
-        else:
-            log.exception(
-                f"Error {func.__name__}ning message {message.id} in {channel_str}: "
-                f"{e.status} ({e.code})"
+        try:
+            await message.author.send(embed=embed)
+        except discord.Forbidden:
+            log.trace(
+                f"Failed to send help dm message to {message.author.id}. DMs Closed/Blocked. "
+                "Removing user from help dm."
             )
-        return False
-    else:
-        log.trace(f"{func.__name__.capitalize()}ned message {message.id} in {channel_str}.")
-        return True
+            await _caches.help_dm.delete(message.author.id)
+            bot_commands_channel = bot.instance.get_channel(constants.Channels.bot_commands)
+            await bot_commands_channel.send(
+                f"{message.author.mention} {constants.Emojis.cross_mark} "
+                "To receive updates on help channels you're active in, enable your DMs.",
+                delete_after=constants.RedirectOutput.delete_delay,
+            )
+            return
+
+        await _caches.session_participants.set(
+            message.channel.id,
+            _serialise_session_participants(session_participants),
+        )

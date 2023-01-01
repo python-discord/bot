@@ -7,12 +7,12 @@ from typing import Optional, Union
 
 import arrow
 from async_rediscache import RedisCache
-from botcore.utils import scheduling
-from botcore.utils.scheduling import Scheduler
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Forbidden, Member, TextChannel, User
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
+from pydis_core.utils import scheduling
+from pydis_core.utils.scheduling import Scheduler
 from redis import RedisError
 
 from bot.bot import Bot

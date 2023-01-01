@@ -10,8 +10,8 @@ Using list comprehensions can make this both shorter and more readable. As a lis
 >>> [n ** 2 for n in range(5)]
 [0, 1, 4, 9, 16]
 ```
-List comprehensions also get an `if` statement:
-```python
+List comprehensions also get an `if` clause:
+```py
 >>> [n ** 2 for n in range(5) if n % 2 == 0]
 [0, 4, 16]
 ```
