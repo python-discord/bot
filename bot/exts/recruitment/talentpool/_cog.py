@@ -9,6 +9,7 @@ from async_rediscache import RedisCache
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from discord.utils import snowflake_time
 from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
@@ -138,7 +139,10 @@ class TalentPool(Cog, name="Talentpool"):
         nominations = [
             nomination
             for nomination in await self.api.get_nominations(active=True)
-            if (now - nomination.inserted_at).days >= OLD_NOMINATIONS_THRESHOLD_IN_DAYS
+            if (
+                nomination.thread_id and
+                (now - snowflake_time(nomination.thread_id)).days >= OLD_NOMINATIONS_THRESHOLD_IN_DAYS
+            )
         ]
         return nominations
 
