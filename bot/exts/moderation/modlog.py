@@ -534,7 +534,7 @@ class ModLog(Cog, name="ModLog"):
 
         return self.is_channel_ignored(message.channel.id)
 
-    def is_channel_ignored(self, channel_id: int) -> bool:
+    def is_channel_ignored(self, channel: int | GuildChannel | Thread) -> bool:
         """
         Return true if the channel, or parent channel in the case of threads, passed should be ignored by modlog.
 
@@ -543,7 +543,8 @@ class ModLog(Cog, name="ModLog"):
         2. Channels that mods do not have view permissions to
         3. Channels in constants.Guild.modlog_blacklist
         """
-        channel = self.bot.get_channel(channel_id)
+        if isinstance(channel, int):
+            channel = self.bot.get_channel(channel)
 
         # Ignore not found channels, DMs, and messages outside of the main guild.
         if not channel or channel.guild is None or channel.guild.id != GuildConstant.id:
@@ -833,7 +834,7 @@ class ModLog(Cog, name="ModLog"):
     @Cog.listener()
     async def on_thread_delete(self, thread: Thread) -> None:
         """Log thread deletion."""
-        if self.is_channel_ignored(thread.id):
+        if self.is_channel_ignored(thread):
             log.trace("Ignoring deletion of thread %s (%d)", thread.mention, thread.id)
             return
 
