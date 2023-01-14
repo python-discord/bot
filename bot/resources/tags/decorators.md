@@ -2,7 +2,23 @@
 
 A decorator is a function that modifies another function.
 
-Consider the following example of a timer decorator:
+Given the decorator
+```py
+def deco(f):
+    ...
+```
+then the following constructs are functionally equivalent
+```py
+def tmp_fun():
+    ...
+fun = deco(tmp_fun)
+
+@deco
+def fun():
+    ...
+```
+
+As an example consider the following example of a timer decorator:
 ```py
 >>> import time
 >>> def timer(f):
