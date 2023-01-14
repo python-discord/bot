@@ -183,7 +183,7 @@ class Subscribe(commands.Cog):
 
     SELF_ASSIGNABLE_ROLES_MESSAGE = (
         f"Hi there {GREETING_EMOJI},"
-        "\nWe have self-assignable roles for server updates an events!"
+        "\nWe have self-assignable roles for server updates and events!"
         "\nClick the button below to toggle them:"
     )
 
