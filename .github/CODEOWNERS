@@ -1,6 +1,5 @@
 # Extensions
 **/bot/exts/backend/sync/**             @MarkKoz
-**/bot/exts/filters/*token_remover.py   @MarkKoz
 **/bot/exts/moderation/*silence.py      @MarkKoz
 bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
@@ -9,13 +8,10 @@ bot/exts/help_channels/**               @MarkKoz
 bot/exts/moderation/**                  @mbaruh @Den4200 @ks129 @jb3
 bot/exts/info/**                        @Den4200 @jb3
 bot/exts/info/information.py            @mbaruh @jb3
-bot/exts/filters/**                     @mbaruh @jb3
+bot/exts/filtering/**                   @mbaruh
 bot/exts/fun/**                         @ks129
 bot/exts/utils/**                       @ks129 @jb3
 bot/exts/recruitment/**                 @wookie184
-
-# Rules
-bot/rules/**                            @mbaruh
 
 # Utils
 bot/utils/function.py                   @MarkKoz
