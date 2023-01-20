@@ -18,6 +18,17 @@ from bot.exts.filtering._utils import FakeContext
 
 log = get_logger(__name__)
 
+passive_form = {
+    "BAN": "banned",
+    "KICK": "kicked",
+    "MUTE": "muted",
+    "VOICE_MUTE": "voice muted",
+    "SUPERSTAR": "superstarred",
+    "WARNING": "warned",
+    "WATCH": "watch",
+    "NOTE": "noted",
+}
+
 
 class Infraction(Enum):
     """An enumeration of infraction types. The lower the value, the higher it is on the hierarchy."""
@@ -146,7 +157,7 @@ class InfractionAndNotification(ActionEntry):
             await self.infraction_type.invoke(
                 ctx.author, channel, alerts_channel, self.infraction_duration, self.infraction_reason
             )
-            ctx.action_descriptions.append(self.infraction_type.name.lower())
+            ctx.action_descriptions.append(passive_form[self.infraction_type.name])
 
     def __or__(self, other: ActionEntry):
         """
