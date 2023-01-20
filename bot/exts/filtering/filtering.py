@@ -28,7 +28,7 @@ from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
-from bot.exts.filtering._filters.filter import Filter
+from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
@@ -220,6 +220,7 @@ class Filtering(Cog):
         await self._check_bad_name(nick_ctx)
 
         await self._maybe_schedule_msg_delete(ctx, result_actions)
+        self._increment_stats(triggers)
 
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
@@ -242,6 +243,7 @@ class Filtering(Cog):
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
         await self._maybe_schedule_msg_delete(ctx, result_actions)
+        self._increment_stats(triggers)
 
     @Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
@@ -264,6 +266,7 @@ class Filtering(Cog):
             await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
+        self._increment_stats(triggers)
 
         return result_actions is not None
 
@@ -927,6 +930,13 @@ class Filtering(Cog):
             username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10], view=AlertView(ctx)
         )
 
+    def _increment_stats(self, triggered_filters: dict[AtomicList, list[Filter]]) -> None:
+        """Increment the stats for every filter triggered."""
+        for filters in triggered_filters.values():
+            for filter_ in filters:
+                if isinstance(filter_, UniqueFilter):
+                    self.bot.stats.incr(f"filters.{filter_.name}")
+
     async def _recently_alerted_name(self, member: discord.Member) -> bool:
         """When it hasn't been `HOURS_BETWEEN_NICKNAME_ALERTS` since last alert, return False, otherwise True."""
         if last_alert := await self.name_alerts.get(member.id):
@@ -952,13 +962,14 @@ class Filtering(Cog):
         names_to_check = (name, normalised_name, cleaned_normalised_name)
 
         new_ctx = ctx.replace(content=" ".join(names_to_check))
-        result_actions, list_messages, _ = await self._resolve_action(new_ctx)
+        result_actions, list_messages, triggers = await self._resolve_action(new_ctx)
         if result_actions:
             await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)  # `ctx` has the original content.
             # Update time when alert sent
             await self.name_alerts.set(ctx.author.id, arrow.utcnow().timestamp())
+        self._increment_stats(triggers)
 
     async def _resolve_list_type_and_name(
         self, ctx: Context, list_type: ListType | None = None, list_name: str | None = None, *, exclude: str = ""
