@@ -118,9 +118,10 @@ def populate_embed_from_dict(embed: Embed, data: dict) -> None:
     for setting, value in data.items():
         if setting.startswith("_"):
             continue
-        if type(value) in (set, tuple):
-            value = list(value)
-        value = str(value) if value not in ("", None) else "-"
+        if isinstance(value, (list, set, tuple)):
+            value = f"[{', '.join(value)}]"
+        else:
+            value = str(value) if value not in ("", None) else "-"
         if len(value) > MAX_FIELD_SIZE:
             value = value[:MAX_FIELD_SIZE] + " [...]"
         embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
@@ -353,7 +354,9 @@ class SequenceEditView(discord.ui.View):
         if _i != len(self.stored_value):
             self.stored_value.pop(_i)
 
-        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self.copy())
+        await interaction.response.edit_message(
+            content=f"Current list: [{', '.join(self.stored_value)}]", view=self.copy()
+        )
         self.stop()
 
     async def apply_addition(self, interaction: Interaction, item: str) -> None:
@@ -363,7 +366,9 @@ class SequenceEditView(discord.ui.View):
             return
 
         self.stored_value.append(item)
-        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self.copy())
+        await interaction.response.edit_message(
+            content=f"Current list: [{', '.join(self.stored_value)}]", view=self.copy()
+        )
         self.stop()
 
     async def apply_edit(self, interaction: Interaction, new_list: str) -> None:
@@ -456,7 +461,7 @@ class EditBaseView(ABC, discord.ui.View):
             else:
                 current_list = []
             await interaction.response.send_message(
-                f"Current list: {current_list}",
+                f"Current list: [{', '.join(current_list)}]",
                 view=SequenceEditView(setting_name, current_list, update_callback),
                 ephemeral=True
             )
