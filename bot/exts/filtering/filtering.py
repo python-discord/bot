@@ -73,7 +73,7 @@ class Filtering(Cog):
         self.filter_lists: dict[str, FilterList] = {}
         self._subscriptions: defaultdict[Event, list[FilterList]] = defaultdict(list)
         self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
-        self.webhook: discord.Webhook = None
+        self.webhook: discord.Webhook | None = None
 
         self.loaded_settings = {}
         self.loaded_filters = {}
@@ -89,6 +89,7 @@ class Filtering(Cog):
         """
         await self.bot.wait_until_guild_available()
 
+        log.trace("Loading filtering information from the database.")
         raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
         example_list = None
         for raw_filter_list in raw_filter_lists:
@@ -544,6 +545,7 @@ class Filtering(Cog):
         async def delete_list() -> None:
             """The actual removal routine."""
             await bot.instance.api_client.delete(f'bot/filter/filters/{filter_id}')
+            log.info(f"Successfully deleted filter with ID {filter_id}.")
             filter_list[list_type].filters.pop(filter_id)
             await ctx.reply(f"✅ Deleted filter: {filter_}")
 
@@ -827,6 +829,7 @@ class Filtering(Cog):
                 self.unsubscribe(filter_list)
 
             await bot.instance.api_client.delete(f"bot/filter/filter_lists/{list_id}")
+            log.info(f"Successfully deleted the {filter_list[list_type].label} filterlist.")
             await message.edit(content=f"✅ The {list_description} list has been deleted.")
 
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -1163,6 +1166,7 @@ class Filtering(Cog):
         }
         response = await bot.instance.api_client.post('bot/filter/filters', json=to_serializable(payload))
         new_filter = filter_list.add_filter(list_type, response)
+        log.info(f"Added new filter: {new_filter}.")
         if new_filter:
             await self._maybe_alert_auto_infraction(filter_list, list_type, new_filter)
             extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
@@ -1205,6 +1209,7 @@ class Filtering(Cog):
         )
         # Return type can be None, but if it's being edited then it's not supposed to be.
         edited_filter = filter_list.add_filter(list_type, response)
+        log.info(f"Successfully patched filter {edited_filter}.")
         await self._maybe_alert_auto_infraction(filter_list, list_type, edited_filter, filter_)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
@@ -1212,9 +1217,11 @@ class Filtering(Cog):
     async def _post_filter_list(self, msg: Message, list_name: str, list_type: ListType, settings: dict) -> None:
         """POST the new data of the filter list to the site API."""
         payload = {"name": list_name, "list_type": list_type.value, **to_serializable(settings)}
+        filterlist_name = f"{past_tense(list_type.name.lower())} {list_name}"
         response = await bot.instance.api_client.post('bot/filter/filter_lists', json=payload)
+        log.info(f"Successfully posted the new {filterlist_name} filterlist.")
         self._load_raw_filter_list(response)
-        await msg.reply(f"✅ Added a new filter list: {past_tense(list_type.name.lower())} {list_name}")
+        await msg.reply(f"✅ Added a new filter list: {filterlist_name}")
 
     @staticmethod
     async def _patch_filter_list(msg: Message, filter_list: FilterList, list_type: ListType, settings: dict) -> None:
@@ -1223,6 +1230,7 @@ class Filtering(Cog):
         response = await bot.instance.api_client.patch(
             f'bot/filter/filter_lists/{list_id}', json=to_serializable(settings)
         )
+        log.info(f"Successfully patched the {filter_list[list_type].label} filterlist, reloading...")
         filter_list.pop(list_type, None)
         filter_list.add_list(response)
         await msg.reply(f"✅ Edited filter list: {filter_list[list_type].label}")
@@ -1356,6 +1364,7 @@ class Filtering(Cog):
 
         If `channel` is not specified, it is sent to #mod-meta.
         """
+        log.trace("Preparing weekly auto-infraction report.")
         seven_days_ago = arrow.utcnow().shift(days=-7)
         if not channel:
             log.info("Auto-infraction report: the channel to report to is missing.")
