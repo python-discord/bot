@@ -534,7 +534,7 @@ class ModLog(Cog, name="ModLog"):
 
         return self.is_channel_ignored(message.channel.id)
 
-    def is_channel_ignored(self, channel_id: int) -> bool:
+    def is_channel_ignored(self, channel: int | GuildChannel | Thread) -> bool:
         """
         Return true if the channel, or parent channel in the case of threads, passed should be ignored by modlog.
 
@@ -543,7 +543,8 @@ class ModLog(Cog, name="ModLog"):
         2. Channels that mods do not have view permissions to
         3. Channels in constants.Guild.modlog_blacklist
         """
-        channel = self.bot.get_channel(channel_id)
+        if isinstance(channel, int):
+            channel = self.bot.get_channel(channel)
 
         # Ignore not found channels, DMs, and messages outside of the main guild.
         if not channel or channel.guild is None or channel.guild.id != GuildConstant.id:
@@ -826,13 +827,14 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {after.mention} ({after.name}, `{after.id}`) from {after.parent.mention} "
                 f"(`{after.parent.id}`) was {action}"
-            )
+            ),
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()
     async def on_thread_delete(self, thread: Thread) -> None:
         """Log thread deletion."""
-        if self.is_channel_ignored(thread.id):
+        if self.is_channel_ignored(thread):
             log.trace("Ignoring deletion of thread %s (%d)", thread.mention, thread.id)
             return
 
@@ -843,24 +845,8 @@ class ModLog(Cog, name="ModLog"):
             (
                 f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
                 f"(`{thread.parent.id}`) deleted"
-            )
-        )
-
-    @Cog.listener()
-    async def on_thread_create(self, thread: Thread) -> None:
-        """Log thread creation."""
-        if self.is_channel_ignored(thread.id):
-            log.trace("Ignoring creation of thread %s (%d)", thread.mention, thread.id)
-            return
-
-        await self.send_log_message(
-            Icons.hash_green,
-            Colours.soft_green,
-            "Thread created",
-            (
-                f"Thread {thread.mention} ({thread.name}, `{thread.id}`) from {thread.parent.mention} "
-                f"(`{thread.parent.id}`) created"
-            )
+            ),
+            channel_id=Channels.message_log,
         )
 
     @Cog.listener()

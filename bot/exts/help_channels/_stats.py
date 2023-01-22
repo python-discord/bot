@@ -23,7 +23,7 @@ class ClosingReason(Enum):
 def report_post_count() -> None:
     """Report post count stats of the help forum."""
     help_forum = bot.instance.get_channel(constants.Channels.help_system_forum)
-    bot.instance.stats.gauge("help_forum.total.in_use", len(help_forum.threads))
+    bot.instance.stats.gauge("help.total.in_use", len(help_forum.threads))
 
 
 async def report_complete_session(help_session_post: discord.Thread, closed_on: ClosingReason) -> None:
@@ -32,13 +32,13 @@ async def report_complete_session(help_session_post: discord.Thread, closed_on: 
 
     `closed_on` is the reason why the post was closed. See `ClosingReason` for possible reasons.
     """
-    bot.instance.stats.incr(f"help_forum.dormant_calls.{closed_on.value}")
+    bot.instance.stats.incr(f"help.dormant_calls.{closed_on.value}")
 
     open_time = discord.utils.snowflake_time(help_session_post.id)
     in_use_time = arrow.utcnow() - open_time
-    bot.instance.stats.timing("help_forum.in_use_time", in_use_time)
+    bot.instance.stats.timing("help.in_use_time", in_use_time)
 
     if await _caches.posts_with_non_claimant_messages.get(help_session_post.id):
-        bot.instance.stats.incr("help_forum.sessions.answered")
+        bot.instance.stats.incr("help.sessions.answered")
     else:
-        bot.instance.stats.incr("help_forum.sessions.unanswered")
+        bot.instance.stats.incr("help.sessions.unanswered")
