@@ -50,7 +50,9 @@ class FilterTests(unittest.TestCase):
     def test_context_doesnt_trigger_for_empty_channel_scope(self):
         """A filter is enabled for all channels by default."""
         channel = MockTextChannel()
-        scope = ChannelScope(disabled_channels=None, disabled_categories=None, enabled_channels=None)
+        scope = ChannelScope(
+            disabled_channels=None, disabled_categories=None, enabled_channels=None, enabled_categories=None
+        )
         self.ctx.channel = channel
 
         result = scope.triggers_on(self.ctx)
@@ -60,7 +62,9 @@ class FilterTests(unittest.TestCase):
     def test_context_doesnt_trigger_for_disabled_channel(self):
         """A filter shouldn't trigger if it's been disabled in the channel."""
         channel = MockTextChannel(id=123)
-        scope = ChannelScope(disabled_channels=["123"], disabled_categories=None, enabled_channels=None)
+        scope = ChannelScope(
+            disabled_channels=["123"], disabled_categories=None, enabled_channels=None, enabled_categories=None
+        )
         self.ctx.channel = channel
 
         result = scope.triggers_on(self.ctx)
@@ -70,7 +74,9 @@ class FilterTests(unittest.TestCase):
     def test_context_doesnt_trigger_in_disabled_category(self):
         """A filter shouldn't trigger if it's been disabled in the category."""
         channel = MockTextChannel(category=MockCategoryChannel(id=456))
-        scope = ChannelScope(disabled_channels=None, disabled_categories=["456"], enabled_channels=None)
+        scope = ChannelScope(
+            disabled_channels=None, disabled_categories=["456"], enabled_channels=None, enabled_categories=None
+        )
         self.ctx.channel = channel
 
         result = scope.triggers_on(self.ctx)
@@ -80,12 +86,50 @@ class FilterTests(unittest.TestCase):
     def test_context_triggers_in_enabled_channel_in_disabled_category(self):
         """A filter should trigger in an enabled channel even if it's been disabled in the category."""
         channel = MockTextChannel(id=123, category=MockCategoryChannel(id=234))
-        scope = ChannelScope(disabled_channels=None, disabled_categories=["234"], enabled_channels=["123"])
+        scope = ChannelScope(
+            disabled_channels=None, disabled_categories=["234"], enabled_channels=["123"], enabled_categories=None
+        )
         self.ctx.channel = channel
 
         result = scope.triggers_on(self.ctx)
 
         self.assertTrue(result)
+
+    def test_context_triggers_inside_enabled_category(self):
+        """A filter shouldn't trigger outside enabled categories, if there are any."""
+        channel = MockTextChannel(id=123, category=MockCategoryChannel(id=234))
+        scope = ChannelScope(
+            disabled_channels=None, disabled_categories=None, enabled_channels=None, enabled_categories=["234"]
+        )
+        self.ctx.channel = channel
+
+        result = scope.triggers_on(self.ctx)
+
+        self.assertTrue(result)
+
+    def test_context_doesnt_trigger_outside_enabled_category(self):
+        """A filter shouldn't trigger outside enabled categories, if there are any."""
+        channel = MockTextChannel(id=123, category=MockCategoryChannel(id=234))
+        scope = ChannelScope(
+            disabled_channels=None, disabled_categories=None, enabled_channels=None, enabled_categories=["789"]
+        )
+        self.ctx.channel = channel
+
+        result = scope.triggers_on(self.ctx)
+
+        self.assertFalse(result)
+
+    def test_context_doesnt_trigger_inside_disabled_channel_in_enabled_category(self):
+        """A filter shouldn't trigger outside enabled categories, if there are any."""
+        channel = MockTextChannel(id=123, category=MockCategoryChannel(id=234))
+        scope = ChannelScope(
+            disabled_channels=["123"], disabled_categories=None, enabled_channels=None, enabled_categories=["234"]
+        )
+        self.ctx.channel = channel
+
+        result = scope.triggers_on(self.ctx)
+
+        self.assertFalse(result)
 
     def test_filtering_dms_when_necessary(self):
         """A filter correctly ignores or triggers in a channel depending on the value of FilterDM."""
@@ -112,14 +156,16 @@ class FilterTests(unittest.TestCase):
             infraction_reason="hi",
             infraction_duration=10,
             dm_content="how",
-            dm_embed="what is"
+            dm_embed="what is",
+            infraction_channel=0
         )
         infraction2 = InfractionAndNotification(
             infraction_type="MUTE",
             infraction_reason="there",
             infraction_duration=20,
             dm_content="are you",
-            dm_embed="your name"
+            dm_embed="your name",
+            infraction_channel=0
         )
 
         result = infraction1 | infraction2
@@ -132,6 +178,7 @@ class FilterTests(unittest.TestCase):
                 "infraction_duration": 20.0,
                 "dm_content": "are you",
                 "dm_embed": "your name",
+                "infraction_channel": 0
             }
         )
 
@@ -142,14 +189,16 @@ class FilterTests(unittest.TestCase):
             infraction_reason="hi",
             infraction_duration=20,
             dm_content="",
-            dm_embed=""
+            dm_embed="",
+            infraction_channel=0
         )
         infraction2 = InfractionAndNotification(
             infraction_type="BAN",
             infraction_reason="",
             infraction_duration=10,
             dm_content="there",
-            dm_embed=""
+            dm_embed="",
+            infraction_channel=0
         )
 
         result = infraction1 | infraction2
@@ -162,5 +211,6 @@ class FilterTests(unittest.TestCase):
                 "infraction_duration": 10.0,
                 "dm_content": "there",
                 "dm_embed": "",
+                "infraction_channel": 0
             }
         )
