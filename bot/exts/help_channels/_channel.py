@@ -48,7 +48,8 @@ def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
 async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:
     """Close the help post and record stats."""
     embed = discord.Embed(description=DORMANT_MSG)
-    embed.set_author(name=POST_TITLE, icon_url=CLOSED_POST_ICON_URL)
+    embed.set_author(name=f"{POST_TITLE} closed", icon_url=CLOSED_POST_ICON_URL)
+
     await closed_post.send(embed=embed)
     await closed_post.edit(archived=True, locked=True, reason="Locked a dormant help post")
 
@@ -75,7 +76,7 @@ async def send_opened_post_message(post: discord.Thread) -> None:
         color=constants.Colours.bright_green,
         description=NEW_POST_MSG,
     )
-    embed.set_author(name=POST_TITLE, icon_url=NEW_POST_ICON_URL)
+    embed.set_author(name=f"{POST_TITLE} opened", icon_url=NEW_POST_ICON_URL)
     embed.set_footer(text=NEW_POST_FOOTER)
     await post.send(embed=embed)
 
