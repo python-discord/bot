@@ -5,7 +5,7 @@
 
 A prime example of these different ideas is `list.sort()` vs `sorted(...)`:
 
-`list.sort()` can cause many errors within your code, one of the most common is shown below:
+This is a common use for `list.sort()` which will end in an error.
 
 ```py
 a_list = [3, 1, 2]
@@ -13,7 +13,7 @@ a_new_list = a_list.sort() # This will be None
 print(a_new_list[1]) # This will error
 ```
 
-On the other hand, `sorted()` can also cause errors:
+This is a common use for `sorted()` which will end in a unexpected result.
 
 ```py
 a_list = [3, 1, 2]
@@ -21,4 +21,4 @@ sorted(a_list)
 print(a_list[0]) # You may expect 1, but it will print 3
 ```
 
-Both of these errors are an easy fixes.
+To fix this you just need to set a new variable to `sorted(a_list)`, and don't create a new list for `list.sort()`
