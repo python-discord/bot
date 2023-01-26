@@ -14,8 +14,9 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
-
+BRANDING_REPO_RAW_URL = "https://raw.githubusercontent.com/python-discord/branding"
 POST_TITLE = "Python help channel"
+
 NEW_POST_MSG = f"""
 **Remember to:**
 • **Ask** your Python question, not if you can ask or if there's an expert who can help.
@@ -24,16 +25,15 @@ NEW_POST_MSG = f"""
 
 For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
-POST_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
+NEW_POST_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
+NEW_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/checkmark/green-checkmark-dist.png"
 
-DORMANT_MSG = f"""
-This help channel has been marked as **dormant** and locked. \
-It is no longer possible to send messages in this channel.
-
-If your question wasn't answered yet, you can create a new post in <#{constants.Channels.help_system_forum}>. \
-Consider rephrasing the question to maximize your chance of getting a good answer. \
-If you're not sure how, have a look through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
+CLOSED_POST_MSG = f"""
+This help channel has been closed and it's no longer possible to send messages here. \
+If your question wasn't answered, feel free to create a new post in <#{constants.Channels.help_system_forum}>. \
+To maximize your chances of getting a response, check out this guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
+CLOSED_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/zzz/zzz-dist.png"
 
 
 def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
@@ -44,9 +44,11 @@ def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
 
 async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:
     """Close the help post and record stats."""
-    embed = discord.Embed(description=DORMANT_MSG)
+    embed = discord.Embed(description=CLOSED_POST_MSG)
+    embed.set_author(name=f"{POST_TITLE} closed", icon_url=CLOSED_POST_ICON_URL)
+
     await closed_post.send(embed=embed)
-    await closed_post.edit(archived=True, locked=True, reason="Locked a dormant help post")
+    await closed_post.edit(archived=True, locked=True, reason="Locked a closed help post")
 
     _stats.report_post_count()
     await _stats.report_complete_session(closed_post, closing_reason)
@@ -71,8 +73,8 @@ async def send_opened_post_message(post: discord.Thread) -> None:
         color=constants.Colours.bright_green,
         description=NEW_POST_MSG,
     )
-    embed.set_author(name=POST_TITLE)
-    embed.set_footer(text=POST_FOOTER)
+    embed.set_author(name=f"{POST_TITLE} opened", icon_url=NEW_POST_ICON_URL)
+    embed.set_footer(text=NEW_POST_FOOTER)
     await post.send(embed=embed)
 
 
