@@ -12,7 +12,7 @@ a_new_list = a_list.sort() # This will be None
 print(a_new_list[1]) # This will error because it is empty
 ```
 
-On the other hand, using `sorted(...)` will return a new sorted list, leaving the original list unchanged. This means that if you expect the original list to be sorted, you will be disappointed with the result. For example, the following code will print 3 instead of 1:
+On the other hand, using the function `sorted(...)` will return a new sorted list, leaving the original list unchanged. This means that if you expect the original list to be sorted, you will be disappointed with the result. For example, the following code will print 3 instead of 1:
 
 ```py
 a_list = [3, 1, 2]
