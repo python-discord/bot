@@ -20,4 +20,4 @@ sorted(a_list)
 print(a_list[0]) # You may expect 1, but it will print 3
 ```
 
-To avoid these errors and unexpected results, it is required to assign the result of sorted(...) to a new variable and use list.sort() method in the original list. This way, the original list will be sorted and the new list will be created with the sorted elements.
+To avoid these errors and unexpected results, it is required to assign the result of `sorted(...)` to a new variable and use `list.sort()` method in the original list. This way, the original list will be sorted and the new list will be created with the sorted elements.
