@@ -1200,9 +1200,12 @@ class Filtering(Cog):
                 for setting_entry in current_settings.values():
                     settings.update({setting: None for setting in setting_entry.dict() if setting not in settings})
 
+        # Even though the list ID remains unchanged, it still needs to be provided for correct serializer validation.
+        list_id = filter_list[list_type].id
         description = description or None
         payload = {
-            "content": content, "description": description, "additional_field": json.dumps(filter_settings), **settings
+            "filter_list": list_id, "content": content, "description": description,
+            "additional_field": json.dumps(filter_settings), **settings
         }
         response = await bot.instance.api_client.patch(
             f'bot/filter/filters/{filter_.id}', json=to_serializable(payload)
