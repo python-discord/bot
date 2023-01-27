@@ -156,6 +156,8 @@ def format_response_error(e: ResponseCodeError) -> Embed:
     description = description.strip()
     if len(description) > MAX_EMBED_DESCRIPTION:
         description = description[:MAX_EMBED_DESCRIPTION] + "[...]"
+    if not description:
+        description = "Something unexpected happened, check the logs."
 
     embed = Embed(colour=discord.Colour.red(), title="Oops...", description=description)
     return embed
