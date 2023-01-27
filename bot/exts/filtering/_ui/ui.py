@@ -121,7 +121,7 @@ def populate_embed_from_dict(embed: Embed, data: dict) -> None:
         if setting.startswith("_"):
             continue
         if isinstance(value, (list, set, tuple)):
-            value = f"[{', '.join(value)}]"
+            value = f"[{', '.join(map(str, value))}]"
         else:
             value = str(value) if value not in ("", None) else "-"
         if len(value) > MAX_FIELD_SIZE:
