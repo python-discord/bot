@@ -1,8 +1,8 @@
 **Out of Place** and **In Place**
 
-In programming, there are two types of operations: "out of place" and "in place". An "out of place" operation creates a new object, leaving the original object unchanged. An "in place" operation modifies the original object, without creating a new one. These operations return None explicitly.
+In programming, there are two types of operations: "out of place" operations creates a new object, leaving the original object unchanged. "in place" operations modifies the original object, without creating a new one. These operations return None explicitly.
 
-A common example of these different concepts is seen in the use of the methods `list.sort()` and `sorted(...)`. Using `list.sort()` and attempting to access an element of the list after calling `sort()` will result in an error. 
+A common example of these different concepts is seen in the use of the methods `list.sort()` and `sorted(...)`. Using `list.sort()` and attempting to access an element of the list will result in an error. 
 
 ```py
 a_list = [3, 1, 2]
