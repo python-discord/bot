@@ -148,11 +148,15 @@ def parse_value(value: str, type_: type[T]) -> T:
 def format_response_error(e: ResponseCodeError) -> Embed:
     """Format the response error into an embed."""
     description = ""
-    if "non_field_errors" in e.response_json:
-        non_field_errors = e.response_json.pop("non_field_errors")
-        description += "\n".join(f"• {error}" for error in non_field_errors) + "\n"
-    for field, errors in e.response_json.items():
-        description += "\n".join(f"• {field} - {error}" for error in errors) + "\n"
+    if isinstance(e.response_json, list):
+        description = "\n".join(f"• {error}" for error in e.response_json)
+    elif isinstance(e.response_json, dict):
+        if "non_field_errors" in e.response_json:
+            non_field_errors = e.response_json.pop("non_field_errors")
+            description += "\n".join(f"• {error}" for error in non_field_errors) + "\n"
+        for field, errors in e.response_json.items():
+            description += "\n".join(f"• {field} - {error}" for error in errors) + "\n"
+
     description = description.strip()
     if len(description) > MAX_EMBED_DESCRIPTION:
         description = description[:MAX_EMBED_DESCRIPTION] + "[...]"
