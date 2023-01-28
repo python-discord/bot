@@ -7,11 +7,11 @@ A common example of these different concepts is seen in the use of the methods `
 ```py
 inplace_list = [3, 1, 2]
 a_new_list = inplace_list.sort() # This will be None
-print(a_new_list[1]) # This will error because it is NoneType and not a list
+print(a_new_list)  # Outputs None. Where did the list go?
 
 outofplace_list = [3, 1, 2]
 sorted(outofplace_list)
-print(outofplace_list[0]) # You may expect 1, but it will print 3
+print(outofplace_list)  # The list still isn't sorted. Why?
 ```
 
 To avoid these errors and unexpected results, it is required to assign the result of `sorted(...)` to a new variable and use `list.sort()` method in the original list. This way, the original list will be sorted and the new list will be created with the sorted elements.
