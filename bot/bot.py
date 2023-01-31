@@ -58,6 +58,9 @@ class Bot(BotBase):
             "updated_at": item["updated_at"],
         }
 
+    def training_example_logger(self, comment: str):
+        print("Commented: ", comment)
+        
     async def cache_filter_list_data(self) -> None:
         """Cache all the data in the FilterList on the site."""
         full_cache = await self.api_client.get('bot/filter-lists')
