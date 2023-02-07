@@ -61,6 +61,11 @@ class FileAttachment:
         content = f"{self.content[:10]}..." if len(self.content) > 10 else self.content
         return f"FileAttachment(path={self.path!r}, content={content})"
 
+    @property
+    def suffix(self) -> str:
+        """Return the file suffix."""
+        return Path(self.path).suffix
+
     @classmethod
     def from_dict(cls, data: dict, size_limit: int = FILE_SIZE_LIMIT) -> FileAttachment:
         """Create a FileAttachment from a dict response."""
