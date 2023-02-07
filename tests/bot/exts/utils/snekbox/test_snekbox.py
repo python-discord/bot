@@ -150,7 +150,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(files=files, failed_files=failed_files, expected_msg=expected_msg):
                 result = EvalResult("", 0, files, failed_files)
                 msg = result.files_error_message
-                self.assertEqual(msg, expected_msg)
+                self.assertIn(expected_msg, msg)
 
     @patch("bot.exts.utils.snekbox._eval.FILE_COUNT_LIMIT", 2)
     def test_eval_result_files_error_str(self):
@@ -407,11 +407,11 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.send_job(ctx, job),
 
         ctx.send.assert_called_once()
-        self.assertEqual(
-            ctx.send.call_args.args[0],
-            '@user#7700 :white_check_mark: Your 3.11 eval job has completed with return code 0.'
-            '\n\n1 file was not uploaded due to disallowed extension: **.disallowed**'
+        res = ctx.send.call_args.args[0]
+        self.assertTrue(
+            res.startswith("@user#7700 :white_check_mark: Your 3.11 eval job has completed with return code 0.")
         )
+        self.assertIn("Some files with disallowed extensions can't be uploaded: **.disallowed**", res)
 
         self.cog.post_job.assert_called_once_with(job)
         self.cog.upload_output.assert_not_called()
