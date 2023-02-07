@@ -14,7 +14,7 @@ from pydis_core.utils import interactions
 from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
-from bot.constants import Channels, Filter, MODERATION_ROLES, Roles, URLs
+from bot.constants import Channels, Emojis, Filter, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
 from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
 from bot.exts.filters.antimalware import TXT_LIKE_FILES
@@ -352,10 +352,8 @@ class Snekbox(Cog):
             allowed, blocked = self._filter_files(ctx, result.files)
             # Add notice if any files were blocked
             if blocked:
-                file_s = "file was" if len(blocked) == 1 else "files were"
-                ext_s = "extension" if len(blocked) == 1 else "extensions"
                 msg += (
-                    f"\n{len(blocked)} {file_s} not uploaded due to disallowed {ext_s}: "
+                    f"\n{Emojis.failmail} Some files with disallowed extensions can't be uploaded: "
                     f"**{', '.join(f.suffix for f in blocked)}**"
                 )
 

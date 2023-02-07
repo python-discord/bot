@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from discord.utils import escape_markdown, escape_mentions
 
+from bot.constants import Emojis
 from bot.exts.utils.snekbox._io import FILE_COUNT_LIMIT, FILE_SIZE_LIMIT, FileAttachment, sizeof_fmt
 from bot.log import get_logger
 
@@ -92,7 +93,7 @@ class EvalResult:
 
         n_failed = len(self.failed_files)
         files = f"file{'s' if n_failed > 1 else ''}"
-        msg = f"Failed to upload {n_failed} {files} {failed_files}"
+        msg = f"{Emojis.failmail} Failed to upload {n_failed} {files} {failed_files}"
 
         if (n_failed + len(self.files)) > FILE_COUNT_LIMIT:
             it_they = "they" if n_failed > 1 else "it"
