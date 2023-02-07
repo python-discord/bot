@@ -10,6 +10,7 @@ from bot import constants
 from bot.errors import LockedResourceError
 from bot.exts.utils import snekbox
 from bot.exts.utils.snekbox import EvalJob, EvalResult, Snekbox
+from bot.exts.utils.snekbox._io import FileAttachment
 from tests.helpers import MockBot, MockContext, MockMember, MockMessage, MockReaction, MockUser
 
 
@@ -382,6 +383,34 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             ctx.send.call_args.args[0],
             '@LemonLemonishBeard#0042 :x: Your 3.11 eval job has completed with return code 127.'
             '\n\n```\nERROR\n```'
+        )
+
+        self.cog.post_job.assert_called_once_with(job)
+        self.cog.upload_output.assert_not_called()
+
+    async def test_send_job_with_disallowed_file_ext(self):
+        """Test send_job with disallowed file extensions."""
+        ctx = MockContext()
+        ctx.message = MockMessage()
+        ctx.send = AsyncMock()
+        ctx.author.mention = "@user#7700"
+
+        eval_result = EvalResult("", 0, files=[FileAttachment("test.disallowed", b"test")])
+        self.cog.post_job = AsyncMock(return_value=eval_result)
+        self.cog.upload_output = AsyncMock()  # This function isn't called
+
+        mocked_filter_cog = MagicMock()
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
+        self.bot.get_cog.return_value = mocked_filter_cog
+
+        job = EvalJob.from_code("MyAwesomeCode").as_version("3.11")
+        await self.cog.send_job(ctx, job),
+
+        ctx.send.assert_called_once()
+        self.assertEqual(
+            ctx.send.call_args.args[0],
+            '@user#7700 :white_check_mark: Your 3.11 eval job has completed with return code 0.'
+            '\n\n1 file was not uploaded due to disallowed extension: **.disallowed**'
         )
 
         self.cog.post_job.assert_called_once_with(job)
