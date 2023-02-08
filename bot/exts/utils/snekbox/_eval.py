@@ -66,7 +66,7 @@ class EvalResult:
     def status_emoji(self) -> str:
         """Return an emoji corresponding to the status code or lack of output in result."""
         # If there are attachments, skip empty output warning
-        if not self.stdout.strip() and not self.files:  # No output
+        if not self.stdout.strip() and not (self.files or self.failed_files):
             return ":warning:"
         elif self.returncode == 0:  # No error
             return ":white_check_mark:"
@@ -92,14 +92,18 @@ class EvalResult:
         failed_files = f"({self.get_failed_files_str()})"
 
         n_failed = len(self.failed_files)
-        files = f"file{'s' if n_failed > 1 else ''}"
-        msg = f"{Emojis.failmail} Failed to upload {n_failed} {files} {failed_files}"
+        s_upload = "uploads" if n_failed > 1 else "upload"
 
+        msg = f"{Emojis.failmail} {n_failed} file {s_upload} {failed_files} failed"
+
+        # Exceeded file count limit
         if (n_failed + len(self.files)) > FILE_COUNT_LIMIT:
-            it_they = "they" if n_failed > 1 else "it"
-            msg += f" as {it_they} exceeded the {FILE_COUNT_LIMIT} file limit."
+            s_it = "they" if n_failed > 1 else "it"
+            msg += f" as {s_it} exceeded the {FILE_COUNT_LIMIT} file limit."
+        # Exceeded file size limit
         else:
-            msg += f". File sizes should each not exceed {sizeof_fmt(FILE_SIZE_LIMIT)}."
+            s_each_file = "each file's" if n_failed > 1 else "its file"
+            msg += f" because {s_each_file} size exceeds {sizeof_fmt(FILE_SIZE_LIMIT)}."
 
         return msg
 

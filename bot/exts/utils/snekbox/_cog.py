@@ -350,12 +350,26 @@ class Snekbox(Cog):
 
             # Filter file extensions
             allowed, blocked = self._filter_files(ctx, result.files)
+            # Also scan failed files for blocked extensions
+            failed_files = [FileAttachment(name, b"") for name in result.failed_files]
+            blocked.extend(self._filter_files(ctx, failed_files).blocked)
             # Add notice if any files were blocked
             if blocked:
-                msg += (
-                    f"\n{Emojis.failmail} Some files with disallowed extensions can't be uploaded: "
-                    f"**{', '.join(f.suffix for f in blocked)}**"
-                )
+                blocked_sorted = sorted(set(f.suffix for f in blocked))
+                # Only no extension
+                if len(blocked_sorted) == 1 and blocked_sorted[0] == "":
+                    blocked_msg = "Files with no extension can't be uploaded."
+                # Both
+                elif "" in blocked_sorted:
+                    blocked_str = ", ".join(ext for ext in blocked_sorted if ext)
+                    blocked_msg = (
+                        f"Files with no extension or disallowed extensions can't be uploaded: **{blocked_str}**"
+                    )
+                else:
+                    blocked_str = ", ".join(blocked_sorted)
+                    blocked_msg = f"Files with disallowed extensions can't be uploaded: **{blocked_str}**"
+
+                msg += f"\n{Emojis.failmail} {blocked_msg}"
 
             filter_cog: Filtering | None = self.bot.get_cog("Filtering")
             if filter_cog and (await filter_cog.filter_snekbox_output(msg, ctx.message)):
