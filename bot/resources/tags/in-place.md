@@ -8,7 +8,7 @@ A common example of these different concepts is seen in the use of the methods `
 # WRONG:
 
 unsorted_list = [3, 1, 2]
-sorted_list = inplace_list.sort() # This will be None
+sorted_list = unsorted_list.sort() # This will be None
 print(sorted_list)  # Outputs None. Where did the list go?
 
 list_to_sort = [3, 1, 2]
