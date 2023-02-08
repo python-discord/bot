@@ -130,20 +130,16 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """EvalResult.files_error_message, should return files error message."""
         cases = [
             ([], ["abc"], (
-                "Failed to upload 1 file (abc)."
-                " File sizes should each not exceed 8 MiB."
+                "1 file upload (abc) failed because its file size exceeds 8 MiB."
             )),
             ([], ["file1.bin", "f2.bin"], (
-                "Failed to upload 2 files (file1.bin, f2.bin)."
-                " File sizes should each not exceed 8 MiB."
+                "2 file uploads (file1.bin, f2.bin) failed because each file's size exceeds 8 MiB."
             )),
             (["a", "b"], ["c"], (
-                "Failed to upload 1 file (c)"
-                " as it exceeded the 2 file limit."
+                "1 file upload (c) failed as it exceeded the 2 file limit."
             )),
             (["a"], ["b", "c"], (
-                "Failed to upload 2 files (b, c)"
-                " as they exceeded the 2 file limit."
+                "2 file uploads (b, c) failed as they exceeded the 2 file limit."
             )),
         ]
         for files, failed_files, expected_msg in cases:
@@ -411,7 +407,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             res.startswith("@user#7700 :white_check_mark: Your 3.11 eval job has completed with return code 0.")
         )
-        self.assertIn("Some files with disallowed extensions can't be uploaded: **.disallowed**", res)
+        self.assertIn("Files with disallowed extensions can't be uploaded: **.disallowed**", res)
 
         self.cog.post_job.assert_called_once_with(job)
         self.cog.upload_output.assert_not_called()
