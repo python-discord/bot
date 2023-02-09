@@ -94,7 +94,7 @@ class EvalResult:
         n_failed = len(self.failed_files)
         s_upload = "uploads" if n_failed > 1 else "upload"
 
-        msg = f"{Emojis.failmail} {n_failed} file {s_upload} {failed_files} failed"
+        msg = f"{Emojis.failed_file} {n_failed} file {s_upload} {failed_files} failed"
 
         # Exceeded file count limit
         if (n_failed + len(self.files)) > FILE_COUNT_LIMIT:

@@ -289,6 +289,7 @@ class Emojis(metaclass=YAMLGetter):
     defcon_update: str  # noqa: E704
 
     failmail: str
+    failed_file: str
 
     incident_actioned: str
     incident_investigating: str

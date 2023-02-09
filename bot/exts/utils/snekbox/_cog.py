@@ -369,7 +369,7 @@ class Snekbox(Cog):
                     blocked_str = ", ".join(blocked_sorted)
                     blocked_msg = f"Files with disallowed extensions can't be uploaded: **{blocked_str}**"
 
-                msg += f"\n{Emojis.failmail} {blocked_msg}"
+                msg += f"\n{Emojis.failed_file} {blocked_msg}"
 
             filter_cog: Filtering | None = self.bot.get_cog("Filtering")
             if filter_cog and (await filter_cog.filter_snekbox_output(msg, ctx.message)):
