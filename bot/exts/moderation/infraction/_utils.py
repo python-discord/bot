@@ -37,7 +37,7 @@ INFRACTION_TITLE = "Please review our rules"
 INFRACTION_APPEAL_SERVER_FOOTER = f"\nTo appeal this infraction, join our [appeals server]({APPEAL_SERVER_INVITE})."
 INFRACTION_APPEAL_MODMAIL_FOOTER = (
     '\nIf you would like to discuss or appeal this infraction, '
-    f'send a message to <@{MODMAIL_ACCOUNT_ID}>.'
+    f'send a message to the ModMail bot (<@{MODMAIL_ACCOUNT_ID}>).'
 )
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
