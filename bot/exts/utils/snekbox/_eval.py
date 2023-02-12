@@ -120,14 +120,9 @@ class EvalResult:
                 names.append("...")
                 break
 
-            to_display = min(char_max, len(file))
-            name_short = file[:to_display]
-            # Add ellipsis if name was truncated
-            if to_display < len(file):
-                name_short += "..."
-                names.append(name_short)
+            if len(file) > char_max:
+                names.append(file[:char_max] + "...")
                 break
-
             char_max -= len(file)
             names.append(file)
 
