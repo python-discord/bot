@@ -131,11 +131,11 @@ class PythonVersionSwitcherButton(ui.Button):
     """A button that allows users to re-run their eval command in a different Python version."""
 
     def __init__(
-            self,
-            version_to_switch_to: PythonVersion,
-            snekbox_cog: Snekbox,
-            ctx: Context,
-            job: EvalJob,
+        self,
+        version_to_switch_to: PythonVersion,
+        snekbox_cog: Snekbox,
+        ctx: Context,
+        job: EvalJob,
     ) -> None:
         self.version_to_switch_to = version_to_switch_to
         super().__init__(label=f"Run in {self.version_to_switch_to}", style=enums.ButtonStyle.primary)
