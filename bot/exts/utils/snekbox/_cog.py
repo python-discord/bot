@@ -344,9 +344,6 @@ class Snekbox(Cog):
             else:
                 self.bot.stats.incr("snekbox.python.success")
 
-            allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
-            view = self.build_python_version_switcher_view(job.version, ctx, job)
-
             # Filter file extensions
             allowed, blocked = self._filter_files(ctx, result.files)
             # Also scan failed files for blocked extensions
@@ -374,8 +371,9 @@ class Snekbox(Cog):
             if filter_cog and (await filter_cog.filter_snekbox_output(msg, ctx.message)):
                 return await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
 
-            # Attach files if provided
             files = [f.to_file() for f in allowed]
+            allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
+            view = self.build_python_version_switcher_view(job.version, ctx, job)
             response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
             view.message = response
 
