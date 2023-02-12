@@ -170,10 +170,10 @@ class Snekbox(Cog):
         self.jobs = {}
 
     def build_python_version_switcher_view(
-            self,
-            current_python_version: PythonVersion,
-            ctx: Context,
-            job: EvalJob,
+        self,
+        current_python_version: PythonVersion,
+        ctx: Context,
+        job: EvalJob,
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
         if current_python_version == "3.10":
