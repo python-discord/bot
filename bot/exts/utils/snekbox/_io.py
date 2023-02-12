@@ -49,7 +49,7 @@ def normalize_discord_file_name(name: str) -> str:
     return name
 
 
-@dataclass
+@dataclass(frozen=True)
 class FileAttachment:
     """File Attachment from Snekbox eval."""
 

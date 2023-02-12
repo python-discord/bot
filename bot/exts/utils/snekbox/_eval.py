@@ -19,7 +19,7 @@ log = get_logger(__name__)
 SIGKILL = 9
 
 
-@dataclass
+@dataclass(frozen=True)
 class EvalJob:
     """Job to be evaluated by snekbox."""
 
