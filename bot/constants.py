@@ -465,6 +465,8 @@ class Channels(metaclass=YAMLGetter):
 
     big_brother_logs: int
 
+    roles: int
+
 
 class Webhooks(metaclass=YAMLGetter):
     section = "guild"
