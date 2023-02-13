@@ -82,7 +82,7 @@ jobs:
     name: Trigger the status embed workflow
     needs: lint-test
 
-    uses: ./.github/workflows/reusable_status_embed.yaml
+    uses: ./.github/workflows/status_embed.yaml
     with:
       job_status: ${{ needs.lint-test.outputs.job_status }}
     secrets:
