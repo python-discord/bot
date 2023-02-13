@@ -79,7 +79,7 @@ jobs:
         run: pytest -n auto --cov --disable-warnings -q
 
   call_status_embed:
-    name: Trigget the status embed workflow
+    name: Trigger the status embed workflow
     needs: lint-test
 
     uses: ./.github/workflows/status_embed.yaml

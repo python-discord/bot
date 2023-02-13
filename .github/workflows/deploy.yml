@@ -48,7 +48,7 @@ jobs:
           kubectl-version: 'latest'
 
   call_status_embed:
-    name: Trigget the status embed workflow
+    name: Trigger the status embed workflow
     needs: build
 
     uses: ./.github/workflows/status_embed.yaml
