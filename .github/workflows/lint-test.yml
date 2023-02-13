@@ -82,7 +82,7 @@ jobs:
     name: Trigget the status embed workflow
     needs: lint-test
 
-    uses: ./.github/workflows/status_embed.yml
+    uses: ./.github/workflows/status_embed.yaml
     with:
       job_status: ${{ needs.lint-test.outputs.job_status }}
     secrets:

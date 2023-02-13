@@ -51,7 +51,7 @@ jobs:
     name: Trigget the status embed workflow
     needs: build
 
-    uses: ./.github/workflows/status_embed.yml
+    uses: ./.github/workflows/status_embed.yaml
     with:
       job_status: ${{ needs.build.outputs.job_status }}
     secrets:
