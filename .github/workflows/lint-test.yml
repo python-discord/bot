@@ -71,10 +71,9 @@ jobs:
       # Format used:
       # ::error file={filename},line={line},col={col}::{message}
       - name: Run flake8
-        run: | 
-          "flake8 \
-          --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
-          [flake8] %(code)s: %(text)s'"
+        run: "flake8 \
+        --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
+        [flake8] %(code)s: %(text)s'"
 
       - name: Run tests and generate coverage report
         run: pytest -n auto --cov --disable-warnings -q
