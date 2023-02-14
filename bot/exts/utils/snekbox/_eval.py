@@ -63,10 +63,19 @@ class EvalResult:
     failed_files: list[str] = field(default_factory=list)
 
     @property
+    def has_output(self) -> bool:
+        """True if the result has any output (stdout, files, or failed files)."""
+        return bool(self.stdout.strip() or self.files or self.failed_files)
+
+    @property
+    def has_files(self) -> bool:
+        """True if the result has any files or failed files."""
+        return bool(self.files or self.failed_files)
+
+    @property
     def status_emoji(self) -> str:
         """Return an emoji corresponding to the status code or lack of output in result."""
-        # If there are attachments, skip empty output warning
-        if not self.stdout.strip() and not (self.files or self.failed_files):
+        if not self.has_output:
             return ":warning:"
         elif self.returncode == 0:  # No error
             return ":white_check_mark:"

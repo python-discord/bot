@@ -328,7 +328,8 @@ class Snekbox(Cog):
                 output, paste_link = await self.format_output(result.stdout)
 
             msg = f"{ctx.author.mention} {result.status_emoji} {msg}.\n"
-            if output not in ("[No output]", "") or not (result.files or result.failed_files):
+            # Skip output if it's empty and there are file uploads
+            if result.stdout or not result.has_files:
                 msg += f"\n```\n{output}\n```"
 
             if paste_link:
