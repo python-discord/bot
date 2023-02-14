@@ -1,16 +1,17 @@
 name: Status Embed
 
 on:
-  workflow_run:
-    workflows:
-      - Lint & Test
-      - Build
-      - Deploy
-    types:
-      - completed
+  workflow_call:
+    inputs:
+      job_status:
+        required: true
+        type: string
+    secrets:
+      webhook_token:
+        required: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -27,34 +28,14 @@ jobs:
     #
     # 3. If any workflow ends in failure or was cancelled.
     if: >-
-      (github.event.workflow_run.name == 'Deploy' && github.event.workflow_run.conclusion != 'skipped') ||
-      github.event.workflow_run.event == 'pull_request' ||
-      github.event.workflow_run.conclusion == 'failure' ||
-      github.event.workflow_run.conclusion == 'cancelled'
+      (github.workflow == 'Deploy' && ${{ inputs.job_status }} != 'skipped') ||
+      github.event_name == 'pull_request' ||
+      ${{ inputs.job_status }} == 'failure' ||
+      ${{ inputs.job_status }} == 'cancelled'
     name:  Send Status Embed to Discord
     runs-on: ubuntu-latest
 
     steps:
-      # A workflow_run event does not contain all the information
-      # we need for a PR embed. That's why we upload an artifact
-      # with that information in the Lint workflow.
-      - name: Get Pull Request Information
-        id: pr_info
-        if: github.event.workflow_run.event == 'pull_request'
-        run: |
-          curl -s -H "Authorization: token $GITHUB_TOKEN" ${{ github.event.workflow_run.artifacts_url }} > artifacts.json
-          DOWNLOAD_URL=$(cat artifacts.json | jq -r '.artifacts[] | select(.name == "pull-request-payload") | .archive_download_url')
-          [ -z "$DOWNLOAD_URL" ] && exit 1
-          wget --quiet --header="Authorization: token $GITHUB_TOKEN" -O pull_request_payload.zip $DOWNLOAD_URL || exit 2
-          unzip -p pull_request_payload.zip > pull_request_payload.json
-          [ -s pull_request_payload.json ] || exit 3
-          echo "::set-output name=pr_author_login::$(jq -r '.user.login // empty' pull_request_payload.json)"
-          echo "::set-output name=pr_number::$(jq -r '.number // empty' pull_request_payload.json)"
-          echo "::set-output name=pr_title::$(jq -r '.title // empty' pull_request_payload.json)"
-          echo "::set-output name=pr_source::$(jq -r '.head.label // empty' pull_request_payload.json)"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # Send an informational status embed to Discord instead of the
       # standard embeds that Discord sends. This embed will contain
       # more information and we can fine tune when we actually want
@@ -64,19 +45,19 @@ jobs:
         with:
           # Our GitHub Actions webhook
           webhook_id: '784184528997842985'
-          webhook_token: ${{ secrets.GHA_WEBHOOK_TOKEN }}
+          webhook_token: ${{ secrets.webhook_token }}
 
           # Workflow information
-          workflow_name: ${{ github.event.workflow_run.name }}
-          run_id: ${{ github.event.workflow_run.id }}
-          run_number: ${{ github.event.workflow_run.run_number }}
-          status: ${{ github.event.workflow_run.conclusion }}
+          workflow_name: ${{ github.workflow }}
+          run_id: ${{ github.run_id }}
+          run_number: ${{ github.run_number }}
+          status: ${{ inputs.job_status }}
           actor: ${{ github.actor }}
           repository:  ${{ github.repository }}
           ref: ${{ github.ref }}
-          sha: ${{ github.event.workflow_run.head_sha }}
+          sha: ${{ github.sha }}
 
-          pr_author_login: ${{ steps.pr_info.outputs.pr_author_login }}
-          pr_number: ${{ steps.pr_info.outputs.pr_number }}
-          pr_title: ${{ steps.pr_info.outputs.pr_title }}
-          pr_source: ${{ steps.pr_info.outputs.pr_source }}
+          pr_author_login: ${{ github.event.pull_request.user.login}}
+          pr_number: ${{ github.event.pull_request.number }}
+          pr_title: ${{ github.event.pull_request.title }}
+          pr_source: ${{ github.event.pull_request.head.label }}
