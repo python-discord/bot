@@ -49,6 +49,7 @@ class AssignableRole:
 ASSIGNABLE_ROLES = (
     AssignableRole(constants.Roles.announcements, None),
     AssignableRole(constants.Roles.pyweek_announcements, None),
+    AssignableRole(constants.Roles.legacy_help_channels_access, None),
     AssignableRole(constants.Roles.lovefest, (1, 2)),
     AssignableRole(constants.Roles.advent_of_code, (11, 12)),
     AssignableRole(constants.Roles.revival_of_code, (7, 8, 9, 10)),
