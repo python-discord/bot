@@ -86,4 +86,3 @@ jobs:
       job_status: ${{ needs.lint-test.outputs.job_status }}
     secrets:
       webhook_token: ${{ secrets.GHA_WEBHOOK_TOKEN }}
-
