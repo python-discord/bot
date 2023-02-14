@@ -167,6 +167,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 '15 lines, 1965 characters output'
             ),
         )
+        
         for case, expected, testname in cases:
             with self.subTest(msg=testname, case=case, expected=expected):
                 self.assertEqual(await self.cog.format_output(case), expected)
