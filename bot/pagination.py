@@ -191,7 +191,7 @@ class LinePaginator(Paginator):
     async def paginate(
         cls,
         lines: t.List[str],
-        ctx: Context,
+        ctx: t.Union[Context, discord.Interaction],
         embed: discord.Embed,
         prefix: str = "",
         suffix: str = "",
@@ -228,7 +228,10 @@ class LinePaginator(Paginator):
         current_page = 0
 
         if not restrict_to_user:
-            restrict_to_user = ctx.author
+            if isinstance(ctx, discord.Interaction):
+                restrict_to_user = ctx.user
+            else:
+                restrict_to_user = ctx.author
 
         if not lines:
             if exception_on_empty_embed:
@@ -261,6 +264,8 @@ class LinePaginator(Paginator):
                 log.trace(f"Setting embed url to '{url}'")
 
             log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
+            if isinstance(ctx, discord.Interaction):
+                return await ctx.response.send_message(embed=embed)
             return await ctx.send(embed=embed)
         else:
             if footer_text:
@@ -274,7 +279,11 @@ class LinePaginator(Paginator):
                 log.trace(f"Setting embed url to '{url}'")
 
             log.debug("Sending first page to channel...")
-            message = await ctx.send(embed=embed)
+            if isinstance(ctx, discord.Interaction):
+                await ctx.response.send_message(embed=embed)
+                message = await ctx.original_response()
+            else:
+                message = await ctx.send(embed=embed)
 
         log.debug("Adding emoji reactions to message...")
 
@@ -292,7 +301,10 @@ class LinePaginator(Paginator):
 
         while True:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=check)
+                if isinstance(ctx, discord.Interaction):
+                    reaction, user = await ctx.client.wait_for("reaction_add", timeout=timeout, check=check)
+                else:
+                    reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=check)
                 log.trace(f"Got reaction: {reaction}")
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")

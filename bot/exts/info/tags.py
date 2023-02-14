@@ -4,12 +4,12 @@ import enum
 import re
 import time
 from pathlib import Path
-from typing import Callable, Iterable, Literal, NamedTuple, Optional, Union
+from typing import Literal, NamedTuple, Optional, Union
 
 import discord
 import frontmatter
-from discord import Embed, Member
-from discord.ext.commands import Cog, Context, group
+from discord import Embed, Member, app_commands
+from discord.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
@@ -26,6 +26,8 @@ TEST_CHANNELS = (
 
 REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
 FOOTER_TEXT = f"To show a tag, type {constants.Bot.prefix}tags <tagname>."
+
+GUILD_ID = constants.Guild.id
 
 
 class COOLDOWN(enum.Enum):
@@ -138,6 +140,15 @@ class Tags(Cog):
         self.bot = bot
         self.tags: dict[TagIdentifier, Tag] = {}
         self.initialize_tags()
+        self.bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
+
+    tag_group = app_commands.Group(name="tag", description="...")
+    # search_tag = app_commands.Group(name="search", description="...", parent=tag_group)
+
+    @Cog.listener()
+    async def on_ready(self) -> None:
+        """Called when the cog is ready."""
+        await self.bot.tree.sync(guild=discord.Object(id=GUILD_ID))
 
     def initialize_tags(self) -> None:
         """Load all tags from resources into `self.tags`."""
@@ -182,90 +193,9 @@ class Tags(Cog):
 
         return suggestions
 
-    def _get_tags_via_content(
-            self,
-            check: Callable[[Iterable], bool],
-            keywords: str,
-            user: Member,
-    ) -> list[tuple[TagIdentifier, Tag]]:
-        """
-        Search for tags via contents.
-
-        `predicate` will be the built-in any, all, or a custom callable. Must return a bool.
-        """
-        keywords_processed = []
-        for keyword in keywords.split(","):
-            keyword_sanitized = keyword.strip().casefold()
-            if not keyword_sanitized:
-                # this happens when there are leading / trailing / consecutive comma.
-                continue
-            keywords_processed.append(keyword_sanitized)
-
-        if not keywords_processed:
-            # after sanitizing, we can end up with an empty list, for example when keywords is ","
-            # in that case, we simply want to search for such keywords directly instead.
-            keywords_processed = [keywords]
-
-        matching_tags = []
-        for identifier, tag in self.tags.items():
-            matches = (query in tag.content.casefold() for query in keywords_processed)
-            if tag.accessible_by(user) and check(matches):
-                matching_tags.append((identifier, tag))
-
-        return matching_tags
-
-    async def _send_matching_tags(
-            self,
-            ctx: Context,
-            keywords: str,
-            matching_tags: list[tuple[TagIdentifier, Tag]],
-    ) -> None:
-        """Send the result of matching tags to user."""
-        if len(matching_tags) == 1:
-            await ctx.send(embed=matching_tags[0][1].embed)
-        elif matching_tags:
-            is_plural = keywords.strip().count(" ") > 0 or keywords.strip().count(",") > 0
-            embed = Embed(
-                title=f"Here are the tags containing the given keyword{'s' * is_plural}:",
-            )
-            await LinePaginator.paginate(
-                sorted(
-                    f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier.name}"
-                    for identifier, _ in matching_tags
-                ),
-                ctx,
-                embed,
-                **self.PAGINATOR_DEFAULTS,
-            )
-
-    @group(name="tags", aliases=("tag", "t"), invoke_without_command=True, usage="[tag_group] [tag_name]")
-    async def tags_group(self, ctx: Context, *, argument_string: Optional[str]) -> None:
-        """Show all known tags, a single tag, or run a subcommand."""
-        await self.get_command(ctx, argument_string=argument_string)
-
-    @tags_group.group(name="search", invoke_without_command=True)
-    async def search_tag_content(self, ctx: Context, *, keywords: str) -> None:
-        """
-        Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
-
-        Only search for tags that has ALL the keywords.
-        """
-        matching_tags = self._get_tags_via_content(all, keywords, ctx.author)
-        await self._send_matching_tags(ctx, keywords, matching_tags)
-
-    @search_tag_content.command(name="any")
-    async def search_tag_content_any_keyword(self, ctx: Context, *, keywords: Optional[str] = "any") -> None:
-        """
-        Search inside tags' contents for tags. Allow searching for multiple keywords separated by comma.
-
-        Search for tags that has ANY of the keywords.
-        """
-        matching_tags = self._get_tags_via_content(any, keywords or "any", ctx.author)
-        await self._send_matching_tags(ctx, keywords, matching_tags)
-
     async def get_tag_embed(
             self,
-            ctx: Context,
+            interaction: discord.Interaction,
             tag_identifier: TagIdentifier,
     ) -> Optional[Union[Embed, Literal[COOLDOWN.obj]]]:
         """
@@ -276,7 +206,7 @@ class Tags(Cog):
         filtered_tags = [
             (ident, tag) for ident, tag in
             self.get_fuzzy_matches(tag_identifier)[:10]
-            if tag.accessible_by(ctx.author)
+            if tag.accessible_by(interaction.user)
         ]
 
         # Try exact match, includes checking through alt names
@@ -295,10 +225,10 @@ class Tags(Cog):
             tag = filtered_tags[0][1]
 
         if tag is not None:
-            if tag.on_cooldown_in(ctx.channel):
+            if tag.on_cooldown_in(interaction.channel):
                 log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
                 return COOLDOWN.obj
-            tag.set_cooldown_for(ctx.channel)
+            tag.set_cooldown_for(interaction.channel)
 
             self.bot.stats.incr(
                 f"tags.usages"
@@ -313,7 +243,7 @@ class Tags(Cog):
             suggested_tags_text = "\n".join(
                 f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
                 for identifier, tag in filtered_tags
-                if not tag.on_cooldown_in(ctx.channel)
+                if not tag.on_cooldown_in(interaction.channel)
             )
             return Embed(
                 title="Did you mean ...",
@@ -362,8 +292,8 @@ class Tags(Cog):
             if identifier.group == group and tag.accessible_by(user)
         )
 
-    @tags_group.command(name="get", aliases=("show", "g"), usage="[tag_group] [tag_name]")
-    async def get_command(self, ctx: Context, *, argument_string: Optional[str]) -> bool:
+    @tag_group.command(name="get")
+    async def get_command(self, interaction: discord.Interaction, *, tag_name: Optional[str]) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group
         Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name.
@@ -373,38 +303,68 @@ class Tags(Cog):
         Returns True if a message was sent, or if the tag is on cooldown.
         Returns False if no message was sent.
         """  # noqa: D205, D415
-        if not argument_string:
+        if not tag_name:
             if self.tags:
                 await LinePaginator.paginate(
-                    self.accessible_tags(ctx.author), ctx, Embed(title="Available tags"), **self.PAGINATOR_DEFAULTS
+                    self.accessible_tags(interaction.user),
+                    interaction, Embed(title="Available tags"),
+                    **self.PAGINATOR_DEFAULTS,
                 )
             else:
-                await ctx.send(embed=Embed(description="**There are no tags!**"))
+                await interaction.response.send_message(embed=Embed(description="**There are no tags!**"))
             return True
 
-        identifier = TagIdentifier.from_string(argument_string)
+        identifier = TagIdentifier.from_string(tag_name)
 
         if identifier.group is None:
             # Try to find accessible tags from a group matching the identifier's name.
-            if group_tags := self.accessible_tags_in_group(identifier.name, ctx.author):
+            if group_tags := self.accessible_tags_in_group(identifier.name, interaction.user):
                 await LinePaginator.paginate(
-                    group_tags, ctx, Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS
+                    group_tags, interaction, Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS
                 )
                 return True
 
-        embed = await self.get_tag_embed(ctx, identifier)
+        embed = await self.get_tag_embed(interaction, identifier)
         if embed is None:
             return False
 
         if embed is not COOLDOWN.obj:
             await wait_for_deletion(
-                await ctx.send(embed=embed),
-                (ctx.author.id,)
+                await interaction.response.send_message(embed=embed),
+                (interaction.user.id,)
             )
         # A valid tag was found and was either sent, or is on cooldown
+        return True
+
+    @get_command.autocomplete("tag_name")
+    async def tag_name_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str
+    ) -> list[app_commands.Choice[str]]:
+        """Autocompleter for `/tag get` command."""
+        tag_names = [tag.name for tag in self.tags.keys()]
+        return [
+            app_commands.Choice(name=tag, value=tag)
+            for tag in tag_names if current.lower() in tag
+        ]
+
+    @tag_group.command(name="list")
+    async def list_command(self, interaction: discord.Interaction) -> bool:
+        """Lists all accessible tags."""
+        if self.tags:
+            await LinePaginator.paginate(
+                self.accessible_tags(interaction.user),
+                interaction,
+                Embed(title="Available tags"),
+                **self.PAGINATOR_DEFAULTS,
+            )
+        else:
+            await interaction.response.send_message(embed=Embed(description="**There are no tags!**"))
         return True
 
 
 async def setup(bot: Bot) -> None:
     """Load the Tags cog."""
     await bot.add_cog(Tags(bot))
+    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
