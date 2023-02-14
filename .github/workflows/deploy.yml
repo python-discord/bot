@@ -50,7 +50,7 @@ jobs:
   call_status_embed:
     name: Trigger the status embed workflow
     needs: build
-
+    if: always()
     uses: ./.github/workflows/status_embed.yaml
     with:
       job_status: ${{ needs.build.outputs.job_status }}
