@@ -12,7 +12,6 @@ concurrency:
 
 jobs:
   lint-test:
-    continue-on-error: true
     outputs:
       job_status: ${{ job.status }}
     runs-on: ubuntu-latest
@@ -81,7 +80,7 @@ jobs:
   call_status_embed:
     name: Trigger the status embed workflow
     needs: lint-test
-
+    if: always()
     uses: ./.github/workflows/status_embed.yaml
     with:
       job_status: ${{ needs.lint-test.outputs.job_status }}
