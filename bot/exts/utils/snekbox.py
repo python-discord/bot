@@ -472,7 +472,7 @@ class Snekbox(Cog):
                 response = await self.send_job(ctx, python_version, code, args=args, job_name=job_name)
             except LockedResourceError:
                 await ctx.reply(
-                    f"You've already got a job running - "
+                    "You've already got a job running - "
                     "please wait for it to finish!"
                 )
                 return
