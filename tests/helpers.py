@@ -479,6 +479,26 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         self.invoked_from_error_handler = kwargs.get('invoked_from_error_handler', False)
 
 
+class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
+    """
+    A MagicMock subclass to mock Interaction objects.
+
+    Instances of this class will follow the specifications of `discord.Interaction`
+    instances. For more information, see the `MockGuild` docstring.
+    """
+    # spec_set = context_instance
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.me = kwargs.get('me', MockMember())
+        self.client = kwargs.get('client', MockBot())
+        self.guild = kwargs.get('guild', MockGuild())
+        self.user = kwargs.get('user', MockMember())
+        self.channel = kwargs.get('channel', MockTextChannel())
+        self.message = kwargs.get('message', MockMessage())
+        self.invoked_from_error_handler = kwargs.get('invoked_from_error_handler', False)
+
+
 attachment_instance = discord.Attachment(data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock())
 
 
