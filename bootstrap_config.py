@@ -21,8 +21,11 @@ def get_all_roles():
     roles = r.json()
 
     for role in roles:
-        name = "_".join(part.lower() for part in role["name"].split(" "))
-        result[name] = role["id"]
+        try:
+            name = "_".join(part.lower() for part in role["name"].split(" "))
+            result[name] = role["id"]
+        except Exception as e:
+            pass
 
     return result
 
@@ -51,6 +54,6 @@ for role_name in _Roles.__fields__:
 all_channels = get_all_channels()
 
 for channel_name in _Channels.__fields__:
-    config_str += f"channels__{channel_name}={all_channels.get(role_name)}\n"
+    config_str += f"channels__{channel_name}={all_channels.get(channel_name)}\n"
 
 env_file_path.write_text(config_str)
