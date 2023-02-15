@@ -149,6 +149,17 @@ class _Roles(EnvConfig):
     patreon_tier_3: int
 
 
+class _Categories(EnvConfig):
+    EnvConfig.Config.env_prefix = "categories__"
+
+    moderators: int
+    modmail: int
+    voice: int
+
+    # 2021 Summer Code Jam
+    summer_code_jam: int
+
+
 class _Guild(BaseSettings):
     id: int
     roles: _Roles

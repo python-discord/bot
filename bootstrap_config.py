@@ -1,6 +1,6 @@
 from pathlib import Path
 import requests
-from bot.constants import _Roles, _Channels
+from bot.constants import _Roles, _Channels, _Categories
 
 env_file_path = Path(".env.server")
 
@@ -30,18 +30,22 @@ def get_all_roles():
     return result
 
 
-def get_all_channels():
-    result = {}
-
+def get_all_channels_and_categories():
+    channels = {} # could be text channels only as well
+    categories = {}
     channels_url = f"{base_url}/guilds/{guild_id}/channels"
     r = requests.get(url=channels_url, headers=headers)
-    channels = r.json()
+    all_channels = r.json()
 
-    for channel in channels:
+    for channel in all_channels:
+        channel_type = channel["type"]
         name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
-        result[name] = channel["id"]
+        if channel_type == 4:
+            categories[name] = channel["id"]
+        else:
+            channels[name] = channel["id"]
 
-    return result
+    return channels, categories
 
 
 config_str = ""
@@ -51,9 +55,12 @@ all_roles = get_all_roles()
 for role_name in _Roles.__fields__:
     config_str += f"roles__{role_name}={all_roles.get(role_name)}\n"
 
-all_channels = get_all_channels()
+all_channels, all_categories = get_all_channels_and_categories()
 
 for channel_name in _Channels.__fields__:
     config_str += f"channels__{channel_name}={all_channels.get(channel_name)}\n"
+
+for category_name in _Categories.__fields__:
+    config_str += f"categories__{category_name}={all_categories.get(category_name)}\n"
 
 env_file_path.write_text(config_str)
