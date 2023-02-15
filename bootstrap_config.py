@@ -32,11 +32,11 @@ def get_all_channels():
 
     channels_url = f"{base_url}/guilds/{guild_id}/channels"
     r = requests.get(url=channels_url, headers=headers)
-    roles = r.json()
+    channels = r.json()
 
-    for role in roles:
-        name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
-        result[name] = role["id"]
+    for channel in channels:
+        name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
+        result[name] = channel["id"]
 
     return result
 
