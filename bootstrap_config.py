@@ -4,8 +4,8 @@ from bot.constants import _Roles, _Channels
 
 env_file_path = Path(".env.server")
 
-token = "my_precious_token"
-guild_id = 999999999999999999 #Replace this with bot's token
+token = "my_precious_token"  #Replace this with bot's token
+guild_id = 999999999999999999  #Replace this with target guild id
 
 
 base_url = "https://discord.com/api/v10"
