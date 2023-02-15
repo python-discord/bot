@@ -1,5 +1,5 @@
 """
-Loads bot configuration from YAML files.
+Loads all bot configuration from YAML files.
 By default, this simply loads the default
 configuration located at `config-default.yml`.
 If a file called `config.yml` is found in the
