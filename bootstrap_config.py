@@ -48,7 +48,7 @@ def get_all_channels_and_categories():
     return channels, categories
 
 
-config_str = ""
+config_str = "#Roles\n"
 
 all_roles = get_all_roles()
 
@@ -57,8 +57,12 @@ for role_name in _Roles.__fields__:
 
 all_channels, all_categories = get_all_channels_and_categories()
 
+config_str += "\n#Channels\n"
+
 for channel_name in _Channels.__fields__:
     config_str += f"channels__{channel_name}={all_channels.get(channel_name)}\n"
+
+config_str += "\n#Categories\n"
 
 for category_name in _Categories.__fields__:
     config_str += f"categories__{category_name}={all_categories.get(category_name)}\n"
