@@ -180,7 +180,8 @@ Categories = _Categories()
 
 class _Guild(BaseSettings):
     id: int
-    roles: _Roles
+    invite: str
+    roles: _Roles = Roles
 
 
 Guild = _Guild()
