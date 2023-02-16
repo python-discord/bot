@@ -38,6 +38,9 @@ class _Bot(EnvConfig):
     trace_loggers: str = "*"
 
 
+Bot = _Bot()
+
+
 class _Channels(EnvConfig):
     EnvConfig.Config.env_prefix = "channels__"
     announcements: int
@@ -90,6 +93,7 @@ class _Channels(EnvConfig):
     admin_announcements: int
     mod_announcements: int
     staff_announcements: int
+    staff_info: int
 
     admins_voice: int
     code_help_voice_0: int
@@ -107,6 +111,9 @@ class _Channels(EnvConfig):
     big_brother_logs: int
 
     duck_pond: int
+
+
+Channels = _Channels()
 
 
 class _Roles(EnvConfig):
@@ -150,6 +157,9 @@ class _Roles(EnvConfig):
     patreon_tier_3: int
 
 
+Roles = _Roles()
+
+
 class _Categories(EnvConfig):
     EnvConfig.Config.env_prefix = "categories__"
 
@@ -161,19 +171,15 @@ class _Categories(EnvConfig):
     summer_code_jam: int
 
 
+Categories = _Categories()
+
+
 class _Guild(BaseSettings):
     id: int
     roles: _Roles
 
 
-Bot = _Bot()
-
-
-# Not fetchable by http call
-class Branding(EnvConfig):
-    EnvConfig.Config.env_prefix = "branding"
-
-    cycle_frequency: int
+Guild = _Guild()
 
 
 class Event(Enum):
@@ -202,19 +208,146 @@ class Event(Enum):
     voice_state_update = "voice_state_update"
 
 
-# Not part of server config ?
-class VideoPermission(EnvConfig):
-    EnvConfig.Config.env_prefix = "video_permission__"
-
-    default_permission_duration: int
-
-
 class ThreadArchiveTimes(Enum):
     HOUR = 60
     DAY = 1440
     THREE_DAY = 4320
     WEEK = 10080
 
+
+class _Webhooks(EnvConfig):
+
+    big_brother: int
+    dev_log: int
+    duck_pond: int
+    incidents: int
+    incidents_archive: int
+    python_news: int
+
+
+Webhooks = _Webhooks()
+
+
+class _BigBrother(EnvConfig):
+    EnvConfig.Config.env_prefix = "big_brother__"
+
+    header_message_limit: int
+    log_delay: int
+
+
+BigBrother = _BigBrother()
+
+
+class _CodeBlock(EnvConfig):
+    EnvConfig.Config.env_prefix = "code_block__"
+
+    # The channels in which code blocks will be detected. They are not subject to a cooldown.
+    channel_whitelist: int = Channels.bot_commands
+    # The channels which will be affected by a cooldown. These channels are also whitelisted.
+    cooldown_channels: int = Channels.python_general
+
+    cooldown_seconds: int
+    minimum_lines: int
+
+
+CodeBlock = _CodeBlock()
+
+
+class _Free(EnvConfig):
+    EnvConfig.Config.env_prefix = "free__"
+
+    activity_timeout: int
+    cooldown_per: float
+    cooldown_rate: int
+
+
+Free = _Free()
+
+
+class _HelpChannels(EnvConfig):
+    EnvConfig.Config.env_prefix = 'help_channels__'
+
+    enable: bool
+    idle_minutes: int
+    deleted_idle_minutes: int
+    # Roles which are allowed to use the command which makes channels dormant
+    cmd_whitelist: list[int] = [Roles.helpers]
+
+
+HelpChannels = _HelpChannels()
+
+
+class _RedirectOutput(EnvConfig):
+    EnvConfig.Config.env_prefix = "redirect_output__"
+
+    delete_delay: int
+    delete_invocation: bool
+
+
+RedirectOutput = _RedirectOutput()
+
+
+class _DuckPond(EnvConfig):
+    EnvConfig.Config.env_prefix = 'duck_pond__'
+
+    channel_blacklist: list[str] = [
+        Channels.announcements,
+        Channels.python_news,
+        Channels.python_events,
+        Channels.mailing_lists,
+        Channels.reddit,
+        Channels.duck_pond,
+        Channels.changelog,
+        Channels.staff_announcements,
+        Channels.mod_announcements,
+        Channels.admin_announcements,
+        Channels.staff_info
+    ]
+
+
+DuckPond = _DuckPond()
+
+
+class _PythonNews(EnvConfig):
+    EnvConfig.Config.env_prefix = "python_news__"
+
+    channel: int = Channels.python_news
+    webhook: int = Webhooks.python_news
+    mail_lists: list[str]
+
+
+PythonNews = _PythonNews()
+
+
+class _VoiceGate(EnvConfig):
+    EnvConfig.Config.env_prefix = "voice_gate__"
+
+    bot_message_delete_delay: int
+    minimum_activity_blocks: int
+    minimum_days_member: int
+    minimum_messages: int
+    voice_ping_delete_delay: int
+
+
+VoiceGate = _VoiceGate()
+
+
+class _Branding(EnvConfig):
+    EnvConfig.Config.env_prefix = "branding__"
+
+    cycle_frequency: int
+
+
+Branding = _Branding()
+
+
+class _VideoPermission(EnvConfig):
+    EnvConfig.Config.env_prefix = "video_permission__"
+
+    default_permission_duration: int
+
+
+VideoPermission = _VideoPermission()
 
 # Bot replies
 NEGATIVE_REPLIES = [
