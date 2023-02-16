@@ -223,6 +223,7 @@ class ThreadArchiveTimes(Enum):
 
 
 class _Webhooks(EnvConfig):
+    EnvConfig.Config.env_prefix = "webhooks__"
 
     big_brother: int
     dev_log: int
