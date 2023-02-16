@@ -15,9 +15,13 @@ from pydantic import BaseSettings
 
 # Will add a check for the required keys
 
-default_env_file_path = Path(__file__).parent.parent / ".env.default"
 env_file_path = Path(__file__).parent.parent / ".env"
 server_env_file_path = Path(__file__).parent.parent / ".env.server"
+
+# If env variables are not found in the previous files, fall back to the following
+default_env_file_path = Path(__file__).parent.parent / ".env.default"
+default_server_env_file_path = Path(__file__).parent.parent / ".env.server.default"
+
 
 FILE_LOGS = True
 DEBUG_MODE = True
@@ -25,7 +29,7 @@ DEBUG_MODE = True
 
 class EnvConfig(BaseSettings):
     class Config:
-        env_file = env_file_path, server_env_file_path, default_env_file_path
+        env_file = env_file_path, server_env_file_path, default_env_file_path, default_server_env_file_path
         env_file_encoding = 'utf-8'
 
 
