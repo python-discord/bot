@@ -11,12 +11,11 @@ their default values from `config-default.yml`.
 """
 from enum import Enum
 from pathlib import Path
-
-
-from pydantic import BaseSettings, BaseModel
+from pydantic import BaseSettings
 
 # Will add a check for the required keys
 
+default_env_file_path = Path(__file__).parent.parent / ".env.default"
 env_file_path = Path(__file__).parent.parent / ".env"
 server_env_file_path = Path(__file__).parent.parent / ".env.server"
 
@@ -26,7 +25,7 @@ DEBUG_MODE = True
 
 class EnvConfig(BaseSettings):
     class Config:
-        env_file = env_file_path, server_env_file_path
+        env_file = env_file_path, server_env_file_path, default_env_file_path
         env_file_encoding = 'utf-8'
 
 
@@ -42,7 +41,7 @@ class _Bot(EnvConfig):
 class _Channels(EnvConfig):
     EnvConfig.Config.env_prefix = "channels__"
     announcements: int
-    change_log: int
+    changelog: int
     mailing_lists: int
     python_events: int
     python_news: int
@@ -106,6 +105,8 @@ class _Channels(EnvConfig):
     voice_chat_1: int
 
     big_brother_logs: int
+
+    duck_pond: int
 
 
 class _Roles(EnvConfig):
@@ -268,3 +269,5 @@ ERROR_REPLIES = [
     "Noooooo!!",
     "I can't believe you've done this",
 ]
+
+print(_Webhooks().dict())
