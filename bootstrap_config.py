@@ -62,7 +62,7 @@ for role_name in _Roles.__fields__:
 
     role_id = all_roles.get(role_name, None)
     if not role_id:
-        log.warning(f"Couldn't find the role {role_name} in the server")
+        log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
         continue
 
     config_str += f"roles__{role_name}={role_id}\n"
@@ -74,7 +74,7 @@ config_str += "\n#Channels\n"
 for channel_name in _Channels.__fields__:
     channel_id = all_channels.get(channel_name, None)
     if not channel_id:
-        log.warning(f"Couldn't find the channel {channel_name} in the server")
+        log.warning(f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used.")
         continue
 
     config_str += f"channels__{channel_name}={channel_id}\n"
@@ -84,7 +84,7 @@ config_str += "\n#Categories\n"
 for category_name in _Categories.__fields__:
     category_id = all_categories.get(category_name, None)
     if not category_id:
-        log.warning(f"Couldn't find the category {category_name} in the server")
+        log.warning(f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used.")
         continue
 
     config_str += f"categories__{category_name}={category_id}\n"
