@@ -4,7 +4,7 @@ from bot.constants import _Roles, _Channels, _Categories
 
 from bot.log import get_logger
 
-log = get_logger(__name__)
+log = get_logger("Config Bootstrapper")
 
 
 env_file_path = Path(".env.server")
