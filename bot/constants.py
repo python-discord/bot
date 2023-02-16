@@ -261,6 +261,25 @@ class _CodeBlock(EnvConfig):
 CodeBlock = _CodeBlock()
 
 
+class _Colours(EnvConfig):
+    EnvConfig.Config.env_prefix = "colours__"
+
+
+    blue: int
+    bright_green: int
+    orange: int
+    pink: int
+    purple: int
+    soft_green: int
+    soft_orange: int
+    soft_red: int
+    white: int
+    yellow: int
+
+
+Colours = _Colours()
+
+
 class _Free(EnvConfig):
     EnvConfig.Config.env_prefix = "free__"
 
