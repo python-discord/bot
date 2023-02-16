@@ -2,6 +2,11 @@ from pathlib import Path
 import requests
 from bot.constants import _Roles, _Channels, _Categories
 
+from bot.log import get_logger
+
+log = get_logger(__name__)
+
+
 env_file_path = Path(".env.server")
 
 token = "my_precious_token"  #Replace this with bot's token
@@ -31,13 +36,14 @@ def get_all_roles():
 
 
 def get_all_channels_and_categories():
-    channels = {} # could be text channels only as well
+    channels = {}  # could be text channels only as well
     categories = {}
     channels_url = f"{base_url}/guilds/{guild_id}/channels"
-    r = requests.get(url=channels_url, headers=headers)
-    all_channels = r.json()
 
-    for channel in all_channels:
+    r = requests.get(url=channels_url, headers=headers)
+    server_channels = r.json()
+
+    for channel in server_channels:
         channel_type = channel["type"]
         name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
         if channel_type == 4:
@@ -53,18 +59,34 @@ config_str = "#Roles\n"
 all_roles = get_all_roles()
 
 for role_name in _Roles.__fields__:
-    config_str += f"roles__{role_name}={all_roles.get(role_name)}\n"
+
+    role_id = all_roles.get(role_name, None)
+    if not role_id:
+        log.warning(f"Couldn't find the role {role_name} in the server")
+        continue
+
+    config_str += f"roles__{role_name}={role_id}\n"
 
 all_channels, all_categories = get_all_channels_and_categories()
 
 config_str += "\n#Channels\n"
 
 for channel_name in _Channels.__fields__:
-    config_str += f"channels__{channel_name}={all_channels.get(channel_name)}\n"
+    channel_id = all_channels.get(channel_name, None)
+    if not channel_id:
+        log.warning(f"Couldn't find the channel {channel_name} in the server")
+        continue
+
+    config_str += f"channels__{channel_name}={channel_id}\n"
 
 config_str += "\n#Categories\n"
 
 for category_name in _Categories.__fields__:
-    config_str += f"categories__{category_name}={all_categories.get(category_name)}\n"
+    category_id = all_categories.get(category_name, None)
+    if not category_id:
+        log.warning(f"Couldn't find the category {category_name} in the server")
+        continue
+
+    config_str += f"categories__{category_name}={category_id}\n"
 
 env_file_path.write_text(config_str)
