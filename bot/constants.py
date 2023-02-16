@@ -179,6 +179,7 @@ Categories = _Categories()
 
 
 class _Guild(BaseSettings):
+    EnvConfig.Config.env_prefix = "guild__"
     id: int
     invite: str
     roles: _Roles = Roles
