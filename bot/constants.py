@@ -29,7 +29,7 @@ DEBUG_MODE = True
 
 class EnvConfig(BaseSettings):
     class Config:
-        env_file = env_file_path, server_env_file_path, default_env_file_path, default_server_env_file_path
+        env_file = default_env_file_path, default_server_env_file_path, env_file_path, server_env_file_path,
         env_file_encoding = 'utf-8'
 
 
