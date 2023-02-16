@@ -269,5 +269,3 @@ ERROR_REPLIES = [
     "Noooooo!!",
     "I can't believe you've done this",
 ]
-
-print(_Webhooks().dict())
