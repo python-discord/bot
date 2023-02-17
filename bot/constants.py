@@ -12,8 +12,7 @@ their default values from `config-default.yml`.
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, BaseSettings, Field
-from pydantic.typing import Optional
+from pydantic import BaseModel, BaseSettings, Field, root_validator
 
 # Will add a check for the required keys
 
@@ -301,8 +300,14 @@ class _Colours(EnvConfig):
     white: int
     yellow: int
 
+    @root_validator(pre=True)
+    def parse_hex_values(cls, values):
+        for key, value in values.items():
+            values[key] = int(value, 16)
+        return values
 
-# Colours = _Colours()
+
+Colours = _Colours()
 
 
 class _Free(EnvConfig):
