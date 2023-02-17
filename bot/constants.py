@@ -437,6 +437,34 @@ class _Redis(EnvConfig):
 Redis = _Redis()
 
 
+class _CleanMessages(EnvConfig):
+    EnvConfig.Config.env_prefix = "clean__"
+
+    message_limit: int
+
+
+CleanMessages = _CleanMessages()
+
+
+class _Stats(EnvConfig):
+    EnvConfig.Config.env_prefix = "stats__"
+
+    presence_update_timeout: int
+    statsd_host: str
+
+
+Stats = _Stats()
+
+
+class _Cooldowns(EnvConfig):
+    EnvConfig.Config.env_prefix = "cooldowns__"
+
+    tags: int
+
+
+Cooldowns = _Cooldowns()
+
+
 # Bot replies
 NEGATIVE_REPLIES = [
     "Noooooo!!",
