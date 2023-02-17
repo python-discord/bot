@@ -1,7 +1,8 @@
 from pathlib import Path
-import requests
-from bot.constants import _Roles, _Channels, _Categories
 
+import requests
+
+from bot.constants import _Categories, _Channels, _Roles
 from bot.log import get_logger
 
 log = get_logger("Config Bootstrapper")
@@ -18,7 +19,8 @@ base_url = "https://discord.com/api/v10"
 headers = {"Authorization": f"Bot {token}"}
 
 
-def get_all_roles():
+def get_all_roles() -> dict:
+    """Fetches all the roles in a guild."""
     result = {}
 
     roles_url = f"{base_url}/guilds/{guild_id}/roles"
@@ -26,16 +28,14 @@ def get_all_roles():
     roles = r.json()
 
     for role in roles:
-        try:
-            name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
-            result[name] = role["id"]
-        except Exception as e:
-            pass
+        name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
+        result[name] = role["id"]
 
     return result
 
 
-def get_all_channels_and_categories():
+def get_all_channels_and_categories() -> (dict, dict):
+    """Fetches all the text channels & categories in a guild."""
     channels = {}  # could be text channels only as well
     categories = {}
     channels_url = f"{base_url}/guilds/{guild_id}/channels"
