@@ -107,6 +107,8 @@ class _Channels(EnvConfig):
     general_voice_1: int
     staff_voice: int
 
+    black_formatter: int
+
     code_help_chat_0: int
     code_help_chat_1: int
     staff_voice_chat: int
@@ -168,8 +170,11 @@ Roles = _Roles()
 class _Categories(EnvConfig):
     EnvConfig.Config.env_prefix = "categories__"
 
+    logs: int
     moderators: int
     modmail: int
+    appeals: int
+    appeals2: int
     voice: int
 
     # 2021 Summer Code Jam
@@ -184,7 +189,26 @@ class _Guild(EnvConfig):
 
     id: int
     invite: str
-    roles: _Roles = Roles
+
+    moderation_categories = [
+        Categories.moderators,
+        Categories.modmail,
+        Categories.logs,
+        Categories.appeals,
+        Categories.appeals2
+    ]
+    moderation_channels = [Channels.admins, Channels.admin_spam, Channels.mods]
+    modlog_blacklist = [
+        Channels.attachment_log,
+        Channels.message_log,
+        Channels.mod_log,
+        Channels.staff_voice,
+        Channels.filter_log
+    ]
+    reminder_whitelist = [Channels.bot_commands, Channels.dev_contrib, Channels.black_formatter]
+    moderation_roles = [Roles.admins, Roles.mod_team, Roles.moderators, Roles.owners]
+    staff_roles = [Roles.admins, Roles.helpers, Roles.mod_team, Roles.owners]
+
 
 
 Guild = _Guild()
