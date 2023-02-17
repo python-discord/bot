@@ -265,7 +265,6 @@ CodeBlock = _CodeBlock()
 class _Colours(EnvConfig):
     EnvConfig.Config.env_prefix = "colours__"
 
-
     blue: int
     bright_green: int
     orange: int
@@ -464,6 +463,22 @@ class _Cooldowns(EnvConfig):
 
 Cooldowns = _Cooldowns()
 
+
+class _Metabase(EnvConfig):
+    EnvConfig.Config.env_prefix = "metabase__"
+    EnvConfig.Config.fields = {
+        "username": {"env": "METABASE_USERNAME"},
+        "password": {"env": "METABASE_PASSWORD"}
+    }
+
+    username: Optional[str]
+    password: Optional[str]
+    base_url: str
+    public_url: str
+    max_session_age: int
+
+
+Metabase = _Metabase()
 
 # Bot replies
 NEGATIVE_REPLIES = [
