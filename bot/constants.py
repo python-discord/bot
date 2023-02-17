@@ -12,6 +12,7 @@ their default values from `config-default.yml`.
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseSettings, BaseModel
+from pydantic.typing import Optional
 
 # Will add a check for the required keys
 
@@ -277,7 +278,7 @@ class _Colours(EnvConfig):
     yellow: int
 
 
-Colours = _Colours()
+# Colours = _Colours()
 
 
 class _Free(EnvConfig):
@@ -419,6 +420,22 @@ class _VideoPermission(EnvConfig):
 
 
 VideoPermission = _VideoPermission()
+
+
+class _Redis(EnvConfig):
+    EnvConfig.Config.env_prefix = "redis__"
+    EnvConfig.Config.fields = {
+        "password": {"env": "REDIS_PASSWORD"}
+    }
+
+    host: str
+    password: Optional[str]
+    port: int
+    use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
+
+
+Redis = _Redis()
+
 
 # Bot replies
 NEGATIVE_REPLIES = [
