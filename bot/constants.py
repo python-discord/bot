@@ -212,7 +212,6 @@ class _Guild(EnvConfig):
     staff_roles = [Roles.admins, Roles.helpers, Roles.mod_team, Roles.owners]
 
 
-
 Guild = _Guild()
 
 
@@ -333,7 +332,7 @@ class Rule(BaseModel):
     max: int
 
 
-# Some in choosing an appropriate name for this is appreciated
+# Some help in choosing an appropriate name for this is appreciated
 class ExtendedRule(Rule):
     max_consecutive: int
 
@@ -598,6 +597,7 @@ class _Emojis(EnvConfig):
 
 Emojis = _Emojis()
 
+
 class _Icons(EnvConfig):
     EnvConfig.Config.env_prefix = "icons__"
 
@@ -653,7 +653,7 @@ class _Icons(EnvConfig):
     voice_state_red: str
 
 
-Emojis = _Emojis()
+Icons = _Icons()
 
 
 class _Filter(EnvConfig):
@@ -698,10 +698,13 @@ class _Filter(EnvConfig):
 Filter = _Filter()
 
 
-class Keys(EnvConfig):
+class _Keys(EnvConfig):
 
     github = Field(default="", env="GITHUB_API_KEY")
     site_api = Field(default="", env="BOT_API_KEY")
+
+
+Keys = _Keys()
 
 
 BOT_DIR = os.path.dirname(__file__)
