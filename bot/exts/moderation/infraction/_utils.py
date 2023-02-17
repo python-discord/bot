@@ -77,14 +77,14 @@ async def post_user(ctx: Context, user: MemberOrUser) -> t.Optional[dict]:
 
 
 async def post_infraction(
-        ctx: Context,
-        user: MemberOrUser,
-        infr_type: str,
-        reason: str,
-        duration_or_expiry: t.Optional[DurationOrExpiry] = None,
-        hidden: bool = False,
-        active: bool = True,
-        dm_sent: bool = False,
+    ctx: Context,
+    user: MemberOrUser,
+    infr_type: str,
+    reason: str,
+    duration_or_expiry: t.Optional[DurationOrExpiry] = None,
+    hidden: bool = False,
+    active: bool = True,
+    dm_sent: bool = False,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
@@ -95,10 +95,13 @@ async def post_infraction(
 
     current_time = arrow.utcnow()
 
-    if is_in_category(ctx.channel, Categories.modmail):
-        jump_url_text = "Infraction issued in a ModMail channel."
+    if any(
+        is_in_category(ctx.channel, category)
+        for category in (Categories.modmail, Categories.appeals, Categories.appeals2)
+    ):
+        jump_url = "Infraction issued in a ModMail channel."
     else:
-        jump_url_text = f"[Click here]({ctx.message.jump_url})"
+        jump_url = ctx.message.jump_url
 
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
@@ -108,7 +111,7 @@ async def post_infraction(
         "user": user.id,
         "active": active,
         "dm_sent": dm_sent,
-        "jump_url_text": jump_url_text,
+        "jump_url": jump_url,
         "inserted_at": current_time.isoformat(),
         "last_applied": current_time.isoformat(),
     }

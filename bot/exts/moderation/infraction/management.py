@@ -390,7 +390,7 @@ class ModManagement(commands.Cog):
         applied = time.discord_timestamp(last_applied)
         duration_edited = arrow.get(last_applied) > arrow.get(inserted_at)
         dm_sent = infraction["dm_sent"]
-        jump_url_text = infraction["jump_url_text"]
+        jump_url = infraction["jump_url"]
 
         # Format the user string.
         if user_obj := self.bot.get_user(user["id"]):
@@ -421,9 +421,12 @@ class ModManagement(commands.Cog):
         else:
             dm_sent_text = "Yes" if dm_sent else "No"
 
-        if jump_url_text == "":
+        if jump_url == "":
             # Infraction was issued prior to jump urls being stored in the database.
-            jump_url_text = "N/A"
+            jump_url = "N/A"
+        elif "discord.com" in jump_url:
+            jump_url = f"[Click here.]({jump_url})"
+            # Else, infraction was issued in ModMail category.
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}
@@ -437,7 +440,7 @@ class ModManagement(commands.Cog):
             Duration: {duration}
             Actor: <@{infraction["actor"]["id"]}>
             ID: `{infraction["id"]}`
-            Jump Url: {jump_url_text}
+            Jump URL: {jump_url}
             Reason: {infraction["reason"] or "*None*"}
             {"**===============**" if active else "==============="}
         """)
