@@ -25,14 +25,19 @@ default_env_file_path = Path(__file__).parent.parent / ".env.default"
 default_server_env_file_path = Path(__file__).parent.parent / ".env.server.default"
 
 
-FILE_LOGS = True
-DEBUG_MODE = True
-
-
 class EnvConfig(BaseSettings):
     class Config:
         env_file = default_env_file_path, default_server_env_file_path, env_file_path, server_env_file_path,
         env_file_encoding = 'utf-8'
+
+
+class Miscellaneous(EnvConfig):
+    debug: str = Field(env="BOT_DEBUG", default="true")
+    file_logs: str = Field(env="FILE_LOGS", default="false")
+
+
+FILE_LOGS = Miscellaneous.file_logs.lower() == "true"
+DEBUG_MODE = Miscellaneous.debug.lower() == "true"
 
 
 class _Bot(EnvConfig):
