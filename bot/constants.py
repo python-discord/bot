@@ -11,7 +11,7 @@ their default values from `config-default.yml`.
 """
 from enum import Enum
 from pathlib import Path
-from pydantic import BaseSettings, BaseModel
+from pydantic import BaseSettings, BaseModel, Field
 from pydantic.typing import Optional
 
 # Will add a check for the required keys
@@ -479,6 +479,50 @@ class _Metabase(EnvConfig):
 
 
 Metabase = _Metabase()
+
+
+class _BaseURLs(EnvConfig):
+    EnvConfig.Config.env_prefix = "urls__"
+
+    # Snekbox endpoints
+    snekbox_eval_api = Field(default="http://snekbox.default.svc.cluster.local/eval", env="SNEKBOX_EVAL_API")
+    snekbox_311_eval_api = Field(default="http://snekbox-311.default.svc.cluster.local/eval", env="SNEKBOX_311_EVAL_API")
+
+    # Discord API
+    discord_api: str
+
+    # Misc endpoints
+    bot_avatar: str
+    github_bot_repo: str
+
+    # Site
+    site: str
+    site_schema: str
+    site_api: str
+    site_api_schema: str
+
+
+BaseURLs = _BaseURLs()
+
+
+class _URLs(_BaseURLs):
+
+    # Discord API endpoints
+    discord_invite_api: str = "".join([BaseURLs.discord_api, "invites"])
+
+    # Base site vars
+    connect_max_retries: int
+    connect_cooldown: int
+
+    site_staff: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff"])
+    site_paste = "".join(["paste.", BaseURLs.site])
+
+    # Site endpoints
+    site_logs_view: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff/bot/logs"])
+    paste_service: str = "".join([BaseURLs.site_schema, "paste.", BaseURLs.site, "/{key}"])
+
+
+URLS = _URLs()
 
 # Bot replies
 NEGATIVE_REPLIES = [
