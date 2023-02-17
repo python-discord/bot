@@ -31,9 +31,12 @@ class EnvConfig(BaseSettings):
         env_file_encoding = 'utf-8'
 
 
-class Miscellaneous(EnvConfig):
+class _Miscellaneous(EnvConfig):
     debug: str = Field(env="BOT_DEBUG", default="true")
     file_logs: str = Field(env="FILE_LOGS", default="false")
+
+
+Miscellaneous = _Miscellaneous()
 
 
 FILE_LOGS = Miscellaneous.file_logs.lower() == "true"
