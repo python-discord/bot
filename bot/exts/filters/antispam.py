@@ -129,7 +129,7 @@ class AntiSpam(Cog):
 
         # Fetch the rule configuration with the highest rule interval.
         max_interval_config = max(
-            AntiSpamConfig.rules.values(),
+            AntiSpamConfig.rules.dict().values(),
             key=itemgetter('interval')
         )
         self.max_interval = max_interval_config['interval']
@@ -178,8 +178,8 @@ class AntiSpam(Cog):
         earliest_relevant_at = arrow.utcnow() - timedelta(seconds=self.max_interval)
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
-        for rule_name in AntiSpamConfig.rules:
-            rule_config = AntiSpamConfig.rules[rule_name]
+        for rule_name, rule_config in AntiSpamConfig.rules:
+            rule_config = rule_config.dict()
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
@@ -297,10 +297,13 @@ class AntiSpam(Cog):
         self.cache.update(after)
 
 
-def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
+def validate_config(rules_: Mapping = None) -> Dict[str, str]:
     """Validates the antispam configs."""
+    if not rules_:
+        rules_ = AntiSpamConfig.rules.dict()
     validation_errors = {}
     for name, config in rules_.items():
+        config = config
         if name not in RULE_FUNCTION_MAPPING:
             log.error(
                 f"Unrecognized antispam rule `{name}`. "
