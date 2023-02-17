@@ -39,9 +39,9 @@ class _Bot(EnvConfig):
     EnvConfig.Config.env_prefix = "bot__"
 
     prefix: str
-    sentry_dsn: str | None
-    token: str
-    trace_loggers: str = "*"
+    sentry_dsn: str = Field(default="", env="BOT_SENTRY_DSN")
+    token: str = Field(default="", env="BOT_TOKEN")
+    trace_loggers = Field(default="*", env="BOT_TRACE_LOGGERS")
 
 
 Bot = _Bot()
