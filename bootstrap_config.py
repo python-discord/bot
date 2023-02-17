@@ -9,8 +9,8 @@ log = get_logger("Config Bootstrapper")
 
 env_file_path = Path(".env.server")
 
-token = "my_precious_token"  #Replace this with bot's token
-guild_id = 999999999999999999  #Replace this with target guild id
+token = "my_precious_token"  # Replace this with bot's token
+guild_id = 999999999999999999  # Replace this with target guild id
 
 
 base_url = "https://discord.com/api/v10"
@@ -27,7 +27,7 @@ def get_all_roles():
 
     for role in roles:
         try:
-            name = "_".join(part.lower() for part in role["name"].split(" "))
+            name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
             result[name] = role["id"]
         except Exception as e:
             pass
