@@ -14,9 +14,6 @@ concurrency:
 
 jobs:
   build:
-    outputs:
-      job_status: ${{ job.status }}
-
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     name: Build & Push
     runs-on: ubuntu-latest
@@ -64,13 +61,3 @@ jobs:
             ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}
           build-args: |
             git_sha=${{ github.sha }}
-
-  call_status_embed:
-    name: Trigger the status embed workflow
-    needs: build
-    if: always()
-    uses: ./.github/workflows/status_embed.yaml
-    with:
-      job_status: ${{ needs.build.outputs.job_status }}
-    secrets:
-      webhook_token: ${{ secrets.GHA_WEBHOOK_TOKEN }}
