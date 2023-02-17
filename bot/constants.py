@@ -100,6 +100,7 @@ class _Channels(EnvConfig):
     mod_announcements: int
     staff_announcements: int
     staff_info: int
+    staff_lounge: int
 
     admins_voice: int
     code_help_voice_0: int
@@ -651,7 +652,51 @@ class _Icons(EnvConfig):
     voice_state_green: str
     voice_state_red: str
 
+
 Emojis = _Emojis()
+
+
+class _Filter(EnvConfig):
+    EnvConfig.Config.env_prefix = "filters__"
+
+    filter_domains: bool
+    filter_everyone_ping: bool
+    filter_invites: bool
+    filter_zalgo: bool
+    watch_regex: bool
+    watch_rich_embeds: bool
+
+    # Notifications are not expected for "watchlist" type filters
+
+    notify_user_domains: bool
+    notify_user_everyone_ping: bool
+    notify_user_invites: bool
+    notify_user_zalgo: bool
+
+    offensive_msg_delete_days: int
+    ping_everyone: bool
+
+    channel_whitelist = [
+        Channels.admins,
+        Channels.big_brother_logs,
+        Channels.dev_log,
+        Channels.message_log,
+        Channels.mod_log,
+        Channels.staff_lounge
+    ]
+    role_whitelist = [
+        Roles.admins,
+        Roles.helpers,
+        Roles.moderators,
+        Roles.owners,
+        Roles.python_community,
+        Roles.sprinters,
+        Roles.partners
+    ]
+
+
+Filter = _Filter()
+
 
 class Keys(EnvConfig):
 
