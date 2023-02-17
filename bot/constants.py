@@ -11,7 +11,8 @@ their default values from `config-default.yml`.
 """
 from enum import Enum
 from pathlib import Path
-from pydantic import BaseSettings, BaseModel, Field
+
+from pydantic import BaseModel, BaseSettings, Field
 from pydantic.typing import Optional
 
 # Will add a check for the required keys
