@@ -121,7 +121,7 @@ class AntiSpam(Cog):
     def __init__(self, bot: Bot, validation_errors: Dict[str, str]) -> None:
         self.bot = bot
         self.validation_errors = validation_errors
-        role_id = AntiSpamConfig.punishment['role_id']
+        role_id = AntiSpamConfig.punishment.role_id
         self.muted_role = Object(role_id)
         self.expiration_date_converter = Duration()
 
@@ -229,7 +229,7 @@ class AntiSpam(Cog):
     async def punish(self, msg: Message, member: Member, reason: str) -> None:
         """Punishes the given member for triggering an antispam rule."""
         if not any(role.id == self.muted_role.id for role in member.roles):
-            remove_role_after = AntiSpamConfig.punishment['remove_after']
+            remove_role_after = AntiSpamConfig.punishment.remove_after
 
             # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
