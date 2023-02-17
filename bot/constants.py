@@ -546,7 +546,7 @@ class _URLs(_BaseURLs):
     paste_service: str = "".join([BaseURLs.site_schema, "paste.", BaseURLs.site, "/{key}"])
 
 
-URLS = _URLs()
+URLs = _URLs()
 
 
 class Keys(EnvConfig):
@@ -571,7 +571,6 @@ MODERATION_CATEGORIES = Guild.moderation_categories
 
 # Git SHA for Sentry
 GIT_SHA = os.environ.get("GIT_SHA", "development")
-
 
 
 # Bot replies
