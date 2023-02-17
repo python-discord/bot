@@ -57,6 +57,7 @@ Bot = _Bot()
 
 class _Channels(EnvConfig):
     EnvConfig.Config.env_prefix = "channels__"
+
     announcements: int
     changelog: int
     mailing_lists: int
@@ -126,8 +127,8 @@ class _Channels(EnvConfig):
     voice_chat_1: int
 
     big_brother_logs: int
-
     duck_pond: int
+    roles: int
 
 
 Channels = _Channels()
@@ -138,7 +139,6 @@ class _Roles(EnvConfig):
     EnvConfig.Config.env_prefix = "roles__"
 
     # Self-assignable roles, see the Subscribe cog
-    advent_of_code: int
     advent_of_code: int
     announcements: int
     lovefest: int
@@ -284,9 +284,9 @@ class _CodeBlock(EnvConfig):
     EnvConfig.Config.env_prefix = "code_block__"
 
     # The channels in which code blocks will be detected. They are not subject to a cooldown.
-    channel_whitelist: int = Channels.bot_commands
+    channel_whitelist: list[int] = [Channels.bot_commands]
     # The channels which will be affected by a cooldown. These channels are also whitelisted.
-    cooldown_channels: int = Channels.python_general
+    cooldown_channels: list[int] = [Channels.python_general]
 
     cooldown_seconds: int
     minimum_lines: int
@@ -359,7 +359,6 @@ class Rules(BaseModel):
 
 class _AntiSpam(EnvConfig):
     EnvConfig.Config.env_prefix = 'anti_spam__'
-
     EnvConfig.Config.env_nested_delimiter = '__'
 
     cache_size: int
