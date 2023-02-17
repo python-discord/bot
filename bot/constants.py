@@ -11,7 +11,7 @@ their default values from `config-default.yml`.
 """
 from enum import Enum
 from pathlib import Path
-from pydantic import BaseSettings
+from pydantic import BaseSettings, BaseModel
 
 # Will add a check for the required keys
 
@@ -289,6 +289,50 @@ class _Free(EnvConfig):
 
 
 Free = _Free()
+
+
+class Punishment(BaseModel):
+    remove_after: int
+    role_id: int = Roles.muted
+
+
+class Rule(BaseModel):
+    interval: int
+    max: int
+
+
+# Some in choosing an appropriate name for this is appreciated
+class ExtendedRule(Rule):
+    max_consecutive: int
+
+
+class Rules(BaseModel):
+    attachments: Rule
+    burst: Rule
+    chars: Rule
+    discord_emojis: Rule
+    duplicates: Rule
+    links: Rule
+    mentions: Rule
+    newlines: ExtendedRule
+    role_mentions: Rule
+
+
+class _AntiSpam(EnvConfig):
+    EnvConfig.Config.env_prefix = 'anti_spam__'
+
+    EnvConfig.Config.env_nested_delimiter = '__'
+
+    cache_size: int
+
+    clean_offending: bool
+    ping_everyone: bool
+
+    punishment: Punishment
+    rules: Rules
+
+
+AntiSpam = _AntiSpam()
 
 
 class _HelpChannels(EnvConfig):
