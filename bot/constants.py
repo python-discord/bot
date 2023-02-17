@@ -423,12 +423,9 @@ VideoPermission = _VideoPermission()
 
 class _Redis(EnvConfig):
     EnvConfig.Config.env_prefix = "redis__"
-    EnvConfig.Config.fields = {
-        "password": {"env": "REDIS_PASSWORD"}
-    }
 
     host: str
-    password: Optional[str]
+    password = Field(default="", env="REDIS_PASSWORD")
     port: int
     use_fakeredis: bool  # If this is True, Bot will use fakeredis.aioredis
 
@@ -466,13 +463,9 @@ Cooldowns = _Cooldowns()
 
 class _Metabase(EnvConfig):
     EnvConfig.Config.env_prefix = "metabase__"
-    EnvConfig.Config.fields = {
-        "username": {"env": "METABASE_USERNAME"},
-        "password": {"env": "METABASE_PASSWORD"}
-    }
 
-    username: Optional[str]
-    password: Optional[str]
+    username = Field(default="", env="METABASE_USERNAME")
+    password = Field(default="", env="METABASE_PASSWORD")
     base_url: str
     public_url: str
     max_session_age: int
