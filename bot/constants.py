@@ -392,6 +392,8 @@ RedirectOutput = _RedirectOutput()
 class _DuckPond(EnvConfig):
     EnvConfig.Config.env_prefix = 'duck_pond__'
 
+    threshold: int
+
     channel_blacklist: list[str] = [
         Channels.announcements,
         Channels.python_news,
@@ -548,6 +550,108 @@ class _URLs(_BaseURLs):
 
 URLs = _URLs()
 
+
+class _Emojis(EnvConfig):
+    EnvConfig.Config.env_prefix = "emojis__"
+
+    badge_bug_hunter: str
+    badge_bug_hunter_level_2: str
+    badge_early_supporter: str
+    badge_hypesquad: str
+    badge_hypesquad_balance: str
+    badge_hypesquad_bravery: str
+    badge_hypesquad_brilliance: str
+    badge_partner: str
+    badge_staff: str
+    badge_verified_bot_developer: str
+    verified_bot: str
+    bot: str
+
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str  # noqa: E704
+    defcon_update: str  # noqa: E704
+
+    failmail: str
+
+    incident_actioned: str
+    incident_investigating: str
+    incident_unactioned: str
+
+    status_dnd: str
+    status_idle: str
+    status_offline: str
+    status_online: str
+
+    ducky_dave: str
+
+    trashcan: str
+
+    bullet: str
+    check_mark: str
+    cross_mark: str
+    new: str
+    pencil: str
+
+    ok_hand: str
+
+
+Emojis = _Emojis()
+
+class _Icons(EnvConfig):
+    EnvConfig.Config.env_prefix = "icons__"
+
+    crown_blurple: str
+    crown_green: str
+    crown_red: str
+
+    defcon_denied: str    # noqa: E704
+    defcon_shutdown: str  # noqa: E704
+    defcon_unshutdown: str   # noqa: E704
+    defcon_update: str   # noqa: E704
+
+    filtering: str
+
+    green_checkmark: str
+    green_questionmark: str
+    guild_update: str
+
+    hash_blurple: str
+    hash_green: str
+    hash_red: str
+
+    message_bulk_delete: str
+    message_delete: str
+    message_edit: str
+
+    pencil: str
+
+    questionmark: str
+
+    remind_blurple: str
+    remind_green: str
+    remind_red: str
+
+    sign_in: str
+    sign_out: str
+
+    superstarify: str
+    unsuperstarify: str
+
+    token_removed: str
+
+    user_ban: str
+    user_mute: str
+    user_unban: str
+    user_unmute: str
+    user_update: str
+    user_verified: str
+    user_warn: str
+
+    voice_state_blue: str
+    voice_state_green: str
+    voice_state_red: str
+
+Emojis = _Emojis()
 
 class Keys(EnvConfig):
 
