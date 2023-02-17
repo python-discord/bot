@@ -517,6 +517,13 @@ class _URLs(_BaseURLs):
 
 URLS = _URLs()
 
+
+class Keys(EnvConfig):
+
+    github = Field(default="", env="GITHUB_API_KEY")
+    site_api = Field(default="", env="BOT_API_KEY")
+
+
 # Bot replies
 NEGATIVE_REPLIES = [
     "Noooooo!!",
