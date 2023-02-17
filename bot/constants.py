@@ -9,6 +9,7 @@ the custom configuration. Any settings left
 out in the custom user configuration will stay
 their default values from `config-default.yml`.
 """
+import os
 from enum import Enum
 from pathlib import Path
 
@@ -552,6 +553,25 @@ class Keys(EnvConfig):
 
     github = Field(default="", env="GITHUB_API_KEY")
     site_api = Field(default="", env="BOT_API_KEY")
+
+
+BOT_DIR = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
+
+# Default role combinations
+MODERATION_ROLES = Guild.moderation_roles
+STAFF_ROLES = Guild.staff_roles
+STAFF_PARTNERS_COMMUNITY_ROLES = STAFF_ROLES + [Roles.partners, Roles.python_community]
+
+# Channel combinations
+MODERATION_CHANNELS = Guild.moderation_channels
+
+# Category combinations
+MODERATION_CATEGORIES = Guild.moderation_categories
+
+# Git SHA for Sentry
+GIT_SHA = os.environ.get("GIT_SHA", "development")
+
 
 
 # Bot replies
