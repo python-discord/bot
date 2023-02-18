@@ -202,7 +202,7 @@ Categories = _Categories()
 class _Guild(EnvConfig):
     EnvConfig.Config.env_prefix = "guild__"
 
-    id: int = Field(default=267624335836053506)
+    id: int = Field(default=267624335836053506, env="GUILD_ID")
     invite: str = Field(default="https://discord.gg/python")
 
     moderation_categories = [
