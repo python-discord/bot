@@ -261,15 +261,21 @@ class ThreadArchiveTimes(Enum):
     WEEK = 10080
 
 
+class Webhook(BaseModel):
+    id: int
+    channel: int
+
+
 class _Webhooks(EnvConfig):
     EnvConfig.Config.env_prefix = "webhooks__"
+    EnvConfig.Config.env_nested_delimiter = '__'
 
-    big_brother: int = Field(default=569133704568373283)
-    dev_log: int = Field(default=680501655111729222)
-    duck_pond: int = Field(default=637821475327311927)
-    incidents: int = Field(default=816650601844572212)
-    incidents_archive: int = Field(default=720671599790915702)
-    python_news: int = Field(default=704381182279942324)
+    big_brother: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother_logs)
+    dev_log: Webhook = Webhook(id=680501655111729222, channel=Channels.dev_log)
+    duck_pond: Webhook = Webhook(id=637821475327311927, channel=Channels.duck_pond)
+    incidents: Webhook = Webhook(id=816650601844572212, channel=Channels.incidents)
+    incidents_archive: Webhook = Webhook(id=720671599790915702, channel=Channels.incidents_archive)
+    python_news: Webhook = Webhook(id=704381182279942324, channel=Channels.python_news)
 
 
 Webhooks = _Webhooks()
@@ -427,8 +433,8 @@ DuckPond = _DuckPond()
 class _PythonNews(EnvConfig):
     EnvConfig.Config.env_prefix = "python_news__"
 
-    channel: int = Channels.python_news
-    webhook: int = Webhooks.python_news
+    channel: int = Webhooks.python_news.channel
+    webhook: int = Webhooks.python_news.id
     mail_lists: list[str] = Field(default=['python-ideas', 'python-announce-list', 'pypi-announce', 'python-dev'])
 
 

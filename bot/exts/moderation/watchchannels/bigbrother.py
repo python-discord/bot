@@ -20,7 +20,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         super().__init__(
             bot,
             destination=Channels.big_brother_logs,
-            webhook_id=Webhooks.big_brother,
+            webhook_id=Webhooks.big_brother.id,
             api_endpoint='bot/infractions',
             api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at', 'limit': 10_000},
             logger=log
