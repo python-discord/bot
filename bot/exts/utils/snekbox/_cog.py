@@ -6,7 +6,7 @@ import re
 from functools import partial
 from operator import attrgetter
 from textwrap import dedent
-from typing import Literal, NamedTuple, Optional, TYPE_CHECKING, Tuple
+from typing import Literal, NamedTuple, Optional, TYPE_CHECKING
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
@@ -233,7 +233,14 @@ class Snekbox(Cog):
         args.extend(["-s", TIMEIT_SETUP_WRAPPER.format(setup=setup_code), code])
         return args
 
-    async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
+    async def format_output(
+        self,
+        output: str,
+        max_lines: int = MAX_OUTPUT_BLOCK_LINES,
+        max_chars: int = MAX_OUTPUT_BLOCK_CHARS,
+        line_nums: bool = True,
+        mark_no_output: bool = True
+    ) -> tuple[str, str | None]:
         """
         Format the output and return a tuple of the formatted output and a URL to the full output.
 
@@ -258,24 +265,26 @@ class Snekbox(Cog):
         lines = output.count("\n")
 
         if lines > 0:
-            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split('\n'), 1)]
-            output = output[:MAX_OUTPUT_BLOCK_LINES+1]  # Limiting to max+1 lines
+            if line_nums:
+                output = [f"{i:03d} | {line}" for i, line in enumerate(output.split('\n'), 1)]
+            output = output[:max_lines+1]  # Limiting to max+1 lines
             output = "\n".join(output)
 
-        if lines > MAX_OUTPUT_BLOCK_LINES:
+        if lines > max_lines:
             truncated = True
-            if len(output) >= MAX_OUTPUT_BLOCK_CHARS:
-                output = f"{output[:MAX_OUTPUT_BLOCK_CHARS]}\n... (truncated - too long, too many lines)"
+            if len(output) >= max_chars:
+                output = f"{output[:max_chars]}\n... (truncated - too long, too many lines)"
             else:
                 output = f"{output}\n... (truncated - too many lines)"
-        elif len(output) >= MAX_OUTPUT_BLOCK_CHARS:
+        elif len(output) >= max_chars:
             truncated = True
-            output = f"{output[:MAX_OUTPUT_BLOCK_CHARS]}\n... (truncated - too long)"
+            output = f"{output[:max_chars]}\n... (truncated - too long)"
 
         if truncated:
             paste_link = await self.upload_output(original_output)
 
-        output = output or "[No output]"
+        if mark_no_output and not output:
+            output = "[No output]"
 
         return output, paste_link
 
@@ -373,11 +382,39 @@ class Snekbox(Cog):
 
                 msg += f"\n{Emojis.failed_file} {blocked_msg}"
 
+            # Split text files
+            text_files = [f for f in allowed if f.suffix in TXT_LIKE_FILES]
+            # Inline until budget, then upload to paste service
+            budget_lines = MAX_OUTPUT_BLOCK_LINES
+            budget_chars = MAX_OUTPUT_BLOCK_CHARS
+            for file in text_files:
+                file_text = file.content.decode("utf-8", errors="replace") or "[Empty]"
+                # Override to always allow 1 line and < 50 chars, since this is less than a link
+                if len(file_text) < 50 and file_text.count("\n") < 2:
+                    msg += f"\n`{file.name}`\n```\n{file_text}\n```"
+                # otherwise, use budget
+                else:
+                    format_text, link_text = await self.format_output(
+                        file_text,
+                        budget_lines,
+                        budget_chars,
+                        line_nums=False,
+                        mark_no_output=False
+                    )
+                    # With any link, use it (don't use budget)
+                    if link_text:
+                        msg += f"\n`{file.name}`\n{link_text}"
+                    else:
+                        msg += f"\n`{file.name}`\n```\n{format_text}\n```"
+                        budget_lines -= file_text.count("\n")
+                        budget_chars -= len(file_text)
+
             filter_cog: Filtering | None = self.bot.get_cog("Filtering")
             if filter_cog and (await filter_cog.filter_snekbox_output(msg, ctx.message)):
                 return await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
 
-            files = [f.to_file() for f in allowed]
+            # Upload remaining non-text files
+            files = [f.to_file() for f in allowed if f not in text_files]
             allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
             view = self.build_python_version_switcher_view(job.version, ctx, job)
             response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
