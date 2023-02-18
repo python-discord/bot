@@ -76,6 +76,10 @@ if not hasattr(sys, "_setup_finished"):
 """
 
 MAX_PASTE_LENGTH = 10_000
+# Max to display in a codeblock before sending to a paste service
+# This also applies to text files
+MAX_OUTPUT_BLOCK_LINES = 10
+MAX_OUTPUT_BLOCK_CHARS = 1000
 
 # The Snekbox commands' whitelists and blacklists.
 NO_SNEKBOX_CHANNELS = (Channels.python_general,)
@@ -255,18 +259,18 @@ class Snekbox(Cog):
 
         if lines > 0:
             output = [f"{i:03d} | {line}" for i, line in enumerate(output.split('\n'), 1)]
-            output = output[:11]  # Limiting to only 11 lines
+            output = output[:MAX_OUTPUT_BLOCK_LINES+1]  # Limiting to max+1 lines
             output = "\n".join(output)
 
-        if lines > 10:
+        if lines > MAX_OUTPUT_BLOCK_LINES:
             truncated = True
-            if len(output) >= 1000:
-                output = f"{output[:1000]}\n... (truncated - too long, too many lines)"
+            if len(output) >= MAX_OUTPUT_BLOCK_CHARS:
+                output = f"{output[:MAX_OUTPUT_BLOCK_CHARS]}\n... (truncated - too long, too many lines)"
             else:
                 output = f"{output}\n... (truncated - too many lines)"
-        elif len(output) >= 1000:
+        elif len(output) >= MAX_OUTPUT_BLOCK_CHARS:
             truncated = True
-            output = f"{output[:1000]}\n... (truncated - too long)"
+            output = f"{output[:MAX_OUTPUT_BLOCK_CHARS]}\n... (truncated - too long)"
 
         if truncated:
             paste_link = await self.upload_output(original_output)
