@@ -66,6 +66,11 @@ class FileAttachment:
         """Return the file suffix."""
         return Path(self.path).suffix
 
+    @property
+    def name(self) -> str:
+        """Return the file name."""
+        return Path(self.path).name
+
     @classmethod
     def from_dict(cls, data: dict, size_limit: int = FILE_SIZE_LIMIT) -> FileAttachment:
         """Create a FileAttachment from a dict response."""
