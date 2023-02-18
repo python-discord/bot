@@ -401,6 +401,7 @@ class Snekbox(Cog):
                         line_nums=False,
                         mark_no_output=False
                     )
+                    format_text = format_text or "[Empty]"
                     # With any link, use it (don't use budget)
                     if link_text:
                         msg += f"\n`{file.name}`\n{link_text}"
