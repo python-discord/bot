@@ -1,17 +1,35 @@
+import os
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 
 from bot.constants import _Categories, _Channels, _Roles
 from bot.log import get_logger
 
+load_dotenv()
 log = get_logger("Config Bootstrapper")
 
-
 env_file_path = Path(".env.server")
+token = os.getenv("BOT_TOKEN", None)
+guild_id = os.getenv("GUILD_ID", None)
 
-token = "my_precious_token"  # Replace this with bot's token
-guild_id = 999999999999999999  # Replace this with target guild id
+
+if not token:
+    message = (
+        "Couldn't find BOT_TOKEN in the environment variables."
+        "Make sure to add it to the `.env` file likewise: `BOT_TOKEN=value_of_your_bot_token`"
+    )
+    log.warning(message)
+    raise ValueError(message)
+
+if not guild_id:
+    message = (
+        "Couldn't find GUILD_ID in the environment variables."
+        "Make sure to add it to the `.env` file likewise: `GUILD_ID=value_of_your_discord_server_id`"
+    )
+    log.warning(message)
+    raise ValueError(message)
 
 
 base_url = "https://discord.com/api/v10"
