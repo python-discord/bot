@@ -176,6 +176,7 @@ class Snekbox(Cog):
         job: EvalJob,
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
+        alt_python_version: PythonVersion
         if current_python_version == "3.10":
             alt_python_version = "3.11"
         else:
