@@ -73,6 +73,7 @@ def get_all_channels_and_categories() -> (dict, dict):
 
 
 def get_channel_webhooks(channel_id_: int) -> dict:
+    """Fetches webhooks of a particular channel."""
     result = {}
     webhooks_url = f"{base_url}/channels/{channel_id_}/webhooks"
     r = requests.get(url=webhooks_url, headers=headers)
@@ -86,7 +87,7 @@ def get_channel_webhooks(channel_id_: int) -> dict:
 
 
 def create_webhook(name: str, channel_id_: int) -> tuple[int, str]:
-
+    """Creates a new webhook for a particular channel."""
     create_webhook_url = f"{base_url}/channels/{channel_id_}/webhooks"
     payload = {"name": name}
 
