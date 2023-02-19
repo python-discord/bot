@@ -4,7 +4,7 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-from bot.constants import _Categories, _Channels, _Roles
+from bot.constants import _Categories, _Channels, _Roles, _Webhooks
 from bot.log import get_logger
 
 load_dotenv()
@@ -72,6 +72,33 @@ def get_all_channels_and_categories() -> (dict, dict):
     return channels, categories
 
 
+def get_channel_webhooks(channel_id_: int) -> dict:
+    result = {}
+    webhooks_url = f"{base_url}/channels/{channel_id_}/webhooks"
+    r = requests.get(url=webhooks_url, headers=headers)
+    webhooks = r.json()
+
+    for webhook in webhooks:
+        name = "_".join(part.lower() for part in webhook["name"].split(" ")).replace("-", "_")
+        result[name] = webhook["id"]
+
+    return result
+
+
+def create_webhook(name: str, channel_id_: int) -> tuple[int, str]:
+
+    create_webhook_url = f"{base_url}/channels/{channel_id_}/webhooks"
+    payload = {"name": name}
+
+    r = requests.post(url=create_webhook_url, headers=headers, json=payload)
+    new_webhook = r.json()
+    webhook_id_ = new_webhook["id"]
+    webhook_token = new_webhook["token"]
+    webhook_url = f"https://discord.com/api/webhooks/{webhook_id_}/{webhook_token}"
+
+    return webhook_id_, webhook_url
+
+
 config_str = "#Roles\n"
 
 all_roles = get_all_roles()
@@ -106,5 +133,24 @@ for category_name in _Categories.__fields__:
         continue
 
     config_str += f"categories__{category_name}={category_id}\n"
+
+
+env_file_path.write_text(config_str)
+
+config_str += "\n#Webhooks\n"
+
+Webhooks = _Webhooks()
+
+for webhook_name, webhook_model in Webhooks:
+    channel_webhooks = get_channel_webhooks(webhook_model.channel)
+    webhook_ids = [int(id) for id in channel_webhooks.values()]
+    if webhook_model.id in webhook_ids:
+        log.info(f"Webhook {webhook_name} already exists, skipping.")
+        continue
+
+    webhook_id, webhook_url = create_webhook(f"{webhook_name}-testo", webhook_model.channel)
+    config_str += f"webhooks__{webhook_name}__id={webhook_id}\n"
+    config_str += f"webhooks__{webhook_name}__channel={webhook_model.channel}\n"
+    config_str += f"webhooks__{webhook_name}__url={webhook_url}\n"
 
 env_file_path.write_text(config_str)
