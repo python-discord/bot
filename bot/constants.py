@@ -12,6 +12,7 @@ their default values from `config-default.yml`.
 import os
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 from pydantic import BaseModel, BaseSettings, Field, root_validator
 
@@ -263,7 +264,7 @@ class ThreadArchiveTimes(Enum):
 
 class Webhook(BaseModel):
     id: int
-    channel: int
+    channel: Optional[int]
 
 
 class _Webhooks(EnvConfig):
