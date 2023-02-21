@@ -52,7 +52,7 @@ def get_all_roles() -> dict:
     return result
 
 
-def get_all_channels_and_categories() -> (dict, dict):
+def get_all_channels_and_categories() -> tuple[dict[str, str], dict[str, str]]:
     """Fetches all the text channels & categories in a guild."""
     channels = {}  # could be text channels only as well
     categories = {}
@@ -82,7 +82,7 @@ def get_webhook(webhook_id_: int) -> dict:
     return {}
 
 
-def create_webhook(name: str, channel_id_: int) -> tuple[int, str]:
+def create_webhook(name: str, channel_id_: int) -> str:
     """Creates a new webhook for a particular channel."""
     create_webhook_url = f"{base_url}/channels/{channel_id_}/webhooks"
     payload = {"name": name}
