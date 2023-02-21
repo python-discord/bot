@@ -141,6 +141,5 @@ for webhook_name, webhook_model in Webhooks:
     else:
         webhook_id = webhook["id"]
     config_str += f"webhooks__{webhook_name}__id={webhook_id}\n"
-    config_str += f"webhooks__{webhook_name}__channel={webhook_model.channel}\n"
 
 env_file_path.write_text(config_str)
