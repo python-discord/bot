@@ -385,8 +385,9 @@ class Snekbox(Cog):
             # Split text files
             text_files = [f for f in allowed if f.suffix in TXT_LIKE_FILES]
             # Inline until budget, then upload to paste service
-            budget_lines = MAX_OUTPUT_BLOCK_LINES
-            budget_chars = MAX_OUTPUT_BLOCK_CHARS
+            # Budget is shared with stdout, so subtract what we've already used
+            budget_lines = MAX_OUTPUT_BLOCK_LINES - (output.count("\n") + 1)
+            budget_chars = MAX_OUTPUT_BLOCK_CHARS - len(output)
             for file in text_files:
                 file_text = file.content.decode("utf-8", errors="replace") or "[Empty]"
                 # Override to always allow 1 line and <= 50 chars, since this is less than a link
