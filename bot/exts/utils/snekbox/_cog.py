@@ -389,8 +389,8 @@ class Snekbox(Cog):
             budget_chars = MAX_OUTPUT_BLOCK_CHARS
             for file in text_files:
                 file_text = file.content.decode("utf-8", errors="replace") or "[Empty]"
-                # Override to always allow 1 line and < 50 chars, since this is less than a link
-                if len(file_text) < 50 and file_text.count("\n") < 2:
+                # Override to always allow 1 line and <= 50 chars, since this is less than a link
+                if len(file_text) <= 50 and not file_text.count("\n"):
                     msg += f"\n`{file.name}`\n```\n{file_text}\n```"
                 # otherwise, use budget
                 else:
