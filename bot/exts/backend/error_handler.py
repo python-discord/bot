@@ -2,7 +2,7 @@ import copy
 import difflib
 import typing as t
 
-from discord import Embed, Interaction
+from discord import Embed, Interaction, utils
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
 from sentry_sdk import push_scope
@@ -23,8 +23,19 @@ class ErrorHandler(Cog):
         self.bot = bot
 
     @staticmethod
-    async def _can_run(_: Interaction) -> bool:
-        return False
+    async def _can_run(ctx: Context) -> bool:
+        """
+        Add checks for the `get_command_ctx` function here.
+
+        Use discord.utils to run the checks.
+        """
+        checks = []
+        predicates = checks
+        if not predicates:
+            # Since we have no checks, then we just return True.
+            return True
+
+        return await utils.async_all(predicate(ctx) for predicate in predicates)
 
     def _get_error_embed(self, title: str, body: str) -> Embed:
         """Return an embed that contains the exception."""
@@ -164,7 +175,7 @@ class ErrorHandler(Cog):
             return True
         return False
 
-    async def try_get_tag(self, interaction: Interaction, can_run: t.Callable[[Interaction], bool] = False) -> None:
+    async def try_get_tag(self, ctx: Context, can_run: t.Callable[[Interaction], bool] = False) -> None:
         """
         Attempt to display a tag by interpreting the command name as a tag name.
 
@@ -172,29 +183,30 @@ class ErrorHandler(Cog):
         by `on_command_error`, but the `invoked_from_error_handler` attribute will be added to
         the context to prevent infinite recursion in the case of a CommandNotFound exception.
         """
-        tags_get_command = self.bot.get_command("tags get")
-        tags_get_command.can_run = can_run if can_run else self._can_run
-        if not tags_get_command:
-            log.debug("Not attempting to parse message as a tag as could not find `tags get` command.")
+        tags_cog = self.bot.get_cog("Tags")
+        if not tags_cog:
+            log.debug("Not attempting to parse message as a tag as could not find `Tags` cog.")
             return
+        tags_get_command = tags_cog.get_command_ctx
+        can_run = can_run if can_run else self._can_run
 
-        interaction.invoked_from_error_handler = True
+        ctx.invoked_from_error_handler = True
 
         log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
         try:
-            if not await tags_get_command.can_run(interaction):
+            if not await can_run(ctx):
                 log.debug(log_msg)
                 return
         except errors.CommandError as tag_error:
             log.debug(log_msg)
-            await self.on_command_error(interaction, tag_error)
+            await self.on_command_error(ctx, tag_error)
             return
 
-        if await interaction.invoke(tags_get_command, tag_name=interaction.message.content):
+        if await tags_get_command(ctx, ctx.message.content):
             return
 
-        if not any(role.id in MODERATION_ROLES for role in interaction.user.roles):
-            await self.send_command_suggestion(interaction, interaction.invoked_with)
+        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            await self.send_command_suggestion(ctx, ctx.invoked_with)
 
     async def try_run_eval(self, ctx: Context) -> bool:
         """

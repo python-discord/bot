@@ -9,7 +9,7 @@ from bot.exts.backend import error_handler
 from bot.exts.info.tags import Tags
 from bot.exts.moderation.silence import Silence
 from bot.utils.checks import InWhitelistCheckFailure
-from tests.helpers import MockBot, MockContext, MockGuild, MockInteraction, MockRole, MockTextChannel, MockVoiceChannel
+from tests.helpers import MockBot, MockContext, MockGuild, MockRole, MockTextChannel, MockVoiceChannel
 
 
 class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
@@ -331,65 +331,65 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.bot = MockBot()
-        self.interaction = MockInteraction()
+        self.ctx = MockContext()
         self.tag = Tags(self.bot)
         self.cog = error_handler.ErrorHandler(self.bot)
-        self.bot.get_command.return_value = self.tag.get_command
+        self.bot.get_cog.return_value = self.tag
 
     async def test_try_get_tag_get_command(self):
         """Should call `Bot.get_command` with `tags get` argument."""
-        self.bot.get_command.reset_mock()
-        await self.cog.try_get_tag(self.interaction)
-        self.bot.get_command.assert_called_once_with("tags get")
+        self.bot.get_cog.reset_mock()
+        await self.cog.try_get_tag(self.ctx)
+        self.bot.get_cog.assert_called_once_with("Tags")
 
     async def test_try_get_tag_invoked_from_error_handler(self):
-        """`self.interaction` should have `invoked_from_error_handler` `True`."""
-        self.interaction.invoked_from_error_handler = False
-        await self.cog.try_get_tag(self.interaction)
-        self.assertTrue(self.interaction.invoked_from_error_handler)
+        """`self.ctx` should have `invoked_from_error_handler` `True`."""
+        self.ctx.invoked_from_error_handler = False
+        await self.cog.try_get_tag(self.ctx)
+        self.assertTrue(self.ctx.invoked_from_error_handler)
 
     async def test_try_get_tag_no_permissions(self):
         """Test how to handle checks failing."""
         self.tag.get_command.can_run = AsyncMock(return_value=False)
-        self.interaction.invoked_with = "foo"
-        self.assertIsNone(await self.cog.try_get_tag(self.interaction, AsyncMock(return_value=False)))
+        self.ctx.invoked_with = "foo"
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx, AsyncMock(return_value=False)))
 
     async def test_try_get_tag_command_error(self):
         """Should call `on_command_error` when `CommandError` raised."""
         err = errors.CommandError()
         self.tag.get_command.can_run = AsyncMock(side_effect=err)
         self.cog.on_command_error = AsyncMock()
-        self.assertIsNone(await self.cog.try_get_tag(self.interaction, AsyncMock(side_effect=err)))
-        self.cog.on_command_error.assert_awaited_once_with(self.interaction, err)
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx, AsyncMock(side_effect=err)))
+        self.cog.on_command_error.assert_awaited_once_with(self.ctx, err)
 
     async def test_dont_call_suggestion_tag_sent(self):
         """Should never call command suggestion if tag is already sent."""
-        self.interaction.message = MagicMock(content="foo")
-        self.interaction.invoke = AsyncMock(return_value=True)
+        self.ctx.message = MagicMock(content="foo")
+        self.tag.get_command_ctx = AsyncMock(return_value=True)
         self.cog.send_command_suggestion = AsyncMock()
 
-        await self.cog.try_get_tag(self.interaction, AsyncMock())
+        await self.cog.try_get_tag(self.ctx)
         self.cog.send_command_suggestion.assert_not_awaited()
 
     @patch("bot.exts.backend.error_handler.MODERATION_ROLES", new=[1234])
     async def test_dont_call_suggestion_if_user_mod(self):
         """Should not call command suggestion if user is a mod."""
-        self.interaction.invoked_with = "foo"
-        self.interaction.invoke = AsyncMock(return_value=False)
-        self.interaction.user.roles = [MockRole(id=1234)]
+        self.ctx.invoked_with = "foo"
+        self.ctx.invoke = AsyncMock(return_value=False)
+        self.ctx.author.roles = [MockRole(id=1234)]
         self.cog.send_command_suggestion = AsyncMock()
 
-        await self.cog.try_get_tag(self.interaction, AsyncMock())
+        await self.cog.try_get_tag(self.ctx)
         self.cog.send_command_suggestion.assert_not_awaited()
 
     async def test_call_suggestion(self):
         """Should call command suggestion if user is not a mod."""
-        self.interaction.invoked_with = "foo"
-        self.interaction.invoke = AsyncMock(return_value=False)
+        self.ctx.invoked_with = "foo"
+        self.ctx.invoke = AsyncMock(return_value=False)
         self.cog.send_command_suggestion = AsyncMock()
 
-        await self.cog.try_get_tag(self.interaction, AsyncMock())
-        self.cog.send_command_suggestion.assert_awaited_once_with(self.interaction, "foo")
+        await self.cog.try_get_tag(self.ctx)
+        self.cog.send_command_suggestion.assert_awaited_once_with(self.ctx, "foo")
 
 
 class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):

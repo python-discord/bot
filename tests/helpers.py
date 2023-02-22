@@ -486,7 +486,6 @@ class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
     Instances of this class will follow the specifications of `discord.Interaction`
     instances. For more information, see the `MockGuild` docstring.
     """
-    # spec_set = context_instance
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -548,6 +547,16 @@ class MockMessage(CustomMockMixin, unittest.mock.MagicMock):
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
         self.author = kwargs.get('author', MockMember())
         self.channel = kwargs.get('channel', MockTextChannel())
+
+
+class MockInteractionMessage(MockMessage):
+    """
+    A MagicMock subclass to mock InteractionMessage objects.
+
+    Instances of this class will follow the specifications of `discord.InteractionMessage` instances. For more
+    information, see the `MockGuild` docstring.
+    """
+    pass
 
 
 emoji_data = {'require_colons': True, 'managed': True, 'id': 1, 'name': 'hyperlemon'}

@@ -8,7 +8,7 @@ from typing import Literal, NamedTuple, Optional, Union
 
 import discord
 import frontmatter
-from discord import Embed, Member, app_commands
+from discord import Embed, Interaction, Member, app_commands
 from discord.ext.commands import Cog
 
 from bot import constants
@@ -140,15 +140,8 @@ class Tags(Cog):
         self.bot = bot
         self.tags: dict[TagIdentifier, Tag] = {}
         self.initialize_tags()
-        self.bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
 
     tag_group = app_commands.Group(name="tag", description="...")
-    # search_tag = app_commands.Group(name="search", description="...", parent=tag_group)
-
-    @Cog.listener()
-    async def on_ready(self) -> None:
-        """Called when the cog is ready."""
-        await self.bot.tree.sync(guild=discord.Object(id=GUILD_ID))
 
     def initialize_tags(self) -> None:
         """Load all tags from resources into `self.tags`."""
@@ -195,7 +188,8 @@ class Tags(Cog):
 
     async def get_tag_embed(
             self,
-            interaction: discord.Interaction,
+            author: discord.Member,
+            channel: discord.TextChannel | discord.Thread,
             tag_identifier: TagIdentifier,
     ) -> Optional[Union[Embed, Literal[COOLDOWN.obj]]]:
         """
@@ -206,7 +200,7 @@ class Tags(Cog):
         filtered_tags = [
             (ident, tag) for ident, tag in
             self.get_fuzzy_matches(tag_identifier)[:10]
-            if tag.accessible_by(interaction.user)
+            if tag.accessible_by(author)
         ]
 
         # Try exact match, includes checking through alt names
@@ -225,10 +219,10 @@ class Tags(Cog):
             tag = filtered_tags[0][1]
 
         if tag is not None:
-            if tag.on_cooldown_in(interaction.channel):
+            if tag.on_cooldown_in(channel):
                 log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
                 return COOLDOWN.obj
-            tag.set_cooldown_for(interaction.channel)
+            tag.set_cooldown_for(channel)
 
             self.bot.stats.incr(
                 f"tags.usages"
@@ -243,7 +237,7 @@ class Tags(Cog):
             suggested_tags_text = "\n".join(
                 f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
                 for identifier, tag in filtered_tags
-                if not tag.on_cooldown_in(interaction.channel)
+                if not tag.on_cooldown_in(channel)
             )
             return Embed(
                 title="Did you mean ...",
@@ -292,8 +286,37 @@ class Tags(Cog):
             if identifier.group == group and tag.accessible_by(user)
         )
 
+    async def get_command_ctx(
+        self,
+        ctx: discord.Context,
+        name: str
+    ) -> bool:
+        """Made specifically for `error_handler.py`, See `get_command` for more info."""
+        identifier = TagIdentifier.from_string(name)
+
+        if identifier.group is None:
+            # Try to find accessible tags from a group matching the identifier's name.
+            if group_tags := self.accessible_tags_in_group(identifier.name, ctx.author):
+                await LinePaginator.paginate(
+                    group_tags, ctx, Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS
+                )
+                return True
+
+        embed = await self.get_tag_embed(ctx.author, ctx.channel, identifier)
+        if embed is None:
+            return False
+
+        if embed is not COOLDOWN.obj:
+
+            await wait_for_deletion(
+                await ctx.send(embed=embed),
+                (ctx.author.id,)
+            )
+        # A valid tag was found and was either sent, or is on cooldown
+        return True
+
     @tag_group.command(name="get")
-    async def get_command(self, interaction: discord.Interaction, *, tag_name: Optional[str]) -> bool:
+    async def get_command(self, interaction: Interaction, *, name: Optional[str]) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group
         Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name.
@@ -303,7 +326,7 @@ class Tags(Cog):
         Returns True if a message was sent, or if the tag is on cooldown.
         Returns False if no message was sent.
         """  # noqa: D205, D415
-        if not tag_name:
+        if not name:
             if self.tags:
                 await LinePaginator.paginate(
                     self.accessible_tags(interaction.user),
@@ -314,7 +337,7 @@ class Tags(Cog):
                 await interaction.response.send_message(embed=Embed(description="**There are no tags!**"))
             return True
 
-        identifier = TagIdentifier.from_string(tag_name)
+        identifier = TagIdentifier.from_string(name)
 
         if identifier.group is None:
             # Try to find accessible tags from a group matching the identifier's name.
@@ -324,33 +347,43 @@ class Tags(Cog):
                 )
                 return True
 
-        embed = await self.get_tag_embed(interaction, identifier)
+        embed = await self.get_tag_embed(interaction.user, interaction.channel, identifier)
+        ephemeral = False
         if embed is None:
-            return False
+            description = f"**There are no tags matching the name {name!r}!**"
+            embed = Embed(description=description)
+            ephemeral = True
+        elif embed is COOLDOWN.obj:
+            description = f"Tag {name!r} is on cooldown."
+            embed = Embed(description=description)
+            ephemeral = True
 
-        if embed is not COOLDOWN.obj:
+        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
+        if not ephemeral:
             await wait_for_deletion(
-                await interaction.response.send_message(embed=embed),
+                await interaction.original_response(),
                 (interaction.user.id,)
             )
+
         # A valid tag was found and was either sent, or is on cooldown
         return True
 
-    @get_command.autocomplete("tag_name")
-    async def tag_name_autocomplete(
+    @get_command.autocomplete("name")
+    async def name_autocomplete(
         self,
-        interaction: discord.Interaction,
+        interaction: Interaction,
         current: str
     ) -> list[app_commands.Choice[str]]:
         """Autocompleter for `/tag get` command."""
-        tag_names = [tag.name for tag in self.tags.keys()]
-        return [
+        names = [tag.name for tag in self.tags.keys()]
+        choices = [
             app_commands.Choice(name=tag, value=tag)
-            for tag in tag_names if current.lower() in tag
+            for tag in names if current.lower() in tag
         ]
+        return choices[:25] if len(choices) > 25 else choices
 
     @tag_group.command(name="list")
-    async def list_command(self, interaction: discord.Interaction) -> bool:
+    async def list_command(self, interaction: Interaction) -> bool:
         """Lists all accessible tags."""
         if self.tags:
             await LinePaginator.paginate(
@@ -367,4 +400,3 @@ class Tags(Cog):
 async def setup(bot: Bot) -> None:
     """Load the Tags cog."""
     await bot.add_cog(Tags(bot))
-    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))

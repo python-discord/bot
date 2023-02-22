@@ -190,8 +190,8 @@ class LinePaginator(Paginator):
     @classmethod
     async def paginate(
         cls,
-        lines: t.List[str],
-        ctx: t.Union[Context, discord.Interaction],
+        lines: list[str],
+        ctx: Context | discord.Interaction,
         embed: discord.Embed,
         prefix: str = "",
         suffix: str = "",
