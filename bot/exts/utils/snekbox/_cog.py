@@ -406,7 +406,7 @@ class Snekbox(Cog):
                         msg += f"\n`{file.name}`\n{link_text}"
                     else:
                         msg += f"\n`{file.name}`\n```\n{format_text}\n```"
-                        budget_lines -= file_text.count("\n")
+                        budget_lines -= format_text.count("\n") + 1
                         budget_chars -= len(file_text)
 
             filter_cog: Filtering | None = self.bot.get_cog("Filtering")
