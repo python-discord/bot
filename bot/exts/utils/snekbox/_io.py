@@ -4,7 +4,7 @@ from __future__ import annotations
 from base64 import b64decode, b64encode
 from dataclasses import dataclass
 from io import BytesIO
-from pathlib import Path
+from pathlib import PurePosixPath
 
 import regex
 from discord import File
@@ -64,12 +64,12 @@ class FileAttachment:
     @property
     def suffix(self) -> str:
         """Return the file suffix."""
-        return Path(self.path).suffix
+        return PurePosixPath(self.path).suffix
 
     @property
     def name(self) -> str:
         """Return the file name."""
-        return Path(self.path).name
+        return PurePosixPath(self.path).name
 
     @classmethod
     def from_dict(cls, data: dict, size_limit: int = FILE_SIZE_LIMIT) -> FileAttachment:
@@ -98,6 +98,5 @@ class FileAttachment:
 
     def to_file(self) -> File:
         """Convert to a discord.File."""
-        name = Path(self.path).name
-        name = normalize_discord_file_name(name)
+        name = normalize_discord_file_name(self.name)
         return File(BytesIO(self.content), filename=name)

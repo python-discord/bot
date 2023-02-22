@@ -1,5 +1,4 @@
-import platform
-from unittest import TestCase, skipIf
+from unittest import TestCase
 
 # noinspection PyProtectedMember
 from bot.exts.utils.snekbox import _io
@@ -7,9 +6,6 @@ from bot.exts.utils.snekbox import _io
 
 class SnekboxIOTests(TestCase):
     # noinspection SpellCheckingInspection
-    # Skip Windows since both pathlib and os strips the escape sequences
-    # and many of these aren't valid Windows file paths
-    @skipIf(platform.system() == "Windows", "File names normalizer tests requires Unix-like OS.")
     def test_normalize_file_name(self):
         """Invalid file names should be normalized."""
         cases = [
