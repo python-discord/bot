@@ -239,7 +239,7 @@ class Snekbox(Cog):
         max_lines: int = MAX_OUTPUT_BLOCK_LINES,
         max_chars: int = MAX_OUTPUT_BLOCK_CHARS,
         line_nums: bool = True,
-        mark_no_output: bool = True
+        output_default: str = "[No output]",
     ) -> tuple[str, str | None]:
         """
         Format the output and return a tuple of the formatted output and a URL to the full output.
@@ -283,8 +283,8 @@ class Snekbox(Cog):
         if truncated:
             paste_link = await self.upload_output(original_output)
 
-        if mark_no_output and not output:
-            output = "[No output]"
+        if output_default and not output:
+            output = output_default
 
         return output, paste_link
 
@@ -399,9 +399,8 @@ class Snekbox(Cog):
                         budget_lines,
                         budget_chars,
                         line_nums=False,
-                        mark_no_output=False
+                        output_default="[Empty]"
                     )
-                    format_text = format_text or "[Empty]"
                     # With any link, use it (don't use budget)
                     if link_text:
                         msg += f"\n`{file.name}`\n{link_text}"
