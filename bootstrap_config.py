@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
+from httpx import Client
 
 from bot.constants import Webhooks, _Categories, _Channels, _Roles
 from bot.log import get_logger
@@ -32,22 +32,24 @@ if not GUILD_ID:
     raise ValueError(message)
 
 
-BASE_URL = "https://discord.com/api/v10"
+class DiscordClient(Client):
+    """An HTTP client to communicate with Discord's APIs."""
 
-HEADERS = {"Authorization": f"Bot {BOT_TOKEN}"}
+    def __init__(self):
+        super().__init__(headers={"Authorization": f"Bot {BOT_TOKEN}"}, base_url="https://discord.com/api/v10")
 
 
 def get_all_roles(guild_id: int | str) -> dict:
     """Fetches all the roles in a guild."""
     result = {}
 
-    roles_url = f"{BASE_URL}/guilds/{guild_id}/roles"
-    response = requests.get(url=roles_url, headers=HEADERS)
-    roles = response.json()
+    with DiscordClient() as client:
+        response = client.get(f"guilds/{guild_id}/roles")
+        roles = response.json()
 
-    for role in roles:
-        name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
-        result[name] = role["id"]
+        for role in roles:
+            name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
+            result[name] = role["id"]
 
     return result
 
@@ -56,40 +58,40 @@ def get_all_channels_and_categories(guild_id: int | str) -> tuple[dict[str, str]
     """Fetches all the text channels & categories in a guild."""
     channels = {}  # could be text channels only as well
     categories = {}
-    channels_url = f"{BASE_URL}/guilds/{guild_id}/channels"
 
-    response = requests.get(url=channels_url, headers=HEADERS)
-    server_channels = response.json()
+    with DiscordClient() as client:
+        response = client.get(f"guilds/{guild_id}/channels")
+        server_channels = response.json()
 
-    for channel in server_channels:
-        channel_type = channel["type"]
-        name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
-        if channel_type == 4:
-            categories[name] = channel["id"]
-        else:
-            channels[name] = channel["id"]
+        for channel in server_channels:
+            channel_type = channel["type"]
+            name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
+            if channel_type == 4:
+                categories[name] = channel["id"]
+            else:
+                channels[name] = channel["id"]
 
     return channels, categories
 
 
 def get_webhook(webhook_id_: int) -> dict:
     """Fetches a particular webhook by its id."""
-    webhooks_url = f"{BASE_URL}/webhooks/{webhook_id_}"
-    response = requests.get(url=webhooks_url, headers=HEADERS)
-    if response.status_code == 200:
-        return response.json()
+    with DiscordClient() as client:
+        response = client.get(f"webhooks/{webhook_id_}")
+        if response.status_code == 200:
+            return response.json()
 
     return {}
 
 
 def create_webhook(name: str, channel_id_: int) -> str:
     """Creates a new webhook for a particular channel."""
-    create_webhook_url = f"{BASE_URL}/channels/{channel_id_}/webhooks"
     payload = {"name": name}
 
-    response = requests.post(url=create_webhook_url, headers=HEADERS, json=payload)
-    new_webhook = response.json()
-    return new_webhook["id"]
+    with DiscordClient() as client:
+        response = client.post(f"channels/{channel_id_}/webhooks", json=payload)
+        new_webhook = response.json()
+        return new_webhook["id"]
 
 
 config_str = "#Roles\n"
