@@ -27,7 +27,8 @@ class ErrorHandler(Cog):
         """
         Add checks for the `get_command_ctx` function here.
 
-        Use discord.utils to run the checks.
+        The command code style is copied from discord.ext.commands.Command.can_run itself.
+        Append checks in the checks list.
         """
         checks = []
         predicates = checks
