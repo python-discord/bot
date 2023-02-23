@@ -41,6 +41,8 @@ RULE_FUNCTION_MAPPING = {
     'role_mentions': rules.apply_role_mentions,
 }
 
+ANTI_SPAM_RULES = AntiSpamConfig.rules.dict()
+
 
 @dataclass
 class DeletionContext:
@@ -297,10 +299,8 @@ class AntiSpam(Cog):
         self.cache.update(after)
 
 
-def validate_config(rules_: Mapping = None) -> Dict[str, str]:
+def validate_config(rules_: Mapping = ANTI_SPAM_RULES) -> Dict[str, str]:
     """Validates the antispam configs."""
-    if not rules_:
-        rules_ = AntiSpamConfig.rules.dict()
     validation_errors = {}
     for name, config in rules_.items():
         config = config
