@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from httpx import Client
+from httpx import Client, Response
 
 from bot.constants import Webhooks, _Categories, _Channels, _Roles
 from bot.log import get_logger
@@ -36,7 +36,15 @@ class DiscordClient(Client):
     """An HTTP client to communicate with Discord's APIs."""
 
     def __init__(self):
-        super().__init__(headers={"Authorization": f"Bot {BOT_TOKEN}"}, base_url="https://discord.com/api/v10")
+        super().__init__(
+            base_url="https://discord.com/api/v10",
+            headers={"Authorization": f"Bot {BOT_TOKEN}"},
+            event_hooks={"response": [self._log_response]}
+        )
+
+    @staticmethod
+    def _log_response(response: Response) -> None:
+        response.raise_for_status()
 
 
 def get_all_roles(guild_id: int | str, client: DiscordClient) -> dict:
