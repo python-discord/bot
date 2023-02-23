@@ -11,15 +11,14 @@ will default to the values passed to the `default` kwarg.
 """
 import os
 from enum import Enum
-from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel, BaseSettings, Field, root_validator
 
 # Will add a check for the required keys
 
-env_file_path = Path(__file__).parent.parent / ".env"
-server_env_file_path = Path(__file__).parent.parent / ".env.server"
+env_file_path = ".env"
+server_env_file_path = ".env.server"
 
 
 class EnvConfig(BaseSettings):
