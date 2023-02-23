@@ -114,7 +114,7 @@ if __name__ == '__main__':
                 log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
                 continue
 
-            config_str += f"roles__{role_name}={role_id}\n"
+            config_str += f"roles.{role_name}={role_id}\n"
 
         all_channels, all_categories = get_all_channels_and_categories(guild_id=GUILD_ID, client=discord_client)
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
                 )
                 continue
 
-            config_str += f"channels__{channel_name}={channel_id}\n"
+            config_str += f"channels.{channel_name}={channel_id}\n"
 
         config_str += "\n#Categories\n"
 
@@ -140,7 +140,7 @@ if __name__ == '__main__':
                 )
                 continue
 
-            config_str += f"categories__{category_name}={category_id}\n"
+            config_str += f"categories.{category_name}={category_id}\n"
 
         env_file_path.write_text(config_str)
 
@@ -152,6 +152,6 @@ if __name__ == '__main__':
                 webhook_id = create_webhook(webhook_name, webhook_model.channel, client=discord_client)
             else:
                 webhook_id = webhook_model.id
-            config_str += f"webhooks__{webhook_name}__id={webhook_id}\n"
+            config_str += f"webhooks.{webhook_name}.id={webhook_id}\n"
 
         env_file_path.write_text(config_str)
