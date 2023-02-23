@@ -1,13 +1,13 @@
 """
-Loads bot configuration from YAML files.
-By default, this simply loads the default
-configuration located at `config-default.yml`.
-If a file called `config.yml` is found in the
-project directory, the default configuration
-is recursively updated with any settings from
-the custom configuration. Any settings left
-out in the custom user configuration will stay
-their default values from `config-default.yml`.
+Loads bot configuration from environment variables
+and `.env` files. By default, this simply loads the
+default configuration defined thanks to the `default`
+keyword argument in each instance of the `Field` class
+If two files called `.env` and `.env.server` are found
+in the project directory, the values will be loaded
+from both of them, thus overlooking the predefined defaults.
+Any settings left out in the custom user configuration
+will default to the values passed to the `default` kwarg.
 """
 import os
 from enum import Enum
