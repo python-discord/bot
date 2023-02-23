@@ -149,7 +149,8 @@ if __name__ == '__main__':
         for webhook_name, webhook_model in Webhooks:
             webhook = webhook_exists(webhook_model.id, client=discord_client)
             if not webhook:
-                webhook_id = create_webhook(webhook_name, webhook_model.channel, client=discord_client)
+                webhook_channel_id = int(all_channels[webhook_name])
+                webhook_id = create_webhook(webhook_name, webhook_channel_id, client=discord_client)
             else:
                 webhook_id = webhook_model.id
             config_str += f"webhooks.{webhook_name}.id={webhook_id}\n"
