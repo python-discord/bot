@@ -41,7 +41,7 @@ DEBUG_MODE = Miscellaneous.debug.lower() == "true"
 
 
 class _Bot(EnvConfig):
-    EnvConfig.Config.env_prefix = "bot__"
+    EnvConfig.Config.env_prefix = "bot."
 
     prefix: str = Field(default="!")
     sentry_dsn: str = Field(default="", env="BOT_SENTRY_DSN")
@@ -53,7 +53,7 @@ Bot = _Bot()
 
 
 class _Channels(EnvConfig):
-    EnvConfig.Config.env_prefix = "channels__"
+    EnvConfig.Config.env_prefix = "channels."
 
     announcements: int = Field(default=354619224620138496)
     changelog: int = Field(default=748238795236704388)
@@ -137,7 +137,7 @@ Channels = _Channels()
 
 class _Roles(EnvConfig):
 
-    EnvConfig.Config.env_prefix = "roles__"
+    EnvConfig.Config.env_prefix = "roles."
 
     # Self-assignable roles, see the Subscribe cog
     advent_of_code: int = Field(default=518565788744024082)
@@ -184,7 +184,7 @@ Roles = _Roles()
 
 
 class _Categories(EnvConfig):
-    EnvConfig.Config.env_prefix = "categories__"
+    EnvConfig.Config.env_prefix = "categories."
 
     logs: int = Field(default=468520609152892958)
     moderators: int = Field(default=749736277464842262)
@@ -201,7 +201,7 @@ Categories = _Categories()
 
 
 class _Guild(EnvConfig):
-    EnvConfig.Config.env_prefix = "guild__"
+    EnvConfig.Config.env_prefix = "guild."
 
     id: int = Field(default=267624335836053506, env="GUILD_ID")
     invite: str = Field(default="https://discord.gg/python")
@@ -268,8 +268,8 @@ class Webhook(BaseModel):
 
 
 class _Webhooks(EnvConfig):
-    EnvConfig.Config.env_prefix = "webhooks__"
-    EnvConfig.Config.env_nested_delimiter = '__'
+    EnvConfig.Config.env_prefix = "webhooks."
+    EnvConfig.Config.env_nested_delimiter = '.'
 
     big_brother: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother_logs)
     dev_log: Webhook = Webhook(id=680501655111729222, channel=Channels.dev_log)
@@ -283,7 +283,7 @@ Webhooks = _Webhooks()
 
 
 class _BigBrother(EnvConfig):
-    EnvConfig.Config.env_prefix = "big_brother__"
+    EnvConfig.Config.env_prefix = "big_brother."
 
     header_message_limit: int = Field(default=15)
     log_delay: int = Field(default=15)
@@ -293,7 +293,7 @@ BigBrother = _BigBrother()
 
 
 class _CodeBlock(EnvConfig):
-    EnvConfig.Config.env_prefix = "code_block__"
+    EnvConfig.Config.env_prefix = "code_block."
 
     # The channels in which code blocks will be detected. They are not subject to a cooldown.
     channel_whitelist: list[int] = [Channels.bot_commands]
@@ -308,7 +308,7 @@ CodeBlock = _CodeBlock()
 
 
 class _Colours(EnvConfig):
-    EnvConfig.Config.env_prefix = "colours__"
+    EnvConfig.Config.env_prefix = "colours."
 
     blue: int = Field(default=0x3775a8)
     bright_green: int = Field(default=0x01d277)
@@ -332,7 +332,7 @@ Colours = _Colours()
 
 
 class _Free(EnvConfig):
-    EnvConfig.Config.env_prefix = "free__"
+    EnvConfig.Config.env_prefix = "free."
 
     activity_timeout: int = Field(default=600)
     cooldown_per: float = Field(default=60.0)
@@ -370,8 +370,8 @@ class Rules(BaseModel):
 
 
 class _AntiSpam(EnvConfig):
-    EnvConfig.Config.env_prefix = 'anti_spam__'
-    EnvConfig.Config.env_nested_delimiter = '__'
+    EnvConfig.Config.env_prefix = 'anti_spam.'
+    EnvConfig.Config.env_nested_delimiter = '.'
 
     cache_size: int = Field(default=100)
 
@@ -386,7 +386,7 @@ AntiSpam = _AntiSpam()
 
 
 class _HelpChannels(EnvConfig):
-    EnvConfig.Config.env_prefix = 'help_channels__'
+    EnvConfig.Config.env_prefix = "help_channels."
 
     enable: bool = Field(default=True)
     idle_minutes: int = Field(default=30)
@@ -399,7 +399,7 @@ HelpChannels = _HelpChannels()
 
 
 class _RedirectOutput(EnvConfig):
-    EnvConfig.Config.env_prefix = "redirect_output__"
+    EnvConfig.Config.env_prefix = "redirect_output."
 
     delete_delay: int = Field(default=15)
     delete_invocation: bool = Field(default=True)
@@ -409,7 +409,7 @@ RedirectOutput = _RedirectOutput()
 
 
 class _DuckPond(EnvConfig):
-    EnvConfig.Config.env_prefix = 'duck_pond__'
+    EnvConfig.Config.env_prefix = "duck_pond."
 
     threshold: int = Field(default=7)
 
@@ -432,7 +432,7 @@ DuckPond = _DuckPond()
 
 
 class _PythonNews(EnvConfig):
-    EnvConfig.Config.env_prefix = "python_news__"
+    EnvConfig.Config.env_prefix = "python_news."
 
     channel: int = Webhooks.python_news.channel
     webhook: int = Webhooks.python_news.id
@@ -443,7 +443,7 @@ PythonNews = _PythonNews()
 
 
 class _VoiceGate(EnvConfig):
-    EnvConfig.Config.env_prefix = "voice_gate__"
+    EnvConfig.Config.env_prefix = "voice_gate."
 
     bot_message_delete_delay: int = Field(default=10)
     minimum_activity_blocks: int = Field(default=3)
@@ -456,7 +456,7 @@ VoiceGate = _VoiceGate()
 
 
 class _Branding(EnvConfig):
-    EnvConfig.Config.env_prefix = "branding__"
+    EnvConfig.Config.env_prefix = "branding."
 
     cycle_frequency: int = Field(default=3)
 
@@ -465,7 +465,7 @@ Branding = _Branding()
 
 
 class _VideoPermission(EnvConfig):
-    EnvConfig.Config.env_prefix = "video_permission__"
+    EnvConfig.Config.env_prefix = "video_permission."
 
     default_permission_duration: int = Field(default=5)
 
@@ -474,7 +474,7 @@ VideoPermission = _VideoPermission()
 
 
 class _Redis(EnvConfig):
-    EnvConfig.Config.env_prefix = "redis__"
+    EnvConfig.Config.env_prefix = "redis."
 
     host: str = Field(default="redis.default.svc.cluster.local")
     password = Field(default="", env="REDIS_PASSWORD")
@@ -486,7 +486,7 @@ Redis = _Redis()
 
 
 class _CleanMessages(EnvConfig):
-    EnvConfig.Config.env_prefix = "clean__"
+    EnvConfig.Config.env_prefix = "clean."
 
     message_limit: int = Field(default=10_000)
 
@@ -495,7 +495,7 @@ CleanMessages = _CleanMessages()
 
 
 class _Stats(EnvConfig):
-    EnvConfig.Config.env_prefix = "stats__"
+    EnvConfig.Config.env_prefix = "stats."
 
     presence_update_timeout: int = Field(default=30)
     statsd_host: str = Field(default="graphite.default.svc.cluster.local")
@@ -505,7 +505,7 @@ Stats = _Stats()
 
 
 class _Cooldowns(EnvConfig):
-    EnvConfig.Config.env_prefix = "cooldowns__"
+    EnvConfig.Config.env_prefix = "cooldowns."
 
     tags: int = Field(default=60)
 
@@ -514,7 +514,7 @@ Cooldowns = _Cooldowns()
 
 
 class _Metabase(EnvConfig):
-    EnvConfig.Config.env_prefix = "metabase__"
+    EnvConfig.Config.env_prefix = "metabase."
 
     username = Field(default="", env="METABASE_USERNAME")
     password = Field(default="", env="METABASE_PASSWORD")
@@ -527,7 +527,7 @@ Metabase = _Metabase()
 
 
 class _BaseURLs(EnvConfig):
-    EnvConfig.Config.env_prefix = "urls__"
+    EnvConfig.Config.env_prefix = "urls."
 
     # Snekbox endpoints
     snekbox_eval_api = Field(default="http://snekbox.default.svc.cluster.local/eval", env="SNEKBOX_EVAL_API")
@@ -573,7 +573,7 @@ URLs = _URLs()
 
 
 class _Emojis(EnvConfig):
-    EnvConfig.Config.env_prefix = "emojis__"
+    EnvConfig.Config.env_prefix = "emojis."
 
     badge_bug_hunter: str = Field(default="<:bug_hunter_lvl1:743882896372269137>")
     badge_bug_hunter_level_2: str = Field(default="<:bug_hunter_lvl2:743882896611344505>")
@@ -620,7 +620,7 @@ Emojis = _Emojis()
 
 
 class _Icons(EnvConfig):
-    EnvConfig.Config.env_prefix = "icons__"
+    EnvConfig.Config.env_prefix = "icons."
 
     crown_blurple: str = Field(default="https://cdn.discordapp.com/emojis/469964153289965568.png")
     crown_green: str = Field(default="https://cdn.discordapp.com/emojis/469964154719961088.png")
@@ -682,7 +682,7 @@ Icons = _Icons()
 
 
 class _Filter(EnvConfig):
-    EnvConfig.Config.env_prefix = "filters__"
+    EnvConfig.Config.env_prefix = "filters."
 
     filter_domains: bool = Field(default=True)
     filter_everyone_ping: bool = Field(default=True)
