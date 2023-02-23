@@ -39,109 +39,111 @@ class DiscordClient(Client):
         super().__init__(headers={"Authorization": f"Bot {BOT_TOKEN}"}, base_url="https://discord.com/api/v10")
 
 
-def get_all_roles(guild_id: int | str) -> dict:
+def get_all_roles(guild_id: int | str, client: DiscordClient) -> dict:
     """Fetches all the roles in a guild."""
     result = {}
 
-    with DiscordClient() as client:
-        response = client.get(f"guilds/{guild_id}/roles")
-        roles = response.json()
+    response = client.get(f"guilds/{guild_id}/roles")
+    roles = response.json()
 
-        for role in roles:
-            name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
-            result[name] = role["id"]
+    for role in roles:
+        name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
+        result[name] = role["id"]
 
     return result
 
 
-def get_all_channels_and_categories(guild_id: int | str) -> tuple[dict[str, str], dict[str, str]]:
+def get_all_channels_and_categories(
+        guild_id: int | str,
+        client: DiscordClient
+) -> tuple[dict[str, str], dict[str, str]]:
     """Fetches all the text channels & categories in a guild."""
     channels = {}  # could be text channels only as well
     categories = {}
 
-    with DiscordClient() as client:
-        response = client.get(f"guilds/{guild_id}/channels")
-        server_channels = response.json()
+    response = client.get(f"guilds/{guild_id}/channels")
+    server_channels = response.json()
 
-        for channel in server_channels:
-            channel_type = channel["type"]
-            name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
-            if channel_type == 4:
-                categories[name] = channel["id"]
-            else:
-                channels[name] = channel["id"]
+    for channel in server_channels:
+        channel_type = channel["type"]
+        name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
+        if channel_type == 4:
+            categories[name] = channel["id"]
+        else:
+            channels[name] = channel["id"]
 
     return channels, categories
 
 
-def get_webhook(webhook_id_: int) -> dict:
+def get_webhook(webhook_id_: int, client: DiscordClient) -> dict:
     """Fetches a particular webhook by its id."""
-    with DiscordClient() as client:
-        response = client.get(f"webhooks/{webhook_id_}")
-        if response.status_code == 200:
-            return response.json()
+    response = client.get(f"webhooks/{webhook_id_}")
+    if response.status_code == 200:
+        return response.json()
 
     return {}
 
 
-def create_webhook(name: str, channel_id_: int) -> str:
+def create_webhook(name: str, channel_id_: int, client: DiscordClient) -> str:
     """Creates a new webhook for a particular channel."""
     payload = {"name": name}
 
-    with DiscordClient() as client:
-        response = client.post(f"channels/{channel_id_}/webhooks", json=payload)
-        new_webhook = response.json()
-        return new_webhook["id"]
+    response = client.post(f"channels/{channel_id_}/webhooks", json=payload)
+    new_webhook = response.json()
+    return new_webhook["id"]
 
 
-config_str = "#Roles\n"
+if __name__ == '__main__':
+    with DiscordClient() as discord_client:
+        config_str = "#Roles\n"
 
-all_roles = get_all_roles(guild_id=GUILD_ID)
+        all_roles = get_all_roles(guild_id=GUILD_ID, client=discord_client)
 
-for role_name in _Roles.__fields__:
+        for role_name in _Roles.__fields__:
 
-    role_id = all_roles.get(role_name, None)
-    if not role_id:
-        log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
-        continue
+            role_id = all_roles.get(role_name, None)
+            if not role_id:
+                log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
+                continue
 
-    config_str += f"roles__{role_name}={role_id}\n"
+            config_str += f"roles__{role_name}={role_id}\n"
 
-all_channels, all_categories = get_all_channels_and_categories(guild_id=GUILD_ID)
+        all_channels, all_categories = get_all_channels_and_categories(guild_id=GUILD_ID, client=discord_client)
 
-config_str += "\n#Channels\n"
+        config_str += "\n#Channels\n"
 
+        for channel_name in _Channels.__fields__:
+            channel_id = all_channels.get(channel_name, None)
+            if not channel_id:
+                log.warning(
+                    f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used."
+                )
+                continue
 
-for channel_name in _Channels.__fields__:
-    channel_id = all_channels.get(channel_name, None)
-    if not channel_id:
-        log.warning(f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used.")
-        continue
+            config_str += f"channels__{channel_name}={channel_id}\n"
 
-    config_str += f"channels__{channel_name}={channel_id}\n"
+        config_str += "\n#Categories\n"
 
-config_str += "\n#Categories\n"
+        for category_name in _Categories.__fields__:
+            category_id = all_categories.get(category_name, None)
+            if not category_id:
+                log.warning(
+                    f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used."
+                )
+                continue
 
-for category_name in _Categories.__fields__:
-    category_id = all_categories.get(category_name, None)
-    if not category_id:
-        log.warning(f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used.")
-        continue
+            config_str += f"categories__{category_name}={category_id}\n"
 
-    config_str += f"categories__{category_name}={category_id}\n"
+        env_file_path.write_text(config_str)
 
+        config_str += "\n#Webhooks\n"
 
-env_file_path.write_text(config_str)
+        for webhook_name, webhook_model in Webhooks:
+            webhook = get_webhook(webhook_model.id, client=discord_client)
+            if not webhook:
+                webhook_id = create_webhook(webhook_name, webhook_model.channel, client=discord_client)
+            else:
+                webhook_id = webhook["id"]
+            config_str += f"webhooks__{webhook_name}__id={webhook_id}\n"
 
-config_str += "\n#Webhooks\n"
-
-
-for webhook_name, webhook_model in Webhooks:
-    webhook = get_webhook(webhook_model.id)
-    if not webhook:
-        webhook_id = create_webhook(webhook_name, webhook_model.channel)
-    else:
-        webhook_id = webhook["id"]
-    config_str += f"webhooks__{webhook_name}__id={webhook_id}\n"
-
-env_file_path.write_text(config_str)
+        env_file_path.write_text(config_str)
