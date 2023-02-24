@@ -131,7 +131,7 @@ class AntiSpam(Cog):
 
         # Fetch the rule configuration with the highest rule interval.
         max_interval_config = max(
-            AntiSpamConfig.rules.dict().values(),
+            ANTI_SPAM_RULES.values(),
             key=itemgetter('interval')
         )
         self.max_interval = max_interval_config['interval']
@@ -180,8 +180,8 @@ class AntiSpam(Cog):
         earliest_relevant_at = arrow.utcnow() - timedelta(seconds=self.max_interval)
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
-        for rule_name, rule_config in AntiSpamConfig.rules:
-            rule_config = rule_config.dict()
+        for rule_name, rule_config in ANTI_SPAM_RULES.items():
+            rule_config = rule_config
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
