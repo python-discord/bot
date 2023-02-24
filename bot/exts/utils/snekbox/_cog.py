@@ -264,7 +264,7 @@ class Snekbox(Cog):
         truncated = False
         lines = output.splitlines()
 
-        if lines:
+        if len(lines) > 1:
             if line_nums:
                 lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
             lines = lines[:max_lines+1]  # Limiting to max+1 lines
