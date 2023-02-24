@@ -15,15 +15,10 @@ from typing import Optional
 
 from pydantic import BaseModel, BaseSettings, Field, root_validator
 
-# Will add a check for the required keys
-
-env_file_path = ".env"
-server_env_file_path = ".env.server"
-
 
 class EnvConfig(BaseSettings):
     class Config:
-        env_file = env_file_path, server_env_file_path,
+        env_file = ".env", ".env.server",
         env_file_encoding = 'utf-8'
 
 
