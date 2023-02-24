@@ -39,11 +39,11 @@ class DiscordClient(Client):
         super().__init__(
             base_url="https://discord.com/api/v10",
             headers={"Authorization": f"Bot {BOT_TOKEN}"},
-            event_hooks={"response": [self._log_response]}
+            event_hooks={"response": [self._raise_for_status]}
         )
 
     @staticmethod
-    def _log_response(response: Response) -> None:
+    def _raise_for_status(response: Response) -> None:
         response.raise_for_status()
 
 
