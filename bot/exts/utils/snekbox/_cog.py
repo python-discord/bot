@@ -262,15 +262,15 @@ class Snekbox(Cog):
             return "Code block escape attempt detected; will not output result", paste_link
 
         truncated = False
-        lines = output.count("\n")
+        lines = output.splitlines()
 
-        if lines > 0:
+        if lines:
             if line_nums:
-                output = [f"{i:03d} | {line}" for i, line in enumerate(output.split('\n'), 1)]
-            output = output[:max_lines+1]  # Limiting to max+1 lines
-            output = "\n".join(output)
+                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
+            lines = lines[:max_lines+1]  # Limiting to max+1 lines
+            output = "\n".join(lines)
 
-        if lines > max_lines:
+        if len(lines) > max_lines:
             truncated = True
             if len(output) >= max_chars:
                 output = f"{output[:max_chars]}\n... (truncated - too long, too many lines)"
