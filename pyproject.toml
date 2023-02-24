@@ -70,6 +70,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.taskipy.tasks]
 start = "python -m bot"
+configure = "python -m bootstrap_config"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
@@ -80,6 +81,7 @@ retest = "pytest -n auto --cov-report= --cov --lf"
 html = "coverage html"
 report = "coverage report"
 isort = "isort ."
+
 
 [tool.coverage.run]
 branch = true
