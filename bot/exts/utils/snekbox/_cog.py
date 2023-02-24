@@ -556,16 +556,17 @@ class Snekbox(Cog):
         """
         Run Python code and get the results.
 
-        This command supports multiple lines of code, including code wrapped inside a formatted code
-        block. Code can be re-evaluated by editing the original message within 10 seconds and
+        This command supports multiple lines of code, including formatted code blocks.
+        Code can be re-evaluated by editing the original message within 10 seconds and
         clicking the reaction that subsequently appears.
+
+        The starting working directory `/home`, is a writeable temporary file system.
+        Files created, excluding names with leading underscores, will be uploaded in the response.
 
         If multiple codeblocks are in a message, all of them will be joined and evaluated,
         ignoring the text outside them.
 
-        By default, your code is run on Python's 3.11 beta release, to assist with testing. If you
-        run into issues related to this Python version, you can request the bot to use Python
-        3.10 by specifying the `python_version` arg and setting it to `3.10`.
+        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
@@ -601,9 +602,7 @@ class Snekbox(Cog):
         If multiple formatted codeblocks are provided, the first one will be the setup code, which will
         not be timed. The remaining codeblocks will be joined together and timed.
 
-        By default your code is run on Python's 3.11 beta release, to assist with testing. If you
-        run into issues related to this Python version, you can request the bot to use Python
-        3.10 by specifying the `python_version` arg and setting it to `3.10`.
+        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
