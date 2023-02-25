@@ -101,58 +101,57 @@ def create_webhook(name: str, channel_id_: int, client: DiscordClient) -> str:
     return new_webhook["id"]
 
 
-if __name__ == '__main__':
-    with DiscordClient() as discord_client:
-        config_str = "#Roles\n"
+with DiscordClient() as discord_client:
+    config_str = "#Roles\n"
 
-        all_roles = get_all_roles(guild_id=GUILD_ID, client=discord_client)
+    all_roles = get_all_roles(guild_id=GUILD_ID, client=discord_client)
 
-        for role_name in _Roles.__fields__:
+    for role_name in _Roles.__fields__:
 
-            role_id = all_roles.get(role_name, None)
-            if not role_id:
-                log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
-                continue
+        role_id = all_roles.get(role_name, None)
+        if not role_id:
+            log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
+            continue
 
-            config_str += f"roles.{role_name}={role_id}\n"
+        config_str += f"roles.{role_name}={role_id}\n"
 
-        all_channels, all_categories = get_all_channels_and_categories(guild_id=GUILD_ID, client=discord_client)
+    all_channels, all_categories = get_all_channels_and_categories(guild_id=GUILD_ID, client=discord_client)
 
-        config_str += "\n#Channels\n"
+    config_str += "\n#Channels\n"
 
-        for channel_name in _Channels.__fields__:
-            channel_id = all_channels.get(channel_name, None)
-            if not channel_id:
-                log.warning(
-                    f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used."
-                )
-                continue
+    for channel_name in _Channels.__fields__:
+        channel_id = all_channels.get(channel_name, None)
+        if not channel_id:
+            log.warning(
+                f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used."
+            )
+            continue
 
-            config_str += f"channels.{channel_name}={channel_id}\n"
+        config_str += f"channels.{channel_name}={channel_id}\n"
 
-        config_str += "\n#Categories\n"
+    config_str += "\n#Categories\n"
 
-        for category_name in _Categories.__fields__:
-            category_id = all_categories.get(category_name, None)
-            if not category_id:
-                log.warning(
-                    f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used."
-                )
-                continue
+    for category_name in _Categories.__fields__:
+        category_id = all_categories.get(category_name, None)
+        if not category_id:
+            log.warning(
+                f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used."
+            )
+            continue
 
-            config_str += f"categories.{category_name}={category_id}\n"
+        config_str += f"categories.{category_name}={category_id}\n"
 
-        env_file_path.write_text(config_str)
+    env_file_path.write_text(config_str)
 
-        config_str += "\n#Webhooks\n"
+    config_str += "\n#Webhooks\n"
 
-        for webhook_name, webhook_model in Webhooks:
-            webhook = webhook_exists(webhook_model.id, client=discord_client)
-            if not webhook:
-                webhook_channel_id = int(all_channels[webhook_name])
-                webhook_id = create_webhook(webhook_name, webhook_channel_id, client=discord_client)
-            else:
-                webhook_id = webhook_model.id
-            config_str += f"webhooks.{webhook_name}.id={webhook_id}\n"
+    for webhook_name, webhook_model in Webhooks:
+        webhook = webhook_exists(webhook_model.id, client=discord_client)
+        if not webhook:
+            webhook_channel_id = int(all_channels[webhook_name])
+            webhook_id = create_webhook(webhook_name, webhook_channel_id, client=discord_client)
+        else:
+            webhook_id = webhook_model.id
+        config_str += f"webhooks.{webhook_name}.id={webhook_id}\n"
 
-        env_file_path.write_text(config_str)
+    env_file_path.write_text(config_str)
