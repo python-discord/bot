@@ -539,7 +539,6 @@ class _BaseURLs(EnvConfig):
     # Site
     site: str = Field(default="pythondiscord.com")
     site_schema: str = Field(default="https://")
-    site_api: str = Field(default="site.default.svc.cluster.local/api")
     site_api_schema: str = Field(default="http://")
 
 
@@ -557,6 +556,7 @@ class _URLs(_BaseURLs):
 
     site_staff: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff"])
     site_paste = "".join(["paste.", BaseURLs.site])
+    site_api = "".join([BaseURLs.site, "/api"])
 
     # Site endpoints
     site_logs_view: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff/bot/logs"])
