@@ -13,6 +13,7 @@ from pydis_core.site_api import ResponseCodeError
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
+from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -20,10 +21,12 @@ from bot.utils import time
 from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 
-from ._api import Nomination, NominationAPI
-
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
+
+# The number of days that a user can have no activity (no messages sent)
+# until they should be removed from the talentpool.
+DAYS_UNTIL_INACTIVE = 30
 
 log = get_logger(__name__)
 
@@ -46,6 +49,8 @@ class TalentPool(Cog, name="Talentpool"):
         """Start autoreview loop if enabled."""
         if await self.autoreview_enabled():
             self.autoreview_loop.start()
+
+        self.prune_talentpool.start()
 
     async def autoreview_enabled(self) -> bool:
         """Return whether automatic posting of nomination reviews is enabled."""
@@ -121,6 +126,42 @@ class TalentPool(Cog, name="Talentpool"):
         async with self.autoreview_lock:
             log.info("Running check for users to nominate.")
             await self.reviewer.maybe_review_user()
+
+    @tasks.loop(hours=24)
+    async def prune_talentpool(self) -> None:
+        """
+        Prune any inactive users from the talentpool.
+
+        A user is considered inactive if they have sent no messages on the server
+        in the past `DAYS_UNTIL_INACTIVE` days.
+        """
+        log.info("Running task to prune users from talent pool")
+        nominations = await self.api.get_nominations(active=True)
+
+        if not nominations:
+            return
+
+        messages_per_user = await self.api.get_activity(
+            [nomination.user_id for nomination in nominations],
+            days=DAYS_UNTIL_INACTIVE
+        )
+
+        nomination_discussion = self.bot.get_channel(Channels.nomination_discussion)
+        for nomination in nominations:
+            if messages_per_user[nomination.user_id] > 0:
+                continue
+
+            log.info("Removing %s from the talent pool due to inactivity", nomination.user_id)
+
+            await nomination_discussion.send(
+                f":warning: <@{nomination.user_id}> ({nomination.user_id})"
+                " was removed from the talentpool due to inactivity."
+            )
+            await self.api.edit_nomination(
+                nomination.id,
+                active=False,
+                end_reason=f"Automatic removal: User was inactive for more than {DAYS_UNTIL_INACTIVE}"
+            )
 
     @nomination_group.command(
         name="nominees",
@@ -539,3 +580,5 @@ class TalentPool(Cog, name="Talentpool"):
         # Only cancel the loop task when the autoreview code is not running
         async with self.autoreview_lock:
             self.autoreview_loop.cancel()
+
+        self.prune_talentpool.cancel()
