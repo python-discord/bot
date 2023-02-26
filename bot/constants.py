@@ -444,6 +444,7 @@ class Channels(metaclass=YAMLGetter):
     mods: int
     nominations: int
     nomination_voting: int
+    nomination_discussion: int
     organisation: int
 
     admin_announcements: int

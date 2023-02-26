@@ -208,6 +208,7 @@ guild:
         mod_meta:                           775412552795947058
         nominations:                        822920136150745168
         nomination_voting:                  822853512709931008
+        nomination_discussion:              798959130634747914
         organisation:       &ORGANISATION   551789653284356126
         staff_lounge:       &STAFF_LOUNGE   464905259261755392
         staff_info:         &STAFF_INFO     396684402404622347
