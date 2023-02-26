@@ -350,16 +350,16 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_try_get_tag_no_permissions(self):
         """Test how to handle checks failing."""
-        self.tag.get_command.can_run = AsyncMock(return_value=False)
+        self.bot.can_run = AsyncMock(return_value=False)
         self.ctx.invoked_with = "foo"
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx, AsyncMock(return_value=False)))
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
 
     async def test_try_get_tag_command_error(self):
         """Should call `on_command_error` when `CommandError` raised."""
         err = errors.CommandError()
-        self.tag.get_command.can_run = AsyncMock(side_effect=err)
+        self.bot.can_run = AsyncMock(side_effect=err)
         self.cog.on_command_error = AsyncMock()
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx, AsyncMock(side_effect=err)))
+        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
         self.cog.on_command_error.assert_awaited_once_with(self.ctx, err)
 
     async def test_dont_call_suggestion_tag_sent(self):
@@ -385,7 +385,7 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
     async def test_call_suggestion(self):
         """Should call command suggestion if user is not a mod."""
         self.ctx.invoked_with = "foo"
-        self.ctx.invoke = AsyncMock(return_value=False)
+        self.tag.get_command_ctx = AsyncMock(return_value=False)
         self.cog.send_command_suggestion = AsyncMock()
 
         await self.cog.try_get_tag(self.ctx)

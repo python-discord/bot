@@ -1,8 +1,7 @@
 import copy
 import difflib
-import typing as t
 
-from discord import Embed, Interaction, utils
+from discord import Embed, Member
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
 from sentry_sdk import push_scope
@@ -21,22 +20,6 @@ class ErrorHandler(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-
-    @staticmethod
-    async def _can_run(ctx: Context) -> bool:
-        """
-        Add checks for the `get_command_ctx` function here.
-
-        The command code style is copied from discord.ext.commands.Command.can_run itself.
-        Append checks in the checks list.
-        """
-        checks = []
-        predicates = checks
-        if not predicates:
-            # Since we have no checks, then we just return True.
-            return True
-
-        return await utils.async_all(predicate(ctx) for predicate in predicates)
 
     def _get_error_embed(self, title: str, body: str) -> Embed:
         """Return an embed that contains the exception."""
@@ -176,7 +159,7 @@ class ErrorHandler(Cog):
             return True
         return False
 
-    async def try_get_tag(self, ctx: Context, can_run: t.Callable[[Interaction], bool] = False) -> None:
+    async def try_get_tag(self, ctx: Context) -> None:
         """
         Attempt to display a tag by interpreting the command name as a tag name.
 
@@ -189,25 +172,28 @@ class ErrorHandler(Cog):
             log.debug("Not attempting to parse message as a tag as could not find `Tags` cog.")
             return
         tags_get_command = tags_cog.get_command_ctx
-        can_run = can_run if can_run else self._can_run
+
+        maybe_tag_name = ctx.invoked_with
+        if not maybe_tag_name or not isinstance(ctx.author, Member):
+            return
 
         ctx.invoked_from_error_handler = True
-
-        log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
         try:
-            if not await can_run(ctx):
-                log.debug(log_msg)
+            if not await self.bot.can_run(ctx):
+                log.debug("Cancelling attempt to fall back to a tag due to failed checks.")
                 return
-        except errors.CommandError as tag_error:
-            log.debug(log_msg)
-            await self.on_command_error(ctx, tag_error)
-            return
 
-        if await tags_get_command(ctx, ctx.message.content):
-            return
+            if await tags_get_command(ctx, maybe_tag_name):
+                return
 
-        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
-            await self.send_command_suggestion(ctx, ctx.invoked_with)
+            if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+                await self.send_command_suggestion(ctx, maybe_tag_name)
+        except Exception as err:
+            log.debug("Error while attempting to invoke tag fallback.")
+            if isinstance(err, errors.CommandError):
+                await self.on_command_error(ctx, err)
+            else:
+                await self.on_command_error(ctx, errors.CommandInvokeError(err))
 
     async def try_run_eval(self, ctx: Context) -> bool:
         """

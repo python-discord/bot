@@ -8,8 +8,8 @@ from typing import Literal, NamedTuple, Optional, Union
 
 import discord
 import frontmatter
-from discord import Embed, Interaction, Member, app_commands
-from discord.ext.commands import Cog
+from discord import Embed, Interaction, Member, User, app_commands
+from discord.ext.commands import Cog, Context
 
 from bot import constants
 from bot.bot import Bot
@@ -26,8 +26,6 @@ TEST_CHANNELS = (
 
 REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
 FOOTER_TEXT = f"To show a tag, type {constants.Bot.prefix}tags <tagname>."
-
-GUILD_ID = constants.Guild.id
 
 
 class COOLDOWN(enum.Enum):
@@ -93,7 +91,7 @@ class Tag:
         embed.description = self.content
         return embed
 
-    def accessible_by(self, member: discord.Member) -> bool:
+    def accessible_by(self, member: Member | User) -> bool:
         """Check whether `member` can access the tag."""
         return bool(
             not self._restricted_to
@@ -141,8 +139,6 @@ class Tags(Cog):
         self.tags: dict[TagIdentifier, Tag] = {}
         self.initialize_tags()
 
-    tag_group = app_commands.Group(name="tag", description="...")
-
     def initialize_tags(self) -> None:
         """Load all tags from resources into `self.tags`."""
         base_path = Path("bot", "resources", "tags")
@@ -188,8 +184,8 @@ class Tags(Cog):
 
     async def get_tag_embed(
             self,
-            author: discord.Member,
-            channel: discord.TextChannel | discord.Thread,
+            author: Member | User,
+            channel: discord.abc.Messageable,
             tag_identifier: TagIdentifier,
     ) -> Optional[Union[Embed, Literal[COOLDOWN.obj]]]:
         """
@@ -244,7 +240,7 @@ class Tags(Cog):
                 description=suggested_tags_text
             )
 
-    def accessible_tags(self, user: Member) -> list[str]:
+    def accessible_tags(self, user: Member | User) -> list[str]:
         """Return a formatted list of tags that are accessible by `user`; groups first, and alphabetically sorted."""
         def tag_sort_key(tag_item: tuple[TagIdentifier, Tag]) -> str:
             group, name = tag_item[0]
@@ -278,7 +274,7 @@ class Tags(Cog):
 
         return result_lines
 
-    def accessible_tags_in_group(self, group: str, user: discord.Member) -> list[str]:
+    def accessible_tags_in_group(self, group: str, user: Member | User) -> list[str]:
         """Return a formatted list of tags in `group`, that are accessible by `user`."""
         return sorted(
             f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
@@ -288,7 +284,7 @@ class Tags(Cog):
 
     async def get_command_ctx(
         self,
-        ctx: discord.Context,
+        ctx: Context,
         name: str
     ) -> bool:
         """Made specifically for `error_handler.py`, See `get_command` for more info."""
@@ -315,7 +311,7 @@ class Tags(Cog):
         # A valid tag was found and was either sent, or is on cooldown
         return True
 
-    @tag_group.command(name="get")
+    @app_commands.command(name="tag")
     async def get_command(self, interaction: Interaction, *, name: Optional[str]) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group
@@ -381,20 +377,6 @@ class Tags(Cog):
             for tag in names if current.lower() in tag
         ]
         return choices[:25] if len(choices) > 25 else choices
-
-    @tag_group.command(name="list")
-    async def list_command(self, interaction: Interaction) -> bool:
-        """Lists all accessible tags."""
-        if self.tags:
-            await LinePaginator.paginate(
-                self.accessible_tags(interaction.user),
-                interaction,
-                Embed(title="Available tags"),
-                **self.PAGINATOR_DEFAULTS,
-            )
-        else:
-            await interaction.response.send_message(embed=Embed(description="**There are no tags!**"))
-        return True
 
 
 async def setup(bot: Bot) -> None:
