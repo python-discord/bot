@@ -66,7 +66,7 @@ class ErrorHandler(Cog):
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
             if await self.try_silence(ctx):
                 return
-            if await self.try_run_eval(ctx):
+            if await self.try_run_fixed_codeblock(ctx):
                 return
             await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
         elif isinstance(e, errors.UserInputError):
@@ -190,9 +190,9 @@ class ErrorHandler(Cog):
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
             await self.send_command_suggestion(ctx, ctx.invoked_with)
 
-    async def try_run_eval(self, ctx: Context) -> bool:
+    async def try_run_fixed_codeblock(self, ctx: Context) -> bool:
         """
-        Attempt to run eval command with backticks directly after command.
+        Attempt to run eval or timeit command with triple backticks directly after command.
 
         For example: !eval```print("hi")```
 
@@ -204,11 +204,18 @@ class ErrorHandler(Cog):
         msg.content = command + " " + sep + end
         new_ctx = await self.bot.get_context(msg)
 
-        eval_command = self.bot.get_command("eval")
-        if eval_command is None or new_ctx.command != eval_command:
+        if new_ctx.command is None:
             return False
 
-        log.debug("Running fixed eval command.")
+        allowed_commands = [
+            self.bot.get_command("eval"),
+            self.bot.get_command("timeit"),
+        ]
+
+        if new_ctx.command not in allowed_commands:
+            return False
+
+        log.debug("Running %r command with fixed codeblock.", new_ctx.command.qualified_name)
         new_ctx.invoked_from_error_handler = True
         await self.bot.invoke(new_ctx)
 
