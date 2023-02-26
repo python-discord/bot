@@ -499,7 +499,12 @@ class TalentPool(Cog, name="Talentpool"):
     @Cog.listener()
     async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
         """Remove `user` from the talent pool after they are banned."""
-        await self.end_nomination(user.id, "User was banned.")
+        if await self.end_nomination(user.id, "Automatic removal: User was banned"):
+            nomination_discussion = self.bot.get_channel(Channels.nomination_discussion)
+            await nomination_discussion.send(
+                f":warning: <@{user.id}> ({user.id})"
+                " was removed from the talentpool due to being banned."
+            )
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent) -> None:
