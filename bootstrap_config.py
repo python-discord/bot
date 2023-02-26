@@ -11,8 +11,8 @@ load_dotenv()
 log = get_logger("Config Bootstrapper")
 
 env_file_path = Path(".env.server")
-BOT_TOKEN = os.getenv("BOT_TOKEN", None)
-GUILD_ID = os.getenv("GUILD_ID", None)
+BOT_TOKEN = os.getenv("BOT.TOKEN", None)
+GUILD_ID = os.getenv("GUILD.ID", None)
 
 
 if not BOT_TOKEN:
