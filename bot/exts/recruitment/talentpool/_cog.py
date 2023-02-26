@@ -1,5 +1,6 @@
 import asyncio
 import textwrap
+from datetime import datetime, timezone
 from io import StringIO
 from typing import Optional, Union
 
@@ -14,7 +15,7 @@ from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
-from bot.exts.recruitment.talentpool._review import Reviewer
+from bot.exts.recruitment.talentpool._review import RECENT_ACTIVITY_DAYS, Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
@@ -163,69 +164,91 @@ class TalentPool(Cog, name="Talentpool"):
                 end_reason=f"Automatic removal: User was inactive for more than {DAYS_UNTIL_INACTIVE}"
             )
 
-    @nomination_group.command(
-        name="nominees",
-        aliases=("nominated", "all", "list", "watched"),
-        root_aliases=("nominees",)
+    @nomination_group.group(
+        name="list",
+        aliases=("nominated", "nominees"),
+        invoke_without_command=True
     )
     @has_any_role(*MODERATION_ROLES)
-    async def list_command(
+    async def list_group(
         self,
         ctx: Context,
-        oldest_first: bool = False,
     ) -> None:
         """
-        Shows the users that are currently in the talent pool.
+        Shows the users that are currently in the talent pool, ordered by next to be reviewed.
 
-        The optional kwarg `oldest_first` can be used to order the list by oldest nomination.
+        Note that this order will change over time, so should not be relied upon.
         """
-        await self.list_nominated_users(ctx, oldest_first=oldest_first)
+        await self.list_nominated_users(ctx, order_by_priority=True)
+
+    @list_group.command(name="oldest")
+    async def list_oldest(self, ctx: Context) -> None:
+        """Shows the users that are currently in the talent pool, ordered by oldest nomination."""
+        await self.list_nominated_users(ctx, oldest_first=True)
+
+    @list_group.command(name='newest')
+    async def list_newest(self, ctx: Context) -> None:
+        """Shows the users that are currently in the talent pool, ordered by newest nomination."""
+        await self.list_nominated_users(ctx, oldest_first=False)
 
     async def list_nominated_users(
         self,
         ctx: Context,
         oldest_first: bool = False,
+        order_by_priority: bool = False
     ) -> None:
         """
-        Gives an overview of the nominated users list.
-
-        It specifies the user's mention, name, how long ago they were nominated, and whether their
-        review was posted.
+        Lists the currently nominated users.
 
         The optional kwarg `oldest_first` orders the list by oldest entry.
         """
-        nominations = await self.api.get_nominations(active=True)
-        if oldest_first:
-            nominations = reversed(nominations)
-
-        lines = []
-
-        for nomination in nominations:
-            member = await get_or_fetch_member(ctx.guild, nomination.user_id)
-            line = f"• `{nomination.user_id}`"
-            if member:
-                line += f" ({member.name}#{member.discriminator})"
-            line += f", added {time.format_relative(nomination.inserted_at)}"
-            if not member:  # Cross off users who left the server.
-                line = f"~~{line}~~"
-            if nomination.reviewed:
-                line += " *(reviewed)*"
-            lines.append(line)
-
-        if not lines:
-            lines = ("There's nothing here yet.",)
-
+        now = datetime.now(tz=timezone.utc)
         embed = Embed(
             title="Talent Pool active nominations",
             color=Color.blue()
         )
-        await LinePaginator.paginate(lines, ctx, embed, empty=False)
+        nominations = await self.api.get_nominations(active=True)
 
-    @nomination_group.command(name='oldest')
-    @has_any_role(*MODERATION_ROLES)
-    async def oldest_command(self, ctx: Context) -> None:
-        """Shows the users that are currently in the talent pool, ordered by oldest nomination."""
-        await self.list_nominated_users(ctx, oldest_first=True)
+        if not nominations:
+            embed.description = "There are no active nominations."
+            await ctx.send(embed=embed)
+            return
+
+        if order_by_priority:
+            nominations = await self.reviewer.sort_nominations_to_review(nominations, now)
+        elif oldest_first:
+            nominations.reverse()
+
+        messages_per_user = await self.api.get_activity(
+            [nomination.user_id for nomination in nominations],
+            days=RECENT_ACTIVITY_DAYS
+        )
+
+        lines: list[str] = []
+        for nomination in nominations:
+            line = f"• `{nomination.user_id}`"
+
+            member = await get_or_fetch_member(ctx.guild, nomination.user_id)
+            if member:
+                line += f" ({member.name}#{member.discriminator})"
+            else:
+                line += " (not in server)"
+
+            line += f", added {time.format_relative(nomination.inserted_at)}"
+
+            is_ready_for_review = await self.reviewer.is_nomination_ready_for_review(
+                nomination,
+                messages_per_user[nomination.user_id],
+                now
+            )
+            if nomination.reviewed:
+                line += " *(reviewed)*"
+            elif is_ready_for_review:
+                line += " *(ready for review)*"
+
+            lines.append(line)
+
+        await LinePaginator.paginate(lines, ctx, embed, empty=False)
 
     @nomination_group.command(
         name="forcenominate",
