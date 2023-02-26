@@ -112,4 +112,4 @@ services:
     env_file:
       - .env
     environment:
-      BOT_API_KEY: badbot13m0n8f570f942013fc818f234916ca531
+      API_KEYS.SITE_API: badbot13m0n8f570f942013fc818f234916ca531
