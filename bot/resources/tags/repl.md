@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Read-Eval-Print Loop"
+    title: "Read-Eval-Print Loop (REPL)"
 ---
 A REPL is an interactive language shell environment. It first **reads** one or more expressions entered by the user, **evaluates** it, yields the result, and **prints** it out to the user. It will then **loop** back to the **read** step.
 

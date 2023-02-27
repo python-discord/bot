@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Positional vs. Keyword arguments"
+    title: "Positional vs. keyword arguments"
 ---
 Functions can take two different kinds of arguments. A positional argument is just the object itself. A keyword argument is a name assigned to an object.
 

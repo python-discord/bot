@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Mutable Default Arguments"
+    title: "Mutable default arguments"
 ---
 Default arguments in python are evaluated *once* when the function is
 **defined**, *not* each time the function is **called**. This means that if

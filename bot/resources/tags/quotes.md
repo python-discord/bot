@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "String Quotes"
+    title: "String quotes"
 ---
 Single and Double quoted strings are the **same** in Python. The choice of which one to use is up to you, just make sure that you **stick to that choice**.
 

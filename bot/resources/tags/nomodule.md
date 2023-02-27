@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "ModuleNotFoundError"
+    title: "The `ModuleNotFoundError` error"
 ---
 If you've installed a package but you're getting a ModuleNotFoundError when you try to import it, it's likely that the environment where your code is running is different from the one where you did the installation.
 

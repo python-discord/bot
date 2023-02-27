@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Identity vs. Equality"
+    title: "Identity vs. equality"
 ---
 Should I be using `is` or `==`?
 

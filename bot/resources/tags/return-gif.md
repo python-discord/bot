@@ -1,7 +1,7 @@
 ---
 aliases: ["print-return", "return-jif"]
 embed:
-    title: Print and Return
+    title: Print and return
     image:
         url: https://raw.githubusercontent.com/python-discord/bot/main/bot/resources/media/print-return.gif
 ---

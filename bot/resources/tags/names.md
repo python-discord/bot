@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Naming and Binding"
+    title: "Naming and binding"
 ---
 A name is a piece of text that is bound to an object. They are a **reference** to an object. Examples are function names, class names, module names, variables, etc.
 

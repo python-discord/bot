@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Return Statement"
+    title: "Return statement"
 ---
 A value created inside a function can't be used outside of it unless you `return` it.
 

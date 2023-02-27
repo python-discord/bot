@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Assignment vs Comparison`"
+    title: "Assignment vs comparison`"
 ---
 The assignment operator (`=`) is used to assign variables.
 ```python

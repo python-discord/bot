@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Type Hints"
+    title: "Type hints"
 ---
 A type hint indicates what type a variable is expected to be.
 ```python

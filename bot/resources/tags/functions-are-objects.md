@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Calling vs. Referencing functions"
+    title: "Calling vs. referencing functions"
 ---
 When assigning a new name to a function, storing it in a container, or passing it as an argument, a common mistake made is to call the function. Instead of getting the actual function, you'll get its return value.
 

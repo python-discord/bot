@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Pathlib"
+    title: "The `pathlib` module"
 ---
 Python 3 comes with a new module named `Pathlib`. Since Python 3.6, `pathlib.Path` objects work nearly everywhere that `os.path` can be used, meaning you can integrate your new code directly into legacy code without having to rewrite anything. Pathlib makes working with paths way simpler than `os.path` does.
 

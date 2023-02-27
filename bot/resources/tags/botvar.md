@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Bot Variables"
+    title: "Bot variables"
 ---
 Python allows you to set custom attributes to most objects, like your bot! By storing things as attributes of the bot object, you can access them anywhere you access your bot. In the discord.py library, these custom attributes are commonly known as "bot variables" and can be a lifesaver if your bot is divided into many different files. An example on how to use custom attributes on your bot is shown below:
 

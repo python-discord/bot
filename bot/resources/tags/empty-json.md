@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Empyt json error"
+    title: "Empty JSON error"
 ---
 When using JSON, you might run into the following error:
 ```

@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Joining Iterables"
+    title: "Joining iterables"
 ---
 If you want to display a list (or some other iterable), you can write:
 ```py

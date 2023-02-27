@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Scoping Rules"
+    title: "Scoping rules"
 ---
 A *scope* defines the visibility of a name within a block, where a block is a piece of python code executed as a unit. For simplicity, this would be a module, a function body, and a class definition. A name refers to text bound to an object.
 
