@@ -1,4 +1,7 @@
-**Star / Wildcard imports**
+---
+embed:
+    title: "Star / Wildcard imports"
+---
 
 Wildcard imports are import statements in the form `from <module_name> import *`. What imports like these do is that they import everything **[1]** from the module into the current module's namespace **[2]**. This allows you to use names defined in the imported module without prefixing the module's name.
 

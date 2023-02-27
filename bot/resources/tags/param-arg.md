@@ -1,5 +1,7 @@
-**Parameters vs. Arguments**
-
+---
+embed:
+    title: "Parameters vs. arguments"
+---
 A parameter is a variable defined in a function signature (the line with `def` in it), while arguments are objects passed to a function call.
 
 ```py

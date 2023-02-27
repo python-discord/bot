@@ -1,5 +1,7 @@
-**Joining Iterables**
-
+---
+embed:
+    title: "Joining iterables"
+---
 If you want to display a list (or some other iterable), you can write:
 ```py
 colors = ['red', 'green', 'blue', 'yellow']

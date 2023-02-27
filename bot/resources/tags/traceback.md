@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Traceback"
+---
 Please provide the full traceback for your exception in order to help us identify your issue.
 While the last line of the error message tells us what kind of error you got,
 the full traceback will tell us which line, and other critical information to solve your problem.
