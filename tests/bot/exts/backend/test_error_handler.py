@@ -47,7 +47,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         )
         self.cog.try_silence = AsyncMock()
         self.cog.try_get_tag = AsyncMock()
-        self.cog.try_run_eval = AsyncMock(return_value=False)
+        self.cog.try_run_fixed_codeblock = AsyncMock(return_value=False)
 
         for case in test_cases:
             with self.subTest(try_silence_return=case["try_silence_return"], try_get_tag=case["called_try_get_tag"]):
@@ -75,7 +75,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.try_silence = AsyncMock()
         self.cog.try_get_tag = AsyncMock()
-        self.cog.try_run_eval = AsyncMock()
+        self.cog.try_run_fixed_codeblock = AsyncMock()
 
         error = errors.CommandNotFound()
 
@@ -83,7 +83,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.try_silence.assert_not_awaited()
         self.cog.try_get_tag.assert_not_awaited()
-        self.cog.try_run_eval.assert_not_awaited()
+        self.cog.try_run_fixed_codeblock.assert_not_awaited()
         self.ctx.send.assert_not_awaited()
 
     async def test_error_handler_user_input_error(self):
