@@ -19,6 +19,7 @@ load_dotenv(".env")
 The variables from the file have now been loaded into your programs environment, and you can access them using `os.getenv()` anywhere in your program, like this:
 ```py
 from os import getenv
+
 my_token = getenv("TOKEN")
 ```
 For further reading about tokens and secrets, please read [this explanation](https://vcokltfre.dev/tips/tokens).
