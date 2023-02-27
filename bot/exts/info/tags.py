@@ -8,7 +8,7 @@ from typing import Literal, NamedTuple, Optional, Union
 
 import discord
 import frontmatter
-from discord import Embed, Interaction, Member, User, app_commands
+from discord import Embed, Interaction, Member, app_commands
 from discord.ext.commands import Cog, Context
 
 from bot import constants
@@ -91,7 +91,7 @@ class Tag:
         embed.description = self.content
         return embed
 
-    def accessible_by(self, member: Member | User) -> bool:
+    def accessible_by(self, member: Member) -> bool:
         """Check whether `member` can access the tag."""
         return bool(
             not self._restricted_to
@@ -184,19 +184,20 @@ class Tags(Cog):
 
     async def get_tag_embed(
             self,
-            author: Member | User,
+            member: Member,
             channel: discord.abc.Messageable,
             tag_identifier: TagIdentifier,
     ) -> Optional[Union[Embed, Literal[COOLDOWN.obj]]]:
         """
-        Generate an embed of the requested tag or of suggestions if the tag doesn't exist/isn't accessible by the user.
+        Generate an embed of the requested tag or of suggestions if the tag doesn't exist
+        or isn't accessible by the member.
 
         If the requested tag is on cooldown return `COOLDOWN.obj`, otherwise if no suggestions were found return None.
-        """
+        """  # noqa: D205, D415
         filtered_tags = [
             (ident, tag) for ident, tag in
             self.get_fuzzy_matches(tag_identifier)[:10]
-            if tag.accessible_by(author)
+            if tag.accessible_by(member)
         ]
 
         # Try exact match, includes checking through alt names
@@ -240,8 +241,8 @@ class Tags(Cog):
                 description=suggested_tags_text
             )
 
-    def accessible_tags(self, user: Member | User) -> list[str]:
-        """Return a formatted list of tags that are accessible by `user`; groups first, and alphabetically sorted."""
+    def accessible_tags(self, member: Member) -> list[str]:
+        """Return a formatted list of tags that are accessible by `member`; groups first, and alphabetically sorted."""
         def tag_sort_key(tag_item: tuple[TagIdentifier, Tag]) -> str:
             group, name = tag_item[0]
             if group is None:
@@ -258,7 +259,7 @@ class Tags(Cog):
 
             if identifier.group != current_group:
                 if not group_accessible:
-                    # Remove group separator line if no tags in the previous group were accessible by the user.
+                    # Remove group separator line if no tags in the previous group were accessible by the member.
                     result_lines.pop()
                 # A new group began, add a separator with the group name.
                 current_group = identifier.group
@@ -268,18 +269,18 @@ class Tags(Cog):
                 else:
                     result_lines.append("\n\N{BULLET}")
 
-            if tag.accessible_by(user):
+            if tag.accessible_by(member):
                 result_lines.append(f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier.name}")
                 group_accessible = True
 
         return result_lines
 
-    def accessible_tags_in_group(self, group: str, user: Member | User) -> list[str]:
-        """Return a formatted list of tags in `group`, that are accessible by `user`."""
+    def accessible_tags_in_group(self, group: str, member: Member) -> list[str]:
+        """Return a formatted list of tags in `group`, that are accessible by `member`."""
         return sorted(
             f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
             for identifier, tag in self.tags.items()
-            if identifier.group == group and tag.accessible_by(user)
+            if identifier.group == group and tag.accessible_by(member)
         )
 
     async def get_command_ctx(
@@ -287,7 +288,11 @@ class Tags(Cog):
         ctx: Context,
         name: str
     ) -> bool:
-        """Made specifically for `error_handler.py`, See `get_command` for more info."""
+        """
+        Made specifically for `ErrorHandler().try_get_tag` to handle sending tags through ctx.
+
+        See `get_command` for more info, but here name is not optional unlike `get_command`.
+        """
         identifier = TagIdentifier.from_string(name)
 
         if identifier.group is None:
