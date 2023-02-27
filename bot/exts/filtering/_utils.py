@@ -2,11 +2,12 @@ import importlib
 import importlib.util
 import inspect
 import pkgutil
+import types
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import cache
-from typing import Any, Iterable, TypeVar, Union
+from typing import Any, Iterable, TypeVar, Union, get_args, get_origin
 
 import discord
 import regex
@@ -121,13 +122,13 @@ def repr_equals(override: Any, default: Any) -> bool:
 
 def starting_value(type_: type[T]) -> T:
     """Return a value of the given type."""
-    if hasattr(type_, "__origin__"):
-        if type_.__origin__ is not Union:  # In case this is a types.GenericAlias or a typing._GenericAlias
-            type_ = type_.__origin__
-    if hasattr(type_, "__args__"):  # In case of a Union
-        if type(None) in type_.__args__:
+    if get_origin(type_) in (Union, types.UnionType):  # In case of a Union
+        args = get_args(type_)
+        if type(None) in args:
             return None
-        type_ = type_.__args__[0]  # Pick one, doesn't matter
+        type_ = args[0]  # Pick one, doesn't matter
+    if origin := get_origin(type_):  # In case of a parameterized List, Set, Dict etc.
+        type_ = origin
 
     try:
         return type_()
