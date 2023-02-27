@@ -12,8 +12,8 @@ from discord.ui.select import SelectOption
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._ui.ui import (
-    COMPONENT_TIMEOUT, CustomCallbackSelect, EditBaseView, MISSING, SETTINGS_DELIMITER, SINGLE_SETTING_PATTERN,
-    format_response_error, parse_value, populate_embed_from_dict
+    COMPONENT_TIMEOUT, CustomCallbackSelect, EditBaseView, MAX_EMBED_DESCRIPTION, MISSING, SETTINGS_DELIMITER,
+    SINGLE_SETTING_PATTERN, format_response_error, parse_value, populate_embed_from_dict
 )
 from bot.exts.filtering._utils import repr_equals, to_serializable
 from bot.log import get_logger
@@ -278,6 +278,8 @@ class FilterEditView(EditBaseView):
             self.embed.description = f"`{content}`" if content else "*No content*"
             if description and description is not self._REMOVE:
                 self.embed.description += f" - {description}"
+            if len(self.embed.description) > MAX_EMBED_DESCRIPTION:
+                self.embed.description = self.embed.description[:MAX_EMBED_DESCRIPTION - 5] + "[...]"
 
         if setting_name:
             # Find the right dictionary to update.
@@ -308,7 +310,7 @@ class FilterEditView(EditBaseView):
                 await interaction_or_msg.response.edit_message(embed=self.embed, view=new_view)
             else:
                 await interaction_or_msg.edit(embed=self.embed, view=new_view)
-        except discord.errors.HTTPException:  # Various errors such as embed description being too long.
+        except discord.errors.HTTPException:  # Various unexpected errors.
             pass
         else:
             self.stop()

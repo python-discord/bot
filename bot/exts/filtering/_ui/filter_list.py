@@ -145,7 +145,7 @@ class FilterListAddView(EditBaseView):
                 await interaction_or_msg.response.edit_message(embed=self.embed, view=new_view)
             else:
                 await interaction_or_msg.edit(embed=self.embed, view=new_view)
-        except discord.errors.HTTPException:  # Various errors such as embed description being too long.
+        except discord.errors.HTTPException:  # Various unexpected errors.
             pass
         else:
             self.stop()
