@@ -1,6 +1,6 @@
 ---
 embed:
-	title: "Decorators"
+    title: "Decorators"
 ---
 A decorator is a function that modifies another function.
 

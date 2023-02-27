@@ -1,6 +1,6 @@
 ---
 embed:
-	title: "The `collections.defaultdict` class"
+    title: "The `collections.defaultdict` class"
 ---
 The Python `defaultdict` type behaves almost exactly like a regular Python dictionary, but if you try to access or modify a missing key, the `defaultdict` will automatically insert the key and generate a default value for it.
 While instantiating a `defaultdict`, we pass in a function that tells it how to create a default value for missing keys.
