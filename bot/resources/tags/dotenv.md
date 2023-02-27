@@ -1,5 +1,7 @@
-**Using .env files in Python**
-
+---
+embed:
+    title: "Using .env files in Python"
+---
 `.env` (dotenv) files are a type of file commonly used for storing application secrets and variables, for example API tokens and URLs, although they may also be used for storing other configurable values. While they are commonly used for storing secrets, at a high level their purpose is to load environment variables into a program.
 
 Dotenv files are especially suited for storing secrets as they are a key-value store in a file, which can be easily loaded in most programming languages and ignored by version control systems like Git with a single entry in a `.gitignore` file.
@@ -14,10 +16,3 @@ from dotenv import load_dotenv()
 
 load_dotenv(".env")
 ```
-The variables from the file have now been loaded into your programs environment, and you can access them using `os.getenv()` anywhere in your program, like this:
-```py
-from os import getenv
-
-my_token = getenv("TOKEN")
-```
-For further reading about tokens and secrets, please read [this explanation](https://vcokltfre.dev/tips/tokens).

@@ -1,5 +1,7 @@
-**Custom Command Checks in discord.py**
-
+---
+embed:
+  title: "Custom command checks in discord.py"
+---
 Often you may find the need to use checks that don't exist by default in discord.py. Fortunately, discord.py provides `discord.ext.commands.check` which allows you to create you own checks like this:
 ```py
 from discord.ext.commands import check, Context

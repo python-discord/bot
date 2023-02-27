@@ -1,4 +1,7 @@
-**Contribute to Python Discord's Open Source Projects**
+---
+embed:
+	title: "Contribute to python discord's open source projects"
+---
 Looking to contribute to Open Source Projects for the first time? Want to add a feature or fix a bug on the bots on this server? We have on-going projects that people can contribute to, even if you've never contributed to open source before!
 
 **Projects to Contribute to**

@@ -1,3 +1,7 @@
+---
+embed:
+    title: "The `enumerate` function"
+---
 Ever find yourself in need of the current iteration number of your `for` loop? You should use **enumerate**! Using `enumerate`, you can turn code that looks like this:
 ```py
 index = 0

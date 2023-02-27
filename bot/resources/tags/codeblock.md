@@ -1,3 +1,7 @@
+---
+embed:
+	title: "Formatting code on discord"
+---
 Here's how to format Python code on Discord:
 
 \`\`\`py

@@ -1,5 +1,7 @@
-**Type Hints**
-
+---
+embed:
+    title: "Type Hints"
+---
 A type hint indicates what type a variable is expected to be.
 ```python
 def add(a: int, b: int) -> int:

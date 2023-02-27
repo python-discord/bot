@@ -1,3 +1,7 @@
+---
+embed:
+    title: "No assist with questions related to youtube-dl"
+---
 Per [Python Discord's Rule 5](https://pythondiscord.com/pages/rules), we are unable to assist with questions related to youtube-dl, pytube, or other YouTube video downloaders, as their usage violates YouTube's Terms of Service.
 
 For reference, this usage is covered by the following clauses in [YouTube's TOS](https://www.youtube.com/static?gl=GB&template=terms), as of 2021-03-17:

@@ -7,4 +7,4 @@ embed:
 ---
 Here's a handy animation demonstrating how `print` and `return` differ in behavior.
 
-See also: `!tags return`
+See also: `/tag return`

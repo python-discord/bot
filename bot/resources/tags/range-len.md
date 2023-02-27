@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Pythonic way of iteratinf over ordered collection"
+---
 Iterating over `range(len(...))` is a common approach to accessing each item in an ordered collection.
 ```py
 for i in range(len(my_list)):

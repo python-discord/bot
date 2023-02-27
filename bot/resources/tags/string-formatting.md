@@ -1,4 +1,7 @@
-**String Formatting Mini-Language**
+---
+embed:
+    title: "String Formatting Mini-Language"
+---
 The String Formatting Language in Python is a powerful way to tailor the display of strings and other data structures. This string formatting mini language works for f-strings and `.format()`.
 
 Take a look at some of these examples!

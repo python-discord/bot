@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Empyt json error"
+---
 When using JSON, you might run into the following error:
 ```
 JSONDecodeError: Expecting value: line 1 column 1 (char 0)

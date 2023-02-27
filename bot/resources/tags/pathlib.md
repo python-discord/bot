@@ -1,5 +1,7 @@
-**Pathlib**
-
+---
+embed:
+    title: "Pathlib"
+---
 Python 3 comes with a new module named `Pathlib`. Since Python 3.6, `pathlib.Path` objects work nearly everywhere that `os.path` can be used, meaning you can integrate your new code directly into legacy code without having to rewrite anything. Pathlib makes working with paths way simpler than `os.path` does.
 
 **Feature spotlight**:
@@ -18,4 +20,4 @@ Python 3 comes with a new module named `Pathlib`. Since Python 3.6, `pathlib.Pat
 • [**Why you should use pathlib** - Trey Hunner](https://treyhunner.com/2018/12/why-you-should-be-using-pathlib/)  
 • [**Answering concerns about pathlib** - Trey Hunner](https://treyhunner.com/2019/01/no-really-pathlib-is-great/)  
 • [**Official Documentation**](https://docs.python.org/3/library/pathlib.html)  
-• [**PEP 519** - Adding a file system path protocol](https://peps.python.org/pep-0519/)  
+• [**PEP 519** - Adding a file system path protocol](https://peps.python.org/pep-0519/)

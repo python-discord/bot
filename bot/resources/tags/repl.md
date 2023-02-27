@@ -1,5 +1,7 @@
-**Read-Eval-Print Loop**
-
+---
+embed:
+    title: "Read-Eval-Print Loop"
+---
 A REPL is an interactive language shell environment. It first **reads** one or more expressions entered by the user, **evaluates** it, yields the result, and **prints** it out to the user. It will then **loop** back to the **read** step.
 
 To use python's REPL, execute the interpreter with no arguments. This will drop you into the interactive interpreter shell, print out some relevant information, and then prompt you with the primary prompt `>>>`. At this point it is waiting for your input.

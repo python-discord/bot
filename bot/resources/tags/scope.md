@@ -1,8 +1,10 @@
-**Scoping Rules**
-
+---
+embed:
+    title: "Scoping Rules"
+---
 A *scope* defines the visibility of a name within a block, where a block is a piece of python code executed as a unit. For simplicity, this would be a module, a function body, and a class definition. A name refers to text bound to an object.
 
-*For more information about names, see `!tags names`*
+*For more information about names, see `/tag names`*
 
 A module is the source code file itself, and encompasses all blocks defined within it. Therefore if a variable is defined at the module level (top-level code block), it is a global variable and can be accessed anywhere in the module as long as the block in which it's referenced is executed after it was defined.
 
