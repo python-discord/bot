@@ -3,6 +3,7 @@ from __future__ import annotations
 import operator
 import traceback
 from abc import abstractmethod
+from copy import copy
 from functools import reduce
 from typing import Any, NamedTuple, Optional, TypeVar
 
@@ -105,9 +106,7 @@ class Settings(FieldRequiring, dict[str, T]):
 
     def copy(self: TSettings) -> TSettings:
         """Create a shallow copy of the object."""
-        copy = self.__class__({})
-        copy.update(super().copy())  # Copy the internal dict.
-        return copy
+        return copy(self)
 
     def get_setting(self, key: str, default: Optional[Any] = None) -> Any:
         """Get the setting matching the key, or fall back to the default value if the key is missing."""
