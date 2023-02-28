@@ -59,6 +59,8 @@ class RemoveContext(ActionEntry):
         if not ctx.message or not ctx.message.guild:
             return
 
+        # If deletion somehow fails at least this will allow scheduling for deletion.
+        ctx.messages_deletion = True
         channel_messages = defaultdict(set)  # Duplicates will cause batch deletion to fail.
         for message in {ctx.message} | ctx.related_messages:
             channel_messages[message.channel].add(message)

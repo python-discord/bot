@@ -57,22 +57,25 @@ T = TypeVar('T')
 async def _build_alert_message_content(ctx: FilterContext, current_message_length: int) -> str:
     """Build the content section of the alert."""
     # For multiple messages and those with attachments or excessive newlines, use the logs API
-    if any((
+    if ctx.messages_deletion and ctx.upload_deletion_logs and any((
         ctx.related_messages,
         len(ctx.attachments) > 0,
         ctx.content.count('\n') > 15
     )):
         url = await upload_log(ctx.related_messages, bot.instance.user.id, ctx.attachments)
-        alert_content = f"A complete log of the offending messages can be found [here]({url})"
-    else:
-        alert_content = escape_markdown(ctx.content)
-        remaining_chars = MAX_EMBED_DESCRIPTION - current_message_length
+        return f"A complete log of the offending messages can be found [here]({url})"
 
-        if len(alert_content) > remaining_chars:
+    alert_content = escape_markdown(ctx.content)
+    remaining_chars = MAX_EMBED_DESCRIPTION - current_message_length
+
+    if len(alert_content) > remaining_chars:
+        if ctx.messages_deletion and ctx.upload_deletion_logs:
             url = await upload_log([ctx.message], bot.instance.user.id, ctx.attachments)
             log_site_msg = f"The full message can be found [here]({url})"
             # 7 because that's the length of "[...]\n\n"
-            alert_content = alert_content[:remaining_chars - (7 + len(log_site_msg))] + "[...]\n\n" + log_site_msg
+            return alert_content[:remaining_chars - (7 + len(log_site_msg))] + "[...]\n\n" + log_site_msg
+        else:
+            return alert_content[:remaining_chars - 5] + "[...]"
 
     return alert_content
 

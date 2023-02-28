@@ -44,11 +44,13 @@ class FilterContext:
     matches: list[str] = field(default_factory=list)  # What exactly was found
     notification_domain: str = ""  # A domain to send the user for context
     filter_info: dict['Filter', str] = field(default_factory=dict)  # Additional info from a filter.
+    messages_deletion: bool = False  # Whether the messages were deleted. Can't upload deletion log otherwise.
     # Additional actions to perform
     additional_actions: list[Callable[[FilterContext], Coroutine]] = field(default_factory=list)
-    related_messages: set[Message] = field(default_factory=set)
+    related_messages: set[Message] = field(default_factory=set)  # Deletion will include these.
     related_channels: set[TextChannel | Thread | DMChannel] = field(default_factory=set)
     attachments: dict[int, list[str]] = field(default_factory=dict)  # Message ID to attachment URLs.
+    upload_deletion_logs: bool = True  # Whether it's allowed to upload deletion logs.
 
     @classmethod
     def from_message(

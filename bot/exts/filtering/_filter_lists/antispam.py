@@ -77,17 +77,23 @@ class AntispamList(UniquesListBase):
             self.message_deletion_queue[ctx.author] = DeletionContext()
             ctx.additional_actions.append(self._create_deletion_context_handler(ctx.author))
             ctx.related_channels |= {msg.channel for msg in ctx.related_messages}
-        else:  # The additional messages found are already part of the deletion context
+        else:  # The additional messages found are already part of a deletion context
             ctx.related_messages = set()
         current_infraction = self.message_deletion_queue[ctx.author].current_infraction
+        # In case another filter wants an alert, prevent deleted messages from being uploaded now and also for
+        # the spam alert (upload happens during alerting).
+        # Deleted messages API doesn't accept duplicates and will error.
+        # Additional messages are necessarily part of the deletion.
+        ctx.upload_deletion_logs = False
         self.message_deletion_queue[ctx.author].add(ctx, triggers)
 
-        current_actions = sublist.merge_actions(triggers) if triggers else None
+        current_actions = sublist.merge_actions(triggers)
         # Don't alert yet.
         current_actions.pop("ping", None)
         current_actions.pop("send_alert", None)
+
         new_infraction = current_actions["infraction_and_notification"].copy()
-        # Smaller infraction value = higher in hierarchy.
+        # Smaller infraction value => higher in hierarchy.
         if not current_infraction or new_infraction.infraction_type.value < current_infraction.value:
             # Pick the first triggered filter for the reason, there's no good way to decide between them.
             new_infraction.infraction_reason = (
@@ -161,11 +167,13 @@ class DeletionContext:
             new_ctx.action_descriptions[-1] += f" (+{descriptions_num - 20} other actions)"
         new_ctx.related_messages = reduce(
             or_, (other_ctx.related_messages for other_ctx in other_contexts), ctx.related_messages
-        )
+        ) | {ctx.message for ctx in other_contexts}
         new_ctx.related_channels = reduce(
             or_, (other_ctx.related_channels for other_ctx in other_contexts), ctx.related_channels
-        )
+        ) | {ctx.channel for ctx in other_contexts}
         new_ctx.attachments = reduce(or_, (other_ctx.attachments for other_ctx in other_contexts), ctx.attachments)
+        new_ctx.upload_deletion_logs = True
+        new_ctx.messages_deletion = all(ctx.messages_deletion for ctx in self.contexts)
 
         rules = list(self.rules)
         actions = antispam_list[ListType.DENY].merge_actions(rules)
