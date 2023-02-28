@@ -168,17 +168,20 @@ class InfractionAndNotification(ActionEntry):
 
         There is no clear way to properly combine several notification messages, especially when it's in two parts.
         To avoid bombarding the user with several notifications, the message with the more significant infraction
-        is used.
+        is used. If the more significant infraction has no accompanying message, use the one from the other infraction,
+        if it exists.
         """
         # Lower number -> higher in the hierarchy
         if self.infraction_type is None:
             return other.copy()
         elif other.infraction_type is None:
             return self.copy()
-        elif self.infraction_type.value < other.infraction_type.value:
-            return self.copy()
+
+        if self.infraction_type.value < other.infraction_type.value:
+            result = self.copy()
         elif self.infraction_type.value > other.infraction_type.value:
-            return other.copy()
+            result = other.copy()
+            other = self
         else:
             if self.infraction_duration is None or (
                 other.infraction_duration is not None and self.infraction_duration > other.infraction_duration
@@ -186,4 +189,15 @@ class InfractionAndNotification(ActionEntry):
                 result = self.copy()
             else:
                 result = other.copy()
-            return result
+                other = self
+
+        # If the winner has no message but the loser does, copy the message to the winner.
+        result_overrides = result.overrides
+        if "dm_content" not in result_overrides and "dm_embed" not in result_overrides:
+            other_overrides = other.overrides
+            if "dm_content" in other_overrides:
+                result.dm_content = other_overrides["dm_content"]
+            if "dm_embed" in other_overrides:
+                result.dm_content = other_overrides["dm_embed"]
+
+        return result
