@@ -220,7 +220,7 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
             if filter_type:
                 return filter_type(filter_data, defaults)
             elif content not in self._already_warned:
-                log.warn(f"A filter named {content} was supplied, but no matching implementation found.")
+                log.warning(f"A filter named {content} was supplied, but no matching implementation found.")
                 self._already_warned.add(content)
             return None
         except TypeError as e:

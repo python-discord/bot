@@ -49,7 +49,7 @@ class AntispamList(UniquesListBase):
             return antispam_filter_types[content]
         except KeyError:
             if content not in self._already_warned:
-                log.warn(f"An antispam filter named {content} was supplied, but no matching implementation found.")
+                log.warning(f"An antispam filter named {content} was supplied, but no matching implementation found.")
                 self._already_warned.add(content)
             return None
 
