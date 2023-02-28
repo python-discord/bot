@@ -143,7 +143,7 @@ class DiscordTokenFilter(UniqueFilter):
 
     @classmethod
     def find_token_in_message(cls, content: str) -> Token | None:
-        """Return a seemingly valid token found in `msg` or `None` if no token is found."""
+        """Return a seemingly valid token found in `content` or `None` if no token is found."""
         # Use finditer rather than search to guard against method calls prematurely returning the
         # token check (e.g. `message.channel.send` also matches our token pattern)
         for match in TOKEN_RE.finditer(content):
