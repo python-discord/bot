@@ -1,10 +1,10 @@
 from collections import defaultdict
 from typing import ClassVar
 
-from botcore.utils import scheduling
-from botcore.utils.logging import get_logger
 from discord import Message
 from discord.errors import HTTPException
+from pydis_core.utils import scheduling
+from pydis_core.utils.logging import get_logger
 from typing_extensions import Self
 
 import bot

@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 import discord
-from botcore.site_api import ResponseCodeError
 from discord import Embed, Interaction, SelectOption, User
 from discord.ext.commands import BadArgument
+from pydis_core.site_api import ResponseCodeError
 
 from bot.exts.filtering._filter_lists import FilterList, ListType
 from bot.exts.filtering._ui.ui import (

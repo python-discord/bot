@@ -1,4 +1,4 @@
-from botcore.utils.logging import get_logger
+from pydis_core.utils.logging import get_logger
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filter_lists.filter_list import ListType, UniquesListBase

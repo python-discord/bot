@@ -12,11 +12,11 @@ from typing import Literal, Optional, get_type_hints
 import arrow
 import discord
 from async_rediscache import RedisCache
-from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
 from discord import Colour, Embed, HTTPException, Message, MessageType
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import scheduling
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui

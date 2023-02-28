@@ -4,11 +4,11 @@ from typing import ClassVar
 
 import arrow
 import discord.abc
-from botcore.utils.logging import get_logger
-from botcore.utils.members import get_or_fetch_member
 from discord import Colour, Embed, Member, User
 from discord.errors import Forbidden
 from pydantic import validator
+from pydis_core.utils.logging import get_logger
+from pydis_core.utils.members import get_or_fetch_member
 from typing_extensions import Self
 
 import bot as bot_module

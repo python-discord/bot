@@ -4,10 +4,10 @@ from typing import Any, Callable
 
 import discord
 import discord.ui
-from botcore.site_api import ResponseCodeError
 from discord import Embed, Interaction, User
 from discord.ext.commands import BadArgument
 from discord.ui.select import SelectOption
+from pydis_core.site_api import ResponseCodeError
 
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter

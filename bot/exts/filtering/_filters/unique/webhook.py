@@ -1,7 +1,7 @@
 import re
 from collections.abc import Callable, Coroutine
 
-from botcore.utils.logging import get_logger
+from pydis_core.utils.logging import get_logger
 
 import bot
 from bot import constants

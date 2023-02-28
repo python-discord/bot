@@ -190,8 +190,8 @@ class LinePaginator(Paginator):
     @classmethod
     async def paginate(
         cls,
-        lines: t.List[str],
-        ctx: Context,
+        lines: list[str],
+        ctx: Context | discord.Interaction,
         embed: discord.Embed,
         prefix: str = "",
         suffix: str = "",
@@ -229,7 +229,10 @@ class LinePaginator(Paginator):
         current_page = 0
 
         if not restrict_to_user:
-            restrict_to_user = ctx.author
+            if isinstance(ctx, discord.Interaction):
+                restrict_to_user = ctx.user
+            else:
+                restrict_to_user = ctx.author
 
         if not lines:
             if exception_on_empty_embed:
@@ -264,6 +267,9 @@ class LinePaginator(Paginator):
                 log.trace(f"Setting embed url to '{url}'")
 
             log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
+
+            if isinstance(ctx, discord.Interaction):
+                return await ctx.response.send_message(embed=embed)
             return await ctx.send(embed=embed, reference=reference)
         else:
             if footer_text:
@@ -277,7 +283,12 @@ class LinePaginator(Paginator):
                 log.trace(f"Setting embed url to '{url}'")
 
             log.debug("Sending first page to channel...")
-            message = await ctx.send(embed=embed, reference=reference)
+
+            if isinstance(ctx, discord.Interaction):
+                await ctx.response.send_message(embed=embed)
+                message = await ctx.original_response()
+            else:
+                message = await ctx.send(embed=embed, reference=reference)
 
         log.debug("Adding emoji reactions to message...")
 
@@ -295,7 +306,10 @@ class LinePaginator(Paginator):
 
         while True:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=check)
+                if isinstance(ctx, discord.Interaction):
+                    reaction, user = await ctx.client.wait_for("reaction_add", timeout=timeout, check=check)
+                else:
+                    reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=check)
                 log.trace(f"Got reaction: {reaction}")
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")
@@ -304,42 +318,35 @@ class LinePaginator(Paginator):
             if str(reaction.emoji) == DELETE_EMOJI:
                 log.debug("Got delete reaction")
                 return await message.delete()
+            elif reaction.emoji in PAGINATION_EMOJI:
+                total_pages = len(paginator.pages)
+                try:
+                    await message.remove_reaction(reaction.emoji, user)
+                except discord.HTTPException as e:
+                    # Suppress if trying to act on an archived thread.
+                    if e.code != 50083:
+                        raise e
 
-            if reaction.emoji == FIRST_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
-                current_page = 0
+                if reaction.emoji == FIRST_EMOJI:
+                    current_page = 0
+                    log.debug(f"Got first page reaction - changing to page 1/{total_pages}")
+                elif reaction.emoji == LAST_EMOJI:
+                    current_page = len(paginator.pages) - 1
+                    log.debug(f"Got last page reaction - changing to page {current_page + 1}/{total_pages}")
+                elif reaction.emoji == LEFT_EMOJI:
+                    if current_page <= 0:
+                        log.debug("Got previous page reaction, but we're on the first page - ignoring")
+                        continue
 
-                log.debug(f"Got first page reaction - changing to page 1/{len(paginator.pages)}")
+                    current_page -= 1
+                    log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{total_pages}")
+                elif reaction.emoji == RIGHT_EMOJI:
+                    if current_page >= len(paginator.pages) - 1:
+                        log.debug("Got next page reaction, but we're on the last page - ignoring")
+                        continue
 
-                embed.description = paginator.pages[current_page]
-                if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
-                else:
-                    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-                await message.edit(embed=embed)
-
-            if reaction.emoji == LAST_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
-                current_page = len(paginator.pages) - 1
-
-                log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
-
-                embed.description = paginator.pages[current_page]
-                if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
-                else:
-                    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-                await message.edit(embed=embed)
-
-            if reaction.emoji == LEFT_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
-
-                if current_page <= 0:
-                    log.debug("Got previous page reaction, but we're on the first page - ignoring")
-                    continue
-
-                current_page -= 1
-                log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
+                    current_page += 1
+                    log.debug(f"Got next page reaction - changing to page {current_page + 1}/{total_pages}")
 
                 embed.description = paginator.pages[current_page]
 
@@ -348,27 +355,20 @@ class LinePaginator(Paginator):
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
-                await message.edit(embed=embed)
-
-            if reaction.emoji == RIGHT_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
-
-                if current_page >= len(paginator.pages) - 1:
-                    log.debug("Got next page reaction, but we're on the last page - ignoring")
-                    continue
-
-                current_page += 1
-                log.debug(f"Got next page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
-
-                embed.description = paginator.pages[current_page]
-
-                if footer_text:
-                    embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
-                else:
-                    embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-
-                await message.edit(embed=embed)
+                try:
+                    await message.edit(embed=embed)
+                except discord.HTTPException as e:
+                    if e.code == 50083:
+                        # Trying to act on an archived thread, just ignore and abort
+                        break
+                    else:
+                        raise e
 
         log.debug("Ending pagination and clearing reactions.")
         with suppress(discord.NotFound):
-            await message.clear_reactions()
+            try:
+                await message.clear_reactions()
+            except discord.HTTPException as e:
+                # Suppress if trying to act on an archived thread.
+                if e.code != 50083:
+                    raise e

@@ -1,6 +1,6 @@
-from botcore.utils.regex import DISCORD_INVITE
 from discord import NotFound
 from discord.ext.commands import BadArgument
+from pydis_core.utils.regex import DISCORD_INVITE
 
 import bot
 from bot.exts.filtering._filter_context import FilterContext

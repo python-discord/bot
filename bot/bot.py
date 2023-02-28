@@ -1,9 +1,8 @@
 import asyncio
-from collections import defaultdict
 
 import aiohttp
-from botcore import BotBase
-from botcore.utils import scheduling
+from pydis_core import BotBase
+from pydis_core.utils import scheduling
 from sentry_sdk import push_scope
 
 from bot import constants, exts
@@ -21,7 +20,7 @@ class StartupError(Exception):
 
 
 class Bot(BotBase):
-    """A subclass of `botcore.BotBase` that implements bot-specific functions."""
+    """A subclass of `pydis_core.BotBase` that implements bot-specific functions."""
 
     def __init__(self, *args, **kwargs):
 

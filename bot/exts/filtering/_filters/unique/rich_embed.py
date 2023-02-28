@@ -1,6 +1,6 @@
 import re
 
-from botcore.utils.logging import get_logger
+from pydis_core.utils.logging import get_logger
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter

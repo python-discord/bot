@@ -4,9 +4,9 @@ from collections.abc import Callable, Coroutine
 from typing import ClassVar, NamedTuple
 
 import discord
-from botcore.utils.logging import get_logger
-from botcore.utils.members import get_or_fetch_member
 from pydantic import BaseModel, Field
+from pydis_core.utils.logging import get_logger
+from pydis_core.utils.members import get_or_fetch_member
 
 import bot
 from bot import constants, utils

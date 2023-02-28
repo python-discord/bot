@@ -3,9 +3,9 @@ from itertools import takewhile
 from typing import ClassVar
 
 import arrow
-from botcore.utils.logging import get_logger
 from discord import DeletedReferencedMessage, MessageType, NotFound
 from pydantic import BaseModel
+from pydis_core.utils.logging import get_logger
 
 import bot
 from bot.exts.filtering._filter_context import Event, FilterContext

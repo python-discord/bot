@@ -4,7 +4,6 @@
 bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
 bot/exts/utils/snekbox.py               @MarkKoz @jb3
-bot/exts/help_channels/**               @MarkKoz
 bot/exts/moderation/**                  @mbaruh @Den4200 @ks129 @jb3
 bot/exts/info/**                        @Den4200 @jb3
 bot/exts/info/information.py            @mbaruh @jb3

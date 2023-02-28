@@ -3,13 +3,13 @@ import pprint
 import textwrap
 from collections import defaultdict
 from textwrap import shorten
-from typing import Any, DefaultDict, Mapping, Optional, Set, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 import rapidfuzz
-from botcore.site_api import ResponseCodeError
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot
@@ -30,6 +30,11 @@ DEFAULT_RULES_DESCRIPTION = (
     " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
     " all members of the community to have read and understood these."
 )
+
+if TYPE_CHECKING:
+    from bot.exts.moderation.defcon import Defcon
+    from bot.exts.moderation.watchchannels.bigbrother import BigBrother
+    from bot.exts.recruitment.talentpool._cog import TalentPool
 
 
 class Information(Cog):
@@ -76,20 +81,23 @@ class Information(Cog):
         )
         return role_stats
 
-    def get_extended_server_info(self, ctx: Context) -> str:
+    async def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
-        if cog := self.bot.get_cog("Talentpool"):
-            num_nominated = len(cog.cache) if cog.cache else "-"
+        talentpool_cog: TalentPool | None = self.bot.get_cog("Talentpool")
+        if talentpool_cog:
+            num_nominated = len(await talentpool_cog.api.get_nominations(active=True))
             talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
-        if cog := self.bot.get_cog("Big Brother"):
-            bb_info = f"BB-watched: {len(cog.watched_users)}\n"
+        bb_cog: BigBrother | None = self.bot.get_cog("Big Brother")
+        if bb_cog:
+            bb_info = f"BB-watched: {len(bb_cog.watched_users)}\n"
 
         defcon_info = ""
-        if cog := self.bot.get_cog("Defcon"):
-            threshold = time.humanize_delta(cog.threshold) if cog.threshold else "-"
+        defcon_cog: Defcon | None = self.bot.get_cog("Defcon")
+        if defcon_cog:
+            threshold = time.humanize_delta(defcon_cog.threshold) if defcon_cog.threshold else "-"
             defcon_info = f"Defcon threshold: {threshold}\n"
 
         verification = f"Verification level: {ctx.guild.verification_level.name}\n"
@@ -224,7 +232,7 @@ class Information(Cog):
 
         # Additional info if ran in moderation channels
         if is_mod_channel(ctx.channel):
-            embed.add_field(name="Moderation:", value=self.get_extended_server_info(ctx))
+            embed.add_field(name="Moderation:", value=await self.get_extended_server_info(ctx))
 
         await ctx.send(embed=embed)
 
@@ -523,8 +531,19 @@ class Information(Cog):
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await self.send_raw_content(ctx, message, json=True)
 
+    async def _set_rules_command_help(self) -> None:
+        help_string = f"{self.rules.help}\n\n"
+        help_string += "__Available keywords per rule__:\n\n"
+
+        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+
+        for index, (_, keywords) in enumerate(full_rules, start=1):
+            help_string += f"**Rule {index}**: {', '.join(keywords)}\n\r"
+
+        self.rules.help = help_string
+
     @command(aliases=("rule",))
-    async def rules(self, ctx: Context, *args: Optional[str]) -> Optional[Set[int]]:
+    async def rules(self, ctx: Context, *, args: Optional[str]) -> Optional[Set[int]]:
         """
         Provides a link to all rules or, if specified, displays specific rule(s).
 
@@ -541,13 +560,15 @@ class Information(Cog):
             for rule_keyword in rule_keywords:
                 keyword_to_rule_number[rule_keyword] = rule_number
 
-        for word in args:
-            try:
-                rule_numbers.append(int(word))
-            except ValueError:
-                if (kw := word.lower()) not in keyword_to_rule_number:
-                    break
-                keywords.append(kw)
+        if args:
+            for word in args.split(maxsplit=100):
+                try:
+                    rule_numbers.append(int(word))
+                except ValueError:
+                    # Stop on first invalid keyword/index to allow for normal messaging after
+                    if (kw := word.lower()) not in keyword_to_rule_number:
+                        break
+                    keywords.append(kw)
 
         if not rule_numbers and not keywords:
             # Neither rules nor keywords were submitted. Return the default description.
@@ -577,6 +598,10 @@ class Information(Cog):
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
         return final_rule_numbers
+
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self._set_rules_command_help()
 
 
 async def setup(bot: Bot) -> None:

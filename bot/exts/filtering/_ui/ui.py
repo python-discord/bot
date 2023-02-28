@@ -8,14 +8,14 @@ from functools import partial
 from typing import Any, Callable, Coroutine, Optional, TypeVar
 
 import discord
-from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
-from botcore.utils.logging import get_logger
-from botcore.utils.members import get_or_fetch_member
 from discord import Embed, Interaction
 from discord.ext.commands import Context
 from discord.ui.select import MISSING as SELECT_MISSING, SelectOption
 from discord.utils import escape_markdown
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import scheduling
+from pydis_core.utils.logging import get_logger
+from pydis_core.utils.members import get_or_fetch_member
 
 import bot
 from bot.constants import Colours

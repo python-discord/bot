@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import typing
 
-from botcore.utils.regex import DISCORD_INVITE
 from discord import Embed, Invite
 from discord.errors import NotFound
+from pydis_core.utils.regex import DISCORD_INVITE
 
 import bot
 from bot.exts.filtering._filter_context import Event, FilterContext

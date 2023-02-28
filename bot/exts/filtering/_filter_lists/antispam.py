@@ -8,9 +8,9 @@ from itertools import takewhile
 from operator import add, or_
 
 import arrow
-from botcore.utils import scheduling
-from botcore.utils.logging import get_logger
 from discord import Member
+from pydis_core.utils import scheduling
+from pydis_core.utils.logging import get_logger
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filter_lists.filter_list import ListType, SubscribingAtomicList, UniquesListBase
