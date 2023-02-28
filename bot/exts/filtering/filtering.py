@@ -742,6 +742,15 @@ class Filtering(Cog):
     @has_any_role(Roles.admins)
     async def fl_add(self, ctx: Context, list_type: list_type_converter, list_name: str) -> None:
         """Add a new filter list."""
+        # Check if there's an implementation.
+        if list_name.lower() not in filter_list_types:
+            if list_name.lower()[:-1] not in filter_list_types:  # Maybe the name was given with uppercase or in plural?
+                await ctx.reply(f":x: Cannot add a `{list_name}` filter list, as there is no matching implementation.")
+                return
+            else:
+                list_name = list_name.lower()[:-1]
+
+        # Check it doesn't already exist.
         list_description = f"{past_tense(list_type.name.lower())} {list_name.lower()}"
         if list_name in self.filter_lists:
             filter_list = self.filter_lists[list_name]
