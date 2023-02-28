@@ -222,7 +222,7 @@ class MockRole(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin):
 
 
 # Create a Member instance to get a realistic Mock of `discord.Member`
-member_data = {'user': 'lemon', 'roles': [1]}
+member_data = {'user': 'lemon', 'roles': [1], 'flags': 2}
 state_mock = unittest.mock.MagicMock()
 member_instance = discord.Member(data=member_data, guild=guild_instance, state=state_mock)
 
