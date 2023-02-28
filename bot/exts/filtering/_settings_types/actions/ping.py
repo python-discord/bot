@@ -1,6 +1,7 @@
 from typing import ClassVar
 
 from pydantic import validator
+from typing_extensions import Self
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
@@ -39,9 +40,6 @@ class Ping(ActionEntry):
         new_content = " ".join([resolve_mention(mention) for mention in mentions])
         ctx.alert_content = f"{new_content} {ctx.alert_content}"
 
-    def __or__(self, other: ActionEntry):
+    def union(self, other: Self) -> Self:
         """Combines two actions of the same type. Each type of action is executed once per filter."""
-        if not isinstance(other, Ping):
-            return NotImplemented
-
         return Ping(guild_pings=self.guild_pings | other.guild_pings, dm_pings=self.dm_pings | other.dm_pings)

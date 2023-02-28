@@ -120,7 +120,7 @@ class InviteList(FilterList[InviteFilter]):
         # Blocked invites come second so that their actions have preference.
         if triggered:
             if actions:
-                actions |= self[ListType.DENY].merge_actions(triggered)
+                actions = actions.union(self[ListType.DENY].merge_actions(triggered))
             else:
                 actions = self[ListType.DENY].merge_actions(triggered)
             all_triggers[ListType.DENY] = triggered

@@ -7,6 +7,8 @@ from copy import copy
 from functools import reduce
 from typing import Any, NamedTuple, Optional, TypeVar
 
+from typing_extensions import Self
+
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types import settings_types
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry, SettingsEntry, ValidationEntry
@@ -175,13 +177,13 @@ class ActionSettings(Settings[ActionEntry]):
     def __init__(self, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False):
         super().__init__(settings_data, defaults=defaults, keep_empty=keep_empty)
 
-    def __or__(self, other: ActionSettings) -> ActionSettings:
+    def union(self, other: Self) -> Self:
         """Combine the entries of two collections of settings into a new ActionsSettings."""
         actions = {}
         # A settings object doesn't necessarily have all types of entries (e.g in the case of filter overrides).
         for entry in self:
             if entry in other:
-                actions[entry] = self[entry] | other[entry]
+                actions[entry] = self[entry].union(other[entry])
             else:
                 actions[entry] = self[entry]
         for entry in other:

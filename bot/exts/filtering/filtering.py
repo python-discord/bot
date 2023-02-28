@@ -1,6 +1,5 @@
 import datetime
 import json
-import operator
 import re
 import unicodedata
 from collections import defaultdict
@@ -917,7 +916,7 @@ class Filtering(Cog):
 
         result_actions = None
         if actions:
-            result_actions = reduce(operator.or_, (action for action in actions))
+            result_actions = reduce(ActionSettings.union, actions)
 
         return result_actions, messages, triggers
 

@@ -5,6 +5,7 @@ from botcore.utils import scheduling
 from botcore.utils.logging import get_logger
 from discord import Message
 from discord.errors import HTTPException
+from typing_extensions import Self
 
 import bot
 from bot.constants import Channels
@@ -105,9 +106,6 @@ class RemoveContext(ActionEntry):
         await command(FakeContext(alerts_channel, command), ctx.author, None, reason=SUPERSTAR_REASON)
         ctx.action_descriptions.append("superstar")
 
-    def __or__(self, other: ActionEntry):
+    def union(self, other: Self) -> Self:
         """Combines two actions of the same type. Each type of action is executed once per filter."""
-        if not isinstance(other, RemoveContext):
-            return NotImplemented
-
         return RemoveContext(remove_context=self.remove_context or other.remove_context)

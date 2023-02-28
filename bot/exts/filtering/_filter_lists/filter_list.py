@@ -6,7 +6,6 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 from functools import reduce
-from operator import or_
 from typing import Any
 
 import arrow
@@ -133,7 +132,7 @@ class AtomicList:
             return None
         try:
             return reduce(
-                or_, (filter_.actions or self.defaults.actions for filter_ in filters)
+                ActionSettings.union, (filter_.actions or self.defaults.actions for filter_ in filters)
             ).fallback_to(self.defaults.actions)
         except TypeError:
             # The sequence fed to reduce is empty, meaning none of the filters have actions,

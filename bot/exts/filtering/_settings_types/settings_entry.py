@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import Any, ClassVar, Union
 
 from pydantic import BaseModel, PrivateAttr
+from typing_extensions import Self
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._utils import FieldRequiring
@@ -80,7 +81,7 @@ class ActionEntry(SettingsEntry):
         ...
 
     @abstractmethod
-    def __or__(self, other: ActionEntry):
+    def union(self, other: Self) -> Self:
         """
         Combine two actions of the same type. Each type of action is executed once per filter.
 

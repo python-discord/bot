@@ -9,6 +9,7 @@ from botcore.utils.members import get_or_fetch_member
 from discord import Colour, Embed, Member, User
 from discord.errors import Forbidden
 from pydantic import validator
+from typing_extensions import Self
 
 import bot as bot_module
 from bot.constants import Channels
@@ -159,7 +160,7 @@ class InfractionAndNotification(ActionEntry):
             )
             ctx.action_descriptions.append(passive_form[self.infraction_type.name])
 
-    def __or__(self, other: ActionEntry):
+    def union(self, other: Self) -> Self:
         """
         Combines two actions of the same type. Each type of action is executed once per filter.
 
@@ -169,9 +170,6 @@ class InfractionAndNotification(ActionEntry):
         To avoid bombarding the user with several notifications, the message with the more significant infraction
         is used.
         """
-        if not isinstance(other, InfractionAndNotification):
-            return NotImplemented
-
         # Lower number -> higher in the hierarchy
         if self.infraction_type is None:
             return other.copy()
