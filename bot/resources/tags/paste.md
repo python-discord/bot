@@ -1,5 +1,7 @@
-**Pasting large amounts of code**
-
+---
+embed:
+    title: "Pasting large amounts of code"
+---
 If your code is too long to fit in a codeblock in Discord, you can paste your code here:
 https://paste.pythondiscord.com/
 

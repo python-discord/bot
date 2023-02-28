@@ -1,7 +1,7 @@
 ---
 aliases: ["virtualenv"]
 embed:
-    title: "Virtual Environments"
+    title: "Virtual environments"
 ---
 
 Virtual environments are isolated Python environments, which make it easier to keep your system clean and manage dependencies. By default, when activated, only libraries and scripts installed in the virtual environment are accessible, preventing cross-project dependency conflicts, and allowing easy isolation of requirements.

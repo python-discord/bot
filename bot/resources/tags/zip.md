@@ -1,3 +1,7 @@
+---
+embed:
+    title: "The `zip` function"
+---
 The zip function allows you to iterate through multiple iterables simultaneously. It joins the iterables together, almost like a zipper, so that each new element is a tuple with one element from each iterable.
 
 ```py

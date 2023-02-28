@@ -1,5 +1,7 @@
-**Identity vs. Equality**
-
+---
+embed:
+    title: "Identity vs. equality"
+---
 Should I be using `is` or `==`?
 
 To check if two objects are equal, use the equality operator (`==`).

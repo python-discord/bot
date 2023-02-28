@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Dictionary comprehensions"
+---
 Dictionary comprehensions (*dict comps*) provide a convenient way to make dictionaries, just like list comps:
 ```py
 >>> {word.lower(): len(word) for word in ('I', 'love', 'Python')}
