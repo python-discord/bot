@@ -119,7 +119,7 @@ class InfractionAndNotification(ActionEntry):
     async def action(self, ctx: FilterContext) -> None:
         """Send the notification to the user, and apply any specified infractions."""
         # If there is no infraction to apply, any DM contents already provided in the context take precedence.
-        if self.infraction_type is None and (ctx.dm_content or ctx.dm_embed):
+        if self.infraction_type == Infraction.NONE and (ctx.dm_content or ctx.dm_embed):
             dm_content = ctx.dm_content
             dm_embed = ctx.dm_embed
         else:
