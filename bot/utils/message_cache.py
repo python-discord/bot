@@ -105,7 +105,7 @@ class MessageCache:
         index = self._message_id_mapping.get(message_id, None)
         return self._messages[index] if index is not None else None
 
-    def get_message_metadata(self, message_id: int) -> dict:
+    def get_message_metadata(self, message_id: int) -> dict | None:
         """Return the metadata of the message that has the given message ID, if it is cached."""
         return self._message_metadata.get(message_id, None)
 
