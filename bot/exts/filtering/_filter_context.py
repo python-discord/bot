@@ -5,7 +5,7 @@ from collections.abc import Callable, Coroutine, Iterable
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 
-from discord import DMChannel, Member, Message, TextChannel, Thread, User
+from discord import DMChannel, Embed, Member, Message, TextChannel, Thread, User
 
 from bot.utils.message_cache import MessageCache
 
@@ -31,7 +31,7 @@ class FilterContext:
     channel: TextChannel | Thread | DMChannel | None  # The channel involved
     content: str | Iterable  # What actually needs filtering
     message: Message | None  # The message involved
-    embeds: list = field(default_factory=list)  # Any embeds involved
+    embeds: list[Embed] = field(default_factory=list)  # Any embeds involved
     before_message: Message | None = None
     message_cache: MessageCache | None = None
     # Output context
@@ -39,7 +39,7 @@ class FilterContext:
     dm_embed: str = field(default_factory=str)  # The embed description to DM the invoker
     send_alert: bool = field(default=False)  # Whether to send an alert for the moderators
     alert_content: str = field(default_factory=str)  # The content of the alert
-    alert_embeds: list = field(default_factory=list)  # Any embeds to add to the alert
+    alert_embeds: list[Embed] = field(default_factory=list)  # Any embeds to add to the alert
     action_descriptions: list = field(default_factory=list)  # What actions were taken
     matches: list[str] = field(default_factory=list)  # What exactly was found
     notification_domain: str = field(default_factory=str)  # A domain to send the user for context
