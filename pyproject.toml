@@ -9,7 +9,7 @@ license = "MIT"
 python = "3.10.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
-pydis_core = { version = "9.4.1", extras = ["async-rediscache"] }
+pydis_core = { version = "9.5.0", extras = ["async-rediscache"] }
 redis = "4.3.5"
 fakeredis = { version = "2.0.0", extras = ["lua"] }
 
