@@ -344,8 +344,14 @@ class Snekbox(Cog):
                 log.trace("Formatting output...")
                 output, paste_link = await self.format_output(results["stdout"])
 
+            warning_message = ""
+            # 33 is the length of the error message. It is done to make sure the last line of output contains
+            # the error and the error is not manually printed by the author with a syntax error.
+            if "EOFError: EOF when reading a line" in output[-33:] and results['returncode'] == 1:
+                warning_message += ":warning: Note: `input` is not supported by the bot :warning:\n\n"
+
             icon = self.get_status_emoji(results)
-            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
+            msg = f"{ctx.author.mention} {icon} {msg}.\n\n{warning_message}```\n{output}\n```"
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
