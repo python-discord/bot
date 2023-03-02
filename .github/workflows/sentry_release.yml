@@ -1,9 +1,7 @@
 name: Create Sentry release
 
 on:
-  push:
-    branches:
-      - main
+  workflow_call
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
