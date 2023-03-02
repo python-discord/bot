@@ -69,7 +69,7 @@ class _Channels(EnvConfig):
     filter_log = 1014943924185473094
     message_log = 467752170159079424
     mod_log = 282638479504965634
-    nomination_archive = 833371042046148738
+    nomination_voting_archive = 833371042046148738
     user_log = 528976905546760203
     voice_log = 640292421988646961
 
@@ -265,7 +265,7 @@ class _Webhooks(EnvConfig):
     EnvConfig.Config.env_prefix = "webhooks."
     EnvConfig.Config.env_nested_delimiter = '.'
 
-    big_brother: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother_logs)
+    big_brother_logs: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother_logs)
     dev_log: Webhook = Webhook(id=680501655111729222, channel=Channels.dev_log)
     duck_pond: Webhook = Webhook(id=637821475327311927, channel=Channels.duck_pond)
     incidents: Webhook = Webhook(id=816650601844572212, channel=Channels.incidents)

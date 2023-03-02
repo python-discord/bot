@@ -281,7 +281,7 @@ class Reviewer:
         else:
             embed_title = f"Vote for `{user_id}`"
 
-        channel = self.bot.get_channel(Channels.nomination_archive)
+        channel = self.bot.get_channel(Channels.nomination_voting_archive)
         for number, part in enumerate(
                 textwrap.wrap(embed_content, width=MAX_EMBED_SIZE, replace_whitespace=False, placeholder="")
         ):
