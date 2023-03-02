@@ -63,7 +63,7 @@ class _Channels(EnvConfig):
     meta = 429409067623251969
     python_general = 267624335836053506
 
-    help_system_forum = 1035199133436354600
+    python_help = 1035199133436354600
 
     attachment_log = 649243850006855680
     filter_log = 1014943924185473094
