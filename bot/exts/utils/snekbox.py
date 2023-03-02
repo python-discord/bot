@@ -347,7 +347,7 @@ class Snekbox(Cog):
             warning_message = ""
             # 33 is the length of the error message. It is done to make sure the last line of output contains
             # the error and the error is not manually printed by the author with a syntax error.
-            if "EOFError: EOF when reading a line" in output[-33:] and results['returncode'] == 1:
+            if results["stdout"].rstrip().endswith("EOFError: EOF when reading a line") and results["returncode"] == 1:
                 warning_message += ":warning: Note: `input` is not supported by the bot :warning:\n\n"
 
             icon = self.get_status_emoji(results)
