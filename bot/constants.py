@@ -184,7 +184,7 @@ class _Categories(EnvConfig):
     moderators = 749736277464842262
     modmail = 714494672835444826
     appeals = 890331800025563216
-    appeals2 = 895417395261341766
+    appeals_2 = 895417395261341766
     voice = 356013253765234688
 
     # 2021 Summer Code Jam
@@ -205,7 +205,7 @@ class _Guild(EnvConfig):
         Categories.modmail,
         Categories.logs,
         Categories.appeals,
-        Categories.appeals2
+        Categories.appeals_2
     ]
     moderation_channels = [Channels.admins, Channels.admin_spam, Channels.mods]
     modlog_blacklist = [
@@ -704,7 +704,6 @@ class _Filter(EnvConfig):
         Roles.moderators,
         Roles.owners,
         Roles.python_community,
-        Roles.sprinters,
         Roles.partners
     ]
 
