@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   lint-test:
-    uses: ./.github/workflows/lint-test
+    uses: ./.github/workflows/lint-test.yml
 
 
   generate-sha-tag:
