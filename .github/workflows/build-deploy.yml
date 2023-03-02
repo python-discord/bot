@@ -64,6 +64,8 @@ jobs:
         with:
           repository: python-discord/kubernetes
 
+      - uses: azure/setup-kubectl@v3
+
       - name: Authenticate with Kubernetes
         uses: azure/k8s-set-context@v3
         with:
