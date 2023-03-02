@@ -76,4 +76,3 @@ jobs:
           manifests: |
             namespaces/default/bot/deployment.yaml
           images: 'ghcr.io/python-discord/bot:${{ inputs.sha-tag }}'
-          kubectl-version: 'latest'
