@@ -3,7 +3,8 @@ name: Bot CI/CD
 on:
   pull_request:
   push:
-    main
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
