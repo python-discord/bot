@@ -65,7 +65,7 @@ jobs:
           repository: python-discord/kubernetes
 
       - name: Authenticate with Kubernetes
-        uses: azure/k8s-set-context@v1
+        uses: azure/k8s-set-context@v3
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBECONFIG }}
