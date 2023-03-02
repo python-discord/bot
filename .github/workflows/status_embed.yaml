@@ -4,8 +4,7 @@ on:
   workflow_run:
     workflows:
       - Lint & Test
-      - Build
-      - Deploy
+      - Build & Deploy
     types:
       - completed
 
