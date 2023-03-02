@@ -121,7 +121,7 @@ class _Channels(EnvConfig):
     voice_chat_0 = 412357430186344448
     voice_chat_1 = 799647045886541885
 
-    big_brother_logs = 468507907357409333
+    big_brother = 468507907357409333
     duck_pond = 637820308341915648
     roles = 851270062434156586
 
@@ -264,7 +264,7 @@ class _Webhooks(EnvConfig):
     EnvConfig.Config.env_prefix = "webhooks."
     EnvConfig.Config.env_nested_delimiter = '.'
 
-    big_brother_logs: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother_logs)
+    big_brother: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother)
     dev_log: Webhook = Webhook(id=680501655111729222, channel=Channels.dev_log)
     duck_pond: Webhook = Webhook(id=637821475327311927, channel=Channels.duck_pond)
     incidents: Webhook = Webhook(id=816650601844572212, channel=Channels.incidents)
@@ -691,7 +691,7 @@ class _Filter(EnvConfig):
 
     channel_whitelist = [
         Channels.admins,
-        Channels.big_brother_logs,
+        Channels.big_brother,
         Channels.dev_log,
         Channels.message_log,
         Channels.mod_log,
