@@ -43,5 +43,3 @@ jobs:
     uses: ./.github.workflows/sentry_release/yml
     needs: build-deploy
     secrets: inherit
-
-
