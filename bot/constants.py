@@ -146,7 +146,6 @@ class _Roles(EnvConfig):
     muted = 277914926603829249
     partners = 323426753857191936
     python_community = 458226413825294336
-    sprinters = 758422482289426471
     voice_verified = 764802720779337729
 
     # Streaming
