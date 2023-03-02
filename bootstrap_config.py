@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -66,6 +67,8 @@ def get_all_channels_and_categories(
         client: DiscordClient
 ) -> tuple[dict[str, str], dict[str, str]]:
     """Fetches all the text channels & categories in a guild."""
+    off_topic_channel_name_regex = r"ot\d{1}(_.*)+"
+    off_topic_count = 0
     channels = {}  # could be text channels only as well
     categories = {}
 
@@ -75,6 +78,10 @@ def get_all_channels_and_categories(
     for channel in server_channels:
         channel_type = channel["type"]
         name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
+        if re.match(off_topic_channel_name_regex, name):
+            name = f"off_topic_{off_topic_count}"
+            off_topic_count += 1
+
         if channel_type == 4:
             categories[name] = channel["id"]
         else:
