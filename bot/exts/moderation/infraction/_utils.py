@@ -2,13 +2,11 @@ import typing as t
 
 import arrow
 import discord
-from pydis_core.site_api import ResponseCodeError
-from pydis_core.utils import interactions
-from discord import ButtonStyle, Interaction, Message, TextChannel
+from discord import ButtonStyle, Interaction, Message
 from discord.ext.commands import Context
 from discord.ui import Button
-from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import interactions
 
 import bot
 from bot.constants import Colours, Icons
