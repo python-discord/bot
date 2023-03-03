@@ -387,9 +387,6 @@ class Categories(metaclass=YAMLGetter):
     section = "guild"
     subsection = "categories"
 
-    help_available: int
-    help_dormant: int
-    help_in_use: int
     moderators: int
     modmail: int
     voice: int
@@ -416,8 +413,7 @@ class Channels(metaclass=YAMLGetter):
     meta: int
     python_general: int
 
-    cooldown: int
-    how_to_get_help: int
+    help_system_forum: int
 
     attachment_log: int
     filter_log: int
@@ -469,6 +465,8 @@ class Channels(metaclass=YAMLGetter):
 
     big_brother_logs: int
 
+    roles: int
+
 
 class Webhooks(metaclass=YAMLGetter):
     section = "guild"
@@ -491,6 +489,7 @@ class Roles(metaclass=YAMLGetter):
     lovefest: int
     pyweek_announcements: int
     revival_of_code: int
+    legacy_help_channels_access: int
 
     contributors: int
     help_cooldown: int
@@ -619,19 +618,9 @@ class HelpChannels(metaclass=YAMLGetter):
     section = 'help_channels'
 
     enable: bool
-    cmd_whitelist: List[int]
-    idle_minutes_claimant: int
-    idle_minutes_others: int
+    idle_minutes: int
     deleted_idle_minutes: int
-    max_available: int
-    max_total_channels: int
-    name_prefix: str
-    notify_channel: int
-    notify_minutes: int
-    notify_none_remaining: bool
-    notify_none_remaining_roles: List[int]
-    notify_running_low: bool
-    notify_running_low_threshold: int
+    cmd_whitelist: List[int]
 
 
 class RedirectOutput(metaclass=YAMLGetter):

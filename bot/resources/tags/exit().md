@@ -1,5 +1,7 @@
-**Exiting Programmatically**
-
+---
+embed:
+    title: "Exiting programmatically"
+---
 If you want to exit your code programmatically, you might think to use the functions `exit()` or `quit()`, however this is bad practice. These functions are constants added by the [`site`](https://docs.python.org/3/library/site.html#module-site) module as a convenient method for exiting the interactive interpreter shell, and should not be used in programs.
 
 You should use either [`SystemExit`](https://docs.python.org/3/library/exceptions.html#SystemExit) or [`sys.exit()`](https://docs.python.org/3/library/sys.html#sys.exit) instead.

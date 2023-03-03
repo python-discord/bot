@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from bot.exts.recruitment.talentpool import _review
 from tests.helpers import MockBot, MockMember, MockMessage, MockTextChannel
@@ -31,10 +31,12 @@ def nomination(
     num_entries: int,
     reviewed: bool = False,
     id: int | None = None
-) -> tuple[int, dict]:
-    return (
-        id or MockMember().id,
-        {"inserted_at": inserted_at.isoformat(), "entries": [Mock() for _ in range(num_entries)], "reviewed": reviewed},
+) -> Mock:
+    return Mock(
+        id=id or MockMember().id,
+        inserted_at=inserted_at,
+        entries=[Mock() for _ in range(num_entries)],
+        reviewed=reviewed
     )
 
 
@@ -48,8 +50,8 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
         self.voting_channel = MockTextChannel()
         self.bot.get_channel = Mock(return_value=self.voting_channel)
 
-        self.pool = Mock(name="MockTalentPool")
-        self.reviewer = _review.Reviewer(self.bot, self.pool)
+        self.nomination_api = Mock(name="MockNominationAPI")
+        self.reviewer = _review.Reviewer(self.bot, self.nomination_api)
 
     @patch("bot.exts.recruitment.talentpool._review.MAX_ONGOING_REVIEWS", 3)
     @patch("bot.exts.recruitment.talentpool._review.MIN_REVIEW_INTERVAL", timedelta(days=1))
@@ -65,6 +67,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     MockMessage(author=self.bot_user, content="Not a review", created_at=not_too_recent),
                     MockMessage(author=self.bot_user, content="Not a review", created_at=not_too_recent),
                 ],
+                not_too_recent.timestamp(),
                 True,
             ),
 
@@ -75,6 +78,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     MockMessage(author=self.bot_user, content="Zig for Helper!", created_at=not_too_recent),
                     MockMessage(author=self.bot_user, content="Scaleios for Helper!", created_at=not_too_recent),
                 ],
+                not_too_recent.timestamp(),
                 False,
             ),
 
@@ -83,6 +87,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                 [
                     MockMessage(author=self.bot_user, content="Chrisjl for Helper!", created_at=too_recent),
                 ],
+                too_recent.timestamp(),
                 False,
             ),
 
@@ -94,22 +99,29 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     MockMessage(author=self.bot_user, content="wookie for Helper!", created_at=not_too_recent),
                     MockMessage(author=self.bot_user, content="Not a review", created_at=not_too_recent),
                 ],
+                not_too_recent.timestamp(),
                 True,
             ),
 
             # No messages, so ready.
-            ([], True),
+            ([], None, True),
         )
 
-        for messages, expected in cases:
+        for messages, last_review_timestamp, expected in cases:
             with self.subTest(messages=messages, expected=expected):
                 self.voting_channel.history = AsyncIterator(messages)
+
+                cache_get_mock = AsyncMock(return_value=last_review_timestamp)
+                self.reviewer.status_cache.get = cache_get_mock
+
                 res = await self.reviewer.is_ready_for_review()
+
                 self.assertIs(res, expected)
+                cache_get_mock.assert_called_with("last_vote_date")
 
     @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=7))
-    async def test_get_user_for_review(self):
-        """Test get_user_for_review function."""
+    async def test_get_nomination_to_review(self):
+        """Test get_nomination_to_review function."""
         now = datetime.now(timezone.utc)
 
         # Each case contains a list of nominations, followed by the index in that list
@@ -146,19 +158,19 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         for (case_num, (nominations, expected)) in enumerate(cases, 1):
-            nomination_dict = dict(nominations)
-
             with self.subTest(case_num=case_num):
-                self.pool.cache = nomination_dict
-                res = await self.reviewer.get_user_for_review()
+                get_nominations_mock = AsyncMock(return_value=nominations)
+                self.nomination_api.get_nominations = get_nominations_mock
+                res = await self.reviewer.get_nomination_to_review()
 
                 if expected is None:
                     self.assertIsNone(res)
                 else:
-                    self.assertEqual(res, nominations[expected][0])
+                    self.assertEqual(res, nominations[expected])
+                get_nominations_mock.assert_called_once_with(active=True)
 
     @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=0))
-    async def test_get_user_for_review_order(self):
+    async def test_get_nomination_to_review_order(self):
         now = datetime.now(timezone.utc)
 
         # Each case in cases is a list of nominations in the order they should be chosen from first to last
@@ -196,8 +208,9 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(case_num=case_num):
                 for i in range(len(case)):
                     with self.subTest(nomination_num=i+1):
-                        sub_case = dict(case[i:])
-                        self.pool.cache = sub_case
+                        get_nominations_mock = AsyncMock(return_value=case[i:])
+                        self.nomination_api.get_nominations = get_nominations_mock
 
-                        res = await self.reviewer.get_user_for_review()
-                        self.assertEqual(res, case[i][0])
+                        res = await self.reviewer.get_nomination_to_review()
+                        self.assertEqual(res, case[i])
+                        get_nominations_mock.assert_called_once_with(active=True)

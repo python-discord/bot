@@ -1,5 +1,7 @@
-**Relative Path**
-
+---
+embed:
+    title: "Relative path"
+---
 A relative path is a partial path that is relative to your current working directory. A common misconception is that your current working directory is the location of the module you're executing, **but this is not the case**. Your current working directory is actually the **directory you were in when you ran the python interpreter**. The reason for this misconception is because a common way to run your code is to navigate to the directory your module is stored, and run `python <module>.py`. Thus, in this case your current working directory will be the same as the location of the module. However, if we instead did `python path/to/<module>.py`, our current working directory would no longer be the same as the location of the module we're executing.
 
 **Why is this important?**

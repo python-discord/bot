@@ -1,14 +1,7 @@
 name: Lint & Test
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call
 
 jobs:
   lint-test:
@@ -35,13 +28,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Python Dependencies
-        uses: HassanAbouelela/actions/setup-python@setup-python_v1.3.1
+        uses: HassanAbouelela/actions/setup-python@setup-python_v1.4.0
         with:
-          # Set dev=true to install flake8 extensions, which are dev dependencies
-          dev: true
           python_version: '3.10'
 
       # Check all of our non-dev dependencies are compatible with the MIT license.

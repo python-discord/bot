@@ -1,5 +1,7 @@
-**Mutable vs immutable objects**
-
+---
+embed:
+    title: "Mutable vs immutable objects"
+---
 Imagine that you want to make all letters in a string upper case. Conveniently, strings have an `.upper()` method.
 
 You might think that this would work:

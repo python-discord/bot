@@ -8,8 +8,8 @@ import arrow
 from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
-from botcore.utils.scheduling import Scheduler
 from discord.ext.commands import Cog, Context, group, has_any_role
+from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import Metabase as MetabaseConfig, Roles
