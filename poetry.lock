@@ -454,14 +454,14 @@ cli = ["clevercsv (==0.7.4)", "click (==8.1.3)", "pyyaml (==6.0)", "toml (==0.10
 
 [[package]]
 name = "discord-py"
-version = "2.2.0"
+version = "2.2.2"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "discord.py-2.2.0-py3-none-any.whl", hash = "sha256:012e98571af6847467e81f9501bbe4c6ebfe292c842f5ef8e951908839ee1cd0"},
-    {file = "discord.py-2.2.0.tar.gz", hash = "sha256:a92d69ab6f982998693d0c371ea19235fa0f9900b50068fc461086d02c33e6bb"},
+    {file = "discord.py-2.2.2-py3-none-any.whl", hash = "sha256:38fc52a784727b8e5e5749267089400035b187a009028eddfabeb182abcc6d52"},
+    {file = "discord.py-2.2.2.tar.gz", hash = "sha256:b9944056bcb5711b2d04088848fd004466cf117c15c84fa798bf55470f28275f"},
 ]
 
 [package.dependencies]
@@ -1479,20 +1479,20 @@ email = ["email-validator (>=1.0.3)"]
 
 [[package]]
 name = "pydis-core"
-version = "9.5.0"
+version = "9.5.1"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 category = "main"
 optional = false
 python-versions = ">=3.10.0,<3.12.0"
 files = [
-    {file = "pydis_core-9.5.0-py3-none-any.whl", hash = "sha256:35834274a80b86a5426f27cb546b3fada8a5711bbf01bbcf1b0a8860a2afee94"},
-    {file = "pydis_core-9.5.0.tar.gz", hash = "sha256:1cf9c223af9b5377e08cc0eb046a12130518e4743afbdd4f052d5556b7dae805"},
+    {file = "pydis_core-9.5.1-py3-none-any.whl", hash = "sha256:50bbf1800fe228dd60ba6624615815f45139c105512ef701c556ee7dedaa91eb"},
+    {file = "pydis_core-9.5.1.tar.gz", hash = "sha256:83b89117def529c8b130f22c9f8cd46211df6329b039eedd5020098e656aa198"},
 ]
 
 [package.dependencies]
 aiodns = "3.0.0"
 async-rediscache = {version = "1.0.0rc2", extras = ["fakeredis"], optional = true, markers = "extra == \"async-rediscache\""}
-"discord.py" = "2.2.0"
+"discord.py" = "2.2.2"
 statsd = "4.0.1"
 
 [package.extras]
@@ -2314,4 +2314,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.10.*"
-content-hash = "95d9251abd0a6125c99cc0c290fd8f97e9003cfe95cde3666ccc1817f751e814"
+content-hash = "9e554d23838cde31200630eda42ce0f1ead91a0f521d10362037f6d4290d3529"
