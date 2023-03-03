@@ -1,33 +1,22 @@
-name: Build
+name: Build & Deploy
 
 on:
-  workflow_run:
-    workflows: ["Lint & Test"]
-    branches:
-      - main
-    types:
-      - completed
+  workflow_call:
+    inputs:
+      sha-tag:
+        description: "A short-form SHA tag for the commit that triggered this workflow"
+        required: true
+        type: string
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     name: Build & Push
     runs-on: ubuntu-latest
 
     steps:
-      # Create a commit SHA-based tag for the container repositories
-      - name: Create SHA Container Tag
-        id: sha_tag
-        run: |
-          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
-          echo "::set-output name=tag::$tag"
-
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # The current version (v2) of Docker's build-push action uses
       # buildx, which comes with BuildKit features that help us speed
@@ -35,6 +24,7 @@ jobs:
       # has a lot of other features that are not as relevant to us.
       #
       # See https://github.com/docker/build-push-action
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -43,11 +33,12 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN  }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Build and push the container to the GitHub Container
       # Repository. The container will be tagged as "latest"
       # and with the short SHA of the commit.
+
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -58,6 +49,32 @@ jobs:
           cache-to: type=inline
           tags: |
             ghcr.io/python-discord/bot:latest
-            ghcr.io/python-discord/bot:${{ steps.sha_tag.outputs.tag }}
+            ghcr.io/python-discord/bot:${{ inputs.sha-tag }}
           build-args: |
             git_sha=${{ github.sha }}
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout Kubernetes repository
+        uses: actions/checkout@v3
+        with:
+          repository: python-discord/kubernetes
+
+      - uses: azure/setup-kubectl@v3
+
+      - name: Authenticate with Kubernetes
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Deploy to Kubernetes
+        uses: Aure/k8s-deploy@v4
+        with:
+          manifests: |
+            namespaces/default/bot/deployment.yaml
+          images: 'ghcr.io/python-discord/bot:${{ inputs.sha-tag }}'

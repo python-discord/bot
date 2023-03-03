@@ -4,9 +4,6 @@ on:
   workflow_run:
     workflows:
       - CI
-      - Lint & Test
-      - Build
-      - Deploy
     types:
       - completed
 
