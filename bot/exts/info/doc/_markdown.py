@@ -1,10 +1,13 @@
+import re
 from urllib.parse import urljoin
 
+import markdownify
 from bs4.element import PageElement
-from markdownify import MarkdownConverter
+
+markdownify.whitespace_re = re.compile(r'[\r\n\s\t ]+')
 
 
-class DocMarkdownConverter(MarkdownConverter):
+class DocMarkdownConverter(markdownify.MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
     def __init__(self, *, page_url: str, **options):
@@ -56,3 +59,7 @@ class DocMarkdownConverter(MarkdownConverter):
         if parent is not None and parent.name == "li":
             return f"{text}\n"
         return super().convert_p(el, text, convert_as_inline)
+
+    def convert_hr(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+        """Ignore `hr` tag."""
+        return "\n"
