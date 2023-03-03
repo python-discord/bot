@@ -295,7 +295,7 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
 
         self.confirmed: t.Optional[bool] = None
 
-    @discord.ui.button(label="Confirm", style=ButtonStyle.green)
+    @discord.ui.button(label="Confirm", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "confirm" button is pressed."""
         await interaction.response.defer()
@@ -303,7 +303,7 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
         await interaction.message.edit(view=None)
         self.stop()
 
-    @discord.ui.button(label="Cancel", style=ButtonStyle.red)
+    @discord.ui.button(label="Cancel", style=ButtonStyle.green)
     async def cancel(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "cancel" button is pressed."""
         await interaction.response.defer()
