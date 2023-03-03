@@ -11,7 +11,7 @@ python = "3.10.*"
 # See https://bot-core.pythondiscord.com/ for docs.
 pydis_core = { version = "9.5.1", extras = ["async-rediscache"] }
 redis = "4.4.2"
-fakeredis = { version = "2.0.0", extras = ["lua"] }
+fakeredis = { version = "2.9.2", extras = ["lua"] }
 
 aiohttp = "3.8.3"
 arrow = "1.2.3"
