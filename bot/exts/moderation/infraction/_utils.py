@@ -2,8 +2,8 @@ import typing as t
 
 import arrow
 import discord
-from botcore.site_api import ResponseCodeError
-from botcore.utils import interactions
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import interactions
 from discord import ButtonStyle, Interaction, Message, TextChannel
 from discord.ext.commands import Context
 from discord.ui import Button
