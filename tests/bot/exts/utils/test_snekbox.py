@@ -167,6 +167,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 '15 lines, 1965 characters output'
             ),
         )
+
         for case, expected, testname in cases:
             with self.subTest(msg=testname, case=case, expected=expected):
                 self.assertEqual(await self.cog.format_output(case), expected)
@@ -220,7 +221,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Test the send_job function."""
         ctx = MockContext()
         ctx.message = MockMessage()
-        ctx.send = AsyncMock()
+        ctx.reply = AsyncMock()
         ctx.author = MockUser(mention='@LemonLemonishBeard#0042')
 
         self.cog.post_job = AsyncMock(return_value={'stdout': '', 'returncode': 0})
@@ -234,12 +235,12 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval')
 
-        ctx.send.assert_called_once()
+        ctx.reply.assert_called_once()
         self.assertEqual(
-            ctx.send.call_args.args[0],
-            '@LemonLemonishBeard#0042 :yay!: Return code 0.\n\n```\n[No output]\n```'
+            ctx.reply.call_args.args[0],
+            ':yay!: Return code 0.\n\n```\n[No output]\n```'
         )
-        allowed_mentions = ctx.send.call_args.kwargs['allowed_mentions']
+        allowed_mentions = ctx.reply.call_args.kwargs['allowed_mentions']
         expected_allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
         self.assertEqual(allowed_mentions.to_dict(), expected_allowed_mentions.to_dict())
 
@@ -252,7 +253,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Test the send_job function with a too long output that generate a paste link."""
         ctx = MockContext()
         ctx.message = MockMessage()
-        ctx.send = AsyncMock()
+        ctx.reply = AsyncMock()
         ctx.author.mention = '@LemonLemonishBeard#0042'
 
         self.cog.post_job = AsyncMock(return_value={'stdout': 'Way too long beard', 'returncode': 0})
@@ -266,10 +267,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval')
 
-        ctx.send.assert_called_once()
+        ctx.reply.assert_called_once()
         self.assertEqual(
-            ctx.send.call_args.args[0],
-            '@LemonLemonishBeard#0042 :yay!: Return code 0.'
+            ctx.reply.call_args.args[0],
+            ':yay!: Return code 0.'
             '\n\n```\nWay too long beard\n```\nFull output: lookatmybeard.com'
         )
 
@@ -284,7 +285,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         """Test the send_job function with a code returning a non-zero code."""
         ctx = MockContext()
         ctx.message = MockMessage()
-        ctx.send = AsyncMock()
+        ctx.reply = AsyncMock()
         ctx.author.mention = '@LemonLemonishBeard#0042'
         self.cog.post_job = AsyncMock(return_value={'stdout': 'ERROR', 'returncode': 127})
         self.cog.get_results_message = MagicMock(return_value=('Return code 127', 'Beard got stuck in the eval'))
@@ -297,10 +298,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         await self.cog.send_job(ctx, '3.11', 'MyAwesomeCode', job_name='eval')
 
-        ctx.send.assert_called_once()
+        ctx.reply.assert_called_once()
         self.assertEqual(
-            ctx.send.call_args.args[0],
-            '@LemonLemonishBeard#0042 :nope!: Return code 127.\n\n```\nBeard got stuck in the eval\n```'
+            ctx.reply.call_args.args[0],
+            ':nope!: Return code 127.\n\n```\nBeard got stuck in the eval\n```'
         )
 
         self.cog.post_job.assert_called_once_with('MyAwesomeCode', '3.11', args=None)

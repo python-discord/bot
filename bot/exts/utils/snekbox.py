@@ -345,7 +345,7 @@ class Snekbox(Cog):
                 output, paste_link = await self.format_output(results["stdout"])
 
             icon = self.get_status_emoji(results)
-            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
+            msg = f"{icon} {msg}.\n\n```\n{output}\n```"
             if paste_link:
                 msg = f"{msg}\nFull output: {paste_link}"
 
@@ -364,7 +364,7 @@ class Snekbox(Cog):
             else:
                 allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
                 view = self.build_python_version_switcher_view(job_name, python_version, ctx, code, args)
-                response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view)
+                response = await ctx.reply(msg, allowed_mentions=allowed_mentions, view=view)
                 view.message = response
 
             log.info(f"{ctx.author}'s {job_name} job had a return code of {results['returncode']}")
@@ -471,8 +471,8 @@ class Snekbox(Cog):
             try:
                 response = await self.send_job(ctx, python_version, code, args=args, job_name=job_name)
             except LockedResourceError:
-                await ctx.send(
-                    f"{ctx.author.mention} You've already got a job running - "
+                await ctx.reply(
+                    "You've already got a job running - "
                     "please wait for it to finish!"
                 )
                 return
