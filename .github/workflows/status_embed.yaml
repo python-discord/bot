@@ -3,6 +3,7 @@ name: Status Embed
 on:
   workflow_run:
     workflows:
+      - CI
       - Lint & Test
       - Build
       - Deploy
