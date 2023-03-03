@@ -1,5 +1,7 @@
-**Microsoft Visual C++ Build Tools**
-
+---
+embed:
+    title: "Microsoft Visual C++ Build Tools"
+---
 When you install a library through `pip` on Windows, sometimes you may encounter this error:
 
 ```

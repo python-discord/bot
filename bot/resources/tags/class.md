@@ -1,5 +1,7 @@
-**Classes**
-
+---
+embed:
+    title: "Classes"
+---
 Classes are used to create objects that have specific behavior.
 
 Every object in python has a class, including `list`s, `dict`ionaries and even numbers. Using a class to group code and data like this is the foundation of Object Oriented Programming. Classes allow you to expose a simple, consistent interface while hiding the more complicated details. This simplifies the rest of your program and makes it easier to separately maintain and debug each component.

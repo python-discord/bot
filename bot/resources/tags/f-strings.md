@@ -1,5 +1,7 @@
 ---
 aliases: ["fstrings", "fstring", "f-string"]
+embed:
+    title: "Format-strings"
 ---
 Creating a Python string with your variables using the `+` operator can be difficult to write and read. F-strings (*format-strings*) make it easy to insert values into a string. If you put an `f` in front of the first quote, you can then put Python expressions between curly braces in the string.
 

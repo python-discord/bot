@@ -1,3 +1,7 @@
+---
+embed:
+    title: "The `@classmethod` decorator"
+---
 Although most methods are tied to an _object instance_, it can sometimes be useful to create a method that does something with _the class itself_. To achieve this in Python, you can use the `@classmethod` decorator. This is often used to provide alternative constructors for a class.
 
 For example, you may be writing a class that takes some magic token (like an API key) as a constructor argument, but you sometimes read this token from a configuration file. You could make use of a `@classmethod` to create an alternate constructor for when you want to read from the configuration file.
