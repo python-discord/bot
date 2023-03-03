@@ -481,11 +481,10 @@ class Infractions(InfractionScheduler, commands.Cog):
                 timeout=10,
             )
 
-            message = await ctx.send(
+            await ctx.send(
                 f"{user} has an elevated role. Are you sure you want to ban them?",
                 view=confirmation_view
             )
-            confirmation_view.message = message
 
             await confirmation_view.wait()
             if confirmation_view.confirmed is None:
