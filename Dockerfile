@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 ghcr.io/chrislovering/python-poetry-base:3.10-slim
+FROM --platform=linux/amd64 ghcr.io/chrislovering/python-poetry-base:3.11-slim
 
 # Define Git SHA build argument for sentry
 ARG git_sha="development"
