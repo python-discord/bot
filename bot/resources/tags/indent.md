@@ -1,5 +1,7 @@
-**Indentation**
-
+---
+embed:
+    title: "Indentation"
+---
 Indentation is leading whitespace (spaces and tabs) at the beginning of a line of code. In the case of Python, they are used to determine the grouping of statements.
 
 Spaces should be preferred over tabs. To be clear, this is in reference to the character itself, not the keys on a keyboard. Your editor/IDE should be configured to insert spaces when the TAB key is pressed. The amount of spaces should be a multiple of 4, except optionally in the case of continuation lines.

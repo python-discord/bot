@@ -1,3 +1,7 @@
+---
+embed:
+    title: "The `with` keyword"
+---
 The `with` keyword triggers a context manager. Context managers automatically set up and take down data connections, or any other kind of object that implements the magic methods `__enter__` and `__exit__`.
 ```py
 with open("test.txt", "r") as file:

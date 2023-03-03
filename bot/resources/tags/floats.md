@@ -1,4 +1,7 @@
-**Floating Point Arithmetic**
+---
+embed:
+    title: "Floating point arithmetic"
+---
 You may have noticed that when doing arithmetic with floats in Python you sometimes get strange results, like this:
 ```python
 >>> 0.1 + 0.2

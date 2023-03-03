@@ -1,5 +1,7 @@
-**Concurrency in Python**
-
+---
+embed:
+    title: "Concurrency in Python"
+---
 Python provides the ability to run multiple tasks and coroutines simultaneously with the use of the `asyncio` library, which is included in the Python standard library.
 
 This works by running these coroutines in an event loop, where the context of the running coroutine switches periodically to allow all other coroutines to run, thus giving the appearance of running at the same time. This is different to using threads or processes in that all code runs in the main process and thread, although it is possible to run coroutines in other threads.

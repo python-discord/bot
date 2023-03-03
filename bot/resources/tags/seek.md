@@ -1,5 +1,7 @@
-**Seek**
-
+---
+embed:
+    title: "Seek"
+---
 In the context of a [file object](https://docs.python.org/3/glossary.html#term-file-object), the `seek` function changes the stream position to a given byte offset, with an optional argument of where to offset from. While you can find the official documentation [here](https://docs.python.org/3/library/io.html#io.IOBase.seek), it can be unclear how to actually use this feature, so keep reading to see examples on how to use it.
 
 File named `example`:
