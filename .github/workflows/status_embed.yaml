@@ -13,10 +13,6 @@ concurrency:
 
 jobs:
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ${{ github.event.workflow_run.event }}
   status_embed:
     # We need to send a status embed whenever the workflow
     # sequence we're running terminates. There are a number
