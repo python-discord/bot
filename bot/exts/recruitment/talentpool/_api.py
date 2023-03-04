@@ -124,6 +124,9 @@ class NominationAPI:
 
         Returns a dictionary mapping user ID to message count.
         """
+        if not user_ids:
+            return {}
+
         result = await self.site_api.post(
             "bot/users/metricity_activity_data",
             json=user_ids,

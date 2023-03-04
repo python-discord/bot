@@ -109,6 +109,17 @@ class Reviewer:
 
         return True
 
+    @staticmethod
+    def is_nomination_old_enough(nomination: Nomination, now: datetime) -> bool:
+        """Check if a nomination is old enough to autoreview."""
+        time_since_nomination = now - nomination.inserted_at
+        return time_since_nomination > MIN_NOMINATION_TIME
+
+    @staticmethod
+    def is_user_active_enough(user_message_count: int) -> bool:
+        """Check if a user's message count is enough for them to be autoreviewed."""
+        return user_message_count > 0
+
     async def is_nomination_ready_for_review(
         self,
         nomination: Nomination,
@@ -125,16 +136,15 @@ class Reviewer:
          - They are still a member of the server.
         """
         guild = self.bot.get_guild(Guild.id)
-        time_since_nomination = now - nomination.inserted_at
         return (
             # Must be an active nomination
             nomination.active and
             # ... that has not already been reviewed
             not nomination.reviewed and
             # ... and has been nominated for long enough
-            time_since_nomination > MIN_NOMINATION_TIME and
+            self.is_nomination_old_enough(nomination, now) and
             # ... and is for a user that has been active recently
-            user_message_count > 0 and
+            self.is_user_active_enough(user_message_count) and
             # ... and is currently a member of the server
             await get_or_fetch_member(guild, nomination.id) is not None
         )
@@ -146,6 +156,9 @@ class Reviewer:
         The priority of the review is determined based on how many nominations the user has
         (more nominations = higher priority), and the age of the nomination.
         """
+        if not nominations:
+            return []
+
         oldest_date = min(nomination.inserted_at for nomination in nominations)
         max_entries = max(len(nomination.entries) for nomination in nominations)
 

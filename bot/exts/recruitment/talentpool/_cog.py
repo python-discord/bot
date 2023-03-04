@@ -15,7 +15,7 @@ from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
-from bot.exts.recruitment.talentpool._review import RECENT_ACTIVITY_DAYS, Reviewer
+from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
@@ -152,6 +152,9 @@ class TalentPool(Cog, name="Talentpool"):
             if messages_per_user[nomination.user_id] > 0:
                 continue
 
+            if nomination.reviewed:
+                continue
+
             log.info("Removing %s from the talent pool due to inactivity", nomination.user_id)
 
             await nomination_discussion.send(
@@ -176,56 +179,105 @@ class TalentPool(Cog, name="Talentpool"):
         ctx: Context,
     ) -> None:
         """
-        Shows the users that are currently in the talent pool, ordered by next to be reviewed.
+        Shows the users that are currently in the talent pool.
 
-        Note that this order will change over time, so should not be relied upon.
+        The "Recent Nominations" sections shows users nominated in the past 7 days,
+        so will not be considered for autoreview.
+
+        In the "Autoreview Priority" section a :zzz: emoji will be shown next to
+        users that have not been active recently enough to be considered for autoreview.
+        Note that the order in this section will change over time so should not be relied upon.
         """
-        await self.list_nominated_users(ctx, order_by_priority=True)
+        await self.show_nominations_list(ctx, grouped_view=True)
 
     @list_group.command(name="oldest")
     async def list_oldest(self, ctx: Context) -> None:
         """Shows the users that are currently in the talent pool, ordered by oldest nomination."""
-        await self.list_nominated_users(ctx, oldest_first=True)
+        await self.show_nominations_list(ctx, oldest_first=True)
 
     @list_group.command(name='newest')
     async def list_newest(self, ctx: Context) -> None:
         """Shows the users that are currently in the talent pool, ordered by newest nomination."""
-        await self.list_nominated_users(ctx, oldest_first=False)
+        await self.show_nominations_list(ctx, oldest_first=False)
 
-    async def list_nominated_users(
+    async def show_nominations_list(
         self,
         ctx: Context,
+        *,
         oldest_first: bool = False,
-        order_by_priority: bool = False
+        grouped_view: bool = False,
     ) -> None:
         """
         Lists the currently nominated users.
 
-        The optional kwarg `oldest_first` orders the list by oldest entry.
+        If `grouped_view` is passed, nominations will be displayed in the groups
+        being reviewed, recent nominations, and others by autoreview priority.
+
+        Otherwise, nominations will be sorted by age
+        (ordered based on the value of `oldest_first`).
         """
         now = datetime.now(tz=timezone.utc)
+        nominations = await self.api.get_nominations(active=True)
+        messages_per_user = await self.api.get_activity(
+            [nomination.user_id for nomination in nominations],
+            days=DAYS_UNTIL_INACTIVE
+        )
+
+        if grouped_view:
+            reviewed_nominations = []
+            recent_nominations = []
+            other_nominations = []
+            for nomination in nominations:
+                if nomination.reviewed:
+                    reviewed_nominations.append(nomination)
+                elif not self.reviewer.is_nomination_old_enough(nomination, now):
+                    recent_nominations.append(nomination)
+                else:
+                    other_nominations.append(nomination)
+
+            other_nominations = await self.reviewer.sort_nominations_to_review(other_nominations, now)
+
+            lines = [
+                "**Being Reviewed:**",
+                *await self.list_nominations(ctx, reviewed_nominations, messages_per_user),
+                "**Recent Nominations:**",
+                *await self.list_nominations(ctx, recent_nominations, messages_per_user),
+                "**Other Nominations by Autoreview Priority:**",
+                *await self.list_nominations(ctx, other_nominations, messages_per_user, show_inactive=True)
+            ]
+        else:
+            if oldest_first:
+                nominations.reverse()
+            lines = await self.list_nominations(ctx, nominations, messages_per_user, show_reviewed=True)
+
+            if not lines:
+                lines = ["There are no active nominations"]
+
         embed = Embed(
             title="Talent Pool active nominations",
             color=Color.blue()
         )
-        nominations = await self.api.get_nominations(active=True)
+        await LinePaginator.paginate(lines, ctx, embed, empty=False)
+
+    async def list_nominations(
+        self,
+        ctx: Context,
+        nominations: list[Nomination],
+        messages_per_user: dict[int, int],
+        show_reviewed: bool = False,
+        show_inactive: bool = False,
+    ) -> list[str]:
+        """
+        Formats the given nominations into a list.
+
+        Pass `show_reviewed` to indicate reviewed nominations, and `show_inactive` to
+        indicate if the user doesn't have recent enough activity to be autoreviewed.
+        """
+        lines: list[str] = []
 
         if not nominations:
-            embed.description = "There are no active nominations."
-            await ctx.send(embed=embed)
-            return
+            return ["*None*"]
 
-        if order_by_priority:
-            nominations = await self.reviewer.sort_nominations_to_review(nominations, now)
-        elif oldest_first:
-            nominations.reverse()
-
-        messages_per_user = await self.api.get_activity(
-            [nomination.user_id for nomination in nominations],
-            days=RECENT_ACTIVITY_DAYS
-        )
-
-        lines: list[str] = []
         for nomination in nominations:
             line = f"• `{nomination.user_id}`"
 
@@ -233,23 +285,19 @@ class TalentPool(Cog, name="Talentpool"):
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             else:
-                line += " (not in server)"
+                line += " (not on server)"
 
             line += f", added {time.format_relative(nomination.inserted_at)}"
 
-            is_ready_for_review = await self.reviewer.is_nomination_ready_for_review(
-                nomination,
-                messages_per_user[nomination.user_id],
-                now
-            )
-            if nomination.reviewed:
+            if show_reviewed and nomination.reviewed:
                 line += " *(reviewed)*"
-            elif is_ready_for_review:
-                line += " *(ready for review)*"
+
+            is_active = self.reviewer.is_user_active_enough(messages_per_user[nomination.user_id])
+            if show_inactive and not is_active:
+                line += " :zzz:"
 
             lines.append(line)
-
-        await LinePaginator.paginate(lines, ctx, embed, empty=False)
+        return lines
 
     @nomination_group.command(
         name="forcenominate",
