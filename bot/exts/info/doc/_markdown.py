@@ -4,7 +4,8 @@ from urllib.parse import urljoin
 import markdownify
 from bs4.element import PageElement
 
-markdownify.whitespace_re = re.compile(r'[\r\n\s\t ]+')
+# See https://github.com/matthewwithanm/python-markdownify/issues/31
+markdownify.whitespace_re = re.compile(r"[\r\n\s\t ]+")
 
 
 class DocMarkdownConverter(markdownify.MarkdownConverter):
@@ -62,4 +63,4 @@ class DocMarkdownConverter(markdownify.MarkdownConverter):
 
     def convert_hr(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Ignore `hr` tag."""
-        return "\n"
+        return ""

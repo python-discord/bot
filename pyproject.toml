@@ -22,11 +22,7 @@ deepdiff = "6.2.1"
 emoji = "2.2.0"
 feedparser = "6.0.10"
 lxml = "4.9.1"
-
-# Must be kept on this version unless doc command output is fixed
-# See https://github.com/python-discord/bot/pull/2156
 markdownify = "0.11.6"
-
 more-itertools = "9.0.0"
 python-dateutil = "2.8.2"
 python-frontmatter = "1.0.0"
