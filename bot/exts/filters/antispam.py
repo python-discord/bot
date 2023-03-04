@@ -228,17 +228,17 @@ class AntiSpam(Cog):
     @lock.lock_arg("antispam.punish", "member", attrgetter("id"))
     async def punish(self, msg: Message, member: Member, reason: str) -> None:
         """Punishes the given member for triggering an antispam rule."""
-        if not any(role.id == self.muted_role.id for role in member.roles):
-            remove_role_after = AntiSpamConfig.punishment['remove_after']
+        if not member.is_timed_out():
+            remove_timeout_after = AntiSpamConfig.punishment['remove_after']
 
             # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
             context.author = self.bot.user
 
-            # Since we're going to invoke the tempmute command directly, we need to manually call the converter.
-            dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_role_after}S")
+            # Since we're going to invoke the timeout command directly, we need to manually call the converter.
+            dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_timeout_after}S")
             await context.invoke(
-                self.bot.get_command('tempmute'),
+                self.bot.get_command('timeout'),
                 member,
                 dt_remove_role_after,
                 reason=reason

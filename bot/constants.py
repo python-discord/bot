@@ -356,9 +356,9 @@ class Icons(metaclass=YAMLGetter):
     token_removed: str
 
     user_ban: str
-    user_mute: str
+    user_timeout: str
     user_unban: str
-    user_unmute: str
+    user_untimeout: str
     user_update: str
     user_verified: str
     user_warn: str
@@ -493,7 +493,7 @@ class Roles(metaclass=YAMLGetter):
 
     contributors: int
     help_cooldown: int
-    muted: int
+    muted: int  # TODO remove when no longer relevant.
     partners: int
     python_community: int
     sprinters: int

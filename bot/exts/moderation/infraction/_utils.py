@@ -19,7 +19,7 @@ log = get_logger(__name__)
 INFRACTION_ICONS = {
     "ban": (Icons.user_ban, Icons.user_unban),
     "kick": (Icons.sign_out, None),
-    "mute": (Icons.user_mute, Icons.user_unmute),
+    "timeout": (Icons.user_timeout, Icons.user_untimeout),
     "note": (Icons.user_warn, None),
     "superstar": (Icons.superstarify, Icons.unsuperstarify),
     "warning": (Icons.user_warn, None),
