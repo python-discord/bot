@@ -264,6 +264,7 @@ class TalentPool(Cog, name="Talentpool"):
         ctx: Context,
         nominations: list[Nomination],
         messages_per_user: dict[int, int],
+        *,
         show_reviewed: bool = False,
         show_inactive: bool = False,
     ) -> list[str]:
