@@ -29,7 +29,7 @@ class FilterContext:
     event: Event  # The type of event
     author: User | Member | None  # Who triggered the event
     channel: TextChannel | Thread | DMChannel | None  # The channel involved
-    content: str | Iterable  # What actually needs filtering
+    content: str | Iterable  # What actually needs filtering. The Iterable type depends on the filter list.
     message: Message | None  # The message involved
     embeds: list[Embed] = field(default_factory=list)  # Any embeds involved
     before_message: Message | None = None
@@ -40,7 +40,7 @@ class FilterContext:
     send_alert: bool = False  # Whether to send an alert for the moderators
     alert_content: str = ""  # The content of the alert
     alert_embeds: list[Embed] = field(default_factory=list)  # Any embeds to add to the alert
-    action_descriptions: list = field(default_factory=list)  # What actions were taken
+    action_descriptions: list[str] = field(default_factory=list)  # What actions were taken
     matches: list[str] = field(default_factory=list)  # What exactly was found
     notification_domain: str = ""  # A domain to send the user for context
     filter_info: dict['Filter', str] = field(default_factory=dict)  # Additional info from a filter.
