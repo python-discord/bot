@@ -27,7 +27,7 @@ REASON_MAX_CHARS = 1000
 
 # The number of days that a user can have no activity (no messages sent)
 # until they should be removed from the talentpool.
-DAYS_UNTIL_INACTIVE = 30
+DAYS_UNTIL_INACTIVE = 45
 
 log = get_logger(__name__)
 
@@ -156,7 +156,8 @@ class TalentPool(Cog, name="Talentpool"):
 
             await nomination_discussion.send(
                 f":warning: <@{nomination.user_id}> ({nomination.user_id})"
-                " was removed from the talentpool due to inactivity."
+                " was removed from the talentpool as they have sent no messages"
+                f" in the past {DAYS_UNTIL_INACTIVE} days."
             )
             await self.api.edit_nomination(
                 nomination.id,
