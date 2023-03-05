@@ -1,9 +1,12 @@
+import contextlib
 import copy
 import difflib
 
-from discord import Embed, Member
+import discord
+from discord import ButtonStyle, Embed, Interaction, Member, Message, NotFound, User
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.interactions import DeleteMessageButton
 from sentry_sdk import push_scope
 
 from bot.bot import Bot
@@ -13,6 +16,51 @@ from bot.log import get_logger
 from bot.utils.checks import ContextCheckFailure
 
 log = get_logger(__name__)
+
+
+class CheckedDeleteMessageButton(DeleteMessageButton):
+    """Button to delete a message, restricted to the message owner and moderators."""
+
+    def __init__(self, owner: User | Member):
+        super().__init__()
+        self.owner = owner
+
+    async def callback(self, interaction: Interaction) -> None:
+        """Delete the message if the user is the owner of the message or a moderator."""
+        user = interaction.user
+        if (
+            user.id == self.owner.id or
+            (
+                isinstance(user, Member) and
+                any(user.get_role(role) for role in MODERATION_ROLES)
+            )
+        ):
+            await super().callback(interaction)
+        else:
+            await interaction.response.send_message("You can only delete your own command responses!", ephemeral=True)
+
+
+class HelpEmbedView(discord.ui.View):
+    """View to allow showing the help command for command error responses."""
+
+    def __init__(self, help_embed: Embed, owner: User | Member):
+        super().__init__()
+        self.help_embed = help_embed
+        self.message: Message | None = None
+
+        self.delete_button = CheckedDeleteMessageButton(owner)
+        self.add_item(self.delete_button)
+
+    @discord.ui.button(label='Help', style=ButtonStyle.primary)
+    async def help_button(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Send an ephemeral message with the contents of the help command."""
+        await interaction.response.send_message(embed=self.help_embed, ephemeral=True)
+
+    async def on_timeout(self) -> None:
+        """Remove the view from `self.message` if set."""
+        if self.message:
+            with contextlib.suppress(NotFound):
+                await self.message.edit(view=None)
 
 
 class ErrorHandler(Cog):
@@ -97,15 +145,6 @@ class ErrorHandler(Cog):
         else:
             # ExtensionError
             await self.handle_unexpected_error(ctx, e)
-
-    async def send_command_help(self, ctx: Context) -> None:
-        """Return a prepared `help` command invocation coroutine."""
-        if ctx.command:
-            self.bot.help_command.context = ctx
-            await ctx.send_help(ctx.command)
-            return
-
-        await ctx.send_help()
 
     async def try_silence(self, ctx: Context) -> bool:
         """
@@ -292,8 +331,21 @@ class ErrorHandler(Cog):
             )
             self.bot.stats.incr("errors.other_user_input_error")
 
-        await ctx.send(embed=embed)
-        await self.send_command_help(ctx)
+        await self.send_error_with_help(ctx, embed)
+
+    async def send_error_with_help(self, ctx: Context, error_embed: Embed) -> None:
+        """Send error message, with button to show command help."""
+        # Fall back to just sending the error embed if the custom help cog isn't loaded yet.
+        # ctx.command shouldn't be None here, but check just to be safe.
+        help_embed_creator = getattr(self.bot.help_command, "command_formatting", None)
+        if not help_embed_creator or not ctx.command:
+            await ctx.send(embed=error_embed)
+            return
+
+        self.bot.help_command.context = ctx
+        help_embed, _ = await help_embed_creator(ctx.command)
+        view = HelpEmbedView(help_embed, ctx.author)
+        view.message = await ctx.send(embed=error_embed, view=view)
 
     @staticmethod
     async def handle_check_failure(ctx: Context, e: errors.CheckFailure) -> None:

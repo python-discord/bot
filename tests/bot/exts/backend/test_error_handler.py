@@ -432,12 +432,13 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         for case in test_cases:
             with self.subTest(error=case["error"], call_prepared=case["call_prepared"]):
                 self.ctx.reset_mock()
+                self.cog.send_error_with_help = AsyncMock()
                 self.assertIsNone(await self.cog.handle_user_input_error(self.ctx, case["error"]))
-                self.ctx.send.assert_awaited_once()
                 if case["call_prepared"]:
-                    self.ctx.send_help.assert_awaited_once()
+                    self.cog.send_error_with_help.assert_awaited_once()
                 else:
-                    self.ctx.send_help.assert_not_awaited()
+                    self.ctx.send.assert_awaited_once()
+                    self.cog.send_error_with_help.assert_not_awaited()
 
     async def test_handle_check_failure_errors(self):
         """Should await `ctx.send` when error is check failure."""
