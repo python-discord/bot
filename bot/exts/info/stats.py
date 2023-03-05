@@ -42,7 +42,7 @@ class Stats(Cog):
                 return
 
         channel = message.channel
-        if hasattr(channel, 'parent'):
+        if hasattr(channel, 'parent') and channel.parent:
             channel = channel.parent
         reformatted_name = CHANNEL_NAME_OVERRIDES.get(channel.id, channel.name)
         reformatted_name = "".join(char if char in ALLOWED_CHARS else '_' for char in reformatted_name)
