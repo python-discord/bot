@@ -295,9 +295,10 @@ class SourceTrasnformer(app_commands.Transformer):
                 return identifier
         escaped_arg = escape_markdown(source_item)
 
-        raise BadArgument(
+        log.debug(
             f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or Cog."
         )
+        return escaped_arg
 
     async def autocomplete(self, interaction: discord.Interaction, value: str) -> list[app_commands.Choice[str]]:
         """Autocompleter for `/source` command."""

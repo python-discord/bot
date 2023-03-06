@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from discord import Embed, Interaction, app_commands
 from discord.ext import commands
@@ -10,7 +10,7 @@ from bot.constants import URLs
 from bot.converters import SourceTrasnformer
 from bot.exts.info.tags import TagIdentifier
 
-SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, TagIdentifier, commands.ExtensionNotLoaded]
+SourceType = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded | str
 
 
 class BotSource(commands.Cog):
@@ -34,8 +34,16 @@ class BotSource(commands.Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        embed = await self.build_embed(source_item)
-        await interaction.response.send_message(embed=embed)
+        embed = None
+        ephemeral = False
+        if isinstance(source_item, str):
+            title = "Bad Argument"
+            description = f"Unable to convert '{source_item}' to valid command, tag, or Cog."
+            embed = Embed(title=title, description=description)
+            ephemeral = True
+
+        embed = await self.build_embed(source_item) if not embed else embed
+        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """
