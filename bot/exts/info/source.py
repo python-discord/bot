@@ -2,12 +2,12 @@ import inspect
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
-from discord import Embed
+from discord import Embed, Interaction, app_commands
 from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import URLs
-from bot.converters import SourceConverter
+from bot.converters import SourceTrasnformer
 from bot.exts.info.tags import TagIdentifier
 
 SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, TagIdentifier, commands.ExtensionNotLoaded]
@@ -19,18 +19,23 @@ class BotSource(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.command(name="source", aliases=("src",))
-    async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
+    @app_commands.command(name="source")
+    async def source_command(
+        self,
+        interaction: Interaction,
+        *,
+        source_item: app_commands.Transform[SourceType, SourceTrasnformer] = None
+    ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
             embed = Embed(title="Bot's GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
             embed.set_thumbnail(url="https://avatars1.githubusercontent.com/u/9919")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
         embed = await self.build_embed(source_item)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """
@@ -83,12 +88,12 @@ class BotSource(commands.Cog):
         elif isinstance(source_object, commands.Command):
             description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
-        elif isinstance(source_object, TagIdentifier):
-            title = f"Tag: {source_object}"
-            description = ""
-        else:
+        elif issubclass(type(source_object), commands.Cog):
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
+        else:
+            title = f"Tag: {source_object}"
+            description = ""
 
         embed = Embed(title=title, description=description)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({url})")
