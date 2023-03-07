@@ -18,16 +18,16 @@ GUILD_ID = os.getenv("GUILD.ID", None)
 
 if not BOT_TOKEN:
     message = (
-        "Couldn't find BOT_TOKEN in the environment variables."
-        "Make sure to add it to the `.env` file likewise: `BOT_TOKEN=value_of_your_bot_token`"
+        "Couldn't find BOT.TOKEN in the environment variables."
+        "Make sure to add it to the `.env` file likewise: `BOT.TOKEN=value_of_your_bot_token`"
     )
     log.warning(message)
     raise ValueError(message)
 
 if not GUILD_ID:
     message = (
-        "Couldn't find GUILD_ID in the environment variables."
-        "Make sure to add it to the `.env` file likewise: `GUILD_ID=value_of_your_discord_server_id`"
+        "Couldn't find GUILD.ID in the environment variables."
+        "Make sure to add it to the `.env` file likewise: `GUILD.ID=value_of_your_discord_server_id`"
     )
     log.warning(message)
     raise ValueError(message)
