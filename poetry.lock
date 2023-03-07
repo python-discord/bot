@@ -1222,21 +1222,21 @@ flake8 = ">=3.9.1"
 
 [[package]]
 name = "pip-licenses"
-version = "4.0.1"
+version = "4.1.0"
 description = "Dump the software license list of Python packages installed with pip."
 category = "dev"
 optional = false
 python-versions = "~=3.8"
 files = [
-    {file = "pip-licenses-4.0.1.tar.gz", hash = "sha256:05a180f5610b262e2d56eea99f04e380db7080e79655abf1c916125f39fe207d"},
-    {file = "pip_licenses-4.0.1-py3-none-any.whl", hash = "sha256:5896c18b7897e38fdd7be9a9ea0de02d6ff3264b7411967d6b679019ddc31878"},
+    {file = "pip-licenses-4.1.0.tar.gz", hash = "sha256:6905abcc8b3ca45548a7a33b24abbee0e7a6eb451463acc676eaa879f1130598"},
+    {file = "pip_licenses-4.1.0-py3-none-any.whl", hash = "sha256:0aef43fa605aaed17342f74c325b5b1a15be034c9b12bcc97ff290de1a8bc0af"},
 ]
 
 [package.dependencies]
 prettytable = ">=2.3.0"
 
 [package.extras]
-test = ["docutils", "pytest-cov", "pytest-pycodestyle", "pytest-runner"]
+test = ["docutils", "mypy", "pytest-cov", "pytest-pycodestyle", "pytest-runner"]
 
 [[package]]
 name = "platformdirs"
@@ -2317,4 +2317,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.10.*"
-content-hash = "4b3549e9e47535d1fea6015a0f7ebf056a42e4d27e766583ccd8b59ebe8297d6"
+content-hash = "c668f2d16cc22062af7280f25ade5f0b856908c136b49aaef64de10f766b7327"
