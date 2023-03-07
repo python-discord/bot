@@ -11,13 +11,14 @@ from discord.ext.commands import Context, command
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Event
+from bot.constants import Channels, Event
 from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.filters.filtering import AUTO_BAN_DURATION, AUTO_BAN_REASON
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
+from bot.utils.channel import is_mod_channel
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
@@ -30,6 +31,10 @@ if t.TYPE_CHECKING:
 
 
 MAXIMUM_TIMEOUT_DAYS = timedelta(days=28)
+TIMEOUT_CAP_MESSAGE = (
+    f"Timeouts can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
+    " I'll pretend that's what you meant."
+)
 
 
 class Infractions(InfractionScheduler, commands.Cog):
@@ -237,8 +242,13 @@ class Infractions(InfractionScheduler, commands.Cog):
             if isinstance(duration, relativedelta):
                 duration += now
             if duration > now + MAXIMUM_TIMEOUT_DAYS:
-                await ctx.send(f":x: A timeout cannot be longer than {MAXIMUM_TIMEOUT_DAYS.days} days.")
-                return
+                if is_mod_channel(ctx.channel):
+                    await ctx.reply(f":warning: {TIMEOUT_CAP_MESSAGE}")
+                else:
+                    await self.bot.get_channel(Channels.mods).send(
+                        f":warning: {ctx.author.mention} {TIMEOUT_CAP_MESSAGE}"
+                    )
+                duration = now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1)  # Duration cap is exclusive.
             elif duration > now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1):
                 # Duration cap is exclusive. This is to still allow specifying "28d".
                 duration -= timedelta(minutes=1)
