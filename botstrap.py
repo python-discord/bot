@@ -12,22 +12,22 @@ load_dotenv()
 log = get_logger("Config Bootstrapper")
 
 env_file_path = Path(".env.server")
-BOT_TOKEN = os.getenv("BOT.TOKEN", None)
-GUILD_ID = os.getenv("GUILD.ID", None)
+BOT_TOKEN = os.getenv("BOT_TOKEN", None)
+GUILD_ID = os.getenv("GUILD_ID", None)
 
 
 if not BOT_TOKEN:
     message = (
-        "Couldn't find BOT.TOKEN in the environment variables."
-        "Make sure to add it to the `.env` file likewise: `BOT.TOKEN=value_of_your_bot_token`"
+        "Couldn't find BOT_TOKEN in the environment variables."
+        "Make sure to add it to the `.env` file likewise: `BOT_TOKEN=value_of_your_bot_token`"
     )
     log.warning(message)
     raise ValueError(message)
 
 if not GUILD_ID:
     message = (
-        "Couldn't find GUILD.ID in the environment variables."
-        "Make sure to add it to the `.env` file likewise: `GUILD.ID=value_of_your_discord_server_id`"
+        "Couldn't find GUILD_ID in the environment variables."
+        "Make sure to add it to the `.env` file likewise: `GUILD_ID=value_of_your_discord_server_id`"
     )
     log.warning(message)
     raise ValueError(message)
@@ -120,7 +120,7 @@ with DiscordClient() as discord_client:
             log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
             continue
 
-        config_str += f"roles.{role_name}={role_id}\n"
+        config_str += f"roles_{role_name}={role_id}\n"
 
     all_channels, all_categories = get_all_channels_and_categories(guild_id=GUILD_ID, client=discord_client)
 
@@ -134,7 +134,7 @@ with DiscordClient() as discord_client:
             )
             continue
 
-        config_str += f"channels.{channel_name}={channel_id}\n"
+        config_str += f"channels_{channel_name}={channel_id}\n"
 
     config_str += "\n#Categories\n"
 
@@ -146,7 +146,7 @@ with DiscordClient() as discord_client:
             )
             continue
 
-        config_str += f"categories.{category_name}={category_id}\n"
+        config_str += f"categories_{category_name}={category_id}\n"
 
     env_file_path.write_text(config_str)
 
@@ -159,6 +159,6 @@ with DiscordClient() as discord_client:
             webhook_id = create_webhook(webhook_name, webhook_channel_id, client=discord_client)
         else:
             webhook_id = webhook_model.id
-        config_str += f"webhooks.{webhook_name}.id={webhook_id}\n"
+        config_str += f"webhooks_{webhook_name}.id={webhook_id}\n"
 
     env_file_path.write_text(config_str)

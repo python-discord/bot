@@ -35,7 +35,7 @@ DEBUG_MODE = Miscellaneous.debug
 
 
 class _Bot(EnvConfig):
-    EnvConfig.Config.env_prefix = "bot."
+    EnvConfig.Config.env_prefix = "bot_"
 
     prefix = "!"
     sentry_dsn = ""
@@ -47,7 +47,7 @@ Bot = _Bot()
 
 
 class _Channels(EnvConfig):
-    EnvConfig.Config.env_prefix = "channels."
+    EnvConfig.Config.env_prefix = "channels_"
 
     announcements = 354619224620138496
     changelog = 748238795236704388
@@ -131,7 +131,7 @@ Channels = _Channels()
 
 class _Roles(EnvConfig):
 
-    EnvConfig.Config.env_prefix = "roles."
+    EnvConfig.Config.env_prefix = "roles_"
 
     # Self-assignable roles, see the Subscribe cog
     advent_of_code = 518565788744024082
@@ -177,7 +177,7 @@ Roles = _Roles()
 
 
 class _Categories(EnvConfig):
-    EnvConfig.Config.env_prefix = "categories."
+    EnvConfig.Config.env_prefix = "categories_"
 
     logs = 468520609152892958
     moderators = 749736277464842262
@@ -194,7 +194,7 @@ Categories = _Categories()
 
 
 class _Guild(EnvConfig):
-    EnvConfig.Config.env_prefix = "guild."
+    EnvConfig.Config.env_prefix = "guild_"
 
     id = 267624335836053506
     invite = "https://discord.gg/python"
@@ -261,7 +261,7 @@ class Webhook(BaseModel):
 
 
 class _Webhooks(EnvConfig):
-    EnvConfig.Config.env_prefix = "webhooks."
+    EnvConfig.Config.env_prefix = "webhooks_"
     EnvConfig.Config.env_nested_delimiter = '.'
 
     big_brother: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother)
@@ -276,7 +276,7 @@ Webhooks = _Webhooks()
 
 
 class _BigBrother(EnvConfig):
-    EnvConfig.Config.env_prefix = "big_brother."
+    EnvConfig.Config.env_prefix = "big_brother_"
 
     header_message_limit = 15
     log_delay = 15
@@ -286,7 +286,7 @@ BigBrother = _BigBrother()
 
 
 class _CodeBlock(EnvConfig):
-    EnvConfig.Config.env_prefix = "code_block."
+    EnvConfig.Config.env_prefix = "code_block_"
 
     # The channels in which code blocks will be detected. They are not subject to a cooldown.
     channel_whitelist: list[int] = [Channels.bot_commands]
@@ -301,7 +301,7 @@ CodeBlock = _CodeBlock()
 
 
 class _Colours(EnvConfig):
-    EnvConfig.Config.env_prefix = "colours."
+    EnvConfig.Config.env_prefix = "colours_"
 
     blue = 0x3775a8
     bright_green = 0x01d277
@@ -325,7 +325,7 @@ Colours = _Colours()
 
 
 class _Free(EnvConfig):
-    EnvConfig.Config.env_prefix = "free."
+    EnvConfig.Config.env_prefix = "free_"
 
     activity_timeout = 600
     cooldown_per = 60.0
@@ -379,7 +379,7 @@ AntiSpam = _AntiSpam()
 
 
 class _HelpChannels(EnvConfig):
-    EnvConfig.Config.env_prefix = "help_channels."
+    EnvConfig.Config.env_prefix = "help_channels_"
 
     enable = True
     idle_minutes = 30
@@ -392,7 +392,7 @@ HelpChannels = _HelpChannels()
 
 
 class _RedirectOutput(EnvConfig):
-    EnvConfig.Config.env_prefix = "redirect_output."
+    EnvConfig.Config.env_prefix = "redirect_output_"
 
     delete_delay = 15
     delete_invocation = True
@@ -402,7 +402,7 @@ RedirectOutput = _RedirectOutput()
 
 
 class _DuckPond(EnvConfig):
-    EnvConfig.Config.env_prefix = "duck_pond."
+    EnvConfig.Config.env_prefix = "duck_pond_"
 
     threshold = 7
 
@@ -425,7 +425,7 @@ DuckPond = _DuckPond()
 
 
 class _PythonNews(EnvConfig):
-    EnvConfig.Config.env_prefix = "python_news."
+    EnvConfig.Config.env_prefix = "python_news_"
 
     channel: int = Webhooks.python_news.channel
     webhook: int = Webhooks.python_news.id
@@ -436,7 +436,7 @@ PythonNews = _PythonNews()
 
 
 class _VoiceGate(EnvConfig):
-    EnvConfig.Config.env_prefix = "voice_gate."
+    EnvConfig.Config.env_prefix = "voice_gate_"
 
     bot_message_delete_delay = 10
     minimum_activity_blocks = 3
@@ -449,7 +449,7 @@ VoiceGate = _VoiceGate()
 
 
 class _Branding(EnvConfig):
-    EnvConfig.Config.env_prefix = "branding."
+    EnvConfig.Config.env_prefix = "branding_"
 
     cycle_frequency = 3
 
@@ -458,7 +458,7 @@ Branding = _Branding()
 
 
 class _VideoPermission(EnvConfig):
-    EnvConfig.Config.env_prefix = "video_permission."
+    EnvConfig.Config.env_prefix = "video_permission_"
 
     default_permission_duration = 5
 
@@ -467,7 +467,7 @@ VideoPermission = _VideoPermission()
 
 
 class _Redis(EnvConfig):
-    EnvConfig.Config.env_prefix = "redis."
+    EnvConfig.Config.env_prefix = "redis_"
 
     host = "redis.default.svc.cluster.local"
     password = ""
@@ -479,7 +479,7 @@ Redis = _Redis()
 
 
 class _CleanMessages(EnvConfig):
-    EnvConfig.Config.env_prefix = "clean."
+    EnvConfig.Config.env_prefix = "clean_"
 
     message_limit = 10_000
 
@@ -488,7 +488,7 @@ CleanMessages = _CleanMessages()
 
 
 class _Stats(EnvConfig):
-    EnvConfig.Config.env_prefix = "stats."
+    EnvConfig.Config.env_prefix = "stats_"
 
     presence_update_timeout = 30
     statsd_host = "graphite.default.svc.cluster.local"
@@ -498,7 +498,7 @@ Stats = _Stats()
 
 
 class _Cooldowns(EnvConfig):
-    EnvConfig.Config.env_prefix = "cooldowns."
+    EnvConfig.Config.env_prefix = "cooldowns_"
 
     tags = 60
 
@@ -507,7 +507,7 @@ Cooldowns = _Cooldowns()
 
 
 class _Metabase(EnvConfig):
-    EnvConfig.Config.env_prefix = "metabase."
+    EnvConfig.Config.env_prefix = "metabase_"
 
     username = ""
     password = ""
@@ -520,7 +520,7 @@ Metabase = _Metabase()
 
 
 class _BaseURLs(EnvConfig):
-    EnvConfig.Config.env_prefix = "urls."
+    EnvConfig.Config.env_prefix = "urls_"
 
     # Snekbox endpoints
     snekbox_eval_api = "http://snekbox-310.default.svc.cluster.local/eval"
@@ -565,7 +565,7 @@ URLs = _URLs()
 
 
 class _Emojis(EnvConfig):
-    EnvConfig.Config.env_prefix = "emojis."
+    EnvConfig.Config.env_prefix = "emojis_"
 
     badge_bug_hunter = "<:bug_hunter_lvl1:743882896372269137>"
     badge_bug_hunter_level_2 = "<:bug_hunter_lvl2:743882896611344505>"
@@ -612,7 +612,7 @@ Emojis = _Emojis()
 
 
 class _Icons(EnvConfig):
-    EnvConfig.Config.env_prefix = "icons."
+    EnvConfig.Config.env_prefix = "icons_"
 
     crown_blurple = "https://cdn.discordapp.com/emojis/469964153289965568.png"
     crown_green = "https://cdn.discordapp.com/emojis/469964154719961088.png"
@@ -670,7 +670,7 @@ Icons = _Icons()
 
 
 class _Filter(EnvConfig):
-    EnvConfig.Config.env_prefix = "filters."
+    EnvConfig.Config.env_prefix = "filters_"
 
     filter_domains = True
     filter_everyone_ping = True
@@ -712,7 +712,7 @@ Filter = _Filter()
 
 class _Keys(EnvConfig):
 
-    EnvConfig.Config.env_prefix = "api_keys."
+    EnvConfig.Config.env_prefix = "api_keys_"
 
     github = ""
     site_api = ""
