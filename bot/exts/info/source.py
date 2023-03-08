@@ -37,9 +37,8 @@ class BotSource(commands.Cog):
         embed = None
         ephemeral = False
         if isinstance(source_item, str):
-            title = "Bad Argument"
-            description = f"Unable to convert '{source_item}' to valid command, tag, or Cog."
-            embed = Embed(title=title, description=description)
+            description = f"**Unable to convert '{source_item}' to valid command, tag, or Cog.**"
+            embed = Embed(description=description)
             ephemeral = True
 
         embed = await self.build_embed(source_item) if not embed else embed
