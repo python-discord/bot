@@ -244,15 +244,20 @@ class CustomHelpCommand(HelpCommand):
         choices.update(cog.category for cog in self.context.bot.cogs.values() if hasattr(cog, "category"))
         return choices
 
-    async def command_not_found(self, string: str) -> "HelpQueryNotFound":
+    async def command_not_found(self, query: str) -> "HelpQueryNotFound":
         """
         Handles when a query does not match a valid command, group, cog or category.
 
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
         choices = list(await self.get_all_help_choices())
-        result = process.extract(default_process(string), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
-        return HelpQueryNotFound(f'Query "{string}" not found.', {choice[0]: choice[1] for choice in result})
+        result = process.extract(default_process(query), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
+
+        # Trim query to avoid embed limits when sending the error.
+        if len(query) >= 100:
+            query = query[:100] + "..."
+
+        return HelpQueryNotFound(f'Query "{query}" not found.', {choice[0]: choice[1] for choice in result})
 
     async def subcommand_not_found(self, command: Command, string: str) -> "HelpQueryNotFound":
         """
