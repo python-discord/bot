@@ -67,7 +67,6 @@ class BotSource(Cog):
         if issubclass(type(source_object), Cog) or isinstance(source_object, HelpCommand | Command):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
-                print("first_line_no")
             except OSError:
                 raise BadArgument("Cannot get source for a dynamically-created object.")
 
