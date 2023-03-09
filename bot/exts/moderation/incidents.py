@@ -329,9 +329,9 @@ class Incidents(Cog):
         await self.bot.wait_until_guild_available()
 
         try:
-            self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+            self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents.id)
         except discord.HTTPException:
-            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents}`.")
+            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents.id}`.")
 
     async def crawl_incidents(self) -> None:
         """
@@ -389,7 +389,7 @@ class Incidents(Cog):
         embed, attachment_file = await make_embed(incident, outcome, actioned_by)
 
         try:
-            webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
+            webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive.id)
             await webhook.send(
                 embed=embed,
                 username=sub_clyde(incident.author.display_name),
