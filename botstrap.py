@@ -160,5 +160,6 @@ with DiscordClient() as discord_client:
         else:
             webhook_id = webhook_model.id
         config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
+        config_str += f"webhooks_{webhook_name}__channel={all_channels[webhook_name]}\n"
 
     env_file_path.write_text(config_str)
