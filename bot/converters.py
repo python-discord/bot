@@ -284,6 +284,11 @@ class SourceTransformer(app_commands.Transformer):
         if cmd:
             return cmd
 
+        slash_cmd = interaction.client.tree.get_command(cog_command_or_tag)
+        slash_cmd = slash_cmd if isinstance(slash_cmd, app_commands.Command) else None
+        if slash_cmd:
+            return slash_cmd
+
         tags_cog = interaction.client.get_cog("Tags")
         show_tag = True
 
@@ -305,10 +310,12 @@ class SourceTransformer(app_commands.Transformer):
         all_cogs = interaction.client.cogs
         tags_cog = all_cogs.get("Tags", None)
         names = [*all_cogs.keys(), *interaction.client.all_commands.keys()]
+        names += [
+            slash_cmd.qualified_name
+            for slash_cmd in interaction.client.tree.get_commands() if isinstance(slash_cmd, app_commands.Command)
+        ]
         if tags_cog:
             names += [tag.name for tag in tags_cog.tags.keys()]
-
-        # Need to manually add the slash commands
         # JSON can't serialize Cogs and Command objects thats why we are passing a string for value parameter.
         choices = [
             app_commands.Choice(name=source_name, value=source_name)

@@ -10,7 +10,8 @@ from bot.constants import URLs
 from bot.converters import SourceTransformer
 from bot.exts.info.tags import TagIdentifier
 
-SourceType = HelpCommand | Command | Cog | TagIdentifier | ExtensionNotLoaded | str
+SourceType = HelpCommand | Command | Cog | TagIdentifier | ExtensionNotLoaded | app_commands.Command | str
+HybridCommand = app_commands.Command | Command
 
 
 class BotSource(Cog):
@@ -50,7 +51,7 @@ class BotSource(Cog):
 
         Raise BadArgument if `source_object` is a dynamically-created object (e.g. via internal eval).
         """
-        if isinstance(source_object, Command):
+        if isinstance(source_object, HybridCommand):
             source_item = inspect.unwrap(source_object.callback)
             src = source_item.__code__
             filename = src.co_filename
@@ -64,7 +65,7 @@ class BotSource(Cog):
             tags_cog = self.bot.get_cog("Tags")
             filename = tags_cog.tags[source_object].file_path
 
-        if issubclass(type(source_object), Cog) or isinstance(source_object, HelpCommand | Command):
+        if issubclass(type(source_object), Cog) or isinstance(source_object, HelpCommand | HybridCommand):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
@@ -95,6 +96,9 @@ class BotSource(Cog):
         elif isinstance(source_object, Command):
             description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
+        elif isinstance(source_object, app_commands.Command):
+            description = source_object.description
+            title = f"Slash Command: {source_object.qualified_name}"
         elif issubclass(type(source_object), Cog):
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
