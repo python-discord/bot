@@ -3,17 +3,17 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from discord import Embed, Interaction, app_commands
-from discord.ext import commands
+from discord.ext.commands import BadArgument, Cog, Command, ExtensionNotLoaded, HelpCommand
 
 from bot.bot import Bot
 from bot.constants import URLs
-from bot.converters import SourceTrasnformer
+from bot.converters import SourceTransformer
 from bot.exts.info.tags import TagIdentifier
 
-SourceType = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded | str
+SourceType = HelpCommand | Command | Cog | TagIdentifier | ExtensionNotLoaded | str
 
 
-class BotSource(commands.Cog):
+class BotSource(Cog):
     """Displays information about the bot's source code."""
 
     def __init__(self, bot: Bot):
@@ -24,7 +24,7 @@ class BotSource(commands.Cog):
         self,
         interaction: Interaction,
         *,
-        source_item: app_commands.Transform[SourceType, SourceTrasnformer] = None
+        source_item: app_commands.Transform[SourceType, SourceTransformer] = None
     ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
@@ -37,7 +37,7 @@ class BotSource(commands.Cog):
         embed = None
         ephemeral = False
         if isinstance(source_item, str):
-            description = f"**Unable to convert '{source_item}' to valid command, tag, or Cog.**"
+            description = f"**Unable to convert '{source_item}' to valid command, tag, or cog.**"
             embed = Embed(description=description)
             ephemeral = True
 
@@ -50,25 +50,25 @@ class BotSource(commands.Cog):
 
         Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
         """
-        if isinstance(source_item, commands.Command):
+        if isinstance(source_item, Command):
             source_item = inspect.unwrap(source_item.callback)
             src = source_item.__code__
             filename = src.co_filename
-        elif isinstance(source_item, TagIdentifier):
-            tags_cog = self.bot.get_cog("Tags")
-            filename = tags_cog.tags[source_item].file_path
-        else:
+        elif issubclass(type(source_item), Cog) or isinstance(source_item, HelpCommand):
             src = type(source_item)
             try:
                 filename = inspect.getsourcefile(src)
             except TypeError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                raise BadArgument("Cannot get source for a dynamically-created object.")
+        else:
+            tags_cog = self.bot.get_cog("Tags")
+            filename = tags_cog.tags[source_item].file_path
 
-        if not isinstance(source_item, TagIdentifier):
+        if issubclass(type(source_item), Cog) or isinstance(source_item, HelpCommand | Command):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                raise BadArgument("Cannot get source for a dynamically-created object.")
 
             lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
         else:
@@ -89,13 +89,13 @@ class BotSource(commands.Cog):
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 
-        if isinstance(source_object, commands.HelpCommand):
+        if isinstance(source_object, HelpCommand):
             title = "Help Command"
             description = source_object.__doc__.splitlines()[1]
-        elif isinstance(source_object, commands.Command):
+        elif isinstance(source_object, Command):
             description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
-        elif issubclass(type(source_object), commands.Cog):
+        elif issubclass(type(source_object), Cog):
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
         else:

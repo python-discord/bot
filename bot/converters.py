@@ -268,7 +268,7 @@ class Snowflake(IDConverter):
         return snowflake
 
 
-class SourceTrasnformer(app_commands.Transformer):
+class SourceTransformer(app_commands.Transformer):
     """Transform an argument into a tag, command or cog."""
 
     async def transform(self, interaction: discord.Interaction, source_item: str) -> SourceType:
