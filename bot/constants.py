@@ -258,7 +258,7 @@ class ThreadArchiveTimes(Enum):
 
 class Webhook(BaseModel):
     id: int
-    channel: Optional[int]
+    channel: int
 
 
 class _Webhooks(EnvConfig):
