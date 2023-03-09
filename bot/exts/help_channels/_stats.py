@@ -22,7 +22,7 @@ class ClosingReason(Enum):
 
 def report_post_count() -> None:
     """Report post count stats of the help forum."""
-    help_forum = bot.instance.get_channel(constants.Channels.help_system_forum)
+    help_forum = bot.instance.get_channel(constants.Channels.python_help)
     bot.instance.stats.gauge("help.total.in_use", len(help_forum.threads))
 
 
