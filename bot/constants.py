@@ -351,9 +351,9 @@ class ExtendedRule(Rule):
 
 
 class Rules(BaseModel):
-    attachments: Rule = Rule(interval=10, max=10)
+    attachments: Rule = Rule(interval=10, max=6)
     burst: Rule = Rule(interval=10, max=7)
-    chars: Rule = Rule(interval=5, max=200)
+    chars: Rule = Rule(interval=5, max=4_200)
     discord_emojis: Rule = Rule(interval=10, max=20)
     duplicates: Rule = Rule(interval=10, max=3)
     links: Rule = Rule(interval=10, max=10)
