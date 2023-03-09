@@ -49,12 +49,8 @@ pytest-cov = "4.0.0"
 pytest-subtests = "0.10.0"
 pytest-xdist = "3.2.0"
 taskipy = "1.10.3"
-
-[tool.poetry.group.config-bootstrap]
-optional = true
-
-[tool.poetry.group.config-bootstrap.dependencies]
 httpx = "0.23.3"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
