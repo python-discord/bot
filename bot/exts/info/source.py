@@ -24,10 +24,10 @@ class BotSource(Cog):
         self,
         interaction: Interaction,
         *,
-        source_item: app_commands.Transform[SourceType, SourceTransformer] = None
+        cog_command_or_tag: app_commands.Transform[SourceType, SourceTransformer] = None
     ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
-        if not source_item:
+        if not cog_command_or_tag:
             embed = Embed(title="Bot's GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
             embed.set_thumbnail(url="https://avatars1.githubusercontent.com/u/9919")
@@ -36,37 +36,38 @@ class BotSource(Cog):
 
         embed = None
         ephemeral = False
-        if isinstance(source_item, str):
-            description = f"**Unable to convert '{source_item}' to valid command, tag, or cog.**"
+        if isinstance(cog_command_or_tag, str):
+            description = f"**Unable to convert '{cog_command_or_tag}' to valid command, tag, or cog.**"
             embed = Embed(description=description)
             ephemeral = True
 
-        embed = await self.build_embed(source_item) if not embed else embed
+        embed = await self.build_embed(cog_command_or_tag) if not embed else embed
         await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
-    def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
+    def get_source_link(self, source_object: SourceType) -> Tuple[str, str, Optional[int]]:
         """
-        Build GitHub link of source item, return this link, file location and first line number.
+        Build GitHub link of source object, return this link, file location and first line number.
 
-        Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
+        Raise BadArgument if `source_object` is a dynamically-created object (e.g. via internal eval).
         """
-        if isinstance(source_item, Command):
-            source_item = inspect.unwrap(source_item.callback)
+        if isinstance(source_object, Command):
+            source_item = inspect.unwrap(source_object.callback)
             src = source_item.__code__
             filename = src.co_filename
-        elif issubclass(type(source_item), Cog) or isinstance(source_item, HelpCommand):
-            src = type(source_item)
+        elif issubclass(type(source_object), Cog) or isinstance(source_object, HelpCommand):
+            src = type(source_object)
             try:
                 filename = inspect.getsourcefile(src)
             except TypeError:
                 raise BadArgument("Cannot get source for a dynamically-created object.")
         else:
             tags_cog = self.bot.get_cog("Tags")
-            filename = tags_cog.tags[source_item].file_path
+            filename = tags_cog.tags[source_object].file_path
 
-        if issubclass(type(source_item), Cog) or isinstance(source_item, HelpCommand | Command):
+        if issubclass(type(source_object), Cog) or isinstance(source_object, HelpCommand | Command):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
+                print("first_line_no")
             except OSError:
                 raise BadArgument("Cannot get source for a dynamically-created object.")
 
@@ -77,7 +78,7 @@ class BotSource(Cog):
 
         # Handle tag file location differently than others to avoid errors in some cases
         if not first_line_no:
-            file_location = Path(filename)
+            file_location = Path(filename).relative_to('.')
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 

@@ -271,16 +271,16 @@ class Snowflake(IDConverter):
 class SourceTransformer(app_commands.Transformer):
     """Transform an argument into a tag, command or cog."""
 
-    async def transform(self, interaction: discord.Interaction, source_item: str) -> SourceType:
-        """Transform source_item into source object."""
-        if source_item.lower() == "help":
+    async def transform(self, interaction: discord.Interaction, cog_command_or_tag: str) -> SourceType:
+        """Transform cog_command_or_tag into source object."""
+        if cog_command_or_tag.lower() == "help":
             return interaction.client.help_command
 
-        cog = interaction.client.get_cog(source_item)
+        cog = interaction.client.get_cog(cog_command_or_tag)
         if cog:
             return cog
 
-        cmd = interaction.client.get_command(source_item)
+        cmd = interaction.client.get_command(cog_command_or_tag)
         if cmd:
             return cmd
 
@@ -290,13 +290,13 @@ class SourceTransformer(app_commands.Transformer):
         if not tags_cog:
             show_tag = False
         else:
-            identifier = TagIdentifier.from_string(source_item.lower())
+            identifier = TagIdentifier.from_string(cog_command_or_tag.lower())
             if identifier in tags_cog.tags:
                 return identifier
-        escaped_arg = escape_markdown(source_item)
+        escaped_arg = escape_markdown(cog_command_or_tag)
 
         log.debug(
-            f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or Cog."
+            f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or cog."
         )
         return escaped_arg
 
@@ -308,6 +308,7 @@ class SourceTransformer(app_commands.Transformer):
         if tags_cog:
             names += [tag.name for tag in tags_cog.tags.keys()]
 
+        # Need to manually add the slash commands
         # JSON can't serialize Cogs and Command objects thats why we are passing a string for value parameter.
         choices = [
             app_commands.Choice(name=source_name, value=source_name)
