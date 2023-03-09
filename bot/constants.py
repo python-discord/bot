@@ -466,6 +466,8 @@ class Channels(metaclass=YAMLGetter):
 
     big_brother_logs: int
 
+    roles: int
+
 
 class Webhooks(metaclass=YAMLGetter):
     section = "guild"
@@ -488,6 +490,7 @@ class Roles(metaclass=YAMLGetter):
     lovefest: int
     pyweek_announcements: int
     revival_of_code: int
+    legacy_help_channels_access: int
 
     contributors: int
     help_cooldown: int

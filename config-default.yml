@@ -236,6 +236,9 @@ guild:
         # Watch
         big_brother_logs:   &BB_LOGS        468507907357409333
 
+        # Information
+        roles:                              851270062434156586
+
     moderation_categories:
         - *MODS_CATEGORY
         - *MODMAIL
@@ -269,6 +272,7 @@ guild:
         lovefest:                               542431903886606399
         pyweek_announcements:                   897568414044938310
         revival_of_code:                        988801794668908655
+        legacy_help_channels_access:            1074780483776417964
 
         contributors:                           295488872404484098
         help_cooldown:                          699189276025421825

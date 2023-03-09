@@ -193,7 +193,7 @@ cli = ["clevercsv (==0.7.4)", "click (==8.1.3)", "pyyaml (==6.0)", "toml (==0.10
 
 [[package]]
 name = "discord-py"
-version = "2.1.0"
+version = "2.1.1"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -685,16 +685,16 @@ email = ["email-validator (>=1.0.3)"]
 
 [[package]]
 name = "pydis-core"
-version = "9.1.1"
+version = "9.4.1"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 category = "main"
 optional = false
-python-versions = ">=3.10.0,<3.11.0"
+python-versions = ">=3.10.0,<3.12.0"
 
 [package.dependencies]
 aiodns = "3.0.0"
 async-rediscache = {version = "1.0.0rc2", extras = ["fakeredis"], optional = true, markers = "extra == \"async-rediscache\""}
-"discord.py" = "2.1.0"
+"discord.py" = "2.1.1"
 statsd = "4.0.1"
 
 [package.extras]
@@ -1113,7 +1113,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.10.*"
-content-hash = "8c741bfe48fa990572979642dbb94c170385a15793c234044a08cde3dce629e1"
+content-hash = "378b9f9a41e79cdd30ee594a9017f709a8286b7dfbfe45215f60ca7bad0f53fd"
 
 [metadata.files]
 aiodns = [
@@ -1376,8 +1376,8 @@ deepdiff = [
     {file = "deepdiff-6.2.1.tar.gz", hash = "sha256:3fe134dde5b3922ff8c51fc1e95a972e659c853797231b836a5ccf15532fd516"},
 ]
 discord-py = [
-    {file = "discord.py-2.1.0-py3-none-any.whl", hash = "sha256:a2cfa9f09e3013aaaa43600cc8dfaf67c532dd34afcb71e550f5a0dc9133a5e0"},
-    {file = "discord.py-2.1.0.tar.gz", hash = "sha256:027ccdd22b5bb66a9e19cbd8daa1bc74b49271a16a074d57e52f288fcfa208e8"},
+    {file = "discord.py-2.1.1-py3-none-any.whl", hash = "sha256:b99fbf4ad74f007c680f33f5174738858146c99a2bc4f6d0e08ddbf93bc12c4d"},
+    {file = "discord.py-2.1.1.tar.gz", hash = "sha256:8258b7af641c532e9e33e186c7b867d9ff5575fe63a460b17ed55bd4fe082200"},
 ]
 distlib = [
     {file = "distlib-0.3.6-py2.py3-none-any.whl", hash = "sha256:f35c4b692542ca110de7ef0bea44d73981caeb34ca0b9b6b2e6d7790dda8f80e"},
@@ -1909,8 +1909,8 @@ pydantic = [
     {file = "pydantic-1.10.2.tar.gz", hash = "sha256:91b8e218852ef6007c2b98cd861601c6a09f1aa32bbbb74fab5b1c33d4a1e410"},
 ]
 pydis-core = [
-    {file = "pydis_core-9.1.1-py3-none-any.whl", hash = "sha256:db6e29c8eb4c12ce29fbf57f7b7214a1bdf702f9464320f4c39fef4dc8741bc0"},
-    {file = "pydis_core-9.1.1.tar.gz", hash = "sha256:a73fe400d9b7cea5d87cfb53d1bb9ca8fd7fd3b48c1c1b74c43117319acefdac"},
+    {file = "pydis_core-9.4.1-py3-none-any.whl", hash = "sha256:29f1f69ae2bc5c9560ac3d43149ca9e7f13d567064555b76b79be5c8fa9ba6ba"},
+    {file = "pydis_core-9.4.1.tar.gz", hash = "sha256:b52c7ea052196aae72298ef59f59514376178e713cd133e0ca6fcb1d7312024c"},
 ]
 pydocstyle = [
     {file = "pydocstyle-6.1.1-py3-none-any.whl", hash = "sha256:6987826d6775056839940041beef5c08cc7e3d71d63149b48e36727f70144dc4"},
