@@ -49,6 +49,7 @@ pytest-cov = "4.0.0"
 pytest-subtests = "0.10.0"
 pytest-xdist = "3.2.0"
 taskipy = "1.10.3"
+httpx = "0.23.3"
 
 
 [build-system]
@@ -57,6 +58,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.taskipy.tasks]
 start = "python -m bot"
+configure = "python -m botstrap"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
