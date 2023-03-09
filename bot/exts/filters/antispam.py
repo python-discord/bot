@@ -41,6 +41,8 @@ RULE_FUNCTION_MAPPING = {
     'role_mentions': rules.apply_role_mentions,
 }
 
+ANTI_SPAM_RULES = AntiSpamConfig.rules.dict()
+
 
 @dataclass
 class DeletionContext:
@@ -121,7 +123,7 @@ class AntiSpam(Cog):
     def __init__(self, bot: Bot, validation_errors: Dict[str, str]) -> None:
         self.bot = bot
         self.validation_errors = validation_errors
-        role_id = AntiSpamConfig.punishment['role_id']
+        role_id = AntiSpamConfig.punishment.role_id
         self.muted_role = Object(role_id)
         self.expiration_date_converter = Duration()
 
@@ -129,7 +131,7 @@ class AntiSpam(Cog):
 
         # Fetch the rule configuration with the highest rule interval.
         max_interval_config = max(
-            AntiSpamConfig.rules.values(),
+            ANTI_SPAM_RULES.values(),
             key=itemgetter('interval')
         )
         self.max_interval = max_interval_config['interval']
@@ -178,8 +180,7 @@ class AntiSpam(Cog):
         earliest_relevant_at = arrow.utcnow() - timedelta(seconds=self.max_interval)
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
-        for rule_name in AntiSpamConfig.rules:
-            rule_config = AntiSpamConfig.rules[rule_name]
+        for rule_name, rule_config in ANTI_SPAM_RULES.items():
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
@@ -229,7 +230,7 @@ class AntiSpam(Cog):
     async def punish(self, msg: Message, member: Member, reason: str) -> None:
         """Punishes the given member for triggering an antispam rule."""
         if not any(role.id == self.muted_role.id for role in member.roles):
-            remove_role_after = AntiSpamConfig.punishment['remove_after']
+            remove_role_after = AntiSpamConfig.punishment.remove_after
 
             # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
@@ -297,10 +298,11 @@ class AntiSpam(Cog):
         self.cache.update(after)
 
 
-def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
+def validate_config(rules_: Mapping = ANTI_SPAM_RULES) -> Dict[str, str]:
     """Validates the antispam configs."""
     validation_errors = {}
     for name, config in rules_.items():
+        config = config
         if name not in RULE_FUNCTION_MAPPING:
             log.error(
                 f"Unrecognized antispam rule `{name}`. "
