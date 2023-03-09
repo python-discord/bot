@@ -1,3 +1,7 @@
+---
+embed:
+    title: "The or-gotcha"
+---
 When checking if something is equal to one thing or another, you might think that this is possible:
 ```py
 # Incorrect...

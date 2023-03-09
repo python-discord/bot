@@ -1,5 +1,7 @@
-**Operator Precedence**
-
+---
+embed:
+    title: "Operator precedence"
+---
 Operator precedence is essentially like an order of operations for python's operators.
 
 **Example 1** (arithmetic)

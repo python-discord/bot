@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Error handling"
+---
 A key part of the Python philosophy is to ask for forgiveness, not permission. This means that it's okay to write code that may produce an error, as long as you specify how that error should be handled. Code written this way is readable and resilient.
 ```py
 try:

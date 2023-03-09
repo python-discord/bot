@@ -21,7 +21,7 @@ class DuckPond(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.webhook_id = constants.Webhooks.duck_pond
+        self.webhook_id = constants.Webhooks.duck_pond.id
         self.webhook = None
         self.ducked_messages = []
         self.relay_lock = None
