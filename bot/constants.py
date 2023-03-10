@@ -584,6 +584,7 @@ class _Emojis(EnvConfig):
     defcon_update = "<:defconsettingsupdated:470326274082996224>"  # noqa: E704
 
     failmail = "<:failmail:633660039931887616>"
+    failed_file = "<:failed_file:1073298441968562226>"
 
     incident_actioned = "<:incident_actioned:714221559279255583>"
     incident_investigating = "<:incident_investigating:714224190928191551>"
