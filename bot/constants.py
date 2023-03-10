@@ -20,6 +20,7 @@ class EnvConfig(BaseSettings):
     class Config:
         env_file = ".env", ".env.server",
         env_file_encoding = 'utf-8'
+        env_nested_delimiter = '__'
 
 
 class _Miscellaneous(EnvConfig):
@@ -257,12 +258,11 @@ class ThreadArchiveTimes(Enum):
 
 class Webhook(BaseModel):
     id: int
-    channel: Optional[int]
+    channel: int
 
 
 class _Webhooks(EnvConfig):
     EnvConfig.Config.env_prefix = "webhooks_"
-    EnvConfig.Config.env_nested_delimiter = '_'
 
     big_brother: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother)
     dev_log: Webhook = Webhook(id=680501655111729222, channel=Channels.dev_log)
@@ -364,7 +364,6 @@ class Rules(BaseModel):
 
 class _AntiSpam(EnvConfig):
     EnvConfig.Config.env_prefix = 'anti_spam_'
-    EnvConfig.Config.env_nested_delimiter = '_'
 
     cache_size = 100
 
@@ -585,6 +584,7 @@ class _Emojis(EnvConfig):
     defcon_update = "<:defconsettingsupdated:470326274082996224>"  # noqa: E704
 
     failmail = "<:failmail:633660039931887616>"
+    failed_file = "<:failed_file:1073298441968562226>"
 
     incident_actioned = "<:incident_actioned:714221559279255583>"
     incident_investigating = "<:incident_investigating:714224190928191551>"
