@@ -10,52 +10,46 @@ python = "3.10.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
 pydis_core = { version = "9.5.1", extras = ["async-rediscache"] }
-redis = "4.4.2"
-fakeredis = { version = "2.0.0", extras = ["lua"] }
 
 aiohttp = "3.8.3"
 arrow = "1.2.3"
-beautifulsoup4 = "4.11.1"
+beautifulsoup4 = "4.11.2"
 colorama = { version = "0.4.6", markers = "sys_platform == 'win32'" }
 coloredlogs = "15.0.1"
-deepdiff = "6.2.1"
+deepdiff = "6.2.3"
 emoji = "2.2.0"
 feedparser = "6.0.10"
-lxml = "4.9.1"
-
-# Must be kept on this version unless doc command output is fixed
-# See https://github.com/python-discord/bot/pull/2156
-markdownify = "0.6.1"
-
-more-itertools = "9.0.0"
+lxml = "4.9.2"
+markdownify = "0.11.6"
+more-itertools = "9.1.0"
 python-dateutil = "2.8.2"
 python-frontmatter = "1.0.0"
 pyyaml = "6.0"
-rapidfuzz = "2.13.2"
+rapidfuzz = "2.13.7"
 regex = "2022.10.31"
 sentry-sdk = "1.16.0"
 tldextract = "3.4.0"
-pydantic = "1.10.2"
+pydantic = { version = "1.10.5", extras = ["dotenv"]}
 
 [tool.poetry.dev-dependencies]
-coverage = "6.5.0"
+coverage = "7.2.1"
 flake8 = "6.0.0"
-flake8-annotations = "2.9.1"
-flake8-bugbear = "22.10.27"
-flake8-docstrings = "1.6.0"
+flake8-annotations = "3.0.0"
+flake8-bugbear = "23.2.13"
+flake8-docstrings = "1.7.0"
 flake8-string-format = "0.3.0"
 flake8-tidy-imports = "4.8.0"
 flake8-todo = "0.7"
-flake8-isort = "5.0.3"
-pep8-naming = "0.13.2"
-pre-commit = "2.20.0"
-pip-licenses = "4.0.1"
-pytest = "7.2.0"
+flake8-isort = "6.0.0"
+pep8-naming = "0.13.3"
+pre-commit = "3.1.1"
+pip-licenses = "4.1.0"
+pytest = "7.2.2"
 pytest-cov = "4.0.0"
-python-dotenv = "0.21.0"
-pytest-xdist = "3.0.2"
-pytest-subtests = "0.9.0"
+pytest-subtests = "0.10.0"
+pytest-xdist = "3.2.0"
 taskipy = "1.10.3"
+httpx = "0.23.3"
 
 
 [build-system]
@@ -64,6 +58,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.taskipy.tasks]
 start = "python -m bot"
+configure = "python -m botstrap"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
