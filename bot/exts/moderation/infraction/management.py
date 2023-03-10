@@ -421,12 +421,12 @@ class ModManagement(commands.Cog):
         else:
             dm_sent_text = "Yes" if dm_sent else "No"
 
-        if jump_url == "":
-            # Infraction was issued prior to jump urls being stored in the database.
+        if jump_url is None:
+            # Infraction was issued prior to jump urls being stored in the database
+            # or infraction was issued in ModMail category.
             jump_url = "N/A"
-        elif "discord.com" in jump_url:
+        else:
             jump_url = f"[Click here.]({jump_url})"
-            # Else, infraction was issued in ModMail category.
 
         lines = textwrap.dedent(f"""
             {"**===============**" if active else "==============="}

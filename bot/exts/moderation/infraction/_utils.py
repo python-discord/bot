@@ -99,7 +99,7 @@ async def post_infraction(
         is_in_category(ctx.channel, category)
         for category in (Categories.modmail, Categories.appeals, Categories.appeals2)
     ):
-        jump_url = "Infraction issued in a ModMail channel."
+        jump_url = None
     else:
         jump_url = ctx.message.jump_url
 

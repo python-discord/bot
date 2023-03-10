@@ -262,9 +262,11 @@ class InfractionScheduler:
         mentions = discord.AllowedMentions(users=[user], roles=False)
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
-        if "discord.com" in jump_url:
+        if jump_url is None:
+            # Infraction issued in ModMail category.
+            jump_url = "N/A"
+        else:
             jump_url = f"[Click here.]({jump_url})"
-            # Else, infraction was issued in ModMail category.
 
         # Send a log message to the mod log.
         # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
