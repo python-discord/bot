@@ -162,4 +162,8 @@ with DiscordClient() as discord_client:
         config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
         config_str += f"webhooks_{webhook_name}__channel={all_channels[webhook_name]}\n"
 
-    env_file_path.write_text(config_str)
+    config_str += "\n#Emojis\n"
+    config_str += "emojis_trashcan=🗑️"
+
+    with env_file_path.open("ab") as file:
+        file.write(config_str.encode("utf-8"))
