@@ -39,9 +39,9 @@ class HelpForum(commands.Cog):
     async def cog_load(self) -> None:
         """Archive all idle open posts, schedule check for later for active open posts."""
         log.trace("Initialising help forum cog.")
-        self.help_forum_channel = self.bot.get_channel(constants.Channels.help_system_forum)
+        self.help_forum_channel = self.bot.get_channel(constants.Channels.python_help)
         if not isinstance(self.help_forum_channel, discord.ForumChannel):
-            raise TypeError("Channels.help_system_forum is not a forum channel!")
+            raise TypeError("Channels.python_help is not a forum channel!")
 
         for post in self.help_forum_channel.threads:
             await _channel.maybe_archive_idle_post(post, self.scheduler, has_task=False)

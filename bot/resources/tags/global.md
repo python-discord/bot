@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Globals"
+---
 When adding functions or classes to a program, it can be tempting to reference inaccessible variables by declaring them as global. Doing this can result in code that is harder to read, debug and test. Instead of using globals, pass variables or objects as parameters and receive return values.
 
 Instead of writing
