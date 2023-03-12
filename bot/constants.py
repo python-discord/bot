@@ -11,14 +11,13 @@ will default to the values passed to the `default` kwarg.
 """
 import os
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, BaseSettings, root_validator
 
 
 class EnvConfig(BaseSettings):
     class Config:
-        env_file = ".env", ".env.server",
+        env_file = ".env.server", ".env",
         env_file_encoding = 'utf-8'
         env_nested_delimiter = '__'
 
