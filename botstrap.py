@@ -52,6 +52,44 @@ class DiscordClient(Client):
         response.raise_for_status()
 
 
+def is_community_server(guild_id: int | str, client: DiscordClient) -> bool:
+    """A predicate that indicates whether a server has the COMMUNITY feature or not"""
+    response = client.get(f"/guilds/{guild_id}")
+    return COMMUNITY_FEATURE in response.json()["features"]
+
+
+def upgrade_server_to_community(guild_id: int | str, client: DiscordClient) -> bool:
+    """Transforms a server into a community one.
+
+    Return true if the server has been correctly upgraded, False otherwise.
+    """
+
+    payload = {"features": [COMMUNITY_FEATURE]}
+    response = client.patch(f"/guilds/{guild_id}", json=payload)
+
+    return 200 <= response.status_code < 300
+
+
+def create_forum_channel(channel_name_: str, guild_id: str, client: DiscordClient, category_id_: int | None = None):
+    """Creates a new forum channel"""
+
+    payload = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
+    if category_id_:
+        payload["parent_id"] = category_id_
+
+    response = client.post(f"/guilds/{guild_id}/channels", json=payload)
+
+    return response.json()["id"]
+
+
+def delete_channel(channel_id_: id, client: DiscordClient):
+    """Upgrades a channel to a channel of type GUILD FORUM"""
+
+    response = client.delete(f"/channels/{channel_id_}")
+
+    return response.json()
+
+
 def get_all_roles(guild_id: int | str, client: DiscordClient) -> dict:
     """Fetches all the roles in a guild."""
     result = {}
