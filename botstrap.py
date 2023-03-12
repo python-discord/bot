@@ -59,7 +59,7 @@ def upgrade_server_to_community_if_necessary(
         rules_channel_id_: int | str,
         announcements_channel_id_: int | str,
         client: DiscordClient) -> None:
-    """Fetches server info & upgrades to COMMUNITY if necessary"""
+    """Fetches server info & upgrades to COMMUNITY if necessary."""
     response = client.get(f"/guilds/{guild_id}")
     payload = response.json()
 
@@ -72,19 +72,23 @@ def upgrade_server_to_community_if_necessary(
 
 
 def upgrade_server_to_community(guild_id: int | str, client: DiscordClient) -> None:
-    """Transforms a server into a community one.
+    """
+    Transforms a server into a community one.
 
     Return true if the server has been correctly upgraded, False otherwise.
     """
-
     payload = {"features": [COMMUNITY_FEATURE]}
     client.patch(f"/guilds/{guild_id}", json=payload)
     log.info(f"Server {guild_id} has been successfully updated to a community.")
 
 
-def create_forum_channel(channel_name_: str, guild_id: str, client: DiscordClient, category_id_: int | None = None):
-    """Creates a new forum channel"""
-
+def create_forum_channel(
+        channel_name_: str,
+        guild_id: str,
+        client: DiscordClient,
+        category_id_: int | None = None
+) -> int:
+    """Creates a new forum channel."""
     payload = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
     if category_id_:
         payload["parent_id"] = category_id_
@@ -96,18 +100,15 @@ def create_forum_channel(channel_name_: str, guild_id: str, client: DiscordClien
 
 
 def is_forum_channel(channel_id_: str, client: DiscordClient) -> bool:
-    """A boolean that indicates if a channel is of type GUILD_FORUM"""
-
+    """A boolean that indicates if a channel is of type GUILD_FORUM."""
     response = client.get(f"/channels/{channel_id_}")
     return response.json()["type"] == GUILD_FORUM_TYPE
 
 
-def delete_channel(channel_id_: id, client: DiscordClient):
-    """Upgrades a channel to a channel of type GUILD FORUM"""
+def delete_channel(channel_id_: id, client: DiscordClient) -> None:
+    """Upgrades a channel to a channel of type GUILD FORUM."""
     log.info(f"Channel python-help: {channel_id_} is not a forum channel and will be replaced with one.")
-    response = client.delete(f"/channels/{channel_id_}")
-
-    return response.json()
+    client.delete(f"/channels/{channel_id_}")
 
 
 def get_all_roles(guild_id: int | str, client: DiscordClient) -> dict:
@@ -203,7 +204,8 @@ with DiscordClient() as discord_client:
             create_help_channel = False
 
     if create_help_channel:
-        python_help_channel_id = create_forum_channel(PYTHON_HELP_CHANNEL_NAME.replace('_', '-'), GUILD_ID, discord_client)
+        python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace('_', '-')
+        python_help_channel_id = create_forum_channel(python_help_channel_name, GUILD_ID, discord_client)
 
     for channel_name in _Channels.__fields__:
         channel_id = all_channels.get(channel_name, None)
