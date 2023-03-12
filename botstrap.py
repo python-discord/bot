@@ -82,6 +82,13 @@ def create_forum_channel(channel_name_: str, guild_id: str, client: DiscordClien
     return response.json()["id"]
 
 
+def is_forum_channel(channel_id_: str, client: DiscordClient) -> bool:
+    """A boolean that indicates if a channel is of type GUILD_FORUM"""
+
+    response = client.get(f"/channels/{channel_id_}")
+    return response.json()["type"] == GUILD_FORUM_TYPE
+
+
 def delete_channel(channel_id_: id, client: DiscordClient):
     """Upgrades a channel to a channel of type GUILD FORUM"""
 
