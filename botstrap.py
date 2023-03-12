@@ -165,5 +165,5 @@ with DiscordClient() as discord_client:
     config_str += "\n#Emojis\n"
     config_str += "emojis_trashcan=🗑️"
 
-    with env_file_path.open("ab") as file:
+    with env_file_path.open("wb") as file:
         file.write(config_str.encode("utf-8"))
