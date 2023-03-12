@@ -125,6 +125,8 @@ class _Channels(EnvConfig):
     duck_pond = 637820308341915648
     roles = 851270062434156586
 
+    rules = 693837295685730335
+
 
 Channels = _Channels()
 

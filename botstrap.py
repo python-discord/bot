@@ -16,7 +16,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", None)
 GUILD_ID = os.getenv("GUILD_ID", None)
 
 COMMUNITY_FEATURE = "COMMUNITY"
-PYTHON_HELP_NAME = _Channels.__fields__["python_help"].name
+PYTHON_HELP_CHANNEL_NAME = _Channels.__fields__["python_help"].name
+ANNOUNCEMENTS_CHANNEL_NAME = _Channels.__fields__["announcements"].name
+RULES_CHANNEL_NAME = _Channels.__fields__["rules"].name
 GUILD_FORUM_TYPE = 15
 
 
@@ -44,7 +46,6 @@ class DiscordClient(Client):
         super().__init__(
             base_url="https://discord.com/api/v10",
             headers={"Authorization": f"Bot {BOT_TOKEN}"},
-            event_hooks={"response": [self._raise_for_status]}
         )
 
     @staticmethod
@@ -52,22 +53,32 @@ class DiscordClient(Client):
         response.raise_for_status()
 
 
-def is_community_server(guild_id: int | str, client: DiscordClient) -> bool:
-    """A predicate that indicates whether a server has the COMMUNITY feature or not"""
+def upgrade_server_to_community_if_necessary(
+        guild_id: int | str,
+        rules_channel_id_: int | str,
+        announcements_channel_id_: int | str,
+        client: DiscordClient) -> None:
+    """Fetches server info & upgrades to COMMUNITY if necessary"""
     response = client.get(f"/guilds/{guild_id}")
-    return COMMUNITY_FEATURE in response.json()["features"]
+    payload = response.json()
+
+    if COMMUNITY_FEATURE not in payload["features"]:
+        log.warning("This server is currently not a community, upgrading.")
+        payload["features"].append(COMMUNITY_FEATURE)
+        payload["rules_channel_id"] = rules_channel_id_
+        payload["public_updates_channel_id"] = announcements_channel_id_
+        client.patch(f"/guilds/{guild_id}", json=payload)
 
 
-def upgrade_server_to_community(guild_id: int | str, client: DiscordClient) -> bool:
+def upgrade_server_to_community(guild_id: int | str, client: DiscordClient) -> None:
     """Transforms a server into a community one.
 
     Return true if the server has been correctly upgraded, False otherwise.
     """
 
     payload = {"features": [COMMUNITY_FEATURE]}
-    response = client.patch(f"/guilds/{guild_id}", json=payload)
-
-    return 200 <= response.status_code < 300
+    client.patch(f"/guilds/{guild_id}", json=payload)
+    log.info(f"Server {guild_id} has been successfully updated to a community.")
 
 
 def create_forum_channel(channel_name_: str, guild_id: str, client: DiscordClient, category_id_: int | None = None):
@@ -78,8 +89,9 @@ def create_forum_channel(channel_name_: str, guild_id: str, client: DiscordClien
         payload["parent_id"] = category_id_
 
     response = client.post(f"/guilds/{guild_id}/channels", json=payload)
-
-    return response.json()["id"]
+    forum_channel_id = response.json()["id"]
+    log.info(f"New forum channel: {channel_name_} has been successfully created.")
+    return forum_channel_id
 
 
 def is_forum_channel(channel_id_: str, client: DiscordClient) -> bool:
@@ -91,7 +103,7 @@ def is_forum_channel(channel_id_: str, client: DiscordClient) -> bool:
 
 def delete_channel(channel_id_: id, client: DiscordClient):
     """Upgrades a channel to a channel of type GUILD FORUM"""
-
+    log.info(f"Channel python-help: {channel_id_} is not a forum channel and will be replaced with one.")
     response = client.delete(f"/channels/{channel_id_}")
 
     return response.json()
@@ -175,19 +187,22 @@ with DiscordClient() as discord_client:
 
     config_str += "\n#Channels\n"
 
-    if not is_community_server(GUILD_ID, discord_client):
-        upgrade_server_to_community(GUILD_ID, discord_client)
+    rules_channel_id = all_channels[RULES_CHANNEL_NAME]
+    announcements_channel_id = all_channels[ANNOUNCEMENTS_CHANNEL_NAME]
+
+    upgrade_server_to_community_if_necessary(GUILD_ID, rules_channel_id, announcements_channel_id, discord_client)
 
     create_help_channel = True
-    if PYTHON_HELP_NAME in all_channels:
-        python_help_channel_id = all_channels[PYTHON_HELP_NAME]
+
+    if PYTHON_HELP_CHANNEL_NAME in all_channels:
+        python_help_channel_id = all_channels[PYTHON_HELP_CHANNEL_NAME]
         if not is_forum_channel(python_help_channel_id, discord_client):
             delete_channel(python_help_channel_id, discord_client)
         else:
             create_help_channel = False
 
     if create_help_channel:
-        python_help_channel_id = create_forum_channel(PYTHON_HELP_NAME.replace('_', '-'), GUILD_ID, discord_client)
+        python_help_channel_id = create_forum_channel(PYTHON_HELP_CHANNEL_NAME.replace('_', '-'), GUILD_ID, discord_client)
 
     for channel_name in _Channels.__fields__:
         channel_id = all_channels.get(channel_name, None)
@@ -198,7 +213,7 @@ with DiscordClient() as discord_client:
             continue
 
         config_str += f"channels_{channel_name}={channel_id}\n"
-    config_str += f"channels_{PYTHON_HELP_NAME}={python_help_channel_id}\n"
+    config_str += f"channels_{PYTHON_HELP_CHANNEL_NAME}={python_help_channel_id}\n"
 
     config_str += "\n#Categories\n"
 
