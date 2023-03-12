@@ -82,16 +82,6 @@ class RoleButtonView(discord.ui.View):
             row = index // ITEMS_PER_ROW
             self.add_item(SingleRoleButton(role, role.role_id in author_roles, row))
 
-    async def interaction_check(self, interaction: Interaction) -> bool:
-        """Ensure that the user clicking the button is the member who invoked the command."""
-        if interaction.user != self.interaction_owner:
-            await interaction.response.send_message(
-                ":x: This is not your command to react to!",
-                ephemeral=True
-            )
-            return False
-        return True
-
 
 class SingleRoleButton(discord.ui.Button):
     """A button that adds or removes a role from the member depending on its current state."""
@@ -113,7 +103,6 @@ class SingleRoleButton(discord.ui.Button):
         super().__init__(
             style=style,
             label=label,
-            custom_id=self.CUSTOM_ID_FORMAT.format(role_id=role.role_id),
             row=row,
         )
         self.role = role
