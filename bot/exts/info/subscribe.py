@@ -100,7 +100,6 @@ class SingleRoleButton(discord.ui.Button):
     REMOVE_STYLE = discord.ButtonStyle.red
     UNAVAILABLE_STYLE = discord.ButtonStyle.secondary
     LABEL_FORMAT = "{action} role {role_name}"
-    CUSTOM_ID_FORMAT = "subscribe-{role_id}"
 
     def __init__(self, role: AssignableRole, assigned: bool, row: int):
         if role.is_currently_available():
