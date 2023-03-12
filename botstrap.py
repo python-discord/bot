@@ -175,6 +175,20 @@ with DiscordClient() as discord_client:
 
     config_str += "\n#Channels\n"
 
+    if not is_community_server(GUILD_ID, discord_client):
+        upgrade_server_to_community(GUILD_ID, discord_client)
+
+    create_help_channel = True
+    if PYTHON_HELP_NAME in all_channels:
+        python_help_channel_id = all_channels[PYTHON_HELP_NAME]
+        if not is_forum_channel(python_help_channel_id, discord_client):
+            delete_channel(python_help_channel_id, discord_client)
+        else:
+            create_help_channel = False
+
+    if create_help_channel:
+        python_help_channel_id = create_forum_channel(PYTHON_HELP_NAME.replace('_', '-'), GUILD_ID, discord_client)
+
     for channel_name in _Channels.__fields__:
         channel_id = all_channels.get(channel_name, None)
         if not channel_id:
@@ -184,6 +198,7 @@ with DiscordClient() as discord_client:
             continue
 
         config_str += f"channels_{channel_name}={channel_id}\n"
+    config_str += f"channels_{PYTHON_HELP_NAME}={python_help_channel_id}\n"
 
     config_str += "\n#Categories\n"
 
