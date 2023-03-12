@@ -147,6 +147,7 @@ class InfractionScheduler:
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
         id_ = infraction['id']
+        jump_url = infraction['jump_url']
         expiry = time.format_with_duration(
             infraction["expires_at"],
             infraction["last_applied"]
@@ -261,6 +262,12 @@ class InfractionScheduler:
         mentions = discord.AllowedMentions(users=[user], roles=False)
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
+        if jump_url is None:
+            # Infraction issued in ModMail category.
+            jump_url = "N/A"
+        else:
+            jump_url = f"[Click here.]({jump_url})"
+
         # Send a log message to the mod log.
         # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
@@ -273,6 +280,7 @@ class InfractionScheduler:
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
+                Jump URL: {jump_url}
                 {additional_info}
             """),
             content=log_content,
