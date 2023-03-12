@@ -46,6 +46,7 @@ class DiscordClient(Client):
         super().__init__(
             base_url="https://discord.com/api/v10",
             headers={"Authorization": f"Bot {BOT_TOKEN}"},
+            event_hooks={"response": [self._raise_for_status]},
         )
 
     @staticmethod
