@@ -15,6 +15,10 @@ env_file_path = Path(".env.server")
 BOT_TOKEN = os.getenv("BOT_TOKEN", None)
 GUILD_ID = os.getenv("GUILD_ID", None)
 
+COMMUNITY_FEATURE = "COMMUNITY"
+PYTHON_HELP_NAME = _Channels.__fields__["python_help"].name
+GUILD_FORUM_TYPE = 15
+
 
 if not BOT_TOKEN:
     message = (
