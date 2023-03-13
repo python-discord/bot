@@ -69,17 +69,7 @@ def upgrade_server_to_community_if_necessary(
         payload["rules_channel_id"] = rules_channel_id_
         payload["public_updates_channel_id"] = announcements_channel_id_
         client.patch(f"/guilds/{guild_id}", json=payload)
-
-
-def upgrade_server_to_community(guild_id: int | str, client: DiscordClient) -> None:
-    """
-    Transforms a server into a community one.
-
-    Return true if the server has been correctly upgraded, False otherwise.
-    """
-    payload = {"features": [COMMUNITY_FEATURE]}
-    client.patch(f"/guilds/{guild_id}", json=payload)
-    log.info(f"Server {guild_id} has been successfully updated to a community.")
+        log.info(f"Server {guild_id} has been successfully updated to a community.")
 
 
 def create_forum_channel(
