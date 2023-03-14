@@ -404,7 +404,7 @@ class _DuckPond(EnvConfig):
 
     threshold = 7
 
-    channel_blacklist: list[str] = [
+    channel_blacklist: list[int] = [
         Channels.announcements,
         Channels.python_news,
         Channels.python_events,
