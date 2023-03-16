@@ -1,4 +1,7 @@
-**Out of Place** and **In Place**
+---
+embed:
+    title: "Out of place and in place"
+---
 
 In programming, there are two types of operations: "out of place" operations create a new object, leaving the original object unchanged. "in place" operations modify the original object, without creating a new one. These operations return None explicitly.
 
