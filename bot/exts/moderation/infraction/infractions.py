@@ -408,8 +408,13 @@ class Infractions(InfractionScheduler, commands.Cog):
     # endregion
     # region: Base apply functions
 
+    @respect_role_hierarchy(member_arg=2)
     async def apply_timeout(self, ctx: Context, user: Member, reason: t.Optional[str], **kwargs) -> None:
         """Apply a timeout infraction with kwargs passed to `post_infraction`."""
+        if isinstance(user, Member) and user.top_role >= ctx.me.top_role:
+            await ctx.send(":x: I can't timeout users above or equal to me in the role hierarchy.")
+            return None
+
         if active := await _utils.get_active_infraction(ctx, user, "timeout", send_msg=False):
             if active["actor"] != self.bot.user.id:
                 await _utils.send_active_infraction_message(ctx, active)
