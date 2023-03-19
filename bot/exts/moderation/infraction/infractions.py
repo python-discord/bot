@@ -32,7 +32,7 @@ if t.TYPE_CHECKING:
 
 MAXIMUM_TIMEOUT_DAYS = timedelta(days=28)
 TIMEOUT_CAP_MESSAGE = (
-    f"Timeouts can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
+    f"The timeout for {{0}} can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
     " I'll pretend that's what you meant."
 )
 
@@ -242,11 +242,12 @@ class Infractions(InfractionScheduler, commands.Cog):
             if isinstance(duration, relativedelta):
                 duration += now
             if duration > now + MAXIMUM_TIMEOUT_DAYS:
+                cap_message_for_user = TIMEOUT_CAP_MESSAGE.format(user.mention)
                 if is_mod_channel(ctx.channel):
-                    await ctx.reply(f":warning: {TIMEOUT_CAP_MESSAGE}")
+                    await ctx.reply(f":warning: {cap_message_for_user}")
                 else:
                     await self.bot.get_channel(Channels.mods).send(
-                        f":warning: {ctx.author.mention} {TIMEOUT_CAP_MESSAGE}"
+                        f":warning: {ctx.author.mention} {cap_message_for_user}"
                     )
                 duration = now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1)  # Duration cap is exclusive.
             elif duration > now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1):
