@@ -89,7 +89,7 @@ class InfractionScheduler:
         to prevent getting a RuntimeWarning if it is not used (e.g. in mocked tests).
         """
         if infraction["expires_at"] is not None:
-            # Calculate the time remaining, in seconds, for the mute.
+            # Calculate the time remaining, in seconds, for the infraction.
             expiry = dateutil.parser.isoparse(infraction["expires_at"])
             delta = (expiry - arrow.utcnow()).total_seconds()
         else:
@@ -291,14 +291,14 @@ class InfractionScheduler:
         return not failed
 
     async def pardon_infraction(
-            self,
-            ctx: Context,
-            infr_type: str,
-            user: MemberOrUser,
-            pardon_reason: t.Optional[str] = None,
-            *,
-            send_msg: bool = True,
-            notify: bool = True
+        self,
+        ctx: Context,
+        infr_type: str,
+        user: MemberOrUser,
+        pardon_reason: t.Optional[str] = None,
+        *,
+        send_msg: bool = True,
+        notify: bool = True
     ) -> None:
         """
         Prematurely end an infraction for a user and log the action in the mod log.
