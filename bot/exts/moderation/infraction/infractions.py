@@ -445,9 +445,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
             await user.edit(timed_out_until=duration_or_expiry, reason=reason)
 
-            log.trace(f"Attempting to kick {user} from voice because they've been timed out.")
-            await user.move_to(None, reason=reason)
-
         await self.apply_infraction(ctx, infraction, user, action)
 
     @respect_role_hierarchy(member_arg=2)
