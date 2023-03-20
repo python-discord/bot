@@ -143,7 +143,6 @@ class _Roles(EnvConfig):
 
     contributors = 295488872404484098
     help_cooldown = 699189276025421825
-    muted = 277914926603829249  # TODO remove when no longer relevant.
     partners = 323426753857191936
     python_community = 458226413825294336
     voice_verified = 764802720779337729

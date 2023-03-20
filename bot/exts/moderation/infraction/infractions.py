@@ -47,32 +47,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         super().__init__(bot, supported_infractions={"ban", "kick", "timeout", "note", "warning", "voice_mute"})
 
         self.category = "Moderation"
-        self._muted_role = discord.Object(constants.Roles.muted)  # TODO remove when no longer relevant.
         self._voice_verified_role = discord.Object(constants.Roles.voice_verified)
-
-    @commands.Cog.listener()
-    async def on_member_join(self, member: Member) -> None:
-        """
-        Apply active timeout infractions for returning members.
-
-        This is only needed for users who received the old role-mute, and are returning before it's ended.
-        TODO remove when no longer relevant.
-        """
-        active_timeouts = await self.bot.api_client.get(
-            "bot/infractions",
-            params={
-                "active": "true",
-                "type": "timeout",
-                "user__id": member.id
-            }
-        )
-
-        if active_timeouts and not member.is_timed_out():
-            reason = f"Applying active timeout for returning member: {active_timeouts[0]['id']}"
-
-            async def action() -> None:
-                await member.edit(timed_out_until=arrow.get(active_timeouts[0]["expires_at"]).datetime, reason=reason)
-            await self.reapply_infraction(active_timeouts[0], action)
 
     # region: Permanent infractions
 
@@ -574,9 +549,6 @@ class Infractions(InfractionScheduler, commands.Cog):
         if user:
             # Remove the timeout.
             self.mod_log.ignore(Event.member_update, user.id)
-            if user.get_role(self._muted_role.id):
-                # Compatibility with existing role mutes. TODO remove when no longer relevant.
-                await user.remove_roles(self._muted_role, reason=reason)
             if user.is_timed_out():  # Handle pardons via the command and any other obscure weirdness.
                 log.trace(f"Manually pardoning timeout for user {user.id}")
                 await user.edit(timed_out_until=None, reason=reason)
