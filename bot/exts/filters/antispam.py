@@ -232,12 +232,14 @@ class AntiSpam(Cog):
 
             # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
-            context.author = self.bot.user
+            command = self.bot.get_command("timeout")
+            context.author = context.guild.get_member(self.bot.user.id)
+            context.command = command
 
             # Since we're going to invoke the timeout command directly, we need to manually call the converter.
             dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_timeout_after}S")
             await context.invoke(
-                self.bot.get_command('timeout'),
+                command,
                 member,
                 dt_remove_role_after,
                 reason=reason
