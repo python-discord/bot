@@ -53,7 +53,7 @@ class WatchChannel(metaclass=CogABCMeta):
     ) -> None:
         self.bot = bot
 
-        self.destination = destination  # E.g., Channels.big_brother_logs
+        self.destination = destination  # E.g., Channels.big_brother
         self.webhook_id = webhook_id  # E.g.,  Webhooks.big_brother
         self.api_endpoint = api_endpoint  # E.g., 'bot/infractions'
         self.api_default_params = api_default_params  # E.g., {'active': 'true', 'type': 'watch'}

@@ -545,7 +545,7 @@ class AlertView(discord.ui.View):
             return
 
         await interaction.response.defer()
-        fake_ctx = FakeContext(interaction.channel, command, author=interaction.user)
+        fake_ctx = FakeContext(interaction.message, interaction.channel, command, author=interaction.user)
         # Get the most updated user/member object every time the button is pressed.
         author = await get_or_fetch_member(interaction.guild, self.ctx.author.id)
         if author is None:
@@ -561,5 +561,5 @@ class AlertView(discord.ui.View):
             return
 
         await interaction.response.defer()
-        fake_ctx = FakeContext(interaction.channel, command, author=interaction.user)
+        fake_ctx = FakeContext(interaction.message, interaction.channel, command, author=interaction.user)
         await command(fake_ctx, self.ctx.author)

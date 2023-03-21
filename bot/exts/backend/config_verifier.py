@@ -24,12 +24,12 @@ class ConfigVerifier(Cog):
 
         server_channel_ids = {channel.id for channel in server.channels}
         invalid_channels = [
-            channel_name for channel_name, channel_id in constants.Channels
+            (channel_name, channel_id) for channel_name, channel_id in constants.Channels
             if channel_id not in server_channel_ids
         ]
 
         if invalid_channels:
-            log.warning(f"Configured channels do not exist in server: {', '.join(invalid_channels)}.")
+            log.warning(f"Configured channels do not exist in server: {invalid_channels}.")
 
 
 async def setup(bot: Bot) -> None:

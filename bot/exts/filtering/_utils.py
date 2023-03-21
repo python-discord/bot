@@ -200,6 +200,7 @@ class FakeContext:
     events.
     """
 
+    message: discord.Message
     channel: discord.abc.Messageable
     command: Command | None
     bot: Bot | None = None

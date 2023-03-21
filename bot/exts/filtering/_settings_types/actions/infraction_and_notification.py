@@ -22,7 +22,7 @@ log = get_logger(__name__)
 passive_form = {
     "BAN": "banned",
     "KICK": "kicked",
-    "MUTE": "muted",
+    "TIMEOUT": "timed out",
     "VOICE_MUTE": "voice muted",
     "SUPERSTAR": "superstarred",
     "WARNING": "warned",
@@ -36,7 +36,7 @@ class Infraction(Enum):
 
     BAN = auto()
     KICK = auto()
-    MUTE = auto()
+    TIMEOUT = auto()
     VOICE_MUTE = auto()
     SUPERSTAR = auto()
     WARNING = auto()
@@ -50,6 +50,7 @@ class Infraction(Enum):
     async def invoke(
         self,
         user: Member | User,
+        message: discord.Message,
         channel: discord.abc.GuildChannel | discord.DMChannel,
         alerts_channel: discord.TextChannel,
         duration: float,
@@ -67,7 +68,7 @@ class Infraction(Enum):
             member = await get_or_fetch_member(channel.guild, user.id)
             if member:
                 user = member
-        ctx = FakeContext(channel, command)
+        ctx = FakeContext(message, channel, command)
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
             await command(ctx, user, reason=reason or None)
         else:
@@ -156,7 +157,7 @@ class InfractionAndNotification(ActionEntry):
                 return
 
             await self.infraction_type.invoke(
-                ctx.author, channel, alerts_channel, self.infraction_duration, self.infraction_reason
+                ctx.author, ctx.message, channel, alerts_channel, self.infraction_duration, self.infraction_reason
             )
             ctx.action_descriptions.append(passive_form[self.infraction_type.name])
 

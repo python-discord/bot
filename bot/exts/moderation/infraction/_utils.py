@@ -6,11 +6,12 @@ from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
 
 import bot
-from bot.constants import Colours, Icons
+from bot.constants import Categories, Colours, Icons
 from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.channel import is_in_category
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -19,7 +20,7 @@ log = get_logger(__name__)
 INFRACTION_ICONS = {
     "ban": (Icons.user_ban, Icons.user_unban),
     "kick": (Icons.sign_out, None),
-    "mute": (Icons.user_mute, Icons.user_unmute),
+    "timeout": (Icons.user_timeout, Icons.user_untimeout),
     "note": (Icons.user_warn, None),
     "superstar": (Icons.superstarify, Icons.unsuperstarify),
     "warning": (Icons.user_warn, None),
@@ -77,14 +78,14 @@ async def post_user(ctx: Context, user: MemberOrUser) -> t.Optional[dict]:
 
 
 async def post_infraction(
-        ctx: Context,
-        user: MemberOrUser,
-        infr_type: str,
-        reason: str,
-        duration_or_expiry: t.Optional[DurationOrExpiry] = None,
-        hidden: bool = False,
-        active: bool = True,
-        dm_sent: bool = False,
+    ctx: Context,
+    user: MemberOrUser,
+    infr_type: str,
+    reason: str,
+    duration_or_expiry: t.Optional[DurationOrExpiry] = None,
+    hidden: bool = False,
+    active: bool = True,
+    dm_sent: bool = False,
 ) -> t.Optional[dict]:
     """Posts an infraction to the API."""
     if isinstance(user, (discord.Member, discord.User)) and user.bot:
@@ -95,6 +96,14 @@ async def post_infraction(
 
     current_time = arrow.utcnow()
 
+    if any(
+        is_in_category(ctx.channel, category)
+        for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
+    ):
+        jump_url = None
+    else:
+        jump_url = ctx.message.jump_url
+
     payload = {
         "actor": ctx.author.id,  # Don't use ctx.message.author; antispam only patches ctx.author.
         "hidden": hidden,
@@ -103,6 +112,7 @@ async def post_infraction(
         "user": user.id,
         "active": active,
         "dm_sent": dm_sent,
+        "jump_url": jump_url,
         "inserted_at": current_time.isoformat(),
         "last_applied": current_time.isoformat(),
     }

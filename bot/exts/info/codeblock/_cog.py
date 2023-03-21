@@ -50,7 +50,7 @@ class CodeBlockCog(Cog, name="Code Block"):
     The cog only detects messages in whitelisted channels. Channels may also have a cooldown on the
     instructions being sent. Note all help channels are also whitelisted with cooldowns enabled.
 
-    For configurable parameters, see the `code_block` section in config-default.py.
+    For configurable parameters, see the `_CodeBlock` class in constants.py.
     """
 
     def __init__(self, bot: Bot):
