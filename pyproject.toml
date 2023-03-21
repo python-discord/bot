@@ -16,7 +16,7 @@ arrow = "1.2.3"
 beautifulsoup4 = "4.11.2"
 colorama = { version = "0.4.6", markers = "sys_platform == 'win32'" }
 coloredlogs = "15.0.1"
-deepdiff = "6.2.3"
+deepdiff = "6.3.0"
 emoji = "2.2.0"
 feedparser = "6.0.10"
 lxml = "4.9.2"
