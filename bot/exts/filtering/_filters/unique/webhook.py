@@ -22,7 +22,7 @@ class WebhookFilter(UniqueFilter):
     """Scan messages to detect Discord webhooks links."""
 
     name = "webhook"
-    events = (Event.MESSAGE, Event.MESSAGE_EDIT)
+    events = (Event.MESSAGE, Event.MESSAGE_EDIT, Event.SNEKBOX)
 
     @property
     def mod_log(self) -> ModLog | None:

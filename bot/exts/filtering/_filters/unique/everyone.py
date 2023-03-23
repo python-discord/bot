@@ -16,7 +16,7 @@ class EveryoneFilter(UniqueFilter):
     """Filter messages which contain `@everyone` and `@here` tags outside a codeblock."""
 
     name = "everyone"
-    events = (Event.MESSAGE, Event.MESSAGE_EDIT)
+    events = (Event.MESSAGE, Event.MESSAGE_EDIT, Event.SNEKBOX)
 
     async def triggered_on(self, ctx: FilterContext) -> bool:
         """Search for the filter's content within a given context."""

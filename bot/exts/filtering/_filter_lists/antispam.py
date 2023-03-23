@@ -171,7 +171,9 @@ class DeletionContext:
         new_ctx.related_channels = reduce(
             or_, (other_ctx.related_channels for other_ctx in other_contexts), ctx.related_channels
         ) | {ctx.channel for ctx in other_contexts}
-        new_ctx.attachments = reduce(or_, (other_ctx.attachments for other_ctx in other_contexts), ctx.attachments)
+        new_ctx.uploaded_attachments = reduce(
+            or_, (other_ctx.uploaded_attachments for other_ctx in other_contexts), ctx.uploaded_attachments
+        )
         new_ctx.upload_deletion_logs = True
         new_ctx.messages_deletion = all(ctx.messages_deletion for ctx in self.contexts)
 

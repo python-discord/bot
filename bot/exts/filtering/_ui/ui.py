@@ -59,10 +59,10 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
     # For multiple messages and those with attachments or excessive newlines, use the logs API
     if ctx.messages_deletion and ctx.upload_deletion_logs and any((
         ctx.related_messages,
-        len(ctx.attachments) > 0,
+        len(ctx.uploaded_attachments) > 0,
         ctx.content.count('\n') > 15
     )):
-        url = await upload_log(ctx.related_messages, bot.instance.user.id, ctx.attachments)
+        url = await upload_log(ctx.related_messages, bot.instance.user.id, ctx.uploaded_attachments)
         return f"A complete log of the offending messages can be found [here]({url})"
 
     alert_content = escape_markdown(ctx.content)
@@ -70,7 +70,7 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
 
     if len(alert_content) > remaining_chars:
         if ctx.messages_deletion and ctx.upload_deletion_logs:
-            url = await upload_log([ctx.message], bot.instance.user.id, ctx.attachments)
+            url = await upload_log([ctx.message], bot.instance.user.id, ctx.uploaded_attachments)
             log_site_msg = f"The full message can be found [here]({url})"
             # 7 because that's the length of "[...]\n\n"
             return alert_content[:remaining_chars - (7 + len(log_site_msg))] + "[...]\n\n" + log_site_msg

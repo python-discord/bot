@@ -40,6 +40,7 @@ from bot.exts.filtering._ui.ui import (
 )
 from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
 from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_BAN_REASON
+from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
@@ -251,24 +252,30 @@ class Filtering(Cog):
         ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
         await self._check_bad_name(ctx)
 
-    async def filter_snekbox_output(self, snekbox_result: str, msg: Message) -> bool:
+    async def filter_snekbox_output(
+        self, stdout: str, files: list[FileAttachment], msg: Message
+    ) -> tuple[bool, set[str]]:
         """
         Filter the result of a snekbox command to see if it violates any of our rules, and then respond accordingly.
 
         Also requires the original message, to check whether to filter and for alerting.
         Any action (deletion, infraction) will be applied in the context of the original message.
 
-        Returns whether a filter was triggered or not.
+        Returns whether the output should be blocked, as well as a list of blocked file extensions.
         """
-        ctx = FilterContext.from_message(Event.MESSAGE, msg).replace(content=snekbox_result)
+        content = stdout
+        if files:  # Filter the filenames as well.
+            content += "\n\n" + "\n".join(file.filename for file in files)
+        ctx = FilterContext.from_message(Event.SNEKBOX, msg).replace(content=content, attachments=files)
+
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
         if result_actions:
             await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
-        self._increment_stats(triggers)
 
-        return result_actions is not None
+        self._increment_stats(triggers)
+        return result_actions is not None, ctx.blocked_exts
 
     # endregion
     # region: blacklist commands

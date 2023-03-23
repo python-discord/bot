@@ -28,8 +28,8 @@ async def upload_messages_attachments(ctx: FilterContext, messages: list[Message
         return
     destination = messages[0].guild.get_channel(Channels.attachment_log)
     for message in messages:
-        if message.attachments and message.id not in ctx.attachments:
-            ctx.attachments[message.id] = await send_attachments(message, destination, link_large=False)
+        if message.attachments and message.id not in ctx.uploaded_attachments:
+            ctx.uploaded_attachments[message.id] = await send_attachments(message, destination, link_large=False)
 
 
 class RemoveContext(ActionEntry):

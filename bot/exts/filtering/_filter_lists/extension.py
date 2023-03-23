@@ -49,7 +49,7 @@ class ExtensionsList(FilterList[ExtensionFilter]):
 
     def __init__(self, filtering_cog: Filtering):
         super().__init__()
-        filtering_cog.subscribe(self, Event.MESSAGE)
+        filtering_cog.subscribe(self, Event.MESSAGE, Event.SNEKBOX)
         self._whitelisted_description = None
 
     def get_filter_type(self, content: str) -> type[Filter]:
@@ -66,7 +66,7 @@ class ExtensionsList(FilterList[ExtensionFilter]):
     ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         # Return early if the message doesn't have attachments.
-        if not ctx.message or not ctx.message.attachments:
+        if not ctx.message or not ctx.attachments:
             return None, [], {}
 
         _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
@@ -75,7 +75,7 @@ class ExtensionsList(FilterList[ExtensionFilter]):
 
         # Find all extensions in the message.
         all_ext = {
-            (splitext(attachment.filename.lower())[1], attachment.filename) for attachment in ctx.message.attachments
+            (splitext(attachment.filename.lower())[1], attachment.filename) for attachment in ctx.attachments
         }
         new_ctx = ctx.replace(content={ext for ext, _ in all_ext})  # And prepare the context for the filters to read.
         triggered = [
@@ -86,31 +86,37 @@ class ExtensionsList(FilterList[ExtensionFilter]):
         # See if there are any extensions left which aren't allowed.
         not_allowed = {ext: filename for ext, filename in all_ext if ext not in allowed_ext}
 
+        if ctx.event == Event.SNEKBOX:
+            not_allowed = {ext: filename for ext, filename in not_allowed.items() if ext not in TXT_LIKE_FILES}
+
         if not not_allowed:  # Yes, it's a double negative. Meaning all attachments are allowed :)
             return None, [], {ListType.ALLOW: triggered}
 
-        # Something is disallowed.
-        if ".py" in not_allowed:
-            # Provide a pastebin link for .py files.
-            ctx.dm_embed = PY_EMBED_DESCRIPTION
-        elif txt_extensions := {ext for ext in TXT_LIKE_FILES if ext in not_allowed}:
-            # Work around Discord auto-conversion of messages longer than 2000 chars to .txt
-            cmd_channel = bot.instance.get_channel(Channels.bot_commands)
-            ctx.dm_embed = TXT_EMBED_DESCRIPTION.format(
-                blocked_extension=txt_extensions.pop(),
-                cmd_channel_mention=cmd_channel.mention
-            )
-        else:
-            meta_channel = bot.instance.get_channel(Channels.meta)
-            if not self._whitelisted_description:
-                self._whitelisted_description = ', '.join(
-                    filter_.content for filter_ in self[ListType.ALLOW].filters.values()
+        # At this point, something is disallowed.
+        if ctx.event != Event.SNEKBOX:  # Don't post the embed if it's a snekbox response.
+            if ".py" in not_allowed:
+                # Provide a pastebin link for .py files.
+                ctx.dm_embed = PY_EMBED_DESCRIPTION
+            elif txt_extensions := {ext for ext in TXT_LIKE_FILES if ext in not_allowed}:
+                # Work around Discord auto-conversion of messages longer than 2000 chars to .txt
+                cmd_channel = bot.instance.get_channel(Channels.bot_commands)
+                ctx.dm_embed = TXT_EMBED_DESCRIPTION.format(
+                    blocked_extension=txt_extensions.pop(),
+                    cmd_channel_mention=cmd_channel.mention
                 )
-            ctx.dm_embed = DISALLOWED_EMBED_DESCRIPTION.format(
-                joined_whitelist=self._whitelisted_description,
-                blocked_extensions_str=", ".join(not_allowed),
-                meta_channel_mention=meta_channel.mention,
-            )
+            else:
+                meta_channel = bot.instance.get_channel(Channels.meta)
+                if not self._whitelisted_description:
+                    self._whitelisted_description = ', '.join(
+                        filter_.content for filter_ in self[ListType.ALLOW].filters.values()
+                    )
+                ctx.dm_embed = DISALLOWED_EMBED_DESCRIPTION.format(
+                    joined_whitelist=self._whitelisted_description,
+                    blocked_extensions_str=", ".join(not_allowed),
+                    meta_channel_mention=meta_channel.mention,
+                )
 
         ctx.matches += not_allowed.values()
-        return self[ListType.ALLOW].defaults.actions, [f"`{ext}`" for ext in not_allowed], {ListType.ALLOW: triggered}
+        ctx.blocked_exts |= set(not_allowed)
+        actions = self[ListType.ALLOW].defaults.actions if ctx.event != Event.SNEKBOX else None
+        return actions, [f"`{ext}`" for ext in not_allowed], {ListType.ALLOW: triggered}

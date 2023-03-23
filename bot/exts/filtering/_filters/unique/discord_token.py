@@ -61,7 +61,7 @@ class DiscordTokenFilter(UniqueFilter):
     """Scans messages for potential discord client tokens and removes them."""
 
     name = "discord_token"
-    events = (Event.MESSAGE, Event.MESSAGE_EDIT)
+    events = (Event.MESSAGE, Event.MESSAGE_EDIT, Event.SNEKBOX)
     extra_fields_type = ExtraDiscordTokenSettings
 
     @property
