@@ -152,7 +152,7 @@ class FilterTests(unittest.TestCase):
     def test_infraction_merge_of_same_infraction_type(self):
         """When both infractions are of the same type, the one with the longer duration wins."""
         infraction1 = InfractionAndNotification(
-            infraction_type="MUTE",
+            infraction_type="TIMEOUT",
             infraction_reason="hi",
             infraction_duration=10,
             dm_content="how",
@@ -160,7 +160,7 @@ class FilterTests(unittest.TestCase):
             infraction_channel=0
         )
         infraction2 = InfractionAndNotification(
-            infraction_type="MUTE",
+            infraction_type="TIMEOUT",
             infraction_reason="there",
             infraction_duration=20,
             dm_content="are you",
@@ -168,12 +168,12 @@ class FilterTests(unittest.TestCase):
             infraction_channel=0
         )
 
-        result = infraction1 | infraction2
+        result = infraction1.union(infraction2)
 
         self.assertDictEqual(
             result.dict(),
             {
-                "infraction_type": Infraction.MUTE,
+                "infraction_type": Infraction.TIMEOUT,
                 "infraction_reason": "there",
                 "infraction_duration": 20.0,
                 "dm_content": "are you",
@@ -185,7 +185,7 @@ class FilterTests(unittest.TestCase):
     def test_infraction_merge_of_different_infraction_types(self):
         """If there are two different infraction types, the one higher up the hierarchy should be picked."""
         infraction1 = InfractionAndNotification(
-            infraction_type="MUTE",
+            infraction_type="TIMEOUT",
             infraction_reason="hi",
             infraction_duration=20,
             dm_content="",
@@ -201,7 +201,7 @@ class FilterTests(unittest.TestCase):
             infraction_channel=0
         )
 
-        result = infraction1 | infraction2
+        result = infraction1.union(infraction2)
 
         self.assertDictEqual(
             result.dict(),
