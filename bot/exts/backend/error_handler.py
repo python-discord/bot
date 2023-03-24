@@ -116,7 +116,7 @@ class ErrorHandler(Cog):
         await interaction.response.defer(ephemeral=True)
 
         debug_message = (
-            f"Command {interaction.command} invoked by {interaction.user} with error "
+            f"Command {interaction.command.qualified_name} invoked by {interaction.user} with error "
             f"{e.__class__.__name__}: {e}"
         )
 
@@ -126,7 +126,7 @@ class ErrorHandler(Cog):
             embed = self._get_error_embed("Transformer error", e.__cause__)
         elif isinstance(e, app_commands.CommandInvokeError):
             log.debug(debug_message)
-            self.bot.stats.incr("errors.appcommand_invoke_error")
+            self.bot.stats.incr("errors.app_command_invoke_error")
             embed = self._get_error_embed("App command invoke error", e.original)
         else:
             cause = e.__cause__

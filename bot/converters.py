@@ -303,7 +303,6 @@ class SourceTransformer(app_commands.Transformer):
         raise BadArgument(
             f"Unable to convert '{escaped_arg}' to valid command{', tag' if show_tag else ''} or cog."
         )
-        return escaped_arg
 
     async def autocomplete(self, interaction: discord.Interaction, value: str) -> list[app_commands.Choice[str]]:
         """Autocompleter for `/source` command."""
@@ -311,8 +310,9 @@ class SourceTransformer(app_commands.Transformer):
         tags_cog = all_cogs.get("Tags", None)
         names = [*all_cogs.keys(), *interaction.client.all_commands.keys()]
         names += [
-            slsh_cmd.qualified_name
-            for slsh_cmd in interaction.client.tree.get_commands() if not isinstance(slsh_cmd, app_commands.ContextMenu)
+            slash_cmd.qualified_name
+            for slash_cmd in interaction.client.tree.get_commands()
+            if not isinstance(slash_cmd, app_commands.ContextMenu)
         ]
         if tags_cog:
             names += [tag.name for tag in tags_cog.tags.keys()]

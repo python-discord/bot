@@ -36,15 +36,8 @@ class BotSource(Cog):
             await interaction.response.send_message(embed=embed)
             return
 
-        embed = None
-        ephemeral = False
-        if isinstance(cog_command_or_tag, str):
-            description = f"**Unable to convert '{cog_command_or_tag}' to valid command, tag, or cog.**"
-            embed = Embed(description=description)
-            ephemeral = True
-
-        embed = await self.build_embed(cog_command_or_tag) if not embed else embed
-        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
+        embed = await self.build_embed(cog_command_or_tag)
+        await interaction.response.send_message(embed=embed)
 
     def get_source_link(self, source_object: SourceType) -> Tuple[str, str, Optional[int]]:
         """
