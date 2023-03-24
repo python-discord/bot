@@ -227,14 +227,14 @@ tests-no-zope = ["cloudpickle", "cloudpickle", "hypothesis", "hypothesis", "mypy
 
 [[package]]
 name = "beautifulsoup4"
-version = "4.11.2"
+version = "4.12.0"
 description = "Screen-scraping library"
 category = "main"
 optional = false
 python-versions = ">=3.6.0"
 files = [
-    {file = "beautifulsoup4-4.11.2-py3-none-any.whl", hash = "sha256:0e79446b10b3ecb499c1556f7e228a53e64a2bfcebd455f370d8927cb5b59e39"},
-    {file = "beautifulsoup4-4.11.2.tar.gz", hash = "sha256:bc4bdda6717de5a2987436fb8d72f45dc90dd856bdfd512a1314ce90349a0106"},
+    {file = "beautifulsoup4-4.12.0-py3-none-any.whl", hash = "sha256:2130a5ad7f513200fae61a17abb5e338ca980fa28c439c0571014bc0217e9591"},
+    {file = "beautifulsoup4-4.12.0.tar.gz", hash = "sha256:c5fceeaec29d09c84970e47c65f2f0efe57872f7cff494c9691a26ec0ff13234"},
 ]
 
 [package.dependencies]
@@ -2440,4 +2440,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.10.*"
-content-hash = "5f63b3a89c3b2078fdc3556844b0656f72b8bd7bbe868342e2df8579583e3637"
+content-hash = "9073fa02a1c88d59ffbd3a71ef1e0d64ffb3111b499a642c1b3f565abfc6dccd"
