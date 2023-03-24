@@ -285,7 +285,7 @@ class SourceTransformer(app_commands.Transformer):
             return cmd
 
         slash_cmd = interaction.client.tree.get_command(cog_command_or_tag)
-        slash_cmd = slash_cmd if isinstance(slash_cmd, app_commands.Command) else None
+        slash_cmd = slash_cmd if not isinstance(slash_cmd, app_commands.ContextMenu) else None
         if slash_cmd:
             return slash_cmd
 
@@ -311,8 +311,8 @@ class SourceTransformer(app_commands.Transformer):
         tags_cog = all_cogs.get("Tags", None)
         names = [*all_cogs.keys(), *interaction.client.all_commands.keys()]
         names += [
-            slash_cmd.qualified_name
-            for slash_cmd in interaction.client.tree.get_commands() if isinstance(slash_cmd, app_commands.Command)
+            slsh_cmd.qualified_name
+            for slsh_cmd in interaction.client.tree.get_commands() if not isinstance(slsh_cmd, app_commands.ContextMenu)
         ]
         if tags_cog:
             names += [tag.name for tag in tags_cog.tags.keys()]

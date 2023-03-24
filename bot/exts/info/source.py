@@ -21,6 +21,7 @@ class BotSource(Cog):
         self.bot = bot
 
     @app_commands.command(name="source")
+    @app_commands.guild_only()
     async def source_command(
         self,
         interaction: Interaction,
@@ -95,7 +96,7 @@ class BotSource(Cog):
             description = source_object.__doc__.splitlines()[1]
         elif isinstance(source_object, Command):
             description = source_object.short_doc
-            title = f"Command: {source_object.qualified_name}"
+            title = f"Prefix-based Command: {source_object.qualified_name}"
         elif isinstance(source_object, app_commands.Command):
             description = source_object.description
             title = f"Slash Command: {source_object.qualified_name}"
