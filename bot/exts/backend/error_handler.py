@@ -1,7 +1,7 @@
 import copy
 import difflib
 
-from discord import Embed, Member
+from discord import Embed, Interaction, Member, app_commands
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
 from sentry_sdk import push_scope
@@ -20,6 +20,14 @@ class ErrorHandler(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.bot.tree.error(coro=self.__dispatch_to_app_command_handler)
+
+    async def __dispatch_to_app_command_handler(
+        self,
+        interaction: Interaction,
+        error: app_commands.AppCommandError
+    ) -> None:
+        self.bot.dispatch("app_command_error", interaction, error)
 
     def _get_error_embed(self, title: str, body: str) -> Embed:
         """Return an embed that contains the exception."""
@@ -97,6 +105,42 @@ class ErrorHandler(Cog):
         else:
             # ExtensionError
             await self.handle_unexpected_error(ctx, e)
+
+    @Cog.listener("on_app_command_error")
+    async def on_app_command_error(self, interaction: Interaction, e: app_commands.AppCommandError) -> None:
+        """
+        Error handler for app commands.
+
+        See on_command_error for detailed description.
+        """
+        await interaction.response.defer(ephemeral=True)
+
+        debug_message = (
+            f"Command {interaction.command} invoked by {interaction.user} with error "
+            f"{e.__class__.__name__}: {e}"
+        )
+
+        if isinstance(e, app_commands.TransformerError):
+            log.debug(debug_message)
+            self.bot.stats.incr("errors.transformer_error")
+            embed = self._get_error_embed("Transformer error", e.__cause__)
+        elif isinstance(e, app_commands.CommandInvokeError):
+            log.debug(debug_message)
+            self.bot.stats.incr("errors.appcommand_invoke_error")
+            embed = self._get_error_embed("App command invoke error", e.original)
+        else:
+            cause = e.__cause__
+            embed = self._get_error_embed(
+                "App command error",
+                f"{cause}\n\nSorry, looks like we have encountered an unexpected error. Please let us know."
+            )
+            log.error(
+                f"Error executing {interaction.command.qualified_name} invoked by {interaction.user}, raised {cause}",
+                exc_info=e
+            )
+            self.bot.stats.incr("errors.app_command_unexpected_error")
+
+        await interaction.edit_original_response(embed=embed)
 
     async def send_command_help(self, ctx: Context) -> None:
         """Return a prepared `help` command invocation coroutine."""
