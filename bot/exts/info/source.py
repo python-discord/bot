@@ -3,14 +3,14 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from discord import Embed, Interaction, app_commands
-from discord.ext.commands import BadArgument, Cog, Command, ExtensionNotLoaded, HelpCommand
+from discord.ext.commands import Cog, Command, ExtensionNotLoaded, HelpCommand
 
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.converters import SourceTransformer
 from bot.exts.info.tags import TagIdentifier
 
-SourceType = HelpCommand | Command | Cog | TagIdentifier | ExtensionNotLoaded | app_commands.Command | str
+SourceType = HelpCommand | Command | Cog | TagIdentifier | ExtensionNotLoaded | app_commands.Command
 HybridCommand = app_commands.Command | Command
 
 
@@ -43,7 +43,7 @@ class BotSource(Cog):
         """
         Build GitHub link of source object, return this link, file location and first line number.
 
-        Raise BadArgument if `source_object` is a dynamically-created object (e.g. via internal eval).
+        Raise ValueError if `source_object` is a dynamically-created object (e.g. via internal eval).
         """
         if isinstance(source_object, HybridCommand):
             source_item = inspect.unwrap(source_object.callback)
@@ -54,7 +54,7 @@ class BotSource(Cog):
             try:
                 filename = inspect.getsourcefile(src)
             except TypeError:
-                raise BadArgument("Cannot get source for a dynamically-created object.")
+                raise ValueError("Cannot get source for a dynamically-created object.")
         else:
             tags_cog = self.bot.get_cog("Tags")
             filename = tags_cog.tags[source_object].file_path
@@ -63,7 +63,7 @@ class BotSource(Cog):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
-                raise BadArgument("Cannot get source for a dynamically-created object.")
+                raise ValueError("Cannot get source for a dynamically-created object.")
 
             lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
         else:

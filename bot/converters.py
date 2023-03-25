@@ -300,7 +300,7 @@ class SourceTransformer(app_commands.Transformer):
                 return identifier
         escaped_arg = escape_markdown(cog_command_or_tag)
 
-        raise BadArgument(
+        raise ValueError(
             f"Unable to convert '{escaped_arg}' to valid command{', tag' if show_tag else ''} or cog."
         )
 
