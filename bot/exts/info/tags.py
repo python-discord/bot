@@ -317,6 +317,7 @@ class Tags(Cog):
         return True
 
     @app_commands.command(name="tag")
+    @app_commands.guild_only()
     async def get_command(self, interaction: Interaction, *, name: Optional[str]) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group
