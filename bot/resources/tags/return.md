@@ -1,5 +1,7 @@
-**Return Statement**
-
+---
+embed:
+    title: "Return statement"
+---
 A value created inside a function can't be used outside of it unless you `return` it.
 
 Consider the following function:
@@ -29,4 +31,4 @@ None
 **Things to note**  
 • `print()` and `return` do **not** accomplish the same thing. `print()` will show the value, and then it will be gone.  
 • A function will return `None` if it ends without a `return` statement.  
-• When you want to print a value from a function, it's best to return the value and print the *function call* instead, like `print(square(5))`.  
+• When you want to print a value from a function, it's best to return the value and print the *function call* instead, like `print(square(5))`.

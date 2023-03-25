@@ -1,7 +1,7 @@
 ---
 aliases: ["under"]
 embed:
-    title: "Meanings of Underscores in Identifier Names"
+    title: "Meanings of underscores in identifier names"
 ---
 
 • `__name__`: Used to implement special behaviour, such as the `+` operator for classes with the `__add__` method. [More info](https://dbader.org/blog/python-dunder-methods)

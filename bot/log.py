@@ -98,7 +98,11 @@ def setup_sentry() -> None:
             sentry_logging,
             RedisIntegration(),
         ],
-        release=f"bot@{constants.GIT_SHA}"
+        release=f"bot@{constants.GIT_SHA}",
+        traces_sample_rate=0.5,
+        _experiments={
+            "profiles_sample_rate": 0.5,
+        },
     )
 
 

@@ -1,7 +1,7 @@
 import copy
 import difflib
 
-from discord import Embed
+from discord import Embed, Member
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
 from sentry_sdk import push_scope
@@ -167,28 +167,33 @@ class ErrorHandler(Cog):
         by `on_command_error`, but the `invoked_from_error_handler` attribute will be added to
         the context to prevent infinite recursion in the case of a CommandNotFound exception.
         """
-        tags_get_command = self.bot.get_command("tags get")
-        if not tags_get_command:
-            log.debug("Not attempting to parse message as a tag as could not find `tags get` command.")
+        tags_cog = self.bot.get_cog("Tags")
+        if not tags_cog:
+            log.debug("Not attempting to parse message as a tag as could not find `Tags` cog.")
+            return
+        tags_get_command = tags_cog.get_command_ctx
+
+        maybe_tag_name = ctx.invoked_with
+        if not maybe_tag_name or not isinstance(ctx.author, Member):
             return
 
         ctx.invoked_from_error_handler = True
-
-        log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
         try:
-            if not await tags_get_command.can_run(ctx):
-                log.debug(log_msg)
+            if not await self.bot.can_run(ctx):
+                log.debug("Cancelling attempt to fall back to a tag due to failed checks.")
                 return
-        except errors.CommandError as tag_error:
-            log.debug(log_msg)
-            await self.on_command_error(ctx, tag_error)
-            return
 
-        if await ctx.invoke(tags_get_command, argument_string=ctx.message.content):
-            return
+            if await tags_get_command(ctx, maybe_tag_name):
+                return
 
-        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
-            await self.send_command_suggestion(ctx, ctx.invoked_with)
+            if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+                await self.send_command_suggestion(ctx, maybe_tag_name)
+        except Exception as err:
+            log.debug("Error while attempting to invoke tag fallback.")
+            if isinstance(err, errors.CommandError):
+                await self.on_command_error(ctx, err)
+            else:
+                await self.on_command_error(ctx, errors.CommandInvokeError(err))
 
     async def try_run_fixed_codeblock(self, ctx: Context) -> bool:
         """

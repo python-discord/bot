@@ -1,4 +1,7 @@
-**Regular expressions**
+---
+embed:
+    title: "Regular expressions"
+---
 Regular expressions (regex) are a tool for finding patterns in strings. The standard library's `re` module defines functions for using regex patterns.
 
 **Example**

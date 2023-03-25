@@ -71,6 +71,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     MockMessage(author=self.bot_user, content="Not a review", created_at=not_too_recent),
                     MockMessage(author=self.bot_user, content="Not a review", created_at=not_too_recent),
                 ],
+                not_too_recent.timestamp(),
                 True,
             ),
 
@@ -81,6 +82,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     MockMessage(author=self.bot_user, content="Zig for Helper!", created_at=not_too_recent),
                     MockMessage(author=self.bot_user, content="Scaleios for Helper!", created_at=not_too_recent),
                 ],
+                not_too_recent.timestamp(),
                 False,
             ),
 
@@ -89,6 +91,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                 [
                     MockMessage(author=self.bot_user, content="Chrisjl for Helper!", created_at=too_recent),
                 ],
+                too_recent.timestamp(),
                 False,
             ),
 
@@ -100,18 +103,25 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     MockMessage(author=self.bot_user, content="wookie for Helper!", created_at=not_too_recent),
                     MockMessage(author=self.bot_user, content="Not a review", created_at=not_too_recent),
                 ],
+                not_too_recent.timestamp(),
                 True,
             ),
 
             # No messages, so ready.
-            ([], True),
+            ([], None, True),
         )
 
-        for messages, expected in cases:
+        for messages, last_review_timestamp, expected in cases:
             with self.subTest(messages=messages, expected=expected):
                 self.voting_channel.history = AsyncIterator(messages)
+
+                cache_get_mock = AsyncMock(return_value=last_review_timestamp)
+                self.reviewer.status_cache.get = cache_get_mock
+
                 res = await self.reviewer.is_ready_for_review()
+
                 self.assertIs(res, expected)
+                cache_get_mock.assert_called_with("last_vote_date")
 
     @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=7))
     async def test_get_nomination_to_review(self):
