@@ -29,8 +29,8 @@ class Nomination(BaseModel):
 class NominationAPI:
     """Abstraction of site API interaction for talentpool."""
 
-    def __init__(self, site_api: APIClient):
-        self.site_api = site_api
+    def __init__(self, site_api_client: APIClient):
+        self.site_api_client = site_api_client
 
     async def get_nominations(
         self,
@@ -49,13 +49,13 @@ class NominationAPI:
         if user_id is not None:
             params["user__id"] = str(user_id)
 
-        data = await self.site_api.get("bot/nominations", params=params)
+        data = await self.site_api_client.get("bot/nominations", params=params)
         nominations = parse_obj_as(list[Nomination], data)
         return nominations
 
     async def get_nomination(self, nomination_id: int) -> Nomination:
         """Fetch a nomination by ID."""
-        data = await self.site_api.get(f"bot/nominations/{nomination_id}")
+        data = await self.site_api_client.get(f"bot/nominations/{nomination_id}")
         nomination = Nomination.parse_obj(data)
         return nomination
 
@@ -83,7 +83,7 @@ class NominationAPI:
         if thread_id is not None:
             data["thread_id"] = thread_id
 
-        result = await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
+        result = await self.site_api_client.patch(f"bot/nominations/{nomination_id}", json=data)
         return Nomination.parse_obj(result)
 
     async def edit_nomination_entry(
@@ -95,7 +95,7 @@ class NominationAPI:
     ) -> Nomination:
         """Edit a nomination entry."""
         data = {"actor": actor_id, "reason": reason}
-        result = await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
+        result = await self.site_api_client.patch(f"bot/nominations/{nomination_id}", json=data)
         return Nomination.parse_obj(result)
 
     async def post_nomination(
@@ -110,5 +110,5 @@ class NominationAPI:
             "reason": reason,
             "user": user_id,
         }
-        result = await self.site_api.post("bot/nominations", json=data)
+        result = await self.site_api_client.post("bot/nominations", json=data)
         return Nomination.parse_obj(result)
