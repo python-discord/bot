@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
+from discord import app_commands
 from discord.ext.commands import errors
 from pydis_core.site_api import ResponseCodeError
 
@@ -9,7 +10,9 @@ from bot.exts.backend import error_handler
 from bot.exts.info.tags import Tags
 from bot.exts.moderation.silence import Silence
 from bot.utils.checks import InWhitelistCheckFailure
-from tests.helpers import MockBot, MockContext, MockGuild, MockRole, MockTextChannel, MockVoiceChannel
+from tests.helpers import (
+    MockAppCommand, MockBot, MockContext, MockGuild, MockInteraction, MockRole, MockTextChannel, MockVoiceChannel
+)
 
 
 class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
@@ -18,15 +21,23 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.bot = MockBot()
         self.ctx = MockContext(bot=self.bot)
+
+        self.interaction = MockInteraction()
+        self.interaction.edit_original_response = AsyncMock()
+        self.interaction.response.defer = AsyncMock()
+
         self.cog = error_handler.ErrorHandler(self.bot)
 
     async def test_error_handler_already_handled(self):
         """Should not do anything when error is already handled by local error handler."""
         self.ctx.reset_mock()
+        self.interaction.reset_mock()
         error = errors.CommandError()
         error.handled = "foo"
         self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
+        self.assertIsNone(await self.cog.on_app_command_error(self.interaction, error))
         self.ctx.send.assert_not_awaited()
+        self.interaction.edit_original_response.assert_not_awaited()
 
     async def test_error_handler_command_not_found_error_not_invoked_by_handler(self):
         """Should try first (un)silence channel, when fail, try to get tag."""
@@ -85,6 +96,31 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         self.cog.try_get_tag.assert_not_awaited()
         self.cog.try_run_fixed_codeblock.assert_not_awaited()
         self.ctx.send.assert_not_awaited()
+
+    async def test_error_handler_transformer_error(self):
+        """Should call `ErrorHandler._get_error_embed` with the title `Tranformer error`."""
+        self.interaction.reset_mock()
+        self.cog._get_error_embed = MagicMock()
+
+        transformer = MagicMock()
+        transformer._error_display_name = "foo"
+
+        error = app_commands.TransformerError("bar", "baz", transformer)
+
+        self.assertIsNone(await self.cog.on_app_command_error(self.interaction, error))
+        self.cog._get_error_embed.assert_called_once_with("Transformer error", error.__cause__)
+        self.interaction.edit_original_response.assert_awaited_once()
+
+    async def test_error_handler_app_command_invoke_error(self):
+        """Should call `ErrorHandler._get_error_embed` with the title `App command invoke error`."""
+        self.interaction.reset_mock()
+        self.cog._get_error_embed = MagicMock()
+
+        error = app_commands.CommandInvokeError(MockAppCommand(), "baz")
+
+        self.assertIsNone(await self.cog.on_app_command_error(self.interaction, error))
+        self.cog._get_error_embed.assert_called_once_with("App command invoke error", "baz")
+        self.interaction.edit_original_response.assert_awaited_once()
 
     async def test_error_handler_user_input_error(self):
         """Should await `ErrorHandler.handle_user_input_error` when error is `UserInputError`."""
@@ -175,6 +211,20 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.cog.handle_unexpected_error.reset_mock()
                 self.assertIsNone(await self.cog.on_command_error(self.ctx, err))
                 self.cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, err)
+
+    async def test_error_handler_app_command_unexpected_errors(self):
+        """Should call `ErrorHandler._get_error_embed` with the title `App command error`."""
+        self.interaction.reset_mock()
+        self.cog._get_error_embed = MagicMock()
+
+        error = app_commands.AppCommandError()
+
+        self.assertIsNone(await self.cog.on_app_command_error(self.interaction, error))
+        self.cog._get_error_embed.assert_called_once_with(
+            "App command error",
+            f"{None}\n\nSorry, looks like we have encountered an unexpected error. Please let us know."
+        )
+        self.interaction.edit_original_response.assert_awaited_once()
 
     @patch("bot.exts.backend.error_handler.log")
     async def test_error_handler_other_errors(self, log_mock):

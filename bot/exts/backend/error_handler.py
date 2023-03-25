@@ -115,6 +115,10 @@ class ErrorHandler(Cog):
         """
         await interaction.response.defer(ephemeral=True)
 
+        if hasattr(e, "handled"):
+            log.trace(f"Command {interaction.command} had its error already handled locally; ignoring.")
+            return
+
         debug_message = (
             f"Command {interaction.command.qualified_name} invoked by {interaction.user} with error "
             f"{e.__class__.__name__}: {e}"
