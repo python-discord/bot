@@ -154,7 +154,7 @@ class Reviewer:
             # ... and is for a user that has been active recently
             self.is_user_active_enough(user_message_count) and
             # ... and is currently a member of the server
-            await get_or_fetch_member(guild, nomination.id) is not None
+            await get_or_fetch_member(guild, nomination.user_id) is not None
         )
 
     async def sort_nominations_to_review(self, nominations: list[Nomination], now: datetime) -> list[Nomination]:
