@@ -16,7 +16,8 @@ jobs:
         MIT License;
         Mozilla Public License 2.0 (MPL 2.0);
         Public Domain;
-        Python Software Foundation License
+        Python Software Foundation License;
+        The Unlicense (Unlicense)
 
       # Dummy values for required bot environment variables
       BOT_API_KEY: foo
@@ -83,7 +84,7 @@ jobs:
       - name: Upload a Build Artifact
         if: always() && steps.prepare-artifact.outcome == 'success'
         continue-on-error: true
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pull-request-payload
           path: pull_request_payload.json

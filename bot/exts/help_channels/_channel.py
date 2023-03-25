@@ -30,7 +30,7 @@ NEW_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/checkmark/green-checkma
 
 CLOSED_POST_MSG = f"""
 This help channel has been closed and it's no longer possible to send messages here. \
-If your question wasn't answered, feel free to create a new post in <#{constants.Channels.help_system_forum}>. \
+If your question wasn't answered, feel free to create a new post in <#{constants.Channels.python_help}>. \
 To maximize your chances of getting a response, check out this guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
 CLOSED_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/zzz/zzz-dist.png"
@@ -39,7 +39,7 @@ CLOSED_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/zzz/zzz-dist.png"
 def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
     """Return True if `channel` is a post in the help forum."""
     log.trace(f"Checking if #{channel} is a help channel.")
-    return getattr(channel, "parent_id", None) == constants.Channels.help_system_forum
+    return getattr(channel, "parent_id", None) == constants.Channels.python_help
 
 
 async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:

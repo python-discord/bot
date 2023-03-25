@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from bot.exts.info.doc import _parsing as parsing
+from bot.exts.info.doc._markdown import DocMarkdownConverter
 
 
 class SignatureSplitter(TestCase):
@@ -64,3 +65,25 @@ class SignatureSplitter(TestCase):
         for input_string, expected_output in test_cases:
             with self.subTest(input_string=input_string):
                 self.assertEqual(list(parsing._split_parameters(input_string)), expected_output)
+
+
+class MarkdownConverterTest(TestCase):
+    def test_hr_removed(self):
+        test_cases = (
+            ('<hr class="docutils"/>', ""),
+            ("<hr>", ""),
+        )
+        self._run_tests(test_cases)
+
+    def test_whitespace_removed(self):
+        test_cases = (
+            ("lines\nof\ntext", "lines of text"),
+            ("lines\n\nof\n\ntext", "lines of text"),
+        )
+        self._run_tests(test_cases)
+
+    def _run_tests(self, test_cases: tuple[tuple[str, str], ...]):
+        for input_string, expected_output in test_cases:
+            with self.subTest(input_string=input_string):
+                d = DocMarkdownConverter(page_url="https://example.com")
+                self.assertEqual(d.convert(input_string), expected_output)
