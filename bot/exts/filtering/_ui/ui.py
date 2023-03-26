@@ -385,7 +385,9 @@ class SequenceEditView(discord.ui.View):
     async def apply_edit(self, interaction: Interaction, new_list: str) -> None:
         """Change the contents of the list."""
         self.stored_value = list(set(part.strip() for part in new_list.split(",") if part.strip()))
-        await interaction.response.edit_message(content=f"Current list: {self.stored_value}", view=self.copy())
+        await interaction.response.edit_message(
+            content=f"Current list: [{', '.join(self.stored_value)}]", view=self.copy()
+        )
         self.stop()
 
     @discord.ui.button(label="Add Value")
@@ -468,7 +470,7 @@ class EditBaseView(ABC, discord.ui.View):
             await interaction.response.send_message(f"Choose a value for `{setting_name}`:", view=view, ephemeral=True)
         elif type_ in (set, list, tuple):
             if (current_value := self.current_value(setting_name)) is not MISSING:
-                current_list = list(current_value)
+                current_list = [str(elem) for elem in current_value]
             else:
                 current_list = []
             await interaction.response.send_message(
