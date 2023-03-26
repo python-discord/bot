@@ -26,7 +26,7 @@ class NewHelperUtils(Cog):
         f"<@&{NEW_HELPER_ROLE_ID}> can someone please answer this??",
         f"Someone answer this <@&{NEW_HELPER_ROLE_ID}> if you want to keep your role",
         f"Where are my <@&{NEW_HELPER_ROLE_ID}> at?",
-        f"<@&{NEW_HELPER_ROLE_ID}>, Help!",
+        f"<@&{NEW_HELPER_ROLE_ID}>, answer this!",
         f"What's the point of having all these new <@&{NEW_HELPER_ROLE_ID}> if questions are going unanswered?",
     ]
 
