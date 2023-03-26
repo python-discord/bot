@@ -22,7 +22,7 @@ class DiscordTokenFilterTests(unittest.IsolatedAsyncioTestCase):
             "content": "discord_token",
             "description": None,
             "settings": {},
-            "additional_field": "{}",  # noqa: P103
+            "additional_settings": "{}",  # noqa: P103
             "created_at": now,
             "updated_at": now
         })
