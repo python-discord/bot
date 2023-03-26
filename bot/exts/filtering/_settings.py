@@ -69,7 +69,7 @@ class Settings(FieldRequiring, dict[str, T]):
     the filter list which contains the filter.
     """
 
-    entry_type = T
+    entry_type: type[T]
 
     _already_warned: set[str] = set()
 

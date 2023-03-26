@@ -1,6 +1,6 @@
 import dataclasses
 import typing
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -258,7 +258,7 @@ class SubscribingAtomicList(AtomicList):
         return await self._create_filter_list_result(ctx, self.defaults, event_filters)
 
 
-class UniquesListBase(FilterList[UniqueFilter]):
+class UniquesListBase(FilterList[UniqueFilter], ABC):
     """
     A list of unique filters.
 

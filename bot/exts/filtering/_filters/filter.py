@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any
 
 import arrow
@@ -86,7 +86,7 @@ class Filter(FieldRequiring):
         return string
 
 
-class UniqueFilter(Filter):
+class UniqueFilter(Filter, ABC):
     """
     Unique filters are ones that should only be run once in a given context.
 
