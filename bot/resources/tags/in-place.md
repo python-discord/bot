@@ -19,4 +19,4 @@ sorted(list_to_sort)
 print(list_to_sort)  # The list still isn't sorted. Why?
 ```
 
-To avoid these errors and unexpected results, it is required to assign the result of `sorted(...)` to a new variable and use `list.sort()` method in the original list. This way, the original list will be sorted and the new list will be created with the sorted elements.
+To avoid these errors and unexpected results, you should either use an out-of-place operation `(sorted(...))` and assign it to a variable or use an in-place operation `(list.sort())` without assignment.
