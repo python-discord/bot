@@ -33,7 +33,7 @@ def build_filter_repr_dict(
     default_setting_values = {}
     for settings_group in filter_list[list_type].defaults:
         for _, setting in settings_group.items():
-            default_setting_values.update(to_serializable(setting.dict()))
+            default_setting_values.update(to_serializable(setting.dict(), ui_repr=True))
 
     # Add overrides. It's done in this way to preserve field order, since the filter won't have all settings.
     total_values = {}
@@ -434,10 +434,10 @@ def description_and_settings_converter(
     return description, settings, filter_settings
 
 
-def filter_serializable_overrides(filter_: Filter) -> tuple[dict, dict]:
-    """Get a serializable version of the filter's overrides."""
+def filter_overrides_for_ui(filter_: Filter) -> tuple[dict, dict]:
+    """Get the filter's overrides in a format that can be displayed in the UI."""
     overrides_values, extra_fields_overrides = filter_.overrides
-    return to_serializable(overrides_values), to_serializable(extra_fields_overrides)
+    return to_serializable(overrides_values, ui_repr=True), to_serializable(extra_fields_overrides, ui_repr=True)
 
 
 def template_settings(
@@ -461,4 +461,4 @@ def template_settings(
         raise BadArgument(
             f"The template filter name is {filter_.name!r}, but the target filter is {filter_type.name!r}"
         )
-    return filter_serializable_overrides(filter_)
+    return filter_.overrides

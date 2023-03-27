@@ -1,7 +1,9 @@
 import unittest
 
 from bot.exts.filtering._filter_context import Event, FilterContext
-from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction, InfractionAndNotification
+from bot.exts.filtering._settings_types.actions.infraction_and_notification import (
+    Infraction, InfractionAndNotification, InfractionDuration
+)
 from bot.exts.filtering._settings_types.validations.bypass_roles import RoleBypass
 from bot.exts.filtering._settings_types.validations.channel_scope import ChannelScope
 from bot.exts.filtering._settings_types.validations.filter_dm import FilterDM
@@ -154,7 +156,7 @@ class FilterTests(unittest.TestCase):
         infraction1 = InfractionAndNotification(
             infraction_type="TIMEOUT",
             infraction_reason="hi",
-            infraction_duration=10,
+            infraction_duration=InfractionDuration(10),
             dm_content="how",
             dm_embed="what is",
             infraction_channel=0
@@ -162,7 +164,7 @@ class FilterTests(unittest.TestCase):
         infraction2 = InfractionAndNotification(
             infraction_type="TIMEOUT",
             infraction_reason="there",
-            infraction_duration=20,
+            infraction_duration=InfractionDuration(20),
             dm_content="are you",
             dm_embed="your name",
             infraction_channel=0
@@ -175,7 +177,7 @@ class FilterTests(unittest.TestCase):
             {
                 "infraction_type": Infraction.TIMEOUT,
                 "infraction_reason": "there",
-                "infraction_duration": 20.0,
+                "infraction_duration": InfractionDuration(20.0),
                 "dm_content": "are you",
                 "dm_embed": "your name",
                 "infraction_channel": 0
@@ -187,7 +189,7 @@ class FilterTests(unittest.TestCase):
         infraction1 = InfractionAndNotification(
             infraction_type="TIMEOUT",
             infraction_reason="hi",
-            infraction_duration=20,
+            infraction_duration=InfractionDuration(20),
             dm_content="",
             dm_embed="",
             infraction_channel=0
@@ -195,7 +197,7 @@ class FilterTests(unittest.TestCase):
         infraction2 = InfractionAndNotification(
             infraction_type="BAN",
             infraction_reason="",
-            infraction_duration=10,
+            infraction_duration=InfractionDuration(10),
             dm_content="there",
             dm_embed="",
             infraction_channel=0
@@ -208,7 +210,7 @@ class FilterTests(unittest.TestCase):
             {
                 "infraction_type": Infraction.BAN,
                 "infraction_reason": "",
-                "infraction_duration": 10.0,
+                "infraction_duration": InfractionDuration(10),
                 "dm_content": "there",
                 "dm_embed": "",
                 "infraction_channel": 0

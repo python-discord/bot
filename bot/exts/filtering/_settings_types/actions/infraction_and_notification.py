@@ -1,9 +1,9 @@
-from datetime import timedelta
 from enum import Enum, auto
 from typing import ClassVar
 
 import arrow
 import discord.abc
+from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Member, User
 from discord.errors import Forbidden
 from pydantic import validator
@@ -15,7 +15,8 @@ import bot as bot_module
 from bot.constants import Channels
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
-from bot.exts.filtering._utils import FakeContext
+from bot.exts.filtering._utils import CustomIOField, FakeContext
+from bot.utils.time import humanize_delta, parse_duration_string, relativedelta_to_timedelta
 
 log = get_logger(__name__)
 
@@ -29,6 +30,38 @@ passive_form = {
     "WATCH": "watch",
     "NOTE": "noted",
 }
+
+
+class InfractionDuration(CustomIOField):
+    """A field that converts a string to a duration and presents it in a human-readable format."""
+
+    @classmethod
+    def process_value(cls, v: str | relativedelta) -> relativedelta:
+        """
+        Transform the given string into a relativedelta.
+
+        Raise a ValueError if the conversion is not possible.
+        """
+        if isinstance(v, relativedelta):
+            return v
+
+        try:
+            v = float(v)
+        except ValueError:  # Not a float.
+            if not (delta := parse_duration_string(v)):
+                raise ValueError(f"`{v}` is not a valid duration string.")
+        else:
+            delta = relativedelta(seconds=float(v)).normalized()
+
+        return delta
+
+    def serialize(self) -> float:
+        """The serialized value is the total number of seconds this duration represents."""
+        return relativedelta_to_timedelta(self.value).total_seconds()
+
+    def __str__(self):
+        """Represent the stored duration in a human-readable format."""
+        return humanize_delta(self.value, max_units=2) if self.value else "Permanent"
 
 
 class Infraction(Enum):
@@ -53,7 +86,7 @@ class Infraction(Enum):
         message: discord.Message,
         channel: discord.abc.GuildChannel | discord.DMChannel,
         alerts_channel: discord.TextChannel,
-        duration: float,
+        duration: InfractionDuration,
         reason: str
     ) -> None:
         """Invokes the command matching the infraction name."""
@@ -72,7 +105,7 @@ class Infraction(Enum):
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
             await command(ctx, user, reason=reason or None)
         else:
-            duration = arrow.utcnow() + timedelta(seconds=duration) if duration else None
+            duration = arrow.utcnow().datetime + duration.value if duration.value else None
             await command(ctx, user, duration, reason=reason or None)
 
 
@@ -91,7 +124,10 @@ class InfractionAndNotification(ActionEntry):
             "the harsher one will be applied (by type or duration).\n\n"
             "Valid infraction types in order of harshness: "
         ) + ", ".join(infraction.name for infraction in Infraction),
-        "infraction_duration": "How long the infraction should last for in seconds. 0 for permanent.",
+        "infraction_duration": (
+            "How long the infraction should last for in seconds. 0 for permanent. "
+            "Also supports durations as in an infraction invocation (such as `10d`)."
+        ),
         "infraction_reason": "The reason delivered with the infraction.",
         "infraction_channel": (
             "The channel ID in which to invoke the infraction (and send the confirmation message). "
@@ -106,7 +142,7 @@ class InfractionAndNotification(ActionEntry):
     dm_embed: str
     infraction_type: Infraction
     infraction_reason: str
-    infraction_duration: float
+    infraction_duration: InfractionDuration
     infraction_channel: int
 
     @validator("infraction_type", pre=True)
@@ -184,8 +220,10 @@ class InfractionAndNotification(ActionEntry):
             result = other.copy()
             other = self
         else:
+            now = arrow.utcnow().datetime
             if self.infraction_duration is None or (
-                other.infraction_duration is not None and self.infraction_duration > other.infraction_duration
+                other.infraction_duration is not None
+                and now + self.infraction_duration.value > now + other.infraction_duration.value
             ):
                 result = self.copy()
             else:

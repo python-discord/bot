@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import importlib.util
 import inspect
@@ -12,6 +14,7 @@ from typing import Any, Iterable, TypeVar, Union, get_args, get_origin
 import discord
 import regex
 from discord.ext.commands import Command
+from typing_extensions import Self
 
 import bot
 from bot.bot import Bot
@@ -23,6 +26,8 @@ ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIAT
 
 
 T = TypeVar('T')
+
+Serializable = Union[bool, int, float, str, list, dict, None]
 
 
 def subclasses_in_package(package: str, prefix: str, parent: T) -> set[T]:
@@ -62,8 +67,13 @@ def past_tense(word: str) -> str:
     return word + "ed"
 
 
-def to_serializable(item: Any) -> Union[bool, int, float, str, list, dict, None]:
-    """Convert the item into an object that can be converted to JSON."""
+def to_serializable(item: Any, *, ui_repr: bool = False) -> Serializable:
+    """
+    Convert the item into an object that can be converted to JSON.
+
+    `ui_repr` dictates whether to use the UI representation of `CustomIOField` instances (if any)
+    or the DB-oriented representation.
+    """
     if isinstance(item, (bool, int, float, str, type(None))):
         return item
     if isinstance(item, dict):
@@ -71,10 +81,12 @@ def to_serializable(item: Any) -> Union[bool, int, float, str, list, dict, None]
         for key, value in item.items():
             if not isinstance(key, (bool, int, float, str, type(None))):
                 key = str(key)
-            result[key] = to_serializable(value)
+            result[key] = to_serializable(value, ui_repr=ui_repr)
         return result
     if isinstance(item, Iterable):
-        return [to_serializable(subitem) for subitem in item]
+        return [to_serializable(subitem, ui_repr=ui_repr) for subitem in item]
+    if not ui_repr and hasattr(item, "serialize"):
+        return item.serialize()
     return str(item)
 
 
@@ -222,3 +234,49 @@ class FakeContext:
     async def send(self, *args, **kwargs) -> discord.Message:
         """A wrapper for channel.send."""
         return await self.channel.send(*args, **kwargs)
+
+
+class CustomIOField:
+    """
+    A class to be used as a data type in SettingEntry subclasses.
+
+    Its subclasses can have custom methods to read and represent the value, which will be used by the UI.
+    """
+
+    def __init__(self, value: Any):
+        self.value = self.process_value(value)
+
+    @classmethod
+    def __get_validators__(cls):
+        """Boilerplate for Pydantic."""
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v: Any) -> Self:
+        """Takes the given value and returns a class instance with that value."""
+        if isinstance(v, CustomIOField):
+            return cls(v.value)
+
+        return cls(v)
+
+    def __eq__(self, other: CustomIOField):
+        if not isinstance(other, CustomIOField):
+            return NotImplemented
+        return self.value == other.value
+
+    @classmethod
+    def process_value(cls, v: str) -> Any:
+        """
+        Perform any necessary transformations before the value is stored in a new instance.
+
+        Override this method to customize the input behavior.
+        """
+        return v
+
+    def serialize(self) -> Serializable:
+        """Override this method to customize how the value will be serialized."""
+        return self.value
+
+    def __str__(self):
+        """Override this method to change how the value will be displayed by the UI."""
+        return self.value

@@ -10,7 +10,7 @@ from discord.ext.commands import BadArgument
 from bot.exts.filtering._filter_lists import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings_types.settings_entry import SettingsEntry
-from bot.exts.filtering._ui.filter import filter_serializable_overrides
+from bot.exts.filtering._ui.filter import filter_overrides_for_ui
 from bot.exts.filtering._ui.ui import (
     COMPONENT_TIMEOUT, CustomCallbackSelect, EditBaseView, MISSING, SETTINGS_DELIMITER, parse_value,
     populate_embed_from_dict
@@ -114,7 +114,7 @@ def template_settings(
     if filter_type and not isinstance(filter_, filter_type):
         raise BadArgument(f"The filter with ID `{filter_id}` is not of type {filter_type.name!r}.")
 
-    settings, filter_settings = filter_serializable_overrides(filter_)
+    settings, filter_settings = filter_overrides_for_ui(filter_)
     return settings, filter_settings, type(filter_)
 
 

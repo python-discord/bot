@@ -31,7 +31,7 @@ from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
-    build_filter_repr_dict, description_and_settings_converter, filter_serializable_overrides, populate_embed_from_dict
+    build_filter_repr_dict, description_and_settings_converter, filter_overrides_for_ui, populate_embed_from_dict
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
 from bot.exts.filtering._ui.search import SearchEditView, search_criteria_converter
@@ -383,7 +383,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
 
-        overrides_values, extra_fields_overrides = filter_serializable_overrides(filter_)
+        overrides_values, extra_fields_overrides = filter_overrides_for_ui(filter_)
 
         all_settings_repr_dict = build_filter_repr_dict(
             filter_list, list_type, type(filter_), overrides_values, extra_fields_overrides
@@ -493,7 +493,7 @@ class Filtering(Cog):
             return
         filter_, filter_list, list_type = result
         filter_type = type(filter_)
-        settings, filter_settings = filter_serializable_overrides(filter_)
+        settings, filter_settings = filter_overrides_for_ui(filter_)
         description, new_settings, new_filter_settings = description_and_settings_converter(
             filter_list,
             list_type, filter_type,
@@ -734,7 +734,7 @@ class Filtering(Cog):
         setting_values = {}
         for settings_group in filter_list[list_type].defaults:
             for _, setting in settings_group.items():
-                setting_values.update(to_serializable(setting.dict()))
+                setting_values.update(to_serializable(setting.dict(), ui_repr=True))
 
         embed = Embed(colour=Colour.blue())
         populate_embed_from_dict(embed, setting_values)
