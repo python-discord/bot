@@ -599,7 +599,7 @@ class Filtering(Cog):
         self, ctx: Context, no_user: bool | None, message: Message | None, *, string: str | None
     ) -> None:
         """
-        Post any responses from the filter lists for the given message or string.
+        List the filters triggered for the given message or string.
 
         If there's a `message`, the `string` will be ignored. Note that if a `message` is provided, it will go through
         all validations appropriate to where it was sent and who sent it. To check for matches regardless of the author
