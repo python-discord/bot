@@ -1,5 +1,6 @@
 import asyncio
 import typing
+from collections import Counter
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -158,9 +159,12 @@ class DeletionContext:
 
         ctx, *other_contexts = self.contexts
         new_ctx = FilterContext(ctx.event, ctx.author, ctx.channel, ctx.content, ctx.message)
-        new_ctx.action_descriptions = reduce(
+        all_descriptions_counts = Counter(reduce(
             add, (other_ctx.action_descriptions for other_ctx in other_contexts), ctx.action_descriptions
-        )
+        ))
+        new_ctx.action_descriptions = [
+            f"{action} X {count}" if count > 1 else action for action, count in all_descriptions_counts.items()
+        ]
         # It shouldn't ever come to this, but just in case.
         if (descriptions_num := len(new_ctx.action_descriptions)) > 20:
             new_ctx.action_descriptions = new_ctx.action_descriptions[:20]
