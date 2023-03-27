@@ -162,7 +162,7 @@ class DeletionContext:
             add, (other_ctx.action_descriptions for other_ctx in other_contexts), ctx.action_descriptions
         )
         # It shouldn't ever come to this, but just in case.
-        if descriptions_num := len(new_ctx.action_descriptions) > 20:
+        if (descriptions_num := len(new_ctx.action_descriptions)) > 20:
             new_ctx.action_descriptions = new_ctx.action_descriptions[:20]
             new_ctx.action_descriptions[-1] += f" (+{descriptions_num - 20} other actions)"
         new_ctx.related_messages = reduce(
