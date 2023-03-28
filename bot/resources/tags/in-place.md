@@ -3,7 +3,7 @@ embed:
     title: "Out of place and in place"
 ---
 
-In programming, there are two types of operations: "out of place" operations create a new object, leaving the original object unchanged. "in place" operations modify the original object, without creating a new one. These operations return None explicitly.
+In programming, there are two types of operations: "out of place" operations create a new object, leaving the original object unchanged. "in place" operations modify the original object without creating a new one, and return `None` explicitly.
 
 A common example of these different concepts is seen in the use of the methods `list.sort()` and `sorted(...)`. Using `list.sort()` and attempting to access an element of the list will result in an error. 
 
