@@ -1,5 +1,7 @@
-`if __name__ == '__main__'`
-
+---
+embed:
+    title: "`if __name__ == '__main__'`"
+---
 This is a statement that is only true if the module (your source code) it appears in is being run directly, as opposed to being imported into another module.  When you run your module, the `__name__` special variable is automatically set to the string `'__main__'`. Conversely, when you import that same module into a different one, and run that, `__name__` is instead set to the filename of your module minus the `.py` extension.
 
 **Example**

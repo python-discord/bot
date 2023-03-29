@@ -58,7 +58,7 @@ def reaction_check(
 
 
 async def wait_for_deletion(
-    message: discord.Message,
+    message: discord.Message | discord.InteractionMessage,
     user_ids: Sequence[int],
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,

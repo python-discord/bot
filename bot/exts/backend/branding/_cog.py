@@ -325,7 +325,7 @@ class Branding(commands.Cog):
 
         # Notify guild of new event ~ this reads the information that we cached above.
         if event_changed and not event.meta.is_fallback:
-            await self.send_info_embed(Channels.change_log, is_notification=True)
+            await self.send_info_embed(Channels.changelog, is_notification=True)
         else:
             log.trace("Omitting #changelog notification. Event has not changed, or new event is fallback.")
 

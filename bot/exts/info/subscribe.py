@@ -49,6 +49,7 @@ class AssignableRole:
 ASSIGNABLE_ROLES = (
     AssignableRole(constants.Roles.announcements, None),
     AssignableRole(constants.Roles.pyweek_announcements, None),
+    AssignableRole(constants.Roles.legacy_help_channels_access, None),
     AssignableRole(constants.Roles.lovefest, (1, 2)),
     AssignableRole(constants.Roles.advent_of_code, (11, 12)),
     AssignableRole(constants.Roles.revival_of_code, (7, 8, 9, 10)),
@@ -99,7 +100,6 @@ class SingleRoleButton(discord.ui.Button):
     REMOVE_STYLE = discord.ButtonStyle.red
     UNAVAILABLE_STYLE = discord.ButtonStyle.secondary
     LABEL_FORMAT = "{action} role {role_name}"
-    CUSTOM_ID_FORMAT = "subscribe-{role_id}"
 
     def __init__(self, role: AssignableRole, assigned: bool, row: int):
         if role.is_currently_available():
@@ -112,7 +112,6 @@ class SingleRoleButton(discord.ui.Button):
         super().__init__(
             style=style,
             label=label,
-            custom_id=self.CUSTOM_ID_FORMAT.format(role_id=role.role_id),
             row=row,
         )
         self.role = role

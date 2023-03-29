@@ -8,7 +8,7 @@ from operator import attrgetter, itemgetter
 from typing import Dict, Iterable, List, Set
 
 import arrow
-from discord import Colour, Member, Message, MessageType, NotFound, Object, TextChannel
+from discord import Colour, Member, Message, MessageType, NotFound, TextChannel
 from discord.ext.commands import Cog
 from pydis_core.utils import scheduling
 
@@ -40,6 +40,8 @@ RULE_FUNCTION_MAPPING = {
     'newlines': rules.apply_newlines,
     'role_mentions': rules.apply_role_mentions,
 }
+
+ANTI_SPAM_RULES = AntiSpamConfig.rules.dict()
 
 
 @dataclass
@@ -121,15 +123,13 @@ class AntiSpam(Cog):
     def __init__(self, bot: Bot, validation_errors: Dict[str, str]) -> None:
         self.bot = bot
         self.validation_errors = validation_errors
-        role_id = AntiSpamConfig.punishment['role_id']
-        self.muted_role = Object(role_id)
         self.expiration_date_converter = Duration()
 
         self.message_deletion_queue = dict()
 
         # Fetch the rule configuration with the highest rule interval.
         max_interval_config = max(
-            AntiSpamConfig.rules.values(),
+            ANTI_SPAM_RULES.values(),
             key=itemgetter('interval')
         )
         self.max_interval = max_interval_config['interval']
@@ -178,8 +178,7 @@ class AntiSpam(Cog):
         earliest_relevant_at = arrow.utcnow() - timedelta(seconds=self.max_interval)
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, self.cache))
 
-        for rule_name in AntiSpamConfig.rules:
-            rule_config = AntiSpamConfig.rules[rule_name]
+        for rule_name, rule_config in ANTI_SPAM_RULES.items():
             rule_function = RULE_FUNCTION_MAPPING[rule_name]
 
             # Create a list of messages that were sent in the interval that the rule cares about.
@@ -228,17 +227,19 @@ class AntiSpam(Cog):
     @lock.lock_arg("antispam.punish", "member", attrgetter("id"))
     async def punish(self, msg: Message, member: Member, reason: str) -> None:
         """Punishes the given member for triggering an antispam rule."""
-        if not any(role.id == self.muted_role.id for role in member.roles):
-            remove_role_after = AntiSpamConfig.punishment['remove_after']
+        if not member.is_timed_out():
+            remove_timeout_after = AntiSpamConfig.remove_timeout_after
 
             # Get context and make sure the bot becomes the actor of infraction by patching the `author` attributes
             context = await self.bot.get_context(msg)
-            context.author = self.bot.user
+            command = self.bot.get_command("timeout")
+            context.author = context.guild.get_member(self.bot.user.id)
+            context.command = command
 
-            # Since we're going to invoke the tempmute command directly, we need to manually call the converter.
-            dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_role_after}S")
+            # Since we're going to invoke the timeout command directly, we need to manually call the converter.
+            dt_remove_role_after = await self.expiration_date_converter.convert(context, f"{remove_timeout_after}S")
             await context.invoke(
-                self.bot.get_command('tempmute'),
+                command,
                 member,
                 dt_remove_role_after,
                 reason=reason
@@ -297,10 +298,11 @@ class AntiSpam(Cog):
         self.cache.update(after)
 
 
-def validate_config(rules_: Mapping = AntiSpamConfig.rules) -> Dict[str, str]:
+def validate_config(rules_: Mapping = ANTI_SPAM_RULES) -> Dict[str, str]:
     """Validates the antispam configs."""
     validation_errors = {}
     for name, config in rules_.items():
+        config = config
         if name not in RULE_FUNCTION_MAPPING:
             log.error(
                 f"Unrecognized antispam rule `{name}`. "
