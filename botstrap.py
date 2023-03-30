@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -37,6 +38,23 @@ if not GUILD_ID:
     )
     log.warning(message)
     raise ValueError(message)
+
+
+class SilencedDict(dict):
+    """A dictionary that silences KeyError exceptions upon subscription to non existent items."""
+
+    def __init__(self, name: str):
+        self.name = name
+        super().__init__()
+
+    def __getitem__(self, item: str):
+        try:
+            super().__getitem__(item)
+        except KeyError:
+            log.warning(f"Couldn't find key: {item} in dict: {self.name} ")
+            log.warning("Please make sure to use our template: https://discord.new/zmHtscpYN9E3"
+                        "to make your own copy of the server to guarantee a successful run of botstrap ")
+            sys.exit(-1)
 
 
 class DiscordClient(Client):
@@ -92,13 +110,13 @@ class DiscordClient(Client):
         return response.json()["type"] == GUILD_FORUM_TYPE
 
     def delete_channel(self, channel_id_: id) -> None:
-        """Upgrades a channel to a channel of type GUILD FORUM."""
+        """Delete a channel."""
         log.info(f"Channel python-help: {channel_id_} is not a forum channel and will be replaced with one.")
         self.delete(f"/channels/{channel_id_}")
 
     def get_all_roles(self) -> dict:
         """Fetches all the roles in a guild."""
-        result = {}
+        result = SilencedDict(name="Roles dictionary")
 
         response = self.get(f"guilds/{self.guild_id}/roles")
         roles = response.json()
@@ -113,8 +131,8 @@ class DiscordClient(Client):
         """Fetches all the text channels & categories in a guild."""
         off_topic_channel_name_regex = r"ot\d{1}(_.*)+"
         off_topic_count = 0
-        channels = {}  # could be text channels only as well
-        categories = {}
+        channels = SilencedDict(name="Channels dictionary")
+        categories = SilencedDict(name="Categories dictionary")
 
         response = self.get(f"guilds/{self.guild_id}/channels")
         server_channels = response.json()
@@ -175,12 +193,11 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
 
     create_help_channel = True
 
-    if PYTHON_HELP_CHANNEL_NAME in all_channels:
-        python_help_channel_id = all_channels[PYTHON_HELP_CHANNEL_NAME]
-        if not discord_client.is_forum_channel(python_help_channel_id):
-            discord_client.delete_channel(python_help_channel_id)
-        else:
-            create_help_channel = False
+    python_help_channel_id = all_channels[PYTHON_HELP_CHANNEL_NAME]
+    if not discord_client.is_forum_channel(python_help_channel_id):
+        discord_client.delete_channel(python_help_channel_id)
+    else:
+        create_help_channel = False
 
     if create_help_channel:
         python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace('_', '-')
