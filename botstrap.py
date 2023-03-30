@@ -42,7 +42,7 @@ if not GUILD_ID:
 class DiscordClient(Client):
     """An HTTP client to communicate with Discord's APIs."""
 
-    def __init__(self, guild_id):
+    def __init__(self, guild_id: int | str):
         super().__init__(
             base_url="https://discord.com/api/v10",
             headers={"Authorization": f"Bot {BOT_TOKEN}"},
