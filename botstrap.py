@@ -55,10 +55,11 @@ class DiscordClient(Client):
 
 
 def upgrade_server_to_community_if_necessary(
-        guild_id: int | str,
-        rules_channel_id_: int | str,
-        announcements_channel_id_: int | str,
-        client: DiscordClient) -> None:
+    guild_id: int | str,
+    rules_channel_id_: int | str,
+    announcements_channel_id_: int | str,
+    client: DiscordClient
+) -> None:
     """Fetches server info & upgrades to COMMUNITY if necessary."""
     response = client.get(f"/guilds/{guild_id}")
     payload = response.json()
@@ -73,10 +74,10 @@ def upgrade_server_to_community_if_necessary(
 
 
 def create_forum_channel(
-        channel_name_: str,
-        guild_id: str,
-        client: DiscordClient,
-        category_id_: int | None = None
+    channel_name_: str,
+    guild_id: str,
+    client: DiscordClient,
+    category_id_: int | None = None
 ) -> int:
     """Creates a new forum channel."""
     payload = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
