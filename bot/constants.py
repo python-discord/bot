@@ -145,7 +145,6 @@ class _Roles(EnvConfig):
 
     contributors = 295488872404484098
     help_cooldown = 699189276025421825
-    muted = 277914926603829249
     partners = 323426753857191936
     python_community = 458226413825294336
     voice_verified = 764802720779337729
@@ -336,11 +335,6 @@ class _Free(EnvConfig):
 Free = _Free()
 
 
-class Punishment(BaseModel):
-    remove_after = 600
-    role_id: int = Roles.muted
-
-
 class Rule(BaseModel):
     interval: int
     max: int
@@ -371,7 +365,7 @@ class _AntiSpam(EnvConfig):
     clean_offending = True
     ping_everyone = True
 
-    punishment = Punishment()
+    remove_timeout_after = 600
     rules = Rules()
 
 
@@ -406,7 +400,7 @@ class _DuckPond(EnvConfig):
 
     threshold = 7
 
-    channel_blacklist: list[str] = [
+    channel_blacklist: list[int] = [
         Channels.announcements,
         Channels.python_news,
         Channels.python_events,
@@ -655,9 +649,9 @@ class _Icons(EnvConfig):
     token_removed = "https://cdn.discordapp.com/emojis/470326273298792469.png"
 
     user_ban = "https://cdn.discordapp.com/emojis/469952898026045441.png"
-    user_mute = "https://cdn.discordapp.com/emojis/472472640100106250.png"
+    user_timeout = "https://cdn.discordapp.com/emojis/472472640100106250.png"
     user_unban = "https://cdn.discordapp.com/emojis/469952898692808704.png"
-    user_unmute = "https://cdn.discordapp.com/emojis/472472639206719508.png"
+    user_untimeout = "https://cdn.discordapp.com/emojis/472472639206719508.png"
     user_update = "https://cdn.discordapp.com/emojis/469952898684551168.png"
     user_verified = "https://cdn.discordapp.com/emojis/470326274519334936.png"
     user_warn = "https://cdn.discordapp.com/emojis/470326274238447633.png"
