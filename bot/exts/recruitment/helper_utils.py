@@ -1,5 +1,6 @@
 import datetime as dt
 import random
+import re
 
 from async_rediscache import RedisCache
 from discord import Message
@@ -13,6 +14,8 @@ OT_CHANNEL_IDS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic
 NEW_HELPER_ROLE_ID = Roles.new_helpers
 
 log = get_logger(__name__)
+
+URL_RE = re.compile(r"(https?://[^\s]+)", flags=re.IGNORECASE)
 
 
 class NewHelperUtils(Cog):
@@ -36,19 +39,7 @@ class NewHelperUtils(Cog):
     @staticmethod
     def _is_question(message: str) -> bool:
         """Return True if `message` appears to be a question, else False!"""
-        return (
-            ('?' in message)
-            and any(map(
-                message.lower().startswith,
-                (
-                    'is', 'are', 'am',
-                    'was', 'were',
-                    'will',
-                    'can', 'does', 'do', 'did'
-                    'who', 'what', 'when', 'where', 'why'
-                )
-            ))
-        )
+        return '?' in URL_RE.sub('', message)
 
     @Cog.listener()
     async def on_message(self, message: Message) -> None:
