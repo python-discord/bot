@@ -141,7 +141,7 @@ class SnoozeButtonView(discord.ui.View):
         reminder_id = self.reminder_dct["id"]
 
         reminder = await self.reminders_instance.bot.api_client.get(f"bot/reminders/{reminder_id}")
-        if reminder['expiration'] > datetime.now().isoformat():
+        if reminder['expiration'] != self.reminder_dct["expiration"]:
             # Reminder was snoozed, so don't delete it
             return
 
