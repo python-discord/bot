@@ -189,6 +189,7 @@ class _Categories(EnvConfig):
 
     # 2021 Summer Code Jam
     summer_code_jam = 861692638540857384
+    python_help_system = 691405807388196926
 
 
 Categories = _Categories()

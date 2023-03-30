@@ -17,6 +17,7 @@ GUILD_ID = os.getenv("GUILD_ID", None)
 
 COMMUNITY_FEATURE = "COMMUNITY"
 PYTHON_HELP_CHANNEL_NAME = "python_help"
+PYTHON_HELP_CATEGORY_NAME = "python_help_system"
 ANNOUNCEMENTS_CHANNEL_NAME = "announcements"
 RULES_CHANNEL_NAME = "rules"
 GUILD_FORUM_TYPE = 15
@@ -196,7 +197,8 @@ with DiscordClient() as discord_client:
 
     if create_help_channel:
         python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace('_', '-')
-        python_help_channel_id = create_forum_channel(python_help_channel_name, GUILD_ID, discord_client)
+        python_help_category_id = all_categories[PYTHON_HELP_CATEGORY_NAME]
+        python_help_channel_id = create_forum_channel(python_help_channel_name, GUILD_ID, discord_client, python_help_category_id)
         all_channels[PYTHON_HELP_CHANNEL_NAME] = python_help_channel_id
 
     for channel_name in _Channels.__fields__:
