@@ -233,6 +233,40 @@ class Snekbox(Cog):
         args.extend(["-s", TIMEIT_SETUP_WRAPPER.format(setup=setup_code), code])
         return args
 
+    @staticmethod
+    def shorten_to_max_length(lines: list[str], max_length: int):
+        """Gradually removes lines from the end of `lines` until `"\\n".join(lines)` is not more than `max_length`."""
+        output = "\n".join(lines)
+
+        too_long_by = len(output) - max_length
+        if too_long_by > 0:
+            # Output is too long, so start removing lines
+            lines_to_remove = 1
+            total_offset = 0
+            while True:
+                line = lines[-lines_to_remove]
+                line_length = len(line)
+
+                total_offset += line_length
+
+                if total_offset >= too_long_by:
+                    # After removing this line output will be short enough
+                    break
+                
+                if lines_to_remove == len(lines):
+                    # Reached first item in list and still too long
+                    # (i.e. first item alone is too long)
+                    break
+
+                total_offset += 1  # +1 for the newline since this there's gonna be another line
+
+                # See what the length would be after removing the previous line
+                lines_to_remove += 1
+
+            lines = lines[:-lines_to_remove] + [lines[-lines_to_remove][:total_offset - too_long_by - 3] + "..."]
+            output = "\n".join(lines)
+        return lines, output
+
     async def format_output(
         self,
         output: str,
@@ -261,26 +295,40 @@ class Snekbox(Cog):
             paste_link = await self.upload_output(original_output)
             return "Code block escape attempt detected; will not output result", paste_link
 
-        truncated = False
+        truncation_reason = None
         lines = output.splitlines()
-
-        if len(lines) > 1:
-            if line_nums:
-                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
-            lines = lines[:max_lines+1]  # Limiting to max+1 lines
-            output = "\n".join(lines)
+        original_line_length = len(lines)
 
         if len(lines) > max_lines:
-            truncated = True
-            if len(output) >= max_chars:
-                output = f"{output[:max_chars]}\n... (truncated - too long, too many lines)"
+            if len(output) > max_chars:
+                truncation_reason = "too long, too many lines"
             else:
-                output = f"{output}\n... (truncated - too many lines)"
-        elif len(output) >= max_chars:
-            truncated = True
-            output = f"{output[:max_chars]}\n... (truncated - too long)"
+                truncation_reason = "too many lines"
 
-        if truncated:
+            if line_nums:
+                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines[:max_lines], 1)]
+            else:
+                lines = lines[:max_lines]
+
+            lines, output = self.shorten_to_max_length(lines, max_chars)
+
+        elif len(output) > max_chars:
+            truncation_reason = "too long"
+            if line_nums:
+                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
+            lines, output = self.shorten_to_max_length(lines, max_chars)
+
+        elif len(lines) > 1:
+            if line_nums:
+                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
+            output = f"\n".join(lines)[:max_chars]
+
+        if truncation_reason:
+            if truncation_reason == "too long" and len(lines) == original_line_length:
+                # When too long, and didn't have to shorten lines, show truncation reason inline
+                output += f" (truncated - {truncation_reason})"
+            else:
+                output += f"\n... (truncated - {truncation_reason})"
             paste_link = await self.upload_output(original_output)
 
         if output_default and not output:

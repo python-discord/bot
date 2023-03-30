@@ -67,7 +67,7 @@ services:
   snekbox-311:
     << : *logging
     << : *restart_policy
-    image: ghcr.io/python-discord/snekbox:3.11-dev
+    image: ghcr.io/python-discord/snekbox:latest
     init: true
     ipc: none
     ports:
@@ -114,7 +114,7 @@ services:
     environment:
       API_KEYS_SITE_API: "badbot13m0n8f570f942013fc818f234916ca531"
       URLS_SITE_API: "web:8000/api"
-      URLS_SNEKBOX_EVAL_API: "http://snekbox/eval"
-      URLS_SNEKBOX_311_EVAL_API: "http://snekbox-311/eval"
+      URLS_SNEKBOX_EVAL_API: https://snekbox.pythondiscord.com//eval"
+      URLS_SNEKBOX_311_EVAL_API: "https://snekbox.pythondiscord.com/eval"
       REDIS_HOST: "redis"
       STATS_STATSD_HOST: "http://localhost"
