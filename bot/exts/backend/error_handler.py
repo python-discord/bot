@@ -37,7 +37,9 @@ class CheckedDeleteMessageButton(DeleteMessageButton):
         ):
             await super().callback(interaction)
         else:
-            await interaction.response.send_message("You can only delete your own command responses!", ephemeral=True)
+            await interaction.response.send_message(
+                "You can only delete responses to your own command invocations!", ephemeral=True
+            )
 
 
 class HelpEmbedView(discord.ui.View):
