@@ -1,5 +1,7 @@
-**Dunder methods**
-
+---
+embed:
+    title: "Dunder methods"
+---
 Double-underscore methods, or "dunder" methods, are special methods defined in a class that are invoked implicitly. Like the name suggests, they are prefixed and suffixed with dunders. You've probably already seen some, such as the `__init__` dunder method, also known as the "constructor" of a class, which is implicitly invoked when you instantiate an instance of a class.
 
 When you create a new class, there will be default dunder methods inherited from the `object` class. However, we can override them by redefining these methods within the new class. For example, the default `__init__` method from `object` doesn't take any arguments, so we almost always override that to fit our needs.

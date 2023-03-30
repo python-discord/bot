@@ -8,8 +8,8 @@ from operator import attrgetter
 from typing import Deque, Dict, List, NamedTuple, Optional, Union
 
 import discord
-from botcore.utils import scheduling
 from bs4 import BeautifulSoup
+from pydis_core.utils import scheduling
 
 import bot
 from bot.constants import Channels

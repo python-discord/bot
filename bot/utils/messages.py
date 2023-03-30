@@ -6,8 +6,8 @@ from io import BytesIO
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
-from botcore.utils import scheduling
 from discord.ext.commands import Context
+from pydis_core.utils import scheduling
 
 import bot
 from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
@@ -58,7 +58,7 @@ def reaction_check(
 
 
 async def wait_for_deletion(
-    message: discord.Message,
+    message: discord.Message | discord.InteractionMessage,
     user_ids: Sequence[int],
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
@@ -101,8 +101,14 @@ async def wait_for_deletion(
             await message.clear_reactions()
         else:
             await message.delete()
+
     except discord.NotFound:
         log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
+
+    except discord.HTTPException:
+        if not isinstance(message.channel, discord.Thread):
+            # Threads might not be accessible by the time the timeout expires
+            raise
 
 
 async def send_attachments(

@@ -244,15 +244,20 @@ class CustomHelpCommand(HelpCommand):
         choices.update(cog.category for cog in self.context.bot.cogs.values() if hasattr(cog, "category"))
         return choices
 
-    async def command_not_found(self, string: str) -> "HelpQueryNotFound":
+    async def command_not_found(self, query: str) -> "HelpQueryNotFound":
         """
         Handles when a query does not match a valid command, group, cog or category.
 
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
         choices = list(await self.get_all_help_choices())
-        result = process.extract(default_process(string), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
-        return HelpQueryNotFound(f'Query "{string}" not found.', {choice[0]: choice[1] for choice in result})
+        result = process.extract(default_process(query), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
+
+        # Trim query to avoid embed limits when sending the error.
+        if len(query) >= 100:
+            query = query[:100] + "..."
+
+        return HelpQueryNotFound(f'Query "{query}" not found.', {choice[0]: choice[1] for choice in result})
 
     async def subcommand_not_found(self, command: Command, string: str) -> "HelpQueryNotFound":
         """
@@ -307,7 +312,7 @@ class CustomHelpCommand(HelpCommand):
         # Remove line breaks from docstrings, if not used to separate paragraphs.
         # Allow overriding this behaviour via putting \u2003 at the start of a line.
         formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help)
-        command_details += f"*{formatted_doc or 'No details provided.'}*\n"
+        command_details += f"{formatted_doc or 'No details provided.'}\n"
         embed.description = command_details
 
         # If the help is invoked in the context of an error, don't show subcommand navigation.
@@ -331,7 +336,7 @@ class CustomHelpCommand(HelpCommand):
         for command in commands_:
             signature = f" {command.signature}" if command.signature else ""
             details.append(
-                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n*{command.short_doc or 'No details provided'}*"
+                f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n{command.short_doc or 'No details provided'}"
             )
         if return_as_list:
             return details
@@ -372,7 +377,7 @@ class CustomHelpCommand(HelpCommand):
 
         embed = Embed()
         embed.set_author(name="Command Help", icon_url=constants.Icons.questionmark)
-        embed.description = f"**{cog.qualified_name}**\n*{cog.description}*"
+        embed.description = f"**{cog.qualified_name}**\n{cog.description}"
 
         command_details = self.get_commands_brief_details(commands_)
         if command_details:
@@ -412,7 +417,7 @@ class CustomHelpCommand(HelpCommand):
         filtered_commands = await self.filter_commands(all_commands, sort=True)
 
         command_detail_lines = self.get_commands_brief_details(filtered_commands, return_as_list=True)
-        description = f"**{category.name}**\n*{category.description}*"
+        description = f"**{category.name}**\n{category.description}"
 
         if command_detail_lines:
             description += "\n\n**Commands:**"

@@ -1,4 +1,8 @@
-**Virtual Environments**
+---
+aliases: ["virtualenv"]
+embed:
+    title: "Virtual environments"
+---
 
 Virtual environments are isolated Python environments, which make it easier to keep your system clean and manage dependencies. By default, when activated, only libraries and scripts installed in the virtual environment are accessible, preventing cross-project dependency conflicts, and allowing easy isolation of requirements.
 
@@ -16,5 +20,7 @@ For more information, take a read of the [documentation](https://docs.python.org
 
 Tools such as [poetry](https://python-poetry.org/docs/basic-usage/) and [pipenv](https://pipenv.pypa.io/en/latest/) can manage the creation of virtual environments as well as project dependencies, making packaging and installing your project easier.
 
-**Note:** When using Windows PowerShell, you may need to change the [execution policy](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies) first. This is only required once:
-`Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+**Note:** When using PowerShell in Windows, you may need to change the [execution policy](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies) first. This is only required once per user:
+```ps1
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```

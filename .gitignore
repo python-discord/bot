@@ -114,7 +114,7 @@ log.*
 !log.py
 
 # Custom user configuration
-config.yml
+*config.yml
 docker-compose.override.yml
 metricity-config.toml
 
@@ -123,3 +123,4 @@ TEST-**.xml
 
 # Mac OS .DS_Store, which is a file that stores custom attributes of its containing folder
 .DS_Store
+*.env*

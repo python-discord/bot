@@ -1,10 +1,10 @@
 import unittest
 from collections import namedtuple
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from botcore.site_api import ResponseCodeError
 from discord import Embed, Forbidden, HTTPException, NotFound
+from pydis_core.site_api import ResponseCodeError
 
 from bot.constants import Colours, Icons
 from bot.exts.moderation.infraction import _utils as utils
@@ -309,8 +309,8 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
     async def test_normal_post_infraction(self):
         """Should return response from POST request if there are no errors."""
-        now = datetime.now()
-        payload = {
+        now = datetime.utcnow()
+        expected = {
             "actor": self.ctx.author.id,
             "hidden": True,
             "reason": "Test reason",
@@ -318,14 +318,17 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
             "user": self.member.id,
             "active": False,
             "expires_at": now.isoformat(),
-            "dm_sent": False
+            "dm_sent": False,
         }
 
         self.ctx.bot.api_client.post.return_value = "foo"
         actual = await utils.post_infraction(self.ctx, self.member, "ban", "Test reason", now, True, False)
-
         self.assertEqual(actual, "foo")
-        self.ctx.bot.api_client.post.assert_awaited_once_with("bot/infractions", json=payload)
+        self.ctx.bot.api_client.post.assert_awaited_once()
+
+        # Since `last_applied` is based on current time, just check if expected is a subset of payload
+        payload: dict = self.ctx.bot.api_client.post.await_args_list[0].kwargs["json"]
+        self.assertEqual(payload, payload | expected)
 
     async def test_unknown_error_post_infraction(self):
         """Should send an error message to chat when a non-400 error occurs."""
@@ -349,19 +352,25 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.moderation.infraction._utils.post_user", return_value="bar")
     async def test_first_fail_second_success_user_post_infraction(self, post_user_mock):
         """Should post the user if they don't exist, POST infraction again, and return the response if successful."""
-        payload = {
+        expected = {
             "actor": self.ctx.author.id,
             "hidden": False,
             "reason": "Test reason",
             "type": "mute",
             "user": self.user.id,
             "active": True,
-            "dm_sent": False
+            "dm_sent": False,
         }
 
         self.bot.api_client.post.side_effect = [ResponseCodeError(MagicMock(status=400), {"user": "foo"}), "foo"]
-
         actual = await utils.post_infraction(self.ctx, self.user, "mute", "Test reason")
         self.assertEqual(actual, "foo")
-        self.bot.api_client.post.assert_has_awaits([call("bot/infractions", json=payload)] * 2)
+        await_args = self.bot.api_client.post.await_args_list
+        self.assertEqual(len(await_args), 2, "Expected 2 awaits")
+
+        # Since `last_applied` is based on current time, just check if expected is a subset of payload
+        for args in await_args:
+            payload: dict = args.kwargs["json"]
+            self.assertEqual(payload, payload | expected)
+
         post_user_mock.assert_awaited_once_with(self.ctx, self.user)

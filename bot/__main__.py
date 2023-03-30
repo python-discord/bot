@@ -3,9 +3,9 @@ import asyncio
 import aiohttp
 import discord
 from async_rediscache import RedisSession
-from botcore import StartupError
-from botcore.site_api import APIClient
 from discord.ext import commands
+from pydis_core import StartupError
+from pydis_core.site_api import APIClient
 from redis import RedisError
 
 import bot
@@ -26,6 +26,7 @@ async def _create_redis_session() -> RedisSession:
         max_connections=20,
         use_fakeredis=constants.Redis.use_fakeredis,
         global_namespace="bot",
+        decode_responses=True,
     )
     try:
         return await redis_session.connect()

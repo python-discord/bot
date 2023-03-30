@@ -1,14 +1,7 @@
 name: Lint & Test
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call
 
 jobs:
   lint-test:
@@ -23,7 +16,8 @@ jobs:
         MIT License;
         Mozilla Public License 2.0 (MPL 2.0);
         Public Domain;
-        Python Software Foundation License
+        Python Software Foundation License;
+        The Unlicense (Unlicense)
 
       # Dummy values for required bot environment variables
       BOT_API_KEY: foo
@@ -33,57 +27,14 @@ jobs:
       REDDIT_SECRET: ham
       REDIS_PASSWORD: ''
 
-      # Configure pip to cache dependencies and do a user install
-      PIP_NO_CACHE_DIR: false
-      PIP_USER: 1
-
-      # Make sure package manager does not use virtualenv
-      POETRY_VIRTUALENVS_CREATE: false
-
-      # Specify explicit paths for python dependencies and the pre-commit
-      # environment so we know which directories to cache
-      POETRY_CACHE_DIR: ${{ github.workspace }}/.cache/py-user-base
-      PYTHONUSERBASE: ${{ github.workspace }}/.cache/py-user-base
-      PRE_COMMIT_HOME: ${{ github.workspace }}/.cache/pre-commit-cache
-
-      # See https://github.com/pre-commit/pre-commit/issues/2178#issuecomment-1002163763
-      # for why we set this.
-      SETUPTOOLS_USE_DISTUTILS: stdlib
-
     steps:
-      - name: Add custom PYTHONUSERBASE to PATH
-        run: echo '${{ env.PYTHONUSERBASE }}/bin/' >> $GITHUB_PATH
-
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Setup python
-        id: python
-        uses: actions/setup-python@v2
+      - name: Install Python Dependencies
+        uses: HassanAbouelela/actions/setup-python@setup-python_v1.4.0
         with:
-          python-version: '3.10'
-
-      # This step caches our Python dependencies. To make sure we
-      # only restore a cache when the dependencies, the python version,
-      # the runner operating system, and the dependency location haven't
-      # changed, we create a cache key that is a composite of those states.
-      #
-      # Only when the context is exactly the same, we will restore the cache.
-      - name: Python Dependency Caching
-        uses: actions/cache@v2
-        id: python_cache
-        with:
-          path: ${{ env.PYTHONUSERBASE }}
-          key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
-          ${{ steps.python.outputs.python-version }}-\
-          ${{ hashFiles('./pyproject.toml', './poetry.lock') }}"
-
-      # Install our dependencies if we did not restore a dependency cache
-      - name: Install dependencies using poetry
-        if: steps.python_cache.outputs.cache-hit != 'true'
-        run: |
-          pip install poetry
-          poetry install
+          python_version: '3.11'
 
       # Check all of our non-dev dependencies are compatible with the MIT license.
       # If you added a new dependencies that is being rejected,
@@ -93,17 +44,6 @@ jobs:
         run: |
           pip-licenses --allow-only="$ALLOWED_LICENSE" \
             --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
-
-      # This step caches our pre-commit environment. To make sure we
-      # do create a new environment when our pre-commit setup changes,
-      # we create a cache key based on relevant factors.
-      - name: Pre-commit Environment Caching
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.PRE_COMMIT_HOME }}
-          key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
-          ${{ steps.python.outputs.python-version }}-\
-          ${{ hashFiles('./.pre-commit-config.yaml') }}"
 
       # We will not run `flake8` here, as we will use a separate flake8
       # action. As pre-commit does not support user installs, we set
@@ -144,7 +84,7 @@ jobs:
       - name: Upload a Build Artifact
         if: always() && steps.prepare-artifact.outcome == 'success'
         continue-on-error: true
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: pull-request-payload
           path: pull_request_payload.json

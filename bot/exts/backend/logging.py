@@ -1,6 +1,6 @@
-from botcore.utils import scheduling
 from discord import Embed
 from discord.ext.commands import Cog
+from pydis_core.utils import scheduling
 
 from bot.bot import Bot
 from bot.constants import Channels, DEBUG_MODE

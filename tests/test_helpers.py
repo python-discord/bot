@@ -14,7 +14,7 @@ class DiscordMocksTests(unittest.TestCase):
         """Test if the default initialization of MockRole results in the correct object."""
         role = helpers.MockRole()
 
-        # The `spec` argument makes sure `isistance` checks with `discord.Role` pass
+        # The `spec` argument makes sure `isinstance` checks with `discord.Role` pass
         self.assertIsInstance(role, discord.Role)
 
         self.assertEqual(role.name, "role")

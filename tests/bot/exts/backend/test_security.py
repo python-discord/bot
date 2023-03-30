@@ -2,7 +2,7 @@ import unittest
 
 from discord.ext.commands import NoPrivateMessage
 
-from bot.exts.filters import security
+from bot.exts.backend import security
 from tests.helpers import MockBot, MockContext
 
 

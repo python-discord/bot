@@ -8,12 +8,12 @@ from ssl import CertificateError
 import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
-from botcore.site_api import ResponseCodeError
-from botcore.utils import unqualify
-from botcore.utils.regex import DISCORD_INVITE
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import unqualify
+from pydis_core.utils.regex import DISCORD_INVITE
 
 from bot import exts, instance as bot_instance
 from bot.constants import URLs
@@ -574,5 +574,6 @@ if t.TYPE_CHECKING:
     Infraction = t.Optional[dict]  # noqa: F811
 
 Expiry = t.Union[Duration, ISODateTime]
+DurationOrExpiry = t.Union[DurationDelta, ISODateTime]
 MemberOrUser = t.Union[discord.Member, discord.User]
 UnambiguousMemberOrUser = t.Union[UnambiguousMember, UnambiguousUser]

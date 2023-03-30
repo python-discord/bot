@@ -2,18 +2,18 @@ import time
 from typing import Optional
 
 import discord
-from botcore.utils import scheduling
 from discord import Message, RawMessageUpdateEvent
 from discord.ext.commands import Cog
+from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot
 from bot.exts.filters.token_remover import TokenRemover
 from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
+from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.info.codeblock._instructions import get_instructions
 from bot.log import get_logger
 from bot.utils import has_lines
-from bot.utils.channel import is_help_channel
 from bot.utils.messages import wait_for_deletion
 
 log = get_logger(__name__)
@@ -50,7 +50,7 @@ class CodeBlockCog(Cog, name="Code Block"):
     The cog only detects messages in whitelisted channels. Channels may also have a cooldown on the
     instructions being sent. Note all help channels are also whitelisted with cooldowns enabled.
 
-    For configurable parameters, see the `code_block` section in config-default.py.
+    For configurable parameters, see the `_CodeBlock` class in constants.py.
     """
 
     def __init__(self, bot: Bot):
@@ -98,7 +98,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
         return (
-            is_help_channel(channel)
+            is_help_forum_post(channel)
             or channel.id in self.channel_cooldowns
             or channel.id in constants.CodeBlock.channel_whitelist
         )

@@ -5,36 +5,43 @@ import re
 import textwrap
 import typing
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Union
 
-import arrow
-from botcore.site_api import ResponseCodeError
-from botcore.utils.scheduling import Scheduler
-from dateutil.parser import isoparse
+import discord
+from async_rediscache import RedisCache
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
-from discord.ext.commands import Context
+from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
+from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.log import get_logger
 from bot.utils import time
+from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
 
 if typing.TYPE_CHECKING:
-    from bot.exts.recruitment.talentpool._cog import TalentPool
     from bot.exts.utils.thread_bumper import ThreadBumper
 
 log = get_logger(__name__)
-
-# Maximum amount of days before an automatic review is posted.
-MAX_DAYS_IN_POOL = 30
 
 # Maximum amount of characters allowed in a message
 MAX_MESSAGE_SIZE = 2000
 # Maximum amount of characters allowed in an embed
 MAX_EMBED_SIZE = 4000
+
+# Maximum number of active reviews
+MAX_ONGOING_REVIEWS = 3
+# Minimum time between reviews
+MIN_REVIEW_INTERVAL = timedelta(days=1)
+# Minimum time between nomination and sending a review
+MIN_NOMINATION_TIME = timedelta(days=7)
+
+# A constant for weighting number of nomination entries against nomination age when selecting a user to review.
+# The higher this is, the lower the effect of review age. At 1, age and number of entries are weighted equally.
+REVIEW_SCORE_WEIGHT = 1.5
 
 # Regex for finding the first message of a nomination, and extracting the nominee.
 NOMINATION_MESSAGE_REGEX = re.compile(
@@ -44,48 +51,131 @@ NOMINATION_MESSAGE_REGEX = re.compile(
 
 
 class Reviewer:
-    """Schedules, formats, and publishes reviews of helper nominees."""
+    """Manages, formats, and publishes reviews of helper nominees."""
 
-    def __init__(self, name: str, bot: Bot, pool: 'TalentPool'):
+    # RedisCache[
+    #    "last_vote_date": float   | POSIX UTC timestamp.
+    # ]
+    status_cache = RedisCache()
+
+    def __init__(self, bot: Bot, nomination_api: NominationAPI):
         self.bot = bot
-        self._pool = pool
-        self._review_scheduler = Scheduler(name)
+        self.api = nomination_api
 
-    def __contains__(self, user_id: int) -> bool:
-        """Return True if the user with ID user_id is scheduled for review, False otherwise."""
-        return user_id in self._review_scheduler
+    async def maybe_review_user(self) -> bool:
+        """
+        Checks if a new vote should be triggered, and triggers one if ready.
 
-    async def reschedule_reviews(self) -> None:
-        """Reschedule all active nominations to be reviewed at the appropriate time."""
-        log.trace("Rescheduling reviews")
-        await self.bot.wait_until_guild_available()
+        Returns a boolean representing whether a new vote was sent or not.
+        """
+        if not await self.is_ready_for_review():
+            return False
 
-        for user_id, user_data in self._pool.cache.items():
-            if not user_data["reviewed"]:
-                self.schedule_review(user_id)
+        nomination = await self.get_nomination_to_review()
+        if not nomination:
+            return False
 
-    def schedule_review(self, user_id: int) -> None:
-        """Schedules a single user for review."""
-        log.trace(f"Scheduling review of user with ID {user_id}")
+        await self.post_review(nomination)
+        return True
 
-        user_data = self._pool.cache.get(user_id)
-        inserted_at = isoparse(user_data['inserted_at'])
-        review_at = inserted_at + timedelta(days=MAX_DAYS_IN_POOL)
+    async def is_ready_for_review(self) -> bool:
+        """
+        Returns a boolean representing whether a new vote should be triggered.
 
-        # If it's over a day overdue, it's probably an old nomination and shouldn't be automatically reviewed.
-        if arrow.utcnow() - review_at < timedelta(days=1):
-            self._review_scheduler.schedule_at(review_at, user_id, self.post_review(user_id, update_database=True))
+        The criteria for this are:
+         - The current number of reviews is lower than `MAX_ONGOING_REVIEWS`.
+         - The most recent review was sent less than `MIN_REVIEW_INTERVAL` ago.
+        """
+        voting_channel = self.bot.get_channel(Channels.nomination_voting)
 
-    async def post_review(self, user_id: int, update_database: bool) -> None:
+        last_vote_timestamp = await self.status_cache.get("last_vote_date")
+        if last_vote_timestamp:
+            last_vote_date = datetime.fromtimestamp(last_vote_timestamp, tz=timezone.utc)
+            time_since_last_vote = datetime.now(timezone.utc) - last_vote_date
+
+            if time_since_last_vote < MIN_REVIEW_INTERVAL:
+                log.debug("Most recent review was less than %s ago, cancelling check", MIN_REVIEW_INTERVAL)
+                return False
+        else:
+            log.info("Date of last vote not found in cache, a vote may be sent early")
+
+        review_count = 0
+        async for msg in voting_channel.history():
+            # Try and filter out any non-review messages. We also only want to count
+            # one message from reviews split over multiple messages. We use fixed text
+            # from the start as any later text could be split over messages.
+            if not msg.author.bot or "for Helper!" not in msg.content:
+                continue
+
+            review_count += 1
+
+            if review_count >= MAX_ONGOING_REVIEWS:
+                log.debug("There are already at least %s ongoing reviews, cancelling check.", MAX_ONGOING_REVIEWS)
+                return False
+
+        return True
+
+    async def get_nomination_to_review(self) -> Optional[Nomination]:
+        """
+        Returns the Nomination of the next user to review, or None if there are no users ready.
+
+        Users will only be selected for review if:
+         - They have not already been reviewed.
+         - They have been nominated for longer than `MIN_NOMINATION_TIME`.
+
+        The priority of the review is determined by how many nominations the user has
+        (more nominations = higher priority).
+        For users with equal priority the oldest nomination will be reviewed first.
+        """
+        now = datetime.now(timezone.utc)
+
+        possible_nominations: list[Nomination] = []
+        nominations = await self.api.get_nominations(active=True)
+        for nomination in nominations:
+            time_since_nomination = now - nomination.inserted_at
+            if (
+                not nomination.reviewed
+                and time_since_nomination > MIN_NOMINATION_TIME
+            ):
+                possible_nominations.append(nomination)
+
+        if not possible_nominations:
+            log.debug("No users ready to review.")
+            return None
+
+        oldest_date = min(nomination.inserted_at for nomination in possible_nominations)
+        max_entries = max(len(nomination.entries) for nomination in possible_nominations)
+
+        def sort_key(nomination: Nomination) -> float:
+            return self.score_nomination(nomination, oldest_date, now, max_entries)
+
+        return max(possible_nominations, key=sort_key)
+
+    @staticmethod
+    def score_nomination(nomination: Nomination, oldest_date: datetime, now: datetime, max_entries: int) -> float:
+        """
+        Scores a nomination based on age and number of nomination entries.
+
+        The higher the score, the higher the priority for being put up for review should be.
+        """
+        num_entries = len(nomination.entries)
+        entries_score = num_entries / max_entries
+
+        nomination_date = nomination.inserted_at
+        age_score = (nomination_date - now) / (oldest_date - now)
+
+        return entries_score * REVIEW_SCORE_WEIGHT + age_score
+
+    async def post_review(self, nomination: Nomination) -> None:
         """Format the review of a user and post it to the nomination voting channel."""
-        review, reviewed_emoji, nominee = await self.make_review(user_id)
+        review, reviewed_emoji, nominee = await self.make_review(nomination)
         if not nominee:
             return
 
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.nomination_voting)
 
-        log.trace(f"Posting the review of {nominee} ({nominee.id})")
+        log.info(f"Posting the review of {nominee} ({nominee.id})")
         messages = await self._bulk_send(channel, review)
 
         await pin_no_system_message(messages[0])
@@ -100,41 +190,34 @@ class Reviewer:
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
-        if update_database:
-            nomination = self._pool.cache.get(user_id)
-            await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
+        now = datetime.now(tz=timezone.utc)
+        await self.status_cache.set("last_vote_date", now.timestamp())
+
+        await self.api.edit_nomination(nomination.id, reviewed=True, thread_id=thread.id)
 
         bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
         if bump_cog:
             context = await self.bot.get_context(message)
             await bump_cog.add_thread_to_bump_list(context, thread)
 
-    async def make_review(self, user_id: int) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
+    async def make_review(self, nomination: Nomination) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
         """Format a generic review of a user and return it with the reviewed emoji and the user themselves."""
-        log.trace(f"Formatting the review of {user_id}")
-
-        # Since `cache` is a defaultdict, we should take care
-        # not to accidentally insert the IDs of users that have no
-        # active nominated by using the `cache.get(user_id)`
-        # instead of `cache[user_id]`.
-        nomination = self._pool.cache.get(user_id)
-        if not nomination:
-            log.trace(f"There doesn't appear to be an active nomination for {user_id}")
-            return f"There doesn't appear to be an active nomination for {user_id}", None, None
+        log.trace(f"Formatting the review of {nomination.user_id}")
 
         guild = self.bot.get_guild(Guild.id)
-        nominee = await get_or_fetch_member(guild, user_id)
+        nominee = await get_or_fetch_member(guild, nomination.user_id)
 
         if not nominee:
             return (
-                f"I tried to review the user with ID `{user_id}`, but they don't appear to be on the server :pensive:"
+                f"I tried to review the user with ID `{nomination.user_id}`,"
+                " but they don't appear to be on the server :pensive:"
             ), None, None
 
         opening = f"{nominee.mention} ({nominee}) for Helper!"
 
         current_nominations = "\n\n".join(
-            f"**<@{entry['actor']}>:** {entry['reason'] or '*no reason given*'}"
-            for entry in nomination['entries'][::-1]
+            f"**<@{entry.actor_id}>:** {entry.reason or '*no reason given*'}"
+            for entry in nomination.entries[::-1]
         )
         current_nominations = f"**Nominated by:**\n{current_nominations}"
 
@@ -142,7 +225,7 @@ class Reviewer:
 
         reviewed_emoji = self._random_ducky(guild)
         vote_request = (
-            "*Refer to their nomination and infraction histories for further details*.\n"
+            "*Refer to their nomination and infraction histories for further details.*\n"
             f"*Please react {reviewed_emoji} once you have reviewed this user,"
             " and react :+1: for approval, or :-1: for disapproval*."
         )
@@ -209,7 +292,7 @@ class Reviewer:
         else:
             embed_title = f"Vote for `{user_id}`"
 
-        channel = self.bot.get_channel(Channels.nomination_archive)
+        channel = self.bot.get_channel(Channels.nomination_voting_archive)
         for number, part in enumerate(
                 textwrap.wrap(embed_content, width=MAX_EMBED_SIZE, replace_whitespace=False, placeholder="")
         ):
@@ -353,29 +436,41 @@ class Reviewer:
         The number of previous nominations and unnominations are shown, as well as the reason the last one ended.
         """
         log.trace(f"Fetching the nomination history data for {member.id}'s review")
-        history = await self.bot.api_client.get(
-            "bot/nominations",
-            params={
-                "user__id": str(member.id),
-                "active": "false",
-                "ordering": "-inserted_at"
-            }
-        )
+        history = await self.api.get_nominations(user_id=member.id, active=False)
 
         log.trace(f"{len(history)} previous nominations found for {member.id}, formatting review.")
         if not history:
             return
 
-        num_entries = sum(len(nomination["entries"]) for nomination in history)
+        num_entries = sum(len(nomination.entries) for nomination in history)
 
         nomination_times = f"{num_entries} times" if num_entries > 1 else "once"
         rejection_times = f"{len(history)} times" if len(history) > 1 else "once"
-        end_time = time.format_relative(history[0]['ended_at'])
+        thread_jump_urls = []
+
+        for nomination in history:
+            if nomination.thread_id is None:
+                continue
+            try:
+                thread = await get_or_fetch_channel(nomination.thread_id)
+            except discord.HTTPException:
+                # Nothing to do here
+                pass
+            else:
+                thread_jump_urls.append(thread.jump_url)
+
+        if not thread_jump_urls:
+            nomination_vote_threads = "No nomination threads have been found for this user."
+        else:
+            nomination_vote_threads = ", ".join(thread_jump_urls)
+
+        end_time = time.format_relative(history[0].ended_at)
 
         review = (
             f"They were nominated **{nomination_times}** before"
             f", but their nomination was called off **{rejection_times}**."
-            f"\nThe last one ended {end_time} with the reason: {history[0]['end_reason']}"
+            f"\nList of all of their nomination threads: {nomination_vote_threads}"
+            f"\nThe last one ended {end_time} with the reason: {history[0].end_reason}"
         )
 
         return review
@@ -404,47 +499,3 @@ class Reviewer:
             results.append(await channel.send(message))
 
         return results
-
-    async def mark_reviewed(self, ctx: Context, user_id: int) -> bool:
-        """
-        Mark an active nomination as reviewed, updating the database and canceling the review task.
-
-        Returns True if the user was successfully marked as reviewed, False otherwise.
-        """
-        log.trace(f"Updating user {user_id} as reviewed")
-        await self._pool.refresh_cache()
-        if user_id not in self._pool.cache:
-            log.trace(f"Can't find a nominated user with id {user_id}")
-            await ctx.send(f":x: Can't find a currently nominated user with id `{user_id}`")
-            return False
-
-        nomination = self._pool.cache.get(user_id)
-        if nomination["reviewed"]:
-            await ctx.send(":x: This nomination was already reviewed, but here's a cookie :cookie:")
-            return False
-
-        await self.bot.api_client.patch(f"bot/nominations/{nomination['id']}", json={"reviewed": True})
-        if user_id in self._review_scheduler:
-            self._review_scheduler.cancel(user_id)
-
-        return True
-
-    def cancel(self, user_id: int) -> None:
-        """
-        Cancels the review of the nominee with ID `user_id`.
-
-        It's important to note that this applies only until reschedule_reviews is called again.
-        To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
-        """
-        log.trace(f"Canceling the review of user {user_id}.")
-        self._review_scheduler.cancel(user_id)
-
-    def cancel_all(self) -> None:
-        """
-        Cancels all reviews.
-
-        It's important to note that this applies only until reschedule_reviews is called again.
-        To permanently cancel someone's review, either remove them from the pool, or use mark_reviewed.
-        """
-        log.trace("Canceling all reviews.")
-        self._review_scheduler.cancel_all()

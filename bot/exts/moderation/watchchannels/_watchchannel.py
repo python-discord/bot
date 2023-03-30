@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import discord
-from botcore.site_api import ResponseCodeError
-from botcore.utils import scheduling
 from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
+from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils import scheduling
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
@@ -53,7 +53,7 @@ class WatchChannel(metaclass=CogABCMeta):
     ) -> None:
         self.bot = bot
 
-        self.destination = destination  # E.g., Channels.big_brother_logs
+        self.destination = destination  # E.g., Channels.big_brother
         self.webhook_id = webhook_id  # E.g.,  Webhooks.big_brother
         self.api_endpoint = api_endpoint  # E.g., 'bot/infractions'
         self.api_default_params = api_default_params  # E.g., {'active': 'true', 'type': 'watch'}
@@ -128,7 +128,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 colour=Color.red()
             )
 
-            self.bot.remove_cog(self.__class__.__name__)
+            await self.bot.remove_cog(self.__class__.__name__)
             return
 
         if not await self.fetch_user_cache():

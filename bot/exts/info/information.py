@@ -3,13 +3,13 @@ import pprint
 import textwrap
 from collections import defaultdict
 from textwrap import shorten
-from typing import Any, DefaultDict, Mapping, Optional, Tuple, Union
+from typing import Any, DefaultDict, Mapping, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 import rapidfuzz
-from botcore.site_api import ResponseCodeError
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Greedy, Paginator, command, group, has_any_role
+from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot
@@ -24,6 +24,17 @@ from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_w
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
+
+DEFAULT_RULES_DESCRIPTION = (
+    "The rules and guidelines that apply to this community can be found on"
+    " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
+    " all members of the community to have read and understood these."
+)
+
+if TYPE_CHECKING:
+    from bot.exts.moderation.defcon import Defcon
+    from bot.exts.moderation.watchchannels.bigbrother import BigBrother
+    from bot.exts.recruitment.talentpool._cog import TalentPool
 
 
 class Information(Cog):
@@ -70,20 +81,23 @@ class Information(Cog):
         )
         return role_stats
 
-    def get_extended_server_info(self, ctx: Context) -> str:
+    async def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
-        if cog := self.bot.get_cog("Talentpool"):
-            num_nominated = len(cog.cache) if cog.cache else "-"
+        talentpool_cog: TalentPool | None = self.bot.get_cog("Talentpool")
+        if talentpool_cog:
+            num_nominated = len(await talentpool_cog.api.get_nominations(active=True))
             talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
-        if cog := self.bot.get_cog("Big Brother"):
-            bb_info = f"BB-watched: {len(cog.watched_users)}\n"
+        bb_cog: BigBrother | None = self.bot.get_cog("Big Brother")
+        if bb_cog:
+            bb_info = f"BB-watched: {len(bb_cog.watched_users)}\n"
 
         defcon_info = ""
-        if cog := self.bot.get_cog("Defcon"):
-            threshold = time.humanize_delta(cog.threshold) if cog.threshold else "-"
+        defcon_cog: Defcon | None = self.bot.get_cog("Defcon")
+        if defcon_cog:
+            threshold = time.humanize_delta(defcon_cog.threshold) if defcon_cog.threshold else "-"
             defcon_info = f"Defcon threshold: {threshold}\n"
 
         verification = f"Verification level: {ctx.guild.verification_level.name}\n"
@@ -218,7 +232,7 @@ class Information(Cog):
 
         # Additional info if ran in moderation channels
         if is_mod_channel(ctx.channel):
-            embed.add_field(name="Moderation:", value=self.get_extended_server_info(ctx))
+            embed.add_field(name="Moderation:", value=await self.get_extended_server_info(ctx))
 
         await ctx.send(embed=embed)
 
@@ -517,39 +531,77 @@ class Information(Cog):
         """Shows information about the raw API response in a copy-pasteable Python format."""
         await self.send_raw_content(ctx, message, json=True)
 
-    @command(aliases=("rule",))
-    async def rules(self, ctx: Context, rules: Greedy[int]) -> None:
-        """Provides a link to all rules or, if specified, displays specific rule(s)."""
-        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
-
-        if not rules:
-            # Rules were not submitted. Return the default description.
-            rules_embed.description = (
-                "The rules and guidelines that apply to this community can be found on"
-                " our [rules page](https://www.pythondiscord.com/pages/rules). We expect"
-                " all members of the community to have read and understood these."
-            )
-
-            await ctx.send(embed=rules_embed)
-            return
+    async def _set_rules_command_help(self) -> None:
+        help_string = f"{self.rules.help}\n\n"
+        help_string += "__Available keywords per rule__:\n\n"
 
         full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
 
-        # Remove duplicates and sort the rule indices
-        rules = sorted(set(rules))
+        for index, (_, keywords) in enumerate(full_rules, start=1):
+            help_string += f"**Rule {index}**: {', '.join(keywords)}\n\r"
 
-        invalid = ", ".join(str(index) for index in rules if index < 1 or index > len(full_rules))
+        self.rules.help = help_string
+
+    @command(aliases=("rule",))
+    async def rules(self, ctx: Context, *, args: Optional[str]) -> Optional[Set[int]]:
+        """
+        Provides a link to all rules or, if specified, displays specific rule(s).
+
+        It accepts either rule numbers or particular keywords that map to a particular rule.
+        Rule numbers and keywords can be sent in any order.
+        """
+        rules_embed = Embed(title="Rules", color=Colour.og_blurple(), url="https://www.pythondiscord.com/pages/rules")
+        keywords, rule_numbers = [], []
+
+        full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
+        keyword_to_rule_number = dict()
+
+        for rule_number, (_, rule_keywords) in enumerate(full_rules, start=1):
+            for rule_keyword in rule_keywords:
+                keyword_to_rule_number[rule_keyword] = rule_number
+
+        if args:
+            for word in args.split(maxsplit=100):
+                try:
+                    rule_numbers.append(int(word))
+                except ValueError:
+                    # Stop on first invalid keyword/index to allow for normal messaging after
+                    if (kw := word.lower()) not in keyword_to_rule_number:
+                        break
+                    keywords.append(kw)
+
+        if not rule_numbers and not keywords:
+            # Neither rules nor keywords were submitted. Return the default description.
+            rules_embed.description = DEFAULT_RULES_DESCRIPTION
+            await ctx.send(embed=rules_embed)
+            return
+
+        # Remove duplicates and sort the rule indices
+        rule_numbers = sorted(set(rule_numbers))
+
+        invalid = ", ".join(
+            str(rule_number) for rule_number in rule_numbers
+            if rule_number < 1 or rule_number > len(full_rules))
 
         if invalid:
             await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
             return
 
-        for rule in rules:
-            self.bot.stats.incr(f"rule_uses.{rule}")
+        final_rules = []
+        final_rule_numbers = {keyword_to_rule_number[keyword] for keyword in keywords}
+        final_rule_numbers.update(rule_numbers)
 
-        final_rules = tuple(f"**{pick}.** {full_rules[pick - 1]}" for pick in rules)
+        for rule_number in sorted(final_rule_numbers):
+            self.bot.stats.incr(f"rule_uses.{rule_number}")
+            final_rules.append(f"**{rule_number}.** {full_rules[rule_number - 1][0]}")
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
+
+        return final_rule_numbers
+
+    async def cog_load(self) -> None:
+        """Carry out cog asynchronous initialisation."""
+        await self._set_rules_command_help()
 
 
 async def setup(bot: Bot) -> None:
