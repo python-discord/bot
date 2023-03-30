@@ -66,7 +66,7 @@ async def main() -> None:
             intents=intents,
             allowed_roles=list({discord.Object(id_) for id_ in constants.MODERATION_ROLES}),
             api_client=APIClient(
-                site_api_url=f"{constants.URLs.site_api_scheme}{constants.URLs.site_api}",
+                site_api_url=constants.URLs.site_api,
                 site_api_token=constants.Keys.site_api,
             ),
         )

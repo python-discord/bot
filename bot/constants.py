@@ -527,8 +527,7 @@ class _BaseURLs(EnvConfig):
     github_bot_repo = "https://github.com/python-discord/bot"
 
     # Site
-    site_api = "site.default.svc.cluster.local/api"
-    site_api_scheme = "http://"
+    site_api = "http://site.default.svc.cluster.local/api"
     site_paste = "https://paste.pythondiscord.com"
 
 
@@ -546,6 +545,7 @@ class _URLs(_BaseURLs):
 
     paste_service: str = "".join([BaseURLs.site_paste, "/{key}"])
     site_logs_view: str = "https://pythondiscord.com/staff/bot/logs"
+
 
 URLs = _URLs()
 

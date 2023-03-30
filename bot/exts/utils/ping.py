@@ -38,7 +38,7 @@ class Latency(commands.Cog):
             bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
-            async with self.bot.http_session.get(f"{URLs.site_api_scheme}{URLs.site_api}/healthcheck") as request:
+            async with self.bot.http_session.get(f"{URLs.site_api}/healthcheck") as request:
                 request.raise_for_status()
                 site_status = "Healthy"
 
