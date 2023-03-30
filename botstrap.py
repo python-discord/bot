@@ -52,8 +52,11 @@ class SilencedDict(dict):
             super().__getitem__(item)
         except KeyError:
             log.warning(f"Couldn't find key: {item} in dict: {self.name} ")
-            log.warning("Please make sure to use our template: https://discord.new/zmHtscpYN9E3"
-                        "to make your own copy of the server to guarantee a successful run of botstrap ")
+            log.warning(
+                "Please make sure to follow our contribution guideline "
+                "https://www.pythondiscord.com/pages/guides/pydis-guides/contributing/bot/ "
+                "to guarantee a successful run of botstrap "
+            )
             sys.exit(-1)
 
 
@@ -193,11 +196,12 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
 
     create_help_channel = True
 
-    python_help_channel_id = all_channels[PYTHON_HELP_CHANNEL_NAME]
-    if not discord_client.is_forum_channel(python_help_channel_id):
-        discord_client.delete_channel(python_help_channel_id)
-    else:
-        create_help_channel = False
+    if PYTHON_HELP_CHANNEL_NAME in all_channels:
+        python_help_channel_id = all_channels[PYTHON_HELP_CHANNEL_NAME]
+        if not discord_client.is_forum_channel(python_help_channel_id):
+            discord_client.delete_channel(python_help_channel_id)
+        else:
+            create_help_channel = False
 
     if create_help_channel:
         python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace('_', '-')
