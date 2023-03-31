@@ -162,6 +162,7 @@ class _Roles(EnvConfig):
     mod_team = 267629731250176001
     owners = 267627879762755584
     project_leads = 815701647526330398
+    new_helpers = 1088292464051368018
 
     # Code Jam
     jammers = 737249140966162473
