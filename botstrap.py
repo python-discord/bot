@@ -49,7 +49,7 @@ class SilencedDict(dict):
 
     def __getitem__(self, item: str):
         try:
-            super().__getitem__(item)
+            return super().__getitem__(item)
         except KeyError:
             log.warning(f"Couldn't find key: {item} in dict: {self.name} ")
             log.warning(
