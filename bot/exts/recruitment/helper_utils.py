@@ -2,6 +2,7 @@ import datetime as dt
 import random
 import re
 
+import arrow
 from async_rediscache import RedisCache
 from discord import Message
 from discord.ext.commands import Cog
@@ -24,6 +25,8 @@ class NewHelperUtils(Cog):
     # RedisCache[discord.Channel.id, UtcPosixTimestamp]
     cooldown_cache = RedisCache()
 
+    CACHE_KEY = "LAST_PING"
+
     COOLDOWN_DURATION = dt.timedelta(minutes=10)
     MESSAGES = [
         f"<@&{NEW_HELPER_ROLE_ID}> can someone please answer this??",
@@ -35,6 +38,11 @@ class NewHelperUtils(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.last_pinged = arrow.get(0)  # Ready to fire if it can't be loaded from the cache.
+
+    async def cog_load(self) -> None:
+        """Load the most recent activation time from the cache."""
+        self.last_pinged = arrow.get(await self.cooldown_cache.get(self.CACHE_KEY, 0))
 
     @staticmethod
     def _is_question(message: str) -> bool:
@@ -52,16 +60,13 @@ class NewHelperUtils(Cog):
         if message.author.bot or message.channel.id not in OT_CHANNEL_IDS:
             return
 
-        last_activation_time = dt.datetime.fromtimestamp(
-            await self.cooldown_cache.get(message.channel.id, 0)
-        )
-
-        if dt.datetime.now() - last_activation_time < self.COOLDOWN_DURATION:
+        if arrow.utcnow() - self.last_pinged < self.COOLDOWN_DURATION:
             return
 
         if self._is_question(message.content):
+            self.last_pinged = arrow.utcnow()
             await message.reply(random.choice(self.MESSAGES))
-            await self.cooldown_cache.set(message.channel.id, dt.datetime.now().timestamp())
+            await self.cooldown_cache.set(self.CACHE_KEY, self.last_pinged.timestamp())
 
 
 async def setup(bot: Bot) -> None:
