@@ -25,10 +25,8 @@ class NewHelperUtils(Cog):
 
     # RedisCache[discord.Channel.id, UtcPosixTimestamp]
     cooldown_cache = RedisCache()
-
     CACHE_KEY = "LAST_PING"
 
-    COOLDOWN_DURATION = dt.timedelta(minutes=10)
     MESSAGES = [
         f"<@&{NEW_HELPER_ROLE_ID}> can someone please answer this??",
         f"Someone answer this <@&{NEW_HELPER_ROLE_ID}> if you want to keep your role",
@@ -40,6 +38,7 @@ class NewHelperUtils(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.last_pinged = arrow.get(0)  # Ready to fire if it can't be loaded from the cache.
+        self.cooldown_duration = dt.timedelta(minutes=10)
 
     async def cog_load(self) -> None:
         """Load the most recent activation time from the cache."""
@@ -61,7 +60,7 @@ class NewHelperUtils(Cog):
         if message.author.bot or message.channel.id not in OT_CHANNEL_IDS:
             return
 
-        if arrow.utcnow() - self.last_pinged < self.COOLDOWN_DURATION:
+        if arrow.utcnow() - self.last_pinged < self.cooldown_duration:
             return
 
         if self._is_question(message.content):
@@ -69,6 +68,7 @@ class NewHelperUtils(Cog):
             allowed_mentions = discord.AllowedMentions(everyone=False, roles=[discord.Object(NEW_HELPER_ROLE_ID)])
             await message.reply(random.choice(self.MESSAGES), allowed_mentions=allowed_mentions)
             await self.cooldown_cache.set(self.CACHE_KEY, self.last_pinged.timestamp())
+            self.cooldown_duration = dt.timedelta(minutes=random.randint(10, 30))
 
 
 async def setup(bot: Bot) -> None:
