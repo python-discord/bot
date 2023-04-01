@@ -3,9 +3,8 @@ import random
 import re
 
 import arrow
-from async_rediscache import RedisCache
-
 import discord
+from async_rediscache import RedisCache
 from discord import Message
 from discord.ext.commands import Cog
 
