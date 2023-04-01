@@ -4,6 +4,7 @@ import re
 
 import arrow
 from async_rediscache import RedisCache
+import discord
 from discord import Message
 from discord.ext.commands import Cog
 
@@ -65,7 +66,8 @@ class NewHelperUtils(Cog):
 
         if self._is_question(message.content):
             self.last_pinged = arrow.utcnow()
-            await message.reply(random.choice(self.MESSAGES))
+            allowed_mentions = discord.AllowedMentions(everyone=False, roles=[discord.Object(NEW_HELPER_ROLE_ID)])
+            await message.reply(random.choice(self.MESSAGES), allowed_mentions=allowed_mentions)
             await self.cooldown_cache.set(self.CACHE_KEY, self.last_pinged.timestamp())
 
 
