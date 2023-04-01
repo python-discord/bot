@@ -125,6 +125,8 @@ class _Channels(EnvConfig):
     duck_pond = 637820308341915648
     roles = 851270062434156586
 
+    rules = 693837295685730335
+
 
 Channels = _Channels()
 
@@ -162,6 +164,7 @@ class _Roles(EnvConfig):
     mod_team = 267629731250176001
     owners = 267627879762755584
     project_leads = 815701647526330398
+    new_helpers = 1088292464051368018
 
     # Code Jam
     jammers = 737249140966162473
@@ -187,6 +190,7 @@ class _Categories(EnvConfig):
 
     # 2021 Summer Code Jam
     summer_code_jam = 861692638540857384
+    python_help_system = 691405807388196926
 
 
 Categories = _Categories()
