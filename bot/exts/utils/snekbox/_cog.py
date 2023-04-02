@@ -234,11 +234,13 @@ class Snekbox(Cog):
         return args
 
     @staticmethod
-    def shorten_to_max_length(lines: list[str], max_length: int):
-        """Gradually removes lines from the end of `lines` until `"\\n".join(lines)` is not more than `max_length`."""
+    def shorten_to_max_length(lines: list[str], max_length: int, truncation_reason: str) -> str:
+        """Removes/shortens lines from `lines` until the returned output will not be more than `max_length`."""
         output = "\n".join(lines)
+        truncation_message = f"\n(truncated - {truncation_reason})"
 
-        too_long_by = len(output) - max_length
+        too_long_by = len(output) + len(truncation_message) - max_length
+        too_long_by += 4  # add 4 since when a line is removed, we add "\n..." to the output
         if too_long_by > 0:
             # Output is too long, so start removing lines
             lines_to_remove = 1
@@ -250,23 +252,28 @@ class Snekbox(Cog):
                 total_offset += line_length
 
                 if lines_to_remove == len(lines):
-                    # Reached first item in list and still too long
-                    # (i.e. first item alone is too long)
-                    lines_to_remove = 0  # we aren't removing any lines, just truncating
+                    # Reached first item in list and still too long # (i.e. first item alone is too long)
+                    # This also means that no lines will be removed (only shortened)
+                    too_long_by -= 4  # we won't be adding the aforementioned "\n..."
+                    lines_to_remove = 0
                     break
 
                 if total_offset >= too_long_by:
                     # After removing this line output will be short enough
                     break
 
-                total_offset += 1  # +1 for the newline since this there's gonna be another line
-
-                # See what the length would be after removing the previous line
+                total_offset += 1  # +1 for the newline that you save by removing this line
                 lines_to_remove += 1
 
+            # Remove necessary lines and shorten + add elipsis to `lines[-line_to_remove]`
             lines = lines[:-lines_to_remove] + [lines[-lines_to_remove][:total_offset - too_long_by - 3] + "..."]
             output = "\n".join(lines)
-        return lines, output
+            if lines_to_remove:
+                # We removed at least one line, so add elipses to indicate such
+                output += "\n..."
+            output += truncation_message
+
+        return output
 
     async def format_output(
         self,
@@ -298,31 +305,24 @@ class Snekbox(Cog):
 
         truncation_reason = None
         lines = output.splitlines()
-        original_lines_length = len(lines)
 
         if len(lines) > 1:
             if line_nums:
                 lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
-            output = f"\n".join(lines)
+            output = "\n".join(lines)
 
         if len(lines) > max_lines:
             if len(output) > max_chars:
                 truncation_reason = "too long, too many lines"
             else:
                 truncation_reason = "too many lines"
-            lines, output = self.shorten_to_max_length(lines[:max_lines], max_chars)
+            output = self.shorten_to_max_length(lines[:max_lines], max_chars, truncation_reason)
 
         elif len(output) > max_chars:
             truncation_reason = "too long"
-            lines, output = self.shorten_to_max_length(lines, max_chars)
-
+            output = self.shorten_to_max_length(lines, max_chars, truncation_reason)
 
         if truncation_reason:
-            if len(lines) != original_lines_length:
-                # At least one line was removed, because the
-                # output had too many lines and/or was too long
-                output += "\n..."
-            output += f"\n(truncated - {truncation_reason})"
             paste_link = await self.upload_output(original_output)
 
         if output_default and not output:
