@@ -11,7 +11,7 @@ async def apply(
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
     """
     Detects total newlines exceeding the set limit sent by a single user.
-    
+
     Messages sent in the help forum are excluded.
     """
     relevant_messages = tuple(
