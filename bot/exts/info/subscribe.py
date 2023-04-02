@@ -12,7 +12,6 @@ from pydis_core.utils import members
 from bot import constants
 from bot.bot import Bot
 from bot.decorators import redirect_output
-from bot.helper_questions import HelperingButton
 from bot.log import get_logger
 from bot.utils.channel import get_or_fetch_channel
 
@@ -79,8 +78,7 @@ class RoleButtonView(discord.ui.View):
         self.interaction_owner = member
         author_roles = [role.id for role in member.roles]
 
-        self.add_item(HelperingButton(constants.Roles.new_helpers in author_roles, 0))
-        for index, role in enumerate(assignable_roles, start=1):
+        for index, role in enumerate(assignable_roles):
             row = index // ITEMS_PER_ROW
             self.add_item(SingleRoleButton(role, role.role_id in author_roles, row))
 
