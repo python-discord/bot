@@ -249,13 +249,14 @@ class Snekbox(Cog):
 
                 total_offset += line_length
 
-                if total_offset >= too_long_by:
-                    # After removing this line output will be short enough
-                    break
-                
                 if lines_to_remove == len(lines):
                     # Reached first item in list and still too long
                     # (i.e. first item alone is too long)
+                    lines_to_remove = 0  # we aren't removing any lines, just truncating
+                    break
+
+                if total_offset >= too_long_by:
+                    # After removing this line output will be short enough
                     break
 
                 total_offset += 1  # +1 for the newline since this there's gonna be another line
@@ -297,38 +298,31 @@ class Snekbox(Cog):
 
         truncation_reason = None
         lines = output.splitlines()
-        original_line_length = len(lines)
+        original_lines_length = len(lines)
+
+        if len(lines) > 1:
+            if line_nums:
+                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
+            output = f"\n".join(lines)
 
         if len(lines) > max_lines:
             if len(output) > max_chars:
                 truncation_reason = "too long, too many lines"
             else:
                 truncation_reason = "too many lines"
-
-            if line_nums:
-                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines[:max_lines], 1)]
-            else:
-                lines = lines[:max_lines]
-
-            lines, output = self.shorten_to_max_length(lines, max_chars)
+            lines, output = self.shorten_to_max_length(lines[:max_lines], max_chars)
 
         elif len(output) > max_chars:
             truncation_reason = "too long"
-            if line_nums:
-                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
             lines, output = self.shorten_to_max_length(lines, max_chars)
 
-        elif len(lines) > 1:
-            if line_nums:
-                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
-            output = f"\n".join(lines)[:max_chars]
 
         if truncation_reason:
-            if truncation_reason == "too long" and len(lines) == original_line_length:
-                # When too long, and didn't have to shorten lines, show truncation reason inline
-                output += f" (truncated - {truncation_reason})"
-            else:
-                output += f"\n... (truncated - {truncation_reason})"
+            if len(lines) != original_lines_length:
+                # At least one line was removed, because the
+                # output had too many lines and/or was too long
+                output += "\n..."
+            output += f"\n(truncated - {truncation_reason})"
             paste_link = await self.upload_output(original_output)
 
         if output_default and not output:
