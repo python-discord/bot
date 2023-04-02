@@ -1,17 +1,27 @@
 import re
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from discord import Member, Message
+from discord import Member, Message, Thread
+
+from bot import constants
 
 
 async def apply(
     last_message: Message, recent_messages: List[Message], config: Dict[str, int]
 ) -> Optional[Tuple[str, Iterable[Member], Iterable[Message]]]:
-    """Detects total newlines exceeding the set limit sent by a single user."""
+    """
+    Detects total newlines exceeding the set limit sent by a single user.
+    
+    Messages sent in the help forum are excluded.
+    """
     relevant_messages = tuple(
         msg
         for msg in recent_messages
         if msg.author == last_message.author
+        if not (
+            isinstance(msg.channel, Thread)
+            and msg.channel.parent_id == constants.Channels.python_help
+        )
     )
 
     # Identify groups of newline characters and get group & total counts
