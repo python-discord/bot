@@ -48,6 +48,8 @@ ALERT_VIEW_TIMEOUT = 3600
 SETTINGS_DELIMITER = re.compile(r"\s+(?=\S+=\S+)")
 SINGLE_SETTING_PATTERN = re.compile(r"[\w/]+=.+")
 
+EDIT_CONFIRMED_MESSAGE = "✅ Edit for `{0}` confirmed"
+
 # Sentinel value to denote that a value is missing
 MISSING = object()
 
@@ -273,9 +275,9 @@ class BooleanSelectView(discord.ui.View):
 
         async def callback(self, interaction: Interaction) -> Any:
             """Respond to the interaction by sending the boolean value to the update callback."""
-            await interaction.response.edit_message(content="✅ Edit confirmed", view=None)
             value = self.values[0] == "True"
             await self.update_callback(setting_name=self.setting_name, setting_value=value)
+            await interaction.response.edit_message(content=EDIT_CONFIRMED_MESSAGE.format(self.setting_name), view=None)
 
     def __init__(self, setting_name: str, update_callback: Callable):
         super().__init__(timeout=COMPONENT_TIMEOUT)
@@ -309,8 +311,10 @@ class FreeInputModal(discord.ui.Modal):
                 f"Could not process the input value for `{self.setting_name}`.", ephemeral=True
             )
         else:
-            await interaction.response.defer()
             await self.update_callback(setting_name=self.setting_name, setting_value=value)
+            await interaction.response.send_message(
+                content=EDIT_CONFIRMED_MESSAGE.format(self.setting_name), ephemeral=True
+            )
 
 
 class SequenceEditView(discord.ui.View):
@@ -404,8 +408,8 @@ class SequenceEditView(discord.ui.View):
     async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Send the final value to the embed editor."""
         # Edit first, it might time out otherwise.
-        await interaction.response.edit_message(content="✅ Edit confirmed", view=None)
         await self.update_callback(setting_name=self.setting_name, setting_value=self.stored_value)
+        await interaction.response.edit_message(content=EDIT_CONFIRMED_MESSAGE.format(self.setting_name), view=None)
         self.stop()
 
     @discord.ui.button(label="🚫 Cancel", style=discord.ButtonStyle.red)
@@ -433,8 +437,8 @@ class EnumSelectView(discord.ui.View):
 
         async def callback(self, interaction: Interaction) -> Any:
             """Respond to the interaction by sending the enum value to the update callback."""
-            await interaction.response.edit_message(content="✅ Edit confirmed", view=None)
             await self.update_callback(setting_name=self.setting_name, setting_value=self.values[0])
+            await interaction.response.edit_message(content=EDIT_CONFIRMED_MESSAGE.format(self.setting_name), view=None)
 
     def __init__(self, setting_name: str, enum_cls: EnumMeta, update_callback: Callable):
         super().__init__(timeout=COMPONENT_TIMEOUT)
