@@ -101,6 +101,13 @@ class Infraction(Enum):
             member = await get_or_fetch_member(channel.guild, user.id)
             if member:
                 user = member
+            else:
+                log.warning(
+                    f"The user {user} were set to receive an automatic {command_name}, "
+                    "but they were not found in the guild."
+                )
+                return
+
         ctx = FakeContext(message, channel, command)
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
             await command(ctx, user, reason=reason or None)
