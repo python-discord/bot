@@ -140,8 +140,9 @@ class InviteList(FilterList[InviteFilter]):
         embed = Embed()
         if invite.guild:
             embed.title = invite.guild.name
-            embed.set_thumbnail(url=invite.guild.icon.url)
             embed.set_footer(text=f"Guild ID: {invite.guild.id}")
+            if invite.guild.icon is not None:
+                embed.set_thumbnail(url=invite.guild.icon.url)
         else:
             embed.title = "Group DM"
 
