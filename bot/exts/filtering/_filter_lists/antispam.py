@@ -18,7 +18,7 @@ from bot.exts.filtering._filter_lists.filter_list import ListType, SubscribingAt
 from bot.exts.filtering._filters.antispam import antispam_filter_types
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
-from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
+from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction, InfractionAndNotification
 from bot.exts.filtering._ui.ui import AlertView, build_mod_alert
 
 if typing.TYPE_CHECKING:
@@ -93,22 +93,22 @@ class AntispamList(UniquesListBase):
         current_actions.pop("ping", None)
         current_actions.pop("send_alert", None)
 
-        new_infraction = current_actions["infraction_and_notification"].copy()
+        new_infraction = current_actions[InfractionAndNotification.name].copy()
         # Smaller infraction value => higher in hierarchy.
         if not current_infraction or new_infraction.infraction_type.value < current_infraction.value:
             # Pick the first triggered filter for the reason, there's no good way to decide between them.
             new_infraction.infraction_reason = (
                 f"{triggers[0].name.replace('_', ' ')} spam – {ctx.filter_info[triggers[0]]}"
             )
-            current_actions["infraction_and_notification"] = new_infraction
+            current_actions[InfractionAndNotification.name] = new_infraction
             self.message_deletion_queue[ctx.author].current_infraction = new_infraction.infraction_type
         else:
-            current_actions.pop("infraction_and_notification", None)
+            current_actions.pop(InfractionAndNotification.name, None)
 
         # Provide some message in case another filter list wants there to be an alert.
         return current_actions, ["Handling spam event..."], {ListType.DENY: triggers}
 
-    def _create_deletion_context_handler(self, context_id: Member) -> Callable[[FilterContext], Coroutine]:
+    def _create_deletion_context_handler(self, member: Member) -> Callable[[FilterContext], Coroutine]:
         async def schedule_processing(ctx: FilterContext) -> None:
             """
             Schedule a coroutine to process the deletion context.
@@ -123,11 +123,11 @@ class AntispamList(UniquesListBase):
                 log.trace("Sleeping before processing message deletion queue.")
                 await asyncio.sleep(ALERT_DELAY)
 
-                if context_id not in self.message_deletion_queue:
-                    log.error(f"Started processing deletion queue for context `{context_id}`, but it was not found!")
+                if member not in self.message_deletion_queue:
+                    log.error(f"Started processing deletion queue for context `{member}`, but it was not found!")
                     return
 
-                deletion_context = self.message_deletion_queue.pop(context_id)
+                deletion_context = self.message_deletion_queue.pop(member)
                 await deletion_context.send_alert(self)
 
             scheduling.create_task(process_deletion_context())

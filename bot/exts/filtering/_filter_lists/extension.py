@@ -27,7 +27,7 @@ TXT_EMBED_DESCRIPTION = (
 )
 
 DISALLOWED_EMBED_DESCRIPTION = (
-    "It looks like you tried to attach file type(s) that we do not allow ({blocked_extensions_str}). "
+    "It looks like you tried to attach file type(s) that we do not allow ({joined_blacklist}). "
     "We currently allow the following file types: **{joined_whitelist}**.\n\n"
     "Feel free to ask in {meta_channel_mention} if you think this is a mistake."
 )
@@ -99,11 +99,7 @@ class ExtensionsList(FilterList[ExtensionFilter]):
                 ctx.dm_embed = PY_EMBED_DESCRIPTION
             elif txt_extensions := {ext for ext in TXT_LIKE_FILES if ext in not_allowed}:
                 # Work around Discord auto-conversion of messages longer than 2000 chars to .txt
-                cmd_channel = bot.instance.get_channel(Channels.bot_commands)
-                ctx.dm_embed = TXT_EMBED_DESCRIPTION.format(
-                    blocked_extension=txt_extensions.pop(),
-                    cmd_channel_mention=cmd_channel.mention
-                )
+                ctx.dm_embed = TXT_EMBED_DESCRIPTION.format(blocked_extension=txt_extensions.pop())
             else:
                 meta_channel = bot.instance.get_channel(Channels.meta)
                 if not self._whitelisted_description:
@@ -112,7 +108,7 @@ class ExtensionsList(FilterList[ExtensionFilter]):
                     )
                 ctx.dm_embed = DISALLOWED_EMBED_DESCRIPTION.format(
                     joined_whitelist=self._whitelisted_description,
-                    blocked_extensions_str=", ".join(not_allowed),
+                    joined_blacklist=", ".join(not_allowed),
                     meta_channel_mention=meta_channel.mention,
                 )
 

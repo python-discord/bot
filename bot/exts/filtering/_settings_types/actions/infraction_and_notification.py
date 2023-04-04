@@ -232,6 +232,7 @@ class InfractionAndNotification(ActionEntry):
 
         # If the winner has no message but the loser does, copy the message to the winner.
         result_overrides = result.overrides
+        # Either take both or nothing, don't mix content from one filter and embed from another.
         if "dm_content" not in result_overrides and "dm_embed" not in result_overrides:
             other_overrides = other.overrides
             if "dm_content" in other_overrides:

@@ -10,7 +10,7 @@ class ChannelScope(ValidationEntry):
     """A setting entry which tells whether the filter was invoked in a whitelisted channel or category."""
 
     name: ClassVar[str] = "channel_scope"
-    description: ClassVar[str] = {
+    description: ClassVar[dict[str, str]] = {
         "disabled_channels": (
             "A list of channel IDs or channel names. "
             "The filter will not trigger in these channels even if the category is expressly enabled."
@@ -29,6 +29,8 @@ class ChannelScope(ValidationEntry):
         )
     }
 
+    # NOTE: Don't change this to use the new 3.10 union syntax unless you ensure Pydantic type validation and coercion
+    # work properly. At the time of writing this code there's a difference.
     disabled_channels: set[Union[int, str]]
     disabled_categories: set[Union[int, str]]
     enabled_channels: set[Union[int, str]]

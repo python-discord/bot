@@ -9,7 +9,7 @@ There are several types of filters, and two filters of the same type differ by t
 For example, filters of type "token" search for a specific token inside the provided string.
 One token filter might look for the string "lemon", while another will look for the string "joe".
 
-Each filter has a set of settings that decide when it triggers (e.g. in which channels), and what happens if it does (e.g. delete the message).
+Each filter has a set of settings that decide when it triggers (e.g. in which channels, in which categories, etc.), and what happens if it does (e.g. delete the message, ping specific roles/users, etc.).
 Filters of a specific type can have additional settings that are special to them.
 
 A list of filters is contained within a filter list.

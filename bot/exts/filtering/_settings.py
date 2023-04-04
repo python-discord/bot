@@ -73,7 +73,7 @@ class Settings(FieldRequiring, dict[str, T]):
 
     _already_warned: set[str] = set()
 
-    @abstractmethod
+    @abstractmethod  # ABCs have to have at least once abstract method to actually count as such.
     def __init__(self, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False):
         super().__init__()
 
