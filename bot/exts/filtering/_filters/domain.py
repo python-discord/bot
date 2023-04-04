@@ -1,5 +1,5 @@
 import re
-from typing import ClassVar, Optional
+from typing import ClassVar
 from urllib.parse import urlparse
 
 import tldextract
@@ -15,12 +15,12 @@ URL_RE = re.compile(r"(?:https?://)?(\S+?)[\\/]*", flags=re.IGNORECASE)
 class ExtraDomainSettings(BaseModel):
     """Extra settings for how domains should be matched in a message."""
 
-    subdomains_description: ClassVar[str] = (
-        "A boolean. If True, will will only trigger for subdomains and subpaths, and not for the domain itself."
+    only_subdomains_description: ClassVar[str] = (
+        "A boolean. If True, will only trigger for subdomains and subpaths, and not for the domain itself."
     )
 
     # Whether to trigger only for subdomains and subpaths, and not the specified domain itself.
-    subdomains: Optional[bool] = False
+    only_subdomains: bool = False
 
 
 class DomainFilter(Filter):
@@ -41,10 +41,10 @@ class DomainFilter(Filter):
         for found_url in ctx.content:
             extract = tldextract.extract(found_url)
             if self.content in found_url and extract.registered_domain == domain:
-                if self.extra_fields.subdomains:
+                if self.extra_fields.only_subdomains:
                     if not extract.subdomain and not urlparse(f"https://{found_url}").path:
                         return False
-                ctx.matches.append(self.content)
+                ctx.matches.append(found_url)
                 ctx.notification_domain = self.content
                 return True
         return False
