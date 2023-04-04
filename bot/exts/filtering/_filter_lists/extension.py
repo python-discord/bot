@@ -115,4 +115,4 @@ class ExtensionsList(FilterList[ExtensionFilter]):
         ctx.matches += not_allowed.values()
         ctx.blocked_exts |= set(not_allowed)
         actions = self[ListType.ALLOW].defaults.actions if ctx.event != Event.SNEKBOX else None
-        return actions, [f"`{ext}`" for ext in not_allowed], {ListType.ALLOW: triggered}
+        return actions, [f"`{ext}`" if ext else "`No Extension`" for ext in not_allowed], {ListType.ALLOW: triggered}
