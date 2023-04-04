@@ -4,7 +4,7 @@ import typing
 from os.path import splitext
 
 import bot
-from bot.constants import Channels, URLs
+from bot.constants import BaseURLs, Channels
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.extension import ExtensionFilter
@@ -17,13 +17,13 @@ if typing.TYPE_CHECKING:
 
 PY_EMBED_DESCRIPTION = (
     "It looks like you tried to attach a Python file - "
-    f"please use a code-pasting service such as {URLs.site_schema}{URLs.site_paste}"
+    f"please use a code-pasting service such as {BaseURLs.site_paste}"
 )
 
 TXT_LIKE_FILES = {".txt", ".csv", ".json"}
 TXT_EMBED_DESCRIPTION = (
     "You either uploaded a `{blocked_extension}` file or entered a message that was too long. "
-    f"Please use our [paste bin]({URLs.site_schema}{URLs.site_paste}) instead."
+    f"Please use our [paste bin]({BaseURLs.site_paste}) instead."
 )
 
 DISALLOWED_EMBED_DESCRIPTION = (

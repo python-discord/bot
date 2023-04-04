@@ -125,6 +125,8 @@ class _Channels(EnvConfig):
     duck_pond = 637820308341915648
     roles = 851270062434156586
 
+    rules = 693837295685730335
+
 
 Channels = _Channels()
 
@@ -187,6 +189,7 @@ class _Categories(EnvConfig):
 
     # 2021 Summer Code Jam
     summer_code_jam = 861692638540857384
+    python_help_system = 691405807388196926
 
 
 Categories = _Categories()
@@ -490,10 +493,8 @@ class _BaseURLs(EnvConfig):
     github_bot_repo = "https://github.com/python-discord/bot"
 
     # Site
-    site = "pythondiscord.com"
-    site_schema = "https://"
-    site_api = "site.default.svc.cluster.local/api"
-    site_api_schema = "http://"
+    site_api = "http://site.default.svc.cluster.local/api"
+    site_paste = "https://paste.pythondiscord.com"
 
 
 BaseURLs = _BaseURLs()
@@ -508,12 +509,8 @@ class _URLs(_BaseURLs):
     connect_max_retries = 3
     connect_cooldown = 5
 
-    site_staff: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff"])
-    site_paste = "".join(["paste.", BaseURLs.site])
-
-    # Site endpoints
-    site_logs_view: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff/bot/logs"])
-    paste_service: str = "".join([BaseURLs.site_schema, "paste.", BaseURLs.site, "/{key}"])
+    paste_service: str = "".join([BaseURLs.site_paste, "/{key}"])
+    site_logs_view: str = "https://pythondiscord.com/staff/bot/logs"
 
 
 URLs = _URLs()
