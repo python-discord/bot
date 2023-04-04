@@ -102,7 +102,7 @@ async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList
             filters.append(f"**{filter_list.name.title()} Filters:** {', '.join(list_message)}")
     filters = "\n".join(filters)
 
-    matches = "**Matches:** " + ", ".join(repr(match) for match in ctx.matches) if ctx.matches else ""
+    matches = "**Matches:** " + escape_markdown(", ".join(repr(match) for match in ctx.matches)) if ctx.matches else ""
     actions = "\n**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")
 
     mod_alert_message = "\n".join(part for part in (triggered_by, triggered_in, filters, matches, actions) if part)
