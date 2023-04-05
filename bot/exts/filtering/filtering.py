@@ -1177,7 +1177,7 @@ class Filtering(Cog):
         description = description or None
         payload = {
             "filter_list": list_id, "content": content, "description": description,
-            "additional_settings": json.dumps(filter_settings), **settings
+            "additional_settings": filter_settings, **settings
         }
         response = await bot.instance.api_client.post('bot/filter/filters', json=to_serializable(payload))
         new_filter = filter_list.add_filter(list_type, response)
@@ -1220,7 +1220,7 @@ class Filtering(Cog):
         description = description or None
         payload = {
             "filter_list": list_id, "content": content, "description": description,
-            "additional_settings": json.dumps(filter_settings), **settings
+            "additional_settings": filter_settings, **settings
         }
         response = await bot.instance.api_client.patch(
             f'bot/filter/filters/{filter_.id}', json=to_serializable(payload)

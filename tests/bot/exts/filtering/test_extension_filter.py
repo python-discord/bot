@@ -25,7 +25,7 @@ class ExtensionsListTests(unittest.IsolatedAsyncioTestCase):
         for i, filter_content in enumerate(self.whitelist, start=1):
             filters.append({
                 "id": i, "content": filter_content, "description": None, "settings": {},
-                "additional_settings": "{}", "created_at": now, "updated_at": now  # noqa: P103
+                "additional_settings": {}, "created_at": now, "updated_at": now  # noqa: P103
             })
         self.filter_list.add_list({
             "id": 1,

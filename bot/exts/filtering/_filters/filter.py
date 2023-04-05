@@ -31,9 +31,7 @@ class Filter(FieldRequiring):
         self.updated_at = arrow.get(filter_data["updated_at"])
         self.actions, self.validations = create_settings(filter_data["settings"], defaults=defaults)
         if self.extra_fields_type:
-            self.extra_fields = self.extra_fields_type.parse_raw(
-                filter_data["additional_settings"] or "{}"   # noqa: P103
-            )
+            self.extra_fields = self.extra_fields_type.parse_obj(filter_data["additional_settings"])
         else:
             self.extra_fields = None
 

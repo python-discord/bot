@@ -40,7 +40,7 @@ class TokenFilterTests(unittest.IsolatedAsyncioTestCase):
                     "content": pattern,
                     "description": None,
                     "settings": {},
-                    "additional_settings": "{}",  # noqa: P103
+                    "additional_settings": {},
                     "created_at": now,
                     "updated_at": now
                 })
