@@ -46,7 +46,7 @@ MAX_EMBED_DESCRIPTION = 4080
 ALERT_VIEW_TIMEOUT = 3600
 
 SETTINGS_DELIMITER = re.compile(r"\s+(?=\S+=\S+)")
-SINGLE_SETTING_PATTERN = re.compile(r"[\w/]+=.+")
+SINGLE_SETTING_PATTERN = re.compile(r"(--)?[\w/]+=.+")
 
 EDIT_CONFIRMED_MESSAGE = "✅ Edit for `{0}` confirmed"
 
