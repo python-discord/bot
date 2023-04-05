@@ -115,7 +115,7 @@ class ExtensionsListTests(unittest.IsolatedAsyncioTestCase):
             ctx.dm_embed,
             extension.DISALLOWED_EMBED_DESCRIPTION.format(
                 joined_whitelist=", ".join(self.whitelist),
-                blocked_extensions_str=".disallowed",
+                joined_blacklist=".disallowed",
                 meta_channel_mention=meta_channel.mention
             )
         )
