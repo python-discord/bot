@@ -141,8 +141,8 @@ class InfractionAndNotification(ActionEntry):
             "If 0, the infraction will be sent in the context channel. If the ID otherwise fails to resolve, "
             "it will default to the mod-alerts channel."
         ),
-        "dm_content": "The contents of a message to be DMed to the offending user.",
-        "dm_embed": "The contents of the embed to be DMed to the offending user."
+        "dm_content": "The contents of a message to be DMed to the offending user. Doesn't send when invoked in DMs.",
+        "dm_embed": "The contents of the embed to be DMed to the offending user. Doesn't send when invoked in DMs."
     }
 
     dm_content: str
@@ -160,8 +160,8 @@ class InfractionAndNotification(ActionEntry):
             return infr_type
         return Infraction[infr_type.replace(" ", "_").upper()]
 
-    async def action(self, ctx: FilterContext) -> None:
-        """Send the notification to the user, and apply any specified infractions."""
+    async def send_message(self, ctx: FilterContext) -> None:
+        """Send the notification to the user."""
         # If there is no infraction to apply, any DM contents already provided in the context take precedence.
         if self.infraction_type == Infraction.NONE and (ctx.dm_content or ctx.dm_embed):
             dm_content = ctx.dm_content
@@ -183,6 +183,11 @@ class InfractionAndNotification(ActionEntry):
                 ctx.action_descriptions.append("notified")
             except Forbidden:
                 ctx.action_descriptions.append("failed to notify")
+
+    async def action(self, ctx: FilterContext) -> None:
+        """Send the notification to the user, and apply any specified infractions."""
+        if hasattr(ctx.channel, "category"):  # Don't DM the user for filters invoked in DMs.
+            await self.send_message(ctx)
 
         if self.infraction_type != Infraction.NONE:
             alerts_channel = bot_module.instance.get_channel(Channels.mod_alerts)
