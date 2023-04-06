@@ -263,8 +263,7 @@ class InfractionScheduler:
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
         if jump_url is None:
-            # Infraction issued in ModMail category.
-            jump_url = "N/A"
+            jump_url = "(Infraction issued in a ModMail channel.)"
         else:
             jump_url = f"[Click here.]({jump_url})"
 
