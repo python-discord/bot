@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 
 import discord
-from discord import DMChannel, Embed, Member, Message, TextChannel, Thread, User
+from discord import DMChannel, Embed, Member, Message, StageChannel, TextChannel, Thread, User, VoiceChannel
 
 from bot.utils.message_cache import MessageCache
 
@@ -31,7 +31,7 @@ class FilterContext:
     # Input context
     event: Event  # The type of event
     author: User | Member | None  # Who triggered the event
-    channel: TextChannel | Thread | DMChannel | None  # The channel involved
+    channel: TextChannel | VoiceChannel | StageChannel | Thread | DMChannel | None  # The channel involved
     content: str | Iterable  # What actually needs filtering. The Iterable type depends on the filter list.
     message: Message | None  # The message involved
     embeds: list[Embed] = field(default_factory=list)  # Any embeds involved
@@ -56,6 +56,10 @@ class FilterContext:
     related_channels: set[TextChannel | Thread | DMChannel] = field(default_factory=set)
     uploaded_attachments: dict[int, list[str]] = field(default_factory=dict)  # Message ID to attachment URLs.
     upload_deletion_logs: bool = True  # Whether it's allowed to upload deletion logs.
+
+    def __post_init__(self):
+        # If it were in the context of a DM there would be a channel.
+        self.in_guild = self.channel is None or self.channel.guild is not None
 
     @classmethod
     def from_message(

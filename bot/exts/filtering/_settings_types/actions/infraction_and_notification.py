@@ -186,7 +186,7 @@ class InfractionAndNotification(ActionEntry):
 
     async def action(self, ctx: FilterContext) -> None:
         """Send the notification to the user, and apply any specified infractions."""
-        if hasattr(ctx.channel, "category"):  # Don't DM the user for filters invoked in DMs.
+        if ctx.in_guild:  # Don't DM the user for filters invoked in DMs.
             await self.send_message(ctx)
 
         if self.infraction_type != Infraction.NONE:
