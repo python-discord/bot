@@ -559,7 +559,7 @@ class AlertView(discord.ui.View):
             author = await bot.instance.fetch_user(self.ctx.author.id)
         await command(fake_ctx, author)
 
-    @discord.ui.button(emoji="⚠")
+    @discord.ui.button(emoji="🗒️")
     async def user_infractions(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Send the infractions embed of the offending user."""
         command = bot.instance.get_command("infraction search")
