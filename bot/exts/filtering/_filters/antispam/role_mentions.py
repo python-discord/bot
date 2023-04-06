@@ -33,7 +33,7 @@ class DuplicatesFilter(UniqueFilter):
         earliest_relevant_at = arrow.utcnow() - timedelta(seconds=self.extra_fields.interval)
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, ctx.content))
         detected_messages = {msg for msg in relevant_messages if msg.author == ctx.author}
-        total_recent_mentions = sum(len(msg.role_mentions) for msg in relevant_messages)
+        total_recent_mentions = sum(len(msg.role_mentions) for msg in detected_messages)
 
         if total_recent_mentions > self.extra_fields.threshold:
             ctx.related_messages |= detected_messages
