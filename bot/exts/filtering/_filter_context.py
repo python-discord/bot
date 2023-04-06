@@ -58,7 +58,7 @@ class FilterContext:
     upload_deletion_logs: bool = True  # Whether it's allowed to upload deletion logs.
 
     def __post_init__(self):
-        # If it were in the context of a DM there would be a channel.
+        # If it's in the context of a DM channel, self.channel won't be None, but self.channel.guild will.
         self.in_guild = self.channel is None or self.channel.guild is not None
 
     @classmethod
