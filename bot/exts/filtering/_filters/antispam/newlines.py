@@ -43,7 +43,7 @@ class NewlinesFilter(UniqueFilter):
 
         # Identify groups of newline characters and get group & total counts
         newline_counts = []
-        for msg in relevant_messages:
+        for msg in detected_messages:
             newline_counts += [len(group) for group in NEWLINES.findall(msg.content)]
         total_recent_newlines = sum(newline_counts)
         # Get maximum newline group size

@@ -43,7 +43,7 @@ class EmojiFilter(UniqueFilter):
         # Convert Unicode emojis to :emoji: format to get their count.
         total_emojis = sum(
             len(DISCORD_EMOJI_RE.findall(demojize(CODE_BLOCK_RE.sub("", msg.content))))
-            for msg in relevant_messages
+            for msg in detected_messages
         )
 
         if total_emojis > self.extra_fields.threshold:

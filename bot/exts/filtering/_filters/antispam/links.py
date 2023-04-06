@@ -39,7 +39,7 @@ class DuplicatesFilter(UniqueFilter):
 
         total_links = 0
         messages_with_links = 0
-        for msg in relevant_messages:
+        for msg in detected_messages:
             total_matches = len(LINK_RE.findall(msg.content))
             if total_matches:
                 messages_with_links += 1

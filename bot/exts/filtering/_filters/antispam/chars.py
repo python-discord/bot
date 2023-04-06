@@ -34,7 +34,7 @@ class CharsFilter(UniqueFilter):
         relevant_messages = list(takewhile(lambda msg: msg.created_at > earliest_relevant_at, ctx.content))
 
         detected_messages = {msg for msg in relevant_messages if msg.author == ctx.author}
-        total_recent_chars = sum(len(msg.content) for msg in relevant_messages)
+        total_recent_chars = sum(len(msg.content) for msg in detected_messages)
 
         if total_recent_chars > self.extra_fields.threshold:
             ctx.related_messages |= detected_messages

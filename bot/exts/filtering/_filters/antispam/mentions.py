@@ -55,7 +55,7 @@ class DuplicatesFilter(UniqueFilter):
         # We would need to deal with codeblocks, escaping markdown, and any discrepancies between
         # our implementation and discord's Markdown parser which would cause false positives or false negatives.
         total_recent_mentions = 0
-        for msg in relevant_messages:
+        for msg in detected_messages:
             # We check if the message is a reply, and if it is try to get the author
             # since we ignore mentions of a user that we're replying to
             reply_author = None
