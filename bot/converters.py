@@ -9,6 +9,7 @@ import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
+from discord import app_commands
 from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
 from pydis_core.site_api import ResponseCodeError
@@ -267,37 +268,60 @@ class Snowflake(IDConverter):
         return snowflake
 
 
-class SourceConverter(Converter):
-    """Convert an argument into a help command, tag, command, or cog."""
+class SourceTransformer(app_commands.Transformer):
+    """Transform an argument into a tag, command or cog."""
 
-    @staticmethod
-    async def convert(ctx: Context, argument: str) -> SourceType:
-        """Convert argument into source object."""
-        if argument.lower() == "help":
-            return ctx.bot.help_command
+    async def transform(self, interaction: discord.Interaction, cog_command_or_tag: str) -> SourceType:
+        """Transform cog_command_or_tag into source object."""
+        if cog_command_or_tag.lower() == "help":
+            return interaction.client.help_command
 
-        cog = ctx.bot.get_cog(argument)
+        cog = interaction.client.get_cog(cog_command_or_tag)
         if cog:
             return cog
 
-        cmd = ctx.bot.get_command(argument)
+        cmd = interaction.client.get_command(cog_command_or_tag)
         if cmd:
             return cmd
 
-        tags_cog = ctx.bot.get_cog("Tags")
+        slash_cmd = interaction.client.tree.get_command(cog_command_or_tag)
+        slash_cmd = slash_cmd if not isinstance(slash_cmd, app_commands.ContextMenu) else None
+        if slash_cmd:
+            return slash_cmd
+
+        tags_cog = interaction.client.get_cog("Tags")
         show_tag = True
 
         if not tags_cog:
             show_tag = False
         else:
-            identifier = TagIdentifier.from_string(argument.lower())
+            identifier = TagIdentifier.from_string(cog_command_or_tag.lower())
             if identifier in tags_cog.tags:
                 return identifier
-        escaped_arg = escape_markdown(argument)
+        escaped_arg = escape_markdown(cog_command_or_tag)
 
-        raise BadArgument(
-            f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or Cog."
+        raise ValueError(
+            f"Unable to convert '{escaped_arg}' to valid command{', tag' if show_tag else ''} or cog."
         )
+
+    async def autocomplete(self, interaction: discord.Interaction, value: str) -> list[app_commands.Choice[str]]:
+        """Autocompleter for `/source` command."""
+        all_cogs = interaction.client.cogs
+        tags_cog = all_cogs.get("Tags", None)
+        names = [*all_cogs.keys(), *interaction.client.all_commands.keys()]
+        names += [
+            slash_cmd.qualified_name
+            for slash_cmd in interaction.client.tree.get_commands()
+            if not isinstance(slash_cmd, app_commands.ContextMenu)
+        ]
+        if tags_cog:
+            names += [tag.name for tag in tags_cog.tags.keys()]
+        # JSON can't serialize Cogs and Command objects thats why we are passing a string for value parameter.
+        choices = [
+            app_commands.Choice(name=source_name, value=source_name)
+            for source_name in names if value.lower() in source_name.lower()
+        ]
+        return choices[:25] if len(choices) > 25 else choices
 
 
 class DurationDelta(Converter):

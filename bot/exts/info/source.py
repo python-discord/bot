@@ -1,62 +1,69 @@
 import inspect
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
-from discord import Embed
-from discord.ext import commands
+from discord import Embed, Interaction, app_commands
+from discord.ext.commands import Cog, Command, ExtensionNotLoaded, HelpCommand
 
 from bot.bot import Bot
 from bot.constants import URLs
-from bot.converters import SourceConverter
+from bot.converters import SourceTransformer
 from bot.exts.info.tags import TagIdentifier
 
-SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, TagIdentifier, commands.ExtensionNotLoaded]
+SourceType = HelpCommand | Command | Cog | TagIdentifier | ExtensionNotLoaded | app_commands.Command
+HybridCommand = app_commands.Command | Command
 
 
-class BotSource(commands.Cog):
+class BotSource(Cog):
     """Displays information about the bot's source code."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.command(name="source", aliases=("src",))
-    async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
+    @app_commands.command(name="source")
+    @app_commands.guild_only()
+    async def source_command(
+        self,
+        interaction: Interaction,
+        *,
+        cog_command_or_tag: app_commands.Transform[SourceType, SourceTransformer] = None
+    ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
-        if not source_item:
+        if not cog_command_or_tag:
             embed = Embed(title="Bot's GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
             embed.set_thumbnail(url="https://avatars1.githubusercontent.com/u/9919")
-            await ctx.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
             return
 
-        embed = await self.build_embed(source_item)
-        await ctx.send(embed=embed)
+        embed = await self.build_embed(cog_command_or_tag)
+        await interaction.response.send_message(embed=embed)
 
-    def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
+    def get_source_link(self, source_object: SourceType) -> Tuple[str, str, Optional[int]]:
         """
-        Build GitHub link of source item, return this link, file location and first line number.
+        Build GitHub link of source object, return this link, file location and first line number.
 
-        Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
+        Raise ValueError if `source_object` is a dynamically-created object (e.g. via internal eval).
         """
-        if isinstance(source_item, commands.Command):
-            source_item = inspect.unwrap(source_item.callback)
+        if isinstance(source_object, HybridCommand):
+            source_item = inspect.unwrap(source_object.callback)
             src = source_item.__code__
             filename = src.co_filename
-        elif isinstance(source_item, TagIdentifier):
-            tags_cog = self.bot.get_cog("Tags")
-            filename = tags_cog.tags[source_item].file_path
-        else:
-            src = type(source_item)
+        elif issubclass(type(source_object), Cog) or isinstance(source_object, HelpCommand):
+            src = type(source_object)
             try:
                 filename = inspect.getsourcefile(src)
             except TypeError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                raise ValueError("Cannot get source for a dynamically-created object.")
+        else:
+            tags_cog = self.bot.get_cog("Tags")
+            filename = tags_cog.tags[source_object].file_path
 
-        if not isinstance(source_item, TagIdentifier):
+        if issubclass(type(source_object), Cog) or isinstance(source_object, HelpCommand | HybridCommand):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                raise ValueError("Cannot get source for a dynamically-created object.")
 
             lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
         else:
@@ -65,7 +72,7 @@ class BotSource(commands.Cog):
 
         # Handle tag file location differently than others to avoid errors in some cases
         if not first_line_no:
-            file_location = Path(filename).relative_to("bot/")
+            file_location = Path(filename).relative_to('.')
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
@@ -77,18 +84,21 @@ class BotSource(commands.Cog):
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 
-        if isinstance(source_object, commands.HelpCommand):
+        if isinstance(source_object, HelpCommand):
             title = "Help Command"
             description = source_object.__doc__.splitlines()[1]
-        elif isinstance(source_object, commands.Command):
+        elif isinstance(source_object, Command):
             description = source_object.short_doc
-            title = f"Command: {source_object.qualified_name}"
-        elif isinstance(source_object, TagIdentifier):
-            title = f"Tag: {source_object}"
-            description = ""
-        else:
+            title = f"Prefix-based Command: {source_object.qualified_name}"
+        elif isinstance(source_object, app_commands.Command):
+            description = source_object.description
+            title = f"Slash Command: {source_object.qualified_name}"
+        elif issubclass(type(source_object), Cog):
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
+        else:
+            title = f"Tag: {source_object}"
+            description = ""
 
         embed = Embed(title=title, description=description)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({url})")

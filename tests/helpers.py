@@ -496,6 +496,7 @@ class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
         self.channel = kwargs.get('channel', MockTextChannel())
         self.message = kwargs.get('message', MockMessage())
         self.invoked_from_error_handler = kwargs.get('invoked_from_error_handler', False)
+        self.response = unittest.mock.AsyncMock()
 
 
 attachment_instance = discord.Attachment(data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock())
@@ -627,3 +628,19 @@ class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
     """
     spec_set = webhook_instance
     additional_spec_asyncs = ("send", "edit", "delete", "execute")
+
+
+class MockAppCommand(CustomMockMixin, unittest.mock.MagicMock):
+    """
+     A MagicMock subclass to mock Command objects.
+
+    Instances of this class will follow the specifications of `discord.app_commands.Command` instances. For
+    more information, see the `MockGuild` docstring.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.name = kwargs.get("name", "foo")
+        self.qualified_name = kwargs.get("qualified_name", "...")
+        self.nsfw = kwargs.get("nsfw", False)
+        self.callback = kwargs.get("callback", unittest.mock.AsyncMock())
