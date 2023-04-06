@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from enum import EnumMeta
 from functools import partial
-from typing import Any, Callable, Coroutine, Optional, TypeVar
+from typing import Any, Callable, Coroutine, Optional, TypeVar, get_origin
 
 import discord
 from discord import Embed, Interaction
@@ -21,7 +21,7 @@ import bot
 from bot.constants import Colours
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filter_lists import FilterList
-from bot.exts.filtering._utils import FakeContext
+from bot.exts.filtering._utils import FakeContext, normalize_type
 from bot.utils.messages import format_channel, format_user, upload_log
 
 log = get_logger(__name__)
@@ -135,10 +135,11 @@ def populate_embed_from_dict(embed: Embed, data: dict) -> None:
 
 
 def parse_value(value: str, type_: type[T]) -> T:
-    """Parse the value and attempt to convert it to the provided type."""
-    if hasattr(type_, "__origin__"):  # In case this is a types.GenericAlias or a typing._GenericAlias
-        type_ = type_.__origin__
-    if value == '""':
+    """Parse the value provided in the CLI and attempt to convert it to the provided type."""
+    blank = value == '""'
+    type_ = normalize_type(type_, prioritize_nonetype=blank)
+
+    if blank or isinstance(None, type_):
         return type_()
     if type_ in (tuple, list, set):
         return list(value.split(","))
@@ -461,8 +462,8 @@ class EditBaseView(ABC, discord.ui.View):
         """Prompt the user to give an override value for the setting they selected, and respond to the interaction."""
         setting_name = select.values[0]
         type_ = self.type_per_setting_name[setting_name]
-        if hasattr(type_, "__origin__"):  # In case this is a types.GenericAlias or a typing._GenericAlias
-            type_ = type_.__origin__
+        if origin := get_origin(type_):  # In case this is a types.GenericAlias or a typing._GenericAlias
+            type_ = origin
         new_view = self.copy()
         # This is in order to not block the interaction response. There's a potential race condition here, since
         # a view's method is used without guaranteeing the task completed, but since it depends on user input

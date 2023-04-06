@@ -132,16 +132,24 @@ def repr_equals(override: Any, default: Any) -> bool:
     return str(override) == str(default)
 
 
-def starting_value(type_: type[T]) -> T:
-    """Return a value of the given type."""
+def normalize_type(type_: type, *, prioritize_nonetype: bool = True) -> type:
+    """Reduce a given type to one that can be initialized."""
     if get_origin(type_) in (Union, types.UnionType):  # In case of a Union
         args = get_args(type_)
         if type(None) in args:
-            return None
+            if prioritize_nonetype:
+                return type(None)
+            else:
+                args = tuple(set(args) - {type(None)})
         type_ = args[0]  # Pick one, doesn't matter
     if origin := get_origin(type_):  # In case of a parameterized List, Set, Dict etc.
-        type_ = origin
+        return origin
+    return type_
 
+
+def starting_value(type_: type[T]) -> T:
+    """Return a value of the given type."""
+    type_ = normalize_type(type_)
     try:
         return type_()
     except TypeError:  # In case it all fails, return a string and let the user handle it.
