@@ -53,23 +53,23 @@ def normalize_discord_file_name(name: str) -> str:
 class FileAttachment:
     """File Attachment from Snekbox eval."""
 
-    path: str
+    filename: str
     content: bytes
 
     def __repr__(self) -> str:
         """Return the content as a string."""
         content = f"{self.content[:10]}..." if len(self.content) > 10 else self.content
-        return f"FileAttachment(path={self.path!r}, content={content})"
+        return f"FileAttachment(path={self.filename!r}, content={content})"
 
     @property
     def suffix(self) -> str:
         """Return the file suffix."""
-        return PurePosixPath(self.path).suffix
+        return PurePosixPath(self.filename).suffix
 
     @property
     def name(self) -> str:
         """Return the file name."""
-        return PurePosixPath(self.path).name
+        return PurePosixPath(self.filename).name
 
     @classmethod
     def from_dict(cls, data: dict, size_limit: int = FILE_SIZE_LIMIT) -> FileAttachment:
@@ -92,7 +92,7 @@ class FileAttachment:
             content = content.encode("utf-8")
 
         return {
-            "path": self.path,
+            "path": self.filename,
             "content": b64encode(content).decode("ascii"),
         }
 

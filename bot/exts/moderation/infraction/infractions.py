@@ -14,7 +14,6 @@ from bot.bot import Bot
 from bot.constants import Channels, Event
 from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
-from bot.exts.filters.filtering import AUTO_BAN_DURATION, AUTO_BAN_REASON
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
@@ -30,6 +29,23 @@ if t.TYPE_CHECKING:
     from bot.exts.moderation.watchchannels.bigbrother import BigBrother
 
 
+# Comp ban
+LINK_PASSWORD = "https://support.discord.com/hc/en-us/articles/218410947-I-forgot-my-Password-Where-can-I-set-a-new-one"
+LINK_2FA = "https://support.discord.com/hc/en-us/articles/219576828-Setting-up-Two-Factor-Authentication"
+COMP_BAN_REASON = (
+    "Your account has been used to send links to a phishing website. You have been automatically banned. "
+    "If you are not aware of sending them, that means your account has been compromised.\n\n"
+
+    f"Here is a guide from Discord on [how to change your password]({LINK_PASSWORD}).\n\n"
+
+    f"We also highly recommend that you [enable 2 factor authentication on your account]({LINK_2FA}), "
+    "for heightened security.\n\n"
+
+    "Once you have changed your password, feel free to follow the instructions at the bottom of "
+    "this message to appeal your ban."
+)
+COMP_BAN_DURATION = timedelta(days=4)
+# Timeout
 MAXIMUM_TIMEOUT_DAYS = timedelta(days=28)
 TIMEOUT_CAP_MESSAGE = (
     f"The timeout for {{0}} can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
@@ -51,7 +67,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
     # region: Permanent infractions
 
-    @command()
+    @command(aliases=("warning",))
     async def warn(self, ctx: Context, user: UnambiguousMemberOrUser, *, reason: t.Optional[str] = None) -> None:
         """Warn a user for the given reason."""
         if not isinstance(user, Member):
@@ -147,7 +163,7 @@ class Infractions(InfractionScheduler, commands.Cog):
     @command()
     async def compban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Same as cleanban, but specifically with the ban reason and duration used for compromised accounts."""
-        await self.cleanban(ctx, user, duration=(arrow.utcnow() + AUTO_BAN_DURATION).datetime, reason=AUTO_BAN_REASON)
+        await self.cleanban(ctx, user, duration=(arrow.utcnow() + COMP_BAN_DURATION).datetime, reason=COMP_BAN_REASON)
 
     @command(aliases=("vban",))
     async def voiceban(self, ctx: Context) -> None:

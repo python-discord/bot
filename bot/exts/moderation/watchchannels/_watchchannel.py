@@ -14,8 +14,8 @@ from pydis_core.utils import scheduling
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
-from bot.exts.filters.token_remover import TokenRemover
-from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
+from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
+from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
 from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
@@ -235,7 +235,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
             await self.send_header(msg)
 
-        if TokenRemover.find_token_in_message(msg) or WEBHOOK_URL_RE.search(msg.content):
+        if DiscordTokenFilter.find_token_in_message(msg.content) or WEBHOOK_URL_RE.search(msg.content):
             cleaned_content = "Content is censored because it contains a bot or webhook token."
         elif cleaned_content := msg.clean_content:
             # Put all non-media URLs in a code block to prevent embeds

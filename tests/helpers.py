@@ -393,15 +393,15 @@ dm_channel_instance = discord.DMChannel(me=me, state=state, data=dm_channel_data
 
 class MockDMChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     """
-    A MagicMock subclass to mock TextChannel objects.
+    A MagicMock subclass to mock DMChannel objects.
 
-    Instances of this class will follow the specifications of `discord.TextChannel` instances. For
+    Instances of this class will follow the specifications of `discord.DMChannel` instances. For
     more information, see the `MockGuild` docstring.
     """
     spec_set = dm_channel_instance
 
     def __init__(self, **kwargs) -> None:
-        default_kwargs = {'id': next(self.discord_id), 'recipient': MockUser(), "me": MockUser()}
+        default_kwargs = {'id': next(self.discord_id), 'recipient': MockUser(), "me": MockUser(), 'guild': None}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
 
@@ -423,7 +423,7 @@ category_channel_instance = discord.CategoryChannel(
 class MockCategoryChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     def __init__(self, **kwargs) -> None:
         default_kwargs = {'id': next(self.discord_id)}
-        super().__init__(**collections.ChainMap(default_kwargs, kwargs))
+        super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
 
 # Create a Message instance to get a realistic MagicMock of `discord.Message`

@@ -8,8 +8,8 @@ from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.filters.token_remover import TokenRemover
-from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
+from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
+from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.info.codeblock._instructions import get_instructions
 from bot.log import get_logger
@@ -135,7 +135,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             not message.author.bot
             and self.is_valid_channel(message.channel)
             and has_lines(message.content, constants.CodeBlock.minimum_lines)
-            and not TokenRemover.find_token_in_message(message)
+            and not DiscordTokenFilter.find_token_in_message(message.content)
             and not WEBHOOK_URL_RE.search(message.content)
         )
 
