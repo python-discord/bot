@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import ClassVar
 
-from discord import Message
+from discord import Message, Thread
 from discord.errors import HTTPException
 from pydis_core.utils import scheduling
 from pydis_core.utils.logging import get_logger
@@ -52,6 +52,8 @@ class RemoveContext(ActionEntry):
             await self._handle_messages(ctx)
         elif ctx.event == Event.NICKNAME:
             await self._handle_nickname(ctx)
+        elif ctx.event == Event.THREAD_NAME:
+            await self._handle_thread(ctx)
 
     @staticmethod
     async def _handle_messages(ctx: FilterContext) -> None:
@@ -106,7 +108,18 @@ class RemoveContext(ActionEntry):
             return
 
         await command(FakeContext(ctx.message, alerts_channel, command), ctx.author, None, reason=SUPERSTAR_REASON)
-        ctx.action_descriptions.append("superstar")
+        ctx.action_descriptions.append("superstarred")
+
+    @staticmethod
+    async def _handle_thread(ctx: FilterContext) -> None:
+        """Delete the context thread."""
+        if isinstance(ctx.channel, Thread):
+            try:
+                await ctx.channel.delete()
+            except HTTPException:
+                ctx.action_descriptions.append("failed to delete thread")
+            else:
+                ctx.action_descriptions.append("deleted thread")
 
     def union(self, other: Self) -> Self:
         """Combines two actions of the same type. Each type of action is executed once per filter."""
