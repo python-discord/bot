@@ -52,11 +52,11 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
     # to read the guide for asking better questions
     if closing_reason == _stats.ClosingReason.INACTIVE and closed_post.owner is not None:
         participant_ids = {
-            message.author.id async for message in closed_post.history(limit=10, oldest_first=False)
+            message.author.id async for message in closed_post.history(limit=100, oldest_first=False)
             if not message.author.bot
         }
         if participant_ids == {closed_post.owner_id}:
-            message += closed_post.owner.mention
+            message = closed_post.owner.mention
 
     await closed_post.send(message, embed=embed)
     await closed_post.edit(archived=True, locked=True, reason="Locked a closed help post")
