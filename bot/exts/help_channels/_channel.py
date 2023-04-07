@@ -215,6 +215,12 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
     If `has_task` is True and rescheduling is required, the extant task to make the post
     dormant will first be cancelled.
     """
+    try:
+        await post.guild.fetch_channel(post.id)
+    except discord.HTTPException:
+        log.trace(f"Not closing missing post #{post} ({post.id}).")
+        return
+
     if post.locked:
         log.trace(f"Not closing already closed post #{post} ({post.id}).")
         return
