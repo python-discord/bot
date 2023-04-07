@@ -223,7 +223,7 @@ class Filtering(Cog):
 
         nick_ctx = FilterContext.from_message(Event.NICKNAME, msg)
         nick_ctx.content = msg.author.display_name
-        await self._check_bad_name(nick_ctx)
+        await self._check_bad_display_name(nick_ctx)
 
         await self._maybe_schedule_msg_delete(ctx, result_actions)
         self._increment_stats(triggers)
