@@ -14,10 +14,9 @@ from pydis_core.utils import interactions
 from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, Filter, MODERATION_ROLES, Roles, URLs
+from bot.constants import Channels, Emojis, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
-from bot.exts.events.code_jams._channels import CATEGORY_NAME as JAM_CATEGORY_NAME
-from bot.exts.filters.antimalware import TXT_LIKE_FILES
+from bot.exts.filtering._filter_lists.extension import TXT_LIKE_FILES
 from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
@@ -27,7 +26,7 @@ from bot.utils.lock import LockedResourceError, lock_arg
 from bot.utils.services import PasteTooLongError, PasteUploadError
 
 if TYPE_CHECKING:
-    from bot.exts.filters.filtering import Filtering
+    from bot.exts.filtering.filtering import Filtering
 
 log = get_logger(__name__)
 
@@ -330,37 +329,22 @@ class Snekbox(Cog):
 
         return output, paste_link
 
-    def get_extensions_whitelist(self) -> set[str]:
-        """Return a set of whitelisted file extensions."""
-        return set(self.bot.filter_list_cache['FILE_FORMAT.True'].keys()) | TXT_LIKE_FILES
-
-    def _filter_files(self, ctx: Context, files: list[FileAttachment]) -> FilteredFiles:
+    def _filter_files(self, ctx: Context, files: list[FileAttachment], blocked_exts: set[str]) -> FilteredFiles:
         """Filter to restrict files to allowed extensions. Return a named tuple of allowed and blocked files lists."""
-        # Check if user is staff, if is, return
-        # Since we only care that roles exist to iterate over, check for the attr rather than a User/Member instance
-        if hasattr(ctx.author, "roles") and any(role.id in Filter.role_whitelist for role in ctx.author.roles):
-            return FilteredFiles(files, [])
-        # Ignore code jam channels
-        if getattr(ctx.channel, "category", None) and ctx.channel.category.name == JAM_CATEGORY_NAME:
-            return FilteredFiles(files, [])
-
-        # Get whitelisted extensions
-        whitelist = self.get_extensions_whitelist()
-
         # Filter files into allowed and blocked
         blocked = []
         allowed = []
         for file in files:
-            if file.suffix in whitelist:
-                allowed.append(file)
-            else:
+            if file.suffix in blocked_exts:
                 blocked.append(file)
+            else:
+                allowed.append(file)
 
         if blocked:
             blocked_str = ", ".join(f.suffix for f in blocked)
             log.info(
                 f"User '{ctx.author}' ({ctx.author.id}) uploaded blacklisted file(s) in eval: {blocked_str}",
-                extra={"attachment_list": [f.path for f in files]}
+                extra={"attachment_list": [f.filename for f in files]}
             )
 
         return FilteredFiles(allowed, blocked)
@@ -407,31 +391,8 @@ class Snekbox(Cog):
             else:
                 self.bot.stats.incr("snekbox.python.success")
 
-            # Filter file extensions
-            allowed, blocked = self._filter_files(ctx, result.files)
-            # Also scan failed files for blocked extensions
-            failed_files = [FileAttachment(name, b"") for name in result.failed_files]
-            blocked.extend(self._filter_files(ctx, failed_files).blocked)
-            # Add notice if any files were blocked
-            if blocked:
-                blocked_sorted = sorted(set(f.suffix for f in blocked))
-                # Only no extension
-                if len(blocked_sorted) == 1 and blocked_sorted[0] == "":
-                    blocked_msg = "Files with no extension can't be uploaded."
-                # Both
-                elif "" in blocked_sorted:
-                    blocked_str = ", ".join(ext for ext in blocked_sorted if ext)
-                    blocked_msg = (
-                        f"Files with no extension or disallowed extensions can't be uploaded: **{blocked_str}**"
-                    )
-                else:
-                    blocked_str = ", ".join(blocked_sorted)
-                    blocked_msg = f"Files with disallowed extensions can't be uploaded: **{blocked_str}**"
-
-                msg += f"\n{Emojis.failed_file} {blocked_msg}"
-
             # Split text files
-            text_files = [f for f in allowed if f.suffix in TXT_LIKE_FILES]
+            text_files = [f for f in result.files if f.suffix in TXT_LIKE_FILES]
             # Inline until budget, then upload to paste service
             # Budget is shared with stdout, so subtract what we've already used
             budget_lines = MAX_OUTPUT_BLOCK_LINES - (output.count("\n") + 1)
@@ -459,8 +420,35 @@ class Snekbox(Cog):
                         budget_chars -= len(file_text)
 
             filter_cog: Filtering | None = self.bot.get_cog("Filtering")
-            if filter_cog and (await filter_cog.filter_snekbox_output(msg, ctx.message)):
-                return await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
+            blocked_exts = set()
+            # Include failed files in the scan.
+            failed_files = [FileAttachment(name, b"") for name in result.failed_files]
+            total_files = result.files + failed_files
+            if filter_cog:
+                block_output, blocked_exts = await filter_cog.filter_snekbox_output(msg, total_files, ctx.message)
+                if block_output:
+                    return await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
+
+            # Filter file extensions
+            allowed, blocked = self._filter_files(ctx, result.files, blocked_exts)
+            blocked.extend(self._filter_files(ctx, failed_files, blocked_exts).blocked)
+            # Add notice if any files were blocked
+            if blocked:
+                blocked_sorted = sorted(set(f.suffix for f in blocked))
+                # Only no extension
+                if len(blocked_sorted) == 1 and blocked_sorted[0] == "":
+                    blocked_msg = "Files with no extension can't be uploaded."
+                # Both
+                elif "" in blocked_sorted:
+                    blocked_str = ", ".join(ext for ext in blocked_sorted if ext)
+                    blocked_msg = (
+                        f"Files with no extension or disallowed extensions can't be uploaded: **{blocked_str}**"
+                    )
+                else:
+                    blocked_str = ", ".join(blocked_sorted)
+                    blocked_msg = f"Files with disallowed extensions can't be uploaded: **{blocked_str}**"
+
+                msg += f"\n{Emojis.failed_file} {blocked_msg}"
 
             # Upload remaining non-text files
             files = [f.to_file() for f in allowed if f not in text_files]

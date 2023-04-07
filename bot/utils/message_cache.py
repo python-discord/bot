@@ -31,20 +31,23 @@ class MessageCache:
         self._start = 0
         self._end = 0
 
-        self._messages: list[t.Optional[Message]] = [None] * self.maxlen
+        self._messages: list[Message | None] = [None] * self.maxlen
         self._message_id_mapping = {}
+        self._message_metadata = {}
 
-    def append(self, message: Message) -> None:
+    def append(self, message: Message, *, metadata: dict | None = None) -> None:
         """Add the received message to the cache, depending on the order of messages defined by `newest_first`."""
         if self.newest_first:
             self._appendleft(message)
         else:
             self._appendright(message)
+        self._message_metadata[message.id] = metadata
 
     def _appendright(self, message: Message) -> None:
         """Add the received message to the end of the cache."""
         if self._is_full():
             del self._message_id_mapping[self._messages[self._start].id]
+            del self._message_metadata[self._messages[self._start].id]
             self._start = (self._start + 1) % self.maxlen
 
         self._messages[self._end] = message
@@ -56,6 +59,7 @@ class MessageCache:
         if self._is_full():
             self._end = (self._end - 1) % self.maxlen
             del self._message_id_mapping[self._messages[self._end].id]
+            del self._message_metadata[self._messages[self._end].id]
 
         self._start = (self._start - 1) % self.maxlen
         self._messages[self._start] = message
@@ -69,6 +73,7 @@ class MessageCache:
         self._end = (self._end - 1) % self.maxlen
         message = self._messages[self._end]
         del self._message_id_mapping[message.id]
+        del self._message_metadata[message.id]
         self._messages[self._end] = None
 
         return message
@@ -80,6 +85,7 @@ class MessageCache:
 
         message = self._messages[self._start]
         del self._message_id_mapping[message.id]
+        del self._message_metadata[message.id]
         self._messages[self._start] = None
         self._start = (self._start + 1) % self.maxlen
 
@@ -89,16 +95,21 @@ class MessageCache:
         """Remove all messages from the cache."""
         self._messages = [None] * self.maxlen
         self._message_id_mapping = {}
+        self._message_metadata = {}
 
         self._start = 0
         self._end = 0
 
-    def get_message(self, message_id: int) -> t.Optional[Message]:
+    def get_message(self, message_id: int) -> Message | None:
         """Return the message that has the given message ID, if it is cached."""
         index = self._message_id_mapping.get(message_id, None)
         return self._messages[index] if index is not None else None
 
-    def update(self, message: Message) -> bool:
+    def get_message_metadata(self, message_id: int) -> dict | None:
+        """Return the metadata of the message that has the given message ID, if it is cached."""
+        return self._message_metadata.get(message_id, None)
+
+    def update(self, message: Message, *, metadata: dict | None = None) -> bool:
         """
         Update a cached message with new contents.
 
@@ -108,13 +119,15 @@ class MessageCache:
         if index is None:
             return False
         self._messages[index] = message
+        if metadata is not None:
+            self._message_metadata[message.id] = metadata
         return True
 
     def __contains__(self, message_id: int) -> bool:
         """Return True if the cache contains a message with the given ID ."""
         return message_id in self._message_id_mapping
 
-    def __getitem__(self, item: t.Union[int, slice]) -> t.Union[Message, list[Message]]:
+    def __getitem__(self, item: int | slice) -> Message | list[Message]:
         """
         Return the message(s) in the index or slice provided.
 

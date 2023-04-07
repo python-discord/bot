@@ -19,6 +19,7 @@ from bot.converters import Age, ISODateTime
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
+from bot.utils.messages import upload_log
 
 log = get_logger(__name__)
 
@@ -351,7 +352,7 @@ class Clean(Cog):
 
         # Reverse the list to have reverse chronological order
         log_messages = reversed(messages)
-        log_url = await self.mod_log.upload_log(log_messages, ctx.author.id)
+        log_url = await upload_log(log_messages, ctx.author.id)
 
         # Build the embed and send it
         if channels == "*":

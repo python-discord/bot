@@ -113,8 +113,8 @@ services:
       - .env
     environment:
       API_KEYS_SITE_API: "badbot13m0n8f570f942013fc818f234916ca531"
-      URLS_SITE_API: "web:8000/api"
-      URLS_SNEKBOX_EVAL_API: https://snekbox.pythondiscord.com//eval"
+      URLS_SITE_API: "http://web:8000/api"
+      URLS_SNEKBOX_EVAL_API: "https://snekbox.pythondiscord.com/eval"
       URLS_SNEKBOX_311_EVAL_API: "https://snekbox.pythondiscord.com/eval"
       REDIS_HOST: "redis"
       STATS_STATSD_HOST: "http://localhost"
