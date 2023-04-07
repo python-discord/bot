@@ -171,7 +171,11 @@ async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) ->
     _stats.report_post_count()
     cached_post = deleted_post_event.thread
     if cached_post and not cached_post.archived:
-        # If the post is in the bot's cache, and it was not archived before deleting, report a complete session.
+        # If the post is in the bot's cache, and it was not archived before deleting,
+        # report a complete session and remove the cooldown.
+        poster = cached_post.owner
+        cooldown_role = cached_post.guild.get_role(constants.Roles.help_cooldown)
+        await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
         await _stats.report_complete_session(cached_post, _stats.ClosingReason.DELETED)
 
 
