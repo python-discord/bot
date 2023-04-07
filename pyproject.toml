@@ -13,7 +13,7 @@ pydis_core = { version = "9.5.1", extras = ["async-rediscache"] }
 
 aiohttp = "3.8.4"
 arrow = "1.2.3"
-beautifulsoup4 = "4.12.0"
+beautifulsoup4 = "4.12.2"
 colorama = { version = "0.4.6", markers = "sys_platform == 'win32'" }
 coloredlogs = "15.0.1"
 deepdiff = "6.3.0"
