@@ -235,6 +235,8 @@ class Snekbox(Cog):
     @staticmethod
     def shorten_to_max_length(lines: list[str], max_length: int, truncation_reason: str) -> str:
         """Removes/shortens lines from `lines` until the returned output will not be more than `max_length`."""
+        have_removed_lines = "too many lines" in truncation_reason  # whether lines were removed before this function
+
         output = "\n".join(lines)
         truncation_message = f"\n(truncated - {truncation_reason})"
 
@@ -266,12 +268,18 @@ class Snekbox(Cog):
 
             # Remove necessary lines and shorten + add elipsis to `lines[-line_to_remove]`
             lines = lines[:-lines_to_remove] + [lines[-lines_to_remove][:total_offset - too_long_by - 3] + "..."]
-            output = "\n".join(lines)
-            if lines_to_remove:
-                # We removed at least one line, so add elipses to indicate such
-                output += "\n..."
-            output += truncation_message
+            if not have_removed_lines:
+                # Lines weren't removed before the loop, but they may have been inside
+                if lines_to_remove:
+                    # At least one line was removed within the loop, so update `have_removed_lines`
+                    have_removed_lines = True
 
+            output = "\n".join(lines)
+
+        if have_removed_lines:
+            # We removed at least one line, so add elipses to indicate such
+            output += "\n..."
+        output += truncation_message
         return output
 
     async def format_output(
