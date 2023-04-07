@@ -10,6 +10,7 @@ from bot import constants
 from bot.errors import LockedResourceError
 from bot.exts.utils import snekbox
 from bot.exts.utils.snekbox import EvalJob, EvalResult, Snekbox
+from bot.exts.utils.snekbox._cog import MAX_OUTPUT_BLOCK_CHARS, MAX_OUTPUT_BLOCK_LINES
 from bot.exts.utils.snekbox._io import FileAttachment
 from tests.helpers import MockBot, MockContext, MockMember, MockMessage, MockReaction, MockUser
 
@@ -200,16 +201,31 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_format_output(self):
         """Test output formatting."""
-        self.cog.upload_output = AsyncMock(return_value='https://testificate.com/')
+        mocked_pastebin_link = "https://testificate.com/"
+        self.cog.upload_output = AsyncMock(return_value=mocked_pastebin_link)
 
-        too_many_lines = (
-            '001 | v\n002 | e\n003 | r\n004 | y\n005 | l\n006 | o\n'
-            '007 | n\n008 | g\n009 | b\n010 | e\n011 | a\n... (truncated - too many lines)'
-        )
-        too_long_too_many_lines = (
-            "\n".join(
-                f"{i:03d} | {line}" for i, line in enumerate(['verylongbeard' * 10] * 15, 1)
-            )[:1000] + "\n... (truncated - too long, too many lines)"
+        too_many_lines_list = ["hello"] * (MAX_OUTPUT_BLOCK_LINES + 1)
+        too_many_lines_input = "\n".join(too_many_lines_list)
+        too_many_lines_expected_output = "\n".join(
+            f"{i:03d} | {line}" for i, line in enumerate(too_many_lines_list[:MAX_OUTPUT_BLOCK_LINES - 2], 1)
+        ) + "\n...\n(truncated - too many lines)"
+
+        too_long_one_line_truncation_message = "...\n(truncated - too long)"
+        too_long_one_line_input = "a" * (MAX_OUTPUT_BLOCK_CHARS + 1)
+        too_long_one_line_expected_output = "a" * (
+            MAX_OUTPUT_BLOCK_CHARS - len(too_long_one_line_truncation_message)
+        ) + too_long_one_line_truncation_message
+
+        length_per_line = ((MAX_OUTPUT_BLOCK_CHARS // (MAX_OUTPUT_BLOCK_LINES)) + 1)
+        too_long_too_many_lines_list = [
+            "a" * length_per_line
+        ] * (MAX_OUTPUT_BLOCK_LINES + 1)
+        too_long_too_many_lines_input = "\n".join(too_long_too_many_lines_list)
+        too_long_too_many_lines_expected_output = "\n".join(
+            f"{i:03d} | {line}" for i, line in enumerate(too_long_too_many_lines_list[:MAX_OUTPUT_BLOCK_LINES - 3], 1)
+        ) + (
+            f"\n{(MAX_OUTPUT_BLOCK_LINES - 2):03d} | {'a' * length_per_line}\n"
+            "...\n(truncated - too long, too many lines)"
         )
 
         cases = (
@@ -219,29 +235,32 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             ('<!@', ("<!@\u200B", None), r'Convert <!@ to <!@\u200B'),
             (
                 '\u202E\u202E\u202E',
-                ('Code block escape attempt detected; will not output result', 'https://testificate.com/'),
+                ('Code block escape attempt detected; will not output result', mocked_pastebin_link),
                 'Detect RIGHT-TO-LEFT OVERRIDE'
             ),
             (
                 '\u200B\u200B\u200B',
-                ('Code block escape attempt detected; will not output result', 'https://testificate.com/'),
+                ('Code block escape attempt detected; will not output result', mocked_pastebin_link),
                 'Detect ZERO WIDTH SPACE'
             ),
             ('long\nbeard', ('001 | long\n002 | beard', None), 'Two line output'),
             (
-                'v\ne\nr\ny\nl\no\nn\ng\nb\ne\na\nr\nd',
-                (too_many_lines, 'https://testificate.com/'),
-                '12 lines output'
+                too_many_lines_input,
+                (too_many_lines_expected_output, mocked_pastebin_link),
+                f'{MAX_OUTPUT_BLOCK_LINES + 1} lines output'
             ),
             (
-                'verylongbeard' * 100,
-                ('verylongbeard' * 76 + 'verylongbear\n... (truncated - too long)', 'https://testificate.com/'),
-                '1300 characters output'
+                too_long_one_line_input,
+                (too_long_one_line_expected_output, mocked_pastebin_link),
+                f'{MAX_OUTPUT_BLOCK_CHARS + 1} characters output'
             ),
             (
-                ('verylongbeard' * 10 + '\n') * 15,
-                (too_long_too_many_lines, 'https://testificate.com/'),
-                '15 lines, 1965 characters output'
+                too_long_too_many_lines_input,
+                (too_long_too_many_lines_expected_output, mocked_pastebin_link),
+                (
+                    f'{MAX_OUTPUT_BLOCK_LINES + 1} lines, '
+                    f'{length_per_line * (MAX_OUTPUT_BLOCK_LINES + 1)} characters output'
+                )
             ),
         )
         for case, expected, testname in cases:
