@@ -323,7 +323,7 @@ class Snekbox(Cog):
                 truncation_reason = "too long, too many lines"
             else:
                 truncation_reason = "too many lines"
-            output = self.shorten_to_max_length(lines[:max_lines], max_chars, truncation_reason)
+            output = self.shorten_to_max_length(lines[:max_lines - 2], max_chars, truncation_reason)
 
         elif len(output) > max_chars:
             truncation_reason = "too long"
