@@ -14,7 +14,7 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 if t.TYPE_CHECKING:
-    from bot.exts.filters.filtering import Filtering
+    from bot.exts.filtering.filtering import Filtering
 
 
 class HelpForum(commands.Cog):
@@ -145,7 +145,7 @@ class HelpForum(commands.Cog):
         if thread.parent_id != self.help_forum_channel.id:
             return
 
-        await self.post_with_disallowed_title_check(thread)
+        # await self.post_with_disallowed_title_check(thread)  TODO bring this back with the new filtering system
         await _channel.help_post_opened(thread)
 
         delay = min(constants.HelpChannels.deleted_idle_minutes, constants.HelpChannels.idle_minutes) * 60
