@@ -94,6 +94,7 @@ class _Channels(EnvConfig):
     mod_meta = 775412552795947058
     mods = 305126844661760000
     nominations = 822920136150745168
+    nomination_discussion = 798959130634747914
     nomination_voting = 822853512709931008
     organisation = 551789653284356126
 
