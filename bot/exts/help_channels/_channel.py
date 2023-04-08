@@ -142,11 +142,15 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
     try:
         await opened_post.starter_message.pin()
     except (discord.HTTPException, AttributeError) as e:
-        # Suppress if the message was not found, most likely deleted
+        # Suppress if the message or post were not found, most likely deleted
         # The message being deleted could be surfaced as an AttributeError on .starter_message,
         # or as an exception from the Discord API, depending on timing and cache status.
-        if isinstance(e, discord.HTTPException) and e.code != 10008:
-            raise e
+        # The post being deleting would happen if it had a bad name that would cause the filtering system to delete it.
+        if isinstance(e, discord.HTTPException):
+            if e.code == 10003:  # Post not found.
+                return
+            elif e.code != 10008:  # 10008 - Starter message not found.
+                raise e
 
     await send_opened_post_message(opened_post)
 
@@ -178,7 +182,11 @@ async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) ->
     _stats.report_post_count()
     cached_post = deleted_post_event.thread
     if cached_post and not cached_post.archived:
-        # If the post is in the bot's cache, and it was not archived before deleting, report a complete session.
+        # If the post is in the bot's cache, and it was not archived before deleting,
+        # report a complete session and remove the cooldown.
+        poster = cached_post.owner
+        cooldown_role = cached_post.guild.get_role(constants.Roles.help_cooldown)
+        await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
         await _stats.report_complete_session(cached_post, _stats.ClosingReason.DELETED)
 
 
@@ -218,6 +226,12 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
     If `has_task` is True and rescheduling is required, the extant task to make the post
     dormant will first be cancelled.
     """
+    try:
+        await post.guild.fetch_channel(post.id)
+    except discord.HTTPException:
+        log.trace(f"Not closing missing post #{post} ({post.id}).")
+        return
+
     if post.locked:
         log.trace(f"Not closing already closed post #{post} ({post.id}).")
         return

@@ -12,7 +12,7 @@ from typing import Literal, Optional, get_type_hints
 import arrow
 import discord
 from async_rediscache import RedisCache
-from discord import Colour, Embed, HTTPException, Message, MessageType
+from discord import Colour, Embed, HTTPException, Message, MessageType, Thread
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
@@ -206,6 +206,11 @@ class Filtering(Cog):
         """Filter the contents of a sent message."""
         if msg.author.bot or msg.webhook_id or msg.type == MessageType.auto_moderation_action:
             return
+        if msg.type == MessageType.channel_name_change and isinstance(msg.channel, Thread):
+            ctx = FilterContext.from_message(Event.THREAD_NAME, msg)
+            await self._check_bad_name(ctx)
+            return
+
         self.message_cache.append(msg)
 
         ctx = FilterContext.from_message(Event.MESSAGE, msg, None, self.message_cache)
@@ -218,7 +223,7 @@ class Filtering(Cog):
 
         nick_ctx = FilterContext.from_message(Event.NICKNAME, msg)
         nick_ctx.content = msg.author.display_name
-        await self._check_bad_name(nick_ctx)
+        await self._check_bad_display_name(nick_ctx)
 
         await self._maybe_schedule_msg_delete(ctx, result_actions)
         self._increment_stats(triggers)
@@ -250,6 +255,12 @@ class Filtering(Cog):
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
         """Checks for bad words in usernames when users join, switch or leave a voice channel."""
         ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
+        await self._check_bad_name(ctx)
+
+    @Cog.listener()
+    async def on_thread_create(self, thread: Thread) -> None:
+        """Check for bad words in new thread names."""
+        ctx = FilterContext(Event.THREAD_NAME, thread.owner, thread, thread.name, None)
         await self._check_bad_name(ctx)
 
     async def filter_snekbox_output(
@@ -966,11 +977,17 @@ class Filtering(Cog):
         return False
 
     @lock_arg("filtering.check_bad_name", "ctx", attrgetter("author.id"))
-    async def _check_bad_name(self, ctx: FilterContext) -> None:
+    async def _check_bad_display_name(self, ctx: FilterContext) -> None:
         """Check filter triggers in the passed context - a member's display name."""
         if await self._recently_alerted_name(ctx.author):
             return
+        new_ctx = await self._check_bad_name(ctx)
+        if new_ctx.send_alert:
+            # Update time when alert sent
+            await self.name_alerts.set(ctx.author.id, arrow.utcnow().timestamp())
 
+    async def _check_bad_name(self, ctx: FilterContext) -> FilterContext:
+        """Check filter triggers for some given name (thread name, a member's display name)."""
         name = ctx.content
         normalised_name = unicodedata.normalize("NFKC", name)
         cleaned_normalised_name = "".join([c for c in normalised_name if not unicodedata.combining(c)])
@@ -981,13 +998,13 @@ class Filtering(Cog):
 
         new_ctx = ctx.replace(content=" ".join(names_to_check))
         result_actions, list_messages, triggers = await self._resolve_action(new_ctx)
+        new_ctx = new_ctx.replace(content=ctx.content)  # Alert with the original content.
         if result_actions:
-            await result_actions.action(ctx)
-        if ctx.send_alert:
-            await self._send_alert(ctx, list_messages)  # `ctx` has the original content.
-            # Update time when alert sent
-            await self.name_alerts.set(ctx.author.id, arrow.utcnow().timestamp())
+            await result_actions.action(new_ctx)
+        if new_ctx.send_alert:
+            await self._send_alert(new_ctx, list_messages)
         self._increment_stats(triggers)
+        return new_ctx
 
     async def _resolve_list_type_and_name(
         self, ctx: Context, list_type: ListType | None = None, list_name: str | None = None, *, exclude: str = ""

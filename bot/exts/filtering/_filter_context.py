@@ -21,6 +21,7 @@ class Event(Enum):
     MESSAGE = auto()
     MESSAGE_EDIT = auto()
     NICKNAME = auto()
+    THREAD_NAME = auto()
     SNEKBOX = auto()
 
 
