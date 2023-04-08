@@ -126,6 +126,8 @@ class _Channels(EnvConfig):
     duck_pond = 637820308341915648
     roles = 851270062434156586
 
+    rules = 693837295685730335
+
 
 Channels = _Channels()
 
@@ -188,6 +190,7 @@ class _Categories(EnvConfig):
 
     # 2021 Summer Code Jam
     summer_code_jam = 861692638540857384
+    python_help_system = 691405807388196926
 
 
 Categories = _Categories()
@@ -332,43 +335,6 @@ class _Free(EnvConfig):
 
 
 Free = _Free()
-
-
-class Rule(BaseModel):
-    interval: int
-    max: int
-
-
-# Some help in choosing an appropriate name for this is appreciated
-class ExtendedRule(Rule):
-    max_consecutive: int
-
-
-class Rules(BaseModel):
-    attachments: Rule = Rule(interval=10, max=6)
-    burst: Rule = Rule(interval=10, max=7)
-    chars: Rule = Rule(interval=5, max=4_200)
-    discord_emojis: Rule = Rule(interval=10, max=20)
-    duplicates: Rule = Rule(interval=10, max=3)
-    links: Rule = Rule(interval=10, max=10)
-    mentions: Rule = Rule(interval=10, max=5)
-    newlines: ExtendedRule = ExtendedRule(interval=10, max=100, max_consecutive=10)
-    role_mentions: Rule = Rule(interval=10, max=3)
-
-
-class _AntiSpam(EnvConfig):
-    EnvConfig.Config.env_prefix = 'anti_spam_'
-
-    cache_size = 100
-
-    clean_offending = True
-    ping_everyone = True
-
-    remove_timeout_after = 600
-    rules = Rules()
-
-
-AntiSpam = _AntiSpam()
 
 
 class _HelpChannels(EnvConfig):
@@ -528,10 +494,8 @@ class _BaseURLs(EnvConfig):
     github_bot_repo = "https://github.com/python-discord/bot"
 
     # Site
-    site = "pythondiscord.com"
-    site_schema = "https://"
-    site_api = "site.default.svc.cluster.local/api"
-    site_api_schema = "http://"
+    site_api = "http://site.default.svc.cluster.local/api"
+    site_paste = "https://paste.pythondiscord.com"
 
 
 BaseURLs = _BaseURLs()
@@ -546,12 +510,8 @@ class _URLs(_BaseURLs):
     connect_max_retries = 3
     connect_cooldown = 5
 
-    site_staff: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff"])
-    site_paste = "".join(["paste.", BaseURLs.site])
-
-    # Site endpoints
-    site_logs_view: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff/bot/logs"])
-    paste_service: str = "".join([BaseURLs.site_schema, "paste.", BaseURLs.site, "/{key}"])
+    paste_service: str = "".join([BaseURLs.site_paste, "/{key}"])
+    site_logs_view: str = "https://pythondiscord.com/staff/bot/logs"
 
 
 URLs = _URLs()
@@ -661,47 +621,6 @@ class _Icons(EnvConfig):
 
 
 Icons = _Icons()
-
-
-class _Filter(EnvConfig):
-    EnvConfig.Config.env_prefix = "filters_"
-
-    filter_domains = True
-    filter_everyone_ping = True
-    filter_invites = True
-    filter_zalgo = False
-    watch_regex = True
-    watch_rich_embeds = True
-
-    # Notifications are not expected for "watchlist" type filters
-
-    notify_user_domains = False
-    notify_user_everyone_ping = True
-    notify_user_invites = True
-    notify_user_zalgo = False
-
-    offensive_msg_delete_days = 7
-    ping_everyone = True
-
-    channel_whitelist = [
-        Channels.admins,
-        Channels.big_brother,
-        Channels.dev_log,
-        Channels.message_log,
-        Channels.mod_log,
-        Channels.staff_lounge
-    ]
-    role_whitelist = [
-        Roles.admins,
-        Roles.helpers,
-        Roles.moderators,
-        Roles.owners,
-        Roles.python_community,
-        Roles.partners
-    ]
-
-
-Filter = _Filter()
 
 
 class _Keys(EnvConfig):
