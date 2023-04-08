@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from functools import partial
 from io import BytesIO
+from itertools import zip_longest
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
@@ -276,7 +277,7 @@ async def upload_log(messages: Iterable[Message], actor_id: int, attachments: di
             "embeds": [embed.to_dict() for embed in message.embeds],
             "attachments": attachment,
         }
-        for message, attachment in zip(messages, attachments)
+        for message, attachment in zip_longest(messages, attachments, fillvalue=[])
     ]
 
     try:
