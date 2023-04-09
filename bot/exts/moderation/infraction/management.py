@@ -10,6 +10,7 @@ from discord.utils import escape_markdown
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import Categories
 from bot.converters import DurationOrExpiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
 from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfraction
@@ -19,7 +20,7 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
-from bot.utils.channel import is_mod_channel
+from bot.utils.channel import is_in_category, is_mod_channel
 from bot.utils.members import get_or_fetch_member
 from bot.utils.time import unpack_duration
 
@@ -228,6 +229,14 @@ class ModManagement(commands.Cog):
             user_text = f"<@{user_id}>"
             thumbnail = None
 
+        if any(
+                is_in_category(ctx.channel, category)
+                for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
+        ):
+            jump_url = "(Infraction edited in a ModMail channel.)"
+        else:
+            jump_url = f"[Click here.]({ctx.message.jump_url})"
+
         await self.mod_log.send_log_message(
             icon_url=constants.Icons.pencil,
             colour=discord.Colour.og_blurple(),
@@ -237,6 +246,7 @@ class ModManagement(commands.Cog):
                 Member: {user_text}
                 Actor: <@{new_infraction['actor']}>
                 Edited by: {ctx.message.author.mention}{log_text}
+                Jump URL: {jump_url}
             """),
             footer=f"ID: {infraction_id}"
         )
