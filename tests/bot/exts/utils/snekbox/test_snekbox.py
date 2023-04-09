@@ -307,7 +307,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.upload_output = AsyncMock()  # Should not be called
 
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, []))
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code('MyAwesomeCode')
@@ -339,7 +339,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.format_output = AsyncMock(return_value=('Way too long beard', 'lookatmybeard.com'))
 
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, []))
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode").as_version("3.11")
@@ -368,7 +368,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.upload_output = AsyncMock()  # This function isn't called
 
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, []))
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode").as_version("3.11")
@@ -396,7 +396,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.upload_output = AsyncMock()  # This function isn't called
 
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=False)
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, [".disallowed"]))
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode").as_version("3.11")

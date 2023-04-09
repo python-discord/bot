@@ -38,6 +38,8 @@ MAX_ONGOING_REVIEWS = 3
 MIN_REVIEW_INTERVAL = timedelta(days=1)
 # Minimum time between nomination and sending a review
 MIN_NOMINATION_TIME = timedelta(days=7)
+# Number of days ago that the user must have activity since
+RECENT_ACTIVITY_DAYS = 7
 
 # A constant for weighting number of nomination entries against nomination age when selecting a user to review.
 # The higher this is, the lower the effect of review age. At 1, age and number of entries are weighted equally.
@@ -115,56 +117,101 @@ class Reviewer:
 
         return True
 
-    async def get_nomination_to_review(self) -> Optional[Nomination]:
+    @staticmethod
+    def is_nomination_old_enough(nomination: Nomination, now: datetime) -> bool:
+        """Check if a nomination is old enough to autoreview."""
+        time_since_nomination = now - nomination.inserted_at
+        return time_since_nomination > MIN_NOMINATION_TIME
+
+    @staticmethod
+    def is_user_active_enough(user_message_count: int) -> bool:
+        """Check if a user's message count is enough for them to be autoreviewed."""
+        return user_message_count > 0
+
+    async def is_nomination_ready_for_review(
+        self,
+        nomination: Nomination,
+        user_message_count: int,
+        now: datetime,
+    ) -> bool:
         """
-        Returns the Nomination of the next user to review, or None if there are no users ready.
+        Returns a boolean representing whether a nomination should be reviewed.
 
         Users will only be selected for review if:
          - They have not already been reviewed.
          - They have been nominated for longer than `MIN_NOMINATION_TIME`.
+         - They have sent at least one message in the server recently.
+         - They are still a member of the server.
+        """
+        guild = self.bot.get_guild(Guild.id)
+        return (
+            # Must be an active nomination
+            nomination.active and
+            # ... that has not already been reviewed
+            not nomination.reviewed and
+            # ... and has been nominated for long enough
+            self.is_nomination_old_enough(nomination, now) and
+            # ... and is for a user that has been active recently
+            self.is_user_active_enough(user_message_count) and
+            # ... and is currently a member of the server
+            await get_or_fetch_member(guild, nomination.user_id) is not None
+        )
 
-        The priority of the review is determined by how many nominations the user has
-        (more nominations = higher priority).
-        For users with equal priority the oldest nomination will be reviewed first.
+    async def sort_nominations_to_review(self, nominations: list[Nomination], now: datetime) -> list[Nomination]:
+        """
+        Sorts a list of nominations by priority for review.
+
+        The priority of the review is determined based on how many nominations the user has
+        (more nominations = higher priority), and the age of the nomination.
+        """
+        if not nominations:
+            return []
+
+        oldest_date = min(nomination.inserted_at for nomination in nominations)
+        max_entries = max(len(nomination.entries) for nomination in nominations)
+
+        def score_nomination(nomination: Nomination) -> float:
+            """
+            Scores a nomination based on age and number of nomination entries.
+
+            The higher the score, the higher the priority for being put up for review should be.
+            """
+            num_entries = len(nomination.entries)
+            entries_score = num_entries / max_entries
+
+            nomination_date = nomination.inserted_at
+            age_score = (nomination_date - now) / (oldest_date - now)
+
+            return entries_score * REVIEW_SCORE_WEIGHT + age_score
+
+        return sorted(nominations, key=score_nomination, reverse=True)
+
+    async def get_nomination_to_review(self) -> Nomination | None:
+        """
+        Returns the Nomination of the next user to review, or None if there are no users ready.
+
+        See `is_ready_for_review` for the criteria for a user to be ready for review.
+        See `sort_nominations_to_review` for the criteria for a user to be prioritised for review.
         """
         now = datetime.now(timezone.utc)
-
-        possible_nominations: list[Nomination] = []
         nominations = await self.api.get_nominations(active=True)
-        for nomination in nominations:
-            time_since_nomination = now - nomination.inserted_at
-            if (
-                not nomination.reviewed
-                and time_since_nomination > MIN_NOMINATION_TIME
-            ):
-                possible_nominations.append(nomination)
-
-        if not possible_nominations:
-            log.debug("No users ready to review.")
+        if not nominations:
             return None
 
-        oldest_date = min(nomination.inserted_at for nomination in possible_nominations)
-        max_entries = max(len(nomination.entries) for nomination in possible_nominations)
+        messages_per_user = await self.api.get_activity(
+            [nomination.user_id for nomination in nominations],
+            days=RECENT_ACTIVITY_DAYS,
+        )
+        possible_nominations = [
+            nomination for nomination in nominations
+            if await self.is_nomination_ready_for_review(nomination, messages_per_user[nomination.user_id], now)
+        ]
+        if not possible_nominations:
+            log.info("No nominations are ready to review")
+            return None
 
-        def sort_key(nomination: Nomination) -> float:
-            return self.score_nomination(nomination, oldest_date, now, max_entries)
-
-        return max(possible_nominations, key=sort_key)
-
-    @staticmethod
-    def score_nomination(nomination: Nomination, oldest_date: datetime, now: datetime, max_entries: int) -> float:
-        """
-        Scores a nomination based on age and number of nomination entries.
-
-        The higher the score, the higher the priority for being put up for review should be.
-        """
-        num_entries = len(nomination.entries)
-        entries_score = num_entries / max_entries
-
-        nomination_date = nomination.inserted_at
-        age_score = (nomination_date - now) / (oldest_date - now)
-
-        return entries_score * REVIEW_SCORE_WEIGHT + age_score
+        sorted_nominations = await self.sort_nominations_to_review(possible_nominations, now)
+        return sorted_nominations[0]
 
     async def post_review(self, nomination: Nomination) -> None:
         """Format the review of a user and post it to the nomination voting channel."""

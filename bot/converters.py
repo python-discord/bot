@@ -9,7 +9,7 @@ import dateutil.parser
 import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import BadArgument, Bot, Context, Converter, IDConverter, MemberConverter, UserConverter
+from discord.ext.commands import BadArgument, Context, Converter, IDConverter, MemberConverter, UserConverter
 from discord.utils import escape_markdown, snowflake_time
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import unqualify
@@ -66,54 +66,6 @@ class ValidDiscordServerInvite(Converter):
             raise BadArgument("Guild IDs are not supported, only invites.")
 
         raise BadArgument("This does not appear to be a valid Discord server invite.")
-
-
-class ValidFilterListType(Converter):
-    """
-    A converter that checks whether the given string is a valid FilterList type.
-
-    Raises `BadArgument` if the argument is not a valid FilterList type, and simply
-    passes through the given argument otherwise.
-    """
-
-    @staticmethod
-    async def get_valid_types(bot: Bot) -> list:
-        """
-        Try to get a list of valid filter list types.
-
-        Raise a BadArgument if the API can't respond.
-        """
-        try:
-            valid_types = await bot.api_client.get('bot/filter-lists/get-types')
-        except ResponseCodeError:
-            raise BadArgument("Cannot validate list_type: Unable to fetch valid types from API.")
-
-        return [enum for enum, classname in valid_types]
-
-    async def convert(self, ctx: Context, list_type: str) -> str:
-        """Checks whether the given string is a valid FilterList type."""
-        valid_types = await self.get_valid_types(ctx.bot)
-        list_type = list_type.upper()
-
-        if list_type not in valid_types:
-
-            # Maybe the user is using the plural form of this type,
-            # e.g. "guild_invites" instead of "guild_invite".
-            #
-            # This code will support the simple plural form (a single 's' at the end),
-            # which works for all current list types, but if a list type is added in the future
-            # which has an irregular plural form (like 'ies'), this code will need to be
-            # refactored to support this.
-            if list_type.endswith("S") and list_type[:-1] in valid_types:
-                list_type = list_type[:-1]
-
-            else:
-                valid_types_list = '\n'.join([f"• {type_.lower()}" for type_ in valid_types])
-                raise BadArgument(
-                    f"You have provided an invalid list type!\n\n"
-                    f"Please provide one of the following: \n{valid_types_list}"
-                )
-        return list_type
 
 
 class Extension(Converter):

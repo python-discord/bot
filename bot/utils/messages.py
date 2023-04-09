@@ -1,16 +1,22 @@
 import asyncio
 import random
 import re
+from collections.abc import Iterable
+from datetime import datetime, timezone
 from functools import partial
 from io import BytesIO
+from itertools import zip_longest
 from typing import Callable, List, Optional, Sequence, Union
 
 import discord
+from discord import Message
 from discord.ext.commands import Context
+from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from sentry_sdk import add_breadcrumb
 
 import bot
-from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES, URLs
 from bot.log import get_logger
 
 log = get_logger(__name__)
@@ -241,6 +247,55 @@ async def send_denial(ctx: Context, reason: str) -> discord.Message:
     return await ctx.send(embed=embed)
 
 
-def format_user(user: discord.abc.User) -> str:
+def format_user(user: discord.User | discord.Member) -> str:
     """Return a string for `user` which has their mention and ID."""
     return f"{user.mention} (`{user.id}`)"
+
+
+def format_channel(channel: discord.abc.Messageable) -> str:
+    """Return a string for `channel` with its mention, ID, and the parent channel if it is a thread."""
+    formatted = f"{channel.mention} ({channel.category}/#{channel}"
+    if hasattr(channel, "parent"):
+        formatted += f"/{channel.parent}"
+    formatted += ")"
+    return formatted
+
+
+async def upload_log(messages: Iterable[Message], actor_id: int, attachments: dict[int, list[str]] = None) -> str:
+    """Upload message logs to the database and return a URL to a page for viewing the logs."""
+    if attachments is None:
+        attachments = []
+    else:
+        attachments = [attachments.get(message.id, []) for message in messages]
+
+    deletedmessage_set = [
+        {
+            "id": message.id,
+            "author": message.author.id,
+            "channel_id": message.channel.id,
+            "content": message.content.replace("\0", ""),  # Null chars cause 400.
+            "embeds": [embed.to_dict() for embed in message.embeds],
+            "attachments": attachment,
+        }
+        for message, attachment in zip_longest(messages, attachments, fillvalue=[])
+    ]
+
+    try:
+        response = await bot.instance.api_client.post(
+            "bot/deleted-messages",
+            json={
+                "actor": actor_id,
+                "creation": datetime.now(timezone.utc).isoformat(),
+                "deletedmessage_set": deletedmessage_set,
+            }
+        )
+    except ResponseCodeError as e:
+        add_breadcrumb(
+            category="api_error",
+            message=str(e),
+            level="error",
+            data=deletedmessage_set,
+        )
+        raise
+
+    return f"{URLs.site_logs_view}/{response['id']}"
