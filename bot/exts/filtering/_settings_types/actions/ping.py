@@ -1,7 +1,6 @@
-from typing import ClassVar
+from typing import ClassVar, Self
 
 from pydantic import validator
-from typing_extensions import Self
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry

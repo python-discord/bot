@@ -1,12 +1,11 @@
 import asyncio
 import random
 import re
-from collections.abc import Iterable
-from datetime import datetime, timezone
+from collections.abc import Callable, Iterable, Sequence
+from datetime import UTC, datetime
 from functools import partial
 from io import BytesIO
 from itertools import zip_longest
-from typing import Callable, List, Optional, Sequence, Union
 
 import discord
 from discord import Message
@@ -53,14 +52,14 @@ def reaction_check(
     if user.id in allowed_users or is_moderator:
         log.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
         return True
-    else:
-        log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
-        scheduling.create_task(
-            reaction.message.remove_reaction(reaction.emoji, user),
-            suppressed_exceptions=(discord.HTTPException,),
-            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
-        )
-        return False
+
+    log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
+    scheduling.create_task(
+        reaction.message.remove_reaction(reaction.emoji, user),
+        suppressed_exceptions=(discord.HTTPException,),
+        name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
+    )
+    return False
 
 
 async def wait_for_deletion(
@@ -102,7 +101,7 @@ async def wait_for_deletion(
 
     try:
         try:
-            await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
+            await bot.instance.wait_for("reaction_add", check=check, timeout=timeout)
         except asyncio.TimeoutError:
             await message.clear_reactions()
         else:
@@ -119,11 +118,11 @@ async def wait_for_deletion(
 
 async def send_attachments(
     message: discord.Message,
-    destination: Union[discord.TextChannel, discord.Webhook],
+    destination: discord.TextChannel | discord.Webhook,
     link_large: bool = True,
     use_cached: bool = False,
     **kwargs
-) -> List[str]:
+) -> list[str]:
     """
     Re-upload the message's attachments to the destination and return a list of their new URLs.
 
@@ -132,11 +131,11 @@ async def send_attachments(
     embed which links to them. Extra kwargs will be passed to send() when sending the attachment.
     """
     webhook_send_kwargs = {
-        'username': message.author.display_name,
-        'avatar_url': message.author.display_avatar.url,
+        "username": message.author.display_name,
+        "avatar_url": message.author.display_avatar.url,
     }
     webhook_send_kwargs.update(kwargs)
-    webhook_send_kwargs['username'] = sub_clyde(webhook_send_kwargs['username'])
+    webhook_send_kwargs["username"] = sub_clyde(webhook_send_kwargs["username"])
 
     large = []
     urls = []
@@ -220,21 +219,20 @@ async def pin_no_system_message(message: discord.Message) -> bool:
     return False
 
 
-def sub_clyde(username: Optional[str]) -> Optional[str]:
+def sub_clyde(username: str | None) -> str | None:
     """
-    Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
+    Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"Е" and return the new string.
 
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
-    """
+    """  # noqa: RUF002
     def replace_e(match: re.Match) -> str:
-        char = "е" if match[2] == "e" else "Е"
+        char = "е" if match[2] == "e" else "Е"  # noqa: RUF001
         return match[1] + char
 
     if username:
         return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
-    else:
-        return username  # Empty string or None
+    return username  # Empty string or None
 
 
 async def send_denial(ctx: Context, reason: str) -> discord.Message:
@@ -285,7 +283,7 @@ async def upload_log(messages: Iterable[Message], actor_id: int, attachments: di
             "bot/deleted-messages",
             json={
                 "actor": actor_id,
-                "creation": datetime.now(timezone.utc).isoformat(),
+                "creation": datetime.now(UTC).isoformat(),
                 "deletedmessage_set": deletedmessage_set,
             }
         )

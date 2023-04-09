@@ -1,8 +1,7 @@
 import json
-import typing
+from collections import OrderedDict
 from contextlib import suppress
-from datetime import datetime, timedelta, timezone
-from typing import Optional, OrderedDict, Union
+from datetime import UTC, datetime, timedelta
 
 from async_rediscache import RedisCache
 from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
@@ -33,7 +32,7 @@ MSG_UNSILENCE_MANUAL = (
 )
 MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced {{channel}}."
 
-TextOrVoiceChannel = Union[TextChannel, VoiceChannel]
+TextOrVoiceChannel = TextChannel | VoiceChannel
 
 VOICE_CHANNELS = {
     constants.Channels.code_help_voice_0: constants.Channels.code_help_chat_0,
@@ -83,7 +82,7 @@ class SilenceNotifier(tasks.Loop):
                 f"Sending notice with channels: "
                 f"{', '.join(f'#{channel} ({channel.id})' for channel in self._silenced_channels)}."
             )
-            channels_text = ', '.join(
+            channels_text = ", ".join(
                 f"{channel.mention} for {(self._current_loop-start)//60} min"
                 for channel, start in self._silenced_channels.items()
             )
@@ -159,7 +158,7 @@ class Silence(commands.Cog):
     async def silence(
         self,
         ctx: Context,
-        duration_or_channel: typing.Union[TextOrVoiceChannel, HushDurationConverter] = None,
+        duration_or_channel: TextOrVoiceChannel | HushDurationConverter = None,
         duration: HushDurationConverter = 10,
         *,
         kick: bool = False
@@ -210,12 +209,12 @@ class Silence(commands.Cog):
     @staticmethod
     def parse_silence_args(
         ctx: Context,
-        duration_or_channel: typing.Union[TextOrVoiceChannel, int],
+        duration_or_channel: TextOrVoiceChannel | int,
         duration: HushDurationConverter
-    ) -> typing.Tuple[TextOrVoiceChannel, Optional[int]]:
+    ) -> tuple[TextOrVoiceChannel, int | None]:
         """Helper method to parse the arguments of the silence command."""
         if duration_or_channel:
-            if isinstance(duration_or_channel, (TextChannel, VoiceChannel)):
+            if isinstance(duration_or_channel, TextChannel | VoiceChannel):
                 channel = duration_or_channel
             else:
                 channel = ctx.channel
@@ -260,13 +259,13 @@ class Silence(commands.Cog):
 
         return True
 
-    async def _schedule_unsilence(self, ctx: Context, channel: TextOrVoiceChannel, duration: Optional[int]) -> None:
+    async def _schedule_unsilence(self, ctx: Context, channel: TextOrVoiceChannel, duration: int | None) -> None:
         """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
         if duration is None:
             await self.unsilence_timestamps.set(channel.id, -1)
         else:
             self.scheduler.schedule_later(duration * 60, channel.id, ctx.invoke(self.unsilence, channel=channel))
-            unsilence_time = datetime.now(tz=timezone.utc) + timedelta(minutes=duration)
+            unsilence_time = datetime.now(tz=UTC) + timedelta(minutes=duration)
             await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
 
     @commands.command(aliases=("unhush",))
@@ -282,7 +281,7 @@ class Silence(commands.Cog):
         await self._unsilence_wrapper(channel, ctx)
 
     @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
-    async def _unsilence_wrapper(self, channel: TextOrVoiceChannel, ctx: Optional[Context] = None) -> None:
+    async def _unsilence_wrapper(self, channel: TextOrVoiceChannel, ctx: Context | None = None) -> None:
         """
         Unsilence `channel` and send a success/failure message to ctx.channel.
 
@@ -451,8 +450,8 @@ class Silence(commands.Cog):
                 self.notifier.add_channel(channel)
                 continue
 
-            dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-            delta = (dt - datetime.now(tz=timezone.utc)).total_seconds()
+            dt = datetime.fromtimestamp(timestamp, tz=UTC)
+            delta = (dt - datetime.now(tz=UTC)).total_seconds()
             if delta <= 0:
                 # Suppress the error since it's not being invoked by a user via the command.
                 with suppress(LockedResourceError):

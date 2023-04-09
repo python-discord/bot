@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import typing as t
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from ssl import CertificateError
 
 import dateutil.parser
@@ -17,7 +17,7 @@ from pydis_core.utils.regex import DISCORD_INVITE
 
 from bot import exts, instance as bot_instance
 from bot.constants import URLs
-from bot.errors import InvalidInfraction
+from bot.errors import InvalidInfractionError
 from bot.exts.info.doc import _inventory_parser
 from bot.exts.info.tags import TagIdentifier
 from bot.log import get_logger
@@ -85,7 +85,8 @@ class Extension(Converter):
 
         if argument in bot_instance.all_extensions:
             return argument
-        elif (qualified_arg := f"{exts.__name__}.{argument}") in bot_instance.all_extensions:
+
+        if (qualified_arg := f"{exts.__name__}.{argument}") in bot_instance.all_extensions:
             return qualified_arg
 
         matches = []
@@ -100,10 +101,10 @@ class Extension(Converter):
                 f":x: `{argument}` is an ambiguous extension name. "
                 f"Please use one of the following fully-qualified names.```\n{names}```"
             )
-        elif matches:
+
+        if matches:
             return matches[0]
-        else:
-            raise BadArgument(f":x: Could not find the extension `{argument}`.")
+        raise BadArgument(f":x: Could not find the extension `{argument}`.")
 
 
 class PackageName(Converter):
@@ -143,7 +144,7 @@ class ValidURL(Converter):
                         f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200"
                     )
         except CertificateError:
-            if url.startswith('https'):
+            if url.startswith("https"):
                 raise BadArgument(
                     f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
                 )
@@ -166,7 +167,7 @@ class Inventory(Converter):
     """
 
     @staticmethod
-    async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
+    async def convert(ctx: Context, url: str) -> tuple[str, _inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.typing()
         try:
@@ -213,7 +214,7 @@ class Snowflake(IDConverter):
 
         if time < DISCORD_EPOCH_DT:
             raise BadArgument(f"{error}: timestamp is before the Discord epoch.")
-        elif (datetime.now(timezone.utc) - time).days < -1:
+        if (datetime.now(UTC) - time).days < -1:
             raise BadArgument(f"{error}: timestamp is too far into the future.")
 
         return snowflake
@@ -286,7 +287,7 @@ class Duration(DurationDelta):
         The converter supports the same symbols for each unit of time as its parent class.
         """
         delta = await super().convert(ctx, duration)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         try:
             return now + delta
@@ -304,7 +305,7 @@ class Age(DurationDelta):
         The converter supports the same symbols for each unit of time as its parent class.
         """
         delta = await super().convert(ctx, duration)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         try:
             return now - delta
@@ -316,7 +317,7 @@ class OffTopicName(Converter):
     """A converter that ensures an added off-topic name is valid."""
 
     ALLOWED_CHARACTERS = r"ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-<>\/"
-    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞⧹⧸"
+    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞⧹⧸"  # noqa: RUF001
 
     @classmethod
     def translate_name(cls, name: str, *, from_unicode: bool = True) -> str:
@@ -340,7 +341,7 @@ class OffTopicName(Converter):
         if not (2 <= len(argument) <= 96):
             raise BadArgument("Channel name must be between 2 and 96 chars long")
 
-        elif not all(c.isalnum() or c in self.ALLOWED_CHARACTERS for c in argument):
+        if not all(c.isalnum() or c in self.ALLOWED_CHARACTERS for c in argument):
             raise BadArgument(
                 "Channel name must only consist of "
                 "alphanumeric characters, minus signs or apostrophes."
@@ -386,9 +387,9 @@ class ISODateTime(Converter):
             raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
 
         if dt.tzinfo:
-            dt = dt.astimezone(timezone.utc)
+            dt = dt.astimezone(UTC)
         else:  # Without a timezone, assume it represents UTC.
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
 
         return dt
 
@@ -426,8 +427,8 @@ def _is_an_unambiguous_user_argument(argument: str) -> bool:
     has_id_or_mention = bool(IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
     # Check to see if the author passed a username (a discriminator exists)
-    argument = argument.removeprefix('@')
-    has_username = len(argument) > 5 and argument[-5] == '#'
+    argument = argument.removeprefix("@")
+    has_username = len(argument) > 5 and argument[-5] == "#"
 
     return has_id_or_mention or has_username
 
@@ -448,8 +449,7 @@ class UnambiguousUser(UserConverter):
         """Convert the `argument` to a `discord.User`."""
         if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
-        else:
-            raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
+        raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
 
 
 class UnambiguousMember(MemberConverter):
@@ -464,8 +464,7 @@ class UnambiguousMember(MemberConverter):
         """Convert the `argument` to a `discord.Member`."""
         if _is_an_unambiguous_user_argument(argument):
             return await super().convert(ctx, argument)
-        else:
-            raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
+        raise BadArgument(AMBIGUOUS_ARGUMENT_MSG.format(argument=argument))
 
 
 class Infraction(Converter):
@@ -476,7 +475,7 @@ class Infraction(Converter):
     obtain the most recent infraction by the actor.
     """
 
-    async def convert(self, ctx: Context, arg: str) -> t.Optional[dict]:
+    async def convert(self, ctx: Context, arg: str) -> dict | None:
         """Attempts to convert `arg` into an infraction `dict`."""
         if arg in ("l", "last", "recent"):
             params = {
@@ -490,32 +489,30 @@ class Infraction(Converter):
                 raise BadArgument(
                     "Couldn't find most recent infraction; you have never given an infraction."
                 )
-            else:
-                return infractions[0]
+            return infractions[0]
 
-        else:
-            try:
-                return await ctx.bot.api_client.get(f"bot/infractions/{arg}/expanded")
-            except ResponseCodeError as e:
-                if e.status == 404:
-                    raise InvalidInfraction(
-                        converter=Infraction,
-                        original=e,
-                        infraction_arg=arg
-                    )
-                raise e
+        try:
+            return await ctx.bot.api_client.get(f"bot/infractions/{arg}/expanded")
+        except ResponseCodeError as e:
+            if e.status == 404:
+                raise InvalidInfractionError(
+                    converter=Infraction,
+                    original=e,
+                    infraction_arg=arg
+                )
+            raise e
 
 
 if t.TYPE_CHECKING:
     ValidDiscordServerInvite = dict  # noqa: F811
-    ValidFilterListType = str  # noqa: F811
+    ValidFilterListType = str
     Extension = str  # noqa: F811
     PackageName = str  # noqa: F811
     ValidURL = str  # noqa: F811
-    Inventory = t.Tuple[str, _inventory_parser.InventoryDict]  # noqa: F811
+    Inventory = tuple[str, _inventory_parser.InventoryDict]  # noqa: F811
     Snowflake = int  # noqa: F811
     SourceConverter = SourceType  # noqa: F811
-    DurationDelta = relativedelta  # noqa: F811
+    DurationDelta = relativedelta
     Duration = datetime  # noqa: F811
     Age = datetime  # noqa: F811
     OffTopicName = str  # noqa: F811
@@ -525,7 +522,7 @@ if t.TYPE_CHECKING:
     UnambiguousMember = discord.Member  # noqa: F811
     Infraction = t.Optional[dict]  # noqa: F811
 
-Expiry = t.Union[Duration, ISODateTime]
-DurationOrExpiry = t.Union[DurationDelta, ISODateTime]
-MemberOrUser = t.Union[discord.Member, discord.User]
-UnambiguousMemberOrUser = t.Union[UnambiguousMember, UnambiguousUser]
+Expiry = Duration | ISODateTime
+DurationOrExpiry = DurationDelta | ISODateTime
+MemberOrUser = discord.Member | discord.User
+UnambiguousMemberOrUser = UnambiguousMember | UnambiguousUser

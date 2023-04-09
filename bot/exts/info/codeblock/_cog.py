@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 import discord
 from discord import Message, RawMessageUpdateEvent
@@ -67,7 +66,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         """Return an embed which displays code block formatting `instructions`."""
         return discord.Embed(description=instructions)
 
-    async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> Optional[Message]:
+    async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> Message | None:
         """
         Return the bot's sent instructions message associated with a user's message `payload`.
 

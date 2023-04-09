@@ -219,7 +219,7 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
             filter_type = self.get_filter_type(content)
             if filter_type:
                 return filter_type(filter_data, defaults)
-            elif content not in self._already_warned:
+            if content not in self._already_warned:
                 log.warning(f"A filter named {content} was supplied, but no matching implementation found.")
                 self._already_warned.add(content)
             return None
@@ -266,7 +266,7 @@ class UniquesListBase(FilterList[UniqueFilter], ABC):
     Each unique filter subscribes to a subset of events to respond to.
     """
 
-    def __init__(self, filtering_cog: 'Filtering'):
+    def __init__(self, filtering_cog: "Filtering"):
         super().__init__()
         self.filtering_cog = filtering_cog
         self.loaded_types: dict[str, type[UniqueFilter]] = {}

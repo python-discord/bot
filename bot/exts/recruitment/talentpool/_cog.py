@@ -1,8 +1,7 @@
 import asyncio
 import textwrap
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
-from typing import Optional, Union
 
 import discord
 from async_rediscache import RedisCache
@@ -57,7 +56,7 @@ class TalentPool(Cog, name="Talentpool"):
         """Return whether automatic posting of nomination reviews is enabled."""
         return await self.talentpool_settings.get(AUTOREVIEW_ENABLED_KEY, True)
 
-    @group(name='talentpool', aliases=('tp', 'talent', 'nomination', 'n'), invoke_without_command=True)
+    @group(name="talentpool", aliases=("tp", "talent", "nomination", "n"), invoke_without_command=True)
     @has_any_role(*STAFF_ROLES)
     async def nomination_group(self, ctx: Context) -> None:
         """Highlights the activity of helper nominees by relaying their messages to the talent pool channel."""
@@ -195,7 +194,7 @@ class TalentPool(Cog, name="Talentpool"):
         """Shows the users that are currently in the talent pool, ordered by oldest nomination."""
         await self.show_nominations_list(ctx, oldest_first=True)
 
-    @list_group.command(name='newest')
+    @list_group.command(name="newest")
     async def list_newest(self, ctx: Context) -> None:
         """Shows the users that are currently in the talent pool, ordered by newest nomination."""
         await self.show_nominations_list(ctx, oldest_first=False)
@@ -216,7 +215,7 @@ class TalentPool(Cog, name="Talentpool"):
         Otherwise, nominations will be sorted by age
         (ordered based on the value of `oldest_first`).
         """
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         nominations = await self.api.get_nominations(active=True)
         messages_per_user = await self.api.get_activity(
             [nomination.user_id for nomination in nominations],
@@ -306,7 +305,7 @@ class TalentPool(Cog, name="Talentpool"):
         root_aliases=("forcenominate",)
     )
     @has_any_role(*MODERATION_ROLES)
-    async def force_nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
+    async def force_nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = "") -> None:
         """
         Adds the given `user` to the talent pool, from any channel.
 
@@ -314,9 +313,9 @@ class TalentPool(Cog, name="Talentpool"):
         """
         await self._nominate_user(ctx, user, reason)
 
-    @nomination_group.command(name='nominate', aliases=("w", "add", "a", "watch"), root_aliases=("nominate",))
+    @nomination_group.command(name="nominate", aliases=("w", "add", "a", "watch"), root_aliases=("nominate",))
     @has_any_role(*STAFF_ROLES)
-    async def nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = '') -> None:
+    async def nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = "") -> None:
         """
         Adds the given `user` to the talent pool.
 
@@ -363,7 +362,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         await ctx.send(f"✅ The nomination for {user.mention} has been added to the talent pool.")
 
-    @nomination_group.command(name='history', aliases=('info', 'search'))
+    @nomination_group.command(name="history", aliases=("info", "search"))
     @has_any_role(*MODERATION_ROLES)
     async def history_command(self, ctx: Context, user: MemberOrUser) -> None:
         """Shows the specified user's nomination history."""
@@ -404,19 +403,19 @@ class TalentPool(Cog, name="Talentpool"):
         else:
             await ctx.send(f":x: {user.mention} doesn't have an active nomination.")
 
-    @nomination_group.group(name='edit', aliases=('e',), invoke_without_command=True)
+    @nomination_group.group(name="edit", aliases=("e",), invoke_without_command=True)
     @has_any_role(*STAFF_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
         """Commands to edit nominations."""
         await ctx.send_help(ctx.command)
 
-    @nomination_edit_group.command(name='reason')
+    @nomination_edit_group.command(name="reason")
     @has_any_role(*STAFF_ROLES)
     async def edit_reason_command(
         self,
         ctx: Context,
-        nominee_or_nomination_id: Union[UnambiguousMemberOrUser, int],
-        nominator: Optional[UnambiguousMemberOrUser] = None,
+        nominee_or_nomination_id: UnambiguousMemberOrUser | int,
+        nominator: UnambiguousMemberOrUser | None = None,
         *,
         reason: str
     ) -> None:
@@ -458,7 +457,7 @@ class TalentPool(Cog, name="Talentpool"):
         self,
         ctx: Context,
         *,
-        target: Union[int, Member, User],
+        target: int | Member | User,
         actor: MemberOrUser,
         reason: str,
     ) -> None:
@@ -493,7 +492,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         await ctx.send(f":white_check_mark: Updated the nomination reason for <@{nomination.user_id}>.")
 
-    @nomination_edit_group.command(name='end_reason')
+    @nomination_edit_group.command(name="end_reason")
     @has_any_role(*MODERATION_ROLES)
     async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """Edits the unnominate reason for the nomination with the given `id`."""
@@ -516,7 +515,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         await ctx.send(f":white_check_mark: Updated the nomination end reason for <@{nomination.user_id}>.")
 
-    @nomination_group.command(aliases=('gr',))
+    @nomination_group.command(aliases=("gr",))
     @has_any_role(*MODERATION_ROLES)
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
@@ -529,7 +528,7 @@ class TalentPool(Cog, name="Talentpool"):
         file = discord.File(StringIO(review), f"{user_id}_review.md")
         await ctx.send(file=file)
 
-    @nomination_group.command(aliases=('review',))
+    @nomination_group.command(aliases=("review",))
     @has_any_role(*MODERATION_ROLES)
     async def post_review(self, ctx: Context, user_id: int) -> None:
         """Post the automatic review for the user ahead of time."""
@@ -618,7 +617,7 @@ class TalentPool(Cog, name="Talentpool"):
             except discord.HTTPException:
                 thread_jump_url = "*Not found*"
             else:
-                thread_jump_url = f'[Jump to thread!]({thread.jump_url})'
+                thread_jump_url = f"[Jump to thread!]({thread.jump_url})"
 
         if nomination.active:
             lines = textwrap.dedent(

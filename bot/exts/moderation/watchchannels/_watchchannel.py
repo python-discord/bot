@@ -4,7 +4,7 @@ import textwrap
 from abc import abstractmethod
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 import discord
 from discord import Color, DMChannel, Embed, HTTPException, Message, errors
@@ -31,8 +31,8 @@ URL_RE = re.compile(r"(https?://[^\s]+)")
 class MessageHistory:
     """Represents a watch channel's message history."""
 
-    last_author: Optional[int] = None
-    last_channel: Optional[int] = None
+    last_author: int | None = None
+    last_channel: int | None = None
     message_count: int = 0
 
 
@@ -158,7 +158,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.watched_users = defaultdict(dict)
 
         for entry in data:
-            user_id = entry.pop('user')
+            user_id = entry.pop("user")
             self.watched_users[user_id] = entry
 
         return True
@@ -207,10 +207,10 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def webhook_send(
         self,
-        content: Optional[str] = None,
-        username: Optional[str] = None,
-        avatar_url: Optional[str] = None,
-        embed: Optional[Embed] = None,
+        content: str | None = None,
+        username: str | None = None,
+        avatar_url: str | None = None,
+        embed: Embed | None = None,
     ) -> None:
         """Sends a message to the webhook with the specified kwargs."""
         username = messages.sub_clyde(username)
@@ -280,13 +280,13 @@ class WatchChannel(metaclass=CogABCMeta):
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
-        actor = await get_or_fetch_member(guild, self.watched_users[user_id]['actor'])
-        actor = actor.display_name if actor else self.watched_users[user_id]['actor']
+        actor = await get_or_fetch_member(guild, self.watched_users[user_id]["actor"])
+        actor = actor.display_name if actor else self.watched_users[user_id]["actor"]
 
-        inserted_at = self.watched_users[user_id]['inserted_at']
+        inserted_at = self.watched_users[user_id]["inserted_at"]
         time_delta = time.format_relative(inserted_at)
 
-        reason = self.watched_users[user_id]['reason']
+        reason = self.watched_users[user_id]["reason"]
 
         if isinstance(msg.channel, DMChannel):
             # If a watched user DMs the bot there won't be a channel name or jump URL
@@ -326,7 +326,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def prepare_watched_users_data(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Prepare overview information of watched users to list.
 
@@ -357,7 +357,7 @@ class WatchChannel(metaclass=CogABCMeta):
             line = f"• `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
-            inserted_at = user_data['inserted_at']
+            inserted_at = user_data["inserted_at"]
             line += f", added {time.format_relative(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"

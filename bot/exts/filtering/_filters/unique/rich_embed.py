@@ -42,10 +42,10 @@ class RichEmbedFilter(UniqueFilter):
                         # of the message, it's unlikely to be an auto-generated embed by Discord.
                         ctx.alert_embeds.extend(ctx.embeds)
                         return True
-                    else:
-                        log.trace(
-                            "Found a rich embed sent by a regular user account, "
-                            "but it was likely just an automatic URL embed."
-                        )
+
+                    log.trace(
+                        "Found a rich embed sent by a regular user account, "
+                        "but it was likely just an automatic URL embed."
+                    )
 
         return False

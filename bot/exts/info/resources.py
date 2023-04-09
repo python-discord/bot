@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 from urllib.parse import quote
 
 from discord import Embed
@@ -25,7 +24,7 @@ def to_kebabcase(resource_topic: str) -> str:
     # First, make it lowercase, and just remove any apostrophes.
     # We remove the apostrophes because "wasnt" is better than "wasn-t"
     resource_topic = resource_topic.casefold()
-    resource_topic = resource_topic.replace("'", '')
+    resource_topic = resource_topic.replace("'", "")
 
     # Now, replace any non-alphanumerics that remains with a dash.
     # If there are multiple consecutive non-letters, just replace them with a single dash.
@@ -48,7 +47,7 @@ class Resources(commands.Cog):
         self.bot = bot
 
     @commands.command(name="resources", aliases=("res",))
-    async def resources_command(self, ctx: commands.Context, *, resource_topic: Optional[str]) -> None:
+    async def resources_command(self, ctx: commands.Context, *, resource_topic: str | None) -> None:
         """Display information and a link to the Python Discord website Resources page."""
         url = RESOURCE_URL
 

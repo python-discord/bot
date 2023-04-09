@@ -69,6 +69,6 @@ class TokensList(FilterList[TokenFilter]):
     def _expand_spoilers(text: str) -> str:
         """Return a string containing all interpretations of a spoilered message."""
         split_text = SPOILER_RE.split(text)
-        return ''.join(
+        return "".join(
             split_text[0::2] + split_text[1::2] + split_text
         )

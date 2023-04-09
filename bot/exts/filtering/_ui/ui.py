@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Callable, Coroutine, Iterable
 from enum import EnumMeta
 from functools import partial
-from typing import Any, Callable, Coroutine, Optional, TypeVar, get_origin
+from typing import Any, TypeVar, get_origin
 
 import discord
 from discord import Embed, Interaction
@@ -53,7 +53,7 @@ EDIT_CONFIRMED_MESSAGE = "✅ Edit for `{0}` confirmed"
 # Sentinel value to denote that a value is missing
 MISSING = object()
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 async def _build_alert_message_content(ctx: FilterContext, current_message_length: int) -> str:
@@ -62,7 +62,7 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
     if ctx.messages_deletion and ctx.upload_deletion_logs and any((
         ctx.related_messages,
         len(ctx.uploaded_attachments) > 0,
-        ctx.content.count('\n') > 15
+        ctx.content.count("\n") > 15
     )):
         url = await upload_log(ctx.related_messages, bot.instance.user.id, ctx.uploaded_attachments)
         return f"A complete log of the offending messages can be found [here]({url})"
@@ -76,8 +76,7 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
             log_site_msg = f"The full message can be found [here]({url})"
             # 7 because that's the length of "[...]\n\n"
             return alert_content[:remaining_chars - (7 + len(log_site_msg))] + "[...]\n\n" + log_site_msg
-        else:
-            return alert_content[:remaining_chars - 5] + "[...]"
+        return alert_content[:remaining_chars - 5] + "[...]"
 
     return alert_content
 
@@ -125,7 +124,7 @@ def populate_embed_from_dict(embed: Embed, data: dict) -> None:
     for setting, value in data.items():
         if setting.startswith("_"):
             continue
-        if isinstance(value, (list, set, tuple)):
+        if isinstance(value, list | set | tuple):
             value = f"[{', '.join(map(str, value))}]"
         else:
             value = str(value) if value not in ("", None) else "-"
@@ -183,7 +182,7 @@ class ArgumentCompletionSelect(discord.ui.Select):
         arg_name: str,
         options: list[str],
         position: int,
-        converter: Optional[Callable] = None
+        converter: Callable | None = None
     ):
         super().__init__(
             placeholder=f"Select a value for {arg_name!r}",
@@ -216,7 +215,7 @@ class ArgumentCompletionView(discord.ui.View):
         arg_name: str,
         options: list[str],
         position: int,
-        converter: Optional[Callable] = None
+        converter: Callable | None = None
     ):
         super().__init__()
         log.trace(f"The {arg_name} argument was designated missing in the invocation {ctx.view.buffer!r}")

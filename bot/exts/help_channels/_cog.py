@@ -121,7 +121,7 @@ class HelpForum(commands.Cog):
             return
         thread = message.channel
 
-        if not message.id == thread.id:
+        if message.id != thread.id:
             # Opener messages have the same ID as the thread
             return
 
@@ -155,7 +155,7 @@ class HelpForum(commands.Cog):
     async def new_post_message_listener(self, message: discord.Message) -> None:
         """Defer application of new message logic for messages in the help forum to the _message helper."""
         if not _channel.is_help_forum_post(message.channel):
-            return None
+            return
 
         await _message.notify_session_participants(message)
 

@@ -1,11 +1,10 @@
 from collections import defaultdict
-from typing import ClassVar
+from typing import ClassVar, Self
 
 from discord import Message, Thread
 from discord.errors import HTTPException
 from pydis_core.utils import scheduling
 from pydis_core.utils.logging import get_logger
-from typing_extensions import Self
 
 import bot
 from bot.constants import Channels

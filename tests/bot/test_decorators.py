@@ -142,6 +142,8 @@ class InWhitelistTests(unittest.TestCase):
             with unittest.mock.patch("bot.decorators.commands.check", new=lambda predicate: predicate):
                 predicate = in_whitelist(**test_case.kwargs)
 
-            with self.subTest(test_description=test_case.description):
-                with self.assertRaisesRegex(InWhitelistCheckFailure, exception_message):
-                    predicate(test_case.ctx)
+            with (
+                self.subTest(test_description=test_case.description),
+                self.assertRaisesRegex(InWhitelistCheckFailure, exception_message),
+            ):
+                predicate(test_case.ctx)

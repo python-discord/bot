@@ -1,11 +1,11 @@
 import typing as t
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 import frontmatter
 
 from bot.bot import Bot
 from bot.constants import Keys
-from bot.errors import BrandingMisconfiguration
+from bot.errors import BrandingMisconfigurationError
 from bot.log import get_logger
 
 # Base URL for requests into the branding repository.
@@ -39,9 +39,9 @@ class RemoteObject:
     name: str  # Filename.
     path: str  # Path from repo root.
     type: str  # Either 'file' or 'dir'.
-    download_url: t.Optional[str]  # If type is 'dir', this is None!
+    download_url: str | None  # If type is 'dir', this is None!
 
-    def __init__(self, dictionary: t.Dict[str, t.Any]) -> None:
+    def __init__(self, dictionary: dict[str, t.Any]) -> None:
         """Initialize by grabbing annotated attributes from `dictionary`."""
         missing_keys = self.__annotations__.keys() - dictionary.keys()
         if missing_keys:
@@ -54,8 +54,8 @@ class MetaFile(t.NamedTuple):
     """Attributes defined in a 'meta.md' file."""
 
     is_fallback: bool
-    start_date: t.Optional[date]
-    end_date: t.Optional[date]
+    start_date: date | None
+    end_date: date | None
     description: str  # Markdown event description.
 
 
@@ -93,7 +93,7 @@ class BrandingRepository:
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    async def fetch_directory(self, path: str, types: t.Container[str] = ("file", "dir")) -> t.Dict[str, RemoteObject]:
+    async def fetch_directory(self, path: str, types: t.Container[str] = ("file", "dir")) -> dict[str, RemoteObject]:
         """
         Fetch directory found at `path` in the branding repository.
 
@@ -137,7 +137,7 @@ class BrandingRepository:
         attrs, description = frontmatter.parse(raw_file, encoding="UTF-8")
 
         if not description:
-            raise BrandingMisconfiguration("No description found in 'meta.md'!")
+            raise BrandingMisconfigurationError("No description found in 'meta.md'!")
 
         if attrs.get("fallback", False):
             return MetaFile(is_fallback=True, start_date=None, end_date=None, description=description)
@@ -146,12 +146,12 @@ class BrandingRepository:
         end_date_raw = attrs.get("end_date")
 
         if None in (start_date_raw, end_date_raw):
-            raise BrandingMisconfiguration("Non-fallback event doesn't have start and end dates defined!")
+            raise BrandingMisconfigurationError("Non-fallback event doesn't have start and end dates defined!")
 
         # We extend the configured month & day with an arbitrary leap year, allowing a datetime object to exist.
         # This may raise errors if misconfigured. We let the caller handle such cases.
-        start_date = datetime.strptime(f"{start_date_raw} {ARBITRARY_YEAR}", DATE_FMT).date()
-        end_date = datetime.strptime(f"{end_date_raw} {ARBITRARY_YEAR}", DATE_FMT).date()
+        start_date = datetime.strptime(f"{start_date_raw} {ARBITRARY_YEAR}", DATE_FMT).replace(tzinfo=UTC).date()
+        end_date = datetime.strptime(f"{end_date_raw} {ARBITRARY_YEAR}", DATE_FMT).replace(tzinfo=UTC).date()
 
         return MetaFile(is_fallback=False, start_date=start_date, end_date=end_date, description=description)
 
@@ -166,15 +166,15 @@ class BrandingRepository:
         missing_assets = {"meta.md", "server_icons", "banners"} - contents.keys()
 
         if missing_assets:
-            raise BrandingMisconfiguration(f"Directory is missing following assets: {missing_assets}")
+            raise BrandingMisconfigurationError(f"Directory is missing following assets: {missing_assets}")
 
         server_icons = await self.fetch_directory(contents["server_icons"].path, types=("file",))
         banners = await self.fetch_directory(contents["banners"].path, types=("file",))
 
         if len(server_icons) == 0:
-            raise BrandingMisconfiguration("Found no server icons!")
+            raise BrandingMisconfigurationError("Found no server icons!")
         if len(banners) == 0:
-            raise BrandingMisconfiguration("Found no server banners!")
+            raise BrandingMisconfigurationError("Found no server banners!")
 
         meta_bytes = await self.fetch_file(contents["meta.md"].download_url)
 
@@ -182,7 +182,7 @@ class BrandingRepository:
 
         return Event(directory.path, meta_file, list(banners.values()), list(server_icons.values()))
 
-    async def get_events(self) -> t.List[Event]:
+    async def get_events(self) -> list[Event]:
         """
         Discover available events in the branding repository.
 
@@ -196,7 +196,7 @@ class BrandingRepository:
             log.exception("Failed to fetch 'events' directory.")
             return []
 
-        instances: t.List[Event] = []
+        instances: list[Event] = []
 
         for event_directory in event_directories.values():
             log.trace(f"Attempting to construct event from directory: '{event_directory.path}'.")
@@ -209,7 +209,7 @@ class BrandingRepository:
 
         return instances
 
-    async def get_current_event(self) -> t.Tuple[t.Optional[Event], t.List[Event]]:
+    async def get_current_event(self) -> tuple[Event | None, list[Event]]:
         """
         Get the currently active event, or the fallback event.
 
@@ -218,7 +218,7 @@ class BrandingRepository:
 
         The current event may be None in the case that no event is active, and no fallback event is found.
         """
-        utc_now = datetime.utcnow()
+        utc_now = datetime.now(tz=UTC)
         log.debug(f"Finding active event for: {utc_now}.")
 
         # Construct an object in the arbitrary year for the purpose of comparison.
