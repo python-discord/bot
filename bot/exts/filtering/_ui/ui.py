@@ -64,7 +64,8 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
         len(ctx.uploaded_attachments) > 0,
         ctx.content.count('\n') > 15
     )):
-        url = await upload_log(ctx.related_messages, bot.instance.user.id, ctx.uploaded_attachments)
+        to_upload = {ctx.message} | ctx.related_messages if ctx.message else ctx.related_messages
+        url = await upload_log(to_upload, bot.instance.user.id, ctx.uploaded_attachments)
         return f"A complete log of the offending messages can be found [here]({url})"
 
     alert_content = escape_markdown(ctx.content)
