@@ -49,7 +49,7 @@ pytest-cov = "4.0.0"
 pytest-subtests = "0.10.0"
 pytest-xdist = "3.2.1"
 taskipy = "1.10.4"
-httpx = "0.23.3"
+httpx = "0.24.0"
 
 
 [build-system]
