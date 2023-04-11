@@ -34,7 +34,7 @@ def search_criteria_converter(
         return {}, {}, filter_type
 
     try:
-        settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}
+        settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
     except ValueError:
         raise BadArgument("The settings provided are not in the correct format.")
 
@@ -102,7 +102,7 @@ def template_settings(
     try:
         filter_id = int(filter_id)
         if filter_id < 0:
-            raise ValueError()
+            raise ValueError
     except ValueError:
         raise BadArgument("Template value must be a non-negative integer.")
 

@@ -65,12 +65,12 @@ async def send_to_paste_service(contents: str, *, extension: str = "", max_lengt
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
             continue
-        elif "key" in response_json:
+        if "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
 
-            paste_link = URLs.paste_service.format(key=response_json['key']) + extension
+            paste_link = URLs.paste_service.format(key=response_json["key"]) + extension
 
-            if extension == '.py':
+            if extension == ".py":
                 return paste_link
 
             return paste_link + "?noredirect"

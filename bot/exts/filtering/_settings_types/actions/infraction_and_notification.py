@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import ClassVar
+from typing import ClassVar, Self
 
 import arrow
 import discord.abc
@@ -9,7 +9,6 @@ from discord.errors import Forbidden
 from pydantic import validator
 from pydis_core.utils.logging import get_logger
 from pydis_core.utils.members import get_or_fetch_member
-from typing_extensions import Self
 
 import bot as bot_module
 from bot.constants import Channels
@@ -223,7 +222,7 @@ class InfractionAndNotification(ActionEntry):
         # Lower number -> higher in the hierarchy
         if self.infraction_type is None:
             return other.copy()
-        elif other.infraction_type is None:
+        if other.infraction_type is None:
             return self.copy()
 
         if self.infraction_type.value < other.infraction_type.value:

@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 from bot.exts.recruitment.talentpool import _review
@@ -61,8 +61,8 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.recruitment.talentpool._review.MIN_REVIEW_INTERVAL", timedelta(days=1))
     async def test_is_ready_for_review(self):
         """Tests for the `is_ready_for_review` function."""
-        too_recent = datetime.now(timezone.utc) - timedelta(hours=1)
-        not_too_recent = datetime.now(timezone.utc) - timedelta(days=7)
+        too_recent = datetime.now(UTC) - timedelta(hours=1)
+        not_too_recent = datetime.now(UTC) - timedelta(days=7)
         cases = (
             # Only one review, and not too recent, so ready.
             (
@@ -126,7 +126,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=7))
     async def test_get_nomination_to_review(self):
         """Test get_nomination_to_review function."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Each case contains a list of nominations, followed by the index in that list
         # of the one that should be selected, or None if None should be returned
@@ -184,7 +184,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
 
     @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=0))
     async def test_get_nomination_to_review_order(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Each case in cases is a list of nominations in the order they should be chosen from first to last
         cases = [

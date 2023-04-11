@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import discord
 import discord.ui
@@ -387,7 +388,7 @@ def description_and_settings_converter(
     if not SINGLE_SETTING_PATTERN.match(parsed[0]):
         description, *parsed = parsed
 
-    settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}
+    settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
     template = None
     if "--template" in settings:
         template = settings.pop("--template")
@@ -447,7 +448,7 @@ def template_settings(
     try:
         filter_id = int(filter_id)
         if filter_id < 0:
-            raise ValueError()
+            raise ValueError
     except ValueError:
         raise BadArgument("Template value must be a non-negative integer.")
 

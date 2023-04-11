@@ -269,7 +269,7 @@ class Branding(commands.Cog):
         log.debug(f"Sending event information event to channel: {channel_id} ({is_notification=}).")
 
         await self.bot.wait_until_guild_available()
-        channel: t.Optional[discord.TextChannel] = self.bot.get_channel(channel_id)
+        channel: discord.TextChannel | None = self.bot.get_channel(channel_id)
 
         if channel is None:
             log.warning(f"Cannot send event information: channel {channel_id} not found!")
@@ -291,7 +291,7 @@ class Branding(commands.Cog):
 
         await channel.send(content=content, embed=embed)
 
-    async def enter_event(self, event: Event) -> t.Tuple[bool, bool]:
+    async def enter_event(self, event: Event) -> tuple[bool, bool]:
         """
         Apply `event` assets and update information cache.
 
@@ -331,7 +331,7 @@ class Branding(commands.Cog):
 
         return banner_success, icon_success
 
-    async def synchronise(self) -> t.Tuple[bool, bool]:
+    async def synchronise(self) -> tuple[bool, bool]:
         """
         Fetch the current event and delegate to `enter_event`.
 
@@ -353,7 +353,7 @@ class Branding(commands.Cog):
 
         return await self.enter_event(current_event)
 
-    async def populate_cache_events(self, events: t.List[Event]) -> None:
+    async def populate_cache_events(self, events: list[Event]) -> None:
         """
         Clear `cache_events` and re-populate with names and durations of `events`.
 
@@ -402,7 +402,7 @@ class Branding(commands.Cog):
         """
         log.debug("Checking whether daemon should start.")
 
-        should_begin: t.Optional[bool] = await self.cache_information.get("daemon_active")  # None if never set!
+        should_begin: bool | None = await self.cache_information.get("daemon_active")  # None if never set!
 
         if should_begin:
             self.daemon_loop.start()

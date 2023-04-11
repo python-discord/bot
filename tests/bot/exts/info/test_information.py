@@ -1,7 +1,7 @@
 import textwrap
 import unittest
 import unittest.mock
-from datetime import datetime
+from datetime import UTC, datetime
 from textwrap import shorten
 
 import discord
@@ -41,7 +41,7 @@ class InformationCogTests(unittest.IsolatedAsyncioTestCase):
         self.ctx.send.assert_called_once()
 
         _, kwargs = self.ctx.send.call_args
-        embed = kwargs.pop('embed')
+        embed = kwargs.pop("embed")
 
         self.assertEqual(embed.title, "Role information (Total 1 role)")
         self.assertEqual(embed.colour, discord.Colour.og_blurple())
@@ -110,15 +110,15 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
         test_values = (
             {
                 "helper_method": self.cog.basic_user_infraction_counts,
-                "expected_args": ("bot/infractions", {'hidden': 'False', 'user__id': str(self.member.id)}),
+                "expected_args": ("bot/infractions", {"hidden": "False", "user__id": str(self.member.id)}),
             },
             {
                 "helper_method": self.cog.expanded_user_infraction_counts,
-                "expected_args": ("bot/infractions", {'user__id': str(self.member.id)}),
+                "expected_args": ("bot/infractions", {"user__id": str(self.member.id)}),
             },
             {
                 "helper_method": self.cog.user_nomination_counts,
-                "expected_args": ("bot/nominations", {'user__id': str(self.member.id)}),
+                "expected_args": ("bot/nominations", {"user__id": str(self.member.id)}),
             },
         )
 
@@ -241,19 +241,19 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
                 "expected_lines": ["No nominations"],
             },
             {
-                "api response": [{'active': True}],
+                "api response": [{"active": True}],
                 "expected_lines": ["This user is **currently** nominated", "(1 nomination in total)"],
             },
             {
-                "api response": [{'active': True}, {'active': False}],
+                "api response": [{"active": True}, {"active": False}],
                 "expected_lines": ["This user is **currently** nominated", "(2 nominations in total)"],
             },
             {
-                "api response": [{'active': False}],
+                "api response": [{"active": False}],
                 "expected_lines": ["This user has 1 historical nomination, but is currently not nominated."],
             },
             {
-                "api response": [{'active': False}, {'active': False}],
+                "api response": [{"active": False}, {"active": False}],
                 "expected_lines": ["This user has 2 historical nominations, but is currently not nominated."],
             },
 
@@ -290,7 +290,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         user.nick = None
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
         user.colour = 0
-        user.created_at = user.joined_at = datetime.utcnow()
+        user.created_at = user.joined_at = datetime.now(UTC)
 
         embed = await self.cog.create_user_embed(ctx, user, False)
 
@@ -312,7 +312,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         user.nick = "Cat lover"
         user.__str__ = unittest.mock.Mock(return_value="Mr. Hemlock")
         user.colour = 0
-        user.created_at = user.joined_at = datetime.utcnow()
+        user.created_at = user.joined_at = datetime.now(UTC)
 
         embed = await self.cog.create_user_embed(ctx, user, False)
 
@@ -329,11 +329,11 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
     async def test_create_user_embed_ignores_everyone_role(self):
         """Created `!user` embeds should not contain mention of the @everyone-role."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=1))
-        admins_role = helpers.MockRole(name='Admins')
+        admins_role = helpers.MockRole(name="Admins")
 
         # A `MockMember` has the @Everyone role by default; we add the Admins to that.
         user = helpers.MockMember(roles=[admins_role], colour=100)
-        user.created_at = user.joined_at = datetime.utcnow()
+        user.created_at = user.joined_at = datetime.now(UTC)
 
         embed = await self.cog.create_user_embed(ctx, user, False)
 
@@ -354,13 +354,13 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """The embed should contain expanded infractions and nomination info in mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=50))
 
-        moderators_role = helpers.MockRole(name='Moderators')
+        moderators_role = helpers.MockRole(name="Moderators")
 
         infraction_counts.return_value = ("Infractions", "expanded infractions info")
         nomination_counts.return_value = ("Nominations", "nomination info")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
-        user.created_at = user.joined_at = datetime.utcfromtimestamp(1)
+        user.created_at = user.joined_at = datetime.fromtimestamp(1, tz=UTC)
         embed = await self.cog.create_user_embed(ctx, user, False)
 
         infraction_counts.assert_called_once_with(user)
@@ -394,13 +394,13 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """The embed should contain only basic infraction data outside of mod channels."""
         ctx = helpers.MockContext(channel=helpers.MockTextChannel(id=100))
 
-        moderators_role = helpers.MockRole(name='Moderators')
+        moderators_role = helpers.MockRole(name="Moderators")
 
         infraction_counts.return_value = ("Infractions", "basic infractions info")
         user_messages.return_value = ("Messages", "user message counts")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
-        user.created_at = user.joined_at = datetime.utcfromtimestamp(1)
+        user.created_at = user.joined_at = datetime.fromtimestamp(1, tz=UTC)
         embed = await self.cog.create_user_embed(ctx, user, False)
 
         infraction_counts.assert_called_once_with(user)
@@ -444,10 +444,10 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         """The embed should be created with the colour of the top role, if a top role is available."""
         ctx = helpers.MockContext()
 
-        moderators_role = helpers.MockRole(name='Moderators')
+        moderators_role = helpers.MockRole(name="Moderators")
 
         user = helpers.MockMember(id=314, roles=[moderators_role], colour=100)
-        user.created_at = user.joined_at = datetime.utcnow()
+        user.created_at = user.joined_at = datetime.now(UTC)
         embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertEqual(embed.colour, discord.Colour(100))
@@ -465,7 +465,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=discord.Colour.default())
-        user.created_at = user.joined_at = datetime.utcnow()
+        user.created_at = user.joined_at = datetime.now(UTC)
         embed = await self.cog.create_user_embed(ctx, user, False)
 
         self.assertEqual(embed.colour, discord.Colour.og_blurple())
@@ -483,7 +483,7 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         ctx = helpers.MockContext()
 
         user = helpers.MockMember(id=217, colour=0)
-        user.created_at = user.joined_at = datetime.utcnow()
+        user.created_at = user.joined_at = datetime.now(UTC)
         user.display_avatar.url = "avatar url"
         embed = await self.cog.create_user_embed(ctx, user, False)
 
@@ -644,6 +644,6 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
         for raw_user_input, expected_matched_rule_numbers in test_cases:
             with self.subTest(identifier=raw_user_input):
                 final_rule_numbers = await self.cog.rules(self.cog, self.ctx, args=raw_user_input)
-                embed = self.ctx.send.call_args.kwargs['embed']
+                embed = self.ctx.send.call_args.kwargs["embed"]
                 self.assertEqual(information.DEFAULT_RULES_DESCRIPTION, embed.description)
                 self.assertEqual(expected_matched_rule_numbers, final_rule_numbers)

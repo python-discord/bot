@@ -17,24 +17,24 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_slowmode_no_channel(self) -> None:
         """Get slowmode without a given channel."""
-        self.ctx.channel = MockTextChannel(name='python-general', slowmode_delay=5)
+        self.ctx.channel = MockTextChannel(name="python-general", slowmode_delay=5)
 
         await self.cog.get_slowmode(self.cog, self.ctx, None)
         self.ctx.send.assert_called_once_with("The slowmode delay for #python-general is 5 seconds.")
 
     async def test_get_slowmode_with_channel(self) -> None:
         """Get slowmode with a given channel."""
-        text_channel = MockTextChannel(name='python-language', slowmode_delay=2)
+        text_channel = MockTextChannel(name="python-language", slowmode_delay=2)
 
         await self.cog.get_slowmode(self.cog, self.ctx, text_channel)
-        self.ctx.send.assert_called_once_with('The slowmode delay for #python-language is 2 seconds.')
+        self.ctx.send.assert_called_once_with("The slowmode delay for #python-language is 2 seconds.")
 
     async def test_set_slowmode_no_channel(self) -> None:
         """Set slowmode without a given channel."""
         test_cases = (
-            ('helpers', 23, True, f'{Emojis.check_mark} The slowmode delay for #helpers is now 23 seconds.'),
-            ('mods', 76526, False, f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.'),
-            ('admins', 97, True, f'{Emojis.check_mark} The slowmode delay for #admins is now 1 minute and 37 seconds.')
+            ("helpers", 23, True, f"{Emojis.check_mark} The slowmode delay for #helpers is now 23 seconds."),
+            ("mods", 76526, False, f"{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours."),
+            ("admins", 97, True, f"{Emojis.check_mark} The slowmode delay for #admins is now 1 minute and 37 seconds.")
         )
 
         for channel_name, seconds, edited, result_msg in test_cases:
@@ -60,9 +60,9 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
     async def test_set_slowmode_with_channel(self) -> None:
         """Set slowmode with a given channel."""
         test_cases = (
-            ('bot-commands', 12, True, f'{Emojis.check_mark} The slowmode delay for #bot-commands is now 12 seconds.'),
-            ('mod-spam', 21, True, f'{Emojis.check_mark} The slowmode delay for #mod-spam is now 21 seconds.'),
-            ('admin-spam', 4323598, False, f'{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.')
+            ("bot-commands", 12, True, f"{Emojis.check_mark} The slowmode delay for #bot-commands is now 12 seconds."),
+            ("mod-spam", 21, True, f"{Emojis.check_mark} The slowmode delay for #mod-spam is now 21 seconds."),
+            ("admin-spam", 4323598, False, f"{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours.")
         )
 
         for channel_name, seconds, edited, result_msg in test_cases:
@@ -87,7 +87,7 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_reset_slowmode_sets_delay_to_zero(self) -> None:
         """Reset slowmode with a given channel."""
-        text_channel = MockTextChannel(name='meta', slowmode_delay=1)
+        text_channel = MockTextChannel(name="meta", slowmode_delay=1)
         self.cog.set_slowmode = mock.AsyncMock()
 
         await self.cog.reset_slowmode(self.cog, self.ctx, text_channel)

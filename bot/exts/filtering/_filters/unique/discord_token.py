@@ -122,13 +122,12 @@ class DiscordTokenFilter(UniqueFilter):
                 user_name=str(user),
                 kind="BOT" if user.bot else "USER",
             ), True
-        else:
-            return UNKNOWN_USER_LOG_MESSAGE.format(user_id=user_id), False
+        return UNKNOWN_USER_LOG_MESSAGE.format(user_id=user_id), False
 
     @staticmethod
     def censor_hmac(hmac: str) -> str:
         """Return a censored version of the hmac."""
-        return 'x' * (len(hmac) - 3) + hmac[-3:]
+        return "x" * (len(hmac) - 3) + hmac[-3:]
 
     @classmethod
     def format_log_message(cls, author: discord.User, channel: discord.abc.GuildChannel, token: Token) -> str:
@@ -166,7 +165,7 @@ class DiscordTokenFilter(UniqueFilter):
 
         try:
             decoded_bytes = base64.urlsafe_b64decode(b64_content)
-            string = decoded_bytes.decode('utf-8')
+            string = decoded_bytes.decode("utf-8")
             if not (string.isascii() and string.isdigit()):
                 # This case triggers if there are fancy unicode digits in the base64 encoding,
                 # that means it's not a valid user id.
@@ -196,9 +195,9 @@ class DiscordTokenFilter(UniqueFilter):
         # is not checked.
         if timestamp + TOKEN_EPOCH >= DISCORD_EPOCH:
             return True
-        else:
-            log.debug(f"Invalid token timestamp '{b64_content}': smaller than Discord epoch")
-            return False
+
+        log.debug(f"Invalid token timestamp '{b64_content}': smaller than Discord epoch")
+        return False
 
     @staticmethod
     def is_maybe_valid_hmac(b64_content: str) -> bool:
@@ -215,5 +214,4 @@ class DiscordTokenFilter(UniqueFilter):
                 " case-insensitively unique characters"
             )
             return False
-        else:
-            return True
+        return True

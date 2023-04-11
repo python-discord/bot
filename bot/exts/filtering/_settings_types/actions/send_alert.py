@@ -1,6 +1,4 @@
-from typing import ClassVar
-
-from typing_extensions import Self
+from typing import ClassVar, Self
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry

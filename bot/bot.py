@@ -8,7 +8,7 @@ from sentry_sdk import push_scope
 from bot import constants, exts
 from bot.log import get_logger
 
-log = get_logger('bot')
+log = get_logger("bot")
 
 
 class StartupError(Exception):

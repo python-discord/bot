@@ -1,7 +1,6 @@
 import itertools
 import unittest
-from datetime import datetime, timezone
-from typing import List, Tuple
+from datetime import UTC, datetime
 from unittest import mock
 from unittest.mock import AsyncMock, Mock
 
@@ -97,10 +96,12 @@ class SilenceNotifierTests(SilenceTest):
         """Alert is skipped on first loop or not an increment of 900."""
         test_cases = (0, 15, 5000)
         for current_loop in test_cases:
-            with self.subTest(current_loop=current_loop):
-                with mock.patch.object(self.notifier, "_current_loop", new=current_loop):
-                    await self.notifier._notifier()
-                    self.alert_channel.send.assert_not_called()
+            with (
+                self.subTest(current_loop=current_loop),
+                mock.patch.object(self.notifier, "_current_loop", new=current_loop),
+            ):
+                await self.notifier._notifier()
+                self.alert_channel.send.assert_not_called()
 
 
 @autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
@@ -203,7 +204,7 @@ class SilenceCogTests(SilenceTest):
                 self.assertEqual((None,), member.move_to.call_args_list[0].args)
 
     @staticmethod
-    def create_erroneous_members() -> Tuple[List[MockMember], List[MockMember]]:
+    def create_erroneous_members() -> tuple[list[MockMember], list[MockMember]]:
         """
         Helper method to generate a list of members that error out on move_to call.
 
@@ -363,7 +364,7 @@ class RescheduleTests(RedisTestCase):
         channels = [MockTextChannel(id=123), MockTextChannel(id=456)]
         self.bot.get_channel.side_effect = channels
         self.cog.unsilence_timestamps.items.return_value = [(123, 2000), (456, 3000)]
-        silence.datetime.now.return_value = datetime.fromtimestamp(1000, tz=timezone.utc)
+        silence.datetime.now.return_value = datetime.fromtimestamp(1000, tz=UTC)
 
         self.cog._unsilence_wrapper = mock.MagicMock()
         unsilence_return = self.cog._unsilence_wrapper.return_value
@@ -426,17 +427,19 @@ class SilenceTests(SilenceTest):
         targets = (MockTextChannel(), MockVoiceChannel(), None)
 
         for (duration, message, was_silenced), target in itertools.product(test_cases, targets):
-            with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=was_silenced):
-                with self.subTest(was_silenced=was_silenced, target=target, message=message):
-                    with mock.patch.object(self.cog, "send_message") as send_message:
-                        ctx = MockContext()
-                        await self.cog.silence.callback(self.cog, ctx, target, duration)
-                        send_message.assert_called_once_with(
-                            message,
-                            ctx.channel,
-                            target or ctx.channel,
-                            alert_target=was_silenced
-                        )
+            with (
+                mock.patch.object(self.cog, "_set_silence_overwrites", return_value=was_silenced),
+                self.subTest(was_silenced=was_silenced, target=target, message=message),
+                mock.patch.object(self.cog, "send_message") as send_message
+            ):
+                ctx = MockContext()
+                await self.cog.silence.callback(self.cog, ctx, target, duration)
+                send_message.assert_called_once_with(
+                    message,
+                    ctx.channel,
+                    target or ctx.channel,
+                    alert_target=was_silenced
+                )
 
     @voice_sync_helper
     async def test_sync_called(self, ctx, sync, kick):
@@ -577,10 +580,10 @@ class SilenceTests(SilenceTest):
         new_overwrite_dict = dict(self.voice_overwrite)
 
         # Remove 'connect' & 'speak' keys because they were changed by the method.
-        del prev_overwrite_dict['connect']
-        del prev_overwrite_dict['speak']
-        del new_overwrite_dict['connect']
-        del new_overwrite_dict['speak']
+        del prev_overwrite_dict["connect"]
+        del prev_overwrite_dict["speak"]
+        del new_overwrite_dict["connect"]
+        del new_overwrite_dict["speak"]
 
         self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
@@ -617,13 +620,13 @@ class SilenceTests(SilenceTest):
         now_timestamp = 100
         duration = 15
         timestamp = now_timestamp + duration * 60
-        datetime_mock.now.return_value = datetime.fromtimestamp(now_timestamp, tz=timezone.utc)
+        datetime_mock.now.return_value = datetime.fromtimestamp(now_timestamp, tz=UTC)
 
         ctx = MockContext(channel=self.text_channel)
         await self.cog.silence.callback(self.cog, ctx, duration)
 
         self.cog.unsilence_timestamps.set.assert_awaited_once_with(ctx.channel.id, timestamp)
-        datetime_mock.now.assert_called_once_with(tz=timezone.utc)  # Ensure it's using an aware dt.
+        datetime_mock.now.assert_called_once_with(tz=UTC)  # Ensure it's using an aware dt.
 
     async def test_cached_indefinite_time(self):
         """A value of -1 was cached for a permanent silence."""
@@ -697,13 +700,15 @@ class UnsilenceTests(SilenceTest):
             if target:
                 target.overwrites_for.return_value = overwrite
 
-            with mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced):
-                with mock.patch.object(self.cog, "send_message") as send_message:
-                    with self.subTest(was_unsilenced=was_unsilenced, overwrite=overwrite, target=target):
-                        await self.cog.unsilence.callback(self.cog, ctx, channel=target)
+            with (
+                mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced),
+                mock.patch.object(self.cog, "send_message") as send_message,
+                self.subTest(was_unsilenced=was_unsilenced, overwrite=overwrite, target=target),
+            ):
+                await self.cog.unsilence.callback(self.cog, ctx, channel=target)
 
-                        call_args = (message, ctx.channel, target or ctx.channel)
-                        send_message.assert_awaited_once_with(*call_args, alert_target=was_unsilenced)
+                call_args = (message, ctx.channel, target or ctx.channel)
+                send_message.assert_awaited_once_with(*call_args, alert_target=was_unsilenced)
 
     async def test_skipped_already_unsilenced(self):
         """Permissions were not set and `False` was returned for an already unsilenced channel."""
@@ -808,10 +813,10 @@ class UnsilenceTests(SilenceTest):
                 new_overwrite_dict = dict(self.text_overwrite)
 
                 # Remove these keys because they were modified by the unsilence.
-                del prev_overwrite_dict['send_messages']
-                del prev_overwrite_dict['add_reactions']
-                del new_overwrite_dict['send_messages']
-                del new_overwrite_dict['add_reactions']
+                del prev_overwrite_dict["send_messages"]
+                del prev_overwrite_dict["add_reactions"]
+                del new_overwrite_dict["send_messages"]
+                del new_overwrite_dict["add_reactions"]
 
                 self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 
@@ -826,10 +831,10 @@ class UnsilenceTests(SilenceTest):
                 new_overwrite_dict = dict(self.voice_overwrite)
 
                 # Remove these keys because they were modified by the unsilence.
-                del prev_overwrite_dict['connect']
-                del prev_overwrite_dict['speak']
-                del new_overwrite_dict['connect']
-                del new_overwrite_dict['speak']
+                del prev_overwrite_dict["connect"]
+                del prev_overwrite_dict["speak"]
+                del new_overwrite_dict["connect"]
+                del new_overwrite_dict["speak"]
 
                 self.assertDictEqual(prev_overwrite_dict, new_overwrite_dict)
 

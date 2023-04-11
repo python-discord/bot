@@ -77,10 +77,10 @@ class EvalResult:
         """Return an emoji corresponding to the status code or lack of output in result."""
         if not self.has_output:
             return ":warning:"
-        elif self.returncode == 0:  # No error
+        if self.returncode == 0:  # No error
             return ":white_check_mark:"
-        else:  # Exception
-            return ":x:"
+        # Exception
+        return ":x:"
 
     @property
     def error_message(self) -> str:

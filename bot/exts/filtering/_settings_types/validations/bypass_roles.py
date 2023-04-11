@@ -12,7 +12,7 @@ class RoleBypass(ValidationEntry):
     name: ClassVar[str] = "bypass_roles"
     description: ClassVar[str] = "A list of role IDs or role names. Users with these roles will not trigger the filter."
 
-    bypass_roles: set[Union[int, str]]
+    bypass_roles: set[Union[int, str]]  # noqa: UP007
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """Return whether the filter should be triggered on this user given their roles."""

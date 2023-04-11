@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, ClassVar, Union
+from typing import Any, ClassVar, Self
 
 from pydantic import BaseModel, PrivateAttr
-from typing_extensions import Self
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._utils import FieldRequiring
@@ -22,7 +21,7 @@ class SettingsEntry(BaseModel, FieldRequiring):
     name: ClassVar[str] = FieldRequiring.MUST_SET_UNIQUE
     # Each subclass must define a description of what it does. If the data an entry type receives comprises
     # several DB fields, the value should a dictionary of field names and their descriptions.
-    description: ClassVar[Union[str, dict[str, str]]] = FieldRequiring.MUST_SET
+    description: ClassVar[str | dict[str, str]] = FieldRequiring.MUST_SET
 
     _overrides: set[str] = PrivateAttr(default_factory=set)
 

@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import UTC, timedelta
 from operator import itemgetter
 
 import arrow
@@ -100,7 +100,7 @@ class Stream(commands.Cog):
         \u2003`s` - seconds
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
-        """
+        """  # noqa: RUF002
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
 
         if duration is None:
@@ -110,7 +110,7 @@ class Stream(commands.Cog):
         elif duration.tzinfo is None:
             # Make duration tz-aware.
             # ISODateTime could already include tzinfo, this check is so it isn't overwritten.
-            duration.replace(tzinfo=timezone.utc)
+            duration.replace(tzinfo=UTC)
 
         # Check if the member already has streaming permission
         already_allowed = any(Roles.video == role.id for role in member.roles)
@@ -185,7 +185,7 @@ class Stream(commands.Cog):
 
         await self._suspend_stream(ctx, member)
 
-    @commands.command(aliases=('lstream',))
+    @commands.command(aliases=("lstream",))
     @commands.has_any_role(*MODERATION_ROLES)
     async def liststream(self, ctx: commands.Context) -> None:
         """Lists all users who aren't staff, partners or members of the python community and have stream permissions."""

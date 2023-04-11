@@ -1,4 +1,3 @@
-import typing as t
 
 import discord
 from discord.ext import commands
@@ -31,11 +30,10 @@ class ThreadBumper(commands.Cog):
         ) as response:
             if response.status == 204:
                 return True
-            elif response.status == 404:
+            if response.status == 404:
                 return False
-            else:
-                # A status other than 204/404 is undefined behaviour from site. Raise error for investigation.
-                raise ResponseCodeError(response, response.text())
+            # A status other than 204/404 is undefined behaviour from site. Raise error for investigation.
+            raise ResponseCodeError(response, response.text())
 
     async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
         """
@@ -94,7 +92,7 @@ class ThreadBumper(commands.Cog):
             await ctx.send_help(ctx.command)
 
     @thread_bump_group.command(name="add", aliases=("a",))
-    async def add_thread_to_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
+    async def add_thread_to_bump_list(self, ctx: commands.Context, thread: discord.Thread | None) -> None:
         """Add a thread to the bump list."""
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
@@ -109,7 +107,7 @@ class ThreadBumper(commands.Cog):
         await ctx.send(f":ok_hand:{thread.mention} has been added to the bump list.")
 
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
-    async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
+    async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: discord.Thread | None) -> None:
         """Remove a thread from the bump list."""
         if not thread:
             if isinstance(ctx.channel, discord.Thread):

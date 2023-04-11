@@ -1,6 +1,5 @@
 import calendar
 import operator
-import typing as t
 from dataclasses import dataclass
 
 import arrow
@@ -26,8 +25,8 @@ class AssignableRole:
     """
 
     role_id: int
-    months_available: t.Optional[tuple[int]]
-    name: t.Optional[str] = None  # This gets populated within Subscribe.cog_load()
+    months_available: tuple[int] | None
+    name: str | None = None  # This gets populated within Subscribe.cog_load()
 
     def is_currently_available(self) -> bool:
         """Check if the role is available for the current month."""

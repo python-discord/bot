@@ -143,7 +143,7 @@ class MessageCache:
                 raise IndexError("cache index out of range")
             return self._messages[(item + self._start) % self.maxlen]
 
-        elif isinstance(item, slice):
+        if isinstance(item, slice):
             length = len(self)
             start, stop, step = item.indices(length)
 
@@ -176,12 +176,10 @@ class MessageCache:
             if step > 0:
                 offset = ceil((self.maxlen - start) / step) * step + start - self.maxlen
                 return self._messages[start::step] + self._messages[offset:stop:step]
-            else:
-                offset = ceil((start + 1) / -step) * -step - start - 1
-                return self._messages[start::step] + self._messages[self.maxlen - 1 - offset:stop:step]
+            offset = ceil((start + 1) / -step) * -step - start - 1
+            return self._messages[start::step] + self._messages[self.maxlen - 1 - offset:stop:step]
 
-        else:
-            raise TypeError(f"cache indices must be integers or slices, not {type(item)}")
+        raise TypeError(f"cache indices must be integers or slices, not {type(item)}")
 
     def __iter__(self) -> t.Iterator[Message]:
         if self._is_empty():
