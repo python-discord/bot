@@ -326,17 +326,6 @@ class _Colours(EnvConfig):
 Colours = _Colours()
 
 
-class _Free(EnvConfig):
-    EnvConfig.Config.env_prefix = "free_"
-
-    activity_timeout = 600
-    cooldown_per = 60.0
-    cooldown_rate = 1
-
-
-Free = _Free()
-
-
 class _HelpChannels(EnvConfig):
     EnvConfig.Config.env_prefix = "help_channels_"
 
