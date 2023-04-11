@@ -9,7 +9,7 @@ from typing import Any, TypeVar, get_origin
 
 import discord
 from discord import Embed, Interaction
-from discord.ext.commands import Context
+from discord.ext.commands import Context, Converter
 from discord.ui.select import MISSING as SELECT_MISSING, SelectOption
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
@@ -182,7 +182,7 @@ class ArgumentCompletionSelect(discord.ui.Select):
         arg_name: str,
         options: list[str],
         position: int,
-        converter: Callable | None = None
+        converter: Converter | None = None
     ):
         super().__init__(
             placeholder=f"Select a value for {arg_name!r}",
@@ -198,7 +198,7 @@ class ArgumentCompletionSelect(discord.ui.Select):
         await interaction.response.defer()
         value = interaction.data["values"][0]
         if self.converter:
-            value = self.converter(value)
+            value = await self.converter().convert(self.ctx, value)
         args = self.args.copy()  # This makes the view reusable.
         args.insert(self.position, value)
         log.trace(f"Argument filled with the value {value}. Re-invoking command")
@@ -215,7 +215,7 @@ class ArgumentCompletionView(discord.ui.View):
         arg_name: str,
         options: list[str],
         position: int,
-        converter: Callable | None = None
+        converter: Converter | None = None
     ):
         super().__init__()
         log.trace(f"The {arg_name} argument was designated missing in the invocation {ctx.view.buffer!r}")

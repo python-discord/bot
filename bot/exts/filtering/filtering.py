@@ -25,7 +25,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
-from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
+from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
@@ -414,7 +414,10 @@ class Filtering(Cog):
 
     @filter.command(name="list", aliases=("get",))
     async def f_list(
-        self, ctx: Context, list_type: list_type_converter | None = None, list_name: str | None = None
+        self,
+        ctx: Context,
+        list_type: ListTypeConverter | None = None,
+        list_name: str | None = None,
     ) -> None:
         """List the contents of a specified list of filters."""
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -449,7 +452,7 @@ class Filtering(Cog):
         self,
         ctx: Context,
         noui: Literal["noui"] | None,
-        list_type: list_type_converter | None,
+        list_type: ListTypeConverter | None,
         list_name: str | None,
         content: str,
         *,
@@ -727,7 +730,7 @@ class Filtering(Cog):
 
     @filterlist.command(name="describe", aliases=("explain", "manual", "id"))
     async def fl_describe(
-        self, ctx: Context, list_type: list_type_converter | None = None, list_name: str | None = None
+        self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
     ) -> None:
         """Show a description of the specified filter list, or a list of possible values if no values are provided."""
         if not list_type and not list_name:
@@ -758,7 +761,7 @@ class Filtering(Cog):
 
     @filterlist.command(name="add", aliases=("a",))
     @has_any_role(Roles.admins)
-    async def fl_add(self, ctx: Context, list_type: list_type_converter, list_name: str) -> None:
+    async def fl_add(self, ctx: Context, list_type: ListTypeConverter, list_name: str) -> None:
         """Add a new filter list."""
         # Check if there's an implementation.
         if list_name.lower() not in filter_list_types:
@@ -796,7 +799,7 @@ class Filtering(Cog):
         self,
         ctx: Context,
         noui: Literal["noui"] | None,
-        list_type: list_type_converter | None = None,
+        list_type: ListTypeConverter | None = None,
         list_name: str | None = None,
         *,
         settings: str | None
@@ -839,7 +842,7 @@ class Filtering(Cog):
     @filterlist.command(name="delete", aliases=("remove",))
     @has_any_role(Roles.admins)
     async def fl_delete(
-        self, ctx: Context, list_type: list_type_converter | None = None, list_name: str | None = None
+        self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
     ) -> None:
         """Remove the filter list and all of its filters from the database."""
         async def delete_list() -> None:
@@ -1024,7 +1027,7 @@ class Filtering(Cog):
                 await ctx.send(
                     "The **list_type** argument is unspecified. Please pick a value from the options below:",
                     view=ArgumentCompletionView(
-                        ctx, args, "list_type", [option.name for option in ListType], 0, list_type_converter
+                        ctx, args, "list_type", [option.name for option in ListType], 0, ListTypeConverter
                     )
                 )
                 return None

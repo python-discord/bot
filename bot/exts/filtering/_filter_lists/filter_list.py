@@ -9,7 +9,7 @@ from functools import reduce
 from typing import Any
 
 import arrow
-from discord.ext.commands import BadArgument
+from discord.ext.commands import BadArgument, Context, Converter
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
@@ -37,13 +37,15 @@ aliases = (
 )
 
 
-def list_type_converter(argument: str) -> ListType:
+class ListTypeConverter(Converter):
     """A converter to get the appropriate list type."""
-    argument = argument.lower()
-    for list_type, list_aliases in aliases:
-        if argument in list_aliases or argument in map(past_tense, list_aliases):
-            return list_type
-    raise BadArgument(f"No matching list type found for {argument!r}.")
+
+    async def convert(self, ctx: Context, argument: str) -> ListType:
+        argument = argument.lower()
+        for list_type, list_aliases in aliases:
+            if argument in list_aliases or argument in map(past_tense, list_aliases):
+                return list_type
+        raise BadArgument(f"No matching list type found for {argument!r}.")
 
 
 # AtomicList and its subclasses must have eq=False, otherwise the dataclass deco will replace the hash function.
