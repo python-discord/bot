@@ -24,7 +24,7 @@ def in_whitelist(
     channels: t.Container[int] = (),
     categories: t.Container[int] = (),
     roles: t.Container[int] = (),
-    redirect: t.Optional[int] = Channels.bot_commands,
+    redirect: int | None = Channels.bot_commands,
     fail_silently: bool = False,
 ) -> t.Callable:
     """
@@ -57,7 +57,7 @@ def not_in_blacklist(
     categories: t.Container[int] = (),
     roles: t.Container[int] = (),
     override_roles: t.Container[int] = (),
-    redirect: t.Optional[int] = Channels.bot_commands,
+    redirect: int | None = Channels.bot_commands,
     fail_silently: bool = False,
 ) -> t.Callable:
     """
@@ -90,7 +90,7 @@ def not_in_blacklist(
     return commands.check(predicate)
 
 
-def has_no_roles(*roles: t.Union[str, int]) -> t.Callable:
+def has_no_roles(*roles: str | int) -> t.Callable:
     """
     Returns True if the user does not have any of the roles specified.
 
@@ -111,9 +111,9 @@ def has_no_roles(*roles: t.Union[str, int]) -> t.Callable:
 
 def redirect_output(
     destination_channel: int,
-    bypass_roles: t.Optional[t.Container[int]] = None,
-    channels: t.Optional[t.Container[int]] = None,
-    categories: t.Optional[t.Container[int]] = None,
+    bypass_roles: t.Container[int] | None = None,
+    channels: t.Container[int] | None = None,
+    categories: t.Container[int] | None = None,
     ping_user: bool = True
 ) -> t.Callable:
     """
@@ -138,12 +138,12 @@ def redirect_output(
                 await func(self, ctx, *args, **kwargs)
                 return
 
-            elif channels and ctx.channel.id not in channels:
+            if channels and ctx.channel.id not in channels:
                 log.trace(f"{ctx.author} used {ctx.command} in a channel that can bypass output redirection")
                 await func(self, ctx, *args, **kwargs)
                 return
 
-            elif categories and ctx.channel.category.id not in categories:
+            if categories and ctx.channel.category.id not in categories:
                 log.trace(f"{ctx.author} used {ctx.command} in a category that can bypass output redirection")
                 await func(self, ctx, *args, **kwargs)
                 return
@@ -213,9 +213,10 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
                     f":x: {actor.mention}, you may not {cmd} "
                     "someone with an equal or higher top role."
                 )
-            else:
-                log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
-                return await func(*args, **kwargs)
+                return None
+
+            log.trace(f"{func.__name__}: {target.top_role=} < {actor.top_role=}; calling func")
+            return await func(*args, **kwargs)
         return wrapper
     return decorator
 
@@ -265,7 +266,7 @@ def ensure_future_timestamp(timestamp_arg: function.Argument) -> t.Callable:
                 is_future = True
             if not is_future:
                 await ctx.send(":x: Provided timestamp is in the past.")
-                return
+                return None
 
             return await func(*args, **kwargs)
         return wrapper

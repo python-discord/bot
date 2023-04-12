@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import fnmatch
 import time
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from async_rediscache.types.base import RedisObject
 
@@ -66,7 +66,7 @@ class DocRedisCache(RedisObject):
             await self.redis_session.client.expire(redis_key, WEEK_SECONDS)
             log.info(f"Set {redis_key} to expire in a week.")
 
-    async def get(self, item: DocItem) -> Optional[str]:
+    async def get(self, item: DocItem) -> str | None:
         """Return the Markdown content of the symbol `item` if it exists."""
         return await self.redis_session.client.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)
 

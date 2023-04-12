@@ -1,4 +1,3 @@
-from typing import Optional
 
 import discord
 from discord import Embed
@@ -11,11 +10,11 @@ log = get_logger(__name__)
 
 async def send_webhook(
         webhook: discord.Webhook,
-        content: Optional[str] = None,
-        username: Optional[str] = None,
-        avatar_url: Optional[str] = None,
-        embed: Optional[Embed] = None,
-        wait: Optional[bool] = False
+        content: str | None = None,
+        username: str | None = None,
+        avatar_url: str | None = None,
+        embed: Embed | None = None,
+        wait: bool | None = False
 ) -> discord.Message:
     """
     Send a message using the provided webhook.

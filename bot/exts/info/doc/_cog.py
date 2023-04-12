@@ -6,7 +6,7 @@ import textwrap
 from collections import defaultdict
 from contextlib import suppress
 from types import SimpleNamespace
-from typing import Dict, Literal, NamedTuple, Optional, Tuple, Union
+from typing import Literal, NamedTuple
 
 import aiohttp
 import discord
@@ -66,7 +66,7 @@ class DocCog(commands.Cog):
         # Used to calculate inventory diffs on refreshes and to display all currently stored inventories.
         self.base_urls = {}
         self.bot = bot
-        self.doc_symbols: Dict[str, DocItem] = {}  # Maps symbol names to objects containing their metadata.
+        self.doc_symbols: dict[str, DocItem] = {}  # Maps symbol names to objects containing their metadata.
         self.item_fetcher = _batch_parser.BatchParser()
         # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
@@ -182,19 +182,17 @@ class DocCog(commands.Cog):
                 # Instead of renaming the current symbol, rename the symbol with which it conflicts.
                 self.doc_symbols[new_name] = self.doc_symbols[symbol_name]
                 return symbol_name
-            else:
-                return new_name
+            return new_name
 
         # When there's a conflict, and the package names of the items differ, use the package name as a prefix.
         if package_name != item.package:
             if package_name in PRIORITY_PACKAGES:
                 return rename(item.package, rename_extant=True)
-            else:
-                return rename(package_name)
+            return rename(package_name)
 
         # If the symbol's group is a non-priority group from FORCE_PREFIX_GROUPS,
         # add it as a prefix to disambiguate the symbols.
-        elif group_name in FORCE_PREFIX_GROUPS:
+        if group_name in FORCE_PREFIX_GROUPS:
             if item.group in FORCE_PREFIX_GROUPS:
                 needs_moving = FORCE_PREFIX_GROUPS.index(group_name) < FORCE_PREFIX_GROUPS.index(item.group)
             else:
@@ -203,8 +201,7 @@ class DocCog(commands.Cog):
 
         # If the above conditions didn't pass, either the existing symbol has its group in FORCE_PREFIX_GROUPS,
         # or deciding which item to rename would be arbitrary, so we rename the existing symbol.
-        else:
-            return rename(item.group, rename_extant=True)
+        return rename(item.group, rename_extant=True)
 
     async def refresh_inventories(self) -> None:
         """Refresh internal documentation inventories."""
@@ -227,7 +224,7 @@ class DocCog(commands.Cog):
         log.debug("Finished inventory refresh.")
         self.refresh_event.set()
 
-    def get_symbol_item(self, symbol_name: str) -> Tuple[str, Optional[DocItem]]:
+    def get_symbol_item(self, symbol_name: str) -> tuple[str, DocItem | None]:
         """
         Get the `DocItem` and the symbol name used to fetch it from the `doc_symbols` dict.
 
@@ -267,7 +264,7 @@ class DocCog(commands.Cog):
                 return "Unable to parse the requested symbol."
         return markdown
 
-    async def create_symbol_embed(self, symbol_name: str) -> Optional[discord.Embed]:
+    async def create_symbol_embed(self, symbol_name: str) -> discord.Embed | None:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -305,12 +302,12 @@ class DocCog(commands.Cog):
             return embed
 
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
+    async def docs_group(self, ctx: commands.Context, *, symbol_name: str | None) -> None:
         """Look up documentation for Python symbols."""
         await self.get_command(ctx, symbol_name=symbol_name)
 
     @docs_group.command(name="getdoc", aliases=("g",))
-    async def get_command(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
+    async def get_command(self, ctx: commands.Context, *, symbol_name: str | None) -> None:
         """
         Return a documentation embed for a given symbol.
 
@@ -452,7 +449,7 @@ class DocCog(commands.Cog):
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: Union[PackageName, Literal["*"]]
+        package_name: PackageName | Literal["*"]
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):

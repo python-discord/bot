@@ -3,7 +3,6 @@ import traceback
 from collections import namedtuple
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Union
 
 import arrow
 from async_rediscache import RedisCache
@@ -44,7 +43,7 @@ SECONDS_IN_DAY = 86400
 class Action(Enum):
     """Defcon Action."""
 
-    ActionInfo = namedtuple('LogInfoDetails', ['icon', 'emoji', 'color', 'template'])
+    ActionInfo = namedtuple("LogInfoDetails", ["icon", "emoji", "color", "template"])
 
     SERVER_OPEN = ActionInfo(Icons.defcon_unshutdown, Emojis.defcon_unshutdown, Colours.soft_green, "")
     SERVER_SHUTDOWN = ActionInfo(Icons.defcon_shutdown, Emojis.defcon_shutdown, Colours.soft_red, "")
@@ -142,13 +141,13 @@ class Defcon(Cog):
                     message, member.display_avatar.url
                 )
 
-    @group(name='defcon', aliases=('dc',), invoke_without_command=True)
+    @group(name="defcon", aliases=("dc",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def defcon_group(self, ctx: Context) -> None:
         """Check the DEFCON status or run a subcommand."""
         await ctx.send_help(ctx.command)
 
-    @defcon_group.command(aliases=('s',))
+    @defcon_group.command(aliases=("s",))
     @has_any_role(*MODERATION_ROLES)
     async def status(self, ctx: Context) -> None:
         """Check the current status of DEFCON mode."""
@@ -164,10 +163,10 @@ class Defcon(Cog):
 
         await ctx.send(embed=embed)
 
-    @defcon_group.command(name="threshold", aliases=('t', 'd'))
+    @defcon_group.command(name="threshold", aliases=("t", "d"))
     @has_any_role(*MODERATION_ROLES)
     async def threshold_command(
-        self, ctx: Context, threshold: Union[DurationDelta, int], expiry: Optional[Expiry] = None
+        self, ctx: Context, threshold: DurationDelta | int, expiry: Expiry | None = None
     ) -> None:
         """
         Set how old an account must be to join the server.
@@ -215,7 +214,7 @@ class Defcon(Cog):
 
     async def _update_channel_topic(self) -> None:
         """Update the #defcon channel topic with the current DEFCON status."""
-        threshold = time.humanize_delta(self.threshold) if self.threshold else '-'
+        threshold = time.humanize_delta(self.threshold) if self.threshold else "-"
         new_topic = f"{BASE_CHANNEL_TOPIC}\n(Threshold: {threshold})"
 
         (await self.get_mod_log()).ignore(Event.guild_channel_update, Channels.defcon)
@@ -227,7 +226,7 @@ class Defcon(Cog):
         author: User,
         channel: TextChannel,
         threshold: relativedelta,
-        expiry: Optional[Expiry] = None
+        expiry: Expiry | None = None
     ) -> None:
         """Update the new threshold in the cog, cache, defcon channel, and logs, and additionally schedule expiry."""
         self.threshold = threshold
@@ -247,8 +246,8 @@ class Defcon(Cog):
         try:
             await self.defcon_settings.update(
                 {
-                    'threshold': Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
-                    'expiry': expiry.isoformat() if expiry else 0
+                    "threshold": Defcon._stringify_relativedelta(self.threshold) if self.threshold else "",
+                    "expiry": expiry.isoformat() if expiry else 0
                 }
             )
         except RedisError:
