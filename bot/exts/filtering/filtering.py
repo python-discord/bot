@@ -7,7 +7,7 @@ from collections.abc import Iterable, Mapping
 from functools import partial, reduce
 from io import BytesIO
 from operator import attrgetter
-from typing import Literal, Optional, get_type_hints
+from typing import Literal, get_type_hints
 
 import arrow
 import discord
@@ -25,7 +25,7 @@ from bot.bot import Bot
 from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
-from bot.exts.filtering._filter_lists import FilterList, ListType, filter_list_types, list_type_converter
+from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
@@ -184,11 +184,11 @@ class Filtering(Cog):
 
     async def schedule_offending_messages_deletion(self) -> None:
         """Load the messages that need to be scheduled for deletion from the database."""
-        response = await self.bot.api_client.get('bot/offensive-messages')
+        response = await self.bot.api_client.get("bot/offensive-messages")
 
         now = arrow.utcnow()
         for msg in response:
-            delete_at = arrow.get(msg['delete_date'])
+            delete_at = arrow.get(msg["delete_date"])
             if delete_at < now:
                 await self._delete_offensive_msg(msg)
             else:
@@ -298,7 +298,7 @@ class Filtering(Cog):
             await ctx.send_help(ctx.command)
 
     @blocklist.command(name="list", aliases=("get",))
-    async def bl_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
+    async def bl_list(self, ctx: Context, list_name: str | None = None) -> None:
         """List the contents of a specified blacklist."""
         result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
         if not result:
@@ -310,11 +310,11 @@ class Filtering(Cog):
     async def bl_add(
         self,
         ctx: Context,
-        noui: Optional[Literal["noui"]],
-        list_name: Optional[str],
+        noui: Literal["noui"] | None,
+        list_name: str | None,
         content: str,
         *,
-        description_and_settings: Optional[str] = None
+        description_and_settings: str | None = None
     ) -> None:
         """
         Add a blocked filter to the specified filter list.
@@ -341,7 +341,7 @@ class Filtering(Cog):
             await ctx.send_help(ctx.command)
 
     @allowlist.command(name="list", aliases=("get",))
-    async def al_list(self, ctx: Context, list_name: Optional[str] = None) -> None:
+    async def al_list(self, ctx: Context, list_name: str | None = None) -> None:
         """List the contents of a specified whitelist."""
         result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name, exclude="list_type")
         if not result:
@@ -353,11 +353,11 @@ class Filtering(Cog):
     async def al_add(
         self,
         ctx: Context,
-        noui: Optional[Literal["noui"]],
-        list_name: Optional[str],
+        noui: Literal["noui"] | None,
+        list_name: str | None,
         content: str,
         *,
-        description_and_settings: Optional[str] = None
+        description_and_settings: str | None = None
     ) -> None:
         """
         Add an allowed filter to the specified filter list.
@@ -378,7 +378,7 @@ class Filtering(Cog):
     # region: filter commands
 
     @commands.group(aliases=("filters", "f"), invoke_without_command=True)
-    async def filter(self, ctx: Context, id_: Optional[int] = None) -> None:
+    async def filter(self, ctx: Context, id_: int | None = None) -> None:
         """
         Group for managing filters.
 
@@ -414,7 +414,10 @@ class Filtering(Cog):
 
     @filter.command(name="list", aliases=("get",))
     async def f_list(
-        self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
+        self,
+        ctx: Context,
+        list_type: ListTypeConverter | None = None,
+        list_name: str | None = None,
     ) -> None:
         """List the contents of a specified list of filters."""
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -425,7 +428,7 @@ class Filtering(Cog):
         await self._send_list(ctx, filter_list, list_type)
 
     @filter.command(name="describe", aliases=("explain", "manual"))
-    async def f_describe(self, ctx: Context, filter_name: Optional[str]) -> None:
+    async def f_describe(self, ctx: Context, filter_name: str | None) -> None:
         """Show a description of the specified filter, or a list of possible values if no name is specified."""
         if not filter_name:
             filter_names = [f"» {f}" for f in self.loaded_filters]
@@ -448,12 +451,12 @@ class Filtering(Cog):
     async def f_add(
         self,
         ctx: Context,
-        noui: Optional[Literal["noui"]],
-        list_type: Optional[list_type_converter],
-        list_name: Optional[str],
+        noui: Literal["noui"] | None,
+        list_type: ListTypeConverter | None,
+        list_name: str | None,
         content: str,
         *,
-        description_and_settings: Optional[str] = None
+        description_and_settings: str | None = None
     ) -> None:
         """
         Add a filter to the specified filter list.
@@ -479,10 +482,10 @@ class Filtering(Cog):
     async def f_edit(
         self,
         ctx: Context,
-        noui: Optional[Literal["noui"]],
+        noui: Literal["noui"] | None,
         filter_id: int,
         *,
-        description_and_settings: Optional[str] = None
+        description_and_settings: str | None = None
     ) -> None:
         """
         Edit a filter specified by its ID.
@@ -561,7 +564,7 @@ class Filtering(Cog):
         """Delete the filter specified by its ID."""
         async def delete_list() -> None:
             """The actual removal routine."""
-            await bot.instance.api_client.delete(f'bot/filter/filters/{filter_id}')
+            await bot.instance.api_client.delete(f"bot/filter/filters/{filter_id}")
             log.info(f"Successfully deleted filter with ID {filter_id}.")
             filter_list[list_type].filters.pop(filter_id)
             await ctx.reply(f"✅ Deleted filter: {filter_}")
@@ -697,7 +700,7 @@ class Filtering(Cog):
 
     @filter.command(root_aliases=("compfilter", "compf"))
     async def compadd(
-        self, ctx: Context, list_name: Optional[str], content: str, *, description: Optional[str] = "Phishing"
+        self, ctx: Context, list_name: str | None, content: str, *, description: str | None = "Phishing"
     ) -> None:
         """Add a filter to detect a compromised account. Will apply the equivalent of a compban if triggered."""
         result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
@@ -727,7 +730,7 @@ class Filtering(Cog):
 
     @filterlist.command(name="describe", aliases=("explain", "manual", "id"))
     async def fl_describe(
-        self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
+        self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
     ) -> None:
         """Show a description of the specified filter list, or a list of possible values if no values are provided."""
         if not list_type and not list_name:
@@ -758,15 +761,14 @@ class Filtering(Cog):
 
     @filterlist.command(name="add", aliases=("a",))
     @has_any_role(Roles.admins)
-    async def fl_add(self, ctx: Context, list_type: list_type_converter, list_name: str) -> None:
+    async def fl_add(self, ctx: Context, list_type: ListTypeConverter, list_name: str) -> None:
         """Add a new filter list."""
         # Check if there's an implementation.
         if list_name.lower() not in filter_list_types:
             if list_name.lower()[:-1] not in filter_list_types:  # Maybe the name was given with uppercase or in plural?
                 await ctx.reply(f":x: Cannot add a `{list_name}` filter list, as there is no matching implementation.")
                 return
-            else:
-                list_name = list_name.lower()[:-1]
+            list_name = list_name.lower()[:-1]
 
         # Check it doesn't already exist.
         list_description = f"{past_tense(list_type.name.lower())} {list_name.lower()}"
@@ -796,9 +798,9 @@ class Filtering(Cog):
     async def fl_edit(
         self,
         ctx: Context,
-        noui: Optional[Literal["noui"]],
-        list_type: Optional[list_type_converter] = None,
-        list_name: Optional[str] = None,
+        noui: Literal["noui"] | None,
+        list_type: ListTypeConverter | None = None,
+        list_name: str | None = None,
         *,
         settings: str | None
     ) -> None:
@@ -840,7 +842,7 @@ class Filtering(Cog):
     @filterlist.command(name="delete", aliases=("remove",))
     @has_any_role(Roles.admins)
     async def fl_delete(
-        self, ctx: Context, list_type: Optional[list_type_converter] = None, list_name: Optional[str] = None
+        self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
     ) -> None:
         """Remove the filter list and all of its filters from the database."""
         async def delete_list() -> None:
@@ -1025,7 +1027,7 @@ class Filtering(Cog):
                 await ctx.send(
                     "The **list_type** argument is unspecified. Please pick a value from the options below:",
                     view=ArgumentCompletionView(
-                        ctx, args, "list_type", [option.name for option in ListType], 0, list_type_converter
+                        ctx, args, "list_type", [option.name for option in ListType], 0, ListTypeConverter
                     )
                 )
                 return None
@@ -1059,21 +1061,22 @@ class Filtering(Cog):
 
         await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
 
-    def _get_filter_by_id(self, id_: int) -> Optional[tuple[Filter, FilterList, ListType]]:
+    def _get_filter_by_id(self, id_: int) -> tuple[Filter, FilterList, ListType] | None:
         """Get the filter object corresponding to the provided ID, along with its containing list and list type."""
         for filter_list in self.filter_lists.values():
             for list_type, sublist in filter_list.items():
                 if id_ in sublist.filters:
                     return sublist.filters[id_], filter_list, list_type
+        return None
 
     async def _add_filter(
         self,
         ctx: Context,
-        noui: Optional[Literal["noui"]],
+        noui: Literal["noui"] | None,
         list_type: ListType,
         filter_list: FilterList,
         content: str,
-        description_and_settings: Optional[str] = None
+        description_and_settings: str | None = None
     ) -> None:
         """Add a filter to the database."""
         # Validations.
@@ -1196,7 +1199,7 @@ class Filtering(Cog):
             "filter_list": list_id, "content": content, "description": description,
             "additional_settings": filter_settings, **settings
         }
-        response = await bot.instance.api_client.post('bot/filter/filters', json=to_serializable(payload))
+        response = await bot.instance.api_client.post("bot/filter/filters", json=to_serializable(payload))
         new_filter = filter_list.add_filter(list_type, response)
         log.info(f"Added new filter: {new_filter}.")
         if new_filter:
@@ -1240,7 +1243,7 @@ class Filtering(Cog):
             "additional_settings": filter_settings, **settings
         }
         response = await bot.instance.api_client.patch(
-            f'bot/filter/filters/{filter_.id}', json=to_serializable(payload)
+            f"bot/filter/filters/{filter_.id}", json=to_serializable(payload)
         )
         # Return type can be None, but if it's being edited then it's not supposed to be.
         edited_filter = filter_list.add_filter(list_type, response)
@@ -1253,7 +1256,7 @@ class Filtering(Cog):
         """POST the new data of the filter list to the site API."""
         payload = {"name": list_name, "list_type": list_type.value, **to_serializable(settings)}
         filterlist_name = f"{past_tense(list_type.name.lower())} {list_name}"
-        response = await bot.instance.api_client.post('bot/filter/filter_lists', json=payload)
+        response = await bot.instance.api_client.post("bot/filter/filter_lists", json=payload)
         log.info(f"Successfully posted the new {filterlist_name} filterlist.")
         self._load_raw_filter_list(response)
         await msg.reply(f"✅ Added a new filter list: {filterlist_name}")
@@ -1263,7 +1266,7 @@ class Filtering(Cog):
         """PATCH the new data of the filter list to the site API."""
         list_id = filter_list[list_type].id
         response = await bot.instance.api_client.patch(
-            f'bot/filter/filter_lists/{list_id}', json=to_serializable(settings)
+            f"bot/filter/filter_lists/{list_id}", json=to_serializable(settings)
         )
         log.info(f"Successfully patched the {filter_list[list_type].label} filterlist, reloading...")
         filter_list.pop(list_type, None)
@@ -1338,9 +1341,9 @@ class Filtering(Cog):
     async def _delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
         """Delete an offensive message, and then delete it from the DB."""
         try:
-            channel = self.bot.get_channel(msg['channel_id'])
+            channel = self.bot.get_channel(msg["channel_id"])
             if channel:
-                msg_obj = await channel.fetch_message(msg['id'])
+                msg_obj = await channel.fetch_message(msg["id"])
                 await msg_obj.delete()
         except discord.NotFound:
             log.info(
@@ -1355,8 +1358,8 @@ class Filtering(Cog):
 
     def _schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
-        delete_at = arrow.get(msg['delete_date']).datetime
-        self.delete_scheduler.schedule_at(delete_at, msg['id'], self._delete_offensive_msg(msg))
+        delete_at = arrow.get(msg["delete_date"]).datetime
+        self.delete_scheduler.schedule_at(delete_at, msg["id"], self._delete_offensive_msg(msg))
 
     async def _maybe_schedule_msg_delete(self, ctx: FilterContext, actions: ActionSettings | None) -> None:
         """Post the message to the database and schedule it for deletion if it's not set to be deleted already."""
@@ -1366,13 +1369,13 @@ class Filtering(Cog):
 
         delete_date = (msg.created_at + OFFENSIVE_MSG_DELETE_TIME).isoformat()
         data = {
-            'id': msg.id,
-            'channel_id': msg.channel.id,
-            'delete_date': delete_date
+            "id": msg.id,
+            "channel_id": msg.channel.id,
+            "delete_date": delete_date
         }
 
         try:
-            await self.bot.api_client.post('bot/offensive-messages', json=data)
+            await self.bot.api_client.post("bot/offensive-messages", json=data)
         except ResponseCodeError as e:
             if e.status == 400 and "already exists" in e.response_json.get("id", [""])[0]:
                 log.debug(f"Offensive message {msg.id} already exists.")

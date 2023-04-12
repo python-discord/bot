@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import discord
 from discord import Embed, Interaction, SelectOption, User
@@ -25,20 +26,20 @@ def settings_converter(loaded_settings: dict, input_data: str) -> dict[str, Any]
         return {}
 
     try:
-        settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}
+        settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
     except ValueError:
         raise BadArgument("The settings provided are not in the correct format.")
 
     for setting in settings:
         if setting not in loaded_settings:
             raise BadArgument(f"{setting!r} is not a recognized setting.")
-        else:
-            type_ = loaded_settings[setting][2]
-            try:
-                parsed_value = parse_value(settings.pop(setting), type_)
-                settings[setting] = parsed_value
-            except (TypeError, ValueError) as e:
-                raise BadArgument(e)
+
+        type_ = loaded_settings[setting][2]
+        try:
+            parsed_value = parse_value(settings.pop(setting), type_)
+            settings[setting] = parsed_value
+        except (TypeError, ValueError) as e:
+            raise BadArgument(e)
 
     return settings
 

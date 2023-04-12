@@ -48,7 +48,7 @@ class FilterContext:
     action_descriptions: list[str] = field(default_factory=list)  # What actions were taken
     matches: list[str] = field(default_factory=list)  # What exactly was found
     notification_domain: str = ""  # A domain to send the user for context
-    filter_info: dict['Filter', str] = field(default_factory=dict)  # Additional info from a filter.
+    filter_info: dict[Filter, str] = field(default_factory=dict)  # Additional info from a filter.
     messages_deletion: bool = False  # Whether the messages were deleted. Can't upload deletion log otherwise.
     blocked_exts: set[str] = field(default_factory=set)  # Any extensions blocked (used for snekbox)
     # Additional actions to perform

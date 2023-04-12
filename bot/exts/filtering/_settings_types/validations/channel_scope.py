@@ -31,10 +31,10 @@ class ChannelScope(ValidationEntry):
 
     # NOTE: Don't change this to use the new 3.10 union syntax unless you ensure Pydantic type validation and coercion
     # work properly. At the time of writing this code there's a difference.
-    disabled_channels: set[Union[int, str]]
-    disabled_categories: set[Union[int, str]]
-    enabled_channels: set[Union[int, str]]
-    enabled_categories: set[Union[int, str]]
+    disabled_channels: set[Union[int, str]]  # noqa: UP007
+    disabled_categories: set[Union[int, str]]  # noqa: UP007
+    enabled_channels: set[Union[int, str]]  # noqa: UP007
+    enabled_categories: set[Union[int, str]]  # noqa: UP007
 
     @validator("*", pre=True)
     @classmethod

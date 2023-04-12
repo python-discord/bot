@@ -4,7 +4,8 @@ import re
 import string
 import textwrap
 from collections import namedtuple
-from typing import Collection, Iterable, Iterator, List, Optional, TYPE_CHECKING, Union
+from collections.abc import Collection, Iterable, Iterator
+from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
@@ -56,7 +57,7 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     """
     last_split = 0
     depth = 0
-    current_search: Optional[BracketPair] = None
+    current_search: BracketPair | None = None
 
     enumerated_string = enumerate(parameters_string)
     for index, character in enumerated_string:
@@ -92,7 +93,7 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     yield parameters_string[last_split:]
 
 
-def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collection[str]]:
+def _truncate_signatures(signatures: Collection[str]) -> list[str] | Collection[str]:
     """
     Truncate passed signatures to not exceed `_MAX_SIGNATURES_LENGTH`.
 
@@ -136,7 +137,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
 
 
 def _get_truncated_description(
-    elements: Iterable[Union[Tag, NavigableString]],
+    elements: Iterable[Tag | NavigableString],
     markdown_converter: DocMarkdownConverter,
     max_length: int,
     max_lines: int,
@@ -213,7 +214,7 @@ def _get_truncated_description(
     return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
 
-def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
+def _create_markdown(signatures: list[str] | None, description: Iterable[Tag], url: str) -> str:
     """
     Create a Markdown string with the signatures at the top, and the converted html description below them.
 
@@ -230,11 +231,10 @@ def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag]
     if signatures is not None:
         signature = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
         return f"{signature}\n{description}"
-    else:
-        return description
+    return description
 
 
-def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:
+def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str | None:
     """
     Return parsed Markdown of the passed item using the passed in soup, truncated to fit within a discord message.
 

@@ -1,4 +1,3 @@
-from typing import Union
 
 import discord
 
@@ -9,7 +8,7 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 
-def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
+def is_mod_channel(channel: discord.TextChannel | discord.Thread) -> bool:
     """True if channel, or channel.parent for threads, is considered a mod channel."""
     if isinstance(channel, discord.Thread):
         channel = channel.parent
@@ -18,13 +17,12 @@ def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
         log.trace(f"Channel #{channel} is a configured mod channel")
         return True
 
-    elif any(is_in_category(channel, category) for category in constants.MODERATION_CATEGORIES):
+    if any(is_in_category(channel, category) for category in constants.MODERATION_CATEGORIES):
         log.trace(f"Channel #{channel} is in a configured mod category")
         return True
 
-    else:
-        log.trace(f"Channel #{channel} is not a mod channel")
-        return False
+    log.trace(f"Channel #{channel} is not a mod channel")
+    return False
 
 
 def is_staff_channel(channel: discord.TextChannel) -> bool:

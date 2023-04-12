@@ -204,7 +204,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
             create_help_channel = False
 
     if create_help_channel:
-        python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace('_', '-')
+        python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace("_", "-")
         python_help_category_id = all_categories[PYTHON_HELP_CATEGORY_NAME]
         python_help_channel_id = discord_client.create_forum_channel(python_help_channel_name, python_help_category_id)
         all_channels[PYTHON_HELP_CHANNEL_NAME] = python_help_channel_id

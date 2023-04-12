@@ -54,7 +54,7 @@ class Latency(commands.Cog):
 
         embed = Embed(title="Pong!")
 
-        for desc, latency in zip(DESCRIPTIONS, [bot_ping, site_status, discord_ping]):
+        for desc, latency in zip(DESCRIPTIONS, [bot_ping, site_status, discord_ping], strict=True):
             embed.add_field(name=desc, value=latency, inline=False)
 
         await ctx.send(embed=embed)

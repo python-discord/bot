@@ -23,11 +23,7 @@ def is_annotation_instance(value: typing.Any, annotation: typing.Any) -> bool:
 
 def is_any_instance(value: typing.Any, types: typing.Collection) -> bool:
     """Return True if `value` is an instance of any type in `types`."""
-    for type_ in types:
-        if is_annotation_instance(value, type_):
-            return True
-
-    return False
+    return any(is_annotation_instance(value, type_) for type_ in types)
 
 
 class ConstantsTests(unittest.TestCase):
@@ -39,7 +35,7 @@ class ConstantsTests(unittest.TestCase):
         sections = (
             cls
             for (name, cls) in inspect.getmembers(constants)
-            if hasattr(cls, 'section') and isinstance(cls, type)
+            if hasattr(cls, "section") and isinstance(cls, type)
         )
         for section in sections:
             for name, annotation in section.__annotations__.items():

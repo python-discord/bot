@@ -103,7 +103,7 @@ class ExtensionsList(FilterList[ExtensionFilter]):
             else:
                 meta_channel = bot.instance.get_channel(Channels.meta)
                 if not self._whitelisted_description:
-                    self._whitelisted_description = ', '.join(
+                    self._whitelisted_description = ", ".join(
                         filter_.content for filter_ in self[ListType.ALLOW].filters.values()
                     )
                 ctx.dm_embed = DISALLOWED_EMBED_DESCRIPTION.format(

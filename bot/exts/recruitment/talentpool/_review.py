@@ -5,8 +5,7 @@ import re
 import textwrap
 import typing
 from collections import Counter
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Union
+from datetime import UTC, datetime, timedelta
 
 import discord
 from async_rediscache import RedisCache
@@ -92,8 +91,8 @@ class Reviewer:
 
         last_vote_timestamp = await self.status_cache.get("last_vote_date")
         if last_vote_timestamp:
-            last_vote_date = datetime.fromtimestamp(last_vote_timestamp, tz=timezone.utc)
-            time_since_last_vote = datetime.now(timezone.utc) - last_vote_date
+            last_vote_date = datetime.fromtimestamp(last_vote_timestamp, tz=UTC)
+            time_since_last_vote = datetime.now(UTC) - last_vote_date
 
             if time_since_last_vote < MIN_REVIEW_INTERVAL:
                 log.debug("Most recent review was less than %s ago, cancelling check", MIN_REVIEW_INTERVAL)
@@ -193,7 +192,7 @@ class Reviewer:
         See `is_ready_for_review` for the criteria for a user to be ready for review.
         See `sort_nominations_to_review` for the criteria for a user to be prioritised for review.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         nominations = await self.api.get_nominations(active=True)
         if not nominations:
             return None
@@ -237,7 +236,7 @@ class Reviewer:
         )
         message = await thread.send(f"<@&{Roles.mod_team}> <@&{Roles.admins}>")
 
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         await self.status_cache.set("last_vote_date", now.timestamp())
 
         await self.api.edit_nomination(nomination.id, reviewed=True, thread_id=thread.id)
@@ -247,7 +246,7 @@ class Reviewer:
             context = await self.bot.get_context(message)
             await bump_cog.add_thread_to_bump_list(context, thread)
 
-    async def make_review(self, nomination: Nomination) -> typing.Tuple[str, Optional[Emoji], Optional[Member]]:
+    async def make_review(self, nomination: Nomination) -> tuple[str, Emoji | None, Member | None]:
         """Format a generic review of a user and return it with the reviewed emoji and the user themselves."""
         log.trace(f"Formatting the review of {nomination.user_id}")
 
@@ -326,7 +325,7 @@ class Reviewer:
 
         result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
         colour = Colours.soft_green if passed else Colours.soft_red
-        timestamp = datetime.utcnow().strftime("%Y/%m/%d")
+        timestamp = datetime.now(tz=UTC).strftime("%Y/%m/%d")
 
         embed_content = (
             f"{result} on {timestamp}\n"
@@ -424,8 +423,8 @@ class Reviewer:
         """
         log.trace(f"Fetching the infraction data for {member.id}'s review")
         infraction_list = await self.bot.api_client.get(
-            'bot/infractions/expanded',
-            params={'user__id': str(member.id), 'ordering': '-inserted_at'}
+            "bot/infractions/expanded",
+            params={"user__id": str(member.id), "ordering": "-inserted_at"}
         )
 
         log.trace(f"{len(infraction_list)} infractions found for {member.id}, formatting review.")
@@ -456,7 +455,7 @@ class Reviewer:
             infractions += ", with the last infraction issued "
 
         # Infractions were ordered by time since insertion descending.
-        infractions += time.format_relative(infraction_list[0]['inserted_at'])
+        infractions += time.format_relative(infraction_list[0]["inserted_at"])
 
         return f"They have {infractions}."
 
@@ -470,13 +469,13 @@ class Reviewer:
         """
         formatted = infr_type.replace("_", " ")
         if count > 1:
-            if infr_type.endswith(('ch', 'sh')):
+            if infr_type.endswith(("ch", "sh")):
                 formatted += "e"
             formatted += "s"
 
         return formatted
 
-    async def _previous_nominations_review(self, member: Member) -> Optional[str]:
+    async def _previous_nominations_review(self, member: Member) -> str | None:
         """
         Formats the review of the nominee's previous nominations.
 
@@ -487,7 +486,7 @@ class Reviewer:
 
         log.trace(f"{len(history)} previous nominations found for {member.id}, formatting review.")
         if not history:
-            return
+            return None
 
         num_entries = sum(len(nomination.entries) for nomination in history)
 
@@ -523,7 +522,7 @@ class Reviewer:
         return review
 
     @staticmethod
-    def _random_ducky(guild: Guild) -> Union[Emoji, str]:
+    def _random_ducky(guild: Guild) -> Emoji | str:
         """Picks a random ducky emoji. If no duckies found returns 👀."""
         duckies = [emoji for emoji in guild.emojis if emoji.name.startswith("ducky")]
         if not duckies:
@@ -531,7 +530,7 @@ class Reviewer:
         return random.choice(duckies)
 
     @staticmethod
-    async def _bulk_send(channel: TextChannel, text: str) -> List[Message]:
+    async def _bulk_send(channel: TextChannel, text: str) -> list[Message]:
         """
         Split a text into several if necessary, and post them to the channel.
 

@@ -2,7 +2,7 @@ import csv
 import json
 from datetime import timedelta
 from io import StringIO
-from typing import Dict, List, Literal, Optional
+from typing import Literal
 
 import arrow
 from aiohttp.client_exceptions import ClientResponseError
@@ -34,11 +34,11 @@ class Metabase(Cog):
         self.bot = bot
         self._session_scheduler = Scheduler(self.__class__.__name__)
 
-        self.session_token: Optional[str] = None  # session_info["session_token"]: str
-        self.session_expiry: Optional[float] = None  # session_info["session_expiry"]: UtcPosixTimestamp
+        self.session_token: str | None = None  # session_info["session_token"]: str
+        self.session_expiry: float | None = None  # session_info["session_expiry"]: UtcPosixTimestamp
         self.headers = BASE_HEADERS
 
-        self.exports: Dict[int, List[Dict]] = {}  # Saves the output of each question, so internal eval can access it
+        self.exports: dict[int, list[dict]] = {}  # Saves the output of each question, so internal eval can access it
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Handle ClientResponseError errors locally to invalidate token if needed."""

@@ -46,7 +46,7 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
     """Close the help post and record stats."""
     embed = discord.Embed(description=CLOSED_POST_MSG)
     embed.set_author(name=f"{POST_TITLE} closed", icon_url=CLOSED_POST_ICON_URL)
-    message = ''
+    message = ""
 
     # Include a ping in the close message if no one else engages, to encourage them
     # to read the guide for asking better questions
@@ -149,7 +149,7 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
         if isinstance(e, discord.HTTPException):
             if e.code == 10003:  # Post not found.
                 return
-            elif e.code != 10008:  # 10008 - Starter message not found.
+            if e.code != 10008:  # 10008 - Starter message not found.
                 raise e
 
     await send_opened_post_message(opened_post)
