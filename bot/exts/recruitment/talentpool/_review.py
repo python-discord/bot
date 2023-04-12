@@ -282,6 +282,7 @@ class Reviewer:
     async def archive_vote(self, message: PartialMessage, passed: bool) -> None:
         """Archive this vote to #nomination-archive."""
         message = await message.fetch()
+        thread = message.channel.get_thread(message.id)
 
         # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
@@ -326,10 +327,12 @@ class Reviewer:
         result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
         colour = Colours.soft_green if passed else Colours.soft_red
         timestamp = datetime.now(tz=UTC).strftime("%Y/%m/%d")
+        thread_jump = f"[Jump to vote thread]({thread.jump_url})" if thread else "Failed to get thread"
 
         embed_content = (
             f"{result} on {timestamp}\n"
-            f"With {reviewed} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
+            f"With {reviewed} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n"
+            f"{thread_jump}\n\n"
             f"{stripped_content}"
         )
 
