@@ -3,7 +3,7 @@ import os
 import sys
 from logging import Logger, handlers
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast
 
 import coloredlogs
 import sentry_sdk
@@ -37,7 +37,7 @@ class CustomLogger(LoggerClass):
             self.log(TRACE_LEVEL, msg, *args, **kwargs)
 
 
-def get_logger(name: Optional[str] = None) -> CustomLogger:
+def get_logger(name: str | None = None) -> CustomLogger:
     """Utility to make mypy recognise that logger is of type `CustomLogger`."""
     return cast(CustomLogger, logging.getLogger(name))
 

@@ -1,13 +1,9 @@
 """
-Loads bot configuration from environment variables
-and `.env` files. By default, this simply loads the
-default configuration defined thanks to the `default`
-keyword argument in each instance of the `Field` class
-If two files called `.env` and `.env.server` are found
-in the project directory, the values will be loaded
-from both of them, thus overlooking the predefined defaults.
-Any settings left out in the custom user configuration
-will default to the values passed to the `default` kwarg.
+Loads bot configuration from environment variables and `.env` files.
+
+By default, the values defined in the classes are used, these can be overridden by an env var with the same name.
+
+`.env` and `.env.server` files are used to populate env vars, if present.
 """
 import os
 from enum import Enum
@@ -16,10 +12,14 @@ from pydantic import BaseModel, BaseSettings, root_validator
 
 
 class EnvConfig(BaseSettings):
+    """Our default configuration for models that should load from .env files."""
+
     class Config:
+        """Specify what .env files to load, and how to load them."""
+
         env_file = ".env.server", ".env",
-        env_file_encoding = 'utf-8'
-        env_nested_delimiter = '__'
+        env_file_encoding = "utf-8"
+        env_nested_delimiter = "__"
 
 
 class _Miscellaneous(EnvConfig):
@@ -94,6 +94,7 @@ class _Channels(EnvConfig):
     mod_meta = 775412552795947058
     mods = 305126844661760000
     nominations = 822920136150745168
+    nomination_discussion = 798959130634747914
     nomination_voting = 822853512709931008
     organisation = 551789653284356126
 
@@ -124,6 +125,8 @@ class _Channels(EnvConfig):
     big_brother = 468507907357409333
     duck_pond = 637820308341915648
     roles = 851270062434156586
+
+    rules = 693837295685730335
 
 
 Channels = _Channels()
@@ -187,6 +190,7 @@ class _Categories(EnvConfig):
 
     # 2021 Summer Code Jam
     summer_code_jam = 861692638540857384
+    python_help_system = 691405807388196926
 
 
 Categories = _Categories()
@@ -223,8 +227,9 @@ Guild = _Guild()
 
 class Event(Enum):
     """
-    Event names. This does not include every event (for example, raw
-    events aren't here), but only events used in ModLog for now.
+    Discord.py event names.
+
+    This does not include every event (for example, raw events aren't here), only events used in ModLog for now.
     """
 
     guild_channel_create = "guild_channel_create"
@@ -248,6 +253,8 @@ class Event(Enum):
 
 
 class ThreadArchiveTimes(Enum):
+    """The time periods threads can have the archive time set to."""
+
     HOUR = 60
     DAY = 1440
     THREE_DAY = 4320
@@ -255,6 +262,8 @@ class ThreadArchiveTimes(Enum):
 
 
 class Webhook(BaseModel):
+    """A base class for all webhooks."""
+
     id: int
     channel: int
 
@@ -313,61 +322,14 @@ class _Colours(EnvConfig):
     yellow = 0xffd241
 
     @root_validator(pre=True)
-    def parse_hex_values(cls, values):
+    def parse_hex_values(cls, values: dict) -> dict:  # noqa: N805
+        """Convert hex strings to ints."""
         for key, value in values.items():
             values[key] = int(value, 16)
         return values
 
 
 Colours = _Colours()
-
-
-class _Free(EnvConfig):
-    EnvConfig.Config.env_prefix = "free_"
-
-    activity_timeout = 600
-    cooldown_per = 60.0
-    cooldown_rate = 1
-
-
-Free = _Free()
-
-
-class Rule(BaseModel):
-    interval: int
-    max: int
-
-
-# Some help in choosing an appropriate name for this is appreciated
-class ExtendedRule(Rule):
-    max_consecutive: int
-
-
-class Rules(BaseModel):
-    attachments: Rule = Rule(interval=10, max=6)
-    burst: Rule = Rule(interval=10, max=7)
-    chars: Rule = Rule(interval=5, max=4_200)
-    discord_emojis: Rule = Rule(interval=10, max=20)
-    duplicates: Rule = Rule(interval=10, max=3)
-    links: Rule = Rule(interval=10, max=10)
-    mentions: Rule = Rule(interval=10, max=5)
-    newlines: ExtendedRule = ExtendedRule(interval=10, max=100, max_consecutive=10)
-    role_mentions: Rule = Rule(interval=10, max=3)
-
-
-class _AntiSpam(EnvConfig):
-    EnvConfig.Config.env_prefix = 'anti_spam_'
-
-    cache_size = 100
-
-    clean_offending = True
-    ping_everyone = True
-
-    remove_timeout_after = 600
-    rules = Rules()
-
-
-AntiSpam = _AntiSpam()
 
 
 class _HelpChannels(EnvConfig):
@@ -421,7 +383,7 @@ class _PythonNews(EnvConfig):
 
     channel: int = Webhooks.python_news.channel
     webhook: int = Webhooks.python_news.id
-    mail_lists = ['python-ideas', 'python-announce-list', 'pypi-announce', 'python-dev']
+    mail_lists = ["python-ideas", "python-announce-list", "pypi-announce", "python-dev"]
 
 
 PythonNews = _PythonNews()
@@ -527,10 +489,8 @@ class _BaseURLs(EnvConfig):
     github_bot_repo = "https://github.com/python-discord/bot"
 
     # Site
-    site = "pythondiscord.com"
-    site_schema = "https://"
-    site_api = "site.default.svc.cluster.local/api"
-    site_api_schema = "http://"
+    site_api = "http://site.default.svc.cluster.local/api"
+    site_paste = "https://paste.pythondiscord.com"
 
 
 BaseURLs = _BaseURLs()
@@ -545,12 +505,8 @@ class _URLs(_BaseURLs):
     connect_max_retries = 3
     connect_cooldown = 5
 
-    site_staff: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff"])
-    site_paste = "".join(["paste.", BaseURLs.site])
-
-    # Site endpoints
-    site_logs_view: str = "".join([BaseURLs.site_schema, BaseURLs.site, "/staff/bot/logs"])
-    paste_service: str = "".join([BaseURLs.site_schema, "paste.", BaseURLs.site, "/{key}"])
+    paste_service: str = "".join([BaseURLs.site_paste, "/{key}"])
+    site_logs_view: str = "https://pythondiscord.com/staff/bot/logs"
 
 
 URLs = _URLs()
@@ -572,9 +528,9 @@ class _Emojis(EnvConfig):
     verified_bot = "<:verified_bot:811645219220750347>"
     bot = "<:bot:812712599464443914>"
 
-    defcon_shutdown = "<:defcondisabled:470326273952972810>"  # noqa: E704
-    defcon_unshutdown = "<:defconenabled:470326274213150730>"  # noqa: E704
-    defcon_update = "<:defconsettingsupdated:470326274082996224>"  # noqa: E704
+    defcon_shutdown = "<:defcondisabled:470326273952972810>"
+    defcon_unshutdown = "<:defconenabled:470326274213150730>"
+    defcon_update = "<:defconsettingsupdated:470326274082996224>"
 
     failmail = "<:failmail:633660039931887616>"
     failed_file = "<:failed_file:1073298441968562226>"
@@ -611,10 +567,10 @@ class _Icons(EnvConfig):
     crown_green = "https://cdn.discordapp.com/emojis/469964154719961088.png"
     crown_red = "https://cdn.discordapp.com/emojis/469964154879344640.png"
 
-    defcon_denied = "https://cdn.discordapp.com/emojis/472475292078964738.png"    # noqa: E704
-    defcon_shutdown = "https://cdn.discordapp.com/emojis/470326273952972810.png"  # noqa: E704
-    defcon_unshutdown = "https://cdn.discordapp.com/emojis/470326274213150730.png"   # noqa: E704
-    defcon_update = "https://cdn.discordapp.com/emojis/472472638342561793.png"   # noqa: E704
+    defcon_denied = "https://cdn.discordapp.com/emojis/472475292078964738.png"
+    defcon_shutdown = "https://cdn.discordapp.com/emojis/470326273952972810.png"
+    defcon_unshutdown = "https://cdn.discordapp.com/emojis/470326274213150730.png"
+    defcon_update = "https://cdn.discordapp.com/emojis/472472638342561793.png"
 
     filtering = "https://cdn.discordapp.com/emojis/472472638594482195.png"
 
@@ -644,7 +600,7 @@ class _Icons(EnvConfig):
     superstarify = "https://cdn.discordapp.com/emojis/636288153044516874.png"
     unsuperstarify = "https://cdn.discordapp.com/emojis/636288201258172446.png"
 
-    token_removed = "https://cdn.discordapp.com/emojis/470326273298792469.png"
+    token_removed = "https://cdn.discordapp.com/emojis/470326273298792469.png"  # noqa: S105
 
     user_ban = "https://cdn.discordapp.com/emojis/469952898026045441.png"
     user_timeout = "https://cdn.discordapp.com/emojis/472472640100106250.png"
@@ -660,47 +616,6 @@ class _Icons(EnvConfig):
 
 
 Icons = _Icons()
-
-
-class _Filter(EnvConfig):
-    EnvConfig.Config.env_prefix = "filters_"
-
-    filter_domains = True
-    filter_everyone_ping = True
-    filter_invites = True
-    filter_zalgo = False
-    watch_regex = True
-    watch_rich_embeds = True
-
-    # Notifications are not expected for "watchlist" type filters
-
-    notify_user_domains = False
-    notify_user_everyone_ping = True
-    notify_user_invites = True
-    notify_user_zalgo = False
-
-    offensive_msg_delete_days = 7
-    ping_everyone = True
-
-    channel_whitelist = [
-        Channels.admins,
-        Channels.big_brother,
-        Channels.dev_log,
-        Channels.message_log,
-        Channels.mod_log,
-        Channels.staff_lounge
-    ]
-    role_whitelist = [
-        Roles.admins,
-        Roles.helpers,
-        Roles.moderators,
-        Roles.owners,
-        Roles.python_community,
-        Roles.partners
-    ]
-
-
-Filter = _Filter()
 
 
 class _Keys(EnvConfig):

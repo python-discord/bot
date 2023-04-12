@@ -270,10 +270,9 @@ class CleanBanTests(unittest.IsolatedAsyncioTestCase):
         def inner(name):
             if name == "ModManagement":
                 return self.management_cog if enable_manage else None
-            elif name == "Clean":
+            if name == "Clean":
                 return self.clean_cog if enable_clean else None
-            else:
-                return DEFAULT
+            return DEFAULT
         return inner
 
     async def test_cleanban_falls_back_to_native_purge_without_clean_cog(self):

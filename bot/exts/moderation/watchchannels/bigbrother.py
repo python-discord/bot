@@ -21,18 +21,18 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             bot,
             destination=Channels.big_brother,
             webhook_id=Webhooks.big_brother.id,
-            api_endpoint='bot/infractions',
-            api_default_params={'active': 'true', 'type': 'watch', 'ordering': '-inserted_at', 'limit': 10_000},
+            api_endpoint="bot/infractions",
+            api_default_params={"active": "true", "type": "watch", "ordering": "-inserted_at", "limit": 10_000},
             logger=log
         )
 
-    @group(name='bigbrother', aliases=('bb',), invoke_without_command=True)
+    @group(name="bigbrother", aliases=("bb",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def bigbrother_group(self, ctx: Context) -> None:
         """Monitors users by relaying their messages to the Big Brother watch channel."""
         await ctx.send_help(ctx.command)
 
-    @bigbrother_group.command(name='watched', aliases=('all', 'list'))
+    @bigbrother_group.command(name="watched", aliases=("all", "list"))
     @has_any_role(*MODERATION_ROLES)
     async def watched_command(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
@@ -47,7 +47,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         """
         await self.list_watched_users(ctx, oldest_first=oldest_first, update_cache=update_cache)
 
-    @bigbrother_group.command(name='oldest')
+    @bigbrother_group.command(name="oldest")
     @has_any_role(*MODERATION_ROLES)
     async def oldest_command(self, ctx: Context, update_cache: bool = True) -> None:
         """
@@ -58,7 +58,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         """
         await ctx.invoke(self.watched_command, oldest_first=True, update_cache=update_cache)
 
-    @bigbrother_group.command(name='watch', aliases=('w',), root_aliases=('watch',))
+    @bigbrother_group.command(name="watch", aliases=("w",), root_aliases=("watch",))
     @has_any_role(*MODERATION_ROLES)
     async def watch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
@@ -69,7 +69,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         """
         await self.apply_watch(ctx, user, reason)
 
-    @bigbrother_group.command(name='unwatch', aliases=('uw',), root_aliases=('unwatch',))
+    @bigbrother_group.command(name="unwatch", aliases=("uw",), root_aliases=("unwatch",))
     @has_any_role(*MODERATION_ROLES)
     async def unwatch_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """Stop relaying messages by the given `user`."""
@@ -99,7 +99,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             await ctx.send(f":x: I'm sorry {ctx.author}, I'm afraid I can't do that. I must be kind to my masters.")
             return
 
-        response = await post_infraction(ctx, user, 'watch', reason, hidden=True, active=True)
+        response = await post_infraction(ctx, user, "watch", reason, hidden=True, active=True)
 
         if response is not None:
             self.watched_users[user.id] = response
@@ -110,8 +110,8 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
                 params={
                     "user__id": str(user.id),
                     "active": "false",
-                    'type': 'watch',
-                    'ordering': '-inserted_at'
+                    "type": "watch",
+                    "ordering": "-inserted_at"
                 }
             )
 
@@ -145,10 +145,10 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
 
             await self.bot.api_client.patch(
                 f"{self.api_endpoint}/{infraction['id']}",
-                json={'active': False}
+                json={"active": False}
             )
 
-            await post_infraction(ctx, user, 'watch', f"Unwatched: {reason}", hidden=True, active=False)
+            await post_infraction(ctx, user, "watch", f"Unwatched: {reason}", hidden=True, active=False)
 
             self._remove_user(user.id)
 

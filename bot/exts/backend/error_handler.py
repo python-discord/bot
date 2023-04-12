@@ -88,7 +88,7 @@ class ErrorHandler(Cog):
         elif isinstance(e, errors.CheckFailure):
             log.debug(debug_message)
             await self.handle_check_failure(ctx, e)
-        elif isinstance(e, (errors.CommandOnCooldown, errors.MaxConcurrencyReached)):
+        elif isinstance(e, errors.CommandOnCooldown | errors.MaxConcurrencyReached):
             log.debug(debug_message)
             await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):
@@ -166,7 +166,7 @@ class ErrorHandler(Cog):
         if command.startswith("shh"):
             await ctx.invoke(silence_command, duration_or_channel=channel, duration=duration, kick=kick)
             return True
-        elif command.startswith("unshh"):
+        if command.startswith("unshh"):
             await ctx.invoke(self.bot.get_command("unsilence"), channel=channel)
             return True
         return False
@@ -321,7 +321,7 @@ class ErrorHandler(Cog):
             await ctx.send(
                 "Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, (ContextCheckFailure, errors.NoPrivateMessage)):
+        elif isinstance(e, ContextCheckFailure | errors.NoPrivateMessage):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 

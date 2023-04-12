@@ -19,7 +19,7 @@ class SnekboxIOTests(TestCase):
             (r"A\0\tB", "A__B"),
             # Any other disallowed chars -> underscore
             (r"\\.txt", "_.txt"),
-            (r"A!@#$%^&*B, C()[]{}+=D.txt", "A_B_C_D.txt"),  # noqa: P103
+            (r"A!@#$%^&*B, C()[]{}+=D.txt", "A_B_C_D.txt"),
             (" ", "_"),
             # Normal file names should be unchanged
             ("legal_file-name.txt", "legal_file-name.txt"),
