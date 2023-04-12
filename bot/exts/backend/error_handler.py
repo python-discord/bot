@@ -53,7 +53,7 @@ class HelpEmbedView(discord.ui.View):
         self.delete_button = CheckedDeleteMessageButton(owner)
         self.add_item(self.delete_button)
 
-    @discord.ui.button(label='Help', style=ButtonStyle.primary)
+    @discord.ui.button(label="Help", style=ButtonStyle.primary)
     async def help_button(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Send an ephemeral message with the contents of the help command."""
         await interaction.response.send_message(embed=self.help_embed, ephemeral=True)
