@@ -2,7 +2,6 @@ import re
 import textwrap
 import typing as t
 
-import arrow
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -453,11 +452,8 @@ class ModManagement(commands.Cog):
                 duration = "*Permanent*"
             else:
                 duration = time.humanize_delta(last_applied, expires_at)
-                expiry_timestamp = time.format_relative(expires_at)
-                if arrow.get(expires_at) > arrow.utcnow():
-                    duration = f"{duration} (Expires {expiry_timestamp})"
-                else:
-                    duration = f"{duration} (Expired {expiry_timestamp})"
+                if infraction["active"]:
+                    duration = f"{duration} (Expires {time.format_relative(expires_at)})"
             duration = f"Duration: {duration}"
 
         if jump_url is None:
@@ -476,7 +472,7 @@ class ModManagement(commands.Cog):
             return messages.format_user(user_obj)
 
         # Use the user data retrieved from the DB.
-        name = escape_markdown(user['name'])
+        name = escape_markdown(user["name"])
         return f"<@{user['id']}> ({name}#{user['discriminator']:04})"
 
     @staticmethod
