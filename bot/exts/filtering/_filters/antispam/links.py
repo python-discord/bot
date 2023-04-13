@@ -24,7 +24,7 @@ class ExtraLinksSettings(BaseModel):
     threshold: int = 10
 
 
-class DuplicatesFilter(UniqueFilter):
+class LinksFilter(UniqueFilter):
     """Detects too many links sent by a single user."""
 
     name = "links"

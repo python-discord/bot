@@ -332,7 +332,7 @@ class Snekbox(Cog):
             # This is done to make sure the last line of output contains the error
             # and the error is not manually printed by the author with a syntax error.
             if result.stdout.rstrip().endswith("EOFError: EOF when reading a line") and result.returncode == 1:
-                msg += ":warning: Note: `input` is not supported by the bot :warning:\n\n"
+                msg += "\n:warning: Note: `input` is not supported by the bot :warning:\n"
 
             # Skip output if it's empty and there are file uploads
             if result.stdout or not result.has_files:
