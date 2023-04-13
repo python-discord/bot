@@ -282,7 +282,14 @@ class Reviewer:
     async def archive_vote(self, message: PartialMessage, passed: bool) -> None:
         """Archive this vote to #nomination-archive."""
         message = await message.fetch()
-        thread = message.channel.get_thread(message.id)
+
+        # Thread channel IDs are the same as the message ID of the parent message.
+        nomination_thread = message.guild.get_thread(message.id)
+        if not nomination_thread:
+            try:
+                nomination_thread = await message.guild.fetch_channel(message.id)
+            except NotFound:
+                log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
 
         # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
@@ -327,7 +334,11 @@ class Reviewer:
         result = f"**Passed** {Emojis.incident_actioned}" if passed else f"**Rejected** {Emojis.incident_unactioned}"
         colour = Colours.soft_green if passed else Colours.soft_red
         timestamp = datetime.now(tz=UTC).strftime("%Y/%m/%d")
-        thread_jump = f"[Jump to vote thread]({thread.jump_url})" if thread else "Failed to get thread"
+
+        if nomination_thread:
+            thread_jump = f"[Jump to vote thread]({nomination_thread.jump_url})"
+        else:
+            thread_jump = "Failed to get thread"
 
         embed_content = (
             f"{result} on {timestamp}\n"
@@ -351,21 +362,13 @@ class Reviewer:
                 colour=colour
             ))
 
-        # Thread channel IDs are the same as the message ID of the parent message.
-        nomination_thread = message.guild.get_thread(message.id)
-        if not nomination_thread:
-            try:
-                nomination_thread = await message.guild.fetch_channel(message.id)
-            except NotFound:
-                log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
-                return
-
         for message_ in messages:
             with contextlib.suppress(NotFound):
                 await message_.delete()
 
-        with contextlib.suppress(NotFound):
-            await nomination_thread.edit(archived=True)
+        if nomination_thread:
+            with contextlib.suppress(NotFound):
+                await nomination_thread.edit(archived=True)
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""
