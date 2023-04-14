@@ -1,4 +1,5 @@
 import datetime
+import io
 import json
 import re
 import unicodedata
@@ -46,6 +47,7 @@ from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
+from bot.utils.services import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 log = get_logger(__name__)
 
@@ -1400,7 +1402,7 @@ class Filtering(Cog):
         """
         Send a list of auto-infractions added in the last 7 days to the specified channel.
 
-        If `channel` is not specified, it is sent to #mod-meta.
+        If `channel` is not specified, the report is sent to #mod-meta instead.
         """
         log.trace("Preparing weekly auto-infraction report.")
         seven_days_ago = arrow.utcnow().shift(days=-7)
@@ -1435,9 +1437,24 @@ class Filtering(Cog):
         if len(lines) == 1:
             lines.append("Nothing to show")
 
-        await channel.send("\n\n".join(lines))
-        log.info("Successfully sent auto-infraction report.")
+        report = "\n\n".join(lines)
+        try:
+            await channel.send(report)
+        except discord.HTTPException as e:
+            if e.code != 50035:  # Content too long
+                raise
+            report = discord.utils.remove_markdown(report)
+            try:
+                paste_resp = await send_to_paste_service(report, extension="txt")
+            except (ValueError, PasteTooLongError, PasteUploadError):
+                paste_resp = ":warning: Failed to upload report to paste service"
+            file_buffer = io.StringIO(report)
+            await channel.send(
+                f"**{lines[0]}**\n\n{paste_resp}",
+                file=discord.File(file_buffer, "last_weeks_autoban_filters.txt"),
+            )
 
+        log.info("Successfully sent auto-infraction report.")
     # endregion
 
     async def cog_unload(self) -> None:

@@ -26,7 +26,7 @@ class ExtraMentionsSettings(BaseModel):
     threshold: int = 5
 
 
-class DuplicatesFilter(UniqueFilter):
+class MentionsFilter(UniqueFilter):
     """
     Detects total mentions exceeding the limit sent by a single user.
 

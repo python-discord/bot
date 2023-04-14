@@ -1,6 +1,6 @@
 import re
 import typing as t
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import discord
 import feedparser
@@ -109,14 +109,17 @@ class PythonNews(Cog):
         for new in data["entries"]:
             try:
                 # %Z doesn't actually set the tzinfo of the datetime object, manually set this to UTC
-                new_datetime = datetime.strptime(new["published"], "%a, %d %b %Y %X %Z").replace(tzinfo=UTC)
+                pep_creation = datetime.strptime(new["published"], "%a, %d %b %Y %X %Z").replace(tzinfo=UTC)
             except ValueError:
                 log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
                 continue
             pep_nr = new["title"].split(":")[0].split()[1]
             if (
                     pep_nr in pep_numbers
-                    or new_datetime.date() < datetime.now(tz=UTC).date()
+                    # A PEP is assigned a creation date before it is reviewed and published to the RSS feed.
+                    # The time between creation date and it appearing in the RSS feed is usually not long,
+                    # but we allow up to 6 weeks to be safe.
+                    or pep_creation < datetime.now(tz=UTC) - timedelta(weeks=6)
             ):
                 continue
 
@@ -124,7 +127,7 @@ class PythonNews(Cog):
             embed = discord.Embed(
                 title=self.escape_markdown(new["title"]),
                 description=self.escape_markdown(new["summary"]),
-                timestamp=new_datetime,
+                timestamp=pep_creation,
                 url=new["link"],
                 colour=constants.Colours.soft_green
             )
