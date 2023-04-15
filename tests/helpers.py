@@ -6,6 +6,7 @@ import logging
 import unittest.mock
 from asyncio import AbstractEventLoop
 from collections.abc import Iterable
+from functools import cached_property
 
 import discord
 from aiohttp import ClientSession
@@ -174,9 +175,16 @@ class MockGuild(CustomMockMixin, unittest.mock.Mock, HashableMixin):
         default_kwargs = {"id": next(self.discord_id), "members": [], "chunked": True}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
-        self.roles = [MockRole(name="@everyone", position=1, id=0)]
         if roles:
-            self.roles.extend(roles)
+            self.roles = [
+                MockRole(name="@everyone", position=1, id=0),
+                *roles
+            ]
+
+    @cached_property
+    def roles(self) -> list[MockRole]:
+        """Cached roles property."""
+        return [MockRole(name="@everyone", position=1, id=0)]
 
 
 # Create a Role instance to get a realistic Mock of `discord.Role`
@@ -322,11 +330,27 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.loop = _get_mock_loop()
-        self.api_client = MockAPIClient(loop=self.loop)
-        self.http_session = unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
-        self.stats = unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
         self.add_cog = unittest.mock.AsyncMock()
+
+    @cached_property
+    def loop(self) -> unittest.mock.Mock:
+        """Cached loop property."""
+        return _get_mock_loop()
+
+    @cached_property
+    def api_client(self) -> MockAPIClient:
+        """Cached api_client property."""
+        return MockAPIClient()
+
+    @cached_property
+    def http_session(self) -> unittest.mock.Mock:
+        """Cached http_session property."""
+        return unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
+
+    @cached_property
+    def stats(self) -> unittest.mock.Mock:
+        """Cached stats property."""
+        return unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
