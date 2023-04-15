@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for trying to improve the community! We do not take tag suggestions on this repository, however please submit your suggestion on the [meta](https://github.com/python-discord/meta) repostiory instead.
+        Thank you for trying to improve the community! We do not take tag suggestions on this repository, however please submit your suggestion on the [meta](https://github.com/python-discord/meta/issues/new?assignees=&labels=area%3A+tags&template=tag-request.yaml) repostiory instead.
   # Mandatory non-markdown body field.
   - type: input
     id: data
