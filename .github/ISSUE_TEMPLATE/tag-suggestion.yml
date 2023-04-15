@@ -1,0 +1,17 @@
+name: Tag Suggestion
+description: Suggest a new tag.
+title: I DID NOT READ THE INSTRUCTIONS
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for trying to improve the community! We do not take tag suggestions on this repository, however please submit your suggestion on the [meta](https://github.com/python-discord/meta) repostiory instead.
+  # Mandatory non-markdown body field.
+  - type: input
+    id: data
+    attributes:
+      label: Do not fill this out
+    validations:
+      required: false
