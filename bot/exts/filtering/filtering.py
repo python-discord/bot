@@ -235,7 +235,7 @@ class Filtering(Cog):
         """Filter the contents of an edited message. Don't reinvoke filters already invoked on the `before` version."""
         if before.author.bot or before.webhook_id or before.type == MessageType.auto_moderation_action:
             return
-        
+
         # Only check changes to the message contents/attachments and embed additions, not pin status etc.
         if all((
             before.content == after.content,  # content hasn't changed
