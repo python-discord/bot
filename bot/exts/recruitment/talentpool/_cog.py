@@ -3,15 +3,19 @@ import textwrap
 from datetime import UTC, datetime
 from io import StringIO
 
+import arrow
 import discord
 from async_rediscache import RedisCache
 from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from discord.utils import snowflake_time
 from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import (
+    Bot as BotConfig, Channels, Emojis, GithubModsRepository, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+)
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.exts.recruitment.talentpool._review import Reviewer
@@ -22,7 +26,9 @@ from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
+FLAG_EMOJI = "🎫"
 REASON_MAX_CHARS = 1000
+OLD_NOMINATIONS_THRESHOLD_IN_DAYS = 14
 
 # The number of days that a user can have no activity (no messages sent)
 # until they should be removed from the talentpool.
@@ -49,6 +55,11 @@ class TalentPool(Cog, name="Talentpool"):
         """Start autoreview loop if enabled."""
         if await self.autoreview_enabled():
             self.autoreview_loop.start()
+
+        if not GithubModsRepository.token:
+            log.warning(f"No token for the {GithubModsRepository.name} repository was provided.")
+        else:
+            self.track_forgotten_nominations.start()
 
         self.prune_talentpool.start()
 
@@ -651,6 +662,92 @@ class TalentPool(Cog, name="Talentpool"):
             )
 
         return lines.strip()
+
+    @tasks.loop(hours=72)
+    async def track_forgotten_nominations(self) -> None:
+        """Track active nominations who are more than 2 weeks old."""
+        old_nominations = await self._get_forgotten_nominations()
+        untracked_nominations = await self._find_untracked_nominations(old_nominations)
+        for nomination, thread in untracked_nominations:
+            issue_created = await self._track_vote_in_github(nomination, thread.jump_url)
+            if issue_created:
+                await thread.starter_message.add_reaction(FLAG_EMOJI)
+
+    async def _get_forgotten_nominations(self) -> list[Nomination]:
+        """Get active nominations that are more than 2 weeks old."""
+        now = arrow.utcnow()
+        nominations = [
+            nomination
+            for nomination in await self.api.get_nominations(active=True)
+            if (
+                    nomination.thread_id and
+                    (now - snowflake_time(nomination.thread_id)).days >= OLD_NOMINATIONS_THRESHOLD_IN_DAYS
+            )
+        ]
+        return nominations
+
+    async def _find_untracked_nominations(
+            self,
+            nominations: list[Nomination]
+    ) -> list[tuple[Nomination, discord.Thread]]:
+        """
+        Returns a list of tuples representing a nomination and its vote message.
+
+        All active nominations are iterated over to identify whether they're tracked or not
+        by checking whether the nomination message has the "🎫" emoji or not.
+        """
+        untracked_nominations = []
+
+        for nomination in nominations:
+            # We avoid the scenario of this task run & nomination created at the same time
+            if not nomination.thread_id:
+                continue
+
+            try:
+                thread = await get_or_fetch_channel(nomination.thread_id)
+            except discord.NotFound:
+                log.debug(f"Couldn't find thread {nomination.thread_id}")
+                continue
+
+            starter_message = thread.starter_message
+            if not starter_message:
+                # Starter message will be null if it's not cached
+                try:
+                    starter_message = await self.bot.get_channel(Channels.nomination_voting).fetch_message(thread.id)
+                except discord.NotFound:
+                    log.debug(f"Couldn't find message {thread.id} in channel: {Channels.nomination_voting}")
+                    continue
+
+            if FLAG_EMOJI in [reaction.emoji for reaction in starter_message.reactions]:
+                # Nomination has been already tracked in GitHub
+                continue
+
+            untracked_nominations.append((nomination, thread))
+        return untracked_nominations
+
+    async def _track_vote_in_github(self, nomination: Nomination, vote_jump_url: str | None = None) -> bool:
+        """
+        Adds an issue in GitHub to track dormant vote.
+
+        Returns True when the issue has been created, False otherwise.
+        """
+        url = f"https://api.github.com/repos/{GithubModsRepository.owner}/{GithubModsRepository.name}/issues"
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": f"Bearer {GithubModsRepository.token}"
+        }
+        member = await get_or_fetch_member(self.bot.get_guild(Guild.id), nomination.user_id)
+        if not member:
+            log.debug(f"Couldn't find member: {nomination.user_id}")
+            return False
+
+        data = {"title": f"Nomination review needed. Id: {nomination.id}. User: {member.name}"}
+        if vote_jump_url:
+            data["body"] = f"Jump to the [vote message]({vote_jump_url})"
+
+        async with self.bot.http_session.post(url=url, raise_for_status=True, headers=headers, json=data) as response:
+            log.debug(f"Creating a review reminder issue for user {member.name}")
+            return response.status == 201
 
     async def cog_unload(self) -> None:
         """Cancels the autoreview loop on cog unload."""
