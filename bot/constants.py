@@ -618,6 +618,17 @@ class _Icons(EnvConfig):
 Icons = _Icons()
 
 
+class _GithubModsRepository(EnvConfig):
+    section = "github_mods_"
+
+    owner: str = "python-discord"
+    name: str = "mods"
+    token: str
+
+
+GithubModsRepository = _GithubModsRepository()
+
+
 class _Keys(EnvConfig):
 
     EnvConfig.Config.env_prefix = "api_keys_"
