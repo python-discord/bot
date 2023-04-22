@@ -34,7 +34,7 @@ services:
     << : *restart_policy
     image: redis:5.0.9
     ports:
-      - "127.0.0.1:6379:6379"
+      - "6379:6379"
 
   metricity:
     << : *logging
@@ -59,7 +59,7 @@ services:
     init: true
     ipc: none
     ports:
-     - "127.0.0.1:8060:8060"
+     - "8060:8060"
     privileged: true
     profiles:
       - "3.10"
@@ -71,7 +71,7 @@ services:
     init: true
     ipc: none
     ports:
-     - "127.0.0.1:8065:8060"
+     - "8065:8060"
     privileged: true
 
   web:
@@ -86,7 +86,7 @@ services:
           - admin.web
           - staff.web
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     tty: true
     depends_on:
       - metricity
