@@ -2,22 +2,16 @@
 # the bot project relies on for testing. Use it if you haven't got a
 # ready-to-use site environment already setup.
 
-version: "3.7"
-
-x-logging: &logging
-  logging:
-    driver: "json-file"
-    options:
-      max-file: "5"
-      max-size: "10m"
-
-x-restart-policy: &restart_policy
-  restart: unless-stopped
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-file: "5"
+    max-size: "10m"
 
 services:
   postgres:
-    << : *logging
-    << : *restart_policy
+    logging : *default-logging
+    restart: unless-stopped
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: pysite
@@ -30,15 +24,14 @@ services:
       retries: 5
 
   redis:
-    << : *logging
-    << : *restart_policy
+    logging : *default-logging
+    restart: unless-stopped
     image: redis:5.0.9
     ports:
       - "127.0.0.1:6379:6379"
 
   metricity:
-    << : *logging
-    << : *restart_policy
+    logging : *default-logging
     restart: on-failure  # USE_METRICITY=false will stop the container, so this ensures it only restarts on error
     depends_on:
       postgres:
@@ -53,8 +46,8 @@ services:
       - .:/tmp/bot:ro
 
   snekbox:
-    << : *logging
-    << : *restart_policy
+    logging : *default-logging
+    restart: unless-stopped
     image: ghcr.io/python-discord/snekbox:latest
     init: true
     ipc: none
@@ -65,8 +58,8 @@ services:
       - "3.10"
 
   snekbox-311:
-    << : *logging
-    << : *restart_policy
+    logging : *default-logging
+    restart: unless-stopped
     image: ghcr.io/python-discord/snekbox:3.11-dev
     init: true
     ipc: none
@@ -75,8 +68,8 @@ services:
     privileged: true
 
   web:
-    << : *logging
-    << : *restart_policy
+    logging : *default-logging
+    restart: unless-stopped
     image: ghcr.io/python-discord/site:latest
     command: ["run", "--debug"]
     networks:
@@ -97,8 +90,8 @@ services:
       STATIC_ROOT: /var/www/static
 
   bot:
-    << : *logging
-    << : *restart_policy
+    logging : *default-logging
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
