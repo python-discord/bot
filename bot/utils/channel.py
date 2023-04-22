@@ -46,6 +46,13 @@ def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     return getattr(channel, "category_id", None) == category_id
 
 
+def is_voice_channel(
+        channel: discord.TextChannel | discord.DMChannel | discord.Thread | discord.StageChannel
+) -> bool:
+    """Return True if `channel` is a voice one."""
+    return channel.type in [discord.ChannelType.voice, discord.ChannelType.stage_voice]
+
+
 async def get_or_fetch_channel(
         channel_id: int
 ) -> discord.abc.GuildChannel | discord.abc.PrivateChannel | discord.Thread:
