@@ -10,7 +10,7 @@ from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.channel import is_in_category, is_voice_channel
+from bot.utils.channel import is_in_category
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -98,7 +98,7 @@ async def post_infraction(
     if any(
         is_in_category(ctx.channel, category)
         for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-    ) or is_voice_channel(ctx.channel):
+    ):
         jump_url = None
     else:
         jump_url = ctx.message.jump_url
