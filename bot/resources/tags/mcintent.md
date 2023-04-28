@@ -5,7 +5,7 @@ embed:
 
 The discord gateway only dispatches events you subscribe to, which you can configure by using "intents"
 
-The message content intent is what determines if an app will receive the content of an ``on_message_create`` event.
+The message content intent is what determines if an app will receive the actual content of newly created messages
 
 Disabling or enabling this feature will allow or disallow this data to be received.
 
