@@ -7,7 +7,6 @@ The discord gateway only dispatches events you subscribe to, which you can confi
 
 The message content intent is what determines if an app will receive the actual content of newly created messages
 
-Disabling or enabling this feature will allow or disallow this data to be received.
 
 ```py
 intents = discord.Intents.default() # create a default Intents instance
