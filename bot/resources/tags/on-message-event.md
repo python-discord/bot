@@ -5,7 +5,7 @@ embed:
 
 When defining an `on_message` event handler, prefix commands may stop working as it overrides the default behaviour of the `on_message` event.
 
-Instead, use [`@bot.listen`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.listen) to add a listener. Listeners get added alongside the default `on_message` event which allows you to respond to message events and prefix commands at the same time.
+Instead, use [`@bot.listen`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.listen) to add a listener. Listeners get added alongside the default `on_message` event, preventing an override of on_message, and allowing prefix commands to still be invoked.
 
 ```python
 @bot.listen('on_message')
