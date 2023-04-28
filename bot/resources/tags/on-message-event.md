@@ -3,9 +3,9 @@ embed:
     title: "The `on_message` event"
 ---
 
-When registering the `on_message` event, prefix commands may stop working as it overrides the default behaviour of the `on_message` event.
+Registering the `on_message` event with [`@bot.event`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.event) will override the default behavior of the event. This may cause prefix commands to stop working, because they rely on the default `on_message` event.
 
-Instead, use [`@bot.listen`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.listen) to add a listener. Listeners get added alongside the default `on_message` event, preventing an override of on_message, and allowing prefix commands to still be invoked.
+Instead, use [`@bot.listen`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.listen) to add a listener. Listeners get added alongside the default `on_message` event, rather than overriding it, so prefix commands can still be invoked as usual:
 
 ```python
 @bot.listen('on_message')
