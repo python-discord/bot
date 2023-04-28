@@ -9,6 +9,8 @@ The message content intent is what determines if an app will receive the actual 
 
 Disabling or enabling this feature will allow or disallow this data to be received.
 
-Discord has disabled this permission for verified bots (bots verified over 75-100 servers).
+```py
+intents = discord.Intents.default() # create a default Intents instance
+intents.message_content = True # enable message content intents
 
-Users can request this permission for their bot.
+bot = commands.Bot(command_prefix="!", intents=intents) # actually pass it into the constructor
