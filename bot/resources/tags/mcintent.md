@@ -3,9 +3,7 @@ embed:
     title: "Message Content Intent"
 ---
 
-Discord regulates data being sent to an application via a specific number.
-
-This number represents different permissions A.K.A. intents.
+The discord gateway only dispatches events you subscribe to, which you can configure by using "intents"
 
 The message content intent is what determines if an app will receive the content of an ``on_message_create`` event.
 
