@@ -30,15 +30,19 @@ class LoggingTestCaseTests(unittest.TestCase):
             r"1 logs of DEBUG or higher were triggered on root:\n"
             r'<LogRecord: tests\.test_base, [\d]+, .+[/\\]tests[/\\]test_base\.py, [\d]+, "Log!">'
         )
-        with self.assertRaisesRegex(AssertionError, msg_regex):
-            with LoggingTestCase.assertNotLogs(self, level=logging.DEBUG):
-                self.log.debug("Log!")
+        with (
+            self.assertRaisesRegex(AssertionError, msg_regex),
+            LoggingTestCase.assertNotLogs(self, level=logging.DEBUG),
+        ):
+            self.log.debug("Log!")
 
     def test_assert_not_logs_reraises_unexpected_exception_in_managed_context(self):
         """Test if LoggingTestCase.assertNotLogs reraises an unexpected exception."""
-        with self.assertRaises(ValueError, msg="test exception"):
-            with LoggingTestCase.assertNotLogs(self, level=logging.DEBUG):
-                raise ValueError("test exception")
+        with (
+            self.assertRaises(ValueError, msg="test exception"),
+            LoggingTestCase.assertNotLogs(self, level=logging.DEBUG),
+        ):
+            raise ValueError("test exception")
 
     def test_assert_not_logs_restores_old_logging_settings(self):
         """Test if LoggingTestCase.assertNotLogs reraises an unexpected exception."""
@@ -56,9 +60,8 @@ class LoggingTestCaseTests(unittest.TestCase):
     def test_logging_test_case_works_with_logger_instance(self):
         """Test if the LoggingTestCase captures logging for provided logger."""
         log = get_logger("new_logger")
-        with self.assertRaises(AssertionError):
-            with LoggingTestCase.assertNotLogs(self, logger=log):
-                log.info("Hello, this should raise an AssertionError")
+        with self.assertRaises(AssertionError), LoggingTestCase.assertNotLogs(self, logger=log):
+            log.info("Hello, this should raise an AssertionError")
 
     def test_logging_test_case_respects_alternative_logger(self):
         """Test if LoggingTestCase only checks the provided logger."""

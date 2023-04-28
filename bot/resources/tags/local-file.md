@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Sending images in embeds using discord.py"
+---
 Thanks to discord.py, sending local files as embed images is simple. You have to create an instance of [`discord.File`](https://discordpy.readthedocs.io/en/stable/api.html#discord.File) class:
 ```py
 # When you know the file exact path, you can pass it.

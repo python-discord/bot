@@ -66,7 +66,7 @@ async def main() -> None:
             intents=intents,
             allowed_roles=list({discord.Object(id_) for id_ in constants.MODERATION_ROLES}),
             api_client=APIClient(
-                site_api_url=f"{constants.URLs.site_api_schema}{constants.URLs.site_api}",
+                site_api_url=constants.URLs.site_api,
                 site_api_token=constants.Keys.site_api,
             ),
         )
@@ -78,7 +78,7 @@ try:
     asyncio.run(main())
 except StartupError as e:
     message = "Unknown Startup Error Occurred."
-    if isinstance(e.exception, (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError)):
+    if isinstance(e.exception, aiohttp.ClientConnectorError | aiohttp.ServerDisconnectedError):
         message = "Could not connect to site API. Is it running?"
     elif isinstance(e.exception, OSError):
         message = "Could not connect to Redis. Is it running?"

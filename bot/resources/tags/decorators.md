@@ -1,5 +1,7 @@
-**Decorators**
-
+---
+embed:
+    title: "Decorators"
+---
 A decorator is a function that modifies another function.
 
 Consider the following example of a timer decorator:

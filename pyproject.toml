@@ -6,56 +6,43 @@ authors = ["Python Discord <info@pythondiscord.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "3.10.*"
+python = "3.11.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
-pydis_core = { version = "9.1.1", extras = ["async-rediscache"] }
-redis = "4.3.5"
-fakeredis = { version = "2.0.0", extras = ["lua"] }
+pydis_core = { version = "9.5.1", extras = ["async-rediscache"] }
 
-aiohttp = "3.8.3"
+aiohttp = "3.8.4"
 arrow = "1.2.3"
-beautifulsoup4 = "4.11.1"
+beautifulsoup4 = "4.12.2"
 colorama = { version = "0.4.6", markers = "sys_platform == 'win32'" }
 coloredlogs = "15.0.1"
-deepdiff = "6.2.1"
+deepdiff = "6.3.0"
 emoji = "2.2.0"
 feedparser = "6.0.10"
-lxml = "4.9.1"
-
-# Must be kept on this version unless doc command output is fixed
-# See https://github.com/python-discord/bot/pull/2156
-markdownify = "0.6.1"
-
-more-itertools = "9.0.0"
+lxml = "4.9.2"
+markdownify = "0.11.6"
+more-itertools = "9.1.0"
 python-dateutil = "2.8.2"
 python-frontmatter = "1.0.0"
 pyyaml = "6.0"
-rapidfuzz = "2.13.2"
-regex = "2022.10.31"
-sentry-sdk = "1.11.1"
+rapidfuzz = "3.0.0"
+regex = "2023.3.23"
+sentry-sdk = "1.20.0"
 tldextract = "3.4.0"
-pydantic = "1.10.2"
+pydantic = { version = "1.10.7", extras = ["dotenv"]}
 
 [tool.poetry.dev-dependencies]
-coverage = "6.5.0"
-flake8 = "6.0.0"
-flake8-annotations = "2.9.1"
-flake8-bugbear = "22.10.27"
-flake8-docstrings = "1.6.0"
-flake8-string-format = "0.3.0"
-flake8-tidy-imports = "4.8.0"
-flake8-todo = "0.7"
-flake8-isort = "5.0.3"
-pep8-naming = "0.13.2"
-pre-commit = "2.20.0"
-pip-licenses = "4.0.1"
-pytest = "7.2.0"
+coverage = "7.2.3"
+httpx = "0.24.0"
+isort = "5.12.0"
+pre-commit = "3.2.2"
+pip-licenses = "4.2.0"
+pytest = "7.3.1"
 pytest-cov = "4.0.0"
-python-dotenv = "0.21.0"
-pytest-xdist = "3.0.2"
-pytest-subtests = "0.9.0"
-taskipy = "1.10.3"
+pytest-subtests = "0.10.0"
+pytest-xdist = "3.2.1"
+ruff = "0.0.262"
+taskipy = "1.10.4"
 
 
 [build-system]
@@ -64,13 +51,14 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.taskipy.tasks]
 start = "python -m bot"
+configure = "python -m botstrap"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 build = "docker build -t ghcr.io/python-discord/bot:latest -f Dockerfile ."
 push = "docker push ghcr.io/python-discord/bot:latest"
-test-nocov = "pytest -n auto"
-test = "pytest -n auto --cov-report= --cov --ff"
-retest = "pytest -n auto --cov-report= --cov --lf"
+test = "pytest -n auto --ff"
+retest = "pytest -n auto --lf"
+test-cov = "pytest -n auto --cov-report= --cov"
 html = "coverage html"
 report = "coverage report"
 isort = "isort ."
@@ -87,6 +75,27 @@ case_sensitive = true
 combine_as_imports = true
 line_length = 120
 atomic = true
+
+[tool.ruff]
+target-version = "py311"
+extend-exclude = [".cache"]
+ignore = [
+    "ANN002", "ANN003", "ANN101", "ANN102", "ANN204", "ANN206", "ANN401",
+    "B904",
+    "C401", "C408",
+    "D100", "D104", "D105", "D107", "D203", "D212", "D214", "D215", "D301",
+    "D400", "D401", "D402", "D404", "D405", "D406", "D407", "D408", "D409", "D410", "D411", "D412", "D413", "D414", "D416", "D417",
+    "E731",
+    "RET504",
+    "RUF005",
+    "S311",
+    "SIM102", "SIM108",
+]
+line-length = 120
+select = ["ANN", "B", "C4", "D", "DTZ", "E", "F", "ISC", "INT", "N", "PGH", "PIE", "Q", "RET", "RSE", "RUF", "S", "SIM", "T20", "TID", "UP", "W"]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["ANN", "D"]
 
 [tool.pytest.ini_options]
 # We don't use nose style tests so disable them in pytest.

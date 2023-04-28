@@ -1,3 +1,7 @@
+---
+embed:
+    title: "List comprehensions"
+---
 Do you ever find yourself writing something like this?
 ```py
 >>> squares = []

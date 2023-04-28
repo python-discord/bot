@@ -106,23 +106,23 @@ class Verification(Cog):
     # endregion
     # region: miscellaneous
 
-    @command(name='verify')
+    @command(name="verify")
     @has_any_role(*constants.MODERATION_ROLES)
     async def perform_manual_verification(self, ctx: Context, user: discord.Member) -> None:
         """Command for moderators to verify any user."""
-        log.trace(f'verify command called by {ctx.author} for {user.id}.')
+        log.trace(f"verify command called by {ctx.author} for {user.id}.")
 
         if not user.pending:
-            log.trace(f'{user.id} is already verified, aborting.')
-            await ctx.send(f'{constants.Emojis.cross_mark} {user.mention} is already verified.')
+            log.trace(f"{user.id} is already verified, aborting.")
+            await ctx.send(f"{constants.Emojis.cross_mark} {user.mention} is already verified.")
             return
 
         # Adding a role automatically verifies the user, so we add and remove the Announcements role.
         temporary_role = self.bot.get_guild(constants.Guild.id).get_role(constants.Roles.announcements)
         await user.add_roles(temporary_role)
         await user.remove_roles(temporary_role)
-        log.trace(f'{user.id} manually verified.')
-        await ctx.send(f'{constants.Emojis.check_mark} {user.mention} is now verified.')
+        log.trace(f"{user.id} manually verified.")
+        await ctx.send(f"{constants.Emojis.check_mark} {user.mention} is now verified.")
 
     # endregion
 

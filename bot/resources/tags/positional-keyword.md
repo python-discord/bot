@@ -1,5 +1,7 @@
-**Positional vs. Keyword arguments**
-
+---
+embed:
+    title: "Positional vs. keyword arguments"
+---
 Functions can take two different kinds of arguments. A positional argument is just the object itself. A keyword argument is a name assigned to an object.
 
 **Example**
@@ -35,4 +37,4 @@ The reverse is also true:
 **More info**  
 • [Keyword only arguments](https://peps.python.org/pep-3102/)  
 • [Positional only arguments](https://peps.python.org/pep-0570/)  
-• `!tags param-arg` (Parameters vs. Arguments)  
+• `/tag param-arg` (Parameters vs. Arguments)  

@@ -1,7 +1,8 @@
 import contextlib
 import functools
+import pkgutil
 import unittest.mock
-from typing import Callable
+from collections.abc import Callable
 
 
 @functools.wraps(unittest.mock._patch.decoration_helper)
@@ -51,7 +52,7 @@ def autospec(target, *attributes: str, pass_mocks: bool = True, **patch_kwargs) 
     # Import the target if it's a string.
     # This is to support both object and string targets like patch.multiple.
     if type(target) is str:
-        target = unittest.mock._importer(target)
+        target = pkgutil.resolve_name(target)
 
     def decorator(func):
         for attribute in attributes:

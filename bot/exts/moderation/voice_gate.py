@@ -51,7 +51,7 @@ VOICE_PING_DM = (
 class VoiceGate(Cog):
     """Voice channels verification management."""
 
-    # RedisCache[t.Union[discord.User.id, discord.Member.id], t.Union[discord.Message.id, int]]
+    # RedisCache[discord.User.id | discord.Member.id, discord.Message.id | int]
     # The cache's keys are the IDs of members who are verified or have joined a voice channel
     # The cache's values are either the message ID of the ping message or 0 (NO_MSG) if no message is present
     redis_cache = RedisCache()
@@ -181,7 +181,7 @@ class VoiceGate(Cog):
         if failed:
             embed = discord.Embed(
                 title="Voice Gate failed",
-                description=FAILED_MESSAGE.format(reasons="\n".join(f'• You {reason}.' for reason in failed_reasons)),
+                description=FAILED_MESSAGE.format(reasons="\n".join(f"• You {reason}." for reason in failed_reasons)),
                 color=Colour.red()
             )
             try:

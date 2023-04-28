@@ -1,7 +1,6 @@
 import logging
 import unittest
 from contextlib import contextmanager
-from typing import Dict
 
 import discord
 from async_rediscache import RedisSession
@@ -86,7 +85,7 @@ class CommandTestCase(unittest.IsolatedAsyncioTestCase):
     async def assertHasPermissionsCheck(  # noqa: N802
         self,
         cmd: commands.Command,
-        permissions: Dict[str, bool],
+        permissions: dict[str, bool],
     ) -> None:
         """
         Test that `cmd` raises a `MissingPermissions` exception if author lacks `permissions`.

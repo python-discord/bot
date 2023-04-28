@@ -1,16 +1,15 @@
 from abc import ABCMeta
-from typing import Optional
 from urllib.parse import urlparse
 
 from discord.ext.commands import CogMeta
 from tldextract import extract
 
 
-class CogABCMeta(CogMeta, ABCMeta):  # noqa: B024 (Ignore abstract class with no abstract methods.)
+class CogABCMeta(CogMeta, ABCMeta):
     """Metaclass for ABCs meant to be implemented as Cogs."""
 
 
-def find_nth_occurrence(string: str, substring: str, n: int) -> Optional[int]:
+def find_nth_occurrence(string: str, substring: str, n: int) -> int | None:
     """Return index of `n`th occurrence of `substring` in `string`, or None if not found."""
     index = 0
     for _ in range(n):

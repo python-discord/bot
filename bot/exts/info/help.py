@@ -4,7 +4,6 @@ import itertools
 import re
 from collections import namedtuple
 from contextlib import suppress
-from typing import List, Optional, Union
 
 from discord import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, ui
 from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
@@ -41,12 +40,12 @@ class SubcommandButton(ui.Button):
         command: Command,
         *,
         style: ButtonStyle = ButtonStyle.primary,
-        label: Optional[str] = None,
+        label: str | None = None,
         disabled: bool = False,
-        custom_id: Optional[str] = None,
-        url: Optional[str] = None,
-        emoji: Optional[Union[str, Emoji, PartialEmoji]] = None,
-        row: Optional[int] = None
+        custom_id: str | None = None,
+        url: str | None = None,
+        emoji: str | Emoji | PartialEmoji | None = None,
+        row: int | None = None
     ):
         super().__init__(
             style=style, label=label, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, row=row
@@ -79,12 +78,12 @@ class GroupButton(ui.Button):
         command: Command,
         *,
         style: ButtonStyle = ButtonStyle.secondary,
-        label: Optional[str] = None,
+        label: str | None = None,
         disabled: bool = False,
-        custom_id: Optional[str] = None,
-        url: Optional[str] = None,
-        emoji: Optional[Union[str, Emoji, PartialEmoji]] = None,
-        row: Optional[int] = None
+        custom_id: str | None = None,
+        url: str | None = None,
+        emoji: str | Emoji | PartialEmoji | None = None,
+        row: int | None = None
     ):
         super().__init__(
             style=style, label=label, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, row=row
@@ -123,7 +122,7 @@ class CommandView(ui.View):
             if any(role.id in constants.MODERATION_ROLES for role in interaction.user.roles):
                 return True
 
-            elif interaction.user.id == self.context.author.id:
+            if interaction.user.id == self.context.author.id:
                 return True
 
         return False
@@ -150,7 +149,7 @@ class GroupView(CommandView):
             self.add_item(SubcommandButton(help_command, subcommand, label=subcommand.name))
 
 
-class HelpQueryNotFound(ValueError):
+class HelpQueryNotFoundError(ValueError):
     """
     Raised when a HelpSession Query doesn't match a command or cog.
 
@@ -244,17 +243,22 @@ class CustomHelpCommand(HelpCommand):
         choices.update(cog.category for cog in self.context.bot.cogs.values() if hasattr(cog, "category"))
         return choices
 
-    async def command_not_found(self, string: str) -> "HelpQueryNotFound":
+    async def command_not_found(self, query: str) -> HelpQueryNotFoundError:
         """
         Handles when a query does not match a valid command, group, cog or category.
 
         Will return an instance of the `HelpQueryNotFound` exception with the error message and possible matches.
         """
         choices = list(await self.get_all_help_choices())
-        result = process.extract(default_process(string), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
-        return HelpQueryNotFound(f'Query "{string}" not found.', {choice[0]: choice[1] for choice in result})
+        result = process.extract(default_process(query), choices, scorer=fuzz.ratio, score_cutoff=60, processor=None)
 
-    async def subcommand_not_found(self, command: Command, string: str) -> "HelpQueryNotFound":
+        # Trim query to avoid embed limits when sending the error.
+        if len(query) >= 100:
+            query = query[:100] + "..."
+
+        return HelpQueryNotFoundError(f'Query "{query}" not found.', {choice[0]: choice[1] for choice in result})
+
+    async def subcommand_not_found(self, command: Command, string: str) -> HelpQueryNotFoundError:
         """
         Redirects the error to `command_not_found`.
 
@@ -262,7 +266,7 @@ class CustomHelpCommand(HelpCommand):
         """
         return await self.command_not_found(f"{command.qualified_name} {string}")
 
-    async def send_error_message(self, error: HelpQueryNotFound) -> None:
+    async def send_error_message(self, error: HelpQueryNotFoundError) -> None:
         """Send the error message to the channel."""
         embed = Embed(colour=Colour.red(), title=str(error))
 
@@ -272,7 +276,7 @@ class CustomHelpCommand(HelpCommand):
 
         await self.context.send(embed=embed)
 
-    async def command_formatting(self, command: Command) -> tuple[Embed, Optional[CommandView]]:
+    async def command_formatting(self, command: Command) -> tuple[Embed, CommandView | None]:
         """
         Takes a command and turns it into an embed.
 
@@ -306,7 +310,7 @@ class CustomHelpCommand(HelpCommand):
 
         # Remove line breaks from docstrings, if not used to separate paragraphs.
         # Allow overriding this behaviour via putting \u2003 at the start of a line.
-        formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help)
+        formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help) if command.help else None
         command_details += f"{formatted_doc or 'No details provided.'}\n"
         embed.description = command_details
 
@@ -321,7 +325,7 @@ class CustomHelpCommand(HelpCommand):
         await wait_for_deletion(message, (self.context.author.id,))
 
     @staticmethod
-    def get_commands_brief_details(commands_: List[Command], return_as_list: bool = False) -> Union[List[str], str]:
+    def get_commands_brief_details(commands_: list[Command], return_as_list: bool = False) -> list[str] | str:
         """
         Formats the prefix, command name and signature, and short doc for an iterable of commands.
 
@@ -335,10 +339,9 @@ class CustomHelpCommand(HelpCommand):
             )
         if return_as_list:
             return details
-        else:
-            return "".join(details)
+        return "".join(details)
 
-    async def format_group_help(self, group: Group) -> tuple[Embed, Optional[CommandView]]:
+    async def format_group_help(self, group: Group) -> tuple[Embed, CommandView | None]:
         """Formats help for a group command."""
         subcommands = group.commands
 
@@ -393,8 +396,7 @@ class CustomHelpCommand(HelpCommand):
                 if command.cog.category:
                     return f"**{command.cog.category}**"
             return f"**{command.cog_name}**"
-        else:
-            return "**\u200bNo Category:**"
+        return "**\u200bNo Category:**"
 
     async def send_category_help(self, category: Category) -> None:
         """

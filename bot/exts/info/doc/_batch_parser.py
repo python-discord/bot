@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import collections
-from collections import defaultdict
+from collections import defaultdict, deque
 from contextlib import suppress
 from operator import attrgetter
-from typing import Deque, Dict, List, NamedTuple, Optional, Union
+from typing import NamedTuple
 
 import discord
 from bs4 import BeautifulSoup
@@ -61,7 +61,7 @@ class QueueItem(NamedTuple):
     doc_item: _cog.DocItem
     soup: BeautifulSoup
 
-    def __eq__(self, other: Union[QueueItem, _cog.DocItem]):
+    def __eq__(self, other: QueueItem | _cog.DocItem):
         if isinstance(other, _cog.DocItem):
             return self.doc_item == other
         return NamedTuple.__eq__(self, other)
@@ -90,14 +90,14 @@ class BatchParser:
     """
 
     def __init__(self):
-        self._queue: Deque[QueueItem] = collections.deque()
-        self._page_doc_items: Dict[str, List[_cog.DocItem]] = defaultdict(list)
-        self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
+        self._queue: deque[QueueItem] = collections.deque()
+        self._page_doc_items: dict[str, list[_cog.DocItem]] = defaultdict(list)
+        self._item_futures: dict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
         self._parse_task = None
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
-    async def get_markdown(self, doc_item: _cog.DocItem) -> Optional[str]:
+    async def get_markdown(self, doc_item: _cog.DocItem) -> str | None:
         """
         Get the result Markdown of `doc_item`.
 
@@ -164,7 +164,7 @@ class BatchParser:
             self._parse_task = None
             log.trace("Finished parsing queue.")
 
-    def _move_to_front(self, item: Union[QueueItem, _cog.DocItem]) -> None:
+    def _move_to_front(self, item: QueueItem | _cog.DocItem) -> None:
         """Move `item` to the front of the parse queue."""
         # The parse queue stores soups along with the doc symbols in QueueItem objects,
         # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.

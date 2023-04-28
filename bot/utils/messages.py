@@ -1,16 +1,21 @@
 import asyncio
 import random
 import re
+from collections.abc import Callable, Iterable, Sequence
+from datetime import UTC, datetime
 from functools import partial
 from io import BytesIO
-from typing import Callable, List, Optional, Sequence, Union
+from itertools import zip_longest
 
 import discord
+from discord import Message
 from discord.ext.commands import Context
+from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from sentry_sdk import add_breadcrumb
 
 import bot
-from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import Emojis, MODERATION_ROLES, NEGATIVE_REPLIES, URLs
 from bot.log import get_logger
 
 log = get_logger(__name__)
@@ -47,18 +52,18 @@ def reaction_check(
     if user.id in allowed_users or is_moderator:
         log.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
         return True
-    else:
-        log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
-        scheduling.create_task(
-            reaction.message.remove_reaction(reaction.emoji, user),
-            suppressed_exceptions=(discord.HTTPException,),
-            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
-        )
-        return False
+
+    log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
+    scheduling.create_task(
+        reaction.message.remove_reaction(reaction.emoji, user),
+        suppressed_exceptions=(discord.HTTPException,),
+        name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}"
+    )
+    return False
 
 
 async def wait_for_deletion(
-    message: discord.Message,
+    message: discord.Message | discord.InteractionMessage,
     user_ids: Sequence[int],
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
@@ -96,7 +101,7 @@ async def wait_for_deletion(
 
     try:
         try:
-            await bot.instance.wait_for('reaction_add', check=check, timeout=timeout)
+            await bot.instance.wait_for("reaction_add", check=check, timeout=timeout)
         except asyncio.TimeoutError:
             await message.clear_reactions()
         else:
@@ -113,11 +118,11 @@ async def wait_for_deletion(
 
 async def send_attachments(
     message: discord.Message,
-    destination: Union[discord.TextChannel, discord.Webhook],
+    destination: discord.TextChannel | discord.Webhook,
     link_large: bool = True,
     use_cached: bool = False,
     **kwargs
-) -> List[str]:
+) -> list[str]:
     """
     Re-upload the message's attachments to the destination and return a list of their new URLs.
 
@@ -126,11 +131,11 @@ async def send_attachments(
     embed which links to them. Extra kwargs will be passed to send() when sending the attachment.
     """
     webhook_send_kwargs = {
-        'username': message.author.display_name,
-        'avatar_url': message.author.display_avatar.url,
+        "username": message.author.display_name,
+        "avatar_url": message.author.display_avatar.url,
     }
     webhook_send_kwargs.update(kwargs)
-    webhook_send_kwargs['username'] = sub_clyde(webhook_send_kwargs['username'])
+    webhook_send_kwargs["username"] = sub_clyde(webhook_send_kwargs["username"])
 
     large = []
     urls = []
@@ -214,21 +219,20 @@ async def pin_no_system_message(message: discord.Message) -> bool:
     return False
 
 
-def sub_clyde(username: Optional[str]) -> Optional[str]:
+def sub_clyde(username: str | None) -> str | None:
     """
-    Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
+    Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"Е" and return the new string.
 
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
-    """
+    """  # noqa: RUF002
     def replace_e(match: re.Match) -> str:
-        char = "е" if match[2] == "e" else "Е"
+        char = "е" if match[2] == "e" else "Е"  # noqa: RUF001
         return match[1] + char
 
     if username:
         return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
-    else:
-        return username  # Empty string or None
+    return username  # Empty string or None
 
 
 async def send_denial(ctx: Context, reason: str) -> discord.Message:
@@ -241,6 +245,55 @@ async def send_denial(ctx: Context, reason: str) -> discord.Message:
     return await ctx.send(embed=embed)
 
 
-def format_user(user: discord.abc.User) -> str:
+def format_user(user: discord.User | discord.Member) -> str:
     """Return a string for `user` which has their mention and ID."""
     return f"{user.mention} (`{user.id}`)"
+
+
+def format_channel(channel: discord.abc.Messageable) -> str:
+    """Return a string for `channel` with its mention, ID, and the parent channel if it is a thread."""
+    formatted = f"{channel.mention} ({channel.category}/#{channel}"
+    if hasattr(channel, "parent"):
+        formatted += f"/{channel.parent}"
+    formatted += ")"
+    return formatted
+
+
+async def upload_log(messages: Iterable[Message], actor_id: int, attachments: dict[int, list[str]] = None) -> str:
+    """Upload message logs to the database and return a URL to a page for viewing the logs."""
+    if attachments is None:
+        attachments = []
+    else:
+        attachments = [attachments.get(message.id, []) for message in messages]
+
+    deletedmessage_set = [
+        {
+            "id": message.id,
+            "author": message.author.id,
+            "channel_id": message.channel.id,
+            "content": message.content.replace("\0", ""),  # Null chars cause 400.
+            "embeds": [embed.to_dict() for embed in message.embeds],
+            "attachments": attachment,
+        }
+        for message, attachment in zip_longest(messages, attachments, fillvalue=[])
+    ]
+
+    try:
+        response = await bot.instance.api_client.post(
+            "bot/deleted-messages",
+            json={
+                "actor": actor_id,
+                "creation": datetime.now(UTC).isoformat(),
+                "deletedmessage_set": deletedmessage_set,
+            }
+        )
+    except ResponseCodeError as e:
+        add_breadcrumb(
+            category="api_error",
+            message=str(e),
+            level="error",
+            data=deletedmessage_set,
+        )
+        raise
+
+    return f"{URLs.site_logs_view}/{response['id']}"

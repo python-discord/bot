@@ -157,9 +157,8 @@ class TestMessageCache(unittest.TestCase):
             cache.append(msg)
 
         for current_loop in test_cases:
-            with self.subTest(current_loop=current_loop):
-                with self.assertRaises(IndexError):
-                    cache[current_loop]
+            with self.subTest(current_loop=current_loop), self.assertRaises(IndexError):
+                cache[current_loop]
 
     def test_slicing_with_unfilled_cache(self):
         """Test if slicing returns the correct messages if the cache is not yet fully filled."""
