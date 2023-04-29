@@ -98,7 +98,7 @@ async def post_infraction(
     if any(
         is_in_category(ctx.channel, category)
         for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-    ):
+    ) or ctx.message is None:
         jump_url = None
     else:
         jump_url = ctx.message.jump_url
