@@ -32,7 +32,7 @@ tldextract = "3.4.1"
 pydantic = { version = "1.10.7", extras = ["dotenv"]}
 
 [tool.poetry.dev-dependencies]
-coverage = "7.2.3"
+coverage = "7.2.4"
 httpx = "0.24.0"
 isort = "5.12.0"
 pre-commit = "3.2.2"
