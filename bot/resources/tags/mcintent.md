@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Message Content Intent"
+    title: "Discord Message Content Intent"
 ---
 
 The Discord gateway only dispatches events you subscribe to, which you can configure by using "intents."
