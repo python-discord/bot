@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "The `on_message` event"
+    title: "The discord.py `on_message` event"
 ---
 
 Registering the `on_message` event with [`@bot.event`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.event) will override the default behavior of the event. This may cause prefix commands to stop working, because they rely on the default `on_message` event.
