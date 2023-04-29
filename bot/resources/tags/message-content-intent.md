@@ -1,16 +1,17 @@
 ---
 embed:
-    title: "Message Content Intent"
+    title: "Discord Message Content Intent"
 ---
 
-Discord regulates data being sent to an application via a specific number.
+The Discord gateway only dispatches events you subscribe to, which you can configure by using "intents."
 
-This number represents different permissions A.K.A. intents.
+The message content intent is what determines if an app will receive the actual content of newly created messages. Without this intent, discord.py won't be able to detect prefix commands, so prefix commands won't respond.
 
-The message content intent is what determines if an app will receive the content of an ``on_message_create`` event.
+Privileged intents, such as message content, have to be explicitly enabled from the [Discord Developer Portal](https://discord.com/developers/applications) in addition to being enabled in the code:
 
-Disabling or enabling this feature will allow or disallow this data to be received.
+```py
+intents = discord.Intents.default() # create a default Intents instance
+intents.message_content = True # enable message content intents
 
-Discord has disabled this permission for verified bots (bots verified over 75-100 servers).
-
-Users can request this permission for their bot.
+bot = commands.Bot(command_prefix="!", intents=intents) # actually pass it into the constructor
+```
