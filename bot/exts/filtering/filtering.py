@@ -260,7 +260,7 @@ class Filtering(Cog):
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
         """Checks for bad words in usernames when users join, switch or leave a voice channel."""
         ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
-        await self._check_bad_name(ctx)
+        await self._check_bad_display_name(ctx)
 
     @Cog.listener()
     async def on_thread_create(self, thread: Thread) -> None:
