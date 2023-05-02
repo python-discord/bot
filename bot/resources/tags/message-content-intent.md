@@ -1,5 +1,5 @@
 ---
-aliases: ["mcintent, message_content, message_content_intent"]
+aliases: ["mcintent", "message_content", "message_content_intent"]
 embed:
     title: "Discord Message Content Intent"
 ---
