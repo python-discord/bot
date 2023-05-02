@@ -32,7 +32,9 @@ class TokensList(FilterList[TokenFilter]):
 
     def __init__(self, filtering_cog: Filtering):
         super().__init__()
-        filtering_cog.subscribe(self, Event.MESSAGE, Event.MESSAGE_EDIT, Event.NICKNAME, Event.SNEKBOX)
+        filtering_cog.subscribe(
+            self, Event.MESSAGE, Event.MESSAGE_EDIT, Event.NICKNAME, Event.THREAD_NAME, Event.SNEKBOX
+        )
 
     def get_filter_type(self, content: str) -> type[Filter]:
         """Get a subclass of filter matching the filter list and the filter's content."""
@@ -67,6 +69,6 @@ class TokensList(FilterList[TokenFilter]):
     def _expand_spoilers(text: str) -> str:
         """Return a string containing all interpretations of a spoilered message."""
         split_text = SPOILER_RE.split(text)
-        return ''.join(
+        return "".join(
             split_text[0::2] + split_text[1::2] + split_text
         )

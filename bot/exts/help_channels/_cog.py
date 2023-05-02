@@ -1,7 +1,5 @@
 """Contains the Cog that receives discord.py events and defers most actions to other files in the module."""
 
-import typing as t
-
 import discord
 from discord.ext import commands
 from pydis_core.utils import scheduling
@@ -12,9 +10,6 @@ from bot.exts.help_channels import _caches, _channel, _message
 from bot.log import get_logger
 
 log = get_logger(__name__)
-
-if t.TYPE_CHECKING:
-    from bot.exts.filtering.filtering import Filtering
 
 
 class HelpForum(commands.Cog):
@@ -62,18 +57,6 @@ class HelpForum(commands.Cog):
             self.bot.stats.incr("help.dormant_invoke.staff")
         return has_role
 
-    async def post_with_disallowed_title_check(self, post: discord.Thread) -> None:
-        """Check if the given post has a bad word, alerting moderators if it does."""
-        filter_cog: Filtering | None = self.bot.get_cog("Filtering")
-        if filter_cog and (match := filter_cog.get_name_match(post.name)):
-            mod_alerts = self.bot.get_channel(constants.Channels.mod_alerts)
-            await mod_alerts.send(
-                f"<@&{constants.Roles.moderators}>\n"
-                f"<@{post.owner_id}> ({post.owner_id}) opened the post {post.mention} ({post.id}), "
-                "which triggered the token filter with its name!\n"
-                f"**Match:** {match.group()}"
-            )
-
     @commands.group(name="help-forum", aliases=("hf",))
     async def help_forum_group(self,  ctx: commands.Context) -> None:
         """A group of commands that help manage our help forum system."""
@@ -85,7 +68,7 @@ class HelpForum(commands.Cog):
         """
         Make the help post this command was called in dormant.
 
-        May only be invoked by the channel's claimant or by staff.
+        May only be invoked by the channel's claimant or by mods+.
         """
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
@@ -133,19 +116,18 @@ class HelpForum(commands.Cog):
 
     @commands.Cog.listener("on_message")
     async def new_post_listener(self, message: discord.Message) -> None:
-        """Defer application of new post logic for posts the help forum to the _channel helper."""
+        """Defer application of new post logic for posts in the help forum to the _channel helper."""
         if not isinstance(message.channel, discord.Thread):
             return
         thread = message.channel
 
-        if not message.id == thread.id:
+        if message.id != thread.id:
             # Opener messages have the same ID as the thread
             return
 
         if thread.parent_id != self.help_forum_channel.id:
             return
 
-        # await self.post_with_disallowed_title_check(thread)  TODO bring this back with the new filtering system
         await _channel.help_post_opened(thread)
 
         delay = min(constants.HelpChannels.deleted_idle_minutes, constants.HelpChannels.idle_minutes) * 60
@@ -162,12 +144,10 @@ class HelpForum(commands.Cog):
             return
         if not before.archived and after.archived:
             await _channel.help_post_archived(after)
-        if before.name != after.name:
-            await self.post_with_disallowed_title_check(after)
 
     @commands.Cog.listener()
     async def on_raw_thread_delete(self, deleted_thread_event: discord.RawThreadDeleteEvent) -> None:
-        """Defer application of new post logic for posts the help forum to the _channel helper."""
+        """Defer application of deleted post logic for posts in the help forum to the _channel helper."""
         if deleted_thread_event.parent_id == self.help_forum_channel.id:
             await _channel.help_post_deleted(deleted_thread_event)
 
@@ -175,7 +155,7 @@ class HelpForum(commands.Cog):
     async def new_post_message_listener(self, message: discord.Message) -> None:
         """Defer application of new message logic for messages in the help forum to the _message helper."""
         if not _channel.is_help_forum_post(message.channel):
-            return None
+            return
 
         await _message.notify_session_participants(message)
 

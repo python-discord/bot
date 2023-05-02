@@ -5,9 +5,7 @@ import traceback
 from abc import abstractmethod
 from copy import copy
 from functools import reduce
-from typing import Any, NamedTuple, Optional, TypeVar
-
-from typing_extensions import Self
+from typing import Any, NamedTuple, Self, TypeVar
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types import settings_types
@@ -26,7 +24,7 @@ T = TypeVar("T", bound=SettingsEntry)
 
 def create_settings(
     settings_data: dict, *, defaults: Defaults | None = None, keep_empty: bool = False
-) -> tuple[Optional[ActionSettings], Optional[ValidationSettings]]:
+) -> tuple[ActionSettings | None, ValidationSettings | None]:
     """
     Create and return instances of the Settings subclasses from the given data.
 
@@ -110,7 +108,7 @@ class Settings(FieldRequiring, dict[str, T]):
         """Create a shallow copy of the object."""
         return copy(self)
 
-    def get_setting(self, key: str, default: Optional[Any] = None) -> Any:
+    def get_setting(self, key: str, default: Any | None = None) -> Any:
         """Get the setting matching the key, or fall back to the default value if the key is missing."""
         for entry in self.values():
             if hasattr(entry, key):
@@ -120,7 +118,7 @@ class Settings(FieldRequiring, dict[str, T]):
     @classmethod
     def create(
         cls, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False
-    ) -> Optional[Settings]:
+    ) -> Settings | None:
         """
         Returns a Settings object from `settings_data` if it holds any value, None otherwise.
 

@@ -5,14 +5,9 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
-        args: [--unsafe] # Required due to custom constructors (e.g. !ENV)
       - id: end-of-file-fixer
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.5.1
-    hooks:
-      - id: python-check-blanket-noqa
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
@@ -20,10 +15,11 @@ repos:
         name: isort (python)
   - repo: local
     hooks:
-      - id: flake8
-        name: Flake8
-        description: This hook runs flake8 within our project's environment.
-        entry: poetry run flake8
-        language: system
-        types: [python]
-        require_serial: true
+    - id: ruff
+      name: ruff
+      description: Run ruff linting
+      entry: poetry run ruff check --force-exclude
+      language: system
+      'types_or': [python, pyi]
+      require_serial: true
+      args: [--fix, --exit-non-zero-on-fix]

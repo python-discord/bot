@@ -1,8 +1,7 @@
 import asyncio
 import difflib
 import itertools
-import typing as t
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import discord
 from dateutil.relativedelta import relativedelta
@@ -20,7 +19,7 @@ from bot.utils.messages import format_user, upload_log
 
 log = get_logger(__name__)
 
-GUILD_CHANNEL = t.Union[discord.CategoryChannel, discord.TextChannel, discord.VoiceChannel]
+GUILD_CHANNEL = discord.CategoryChannel | discord.TextChannel | discord.VoiceChannel
 
 CHANNEL_CHANGES_UNSUPPORTED = ("permissions",)
 CHANNEL_CHANGES_SUPPRESSED = ("_overwrites", "position")
@@ -50,18 +49,18 @@ class ModLog(Cog, name="ModLog"):
 
     async def send_log_message(
         self,
-        icon_url: t.Optional[str],
-        colour: t.Union[discord.Colour, int],
-        title: t.Optional[str],
+        icon_url: str | None,
+        colour: discord.Colour | int,
+        title: str | None,
         text: str,
-        thumbnail: t.Optional[t.Union[str, discord.Asset]] = None,
+        thumbnail: str | discord.Asset | None = None,
         channel_id: int = Channels.mod_log,
         ping_everyone: bool = False,
-        files: t.Optional[t.List[discord.File]] = None,
-        content: t.Optional[str] = None,
-        additional_embeds: t.Optional[t.List[discord.Embed]] = None,
-        timestamp_override: t.Optional[datetime] = None,
-        footer: t.Optional[str] = None,
+        files: list[discord.File] | None = None,
+        content: str | None = None,
+        additional_embeds: list[discord.Embed] | None = None,
+        timestamp_override: datetime | None = None,
+        footer: str | None = None,
     ) -> Context:
         """Generate log embed and send to logging channel."""
         await self.bot.wait_until_guild_available()
@@ -74,7 +73,7 @@ class ModLog(Cog, name="ModLog"):
             embed.set_author(name=title, icon_url=icon_url)
 
         embed.colour = colour
-        embed.timestamp = timestamp_override or datetime.utcnow()
+        embed.timestamp = timestamp_override or datetime.now(tz=UTC)
 
         if footer:
             embed.set_footer(text=footer)
@@ -366,7 +365,7 @@ class ModLog(Cog, name="ModLog"):
         if member.guild.id != GuildConstant.id:
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(tz=UTC)
         difference = abs(relativedelta(now, member.created_at))
 
         message = format_user(member) + "\n\n**Account age:** " + time.humanize_delta(difference)
@@ -416,7 +415,7 @@ class ModLog(Cog, name="ModLog"):
         )
 
     @staticmethod
-    def get_role_diff(before: t.List[discord.Role], after: t.List[discord.Role]) -> t.List[str]:
+    def get_role_diff(before: list[discord.Role], after: list[discord.Role]) -> list[str]:
         """Return a list of strings describing the roles added and removed."""
         changes = []
         before_roles = set(before)
@@ -645,16 +644,16 @@ class ModLog(Cog, name="ModLog"):
             for diff_type, diff_words in itertools.groupby(diff, key=lambda s: s[0])
         )
 
-        content_before: t.List[str] = []
-        content_after: t.List[str] = []
+        content_before: list[str] = []
+        content_after: list[str] = []
 
         for index, (diff_type, words) in enumerate(diff_groups):
-            sub = ' '.join(words)
-            if diff_type == '-':
+            sub = " ".join(words)
+            if diff_type == "-":
                 content_before.append(f"[{sub}](http://o.hi)")
-            elif diff_type == '+':
+            elif diff_type == "+":
                 content_after.append(f"[{sub}](http://o.hi)")
-            elif diff_type == ' ':
+            elif diff_type == " ":
                 if len(words) > 2:
                     sub = (
                         f"{words[0] if index > 0 else ''}"

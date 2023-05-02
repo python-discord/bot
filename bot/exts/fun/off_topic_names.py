@@ -4,7 +4,6 @@ import difflib
 import json
 import random
 from functools import partial
-from typing import Optional
 
 from discord import ButtonStyle, Colour, Embed, HTTPException, Interaction
 from discord.abc import GuildChannel
@@ -69,7 +68,7 @@ class OffTopicNames(Cog):
             try:
                 num_names_to_fetch = len(remaining_channels)
                 new_channel_names: list = await self.bot.api_client.get(
-                    'bot/off-topic-channel-names', params={'random_items': num_names_to_fetch}
+                    "bot/off-topic-channel-names", params={"random_items": num_names_to_fetch}
                 )
                 if (num_fetched := len(new_channel_names)) < num_names_to_fetch:
                     # Handle when there's not enough names in the pool
@@ -146,7 +145,7 @@ class OffTopicNames(Cog):
                 name_or_names = "name"
                 is_or_are = "is an"
             else:
-                names = f"{', '.join(map(lambda name: f'`{name}`', failed_names[:-1]))} and `{failed_names[-1]}`"
+                names = f"{', '.join((f'`{name}`' for name in failed_names[:-1]))} and `{failed_names[-1]}`"
                 name_or_names = "names"
                 is_or_are = "are"
 
@@ -194,7 +193,7 @@ class OffTopicNames(Cog):
 
     async def list_ot_names(self, ctx: Context, active: bool = True) -> None:
         """Send an embed containing active/deactivated off-topic channel names."""
-        result = await self.bot.api_client.get('bot/off-topic-channel-names', params={'active': json.dumps(active)})
+        result = await self.bot.api_client.get("bot/off-topic-channel-names", params={"active": json.dumps(active)})
         lines = sorted(f"• {name}" for name in result)
         embed = Embed(
             title=f"{'Active' if active else 'Deactivated'} off-topic names (`{len(result)}` total)",
@@ -206,13 +205,13 @@ class OffTopicNames(Cog):
             embed.description = "Hmmm, seems like there's nothing here yet."
             await ctx.send(embed=embed)
 
-    @group(name='otname', aliases=('otnames', 'otn'), invoke_without_command=True)
+    @group(name="otname", aliases=("otnames", "otn"), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def otname_group(self, ctx: Context) -> None:
         """Add or list items from the off-topic channel name rotation."""
         await ctx.send_help(ctx.command)
 
-    @otname_group.command(name='add', aliases=('a',))
+    @otname_group.command(name="add", aliases=("a",))
     @has_any_role(*MODERATION_ROLES)
     async def add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """
@@ -220,7 +219,7 @@ class OffTopicNames(Cog):
 
         The name is not added if it is too similar to an existing name.
         """
-        existing_names = await self.bot.api_client.get('bot/off-topic-channel-names')
+        existing_names = await self.bot.api_client.get("bot/off-topic-channel-names")
         close_match = difflib.get_close_matches(name, existing_names, n=1, cutoff=0.8)
 
         if close_match:
@@ -235,7 +234,7 @@ class OffTopicNames(Cog):
         else:
             await self._add_name(ctx, name)
 
-    @otname_group.command(name='forceadd', aliases=('fa',))
+    @otname_group.command(name="forceadd", aliases=("fa",))
     @has_any_role(*MODERATION_ROLES)
     async def force_add_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Forcefully adds a new off-topic name to the rotation."""
@@ -243,35 +242,35 @@ class OffTopicNames(Cog):
 
     async def _add_name(self, ctx: Context, name: str) -> None:
         """Adds an off-topic channel name to the site storage."""
-        await self.bot.api_client.post('bot/off-topic-channel-names', params={'name': name})
+        await self.bot.api_client.post("bot/off-topic-channel-names", params={"name": name})
 
         log.info(f"{ctx.author} added the off-topic channel name '{name}'")
         await ctx.send(f":ok_hand: Added `{name}` to the names list.")
 
-    @otname_group.command(name='delete', aliases=('remove', 'rm', 'del', 'd'))
+    @otname_group.command(name="delete", aliases=("remove", "rm", "del", "d"))
     @has_any_role(*MODERATION_ROLES)
     async def delete_command(self, ctx: Context, *, name: OffTopicName) -> None:
         """Removes a off-topic name from the rotation."""
-        await self.bot.api_client.delete(f'bot/off-topic-channel-names/{name}')
+        await self.bot.api_client.delete(f"bot/off-topic-channel-names/{name}")
 
         log.info(f"{ctx.author} deleted the off-topic channel name '{name}'")
         await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
 
-    @otname_group.command(name='activate', aliases=('whitelist',))
+    @otname_group.command(name="activate", aliases=("whitelist",))
     @has_any_role(*MODERATION_ROLES)
     async def activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
         """Activate an existing off-topic name."""
         await self.toggle_ot_name_activity(ctx, name, True)
 
-    @otname_group.command(name='deactivate', aliases=('blacklist',))
+    @otname_group.command(name="deactivate", aliases=("blacklist",))
     @has_any_role(*MODERATION_ROLES)
     async def de_activate_ot_name(self, ctx: Context, name: OffTopicName) -> None:
         """Deactivate a specific off-topic name."""
         await self.toggle_ot_name_activity(ctx, name, False)
 
-    @otname_group.command(name='reroll')
+    @otname_group.command(name="reroll")
     @has_any_role(*MODERATION_ROLES)
-    async def re_roll_command(self, ctx: Context, ot_channel_index: Optional[int] = None) -> None:
+    async def re_roll_command(self, ctx: Context, ot_channel_index: int | None = None) -> None:
         """
         Re-roll an off-topic name for a specific off-topic channel and deactivate the current name.
 
@@ -296,7 +295,7 @@ class OffTopicNames(Cog):
         await self.de_activate_ot_name(ctx, old_ot_name)
 
         response = await self.bot.api_client.get(
-            'bot/off-topic-channel-names', params={'random_items': 1}
+            "bot/off-topic-channel-names", params={"random_items": 1}
         )
         try:
             new_channel_name = response[0]
@@ -361,7 +360,7 @@ class OffTopicNames(Cog):
 
             await ctx.message.reply(embed=embed, view=view)
 
-    @otname_group.group(name='list', aliases=('l',), invoke_without_command=True)
+    @otname_group.group(name="list", aliases=("l",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def list_command(self, ctx: Context) -> None:
         """
@@ -371,19 +370,19 @@ class OffTopicNames(Cog):
         """
         await self.active_otnames_command(ctx)
 
-    @list_command.command(name='active', aliases=('a',))
+    @list_command.command(name="active", aliases=("a",))
     @has_any_role(*MODERATION_ROLES)
     async def active_otnames_command(self, ctx: Context) -> None:
         """List active off-topic channel names."""
         await self.list_ot_names(ctx, True)
 
-    @list_command.command(name='deactivated', aliases=('d',))
+    @list_command.command(name="deactivated", aliases=("d",))
     @has_any_role(*MODERATION_ROLES)
     async def deactivated_otnames_command(self, ctx: Context) -> None:
         """List deactivated off-topic channel names."""
         await self.list_ot_names(ctx, False)
 
-    @otname_group.command(name='search', aliases=('s',))
+    @otname_group.command(name="search", aliases=("s",))
     @has_any_role(*MODERATION_ROLES)
     async def search_command(self, ctx: Context, *, query: OffTopicName) -> None:
         """Search for an off-topic name."""
@@ -392,11 +391,11 @@ class OffTopicNames(Cog):
         # Map normalized names to returned names for search purposes
         result = {
             OffTopicName.translate_name(name, from_unicode=False).lower(): name
-            for name in await self.bot.api_client.get('bot/off-topic-channel-names')
+            for name in await self.bot.api_client.get("bot/off-topic-channel-names")
         }
 
         # Search normalized keys
-        in_matches = {name for name in result.keys() if query in name}
+        in_matches = {name for name in result if query in name}
         close_matches = difflib.get_close_matches(query, result.keys(), n=10, cutoff=0.70)
 
         # Send Results

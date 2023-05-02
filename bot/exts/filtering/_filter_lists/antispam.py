@@ -40,7 +40,7 @@ class AntispamList(UniquesListBase):
 
     name = "antispam"
 
-    def __init__(self, filtering_cog: 'Filtering'):
+    def __init__(self, filtering_cog: "Filtering"):
         super().__init__(filtering_cog)
         self.message_deletion_queue: dict[Member, DeletionContext] = dict()
 
@@ -98,7 +98,7 @@ class AntispamList(UniquesListBase):
         if not current_infraction or new_infraction.infraction_type.value < current_infraction.value:
             # Pick the first triggered filter for the reason, there's no good way to decide between them.
             new_infraction.infraction_reason = (
-                f"{triggers[0].name.replace('_', ' ')} spam – {ctx.filter_info[triggers[0]]}"
+                f"{triggers[0].name.replace('_', ' ')} spam - {ctx.filter_info[triggers[0]]}"
             )
             current_actions[InfractionAndNotification.name] = new_infraction
             self.message_deletion_queue[ctx.author].current_infraction = new_infraction.infraction_type

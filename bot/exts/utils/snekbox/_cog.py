@@ -6,7 +6,7 @@ import re
 from functools import partial
 from operator import attrgetter
 from textwrap import dedent
-from typing import Literal, NamedTuple, Optional, TYPE_CHECKING
+from typing import Literal, NamedTuple, TYPE_CHECKING
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
@@ -85,12 +85,14 @@ NO_SNEKBOX_CHANNELS = (Channels.python_general,)
 NO_SNEKBOX_CATEGORIES = ()
 SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
 
-REDO_EMOJI = '\U0001f501'  # :repeat:
+REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
 PythonVersion = Literal["3.10", "3.11"]
 
-FilteredFiles = NamedTuple("FilteredFiles", [("allowed", list[FileAttachment]), ("blocked", list[FileAttachment])])
+class FilteredFiles(NamedTuple):
+    allowed: list[FileAttachment]
+    blocked: list[FileAttachment]
 
 
 class CodeblockConverter(Converter):
@@ -207,7 +209,7 @@ class Snekbox(Cog):
             return EvalResult.from_dict(await resp.json())
 
     @staticmethod
-    async def upload_output(output: str) -> Optional[str]:
+    async def upload_output(output: str) -> str | None:
         """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
@@ -330,7 +332,7 @@ class Snekbox(Cog):
             # This is done to make sure the last line of output contains the error
             # and the error is not manually printed by the author with a syntax error.
             if result.stdout.rstrip().endswith("EOFError: EOF when reading a line") and result.returncode == 1:
-                msg += ":warning: Note: `input` is not supported by the bot :warning:\n\n"
+                msg += "\n:warning: Note: `input` is not supported by the bot :warning:\n"
 
             # Skip output if it's empty and there are file uploads
             if result.stdout or not result.has_files:
@@ -433,13 +435,13 @@ class Snekbox(Cog):
         with contextlib.suppress(NotFound):
             try:
                 _, new_message = await self.bot.wait_for(
-                    'message_edit',
+                    "message_edit",
                     check=_predicate_message_edit,
                     timeout=REDO_TIMEOUT
                 )
                 await ctx.message.add_reaction(REDO_EMOJI)
                 await self.bot.wait_for(
-                    'reaction_add',
+                    "reaction_add",
                     check=_predicate_emoji_reaction,
                     timeout=10
                 )
@@ -466,12 +468,11 @@ class Snekbox(Cog):
 
             if job_name == "timeit":
                 return EvalJob(self.prepare_timeit_input(codeblocks))
-            else:
-                return EvalJob.from_code("\n".join(codeblocks))
+            return EvalJob.from_code("\n".join(codeblocks))
 
         return None
 
-    async def get_code(self, message: Message, command: Command) -> Optional[str]:
+    async def get_code(self, message: Message, command: Command) -> str | None:
         """
         Return the code from `message` to be evaluated.
 

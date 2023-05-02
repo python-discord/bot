@@ -7,14 +7,14 @@ import pkgutil
 import types
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cache
-from typing import Any, Iterable, TypeVar, Union, get_args, get_origin
+from typing import Any, Self, TypeVar, Union, get_args, get_origin
 
 import discord
 import regex
 from discord.ext.commands import Command
-from typing_extensions import Self
 
 import bot
 from bot.bot import Bot
@@ -25,9 +25,9 @@ INVISIBLE_RE = regex.compile(rf"[{VARIATION_SELECTORS}\p{{UNASSIGNED}}\p{{FORMAT
 ZALGO_RE = regex.compile(rf"[\p{{NONSPACING MARK}}\p{{ENCLOSING MARK}}--[{VARIATION_SELECTORS}]]", regex.V1)
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
-Serializable = Union[bool, int, float, str, list, dict, None]
+Serializable = bool | int | float | str | list | dict | None
 
 
 def subclasses_in_package(package: str, prefix: str, parent: T) -> set[T]:
@@ -74,12 +74,12 @@ def to_serializable(item: Any, *, ui_repr: bool = False) -> Serializable:
     `ui_repr` dictates whether to use the UI representation of `CustomIOField` instances (if any)
     or the DB-oriented representation.
     """
-    if isinstance(item, (bool, int, float, str, type(None))):
+    if isinstance(item, bool | int | float | str | type(None)):
         return item
     if isinstance(item, dict):
         result = {}
         for key, value in item.items():
-            if not isinstance(key, (bool, int, float, str, type(None))):
+            if not isinstance(key, bool | int | float | str | type(None)):
                 key = str(key)
             result[key] = to_serializable(value, ui_repr=ui_repr)
         return result
@@ -103,8 +103,7 @@ def resolve_mention(mention: str) -> str:
     else:
         if any(mention == role.id for role in guild.roles):
             return f"<@&{mention}>"
-        else:
-            return f"<@{mention}>"
+        return f"<@{mention}>"
 
     # It's a name
     for role in guild.roles:
@@ -121,14 +120,14 @@ def repr_equals(override: Any, default: Any) -> bool:
     if override is None:  # It's not an override
         return True
 
-    override_is_sequence = isinstance(override, (tuple, list, set))
-    default_is_sequence = isinstance(default, (tuple, list, set))
+    override_is_sequence = isinstance(override, tuple | list | set)
+    default_is_sequence = isinstance(default, tuple | list | set)
     if override_is_sequence != default_is_sequence:  # One is a sequence and the other isn't.
         return False
     if override_is_sequence:
         if len(override) != len(default):
             return False
-        return all(str(item1) == str(item2) for item1, item2 in zip(set(override), set(default)))
+        return all(str(item1) == str(item2) for item1, item2 in zip(set(override), set(default), strict=True))
     return str(override) == str(default)
 
 
@@ -139,8 +138,7 @@ def normalize_type(type_: type, *, prioritize_nonetype: bool = True) -> type:
         if type(None) in args:
             if prioritize_nonetype:
                 return type(None)
-            else:
-                args = tuple(set(args) - {type(None)})
+            args = tuple(set(args) - {type(None)})
         type_ = args[0]  # Pick one, doesn't matter
     if origin := get_origin(type_):  # In case of a parameterized List, Set, Dict etc.
         return origin
@@ -176,10 +174,9 @@ class FieldRequiring(ABC):
     def __init_subclass__(cls, **kwargs):
         def inherited(attr: str) -> bool:
             """True if `attr` was inherited from a parent class."""
-            for parent in cls.__mro__[1:-1]:  # The first element is the class itself, last element is object.
-                if hasattr(parent, attr):  # The attribute was inherited.
-                    return True
-            return False
+            # The first element of cls.__mro__ is the class itself, last element is object, skip those.
+            # hasattr(parent, attr) means the attribute was inherited.
+            return any(hasattr(parent, attr) for parent in cls.__mro__[1:-1])
 
         # If a new attribute with the value MUST_SET_UNIQUE was defined in an abstract class, record it.
         if inspect.isabstract(cls):
@@ -196,18 +193,18 @@ class FieldRequiring(ABC):
             value = getattr(cls, attribute)
             if value is FieldRequiring.MUST_SET and inherited(attribute):
                 raise ValueError(f"You must set attribute {attribute!r} when creating {cls!r}")
-            elif value is FieldRequiring.MUST_SET_UNIQUE and inherited(attribute):
+            if value is FieldRequiring.MUST_SET_UNIQUE and inherited(attribute):
                 raise ValueError(f"You must set a unique value to attribute {attribute!r} when creating {cls!r}")
-            else:
-                # Check if the value needs to be unique.
-                for parent in cls.__mro__[1:-1]:
-                    # Find the parent class the attribute was first defined in.
-                    if attribute in FieldRequiring.__unique_attributes[parent]:
-                        if value in FieldRequiring.__unique_attributes[parent][attribute]:
-                            raise ValueError(f"Value of {attribute!r} in {cls!r} is not unique for parent {parent!r}.")
-                        else:
-                            # Add to the set of unique values for that field.
-                            FieldRequiring.__unique_attributes[parent][attribute].add(value)
+
+            # Check if the value needs to be unique.
+            for parent in cls.__mro__[1:-1]:
+                # Find the parent class the attribute was first defined in.
+                if attribute in FieldRequiring.__unique_attributes[parent]:
+                    if value in FieldRequiring.__unique_attributes[parent][attribute]:
+                        raise ValueError(f"Value of {attribute!r} in {cls!r} is not unique for parent {parent!r}.")
+
+                    # Add to the set of unique values for that field.
+                    FieldRequiring.__unique_attributes[parent][attribute].add(value)
 
 
 @dataclass

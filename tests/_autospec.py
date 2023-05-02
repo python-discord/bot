@@ -2,7 +2,7 @@ import contextlib
 import functools
 import pkgutil
 import unittest.mock
-from typing import Callable
+from collections.abc import Callable
 
 
 @functools.wraps(unittest.mock._patch.decoration_helper)

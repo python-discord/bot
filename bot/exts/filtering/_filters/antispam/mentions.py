@@ -26,7 +26,7 @@ class ExtraMentionsSettings(BaseModel):
     threshold: int = 5
 
 
-class DuplicatesFilter(UniqueFilter):
+class MentionsFilter(UniqueFilter):
     """
     Detects total mentions exceeding the limit sent by a single user.
 
@@ -72,7 +72,7 @@ class DuplicatesFilter(UniqueFilter):
                             resolved.message_id
                         )
                     except NotFound:
-                        log.info('Could not fetch the reference message as it has been deleted.')
+                        log.info("Could not fetch the reference message as it has been deleted.")
 
                 if resolved and not isinstance(resolved, DeletedReferencedMessage):
                     reply_author = resolved.author

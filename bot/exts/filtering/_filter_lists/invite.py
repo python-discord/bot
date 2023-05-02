@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import typing
 
 from discord import Embed, Invite
@@ -16,6 +17,13 @@ from bot.exts.filtering._utils import clean_input
 
 if typing.TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
+
+
+REFINED_INVITE_CODE = re.compile(
+    r"(?P<invite>[a-zA-Z0-9/]+)"  # The supposedly real invite code.
+    r"(?:[^a-zA-Z0-9/].*)?"       # Ignoring anything that may come after an invalid character.
+    r"$"                          # Up until the end of the string.
+)
 
 
 class InviteList(FilterList[InviteFilter]):
@@ -63,6 +71,15 @@ class InviteList(FilterList[InviteFilter]):
             return None, [], {}
         all_triggers = {}
 
+        refined_invites = {}
+        for invite_code in invite_codes:
+            # Attempt to overcome an obfuscated invite.
+            # If the result is incorrect, it won't make the whitelist more permissive or the blacklist stricter.
+            refined_invite_code = invite_code
+            if match := REFINED_INVITE_CODE.search(invite_code):
+                refined_invite_code = match.group("invite")
+            refined_invites[invite_code] = refined_invite_code
+
         _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
         # If the allowed list doesn't operate in the context, unknown invites are allowed.
         check_if_allowed = not failed
@@ -70,7 +87,7 @@ class InviteList(FilterList[InviteFilter]):
         # Sort the invites into two categories:
         invites_for_inspection = dict()  # Found guild invites requiring further inspection.
         unknown_invites = dict()  # Either don't resolve or group DMs.
-        for invite_code in invite_codes:
+        for invite_code in refined_invites.values():
             try:
                 invite = await bot.instance.fetch_invite(invite_code)
             except NotFound:
@@ -126,7 +143,7 @@ class InviteList(FilterList[InviteFilter]):
             all_triggers[ListType.DENY] = triggered
 
         blocked_invites |= unknown_invites
-        ctx.matches += {match[0] for match in matches if match.group("invite") in blocked_invites}
+        ctx.matches += {match[0] for match in matches if refined_invites.get(match.group("invite")) in blocked_invites}
         ctx.alert_embeds += (self._guild_embed(invite) for invite in blocked_invites.values() if invite)
         messages = self[ListType.DENY].format_messages(triggered)
         messages += [

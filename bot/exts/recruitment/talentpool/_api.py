@@ -112,3 +112,24 @@ class NominationAPI:
         }
         result = await self.site_api.post("bot/nominations", json=data)
         return Nomination.parse_obj(result)
+
+    async def get_activity(
+        self,
+        user_ids: list[int],
+        *,
+        days: int,
+    ) -> dict[int, int]:
+        """
+        Get the number of messages sent in the past `days` days by users with the given IDs.
+
+        Returns a dictionary mapping user ID to message count.
+        """
+        if not user_ids:
+            return {}
+
+        result = await self.site_api.post(
+            "bot/users/metricity_activity_data",
+            json=user_ids,
+            params={"days": str(days)}
+        )
+        return {int(user_id): message_count for user_id, message_count in result.items()}

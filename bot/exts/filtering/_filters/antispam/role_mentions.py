@@ -21,7 +21,7 @@ class ExtraRoleMentionsSettings(BaseModel):
     threshold: int = 3
 
 
-class DuplicatesFilter(UniqueFilter):
+class RoleMentionsFilter(UniqueFilter):
     """Detects too many role mentions sent by a single user."""
 
     name = "role_mentions"
