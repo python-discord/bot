@@ -5,7 +5,7 @@ embed:
 
 Registering the `on_message` event with [`@bot.event`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.event) will override the default behavior of the event. This may cause prefix commands to stop working, because they rely on the default `on_message` event handler.
 
-Instead, use [`@bot.listen`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.listen) to add a listener. Listeners get added alongside the default `on_message` event, rather than overriding it, so prefix commands can still be invoked as usual:
+Instead, use [`@bot.listen`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.listen) to add a listener. Listeners get added alongside the default `on_message` handler which allows you to have multiple handlers for the same event. This means prefix commands can still be invoked as usual. Here's an example:
 ```python
 @bot.listen()
 async def on_message(message):
