@@ -7,16 +7,16 @@ Registering the `on_message` event with [`@bot.event`](https://discordpy.readthe
 
 Instead, use [`@bot.listen`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.listen) to add a listener. Listeners get added alongside the default `on_message` event, rather than overriding it, so prefix commands can still be invoked as usual:
 ```python
-# Method 1
-@bot.listen('on_message')
-async def message_listener(message):
-    ...  # do stuff here
-
-# Method 2
 @bot.listen()
 async def on_message(message):
+    ...  # do stuff here
+
+# Or...
+
+@bot.listen('on_message')
+async def message_listener(message):
     ...  # do stuff here
 ```
 You can also tell discord.py to process the message for commands as usual at the end of the `on_message` handler with [`bot.process_commands()`](https://discordpy.readthedocs.io/en/stable/ext/commands/api.html#discord.ext.commands.Bot.process_commands). However, this method isn't recommended as it does not allow you to add multiple `on_message` handlers.
 
-If your prefix commands are still not working, it may be because you haven't enabled the `message_content` intent. See `!tag message_content` for more info.
+If your prefix commands are still not working, it may be because you haven't enabled the `message_content` intent. See `/tag message_content` for more info.
