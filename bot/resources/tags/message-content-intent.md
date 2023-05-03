@@ -16,3 +16,4 @@ intents.message_content = True # enable message content intents
 
 bot = commands.Bot(command_prefix="!", intents=intents) # actually pass it into the constructor
 ```
+For more information on intents, see `/tag intents`. If prefix commands are still not working, see `/tag on-message-event`.
