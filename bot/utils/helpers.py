@@ -1,8 +1,14 @@
 from abc import ABCMeta
 from urllib.parse import urlparse
 
+from discord import Message
+from discord.errors import Forbidden
 from discord.ext.commands import CogMeta
 from tldextract import extract
+
+from bot.log import get_logger
+
+log = get_logger(__name__)
 
 
 class CogABCMeta(CogMeta, ABCMeta):
@@ -41,3 +47,19 @@ def remove_subdomain_from_url(url: str) -> str:
     netloc = extracted_url.registered_domain
     parsed_url = parsed_url._replace(netloc=netloc)
     return parsed_url.geturl()
+
+
+async def try_handle_forbidden(error: Forbidden, message: Message | None = None) -> bool:
+    """Attempts to handle `discord.Forbidden` errors, returning `True` if successful else `False`."""
+    if error.code == 90001:
+        # Occurs when the bot attempted to add a reaction
+        # to a message from a user that has blocked the bot.
+        log.debug("Failed to add reaction to a message since the message author has blocked the bot")
+        if message:
+            await message.channel.send(
+                f":x: {message.author.mention} failed to add reactions to your message as you've blocked me.",
+                delete_after=30
+            )
+
+        return True
+    return False

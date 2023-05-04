@@ -1,12 +1,16 @@
 import asyncio
+from sys import exc_info
+from traceback import format_exception
 
 import aiohttp
+from discord.errors import Forbidden
 from pydis_core import BotBase
 from pydis_core.utils import scheduling
 from sentry_sdk import push_scope
 
 from bot import constants, exts
 from bot.log import get_logger
+from bot.utils.helpers import try_handle_forbidden
 
 log = get_logger("bot")
 
@@ -52,6 +56,21 @@ class Bot(BotBase):
 
     async def on_error(self, event: str, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""
+        e_type, e_val, e_tb = exc_info()
+
+        if e_type is Forbidden:
+            event_to_message_indx = {
+                "on_message": 0,
+                "on_message_edit": 1
+            }
+            message = None
+            if (message_indx_in_args := event_to_message_indx.get(event)) is not None:
+                message = args[message_indx_in_args]
+
+            if await try_handle_forbidden(e_val, message):
+                # Error was handled so return
+                return
+
         self.stats.incr(f"errors.event.{event}")
 
         with push_scope() as scope:
@@ -59,4 +78,5 @@ class Bot(BotBase):
             scope.set_extra("args", args)
             scope.set_extra("kwargs", kwargs)
 
-            log.exception(f"Unhandled exception in {event}.")
+            formatted_exc = "\n".join(format_exception(e_type, e_val, e_tb))
+            log.exception(f"Unhandled exception in {event}: {formatted_exc}.")
