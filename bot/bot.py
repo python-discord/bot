@@ -1,6 +1,5 @@
 import asyncio
-from sys import exc_info
-from traceback import format_exception
+from sys import exception
 
 import aiohttp
 from discord.errors import Forbidden
@@ -56,9 +55,9 @@ class Bot(BotBase):
 
     async def on_error(self, event: str, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""
-        e_type, e_val, e_tb = exc_info()
+        e_val = exception()
 
-        if e_type is Forbidden:
+        if isinstance(e_val, Forbidden):
             event_to_message_indx = {
                 "on_message": 0,
                 "on_message_edit": 1
@@ -78,5 +77,4 @@ class Bot(BotBase):
             scope.set_extra("args", args)
             scope.set_extra("kwargs", kwargs)
 
-            formatted_exc = "\n".join(format_exception(e_type, e_val, e_tb))
-            log.exception(f"Unhandled exception in {event}: {formatted_exc}.")
+            log.exception(f"Unhandled exception in {event}.")
