@@ -49,17 +49,23 @@ def remove_subdomain_from_url(url: str) -> str:
     return parsed_url.geturl()
 
 
-async def try_handle_forbidden(error: Forbidden, message: Message | None = None) -> bool:
-    """Attempts to handle `discord.Forbidden` errors, returning `True` if successful else `False`."""
+async def handle_forbidden_from_block(error: Forbidden, message: Message | None = None) -> None:
+    """Handles `discord.Forbidden` 90001 errors, or re-raises if `error` isn't the wanted error."""
     if error.code == 90001:
         # Occurs when the bot attempted to add a reaction
         # to a message from a user that has blocked the bot.
-        log.debug("Failed to add reaction to a message since the message author has blocked the bot")
         if message:
+            log.info(
+                "Failed to add reaction to message %d-%d since the message author (%d) has blocked the bot",
+                message.channel.id,
+                message.id,
+                message.author.id,
+            )
             await message.channel.send(
-                f":x: {message.author.mention} failed to add reactions to your message as you've blocked me.",
+                f":x: {message.author.mention} failed to add reaction(s) to your message as you've blocked me.",
                 delete_after=30
             )
-
-        return True
-    return False
+        else:
+            log.info("Failed to add reaction(s) to a message since the message author has blocked the bot")
+    else:
+        raise error

@@ -9,7 +9,7 @@ from sentry_sdk import push_scope
 
 from bot import constants, exts
 from bot.log import get_logger
-from bot.utils.helpers import try_handle_forbidden
+from bot.utils.helpers import handle_forbidden_from_block
 
 log = get_logger("bot")
 
@@ -58,16 +58,14 @@ class Bot(BotBase):
         e_val = exception()
 
         if isinstance(e_val, Forbidden):
-            event_to_message_indx = {
-                "on_message": 0,
-                "on_message_edit": 1
-            }
-            message = None
-            if (message_indx_in_args := event_to_message_indx.get(event)) is not None:
-                message = args[message_indx_in_args]
-
-            if await try_handle_forbidden(e_val, message):
-                # Error was handled so return
+            message = args[0] if event == "on_message" else args[1] if event == "on_message_edit" else None
+            try:
+                await handle_forbidden_from_block(e_val, message)
+            except Forbidden:
+                # Error wasn't handled, so handle below
+                pass
+            else:
+                # Error was handled, so return
                 return
 
         self.stats.incr(f"errors.event.{event}")
