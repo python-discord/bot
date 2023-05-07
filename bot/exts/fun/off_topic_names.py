@@ -3,6 +3,7 @@ import datetime
 import difflib
 import json
 import random
+from collections import defaultdict
 from functools import partial
 
 from discord import ButtonStyle, Colour, Embed, HTTPException, Interaction
@@ -60,7 +61,7 @@ class OffTopicNames(Cog):
         await self.bot.wait_until_guild_available()
 
         channels = [await get_or_fetch_channel(channel_id) for channel_id in CHANNELS]
-        failed_renames = {}
+        failed_renames = defaultdict(list)
         successfully_renamed = set()
         for attempt in range(MAX_RENAME_ATTEMPTS):
             # Get the necessary amount of new channel names
@@ -113,7 +114,7 @@ class OffTopicNames(Cog):
                         # The error isn't the one we want to handle so re-raise
                         raise e
 
-                    failed_renames[channel_indx] = failed_renames.get(channel_indx, []) + [new_channel_name]
+                    failed_renames[channel_indx] += [new_channel_name]
                     # Deactivate the name since it's not valid
                     log.info(
                         f"Deactiving off-topic name {new_channel_name} as "
