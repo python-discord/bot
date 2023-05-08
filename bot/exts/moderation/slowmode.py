@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from dateutil.relativedelta import relativedelta
 from discord import TextChannel, Thread
@@ -20,7 +20,7 @@ COMMONLY_SLOWMODED_CHANNELS = {
     Channels.off_topic_0: "ot0",
 }
 
-MessageHolder = Optional[TextChannel | Thread]
+MessageHolder = TextChannel | Thread | None
 
 
 class Slowmode(Cog):
