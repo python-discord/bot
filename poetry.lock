@@ -545,14 +545,14 @@ optimize = ["orjson"]
 
 [[package]]
 name = "discord-py"
-version = "2.2.2"
+version = "2.2.3"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "discord.py-2.2.2-py3-none-any.whl", hash = "sha256:38fc52a784727b8e5e5749267089400035b187a009028eddfabeb182abcc6d52"},
-    {file = "discord.py-2.2.2.tar.gz", hash = "sha256:b9944056bcb5711b2d04088848fd004466cf117c15c84fa798bf55470f28275f"},
+    {file = "discord.py-2.2.3-py3-none-any.whl", hash = "sha256:792bdcfe71cfe013c446cf379b2e83e08b5050604322ad6fb592864e63511abd"},
+    {file = "discord.py-2.2.3.tar.gz", hash = "sha256:f9df95795c6f52c5db43b7ab43634993e12ef233288636a759166dd9c134d077"},
 ]
 
 [package.dependencies]
@@ -1465,20 +1465,20 @@ email = ["email-validator (>=1.0.3)"]
 
 [[package]]
 name = "pydis-core"
-version = "9.5.1"
+version = "9.6.0"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 category = "main"
 optional = false
 python-versions = ">=3.10.0,<3.12.0"
 files = [
-    {file = "pydis_core-9.5.1-py3-none-any.whl", hash = "sha256:50bbf1800fe228dd60ba6624615815f45139c105512ef701c556ee7dedaa91eb"},
-    {file = "pydis_core-9.5.1.tar.gz", hash = "sha256:83b89117def529c8b130f22c9f8cd46211df6329b039eedd5020098e656aa198"},
+    {file = "pydis_core-9.6.0-py3-none-any.whl", hash = "sha256:284b4587a124956220c186a3f774430cf1654d721c3c239640a204a53a567434"},
+    {file = "pydis_core-9.6.0.tar.gz", hash = "sha256:a88fcb2f2c2b16fa256228b684980b7f8aec7ee75a07e5868c69eb4a2162960b"},
 ]
 
 [package.dependencies]
 aiodns = "3.0.0"
 async-rediscache = {version = "1.0.0rc2", extras = ["fakeredis"], optional = true, markers = "extra == \"async-rediscache\""}
-"discord.py" = "2.2.2"
+"discord.py" = "2.2.3"
 statsd = "4.0.1"
 
 [package.extras]
@@ -2290,4 +2290,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "e57b088f4aef7a5dbb7a7de2a0571a27b497bcfd367c905bc7f5b0341dd46007"
+content-hash = "a21b885529047e783dcd0a12b13dc39f5f694ea966d590135ae2bc141f5f5112"
