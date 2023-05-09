@@ -114,7 +114,7 @@ class OffTopicNames(Cog):
                         # The error isn't the one we want to handle so re-raise
                         raise e
 
-                    failed_renames[channel_indx] += [new_channel_name]
+                    failed_renames[channel_indx].append(new_channel_name)
                     # Deactivate the name since it's not valid
                     log.info(
                         f"Deactiving off-topic name {new_channel_name} as "
