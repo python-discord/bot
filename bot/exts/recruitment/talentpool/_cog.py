@@ -476,7 +476,7 @@ class TalentPool(Cog, name="Talentpool"):
                 await ctx.send(f":x: {target.mention} doesn't have an active nomination.")
                 return
 
-        log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {repr(reason)}")
+        log.trace(f"Changing reason for nomination with id {nomination_id} of actor {actor} to {reason!r}")
 
         try:
             nomination = await self.api.edit_nomination_entry(nomination_id, actor_id=actor.id, reason=reason)
@@ -500,7 +500,7 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(f":x: The reason's length must not exceed {REASON_MAX_CHARS} characters.")
             return
 
-        log.trace(f"Changing end reason for nomination with id {nomination_id} to {repr(reason)}")
+        log.trace(f"Changing end reason for nomination with id {nomination_id} to {reason!r}")
         try:
             nomination = await self.api.edit_nomination(nomination_id, end_reason=reason)
         except ResponseCodeError as e:

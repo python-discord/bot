@@ -42,7 +42,7 @@ class PasteTests(unittest.IsolatedAsyncioTestCase):
         self.bot.http_session.post.return_value.__aenter__.return_value = response
 
         for expected_output, extension in test_cases:
-            with self.subTest(msg=f"Send contents with extension {repr(extension)}"):
+            with self.subTest(msg=f"Send contents with extension {extension!r}"):
                 self.assertEqual(
                     await send_to_paste_service("", extension=extension),
                     expected_output
