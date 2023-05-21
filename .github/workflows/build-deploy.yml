@@ -2,7 +2,7 @@ name: Build & Deploy
 
 env:
   # Used to determine whether we should push & deploy the docker image.
-  IS_MAIN_REF: ${{ github.ref == github.event.repository.default_branch }}
+  IS_MAIN_REF: ${{ github.ref == 'refs/heads/main'}}
 
 on:
   workflow_call:
