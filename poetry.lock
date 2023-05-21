@@ -2109,14 +2109,14 @@ tomli = {version = ">=2.0.1,<3.0.0", markers = "python_version >= \"3.7\" and py
 
 [[package]]
 name = "tldextract"
-version = "3.4.1"
+version = "3.4.4"
 description = "Accurately separates a URL's subdomain, domain, and public suffix, using the Public Suffix List (PSL). By default, this includes the public ICANN TLDs and their exceptions. You can optionally support the Public Suffix List's private domains as well."
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "tldextract-3.4.1-py3-none-any.whl", hash = "sha256:26f646987b01ae2946e7491cce4aaf54129f3489a196a274e6c843ec72968313"},
-    {file = "tldextract-3.4.1.tar.gz", hash = "sha256:fa9e50c4a03bede2a1d95dca620d661678484626858ccf388cf9671a0dd497a4"},
+    {file = "tldextract-3.4.4-py3-none-any.whl", hash = "sha256:581e7dbefc90e7bb857bb6f768d25c811a3c5f0892ed56a9a2999ddb7b1b70c2"},
+    {file = "tldextract-3.4.4.tar.gz", hash = "sha256:5fe3210c577463545191d45ad522d3d5e78d55218ce97215e82004dcae1e1234"},
 ]
 
 [package.dependencies]
@@ -2290,4 +2290,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "9406cfb663f4b4c5cdf4aa8c1893323a39125009f6fe1c25c4b2b34f1a3fa990"
+content-hash = "042f0d95da21dcd40821faa497924f11bf037531058bded14e1625bed93fdb53"
