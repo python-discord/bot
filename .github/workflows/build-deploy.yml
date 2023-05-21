@@ -1,9 +1,5 @@
 name: Build & Deploy
 
-env:
-  # Used to determine whether we should push & deploy the docker image.
-  IS_MAIN_REF: ${{ github.ref == 'refs/heads/main'}}
-
 on:
   workflow_call:
     inputs:
@@ -48,7 +44,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: $IS_MAIN_REF
+          push: ${{ github.ref == 'refs/heads/main' }}
           cache-from: type=registry,ref=ghcr.io/python-discord/bot:latest
           cache-to: type=inline
           tags: |
@@ -61,7 +57,7 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
-    if: $IS_MAIN_REF
+    if: ${{ github.ref == 'refs/heads/main' }}
     environment: production
     steps:
       - name: Checkout Kubernetes repository
