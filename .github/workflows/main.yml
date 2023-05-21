@@ -31,7 +31,6 @@ jobs:
 
 
   build-deploy:
-    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-deploy.yml
     needs:
       - lint-test
