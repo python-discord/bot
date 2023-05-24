@@ -292,7 +292,7 @@ class LinePaginator(Paginator):
 
         for emoji in PAGINATION_EMOJI:
             # Add all the applicable emoji to the message
-            log.trace(f"Adding reaction: {repr(emoji)}")
+            log.trace(f"Adding reaction: {emoji!r}")
             await message.add_reaction(emoji)
 
         check = partial(
