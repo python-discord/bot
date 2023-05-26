@@ -777,14 +777,14 @@ socks = ["socksio (>=1.0.0,<2.0.0)"]
 
 [[package]]
 name = "httpx"
-version = "0.24.0"
+version = "0.24.1"
 description = "The next generation HTTP client."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "httpx-0.24.0-py3-none-any.whl", hash = "sha256:447556b50c1921c351ea54b4fe79d91b724ed2b027462ab9a329465d147d5a4e"},
-    {file = "httpx-0.24.0.tar.gz", hash = "sha256:507d676fc3e26110d41df7d35ebd8b3b8585052450f4097401c9be59d928c63e"},
+    {file = "httpx-0.24.1-py3-none-any.whl", hash = "sha256:06781eb9ac53cde990577af654bd990a4949de37a28bdb4a230d434f3a30b9bd"},
+    {file = "httpx-0.24.1.tar.gz", hash = "sha256:5853a43053df830c20f8110c5e69fe44d035d850b2dfe795e196f00fdb774bdd"},
 ]
 
 [package.dependencies]
@@ -2291,4 +2291,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "ac58ffc15a780011227c6ff9d2b897e0295658c9c8271aea33ba12145f92ff8d"
+content-hash = "a33a37061a161838167a90b25d753f1ff8e1d9a70eb6cba35eee78177d7f7d73"
