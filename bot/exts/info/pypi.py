@@ -1,8 +1,11 @@
 import itertools
 import random
 import re
+import typing
 from contextlib import suppress
+from datetime import datetime
 
+import arrow
 from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
 from discord.utils import escape_markdown
@@ -22,6 +25,12 @@ INVALID_INPUT_DELETE_DELAY = RedirectOutput.delete_delay
 
 log = get_logger(__name__)
 
+def _get_latest_distribution_timestamp(data: dict[str, typing.Any]) -> datetime | None:
+    """Get upload time of last distribution, or `None` if no distributions were found."""
+    if not data["urls"]:
+        return None
+
+    return max(arrow.get(dist["upload_time"]) for dist in data["urls"]).datetime
 
 class PyPi(Cog):
     """Cog for getting information about PyPi packages."""
@@ -62,6 +71,10 @@ class PyPi(Cog):
                         embed.description = escape_markdown(summary)
                     else:
                         embed.description = "No summary provided."
+
+                    upload_time = _get_latest_distribution_timestamp(response_json)
+                    if upload_time:
+                        embed.timestamp = upload_time
 
                     error = False
 
