@@ -477,8 +477,7 @@ class _BaseURLs(EnvConfig):
     EnvConfig.Config.env_prefix = "urls_"
 
     # Snekbox endpoints
-    snekbox_eval_api = "http://snekbox-310.default.svc.cluster.local/eval"
-    snekbox_311_eval_api = "http://snekbox.default.svc.cluster.local/eval"
+    snekbox_eval_api = "http://snekbox.default.svc.cluster.local/eval"
 
     # Discord API
     discord_api = "https://discordapp.com/api/v7/"
