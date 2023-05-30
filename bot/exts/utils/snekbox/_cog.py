@@ -88,7 +88,7 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-PythonVersion = Literal["3.10", "3.11"]
+SupportedPythonVersions = Literal["3.11"]
 
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
@@ -137,7 +137,7 @@ class PythonVersionSwitcherButton(ui.Button):
 
     def __init__(
         self,
-        version_to_switch_to: PythonVersion,
+        version_to_switch_to: SupportedPythonVersions,
         snekbox_cog: Snekbox,
         ctx: Context,
         job: EvalJob,
@@ -176,12 +176,12 @@ class Snekbox(Cog):
 
     def build_python_version_switcher_view(
         self,
-        current_python_version: PythonVersion,
+        current_python_version: SupportedPythonVersions,
         ctx: Context,
         job: EvalJob,
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
-        alt_python_version: PythonVersion
+        alt_python_version: SupportedPythonVersions
         if current_python_version == "3.10":
             alt_python_version = "3.11"
         else:
@@ -200,14 +200,9 @@ class Snekbox(Cog):
 
     async def post_job(self, job: EvalJob) -> EvalResult:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
-        if job.version == "3.10":
-            url = URLs.snekbox_eval_api
-        else:
-            url = URLs.snekbox_311_eval_api
-
         data = job.to_dict()
 
-        async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
+        async with self.bot.http_session.post(URLs.snekbox_eval_api, json=data, raise_for_status=True) as resp:
             return EvalResult.from_dict(await resp.json())
 
     @staticmethod
@@ -546,7 +541,7 @@ class Snekbox(Cog):
     async def eval_command(
         self,
         ctx: Context,
-        python_version: PythonVersion | None,
+        python_version: SupportedPythonVersions | None,
         *,
         code: CodeblockConverter
     ) -> None:
@@ -585,7 +580,7 @@ class Snekbox(Cog):
     async def timeit_command(
         self,
         ctx: Context,
-        python_version: PythonVersion | None,
+        python_version: SupportedPythonVersions | None,
         *,
         code: CodeblockConverter
     ) -> None:
