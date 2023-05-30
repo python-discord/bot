@@ -185,13 +185,15 @@ class Snekbox(Cog):
         if current_python_version == "3.10":
             alt_python_version = "3.11"
         else:
-            alt_python_version = "3.10"
+            alt_python_version = "3.10"  # noqa: F841
 
         view = interactions.ViewWithUserAndRoleCheck(
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
         )
-        view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
+        # Temp disabled until snekbox multi-version support is complete
+        # https://github.com/python-discord/snekbox/issues/158
+        # view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
         view.add_item(interactions.DeleteMessageButton())
 
         return view
