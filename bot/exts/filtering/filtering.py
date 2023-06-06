@@ -233,6 +233,9 @@ class Filtering(Cog):
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         """Filter the contents of an edited message. Don't reinvoke filters already invoked on the `before` version."""
+        if before.author.bot or before.webhook_id or before.type == MessageType.auto_moderation_action:
+            return
+
         # Only check changes to the message contents/attachments and embed additions, not pin status etc.
         if all((
             before.content == after.content,  # content hasn't changed
@@ -257,7 +260,7 @@ class Filtering(Cog):
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
         """Checks for bad words in usernames when users join, switch or leave a voice channel."""
         ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
-        await self._check_bad_name(ctx)
+        await self._check_bad_display_name(ctx)
 
     @Cog.listener()
     async def on_thread_create(self, thread: Thread) -> None:

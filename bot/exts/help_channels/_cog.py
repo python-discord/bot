@@ -68,7 +68,7 @@ class HelpForum(commands.Cog):
         """
         Make the help post this command was called in dormant.
 
-        May only be invoked by the channel's claimant or by staff.
+        May only be invoked by the channel's claimant or by mods+.
         """
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):

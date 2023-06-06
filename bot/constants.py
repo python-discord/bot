@@ -339,7 +339,7 @@ class _HelpChannels(EnvConfig):
     idle_minutes = 30
     deleted_idle_minutes = 5
     # Roles which are allowed to use the command which makes channels dormant
-    cmd_whitelist: list[int] = [Roles.helpers]
+    cmd_whitelist = Guild.moderation_roles
 
 
 HelpChannels = _HelpChannels()
@@ -477,8 +477,7 @@ class _BaseURLs(EnvConfig):
     EnvConfig.Config.env_prefix = "urls_"
 
     # Snekbox endpoints
-    snekbox_eval_api = "http://snekbox-310.default.svc.cluster.local/eval"
-    snekbox_311_eval_api = "http://snekbox.default.svc.cluster.local/eval"
+    snekbox_eval_api = "http://snekbox.default.svc.cluster.local/eval"
 
     # Discord API
     discord_api = "https://discordapp.com/api/v7/"
@@ -525,6 +524,9 @@ class _Emojis(EnvConfig):
     badge_partner = "<:partner:748666453242413136>"
     badge_staff = "<:discord_staff:743882896498098226>"
     badge_verified_bot_developer = "<:verified_bot_dev:743882897299210310>"
+    badge_discord_certified_moderator = "<:discord_certified_moderator:1114130029547364434>"
+    badge_bot_http_interactions = "<:bot_http_interactions:1114130379754975283>"
+    badge_active_developer = "<:active_developer:1114130031036338176>"
     verified_bot = "<:verified_bot:811645219220750347>"
     bot = "<:bot:812712599464443914>"
 
