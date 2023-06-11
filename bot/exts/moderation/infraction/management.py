@@ -309,7 +309,8 @@ class ModManagement(commands.Cog):
             title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
-        prefix = f"{user.mention} - {user.id}"
+        # Manually form mention from ID as discord.Object doesn't have a `.mention` attr
+        prefix = f"<@{user.id}> - {user.id}"
         await self.send_infraction_list(ctx, embed, infraction_list, prefix, ("user",))
 
     @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))

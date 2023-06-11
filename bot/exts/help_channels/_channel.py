@@ -59,7 +59,12 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
             message = closed_post.owner.mention
 
     await closed_post.send(message, embed=embed)
-    await closed_post.edit(archived=True, locked=True, reason="Locked a closed help post")
+    await closed_post.edit(
+        name=f"🔒 {closed_post.name}"[:100],
+        archived=True,
+        locked=True,
+        reason="Locked a closed help post",
+    )
 
     _stats.report_post_count()
     await _stats.report_complete_session(closed_post, closing_reason)
