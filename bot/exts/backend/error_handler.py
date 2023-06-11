@@ -4,6 +4,7 @@ import difflib
 from discord import Embed, Forbidden, Member
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import push_scope
 
 from bot.bot import Bot
@@ -11,7 +12,6 @@ from bot.constants import Colours, Icons, MODERATION_ROLES
 from bot.errors import InvalidInfractedUserError, LockedResourceError
 from bot.log import get_logger
 from bot.utils.checks import ContextCheckFailure
-from bot.utils.helpers import handle_forbidden_from_block
 
 log = get_logger(__name__)
 

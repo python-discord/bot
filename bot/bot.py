@@ -5,11 +5,11 @@ import aiohttp
 from discord.errors import Forbidden
 from pydis_core import BotBase
 from pydis_core.utils import scheduling
+from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import push_scope
 
 from bot import constants, exts
 from bot.log import get_logger
-from bot.utils.helpers import handle_forbidden_from_block
 
 log = get_logger("bot")
 
