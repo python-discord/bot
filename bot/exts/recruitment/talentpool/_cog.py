@@ -313,7 +313,11 @@ class TalentPool(Cog, name="Talentpool"):
         """
         await self._nominate_user(ctx, user, reason)
 
-    @nomination_group.command(name="nominate", aliases=("w", "add", "a", "watch"), root_aliases=("nominate",))
+    @nomination_group.command(
+        name="nominate",
+        aliases=("nom", "n", "watch", "w", "add", "a"),
+        root_aliases=("nominate", "nom")
+    )
     @has_any_role(*STAFF_ROLES)
     async def nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = "") -> None:
         """
