@@ -564,7 +564,6 @@ class TalentPool(Cog, name="Talentpool"):
         """
         Watch for reactions in the #nomination-voting channel to automate it.
 
-        Adding a ticket emoji will unpin the message.
         Adding an incident reaction will archive the message.
         """
         if payload.channel_id != Channels.nomination_voting:
@@ -576,9 +575,7 @@ class TalentPool(Cog, name="Talentpool"):
         message: PartialMessage = self.bot.get_channel(payload.channel_id).get_partial_message(payload.message_id)
         emoji = str(payload.emoji)
 
-        if emoji == "\N{TICKET}":
-            await message.unpin(reason="Admin task created.")
-        elif emoji in {Emojis.incident_actioned, Emojis.incident_unactioned}:
+        if emoji in {Emojis.incident_actioned, Emojis.incident_unactioned}:
             log.info(f"Archiving nomination {message.id}")
             await self.reviewer.archive_vote(message, emoji == Emojis.incident_actioned)
 
