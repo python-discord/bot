@@ -336,7 +336,7 @@ class _HelpChannels(EnvConfig):
     EnvConfig.Config.env_prefix = "help_channels_"
 
     enable = True
-    idle_minutes = 30
+    idle_minutes = 60
     deleted_idle_minutes = 5
     # Roles which are allowed to use the command which makes channels dormant
     cmd_whitelist = Guild.moderation_roles
