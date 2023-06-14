@@ -256,6 +256,9 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
         if "mention" not in kwargs:
             self.mention = f"@{self.name}"
 
+    def get_role(self, role_id: int) -> MockRole | None:
+        return discord.utils.get(self.roles, id=role_id)
+
 
 # Create a User instance to get a realistic Mock of `discord.User`
 _user_data_mock = collections.defaultdict(unittest.mock.MagicMock, {
