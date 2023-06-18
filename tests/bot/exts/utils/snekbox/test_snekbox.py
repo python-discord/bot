@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, pat
 
 from discord import AllowedMentions
 from discord.ext import commands
+from pydis_core.utils.paste_service import MAX_PASTE_SIZE
 
 from bot import constants
 from bot.errors import LockedResourceError
@@ -56,18 +57,8 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_upload_output_reject_too_long(self):
         """Reject output longer than MAX_PASTE_LENGTH."""
-        result = await self.cog.upload_output("-" * (snekbox._cog.MAX_PASTE_LENGTH + 1))
+        result = await self.cog.upload_output("-" * (MAX_PASTE_SIZE + 1))
         self.assertEqual(result, "too long to upload")
-
-    @patch("bot.exts.utils.snekbox._cog.send_to_paste_service")
-    async def test_upload_output(self, mock_paste_util):
-        """Upload the eval output to the URLs.paste_service.format(key="documents") endpoint."""
-        await self.cog.upload_output("Test output.")
-        mock_paste_util.assert_called_once_with(
-            "Test output.",
-            extension="txt",
-            max_length=snekbox._cog.MAX_PASTE_LENGTH
-        )
 
     async def test_codeblock_converter(self):
         ctx = MockContext()

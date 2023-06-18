@@ -18,6 +18,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
@@ -47,7 +48,6 @@ from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
-from bot.utils.services import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 log = get_logger(__name__)
 
@@ -1452,7 +1452,12 @@ class Filtering(Cog):
                 raise
             report = discord.utils.remove_markdown(report)
             try:
-                paste_resp = await send_to_paste_service(report, extension="txt")
+                resp = await send_to_paste_service(
+                    contents=report,
+                    http_session=self.bot.http_session,
+                    lexer="text",
+                )
+                paste_resp = resp["link"]
             except (ValueError, PasteTooLongError, PasteUploadError):
                 paste_resp = ":warning: Failed to upload report to paste service"
             file_buffer = io.StringIO(report)
