@@ -1,8 +1,6 @@
-import calendar
 import operator
 from dataclasses import dataclass
 
-import arrow
 import discord
 from discord.ext import commands
 from discord.interactions import Interaction
@@ -17,41 +15,19 @@ from bot.utils.channel import get_or_fetch_channel
 
 @dataclass(frozen=True)
 class AssignableRole:
-    """
-    A role that can be assigned to a user.
-
-    months_available is a tuple that signifies what months the role should be
-    self-assignable, using None for when it should always be available.
-    """
+    """A role that can be assigned to a user."""
 
     role_id: int
-    months_available: tuple[int] | None
     name: str | None = None  # This gets populated within Subscribe.cog_load()
-
-    def is_currently_available(self) -> bool:
-        """Check if the role is available for the current month."""
-        if self.months_available is None:
-            return True
-        return arrow.utcnow().month in self.months_available
-
-    def get_readable_available_months(self) -> str:
-        """Get a readable string of the months the role is available."""
-        if self.months_available is None:
-            return f"{self.name} is always available."
-
-        # Join the months together with comma separators, but use "and" for the final seperator.
-        month_names = [calendar.month_name[month] for month in self.months_available]
-        available_months_str = ", ".join(month_names[:-1]) + f" and {month_names[-1]}"
-        return f"{self.name} can only be assigned during {available_months_str}."
 
 
 ASSIGNABLE_ROLES = (
-    AssignableRole(constants.Roles.announcements, None),
-    AssignableRole(constants.Roles.pyweek_announcements, None),
-    AssignableRole(constants.Roles.legacy_help_channels_access, None),
-    AssignableRole(constants.Roles.lovefest, None),
-    AssignableRole(constants.Roles.advent_of_code, None),
-    AssignableRole(constants.Roles.revival_of_code, None),
+    AssignableRole(constants.Roles.announcements),
+    AssignableRole(constants.Roles.pyweek_announcements),
+    AssignableRole(constants.Roles.legacy_help_channels_access),
+    AssignableRole(constants.Roles.lovefest),
+    AssignableRole(constants.Roles.advent_of_code),
+    AssignableRole(constants.Roles.revival_of_code),
 )
 
 ITEMS_PER_ROW = 3
@@ -92,12 +68,8 @@ class SingleRoleButton(discord.ui.Button):
     LABEL_FORMAT = "{action} role {role_name}"
 
     def __init__(self, role: AssignableRole, assigned: bool, row: int):
-        if role.is_currently_available():
-            style = self.REMOVE_STYLE if assigned else self.ADD_STYLE
-            label = self.LABEL_FORMAT.format(action="Remove" if assigned else "Add", role_name=role.name)
-        else:
-            style = self.UNAVAILABLE_STYLE
-            label = f"🔒 {role.name}"
+        style = self.REMOVE_STYLE if assigned else self.ADD_STYLE
+        label = self.LABEL_FORMAT.format(action="Remove" if assigned else "Add", role_name=role.name)
 
         super().__init__(
             style=style,
@@ -113,10 +85,6 @@ class SingleRoleButton(discord.ui.Button):
             log.trace("User %s is not a member", interaction.user)
             await interaction.message.delete()
             self.view.stop()
-            return
-
-        if not self.role.is_currently_available():
-            await interaction.response.send_message(self.role.get_readable_available_months(), ephemeral=True)
             return
 
         await members.handle_role_change(
@@ -194,14 +162,12 @@ class Subscribe(commands.Cog):
             self.assignable_roles.append(
                 AssignableRole(
                     role_id=role.role_id,
-                    months_available=role.months_available,
                     name=discord_role.name,
                 )
             )
 
-        # Sort by role name, then shift unavailable roles to the end of the list
+        # Sort by role name
         self.assignable_roles.sort(key=operator.attrgetter("name"))
-        self.assignable_roles.sort(key=operator.methodcaller("is_currently_available"), reverse=True)
 
         placeholder_message_view_tuple = await self._fetch_or_create_self_assignable_roles_message()
         self_assignable_roles_message, self_assignable_roles_view = placeholder_message_view_tuple
