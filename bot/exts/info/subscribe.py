@@ -94,8 +94,15 @@ class SingleRoleButton(discord.ui.Button):
         )
 
         self.assigned = not self.assigned
-        await self.update_view(interaction)
-        await interaction.followup.send(
+        try:
+            await self.update_view(interaction)
+            send_function = interaction.followup.send
+        except discord.NotFound:
+            log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
+            self.view.stop()
+            send_function = interaction.response.send_message
+
+        await send_function(
             self.LABEL_FORMAT.format(action="Added" if self.assigned else "Removed", role_name=self.role.name),
             ephemeral=True,
         )
@@ -104,11 +111,7 @@ class SingleRoleButton(discord.ui.Button):
         """Updates the original interaction message with a new view object with the updated buttons."""
         self.style = self.REMOVE_STYLE if self.assigned else self.ADD_STYLE
         self.label = self.LABEL_FORMAT.format(action="Remove" if self.assigned else "Add", role_name=self.role.name)
-        try:
-            await interaction.response.edit_message(view=self.view)
-        except discord.NotFound:
-            log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
-            self.view.stop()
+        await interaction.response.edit_message(view=self.view)
 
 
 class AllSelfAssignableRolesView(discord.ui.View):
