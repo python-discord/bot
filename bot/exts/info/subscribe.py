@@ -61,16 +61,7 @@ log = get_logger(__name__)
 
 
 class RoleButtonView(discord.ui.View):
-    """
-    A view that holds the list of SingleRoleButtons to show to the member.
-
-    Attributes
-    __________
-    interaction_owner: discord.Member
-        The member that initiated the interaction
-    """
-
-    interaction_owner: discord.Member
+    """A view that holds the list of SingleRoleButtons to show to the member."""
 
     def __init__(self, member: discord.Member, assignable_roles: list[AssignableRole]):
         super().__init__(timeout=DELETE_MESSAGE_AFTER)
