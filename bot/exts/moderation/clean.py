@@ -464,13 +464,13 @@ class Clean(Cog):
     async def clean_group(
         self,
         ctx: Context,
-        users: Greedy[User] = None,
+        users: Greedy[User] = None,  # noqa: RUF013
         first_limit: CleanLimit | None = None,
         second_limit: CleanLimit | None = None,
         regex: Regex | None = None,
         bots_only: bool | None = False,
         *,
-        channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
+        channels: CleanChannels = None  # noqa: RUF013 "Optional" with discord.py silently ignores incorrect input.
     ) -> None:
         """
         Commands for cleaning messages in channels.
@@ -501,7 +501,7 @@ class Clean(Cog):
         users: Greedy[User],
         message_or_time: CleanLimit,
         *,
-        channels: CleanChannels = None
+        channels: CleanChannels = None  # noqa: RUF013
     ) -> None:
         """
         Delete messages posted by the provided users, stop cleaning after reaching `message_or_time`.
@@ -517,7 +517,13 @@ class Clean(Cog):
         await self._clean_messages(ctx, users=users, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
-    async def clean_bots(self, ctx: Context, message_or_time: CleanLimit, *, channels: CleanChannels = None) -> None:
+    async def clean_bots(
+        self,
+        ctx: Context,
+        message_or_time: CleanLimit,
+        *,
+        channels: CleanChannels = None,  # noqa: RUF013
+    ) -> None:
         """
         Delete all messages posted by a bot, stop cleaning after reaching `message_or_time`.
 
@@ -538,7 +544,7 @@ class Clean(Cog):
         regex: Regex,
         message_or_time: CleanLimit,
         *,
-        channels: CleanChannels = None
+        channels: CleanChannels = None  # noqa: RUF013
     ) -> None:
         """
         Delete all messages that match a certain regex, stop cleaning after reaching `message_or_time`.
@@ -566,7 +572,7 @@ class Clean(Cog):
         self,
         ctx: Context,
         until: CleanLimit,
-        channel: TextChannel = None
+        channel: TextChannel = None  # noqa: RUF013
     ) -> None:
         """
         Delete all messages until a certain limit.
@@ -592,7 +598,7 @@ class Clean(Cog):
         ctx: Context,
         first_limit: CleanLimit,
         second_limit: CleanLimit,
-        channel: TextChannel = None
+        channel: TextChannel = None  # noqa: RUF013
     ) -> None:
         """
         Delete all messages within range.

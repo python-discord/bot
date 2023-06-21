@@ -158,7 +158,7 @@ class Silence(commands.Cog):
     async def silence(
         self,
         ctx: Context,
-        duration_or_channel: TextOrVoiceChannel | HushDurationConverter = None,
+        duration_or_channel: TextOrVoiceChannel | HushDurationConverter = None,  # noqa: RUF013
         duration: HushDurationConverter = 10,
         *,
         kick: bool = False
@@ -269,7 +269,7 @@ class Silence(commands.Cog):
             await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
 
     @commands.command(aliases=("unhush",))
-    async def unsilence(self, ctx: Context, *, channel: TextOrVoiceChannel = None) -> None:
+    async def unsilence(self, ctx: Context, *, channel: TextOrVoiceChannel = None) -> None:  # noqa: RUF013
         """
         Unsilence the given channel if given, else the current one.
 

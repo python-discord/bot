@@ -1402,7 +1402,10 @@ class Filtering(Cog):
 
         await self.send_weekly_auto_infraction_report()
 
-    async def send_weekly_auto_infraction_report(self, channel: discord.TextChannel | discord.Thread = None) -> None:
+    async def send_weekly_auto_infraction_report(
+        self,
+        channel: discord.TextChannel | discord.Thread | None = None,
+    ) -> None:
         """
         Send a list of auto-infractions added in the last 7 days to the specified channel.
 
