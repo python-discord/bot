@@ -715,7 +715,8 @@ class Filtering(Cog):
 
         settings = (
             "remove_context=True "
-            "dm_pings=Moderators "
+            'guild_pings="" '
+            'dm_pings="" '
             "infraction_type=BAN "
             "infraction_channel=1 "  # Post the ban in #mod-alerts
             f"infraction_duration={COMP_BAN_DURATION.total_seconds()} "
