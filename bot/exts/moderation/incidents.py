@@ -134,7 +134,8 @@ def is_incident(message: discord.Message) -> bool:
         message.channel.id == Channels.incidents,  # Message sent in #incidents
         not message.author.bot,                    # Not by a bot
         not message.content.startswith("#"),       # Doesn't start with a hash
-        not message.pinned,                        # And isn't header
+        not message.pinned,                        # Isn't header
+        not message.reference,                     # And is not a reply
     )
     return all(conditions)
 
