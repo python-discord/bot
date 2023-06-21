@@ -185,6 +185,7 @@ class TestIsIncident(unittest.TestCase):
             content="this is an incident",
             author=MockUser(bot=False),
             pinned=False,
+            reference=None,
         )
 
     def test_is_incident_true(self):
