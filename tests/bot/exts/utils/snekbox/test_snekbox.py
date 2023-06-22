@@ -55,6 +55,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         )
         resp.json.assert_awaited_once()
 
+    @patch(
+        "bot.exts.utils.snekbox._cog.paste_service._lexers_supported_by_pastebin",
+        {"https://paste.pythondiscord.com": ["text"]},
+    )
     async def test_upload_output_reject_too_long(self):
         """Reject output longer than MAX_PASTE_LENGTH."""
         result = await self.cog.upload_output("-" * (MAX_PASTE_SIZE + 1))
