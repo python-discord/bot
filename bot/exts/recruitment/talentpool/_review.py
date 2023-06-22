@@ -46,7 +46,7 @@ REVIEW_SCORE_WEIGHT = 1.5
 
 # Regex for finding the first message of a nomination, and extracting the nominee.
 NOMINATION_MESSAGE_REGEX = re.compile(
-    r"<@!?(\d+)> \(.+#\d{4}\) for Helper!\n\n",
+    r"<@!?(\d+)> \(.+(#\d{4})?\) for Helper!\n\n",
     re.MULTILINE
 )
 
