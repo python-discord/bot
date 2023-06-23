@@ -1426,13 +1426,13 @@ email = ["email-validator (>=1.0.3)"]
 
 [[package]]
 name = "pydis-core"
-version = "9.8.0"
+version = "9.9.1"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 optional = false
 python-versions = ">=3.10.dev0,<3.12.dev0"
 files = [
-    {file = "pydis_core-9.8.0-py3-none-any.whl", hash = "sha256:fddc3b863fcf542ee62c8cefc9fb5498b23b10a36655221ade48268c0dd37507"},
-    {file = "pydis_core-9.8.0.tar.gz", hash = "sha256:63806fcfa09abfaf83775dba4adbc6a2b1182f6bc2336def2f16bb2b884fd35c"},
+    {file = "pydis_core-9.9.1-py3-none-any.whl", hash = "sha256:456c81b226c4b49611139c5502dc69f04ca5ba46088d17d9f75176e989f77ebc"},
+    {file = "pydis_core-9.9.1.tar.gz", hash = "sha256:80b97eae4397e46eea90e88eccdec993a6c1859668150d32af08e80e15cefb2c"},
 ]
 
 [package.dependencies]
@@ -2221,4 +2221,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "731ade15ecf533075d07f05e0c279ad90034990fa0216595f90141f5367bca4c"
+content-hash = "954c761d56f1b10847f6edb0d0db7a9b3a753fa26bf9961126e3ef06b0f72609"
