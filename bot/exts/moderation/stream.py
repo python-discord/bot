@@ -85,7 +85,12 @@ class Stream(commands.Cog):
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def stream(self, ctx: commands.Context, member: discord.Member, duration: Expiry = None) -> None:
+    async def stream(
+        self,
+        ctx: commands.Context,
+        member: discord.Member,
+        duration: Expiry = None, # noqa: RUF013
+    ) -> None:
         """
         Temporarily grant streaming permissions to a member for a given duration.
 

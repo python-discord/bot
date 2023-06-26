@@ -9,7 +9,7 @@ license = "MIT"
 python = "3.11.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
-pydis_core = { version = "9.8.0", extras = ["async-rediscache"] }
+pydis_core = { version = "9.9.1", extras = ["async-rediscache"] }
 
 aiohttp = "3.8.4"
 arrow = "1.2.3"
@@ -37,11 +37,11 @@ httpx = "0.24.1"
 isort = "5.12.0"
 pre-commit = "3.3.3"
 pip-licenses = "4.3.2"
-pytest = "7.3.2"
+pytest = "7.4.0"
 pytest-cov = "4.1.0"
 pytest-subtests = "0.11.0"
 pytest-xdist = "3.3.1"
-ruff = "0.0.272"
+ruff = "0.0.275"
 taskipy = "1.11.0"
 
 
@@ -87,7 +87,7 @@ ignore = [
     "D400", "D401", "D402", "D404", "D405", "D406", "D407", "D408", "D409", "D410", "D411", "D412", "D413", "D414", "D416", "D417",
     "E731",
     "RET504",
-    "RUF005",
+    "RUF005", "RUF012",
     "S311",
     "SIM102", "SIM108",
 ]

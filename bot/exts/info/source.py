@@ -19,7 +19,12 @@ class BotSource(commands.Cog):
         self.bot = bot
 
     @commands.command(name="source", aliases=("src",))
-    async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
+    async def source_command(
+        self,
+        ctx: commands.Context,
+        *,
+        source_item: SourceConverter = None,  # noqa: RUF013
+    ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
             embed = Embed(title="Bot's GitHub Repository")
