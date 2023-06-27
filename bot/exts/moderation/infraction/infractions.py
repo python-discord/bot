@@ -510,7 +510,7 @@ class Infractions(InfractionScheduler, commands.Cog):
                 timeout=10,
             )
 
-            await ctx.send(
+            confirmation_view.message = await ctx.send(
                 f"{user} has an elevated role. Are you sure you want to ban them?",
                 view=confirmation_view
             )
@@ -525,7 +525,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
                 return None
 
-            elif confirmation_view.confirmed is False:
+            if confirmation_view.confirmed is False:
                 log.trace(
                     "Attempted ban of user %s by moderator %s cancelled due to manual cancel.",
                     str(user),
