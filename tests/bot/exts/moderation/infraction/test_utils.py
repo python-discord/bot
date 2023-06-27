@@ -1,6 +1,6 @@
 import unittest
 from collections import namedtuple
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from discord import Embed, Forbidden, HTTPException, NotFound
@@ -136,7 +136,10 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         """
         test_cases = [
             {
-                "args": (dict(id=0, type="ban", reason=None, expires_at=datetime(2020, 2, 26, 9, 20)), self.user),
+                "args": (
+                    dict(id=0, type="ban", reason=None, expires_at=datetime(2020, 2, 26, 9, 20, tzinfo=UTC)),
+                    self.user,
+                ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
@@ -192,7 +195,10 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "send_result": False
             },
             {
-                "args": (dict(id=0, type="mute", reason="Test", expires_at=datetime(2020, 2, 26, 9, 20)), self.user),
+                "args": (
+                    dict(id=0, type="mute", reason="Test", expires_at=datetime(2020, 2, 26, 9, 20, tzinfo=UTC)),
+                    self.user,
+                ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
                     description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
@@ -309,7 +315,7 @@ class TestPostInfraction(unittest.IsolatedAsyncioTestCase):
 
     async def test_normal_post_infraction(self):
         """Should return response from POST request if there are no errors."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         expected = {
             "actor": self.ctx.author.id,
             "hidden": True,

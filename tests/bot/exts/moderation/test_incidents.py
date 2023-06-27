@@ -20,7 +20,7 @@ from tests.helpers import (
     MockUser
 )
 
-CURRENT_TIME = datetime.datetime(2022, 1, 1, tzinfo=datetime.timezone.utc)
+CURRENT_TIME = datetime.datetime(2022, 1, 1, tzinfo=datetime.UTC)
 
 
 class MockAsyncIterable:
@@ -799,7 +799,7 @@ class TestMessageLinkEmbeds(TestIncidents):
 
             "\n".join("Lets make a new line test".split()): "Lets\nmake\na...",
 
-            'Hello, World!' * 300: (
+            "Hello, World!" * 300: (
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"

@@ -1,9 +1,7 @@
 # Python Utility Bot
 
-[![Discord][7]][8]
-[![Lint & Test][1]][2]
-[![Build][3]][4]
-[![Deploy][5]][6]
+[![Discord][1]][2]
+[![CI][3]][4]
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 This project is a Discord bot specifically for use with the Python Discord server. It provides numerous utilities
@@ -11,11 +9,7 @@ and other tools to help keep the server running like a well-oiled machine.
 
 Read the [Contributing Guide](https://pythondiscord.com/pages/contributing/bot/) on our website if you're interested in helping out.
 
-[1]: https://github.com/python-discord/bot/workflows/Lint%20&%20Test/badge.svg?branch=main
-[2]: https://github.com/python-discord/bot/actions?query=workflow%3A%22Lint+%26+Test%22+branch%3Amain
-[3]: https://github.com/python-discord/bot/workflows/Build/badge.svg?branch=main
-[4]: https://github.com/python-discord/bot/actions?query=workflow%3ABuild+branch%3Amain
-[5]: https://github.com/python-discord/bot/workflows/Deploy/badge.svg?branch=main
-[6]: https://github.com/python-discord/bot/actions?query=workflow%3ADeploy+branch%3Amain
-[7]: https://raw.githubusercontent.com/python-discord/branding/main/logos/badge/badge_github.svg
-[8]: https://discord.gg/python
+[1]: https://raw.githubusercontent.com/python-discord/branding/main/logos/badge/badge_github.svg
+[2]: https://discord.gg/python
+[3]: https://github.com/python-discord/bot/actions/workflows/main.yml/badge.svg?branch=main
+[4]: https://github.com/python-discord/bot/actions/workflows/main.yml?query=branch%3Amain

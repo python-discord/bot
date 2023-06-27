@@ -41,12 +41,11 @@ class Stats(Cog):
                 # of them for interesting statistics to be drawn out of this.
                 return
 
-        reformatted_name = message.channel.name.replace('-', '_')
-
-        if CHANNEL_NAME_OVERRIDES.get(message.channel.id):
-            reformatted_name = CHANNEL_NAME_OVERRIDES.get(message.channel.id)
-
-        reformatted_name = "".join(char for char in reformatted_name if char in ALLOWED_CHARS)
+        channel = message.channel
+        if hasattr(channel, "parent") and channel.parent:
+            channel = channel.parent
+        reformatted_name = CHANNEL_NAME_OVERRIDES.get(channel.id, channel.name)
+        reformatted_name = "".join(char if char in ALLOWED_CHARS else "_" for char in reformatted_name)
 
         stat_name = f"channels.{reformatted_name}"
         self.bot.stats.incr(stat_name)

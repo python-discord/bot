@@ -4,7 +4,7 @@ import enum
 import re
 import time
 from pathlib import Path
-from typing import Literal, NamedTuple, Optional, Union
+from typing import Literal, NamedTuple
 
 import discord
 import frontmatter
@@ -37,7 +37,7 @@ class COOLDOWN(enum.Enum):
 class TagIdentifier(NamedTuple):
     """Stores the group and name used as an identifier for a tag."""
 
-    group: Optional[str]
+    group: str | None
     name: str
 
     def get_fuzzy_score(self, fuzz_tag_identifier: TagIdentifier) -> float:
@@ -59,8 +59,7 @@ class TagIdentifier(NamedTuple):
     def __str__(self) -> str:
         if self.group is not None:
             return f"{self.group} {self.name}"
-        else:
-            return self.name
+        return self.name
 
     @classmethod
     def from_string(cls, string: str) -> TagIdentifier:
@@ -68,8 +67,7 @@ class TagIdentifier(NamedTuple):
         split_string = string.removeprefix(constants.Bot.prefix).split(" ", maxsplit=2)
         if len(split_string) == 1:
             return cls(None, split_string[0])
-        else:
-            return cls(split_string[0], split_string[1])
+        return cls(split_string[0], split_string[1])
 
 
 class Tag:
@@ -187,13 +185,13 @@ class Tags(Cog):
             member: Member,
             channel: discord.abc.Messageable,
             tag_identifier: TagIdentifier,
-    ) -> Optional[Union[Embed, Literal[COOLDOWN.obj]]]:
+    ) -> Embed | Literal[COOLDOWN.obj] | None:
         """
         Generate an embed of the requested tag or of suggestions if the tag doesn't exist
         or isn't accessible by the member.
 
         If the requested tag is on cooldown return `COOLDOWN.obj`, otherwise if no suggestions were found return None.
-        """  # noqa: D205, D415
+        """  # noqa: D205
         filtered_tags = [
             (ident, tag) for ident, tag in
             self.get_fuzzy_matches(tag_identifier)[:10]
@@ -228,18 +226,17 @@ class Tags(Cog):
             )
             return tag.embed
 
-        else:
-            if not filtered_tags:
-                return None
-            suggested_tags_text = "\n".join(
-                f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
-                for identifier, tag in filtered_tags
-                if not tag.on_cooldown_in(channel)
-            )
-            return Embed(
-                title="Did you mean ...",
-                description=suggested_tags_text
-            )
+        if not filtered_tags:
+            return None
+        suggested_tags_text = "\n".join(
+            f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier}"
+            for identifier, tag in filtered_tags
+            if not tag.on_cooldown_in(channel)
+        )
+        return Embed(
+            title="Did you mean ...",
+            description=suggested_tags_text
+        )
 
     def accessible_tags(self, member: Member) -> list[str]:
         """Return a formatted list of tags that are accessible by `member`; groups first, and alphabetically sorted."""
@@ -317,7 +314,8 @@ class Tags(Cog):
         return True
 
     @app_commands.command(name="tag")
-    async def get_command(self, interaction: Interaction, *, name: Optional[str]) -> bool:
+    @app_commands.guild_only()
+    async def get_command(self, interaction: Interaction, *, name: str | None) -> bool:
         """
         If a single argument matching a group name is given, list all accessible tags from that group
         Otherwise display the tag if one was found for the given arguments, or try to display suggestions for that name.
@@ -326,7 +324,7 @@ class Tags(Cog):
 
         Returns True if a message was sent, or if the tag is on cooldown.
         Returns False if no message was sent.
-        """  # noqa: D205, D415
+        """  # noqa: D205
         if not name:
             if self.tags:
                 await LinePaginator.paginate(
@@ -376,7 +374,7 @@ class Tags(Cog):
         current: str
     ) -> list[app_commands.Choice[str]]:
         """Autocompleter for `/tag get` command."""
-        names = [tag.name for tag in self.tags.keys()]
+        names = [tag.name for tag in self.tags]
         choices = [
             app_commands.Choice(name=tag, value=tag)
             for tag in names if current.lower() in tag

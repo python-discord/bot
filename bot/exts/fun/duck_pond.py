@@ -1,5 +1,4 @@
 import asyncio
-from typing import Union
 
 import discord
 from discord import Color, Embed, Message, RawReactionActionEvent, errors
@@ -21,7 +20,7 @@ class DuckPond(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.webhook_id = constants.Webhooks.duck_pond
+        self.webhook_id = constants.Webhooks.duck_pond.id
         self.webhook = None
         self.ducked_messages = []
         self.relay_lock = None
@@ -54,12 +53,11 @@ class DuckPond(Cog):
         return False
 
     @staticmethod
-    def _is_duck_emoji(emoji: Union[str, discord.PartialEmoji, discord.Emoji]) -> bool:
+    def _is_duck_emoji(emoji: str | discord.PartialEmoji | discord.Emoji) -> bool:
         """Check if the emoji is a valid duck emoji."""
         if isinstance(emoji, str):
             return emoji == "🦆"
-        else:
-            return hasattr(emoji, "name") and emoji.name.startswith("ducky_")
+        return hasattr(emoji, "name") and emoji.name.startswith("ducky_")
 
     async def count_ducks(self, message: Message) -> int:
         """

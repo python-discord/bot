@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 from bot.exts.recruitment.talentpool import _review
@@ -30,13 +30,17 @@ def nomination(
     inserted_at: datetime,
     num_entries: int,
     reviewed: bool = False,
-    id: int | None = None
+    id: int | None = None,
+    msg_count: int = 1000,
 ) -> Mock:
+    id = id or MockMember().id
     return Mock(
         id=id or MockMember().id,
+        user_id=id,
         inserted_at=inserted_at,
         entries=[Mock() for _ in range(num_entries)],
-        reviewed=reviewed
+        reviewed=reviewed,
+        _msg_count=msg_count,
     )
 
 
@@ -57,8 +61,8 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.recruitment.talentpool._review.MIN_REVIEW_INTERVAL", timedelta(days=1))
     async def test_is_ready_for_review(self):
         """Tests for the `is_ready_for_review` function."""
-        too_recent = datetime.now(timezone.utc) - timedelta(hours=1)
-        not_too_recent = datetime.now(timezone.utc) - timedelta(days=7)
+        too_recent = datetime.now(UTC) - timedelta(hours=1)
+        not_too_recent = datetime.now(UTC) - timedelta(days=7)
         cases = (
             # Only one review, and not too recent, so ready.
             (
@@ -122,15 +126,18 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
     @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=7))
     async def test_get_nomination_to_review(self):
         """Test get_nomination_to_review function."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Each case contains a list of nominations, followed by the index in that list
         # of the one that should be selected, or None if None should be returned
         cases = [
-            # One nomination, too recent so don't send.
+            # Don't send if too recent, already reviewed, or no recent messages.
             (
                 [
                     nomination(now - timedelta(days=1), 5),
+                    nomination(now - timedelta(days=10), 5, reviewed=True),
+                    nomination(now - timedelta(days=10), 5, msg_count=0),
+
                 ],
                 None,
             ),
@@ -161,6 +168,11 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(case_num=case_num):
                 get_nominations_mock = AsyncMock(return_value=nominations)
                 self.nomination_api.get_nominations = get_nominations_mock
+
+                activity = {nomination.id: nomination._msg_count for nomination in nominations}
+                get_activity_mock = AsyncMock(return_value=activity)
+                self.nomination_api.get_activity = get_activity_mock
+
                 res = await self.reviewer.get_nomination_to_review()
 
                 if expected is None:
@@ -168,10 +180,11 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     self.assertEqual(res, nominations[expected])
                 get_nominations_mock.assert_called_once_with(active=True)
+                get_activity_mock.assert_called_once()
 
     @patch("bot.exts.recruitment.talentpool._review.MIN_NOMINATION_TIME", timedelta(days=0))
     async def test_get_nomination_to_review_order(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Each case in cases is a list of nominations in the order they should be chosen from first to last
         cases = [
@@ -210,6 +223,10 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                     with self.subTest(nomination_num=i+1):
                         get_nominations_mock = AsyncMock(return_value=case[i:])
                         self.nomination_api.get_nominations = get_nominations_mock
+
+                        activity = {nomination.id: nomination._msg_count for nomination in case}
+                        get_activity_mock = AsyncMock(return_value=activity)
+                        self.nomination_api.get_activity = get_activity_mock
 
                         res = await self.reviewer.get_nomination_to_review()
                         self.assertEqual(res, case[i])

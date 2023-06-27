@@ -44,7 +44,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: ${{ github.ref == 'refs/heads/main' }}
           cache-from: type=registry,ref=ghcr.io/python-discord/bot:latest
           cache-to: type=inline
           tags: |
@@ -57,6 +57,7 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
     environment: production
     steps:
       - name: Checkout Kubernetes repository

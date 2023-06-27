@@ -89,7 +89,7 @@ class ModPings(Cog):
         log.info("Scheduling modpings schedule for applicable moderators found in cache.")
         for mod_id, schedule in schedule_cache.items():
             start_timestamp, work_time = schedule.split("|")
-            start = datetime.datetime.fromtimestamp(float(start_timestamp))
+            start = datetime.datetime.fromtimestamp(float(start_timestamp), tz=datetime.UTC)
 
             mod = await self.bot.fetch_user(mod_id)
             self._modpings_scheduler.schedule_at(
@@ -134,13 +134,13 @@ class ModPings(Cog):
         await mod.add_roles(self.moderators_role, reason="Pings off period expired.")
         await self.pings_off_mods.delete(mod.id)
 
-    @group(name='modpings', aliases=('modping',), invoke_without_command=True)
+    @group(name="modpings", aliases=("modping",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)
     async def modpings_group(self, ctx: Context) -> None:
         """Allow the removal and re-addition of the pingable moderators role."""
         await ctx.send_help(ctx.command)
 
-    @modpings_group.command(name='off')
+    @modpings_group.command(name="off")
     @has_any_role(*MODERATION_ROLES)
     async def off_command(self, ctx: Context, duration: Expiry) -> None:
         """
@@ -159,7 +159,7 @@ class ModPings(Cog):
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
 
         The duration cannot be longer than 30 days.
-        """
+        """  # noqa: RUF002
         delta = duration - arrow.utcnow()
         if delta > datetime.timedelta(days=30):
             await ctx.send(":x: Cannot remove the role for longer than 30 days.")
@@ -182,7 +182,7 @@ class ModPings(Cog):
             f"until {discord_timestamp(duration, format=TimestampFormats.DAY_TIME)}."
         )
 
-    @modpings_group.command(name='on')
+    @modpings_group.command(name="on")
     @has_any_role(*MODERATION_ROLES)
     async def on_command(self, ctx: Context) -> None:
         """Re-apply the pingable moderators role."""
@@ -201,8 +201,8 @@ class ModPings(Cog):
         await ctx.send(f"{Emojis.check_mark} Moderators role has been re-applied.")
 
     @modpings_group.group(
-        name='schedule',
-        aliases=('s',),
+        name="schedule",
+        aliases=("s",),
         invoke_without_command=True
     )
     @has_any_role(*MODERATION_ROLES)
@@ -220,7 +220,7 @@ class ModPings(Cog):
             )
             return
 
-        if start < datetime.datetime.utcnow():
+        if start < datetime.datetime.now(datetime.UTC):
             # The datetime has already gone for the day, so make it tomorrow
             # otherwise the scheduler would schedule it immediately
             start += datetime.timedelta(days=1)
@@ -244,7 +244,7 @@ class ModPings(Cog):
             f"{discord_timestamp(end, TimestampFormats.TIME)}!"
         )
 
-    @schedule_modpings.command(name='delete', aliases=('del', 'd'))
+    @schedule_modpings.command(name="delete", aliases=("del", "d"))
     async def modpings_schedule_delete(self, ctx: Context) -> None:
         """Delete your modpings schedule."""
         self._modpings_scheduler.cancel(ctx.author.id)
