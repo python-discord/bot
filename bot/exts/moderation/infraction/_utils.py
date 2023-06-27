@@ -1,7 +1,7 @@
 
 import arrow
 import discord
-from discord import ButtonStyle, Interaction, Message
+from discord import ButtonStyle, Interaction
 from discord.ext.commands import Context
 from discord.ui import Button
 from pydis_core.site_api import ResponseCodeError
@@ -287,23 +287,6 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
 
 class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
     """The confirmation view that is sent when a moderator attempts to ban a staff member."""
-
-    def __init__(
-        self,
-        *,
-        allowed_users: t.Sequence[int],
-        allowed_roles: t.Sequence[int],
-        timeout: t.Optional[float] = 180,
-        message: t.Optional[Message] = None
-    ) -> None:
-        super().__init__(
-            allowed_users=allowed_users,
-            allowed_roles=allowed_roles,
-            timeout=timeout,
-            message=message
-        )
-
-        self.confirmed: t.Optional[bool] = None
 
     @discord.ui.button(label="Confirm", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:

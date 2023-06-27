@@ -515,8 +515,8 @@ class Infractions(InfractionScheduler, commands.Cog):
                 view=confirmation_view
             )
 
-            await confirmation_view.wait()
-            if confirmation_view.confirmed is None:
+            timed_out = await confirmation_view.wait()
+            if timed_out:
                 log.trace(
                     "Attempted ban of user %s by moderator %s cancelled due to timeout.",
                     str(user),
