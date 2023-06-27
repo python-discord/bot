@@ -68,7 +68,7 @@ class ModManagement(commands.Cog):
         return self.bot.get_cog("Infractions")
 
     @commands.group(name="infraction", aliases=("infr", "infractions", "inf", "i"), invoke_without_command=True)
-    async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
+    async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:  # noqa: RUF013
         """
         Infraction management commands.
 
@@ -116,7 +116,7 @@ class ModManagement(commands.Cog):
         infraction: Infraction,
         duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
         *,
-        reason: str = None
+        reason: str = None  # noqa: RUF013
     ) -> None:
         """
         Append text and/or edit the duration of an infraction.
@@ -156,7 +156,7 @@ class ModManagement(commands.Cog):
         infraction: Infraction,
         duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
         *,
-        reason: str = None
+        reason: str = None  # noqa: RUF013
     ) -> None:
         """
         Edit the duration and/or the reason of an infraction.

@@ -19,7 +19,7 @@ from bot.log import get_logger
 from bot.utils import time
 from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
-from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
+from bot.utils.messages import count_unique_users_reaction
 
 if typing.TYPE_CHECKING:
     from bot.exts.utils.thread_bumper import ThreadBumper
@@ -46,7 +46,7 @@ REVIEW_SCORE_WEIGHT = 1.5
 
 # Regex for finding the first message of a nomination, and extracting the nominee.
 NOMINATION_MESSAGE_REGEX = re.compile(
-    r"<@!?(\d+)> \(.+#\d{4}\) for Helper!\n\n",
+    r"<@!?(\d+)> \(.+(#\d{4})?\) for Helper!\n\n",
     re.MULTILINE
 )
 
@@ -223,8 +223,6 @@ class Reviewer:
 
         log.info(f"Posting the review of {nominee} ({nominee.id})")
         messages = await self._bulk_send(channel, review)
-
-        await pin_no_system_message(messages[0])
 
         last_message = messages[-1]
         if reviewed_emoji:

@@ -50,7 +50,7 @@ def _find_elements_until_tag(
     *,
     func: Callable,
     include_strings: bool = False,
-    limit: int = None,
+    limit: int | None = None,
 ) -> list[Tag | NavigableString]:
     """
     Get all elements up to `limit` or until a tag matching `end_tag_filter` is found.
