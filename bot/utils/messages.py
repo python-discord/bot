@@ -259,7 +259,11 @@ def format_channel(channel: discord.abc.Messageable) -> str:
     return formatted
 
 
-async def upload_log(messages: Iterable[Message], actor_id: int, attachments: dict[int, list[str]] = None) -> str:
+async def upload_log(
+    messages: Iterable[Message],
+    actor_id: int,
+    attachments: dict[int, list[str]] | None = None,
+) -> str:
     """Upload message logs to the database and return a URL to a page for viewing the logs."""
     if attachments is None:
         attachments = []

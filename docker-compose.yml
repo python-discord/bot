@@ -54,18 +54,6 @@ services:
     ports:
      - "127.0.0.1:8060:8060"
     privileged: true
-    profiles:
-      - "3.10"
-
-  snekbox-311:
-    logging : *default-logging
-    restart: unless-stopped
-    image: ghcr.io/python-discord/snekbox:3.11-dev
-    init: true
-    ipc: none
-    ports:
-     - "127.0.0.1:8065:8060"
-    privileged: true
 
   web:
     logging : *default-logging
@@ -101,13 +89,12 @@ services:
     depends_on:
       - web
       - redis
-      - snekbox-311
+      - snekbox
     env_file:
       - .env
     environment:
       API_KEYS_SITE_API: "badbot13m0n8f570f942013fc818f234916ca531"
       URLS_SITE_API: "http://web:8000/api"
       URLS_SNEKBOX_EVAL_API: "http://snekbox:8060/eval"
-      URLS_SNEKBOX_311_EVAL_API: "http://snekbox-311:8060/eval"
       REDIS_HOST: "redis"
       STATS_STATSD_HOST: "http://localhost"

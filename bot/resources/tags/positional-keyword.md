@@ -9,7 +9,7 @@ Functions can take two different kinds of arguments. A positional argument is ju
 >>> print('Hello', 'world!', sep=', ')
 Hello, world!
 ```
-The first two strings `'Hello'` and `world!'` are positional arguments.
+The first two strings `'Hello'` and `'world!'` are positional arguments.
 The `sep=', '` is a keyword argument.
 
 **Note**
@@ -21,7 +21,7 @@ def sum(a, b=1):
 sum(1, b=5)
 sum(1, 5) # same as above
 ```
-[Somtimes this is forced](https://peps.python.org/pep-0570/#history-of-positional-only-parameter-semantics-in-python), in the case of the `pow()` function.
+[Sometimes this is forced](https://peps.python.org/pep-0570/#history-of-positional-only-parameter-semantics-in-python), in the case of the `pow()` function.
 
 The reverse is also true:
 ```py
