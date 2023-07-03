@@ -40,19 +40,30 @@ class PythonNews(Cog):
         self.bot = bot
         self.webhook_names = {}
         self.webhook: discord.Webhook | None = None
-
-    async def cog_load(self) -> None:
-        """Carry out cog asynchronous initialisation."""
-        await self.get_webhook_names()
-        await self.get_webhook_and_channel()
-
-    async def start_tasks(self) -> None:
-        """Start the tasks for fetching new PEPs and mailing list messages."""
         self.fetch_new_media.start()
+
+    async def cog_unload(self) -> None:
+        """Stop news posting tasks on cog unload."""
+        self.fetch_new_media.cancel()
+
+    async def get_webhooks(self) -> None:
+        """Get webhook author names from maillist API."""
+        await self.bot.wait_until_guild_available()
+
+        async with self.bot.http_session.get("https://mail.python.org/archives/api/lists") as resp:
+            lists = await resp.json()
+
+        for mail in lists:
+            if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
+                self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
+        self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
 
     @loop(minutes=20)
     async def fetch_new_media(self) -> None:
         """Fetch new mailing list messages and then new PEPs."""
+        if not self.webhook:
+            await self.get_webhooks()
+
         await self.post_maillist_news()
         await self.post_pep_news()
 
@@ -71,17 +82,6 @@ class PythonNews(Cog):
             response["data"]["pep"] = []
 
         await self.bot.api_client.put("bot/bot-settings/news", json=response)
-
-    async def get_webhook_names(self) -> None:
-        """Get webhook author names from maillist API."""
-        await self.bot.wait_until_guild_available()
-
-        async with self.bot.http_session.get("https://mail.python.org/archives/api/lists") as resp:
-            lists = await resp.json()
-
-        for mail in lists:
-            if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
-                self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
 
     @staticmethod
     def escape_markdown(content: str) -> str:
@@ -237,17 +237,6 @@ class PythonNews(Cog):
         async with self.bot.http_session.get(thread_information["starting_email"]) as resp:
             email_information = await resp.json()
         return thread_information, email_information
-
-    async def get_webhook_and_channel(self) -> None:
-        """Storage #python-news channel Webhook and `TextChannel` to `News.webhook` and `channel`."""
-        await self.bot.wait_until_guild_available()
-        self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
-
-        await self.start_tasks()
-
-    async def cog_unload(self) -> None:
-        """Stop news posting tasks on cog unload."""
-        self.fetch_new_media.cancel()
 
 
 async def setup(bot: Bot) -> None:
