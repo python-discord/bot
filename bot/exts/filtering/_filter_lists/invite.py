@@ -20,7 +20,7 @@ if typing.TYPE_CHECKING:
 
 
 REFINED_INVITE_CODE = re.compile(
-    r"(?P<invite>[a-zA-Z0-9/]+)"  # The supposedly real invite code.
+    r"(?P<invite>[a-zA-Z0-9/_-]+)"  # The supposedly real invite code.
     r"(?:[^a-zA-Z0-9/].*)?"       # Ignoring anything that may come after an invalid character.
     r"$"                          # Up until the end of the string.
 )
