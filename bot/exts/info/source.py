@@ -23,7 +23,7 @@ class BotSource(commands.Cog):
         self,
         ctx: commands.Context,
         *,
-        source_item: SourceConverter = None,  # noqa: RUF013
+        source_item: SourceConverter = None,
     ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:

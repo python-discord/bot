@@ -238,7 +238,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user_or_message: MemberOrUser | Message = None) -> None:  # noqa: RUF013
+    async def user_info(self, ctx: Context, user_or_message: MemberOrUser | Message = None) -> None:
         """Returns info about a user."""
         if passed_as_message := isinstance(user_or_message, Message):
             user = user_or_message.author
