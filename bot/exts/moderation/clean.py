@@ -470,7 +470,7 @@ class Clean(Cog):
         regex: Regex | None = None,
         bots_only: bool | None = False,
         *,
-        channels: CleanChannels = None  # noqa: RUF013 "Optional" with discord.py silently ignores incorrect input.
+        channels: CleanChannels = None  # "Optional" with discord.py silently ignores incorrect input.
     ) -> None:
         """
         Commands for cleaning messages in channels.
@@ -501,7 +501,7 @@ class Clean(Cog):
         users: Greedy[User],
         message_or_time: CleanLimit,
         *,
-        channels: CleanChannels = None  # noqa: RUF013
+        channels: CleanChannels = None
     ) -> None:
         """
         Delete messages posted by the provided users, stop cleaning after reaching `message_or_time`.
@@ -522,7 +522,7 @@ class Clean(Cog):
         ctx: Context,
         message_or_time: CleanLimit,
         *,
-        channels: CleanChannels = None,  # noqa: RUF013
+        channels: CleanChannels = None,
     ) -> None:
         """
         Delete all messages posted by a bot, stop cleaning after reaching `message_or_time`.
@@ -544,7 +544,7 @@ class Clean(Cog):
         regex: Regex,
         message_or_time: CleanLimit,
         *,
-        channels: CleanChannels = None  # noqa: RUF013
+        channels: CleanChannels = None
     ) -> None:
         """
         Delete all messages that match a certain regex, stop cleaning after reaching `message_or_time`.
@@ -572,7 +572,7 @@ class Clean(Cog):
         self,
         ctx: Context,
         until: CleanLimit,
-        channel: TextChannel = None  # noqa: RUF013
+        channel: TextChannel = None
     ) -> None:
         """
         Delete all messages until a certain limit.
@@ -598,7 +598,7 @@ class Clean(Cog):
         ctx: Context,
         first_limit: CleanLimit,
         second_limit: CleanLimit,
-        channel: TextChannel = None  # noqa: RUF013
+        channel: TextChannel = None
     ) -> None:
         """
         Delete all messages within range.

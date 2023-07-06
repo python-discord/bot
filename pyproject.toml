@@ -41,7 +41,7 @@ pytest = "7.4.0"
 pytest-cov = "4.1.0"
 pytest-subtests = "0.11.0"
 pytest-xdist = "3.3.1"
-ruff = "0.0.275"
+ruff = "0.0.277"
 taskipy = "1.11.0"
 
 

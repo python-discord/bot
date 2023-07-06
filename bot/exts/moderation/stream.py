@@ -89,7 +89,7 @@ class Stream(commands.Cog):
         self,
         ctx: commands.Context,
         member: discord.Member,
-        duration: Expiry = None, # noqa: RUF013
+        duration: Expiry = None,
     ) -> None:
         """
         Temporarily grant streaming permissions to a member for a given duration.
