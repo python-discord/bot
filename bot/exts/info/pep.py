@@ -29,12 +29,8 @@ class PythonEnhancementProposals(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: dict[int, str] = {}
-        # To avoid situations where we don't have last datetime, set this to now.
-        self.last_refreshed_peps: datetime = datetime.now(tz=UTC)
-
-    async def cog_load(self) -> None:
-        """Carry out cog asynchronous initialisation."""
-        await self.refresh_peps_urls()
+        # Ensure peps are refreshed the first time this is checked
+        self.last_refreshed_peps: datetime = datetime.min.replace(tzinfo=UTC)
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
