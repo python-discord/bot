@@ -114,7 +114,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
 
-        scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)), event_loop=self.bot.loop)
+        scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)))
 
         # Increase amount of codeblock correction in stats
         self.bot.stats.incr("codeblock_corrections")
