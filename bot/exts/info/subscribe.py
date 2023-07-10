@@ -5,12 +5,12 @@ import discord
 from discord.ext import commands
 from discord.interactions import Interaction
 from pydis_core.utils import members
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
 from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.utils.channel import get_or_fetch_channel
 
 
 @dataclass(frozen=True)
