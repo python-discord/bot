@@ -291,8 +291,7 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
     @discord.ui.button(label="Confirm", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "confirm" button is pressed."""
-        await interaction.response.send_message("Applied infraction.")
-        await interaction.message.edit(view=None)
+        await interaction.response.edit_message(view=None)
 
         self.confirmed = True
         self.stop()
