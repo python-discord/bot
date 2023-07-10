@@ -294,7 +294,7 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
         await interaction.response.defer() # `ViewWithuserAndRoleCheck` view will remove the buttons
 
         self.confirmed = True
-        await self.stop()
+        self.stop()
 
     @discord.ui.button(label="Cancel", style=ButtonStyle.green)
     async def cancel(self, interaction: Interaction, button: Button) -> None:
@@ -302,4 +302,4 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
         await interaction.response.send_message("Cancelled infraction.")
 
         self.confirmed = False
-        await self.stop()
+        self.stop()
