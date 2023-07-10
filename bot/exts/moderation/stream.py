@@ -7,6 +7,7 @@ from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext import commands
 from pydis_core.utils import scheduling
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import (
@@ -16,7 +17,6 @@ from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 

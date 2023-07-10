@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -20,7 +21,6 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_in_category, is_mod_channel
-from bot.utils.members import get_or_fetch_member
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)

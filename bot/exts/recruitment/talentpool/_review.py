@@ -12,13 +12,13 @@ from async_rediscache import RedisCache
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import count_unique_users_reaction
 
 if typing.TYPE_CHECKING:

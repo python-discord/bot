@@ -9,6 +9,7 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.members import get_or_fetch_member
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
@@ -22,7 +23,6 @@ from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
-from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
 
 log = get_logger(__name__)
