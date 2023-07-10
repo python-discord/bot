@@ -30,8 +30,7 @@ class StaleInventoryNotifier:
     def __init__(self):
         self._init_task = scheduling.create_task(
             self._init_channel(),
-            name="StaleInventoryNotifier channel init",
-            event_loop=bot.instance.loop,
+            name="StaleInventoryNotifier channel init"
         )
         self._warned_urls = set()
 

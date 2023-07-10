@@ -68,7 +68,7 @@ class ModManagement(commands.Cog):
         return self.bot.get_cog("Infractions")
 
     @commands.group(name="infraction", aliases=("infr", "infractions", "inf", "i"), invoke_without_command=True)
-    async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:  # noqa: RUF013
+    async def infraction_group(self, ctx: Context, infraction: Infraction = None) -> None:
         """
         Infraction management commands.
 

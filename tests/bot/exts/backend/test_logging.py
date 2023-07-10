@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from bot import constants
 from bot.exts.backend.logging import Logging
-from tests.helpers import MockBot, MockTextChannel
+from tests.helpers import MockBot, MockTextChannel, no_create_task
 
 
 class LoggingTests(unittest.IsolatedAsyncioTestCase):
@@ -11,7 +11,8 @@ class LoggingTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         self.bot = MockBot()
-        self.cog = Logging(self.bot)
+        with no_create_task():
+            self.cog = Logging(self.bot)
         self.dev_log = MockTextChannel(id=1234, name="dev-log")
 
     @patch("bot.exts.backend.logging.DEBUG_MODE", False)

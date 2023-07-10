@@ -6,6 +6,7 @@ import logging
 import unittest.mock
 from asyncio import AbstractEventLoop
 from collections.abc import Iterable
+from contextlib import contextmanager
 from functools import cached_property
 
 import discord
@@ -664,3 +665,12 @@ class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
     """
     spec_set = webhook_instance
     additional_spec_asyncs = ("send", "edit", "delete", "execute")
+
+@contextmanager
+def no_create_task():
+    def side_effect(coro, *_, **__):
+        coro.close()
+
+    with unittest.mock.patch("pydis_core.utils.scheduling.create_task") as create_task:
+        create_task.side_effect = side_effect
+        yield

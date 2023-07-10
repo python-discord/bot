@@ -20,6 +20,7 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, time
+from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
@@ -97,7 +98,7 @@ class WatchChannel(metaclass=CogABCMeta):
         await self.bot.wait_until_guild_available()
 
         try:
-            self.channel = await self.bot.fetch_channel(self.destination)
+            self.channel = await get_or_fetch_channel(self.destination)
         except HTTPException:
             self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
 
@@ -168,7 +169,7 @@ class WatchChannel(metaclass=CogABCMeta):
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:
             if not self.consuming_messages:
-                self._consume_task = scheduling.create_task(self.consume_messages(), event_loop=self.bot.loop)
+                self._consume_task = scheduling.create_task(self.consume_messages())
 
             self.log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
             self.message_queue[msg.author.id][msg.channel.id].append(msg)
@@ -198,10 +199,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         if self.message_queue:
             self.log.trace("Channel queue not empty: Continuing consuming queues")
-            self._consume_task = scheduling.create_task(
-                self.consume_messages(delay_consumption=False),
-                event_loop=self.bot.loop,
-            )
+            self._consume_task = scheduling.create_task(self.consume_messages(delay_consumption=False))
         else:
             self.log.trace("Done consuming messages.")
 
