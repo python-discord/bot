@@ -11,6 +11,7 @@ from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
@@ -20,7 +21,6 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import CustomLogger, get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, time
-from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)

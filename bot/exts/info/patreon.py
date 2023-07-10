@@ -3,13 +3,13 @@ import datetime
 import arrow
 import discord
 from discord.ext import commands, tasks
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Channels, Guild, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.decorators import in_whitelist
 from bot.log import get_logger
-from bot.utils.channel import get_or_fetch_channel
 
 log = get_logger(__name__)
 
