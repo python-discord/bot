@@ -14,7 +14,7 @@ from pydis_core.utils import interactions, paste_service
 from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, MODERATION_ROLES, Roles, URLs
+from bot.constants import BaseURLs, Channels, Emojis, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
 from bot.exts.filtering._filter_lists.extension import TXT_LIKE_FILES
 from bot.exts.help_channels._channel import is_help_forum_post
@@ -211,6 +211,7 @@ class Snekbox(Cog):
                 contents=output,
                 lexer="text",
                 http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
             )
             return paste_link["link"]
         except paste_service.PasteTooLongError:

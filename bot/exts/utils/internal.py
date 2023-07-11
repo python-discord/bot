@@ -14,7 +14,7 @@ from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
 from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
-from bot.constants import DEBUG_MODE, Roles
+from bot.constants import BaseURLs, DEBUG_MODE, Roles
 from bot.log import get_logger
 from bot.utils import find_nth_occurrence
 
@@ -200,6 +200,7 @@ async def func():  # (None,) -> Any
                     contents=out,
                     lexer="python",
                     http_session=self.bot.http_session,
+                    paste_url=BaseURLs.paste_url,
                 )
             except PasteTooLongError:
                 paste_text = "too long to upload to paste service."

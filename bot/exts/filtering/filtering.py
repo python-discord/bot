@@ -24,7 +24,7 @@ import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
+from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
@@ -1456,6 +1456,7 @@ class Filtering(Cog):
                     contents=report,
                     http_session=self.bot.http_session,
                     lexer="text",
+                    paste_url=BaseURLs.paste_url,
                 )
                 paste_resp = resp["link"]
             except (ValueError, PasteTooLongError, PasteUploadError):
