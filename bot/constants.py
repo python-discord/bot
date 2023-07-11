@@ -504,7 +504,6 @@ class _URLs(_BaseURLs):
     connect_max_retries = 3
     connect_cooldown = 5
 
-    paste_service: str = "".join([BaseURLs.site_paste, "/{key}"])
     site_logs_view: str = "https://pythondiscord.com/staff/bot/logs"
 
 

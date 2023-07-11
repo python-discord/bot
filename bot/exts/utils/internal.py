@@ -11,12 +11,12 @@ from typing import Any
 import arrow
 import discord
 from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
+from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
 from bot.constants import DEBUG_MODE, Roles
 from bot.log import get_logger
-from bot.utils import find_nth_occurrence, send_to_paste_service
-from bot.utils.services import PasteTooLongError, PasteUploadError
+from bot.utils import find_nth_occurrence
 
 log = get_logger(__name__)
 
@@ -196,13 +196,17 @@ async def func():  # (None,) -> Any
 
         if len(out) > truncate_index:
             try:
-                paste_link = await send_to_paste_service(out, extension="py")
+                resp = await send_to_paste_service(
+                    contents=out,
+                    lexer="python",
+                    http_session=self.bot.http_session,
+                )
             except PasteTooLongError:
                 paste_text = "too long to upload to paste service."
             except PasteUploadError:
                 paste_text = "failed to upload contents to paste service."
             else:
-                paste_text = f"full contents at {paste_link}"
+                paste_text = f"full contents at {resp['link']}"
 
             await ctx.send(
                 f"```py\n{out[:truncate_index]}\n```"

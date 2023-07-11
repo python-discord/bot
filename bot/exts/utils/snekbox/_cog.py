@@ -10,7 +10,7 @@ from typing import Literal, NamedTuple, TYPE_CHECKING
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
-from pydis_core.utils import interactions
+from pydis_core.utils import interactions, paste_service
 from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
@@ -21,9 +21,7 @@ from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
-from bot.utils import send_to_paste_service
 from bot.utils.lock import LockedResourceError, lock_arg
-from bot.utils.services import PasteTooLongError, PasteUploadError
 
 if TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
@@ -74,7 +72,6 @@ if not hasattr(sys, "_setup_finished"):
 {setup}
 """
 
-MAX_PASTE_LENGTH = 10_000
 # Max to display in a codeblock before sending to a paste service
 # This also applies to text files
 MAX_OUTPUT_BLOCK_LINES = 10
@@ -205,16 +202,20 @@ class Snekbox(Cog):
         async with self.bot.http_session.post(URLs.snekbox_eval_api, json=data, raise_for_status=True) as resp:
             return EvalResult.from_dict(await resp.json())
 
-    @staticmethod
-    async def upload_output(output: str) -> str | None:
+    async def upload_output(self, output: str) -> str | None:
         """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
         try:
-            return await send_to_paste_service(output, extension="txt", max_length=MAX_PASTE_LENGTH)
-        except PasteTooLongError:
+            paste_link = await paste_service.send_to_paste_service(
+                contents=output,
+                lexer="text",
+                http_session=self.bot.http_session,
+            )
+            return paste_link["link"]
+        except paste_service.PasteTooLongError:
             return "too long to upload"
-        except PasteUploadError:
+        except paste_service.PasteUploadError:
             return "unable to upload"
 
     @staticmethod
