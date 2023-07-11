@@ -64,7 +64,7 @@ class Patreon(commands.Cog):
             f":tada: {after.mention} just became a **tier {new_patreon_tier}** patron!\n"
             "Support us on Patreon: https://pydis.com/patreon"
         )
-        channel = await get_or_fetch_channel(Channels.meta)
+        channel = await get_or_fetch_channel(self.bot, Channels.meta)
         await channel.send(message)
 
     async def send_current_supporters(self, channel: discord.abc.Messageable, automatic: bool = False) -> None:
@@ -120,7 +120,7 @@ class Patreon(commands.Cog):
         """A loop running daily to see if it's the first of the month. If so call `self.send_current_supporters()`."""
         now = arrow.utcnow()
         if now.day == 1:
-            meta_channel = await get_or_fetch_channel(Channels.meta)
+            meta_channel = await get_or_fetch_channel(self.bot, Channels.meta)
             await self.send_current_supporters(meta_channel, automatic=True)
 
 
