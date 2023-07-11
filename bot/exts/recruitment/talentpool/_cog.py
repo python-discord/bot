@@ -146,7 +146,7 @@ class TalentPool(Cog, name="Talentpool"):
             days=DAYS_UNTIL_INACTIVE
         )
 
-        nomination_discussion = await get_or_fetch_channel(Channels.nomination_discussion)
+        nomination_discussion = await get_or_fetch_channel(self.bot, Channels.nomination_discussion)
         for nomination in nominations:
             if messages_per_user[nomination.user_id] > 0:
                 continue
@@ -553,7 +553,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
         """Remove `user` from the talent pool after they are banned."""
         if await self.end_nomination(user.id, "Automatic removal: User was banned"):
-            nomination_discussion = await get_or_fetch_channel(Channels.nomination_discussion)
+            nomination_discussion = await get_or_fetch_channel(self.bot, Channels.nomination_discussion)
             await nomination_discussion.send(
                 f":warning: <@{user.id}> ({user.id})"
                 " was removed from the talentpool due to being banned."
@@ -614,7 +614,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         if nomination.thread_id:
             try:
-                thread = await get_or_fetch_channel(nomination.thread_id)
+                thread = await get_or_fetch_channel(self.bot, nomination.thread_id)
             except discord.HTTPException:
                 thread_jump_url = "*Not found*"
             else:

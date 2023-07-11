@@ -98,7 +98,7 @@ class WatchChannel(metaclass=CogABCMeta):
         await self.bot.wait_until_guild_available()
 
         try:
-            self.channel = await get_or_fetch_channel(self.destination)
+            self.channel = await get_or_fetch_channel(self.bot, self.destination)
         except HTTPException:
             self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
 

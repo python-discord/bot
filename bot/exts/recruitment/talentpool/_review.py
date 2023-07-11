@@ -502,7 +502,7 @@ class Reviewer:
             if nomination.thread_id is None:
                 continue
             try:
-                thread = await get_or_fetch_channel(nomination.thread_id)
+                thread = await get_or_fetch_channel(self.bot, nomination.thread_id)
             except discord.HTTPException:
                 # Nothing to do here
                 pass

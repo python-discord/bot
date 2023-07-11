@@ -198,7 +198,7 @@ class Subscribe(commands.Cog):
         If the initial message isn't found, a new one will be created.
         This message will always be needed to attach the persistent view to it
         """
-        roles_channel: discord.TextChannel = await get_or_fetch_channel(constants.Channels.roles)
+        roles_channel: discord.TextChannel = await get_or_fetch_channel(self.bot, constants.Channels.roles)
 
         async for message in roles_channel.history(limit=30):
             if message.content == self.SELF_ASSIGNABLE_ROLES_MESSAGE:
