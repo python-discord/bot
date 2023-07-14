@@ -13,7 +13,7 @@ from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, 
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
-from bot.constants import Metabase as MetabaseConfig, Roles
+from bot.constants import BaseURLs, Metabase as MetabaseConfig, Roles
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
 
@@ -146,6 +146,7 @@ class Metabase(Cog):
                 contents=out,
                 lexer=extension,
                 http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
             )
         except PasteTooLongError:
             message = f":x: {ctx.author.mention} Too long to upload to paste service."

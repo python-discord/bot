@@ -489,7 +489,8 @@ class _BaseURLs(EnvConfig):
 
     # Site
     site_api = "http://site.default.svc.cluster.local/api"
-    site_paste = "https://paste.pythondiscord.com"
+
+    paste_url = "https://paste.pythondiscord.com"
 
 
 BaseURLs = _BaseURLs()

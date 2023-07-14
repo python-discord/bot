@@ -3,7 +3,7 @@ from discord.ext.commands import Cog, Context, command, has_any_role
 from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES
+from bot.constants import BaseURLs, Emojis, MODERATION_ROLES
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
 
@@ -58,6 +58,7 @@ class DMRelay(Cog):
                 contents=metadata + output,
                 lexer="text",
                 http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
             )
             message = resp["link"]
         except PasteTooLongError:
