@@ -18,7 +18,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
-from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, PasteFile, send_to_paste_service
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui

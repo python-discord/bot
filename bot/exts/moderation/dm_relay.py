@@ -1,6 +1,6 @@
 import discord
 from discord.ext.commands import Cog, Context, command, has_any_role
-from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, PasteFile, send_to_paste_service
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
 from bot.constants import BaseURLs, Emojis, MODERATION_ROLES

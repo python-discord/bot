@@ -9,7 +9,7 @@ from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext.commands import Cog, Context, group, has_any_role
-from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, PasteFile, send_to_paste_service
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
