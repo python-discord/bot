@@ -11,7 +11,7 @@ from typing import Any
 import arrow
 import discord
 from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
-from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
+from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, PasteFile, send_to_paste_service
 
 from bot.bot import Bot
 from bot.constants import BaseURLs, DEBUG_MODE, Roles
@@ -195,10 +195,10 @@ async def func():  # (None,) -> Any
             truncate_index = newline_truncate_index
 
         if len(out) > truncate_index:
+            file = PasteFile(content=out)
             try:
                 resp = await send_to_paste_service(
-                    contents=out,
-                    lexer="python",
+                    files=[file],
                     http_session=self.bot.http_session,
                     paste_url=BaseURLs.paste_url,
                 )
@@ -207,7 +207,7 @@ async def func():  # (None,) -> Any
             except PasteUploadError:
                 paste_text = "failed to upload contents to paste service."
             else:
-                paste_text = f"full contents at {resp['link']}"
+                paste_text = f"full contents at {resp.link}"
 
             await ctx.send(
                 f"```py\n{out[:truncate_index]}\n```"

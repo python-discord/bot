@@ -11,6 +11,7 @@ from typing import Literal, NamedTuple, TYPE_CHECKING
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
 from pydis_core.utils import interactions, paste_service
+from pydis_core.utils.paste_service import send_to_paste_service, PasteFile
 from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
@@ -206,14 +207,14 @@ class Snekbox(Cog):
         """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
+        file = PasteFile(content=output, lexer="text")
         try:
-            paste_link = await paste_service.send_to_paste_service(
-                contents=output,
-                lexer="text",
+            paste_response = await send_to_paste_service(
+                files=[file],
                 http_session=self.bot.http_session,
                 paste_url=BaseURLs.paste_url,
             )
-            return paste_link["link"]
+            return paste_response.link
         except paste_service.PasteTooLongError:
             return "too long to upload"
         except paste_service.PasteUploadError:

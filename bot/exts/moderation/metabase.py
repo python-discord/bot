@@ -9,7 +9,7 @@ from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext.commands import Cog, Context, group, has_any_role
-from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
+from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, PasteFile, send_to_paste_service
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
@@ -141,10 +141,10 @@ class Metabase(Cog):
                 # Format it nicely for human eyes
                 out = json.dumps(out, indent=4, sort_keys=True)
 
+        file = PasteFile(content=out, lexer=extension)
         try:
             resp = await send_to_paste_service(
-                contents=out,
-                lexer=extension,
+                files=[file],
                 http_session=self.bot.http_session,
                 paste_url=BaseURLs.paste_url,
             )
@@ -153,7 +153,7 @@ class Metabase(Cog):
         except PasteUploadError:
             message = f":x: {ctx.author.mention} Failed to upload to paste service."
         else:
-            message = f":+1: {ctx.author.mention} Here's your link: {resp['link']}"
+            message = f":+1: {ctx.author.mention} Here's your link: {resp.link}"
 
         await ctx.send(
             f"{message}\nYou can also access this data within internal eval by doing: "
