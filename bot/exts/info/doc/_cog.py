@@ -12,13 +12,13 @@ import aiohttp
 import discord
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.paginator import LinePaginator
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
-from bot.constants import MODERATION_ROLES, RedirectOutput
+from bot.constants import MODERATION_ROLES, PaginationEmojis, RedirectOutput
 from bot.converters import Inventory, PackageName, ValidURL
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils.lock import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 
@@ -327,7 +327,10 @@ class DocCog(commands.Cog):
 
             lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
             if self.base_urls:
-                await LinePaginator.paginate(lines, ctx, inventory_embed, max_size=400, empty=False)
+                await LinePaginator.paginate(
+                    PaginationEmojis, lines, ctx,
+                    inventory_embed, max_size=400, empty=False, allowed_roles=MODERATION_ROLES
+                )
 
             else:
                 inventory_embed.description = "Hmmm, seems like there's nothing here yet."
