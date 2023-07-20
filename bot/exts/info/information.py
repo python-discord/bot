@@ -11,14 +11,15 @@ from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.paginator import LinePaginator
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import PaginationEmojis
 from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
@@ -131,7 +132,10 @@ class Information(Cog):
             colour=Colour.og_blurple()
         )
 
-        await LinePaginator.paginate(role_list, ctx, embed, empty=False)
+        await LinePaginator.paginate(
+            PaginationEmojis, role_list, ctx, embed,
+            empty=False, allowed_roles=constants.MODERATION_ROLES
+        )
 
     @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="role")
@@ -597,7 +601,10 @@ class Information(Cog):
             self.bot.stats.incr(f"rule_uses.{rule_number}")
             final_rules.append(f"**{rule_number}.** {full_rules[rule_number - 1][0]}")
 
-        await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
+        await LinePaginator.paginate(
+            PaginationEmojis, final_rules, ctx, rules_embed,
+            max_lines=3, allowed_roles=constants.MODERATION_ROLES
+        )
 
         return final_rule_numbers
 
