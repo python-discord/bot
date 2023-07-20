@@ -7,14 +7,14 @@ from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext import commands
 from pydis_core.utils import scheduling
+from pydis_core.utils.paginator import LinePaginator
 
 from bot.bot import Bot
 from bot.constants import (
-    Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
+    Colours, Emojis, Guild, MODERATION_ROLES, PaginationEmojis, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
 )
 from bot.converters import Expiry
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.members import get_or_fetch_member
 
@@ -226,7 +226,10 @@ class Stream(commands.Cog):
                 title=f"Members with streaming permission (`{len(lines)}` total)",
                 colour=Colours.soft_green
             )
-            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+            await LinePaginator.paginate(
+                PaginationEmojis, lines, ctx, embed,
+                max_size=400, empty=False, allowed_roles=MODERATION_ROLES
+            )
         else:
             await ctx.send("No members with stream permissions found.")
 
