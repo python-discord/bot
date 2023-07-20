@@ -5,13 +5,13 @@ from enum import Enum
 from discord import Colour, Embed
 from discord.ext import commands
 from discord.ext.commands import Context, group
+from pydis_core.utils.paginator import LinePaginator
 
 from bot import exts
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES, Roles, URLs
+from bot.constants import Emojis, MODERATION_ROLES, PaginationEmojis, Roles, URLs
 from bot.converters import Extension
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 
 log = get_logger(__name__)
 
@@ -125,7 +125,10 @@ class Extensions(commands.Cog):
             lines.append(f"**{category}**\n{extensions}\n")
 
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
-        await LinePaginator.paginate(lines, ctx, embed, scale_to_size=700, empty=False)
+        await LinePaginator.paginate(
+            PaginationEmojis, lines, ctx, embed,
+            scale_to_size=700, empty=False, allowed_roles=MODERATION_ROLES
+        )
 
     def group_extension_statuses(self) -> t.Mapping[str, str]:
         """Return a mapping of extension names and statuses to their categories."""
