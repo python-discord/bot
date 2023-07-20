@@ -10,11 +10,12 @@ import discord
 import frontmatter
 from discord import Embed, Interaction, Member, app_commands
 from discord.ext.commands import Cog, Context
+from pydis_core.utils.paginator import LinePaginator
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import PaginationEmojis
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 
 log = get_logger(__name__)
@@ -296,7 +297,9 @@ class Tags(Cog):
             # Try to find accessible tags from a group matching the identifier's name.
             if group_tags := self.accessible_tags_in_group(identifier.name, ctx.author):
                 await LinePaginator.paginate(
-                    group_tags, ctx, Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS
+                    PaginationEmojis, group_tags, ctx,
+                    Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS,
+                    allowed_roles=constants.MODERATION_ROLES
                 )
                 return True
 
@@ -328,9 +331,11 @@ class Tags(Cog):
         if not name:
             if self.tags:
                 await LinePaginator.paginate(
+                    PaginationEmojis,
                     self.accessible_tags(interaction.user),
                     interaction, Embed(title="Available tags"),
                     **self.PAGINATOR_DEFAULTS,
+                    allowed_roles=constants.MODERATION_ROLES
                 )
             else:
                 await interaction.response.send_message(embed=Embed(description="**There are no tags!**"))
@@ -342,7 +347,8 @@ class Tags(Cog):
             # Try to find accessible tags from a group matching the identifier's name.
             if group_tags := self.accessible_tags_in_group(identifier.name, interaction.user):
                 await LinePaginator.paginate(
-                    group_tags, interaction, Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS
+                    PaginationEmojis, group_tags, interaction,
+                    Embed(title=f"Tags under *{identifier.name}*"), **self.PAGINATOR_DEFAULTS
                 )
                 return True
 
