@@ -1,6 +1,8 @@
 from unittest import TestCase
 
-from bot import pagination
+from pydis_core.utils.paginator import LinePaginator
+
+from bot.constants import PaginationEmojis
 
 
 class LinePaginatorTests(TestCase):
@@ -8,8 +10,9 @@ class LinePaginatorTests(TestCase):
 
     def setUp(self):
         """Create a paginator for the test method."""
-        self.paginator = pagination.LinePaginator(prefix="", suffix="", max_size=30,
-                                                  scale_to_size=50)
+        self.paginator = LinePaginator(
+            pagination_emojis=PaginationEmojis, prefix="",
+            suffix="", max_size=30, scale_to_size=50)
 
     def test_add_line_works_on_small_lines(self):
         """`add_line` should allow small lines to be added."""
