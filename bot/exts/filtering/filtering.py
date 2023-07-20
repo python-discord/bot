@@ -18,13 +18,14 @@ from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.paginator import LinePaginator
 from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot import constants
 from bot.bot import Bot
-from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
+from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, PaginationEmojis, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
@@ -44,7 +45,6 @@ from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, t
 from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_BAN_REASON
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
@@ -439,7 +439,9 @@ class Filtering(Cog):
             filter_names = [f"» {f}" for f in self.loaded_filters]
             embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of filter names")
-            await LinePaginator.paginate(filter_names, ctx, embed, max_lines=10, empty=False)
+            await LinePaginator.paginate(
+                PaginationEmojis, filter_names, ctx, embed,
+                max_lines=10, empty=False, allowed_roles=MODERATION_ROLES)
         else:
             filter_type = self.loaded_filters.get(filter_name)
             if not filter_type:
@@ -593,7 +595,10 @@ class Filtering(Cog):
                 settings_list.extend(f"» {filter_name}/{setting}" for setting in filter_settings)
             embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of setting names")
-            await LinePaginator.paginate(settings_list, ctx, embed, max_lines=10, empty=False)
+            await LinePaginator.paginate(
+                PaginationEmojis, settings_list, ctx, embed,
+                max_lines=10, empty=False, allowed_roles=MODERATION_ROLES
+            )
 
         else:
             # The setting is either in a SettingsEntry subclass, or a pydantic model.
@@ -644,7 +649,10 @@ class Filtering(Cog):
         lines = lines[:-1]  # Remove last newline.
 
         embed = Embed(colour=Colour.blue(), title="Match results")
-        await LinePaginator.paginate(lines, ctx, embed, max_lines=10, empty=False)
+        await LinePaginator.paginate(
+            PaginationEmojis, lines, ctx, embed,
+            max_lines=10, empty=False, allowed_roles=MODERATION_ROLES
+        )
 
     @filter.command(name="search")
     async def f_search(
@@ -743,7 +751,10 @@ class Filtering(Cog):
             list_names = [f"» {fl}" for fl in self.filter_lists]
             embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of filter lists names")
-            await LinePaginator.paginate(list_names, ctx, embed, max_lines=10, empty=False)
+            await LinePaginator.paginate(
+                PaginationEmojis, list_names, ctx, embed,
+                max_lines=10, empty=False, allowed_roles=MODERATION_ROLES
+            )
             return
 
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -1065,7 +1076,10 @@ class Filtering(Cog):
         embed = Embed(colour=Colour.blue())
         embed.set_author(name=f"List of {filter_list[list_type].label}s ({len(lines)} total)")
 
-        await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
+        await LinePaginator.paginate(
+            PaginationEmojis, lines, ctx, embed,
+            max_lines=15, empty=False, reply=True, allowed_roles=MODERATION_ROLES
+        )
 
     def _get_filter_by_id(self, id_: int) -> tuple[Filter, FilterList, ListType] | None:
         """Get the filter object corresponding to the provided ID, along with its containing list and list type."""
@@ -1342,7 +1356,10 @@ class Filtering(Cog):
         embed = Embed(colour=Colour.blue())
         embed.set_author(name=f"Search Results ({result_count} total)")
         ctx = await bot.instance.get_context(message)
-        await LinePaginator.paginate(lines, ctx, embed, max_lines=15, empty=False, reply=True)
+        await LinePaginator.paginate(
+            PaginationEmojis, lines, ctx, embed,
+            max_lines=15, empty=False, reply=True, allowed_roles=MODERATION_ROLES
+        )
 
     async def _delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
         """Delete an offensive message, and then delete it from the DB."""
