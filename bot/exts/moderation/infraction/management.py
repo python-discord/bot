@@ -6,10 +6,11 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
+from pydis_core.utils.paginator import LinePaginator
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Categories
+from bot.constants import Categories, PaginationEmojis
 from bot.converters import DurationOrExpiry, Infraction, MemberOrUser, Snowflake, UnambiguousUser
 from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfractionError
@@ -17,7 +18,6 @@ from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_in_category, is_mod_channel
 from bot.utils.members import get_or_fetch_member
@@ -408,13 +408,15 @@ class ModManagement(commands.Cog):
         lines = [self.infraction_to_string(infraction, ignore_fields) for infraction in infractions]
 
         await LinePaginator.paginate(
+            PaginationEmojis,
             lines,
             ctx=ctx,
             embed=embed,
             prefix=f"{prefix}\n",
             empty=True,
             max_lines=3,
-            max_size=1000
+            max_size=1000,
+            allowed_roles = constants.MODERATION_ROLES
         )
 
     def infraction_to_string(self, infraction: dict[str, t.Any], ignore_fields: tuple[str, ...]) -> str:
