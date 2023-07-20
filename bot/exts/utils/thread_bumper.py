@@ -2,11 +2,12 @@
 import discord
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.paginator import LinePaginator
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import PaginationEmojis
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils import channel
 
 log = get_logger(__name__)
@@ -129,7 +130,10 @@ class ThreadBumper(commands.Cog):
             title="Threads in the bump list",
             colour=constants.Colours.blue
         )
-        await LinePaginator.paginate(lines, ctx, embed, max_lines=10)
+        await LinePaginator.paginate(
+            PaginationEmojis, lines, ctx, embed,
+            max_lines=10, allowed_roles=constants.MODERATION_ROLES
+        )
 
     @commands.Cog.listener()
     async def on_thread_update(self, _: discord.Thread, after: discord.Thread) -> None:
