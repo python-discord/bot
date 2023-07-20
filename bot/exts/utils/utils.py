@@ -5,13 +5,13 @@ import unicodedata
 from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
 from discord.utils import snowflake_time
+from pydis_core.utils.paginator import LinePaginator
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import Channels, MODERATION_ROLES, PaginationEmojis, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import Snowflake
 from bot.decorators import in_whitelist, not_in_blacklist
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils import messages, time
 
 log = get_logger(__name__)
@@ -82,7 +82,9 @@ class Utils(Cog):
             # Maximum length possible is 502 out of 1024, so there's no need to truncate.
             embed.add_field(name="Full Raw Text", value=f"`{''.join(raw_list)}`", inline=False)
 
-        await LinePaginator.paginate(char_list, ctx, embed, max_lines=10, max_size=2000, empty=False)
+        await LinePaginator.paginate(
+            PaginationEmojis, char_list, ctx, embed,
+            max_lines=10, max_size=2000, empty=False, allowed_roles=MODERATION_ROLES)
 
     @command()
     async def zen(
@@ -181,6 +183,7 @@ class Utils(Cog):
             lines.append(f"**{snowflake}**\nCreated at {created_at} ({time.format_relative(created_at)}).")
 
         await LinePaginator.paginate(
+            PaginationEmojis,
             lines,
             ctx=ctx,
             embed=embed,
