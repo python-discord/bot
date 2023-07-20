@@ -9,16 +9,18 @@ from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.paginator import LinePaginator
 
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
+from bot.constants import (
+    Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, PaginationEmojis, Roles, STAFF_ROLES
+)
 from bot.converters import MemberOrUser, UnambiguousMemberOrUser
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.channel import get_or_fetch_channel
 from bot.utils.members import get_or_fetch_member
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
@@ -146,7 +148,7 @@ class TalentPool(Cog, name="Talentpool"):
             days=DAYS_UNTIL_INACTIVE
         )
 
-        nomination_discussion = await get_or_fetch_channel(Channels.nomination_discussion)
+        nomination_discussion = await get_or_fetch_channel(self.bot, Channels.nomination_discussion)
         for nomination in nominations:
             if messages_per_user[nomination.user_id] > 0:
                 continue
@@ -256,7 +258,7 @@ class TalentPool(Cog, name="Talentpool"):
             title="Talent Pool active nominations",
             color=Color.blue()
         )
-        await LinePaginator.paginate(lines, ctx, embed, empty=False)
+        await LinePaginator.paginate(PaginationEmojis, lines, ctx, embed, empty=False, allowed_roles=MODERATION_ROLES)
 
     async def list_nominations(
         self,
@@ -382,6 +384,7 @@ class TalentPool(Cog, name="Talentpool"):
         )
         lines = [await self._nomination_to_string(nomination) for nomination in result]
         await LinePaginator.paginate(
+            PaginationEmojis,
             lines,
             ctx=ctx,
             embed=embed,
@@ -553,7 +556,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
         """Remove `user` from the talent pool after they are banned."""
         if await self.end_nomination(user.id, "Automatic removal: User was banned"):
-            nomination_discussion = await get_or_fetch_channel(Channels.nomination_discussion)
+            nomination_discussion = await get_or_fetch_channel(self.bot, Channels.nomination_discussion)
             await nomination_discussion.send(
                 f":warning: <@{user.id}> ({user.id})"
                 " was removed from the talentpool due to being banned."
@@ -614,7 +617,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         if nomination.thread_id:
             try:
-                thread = await get_or_fetch_channel(nomination.thread_id)
+                thread = await get_or_fetch_channel(self.bot, nomination.thread_id)
             except discord.HTTPException:
                 thread_jump_url = "*Not found*"
             else:
