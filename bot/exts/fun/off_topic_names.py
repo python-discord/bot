@@ -10,12 +10,12 @@ from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.ui import Button, View
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.paginator import LinePaginator
 
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, NEGATIVE_REPLIES
+from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, NEGATIVE_REPLIES, PaginationEmojis
 from bot.converters import OffTopicName
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 
@@ -87,7 +87,9 @@ class OffTopicNames(Cog):
             colour=Colour.blue()
         )
         if result:
-            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+            await LinePaginator.paginate(
+                PaginationEmojis, lines, ctx, embed,
+                max_size=400, empty=False, allowed_roles=MODERATION_ROLES)
         else:
             embed.description = "Hmmm, seems like there's nothing here yet."
             await ctx.send(embed=embed)
@@ -293,7 +295,10 @@ class OffTopicNames(Cog):
         )
 
         if lines:
-            await LinePaginator.paginate(lines, ctx, embed, max_size=400, empty=False)
+            await LinePaginator.paginate(
+                PaginationEmojis, lines, ctx, embed,
+                max_size=400, empty=False, allowed_roles=MODERATION_ROLES
+            )
         else:
             embed.description = "Nothing found."
             await ctx.send(embed=embed)
