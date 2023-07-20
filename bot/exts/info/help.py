@@ -7,14 +7,14 @@ from contextlib import suppress
 
 from discord import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, ui
 from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
+from pydis_core.utils.pagination import LinePaginator
 from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
 
 from bot import constants
-from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import Channels, PaginationEmojis, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils.messages import wait_for_deletion
 
 log = get_logger(__name__)
@@ -420,12 +420,14 @@ class CustomHelpCommand(HelpCommand):
             description += "\n\n**Commands:**"
 
         await LinePaginator.paginate(
-            command_detail_lines,
-            self.context,
-            embed,
+            pagination_emojis=PaginationEmojis,
+            lines=command_detail_lines,
+            ctx=self.context,
+            embed=embed,
             prefix=description,
             max_lines=COMMANDS_PER_PAGE,
             max_size=2000,
+            allowed_roles=constants.MODERATION_ROLES
         )
 
     async def send_bot_help(self, mapping: dict) -> None:
@@ -472,7 +474,14 @@ class CustomHelpCommand(HelpCommand):
             # add any remaining command help that didn't get added in the last iteration above.
             pages.append(page)
 
-        await LinePaginator.paginate(pages, self.context, embed=embed, max_lines=1, max_size=2000)
+        await LinePaginator.paginate(
+            pagination_emojis=PaginationEmojis,
+            lines=pages,
+            ctx=self.context,
+            embed=embed,
+            max_lines=1,
+            max_size=2000,
+            allowed_roles=constants.MODERATION_ROLES)
 
 
 class Help(Cog):
