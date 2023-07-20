@@ -11,7 +11,7 @@ python = "3.11.*"
 # See https://bot-core.pythondiscord.com/ for docs.
 pydis_core = { version = "9.9.2", extras = ["async-rediscache"] }
 
-aiohttp = "3.8.4"
+aiohttp = "3.8.5"
 arrow = "1.2.3"
 beautifulsoup4 = "4.12.2"
 colorama = { version = "0.4.6", markers = "sys_platform == 'win32'" }
