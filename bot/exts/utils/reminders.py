@@ -9,16 +9,17 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.paginator import LinePaginator
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import (
-    Channels, Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+    Channels, Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, PaginationEmojis, Roles,
+    STAFF_PARTNERS_COMMUNITY_ROLES
 )
 from bot.converters import Duration, UnambiguousUser
 from bot.errors import LockedResourceError
 from bot.log import get_logger
-from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
@@ -393,9 +394,11 @@ class Reminders(Cog):
         embed.colour = discord.Colour.og_blurple()
 
         await LinePaginator.paginate(
+            PaginationEmojis,
             lines,
             ctx, embed,
             max_lines=3,
+            allowed_roles=MODERATION_ROLES
         )
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
