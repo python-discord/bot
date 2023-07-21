@@ -10,7 +10,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot.bot import Bot
 from bot.constants import (

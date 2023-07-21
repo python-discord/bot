@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot.constants import PaginationEmojis
 

@@ -7,7 +7,7 @@ from contextlib import suppress
 
 from discord import ButtonStyle, Colour, Embed, Emoji, Interaction, PartialEmoji, ui
 from discord.ext.commands import Bot, Cog, Command, CommandError, Context, DisabledCommand, Group, HelpCommand
-from pydis_core.utils.pagination import LinePaginator
+from pydis_core import LinePaginator
 from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
 

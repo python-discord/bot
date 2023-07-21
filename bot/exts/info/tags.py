@@ -10,7 +10,7 @@ import discord
 import frontmatter
 from discord import Embed, Interaction, Member, app_commands
 from discord.ext.commands import Cog, Context
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot import constants
 from bot.bot import Bot

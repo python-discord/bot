@@ -12,8 +12,8 @@ import aiohttp
 import discord
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
-from pydis_core.utils.paginator import LinePaginator
 from pydis_core.utils.scheduling import Scheduler
+from pydis_core import LinePaginator
 
 from bot.bot import Bot
 from bot.constants import MODERATION_ROLES, PaginationEmojis, RedirectOutput

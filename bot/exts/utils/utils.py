@@ -5,7 +5,7 @@ import unicodedata
 from discord import Colour, Embed, utils
 from discord.ext.commands import BadArgument, Cog, Context, clean_content, command, has_any_role
 from discord.utils import snowflake_time
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, PaginationEmojis, Roles, STAFF_PARTNERS_COMMUNITY_ROLES

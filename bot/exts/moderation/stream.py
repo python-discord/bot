@@ -7,7 +7,7 @@ from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext import commands
 from pydis_core.utils import scheduling
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot.bot import Bot
 from bot.constants import (

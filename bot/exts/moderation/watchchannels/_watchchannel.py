@@ -11,7 +11,7 @@ from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons, PaginationEmojis

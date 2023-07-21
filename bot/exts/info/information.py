@@ -11,7 +11,7 @@ from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot import constants
 from bot.bot import Bot

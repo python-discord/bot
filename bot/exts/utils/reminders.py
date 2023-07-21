@@ -9,7 +9,7 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot

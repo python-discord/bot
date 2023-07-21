@@ -5,7 +5,7 @@ from enum import Enum
 from discord import Colour, Embed
 from discord.ext import commands
 from discord.ext.commands import Context, group
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot import exts
 from bot.bot import Bot

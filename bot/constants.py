@@ -9,7 +9,7 @@ import os
 from enum import Enum
 
 from pydantic import BaseModel, BaseSettings, root_validator
-from pydis_core.settings import PaginationEmojisSettings
+from pydis_core import PaginationEmojis as PaginationEmojisModel
 
 
 class EnvConfig(BaseSettings):
@@ -704,4 +704,5 @@ ERROR_REPLIES = [
     "I can't believe you've done this",
 ]
 
-PaginationEmojis = PaginationEmojisSettings()
+PaginationEmojis = PaginationEmojisModel(delete=Emojis.trashcan)
+

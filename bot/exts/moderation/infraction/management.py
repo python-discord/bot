@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
-from pydis_core.utils.paginator import LinePaginator
+from pydis_core import LinePaginator
 
 from bot import constants
 from bot.bot import Bot
