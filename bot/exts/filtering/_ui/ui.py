@@ -678,9 +678,11 @@ class AlertView(discord.ui.View):
             if len(content_list) > 1:
                 return "", None
             if content_list:
+                content = next(iter(content_list))
+                if filter_list.name == "domain" and "discord" in content:  # Leave invites to the invite filterlist.
+                    continue
                 if encountered:
                     return "", None
-                content = next(iter(content_list))
                 target_filter_list = filter_list
                 encountered = True
 
