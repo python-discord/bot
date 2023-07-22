@@ -558,7 +558,7 @@ class PhishConfirmationView(discord.ui.View):
             if not compban_command:
                 await interaction.followup.send(':warning: Could not find the command "compban".')
             else:
-                ctx = FakeContext(interaction.message, interaction.channel, compban_command)
+                ctx = FakeContext(interaction.message, interaction.channel, compban_command, author=self.mod)
                 await compban_command(ctx, self.offender)
 
         compf_command = bot.instance.get_command("compfilter")
