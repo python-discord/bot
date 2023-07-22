@@ -2,7 +2,7 @@
 embed:
     title: "Mutable default arguments"
 ---
-Default arguments in python are evaluated *once* when the function is
+Default arguments in Python are evaluated *once* when the function is
 **defined**, *not* each time the function is **called**. This means that if
 you have a mutable default argument and mutate it, you will have
 mutated that object for all future calls to the function as well.
