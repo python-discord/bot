@@ -2,7 +2,7 @@
 embed:
     title: "Operator precedence"
 ---
-Operator precedence is essentially like an order of operations for python's operators.
+Operator precedence is essentially like an order of operations for Python's operators.
 
 **Example 1** (arithmetic)
 `2 * 3 + 1` is `7` because multiplication is first
