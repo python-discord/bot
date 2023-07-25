@@ -464,7 +464,7 @@ class Clean(Cog):
     async def clean_group(
         self,
         ctx: Context,
-        users: Greedy[User] = None,  # noqa: RUF013
+        users: Greedy[User] = None,
         first_limit: CleanLimit | None = None,
         second_limit: CleanLimit | None = None,
         regex: Regex | None = None,
