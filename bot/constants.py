@@ -8,7 +8,7 @@ By default, the values defined in the classes are used, these can be overridden 
 import os
 from enum import Enum
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 
@@ -298,30 +298,6 @@ class _CodeBlock(EnvConfig, env_prefix="code_block_"):
 CodeBlock = _CodeBlock()
 
 
-class _Colours(EnvConfig, env_prefix="colours_"):
-
-    blue: int = 0x3775a8
-    bright_green: int = 0x01d277
-    orange: int = 0xe67e22
-    pink: int = 0xcf84e0
-    purple: int = 0xb734eb
-    soft_green: int = 0x68c290
-    soft_orange: int = 0xf9cb54
-    soft_red: int = 0xcd6d6d
-    white: int = 0xfffffe
-    yellow: int = 0xffd241
-
-    @model_validator(mode="before")
-    def parse_hex_values(cls, values: dict) -> dict:  # noqa: N805
-        """Convert hex strings to ints."""
-        for key, value in values.items():
-            values[key] = int(value, 16)
-        return values
-
-
-Colours = _Colours()
-
-
 class _HelpChannels(EnvConfig, env_prefix="help_channels_"):
 
     enable: bool = True
@@ -536,7 +512,8 @@ class _Emojis(EnvConfig, env_prefix="emojis_"):
 Emojis = _Emojis()
 
 
-class _Icons(EnvConfig, env_prefix="icons_"):
+class Icons:
+    """URLs to commonly used icons."""
 
     crown_blurple = "https://cdn.discordapp.com/emojis/469964153289965568.png"
     crown_green = "https://cdn.discordapp.com/emojis/469964154719961088.png"
@@ -590,7 +567,19 @@ class _Icons(EnvConfig, env_prefix="icons_"):
     voice_state_red = "https://cdn.discordapp.com/emojis/656899769905709076.png"
 
 
-Icons = _Icons()
+class Colours:
+    """Colour codes, mostly used to set discord.Embed colours."""
+
+    blue: int = 0x3775a8
+    bright_green: int = 0x01d277
+    orange: int = 0xe67e22
+    pink: int = 0xcf84e0
+    purple: int = 0xb734eb
+    soft_green: int = 0x68c290
+    soft_orange: int = 0xf9cb54
+    soft_red: int = 0xcd6d6d
+    white: int = 0xfffffe
+    yellow: int = 0xffd241
 
 
 class _Keys(EnvConfig, env_prefix="api_keys_"):
