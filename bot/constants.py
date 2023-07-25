@@ -8,7 +8,7 @@ By default, the values defined in the classes are used, these can be overridden 
 import os
 from enum import Enum
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -311,7 +311,7 @@ class _Colours(EnvConfig, env_prefix="colours_"):
     white: int = 0xfffffe
     yellow: int = 0xffd241
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def parse_hex_values(cls, values: dict) -> dict:  # noqa: N805
         """Convert hex strings to ints."""
         for key, value in values.items():

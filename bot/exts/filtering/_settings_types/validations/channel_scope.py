@@ -1,6 +1,6 @@
 from typing import ClassVar, Union
 
-from pydantic import validator
+from pydantic import field_validator
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ValidationEntry
@@ -36,7 +36,7 @@ class ChannelScope(ValidationEntry):
     enabled_channels: set[Union[int, str]]  # noqa: UP007
     enabled_categories: set[Union[int, str]]  # noqa: UP007
 
-    @validator("*", pre=True)
+    @field_validator("*", mode="before")
     @classmethod
     def init_if_sequence_none(cls, sequence: list[str] | None) -> list[str]:
         """Initialize an empty sequence if the value is None."""

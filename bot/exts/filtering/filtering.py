@@ -181,7 +181,7 @@ class Filtering(Cog):
                     extra_fields_type,
                     type_hints[field_name]
                 )
-                for field_name in extra_fields_type.__fields__
+                for field_name in extra_fields_type.model_fields
             }
 
     async def schedule_offending_messages_deletion(self) -> None:
@@ -754,7 +754,7 @@ class Filtering(Cog):
         setting_values = {}
         for settings_group in filter_list[list_type].defaults:
             for _, setting in settings_group.items():
-                setting_values.update(to_serializable(setting.dict(), ui_repr=True))
+                setting_values.update(to_serializable(setting.model_dump(), ui_repr=True))
 
         embed = Embed(colour=Colour.blue())
         populate_embed_from_dict(embed, setting_values)
@@ -1239,7 +1239,13 @@ class Filtering(Cog):
         for current_settings in (filter_.actions, filter_.validations):
             if current_settings:
                 for setting_entry in current_settings.values():
-                    settings.update({setting: None for setting in setting_entry.dict() if setting not in settings})
+                    settings.update(
+                        {
+                            setting: None
+                            for setting in setting_entry.model_dump()
+                            if setting not in settings
+                        }
+                    )
 
         # Even though the list ID remains unchanged, it still needs to be provided for correct serializer validation.
         list_id = filter_list[list_type].id
@@ -1295,7 +1301,7 @@ class Filtering(Cog):
         if not (differ_by_default <= override_matches):  # The overrides didn't cover for the default mismatches.
             return False
 
-        filter_settings = filter_.extra_fields.dict() if filter_.extra_fields else {}
+        filter_settings = filter_.extra_fields.model_dump() if filter_.extra_fields else {}
         # If the dict changes then some fields were not the same.
         return (filter_settings | filter_settings_query) == filter_settings
 
