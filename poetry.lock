@@ -540,13 +540,13 @@ optimize = ["orjson"]
 
 [[package]]
 name = "discord-py"
-version = "2.3.0"
+version = "2.3.1"
 description = "A Python wrapper for the Discord API"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "discord.py-2.3.0-py3-none-any.whl", hash = "sha256:3e9498967822ad4499f8f72deb9173f942d9827d92b6e4e4e7732d24f78f300c"},
-    {file = "discord.py-2.3.0.tar.gz", hash = "sha256:c71066a30f037d069218e59092505c3e8945fd175e396a80748056d989756806"},
+    {file = "discord.py-2.3.1-py3-none-any.whl", hash = "sha256:149652f24da299706270bf8c03c2fcf80cf1caf3a480744c61d5b001688b380d"},
+    {file = "discord.py-2.3.1.tar.gz", hash = "sha256:8eb4fe66b5d503da6de3a8425e23012711dc2fbcd7a782107a92beac15ee3459"},
 ]
 
 [package.dependencies]
@@ -1428,19 +1428,20 @@ email = ["email-validator (>=1.0.3)"]
 
 [[package]]
 name = "pydis-core"
-version = "9.9.2"
+version = "10.1.0"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 optional = false
 python-versions = ">=3.10.dev0,<3.12.dev0"
 files = [
-    {file = "pydis_core-9.9.2-py3-none-any.whl", hash = "sha256:8149837bb8b7e72f17c21eae117e5892290ea88e952453b41bfe031feff64c92"},
-    {file = "pydis_core-9.9.2.tar.gz", hash = "sha256:3c91ed293a14d6c955c432c075226b788c8d9adea3d0044b9e9f86e4ff00df63"},
+    {file = "pydis_core-10.1.0-py3-none-any.whl", hash = "sha256:91f7e39b052b4266af5d65011027318174e0c15330e01d2d4c3e8b1eb925f5a0"},
+    {file = "pydis_core-10.1.0.tar.gz", hash = "sha256:87f4883704ef4ee62b89a1577a0829b8ce6e97bfae875c409ae9b22d5e394d97"},
 ]
 
 [package.dependencies]
 aiodns = "3.0.0"
 async-rediscache = {version = "1.0.0rc2", extras = ["fakeredis"], optional = true, markers = "extra == \"async-rediscache\""}
-"discord.py" = "2.3.0"
+"discord.py" = "2.3.1"
+pydantic = ">=1.7.4,<3.0.0"
 statsd = "4.0.1"
 
 [package.extras]
@@ -2223,4 +2224,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "01b6ece18dec30b37cef5449ac10f5617934b9ce24e8ed1c46596b560783303f"
+content-hash = "4efd5ff87c2613cb2e4472faf1e28f3ba248eee0efe3bb1611d12de232f71e7d"
