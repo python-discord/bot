@@ -1,4 +1,5 @@
-from typing import ClassVar, Union
+from collections.abc import Sequence
+from typing import ClassVar
 
 from pydantic import field_validator
 
@@ -29,20 +30,29 @@ class ChannelScope(ValidationEntry):
         )
     }
 
-    # NOTE: Don't change this to use the new 3.10 union syntax unless you ensure Pydantic type validation and coercion
-    # work properly. At the time of writing this code there's a difference.
-    disabled_channels: set[Union[int, str]]  # noqa: UP007
-    disabled_categories: set[Union[int, str]]  # noqa: UP007
-    enabled_channels: set[Union[int, str]]  # noqa: UP007
-    enabled_categories: set[Union[int, str]]  # noqa: UP007
+    disabled_channels: set[int | str]
+    disabled_categories: set[int | str]
+    enabled_channels: set[int | str]
+    enabled_categories: set[int | str]
 
     @field_validator("*", mode="before")
     @classmethod
-    def init_if_sequence_none(cls, sequence: list[str] | None) -> list[str]:
-        """Initialize an empty sequence if the value is None."""
+    def init_if_sequence_none(cls, sequence: Sequence[int | str] | None) -> Sequence[int | str]:
+        """
+        Initialize an empty sequence if the value is None.
+
+        This also coerces each element of sequence to an int, if possible.
+        """
         if sequence is None:
             return []
-        return sequence
+
+        def _coerce_to_int(input: int | str) -> int | str:
+            try:
+                return int(input)
+            except ValueError:
+                return input
+
+        return map(_coerce_to_int, sequence)
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """
