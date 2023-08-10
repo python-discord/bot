@@ -1,0 +1,30 @@
+name: Block "fixup" commit merges
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-commits:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Get dev branch commit messages
+      id: fetch-commit-messages
+      run: |
+        commit_messages=$(git log ${{ github.event.pull_request.base.ref }}..$GITHUB_HEAD_REF --format=%B)
+        echo $commit_messages >> $MESSAGES
+
+    - name: Echo commit messages
+      run: echo $MESSAGES
+ 
+    - name: Check for "fixup"
+      run: |
+        if echo "${{ steps.fetch-commit-messages.outputs.MESSAGES }}" | grep -q "^fixup"; then
+          echo "Please make sure to squash all commits that have the 'fixup' prefix in your commit messages."
+          exit 1
+        fi
