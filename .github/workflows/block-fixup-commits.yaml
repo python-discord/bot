@@ -12,19 +12,19 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        fetch-depth: ${{ github.event.pull_request.commits }} + 1
 
-    - name: Get dev branch commit messages
-      id: fetch-commit-messages
-      run: |
-        commit_messages=$(git log ${{ github.event.pull_request.base.ref }}..$GITHUB_HEAD_REF --format=%B)
-        echo $commit_messages >> $MESSAGES
+    - name: Fetch the base branch
+      run:  git fetch origin ${{ github.event.pull_request.base.ref }}
 
-    - name: Echo commit messages
-      run: echo $MESSAGES
- 
-    - name: Check for "fixup"
+    - name: Look for the fixup prefix
+      id: search-for-fixup-prefix
       run: |
-        if echo "${{ steps.fetch-commit-messages.outputs.MESSAGES }}" | grep -q "^fixup"; then
+        commit_messages=$(git log origin/${{ github.event.pull_request.base.ref }}..$GITHUB_HEAD_REF --format=%B)
+
+        if echo "$commit_messages" | grep -q "^fixup"; then
           echo "Please make sure to squash all commits that have the 'fixup' prefix in your commit messages."
           exit 1
         fi
