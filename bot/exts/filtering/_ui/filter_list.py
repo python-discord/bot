@@ -50,7 +50,7 @@ def build_filterlist_repr_dict(filter_list: FilterList, list_type: ListType, new
     default_setting_values = {}
     for settings_group in filter_list[list_type].defaults:
         for _, setting in settings_group.items():
-            default_setting_values.update(to_serializable(setting.dict(), ui_repr=True))
+            default_setting_values.update(to_serializable(setting.model_dump(), ui_repr=True))
 
     # Add new values. It's done in this way to preserve field order, since the new_values won't have all settings.
     total_values = {}

@@ -173,7 +173,7 @@ class FilterTests(unittest.TestCase):
         result = infraction1.union(infraction2)
 
         self.assertDictEqual(
-            result.dict(),
+            result.model_dump(),
             {
                 "infraction_type": Infraction.TIMEOUT,
                 "infraction_reason": "there",
@@ -206,7 +206,7 @@ class FilterTests(unittest.TestCase):
         result = infraction1.union(infraction2)
 
         self.assertDictEqual(
-            result.dict(),
+            result.model_dump(),
             {
                 "infraction_type": Infraction.BAN,
                 "infraction_reason": "",

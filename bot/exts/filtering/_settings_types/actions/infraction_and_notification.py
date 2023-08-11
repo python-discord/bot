@@ -6,7 +6,7 @@ import discord.abc
 from dateutil.relativedelta import relativedelta
 from discord import Colour, Embed, Member, User
 from discord.errors import Forbidden
-from pydantic import validator
+from pydantic import field_validator
 from pydis_core.utils.logging import get_logger
 from pydis_core.utils.members import get_or_fetch_member
 
@@ -151,7 +151,7 @@ class InfractionAndNotification(ActionEntry):
     infraction_duration: InfractionDuration
     infraction_channel: int
 
-    @validator("infraction_type", pre=True)
+    @field_validator("infraction_type", mode="before")
     @classmethod
     def convert_infraction_name(cls, infr_type: str | Infraction) -> Infraction:
         """Convert the string to an Infraction by name."""
@@ -221,14 +221,14 @@ class InfractionAndNotification(ActionEntry):
         """
         # Lower number -> higher in the hierarchy
         if self.infraction_type is None:
-            return other.copy()
+            return other.model_copy()
         if other.infraction_type is None:
-            return self.copy()
+            return self.model_copy()
 
         if self.infraction_type.value < other.infraction_type.value:
-            result = self.copy()
+            result = self.model_copy()
         elif self.infraction_type.value > other.infraction_type.value:
-            result = other.copy()
+            result = other.model_copy()
             other = self
         else:
             now = arrow.utcnow().datetime
@@ -236,9 +236,9 @@ class InfractionAndNotification(ActionEntry):
                 other.infraction_duration is not None
                 and now + self.infraction_duration.value > now + other.infraction_duration.value
             ):
-                result = self.copy()
+                result = self.model_copy()
             else:
-                result = other.copy()
+                result = other.model_copy()
                 other = self
 
         # If the winner has no message but the loser does, copy the message to the winner.

@@ -227,5 +227,5 @@ class Defaults(NamedTuple):
         """Return a dict representation of the stored fields across all entries."""
         dict_ = {}
         for settings in self:
-            dict_ = reduce(operator.or_, (entry.dict() for entry in settings.values()), dict_)
+            dict_ = reduce(operator.or_, (entry.model_dump() for entry in settings.values()), dict_)
         return dict_
