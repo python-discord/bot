@@ -2,7 +2,9 @@ import unittest
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import (
-    Infraction, InfractionAndNotification, InfractionDuration
+    Infraction,
+    InfractionAndNotification,
+    InfractionDuration,
 )
 from bot.exts.filtering._settings_types.validations.bypass_roles import RoleBypass
 from bot.exts.filtering._settings_types.validations.channel_scope import ChannelScope
