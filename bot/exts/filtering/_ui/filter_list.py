@@ -10,8 +10,13 @@ from pydis_core.site_api import ResponseCodeError
 
 from bot.exts.filtering._filter_lists import FilterList, ListType
 from bot.exts.filtering._ui.ui import (
-    CustomCallbackSelect, EditBaseView, MISSING, SETTINGS_DELIMITER, format_response_error, parse_value,
-    populate_embed_from_dict
+    CustomCallbackSelect,
+    EditBaseView,
+    MISSING,
+    SETTINGS_DELIMITER,
+    format_response_error,
+    parse_value,
+    populate_embed_from_dict,
 )
 from bot.exts.filtering._utils import repr_equals, to_serializable
 

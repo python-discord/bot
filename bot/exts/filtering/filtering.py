@@ -33,12 +33,19 @@ from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
-    build_filter_repr_dict, description_and_settings_converter, filter_overrides_for_ui, populate_embed_from_dict
+    build_filter_repr_dict,
+    description_and_settings_converter,
+    filter_overrides_for_ui,
+    populate_embed_from_dict,
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
 from bot.exts.filtering._ui.search import SearchEditView, search_criteria_converter
 from bot.exts.filtering._ui.ui import (
-    AlertView, ArgumentCompletionView, DeleteConfirmationView, build_mod_alert, format_response_error
+    AlertView,
+    ArgumentCompletionView,
+    DeleteConfirmationView,
+    build_mod_alert,
+    format_response_error,
 )
 from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
 from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_BAN_REASON

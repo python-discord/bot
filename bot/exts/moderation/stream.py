@@ -10,7 +10,13 @@ from pydis_core.utils import scheduling
 
 from bot.bot import Bot
 from bot.constants import (
-    Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
+    Colours,
+    Emojis,
+    Guild,
+    MODERATION_ROLES,
+    Roles,
+    STAFF_PARTNERS_COMMUNITY_ROLES,
+    VideoPermission,
 )
 from bot.converters import Expiry
 from bot.log import get_logger
