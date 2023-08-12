@@ -13,6 +13,10 @@ concurrency:
 
 
 jobs:
+
+  fixup-commit-blocker:
+    uses: python-discord/.github/.github/workflows/block-fixup-commits.yaml@main
+
   lint-test:
     uses: ./.github/workflows/lint-test.yml
 
