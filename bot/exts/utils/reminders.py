@@ -579,7 +579,7 @@ class Reminders(Cog):
             log.debug(f"{ctx.author} is an admin, asking for confirmation to modify someone else's.")
 
             confirmation_view = ModifyConfirmationView(ctx.author)
-            await ctx.send(
+            await ctx.reply(
                 "Are you sure you want to modify someone else's reminder?",
                 view=confirmation_view,
             )
