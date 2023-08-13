@@ -6,6 +6,7 @@ from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
+from discord import Interaction
 from discord.ext.commands import Cog, Context, Greedy, group
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
@@ -37,9 +38,41 @@ log = get_logger(__name__)
 LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
+CONFIRMATION_TIMEOUT = 60
 
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
+
+
+class ModifyConfirmationView(discord.ui.View):
+    """A view to confirm modifying someone else's reminder."""
+
+    def __init__(self, author: discord.Member | discord.User):
+        super().__init__(timeout=CONFIRMATION_TIMEOUT)
+        self.author = author
+        self.result: bool | None = None
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """Only allow interactions from the command invoker."""
+        return interaction.user.id == self.author.id
+
+    async def on_timeout(self) -> None:
+        """Default to not modifying if the user doesn't respond."""
+        self.result = False
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.blurple, row=0)
+    async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Confirm the reminder modification."""
+        await interaction.response.edit_message(view=None)
+        self.result = True
+        self.stop()
+
+    @discord.ui.button(label="Cancel", row=0)
+    async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Cancel the reminder modification."""
+        await interaction.response.edit_message(content="🚫 Operation canceled.", view=None)
+        self.result = False
+        self.stop()
 
 
 class Reminders(Cog):
