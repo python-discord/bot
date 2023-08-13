@@ -571,17 +571,30 @@ class Reminders(Cog):
                     return False
             raise e
 
-        if await has_any_role_check(ctx, Roles.admins):
+        if api_response["author"] == ctx.author.id:
+            log.debug(f"{ctx.author} is the reminder author and passes the check.")
             return True
 
-        if api_response["author"] != ctx.author.id:
-            log.debug(f"{ctx.author} is not the reminder author and does not pass the check.")
-            if send_on_denial:
-                await send_denial(ctx, "You can't modify reminders of other users!")
-            return False
+        if await has_any_role_check(ctx, Roles.admins):
+            log.debug(f"{ctx.author} is an admin, asking for confirmation to modify the reminder.")
 
-        log.debug(f"{ctx.author} is the reminder author and passes the check.")
-        return True
+            confirmation_view = ModifyConfirmationView(ctx.author)
+            await ctx.send(
+                "Are you sure you want to modify someone else's reminder?",
+                view=confirmation_view,
+            )
+            await confirmation_view.wait()
+
+            if confirmation_view.result:
+                log.debug(f"{ctx.author} has confirmed reminder modification.")
+            else:
+                log.debug(f"{ctx.author} has cancelled reminder modification.")
+            return confirmation_view.result
+
+        log.debug(f"{ctx.author} is not the reminder author and does not pass the check.")
+        if send_on_denial:
+            await send_denial(ctx, "You can't modify reminders of other users!")
+        return False
 
 
 async def setup(bot: Bot) -> None:
