@@ -560,7 +560,7 @@ class Reminders(Cog):
         """
         Check whether the reminder can be modified by the ctx author.
 
-        The check passes when the user is an admin, or if they created the reminder.
+        The check passes if the user created the reminder, or if they are an admin (with confirmation).
         """
         try:
             api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
