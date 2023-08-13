@@ -38,14 +38,14 @@ log = get_logger(__name__)
 LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
-CONFIRMATION_TIMEOUT = 60
+REMINDER_EDIT_CONFIRMATION_TIMEOUT = 60
 
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
 
 
-class ModifyConfirmationView(discord.ui.View):
-    """A view to confirm modifying someone else's reminder."""
+class ModifyReminderConfirmationView(discord.ui.View):
+    """A view to confirm modifying someone else's reminder by admins."""
 
     def __init__(self, author: discord.Member | discord.User):
         super().__init__(timeout=CONFIRMATION_TIMEOUT)
@@ -572,11 +572,11 @@ class Reminders(Cog):
             raise e
 
         if api_response["author"] == ctx.author.id:
-            log.debug(f"{ctx.author} is the reminder author and passes the check.")
+            log.debug(f"{ctx.author} is the reminder's author and passes the check.")
             return True
 
         if await has_any_role_check(ctx, Roles.admins):
-            log.debug(f"{ctx.author} is an admin, asking for confirmation to modify the reminder.")
+            log.debug(f"{ctx.author} is an admin, asking for confirmation to modify someone else's.")
 
             confirmation_view = ModifyConfirmationView(ctx.author)
             await ctx.send(
