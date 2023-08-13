@@ -591,7 +591,7 @@ class Reminders(Cog):
                 log.debug(f"{ctx.author} has cancelled reminder modification.")
             return confirmation_view.result
 
-        log.debug(f"{ctx.author} is not the reminder author and does not pass the check.")
+        log.debug(f"{ctx.author} is not the reminder's author and thus does not pass the check.")
         if send_on_denial:
             await send_denial(ctx, "You can't modify reminders of other users!")
         return False
