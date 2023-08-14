@@ -570,8 +570,9 @@ class Reminders(Cog):
                 if e.status == 404:
                     return False
             raise e
+        owner_id = api_response["author"]
 
-        if api_response["author"] == ctx.author.id:
+        if owner_id == ctx.author.id:
             log.debug(f"{ctx.author} is the reminder's author and passes the check.")
             return True
 
@@ -580,7 +581,7 @@ class Reminders(Cog):
 
             confirmation_view = ModifyReminderConfirmationView(ctx.author)
             await ctx.reply(
-                "Are you sure you want to modify someone else's reminder?",
+                "Are you sure you want to modify <@{owner_id}>'s reminder?",
                 view=confirmation_view,
             )
             await confirmation_view.wait()
