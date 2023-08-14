@@ -48,7 +48,7 @@ class ModifyReminderConfirmationView(discord.ui.View):
     """A view to confirm modifying someone else's reminder by admins."""
 
     def __init__(self, author: discord.Member | discord.User):
-        super().__init__(timeout=CONFIRMATION_TIMEOUT)
+        super().__init__(timeout=REMINDER_EDIT_CONFIRMATION_TIMEOUT)
         self.author = author
         self.result: bool | None = None
 
@@ -578,7 +578,7 @@ class Reminders(Cog):
         if await has_any_role_check(ctx, Roles.admins):
             log.debug(f"{ctx.author} is an admin, asking for confirmation to modify someone else's.")
 
-            confirmation_view = ModifyConfirmationView(ctx.author)
+            confirmation_view = ModifyReminderConfirmationView(ctx.author)
             await ctx.reply(
                 "Are you sure you want to modify someone else's reminder?",
                 view=confirmation_view,
