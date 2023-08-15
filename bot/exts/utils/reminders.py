@@ -47,7 +47,7 @@ ReminderMention = UnambiguousUser | discord.Role
 class ModifyReminderConfirmationView(discord.ui.View):
     """A view to confirm modifying someone else's reminder by admins."""
 
-    def __init__(self, author: discord.Member | discord.User):
+    def __init__(self, author: discord.Member):
         super().__init__(timeout=REMINDER_EDIT_CONFIRMATION_TIMEOUT)
         self.author = author
         self.result: bool | None = None
@@ -581,7 +581,7 @@ class Reminders(Cog):
 
             confirmation_view = ModifyReminderConfirmationView(ctx.author)
             await ctx.reply(
-                "Are you sure you want to modify <@{owner_id}>'s reminder?",
+                f"Are you sure you want to modify <@{owner_id}>'s reminder?",
                 view=confirmation_view,
             )
             await confirmation_view.wait()
