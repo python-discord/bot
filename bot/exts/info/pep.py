@@ -100,7 +100,7 @@ class PythonEnhancementProposals(Cog):
         # Assemble the embed
         pep_embed = Embed(
             title=f"**PEP {pep_nr} - {title}**",
-            description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
+            url=f"{BASE_PEP_URL}{pep_nr:04}",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
