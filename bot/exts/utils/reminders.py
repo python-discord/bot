@@ -579,9 +579,14 @@ class Reminders(Cog):
         if await has_any_role_check(ctx, Roles.admins):
             log.debug(f"{ctx.author} is an admin, asking for confirmation to modify someone else's.")
 
+            if ctx.command == self.delete_reminder:
+                modify_action = "delete"
+            else:
+                modify_action = "edit"
+
             confirmation_view = ModifyReminderConfirmationView(ctx.author)
             await ctx.reply(
-                f"Are you sure you want to modify <@{owner_id}>'s reminder?",
+                f"Are you sure you want to {modify_action} <@{owner_id}>'s reminder?",
                 view=confirmation_view,
             )
             await confirmation_view.wait()
