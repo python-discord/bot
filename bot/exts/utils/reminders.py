@@ -585,11 +585,14 @@ class Reminders(Cog):
                 modify_action = "edit"
 
             confirmation_view = ModifyReminderConfirmationView(ctx.author)
-            await ctx.reply(
+            confirmation_message = await ctx.reply(
                 f"Are you sure you want to {modify_action} <@{owner_id}>'s reminder?",
                 view=confirmation_view,
             )
-            await confirmation_view.wait()
+            view_timed_out = await confirmation_view.wait()
+            # We don't have access to the message in `on_timeout` so we have to delete the view here
+            if view_timed_out:
+                await confirmation_message.edit(view=None)
 
             if confirmation_view.result:
                 log.debug(f"{ctx.author} has confirmed reminder modification.")
