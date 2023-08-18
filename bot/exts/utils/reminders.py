@@ -70,7 +70,7 @@ class ModifyReminderConfirmationView(discord.ui.View):
     @discord.ui.button(label="Cancel", row=0)
     async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Cancel the reminder modification."""
-        await interaction.response.edit_message(content="🚫 Operation canceled.", view=None)
+        await interaction.response.edit_message(view=None)
         self.result = False
         self.stop()
 
@@ -597,6 +597,7 @@ class Reminders(Cog):
             if confirmation_view.result:
                 log.debug(f"{ctx.author} has confirmed reminder modification.")
             else:
+                await ctx.send("🚫 Operation canceled.")
                 log.debug(f"{ctx.author} has cancelled reminder modification.")
             return confirmation_view.result
 
