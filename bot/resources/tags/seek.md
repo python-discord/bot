@@ -20,5 +20,5 @@ Now lets do `f.seek(4, 1)`. This will move our stream position 4 bytes forward r
 Finally, lets do `f.seek(-4, 2)`, moving our stream position *backwards* 4 bytes relative to the **end** of the stream. Now if we did `f.read()` to read everything after our position in the file, it would return the string `'eggs'` and also move our stream position to the end of the file.
 
 **Note**  
-• For the second argument in `seek()`, use `os.SEEK_SET`, `os.SEEK_CUR`, and `os.SEEK_END` in place of 0, 1, and 2 respectively.  
-• `os.SEEK_CUR` is only usable when the file is in byte mode.
+- For the second argument in `seek()`, use `os.SEEK_SET`, `os.SEEK_CUR`, and `os.SEEK_END` in place of 0, 1, and 2 respectively.  
+- `os.SEEK_CUR` is only usable when the file is in byte mode.
