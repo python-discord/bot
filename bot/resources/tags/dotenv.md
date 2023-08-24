@@ -12,9 +12,9 @@ TOKEN=a00418c85bff087b49f23923efe40aa5
 ```
 Next, in your main Python file, you need to load the environment variables from the dotenv file you just created:
 ```py
-from dotenv import load_dotenv()
+from dotenv import load_dotenv
 
-load_dotenv(".env")
+load_dotenv()
 ```
 The variables from the file have now been loaded into your programs environment, and you can access them using `os.getenv()` anywhere in your program, like this:
 ```py
