@@ -17,12 +17,6 @@ jobs:
   lint-test:
     uses: ./.github/workflows/lint-test.yml
 
-  fixup-commit-blocker:
-    if: github.ref != 'refs/heads/main'
-    uses: python-discord/.github/.github/workflows/block-fixup-commits.yaml@main
-    needs: lint-test
-
-
   generate-sha-tag:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
