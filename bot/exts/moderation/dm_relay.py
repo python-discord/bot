@@ -53,7 +53,7 @@ class DMRelay(Cog):
             f"User: {user} ({user.id})\n"
             f"Channel ID: {user.dm_channel.id}\n\n"
         )
-        file = PasteFile(content=metadata+output, lexer="text")
+        file = PasteFile(content=metadata + output, lexer="text")
         try:
             resp = await send_to_paste_service(
                 files=[file],
