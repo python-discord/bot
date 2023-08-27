@@ -68,7 +68,7 @@ class OffTopicNames(Cog):
             remaining_channels = set(channel.id for channel in channels if channel.id not in successfully_renamed)
             try:
                 num_names_to_fetch = len(remaining_channels)
-                new_channel_names: list = await self.bot.api_client.get(
+                new_channel_names: list[str] = await self.bot.api_client.get(
                     "bot/off-topic-channel-names", params={"random_items": num_names_to_fetch}
                 )
                 if (num_fetched := len(new_channel_names)) < num_names_to_fetch:
