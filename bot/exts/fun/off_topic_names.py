@@ -154,7 +154,10 @@ class OffTopicNames(Cog):
             if num_ot_channels_not_renamed == 1:
                 ot_channels_not_renamed = ot_channels_not_renamed[0].mention
             else:
-                ot_channels_not_renamed_joined = ", ".join(ot_channel.mention for ot_channel in ot_channels_not_renamed)
+                ot_channels_not_renamed_joined = (
+                    ", ".join(ot_channel.mention for ot_channel in ot_channels_not_renamed[:-1]) +
+                    f" and {ot_channels_not_renamed[-1].mention}"
+                )
             message += (
                 f"\n:x: Was unable to rename {ot_channels_not_renamed_joined} "
                 f"within the configured maximum {MAX_RENAME_ATTEMPTS} attempts."
