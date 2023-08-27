@@ -80,14 +80,7 @@ class OffTopicNames(Cog):
                     await mod_meta.send(
                         f":x: The pool of off-topic names ran out whilst attempting to rename {ot_channel.mention}.\n"
                     )
-
-                    if deactivated_ot_names:
-                        failed_to_rename = [
-                            channel for channel in ot_channels if channel.id not in renamed_ot_channels
-                        ]
-                        await self.handle_failed_renames(self.bot, deactivated_ot_names, failed_to_rename)
-
-                    return
+                    break
                 try:
                     log.debug(
                         f"Attempt #{attempt} / {MAX_RENAME_ATTEMPTS} to rename "
