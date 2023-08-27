@@ -76,12 +76,17 @@ class OffTopicNames(Cog):
                 try:
                     new_channel_name = next(channel_name_pool)
                 except StopIteration:
-                    message = (
-                        f":x: The pool of off-topic names ran out whilst attempting to rename {ot_channel.mention}. "
-                        "This channel and any remaining off-topic channels won't be renamed."
-                    )
                     mod_meta = await get_or_fetch_channel(self.bot, Channels.mod_meta)
-                    await mod_meta.send(message)
+                    await mod_meta.send(
+                        f":x: The pool of off-topic names ran out whilst attempting to rename {ot_channel.mention}.\n"
+                    )
+
+                    if deactivated_ot_names:
+                        failed_to_rename = [
+                            channel for channel in ot_channels if channel.id not in renamed_ot_channels
+                        ]
+                        await self.handle_failed_renames(self.bot, deactivated_ot_names, failed_to_rename)
+
                     return
                 try:
                     log.debug(
