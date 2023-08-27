@@ -12,13 +12,13 @@ from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.ui import Button, View
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, NEGATIVE_REPLIES
 from bot.converters import OffTopicName
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.channel import get_or_fetch_channel
 
 CHANNELS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 
@@ -60,7 +60,7 @@ class OffTopicNames(Cog):
         """Background updater task that performs the daily channel name update."""
         await self.bot.wait_until_guild_available()
 
-        channels = [await get_or_fetch_channel(channel_id) for channel_id in CHANNELS]
+        channels = [await get_or_fetch_channel(self.bot, channel_id) for channel_id in CHANNELS]
         failed_renames = defaultdict(list)
         successfully_renamed = set()
         for attempt in range(MAX_RENAME_ATTEMPTS):
@@ -131,10 +131,14 @@ class OffTopicNames(Cog):
 
         # Handle any rename failures
         if failed_renames:
-            await self.handle_failed_renames(failed_renames, channels)
+            await self.handle_failed_renames(self.bot, failed_renames, channels)
 
     @staticmethod
-    async def handle_failed_renames(failed_renames: dict[int, list[str]], channels: list[GuildChannel]) -> None:
+    async def handle_failed_renames(
+        bot: Bot,
+        failed_renames: dict[int, list[str]],
+        channels: list[GuildChannel]
+    ) -> None:
         """Sends an appropriate warning/error message to mod-meta for each ot channel that had a failed rename."""
         for channel_indx, failed_names in failed_renames.items():
             channel = channels[channel_indx]
@@ -181,7 +185,7 @@ class OffTopicNames(Cog):
                     new_name=channel.mention
                 )
 
-            mod_meta_channel = await get_or_fetch_channel(Channels.mod_meta)
+            mod_meta_channel = await get_or_fetch_channel(bot, Channels.mod_meta)
             await mod_meta_channel.send(message)
 
     async def toggle_ot_name_activity(self, ctx: Context, name: str, active: bool) -> None:
