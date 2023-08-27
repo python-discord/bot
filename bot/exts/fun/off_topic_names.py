@@ -120,8 +120,8 @@ class OffTopicNames(Cog):
                     renamed_ot_channels.add(ot_channel.id)
                     break
 
-        failed_to_rename = [ot_channel for ot_channel in ot_channels if ot_channel.id not in renamed_ot_channels]
         if deactivated_ot_names:
+            failed_to_rename = [ot_channel for ot_channel in ot_channels if ot_channel.id not in renamed_ot_channels]
             await self.handle_failed_renames(self.bot, deactivated_ot_names, failed_to_rename)
 
     @staticmethod
