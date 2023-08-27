@@ -6,13 +6,13 @@ from async_rediscache import RedisCache
 from dateutil.parser import isoparse, parse as dateutil_parse
 from discord import Member
 from discord.ext.commands import Cog, Context, group, has_any_role
+from pydis_core.utils.members import get_or_fetch_member
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import Emojis, Guild, MODERATION_ROLES, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
-from bot.utils.members import get_or_fetch_member
 from bot.utils.time import TimestampFormats, discord_timestamp
 
 log = get_logger(__name__)

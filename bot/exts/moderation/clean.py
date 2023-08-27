@@ -517,7 +517,13 @@ class Clean(Cog):
         await self._clean_messages(ctx, users=users, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
-    async def clean_bots(self, ctx: Context, message_or_time: CleanLimit, *, channels: CleanChannels = None) -> None:
+    async def clean_bots(
+        self,
+        ctx: Context,
+        message_or_time: CleanLimit,
+        *,
+        channels: CleanChannels = None,
+    ) -> None:
         """
         Delete all messages posted by a bot, stop cleaning after reaching `message_or_time`.
 

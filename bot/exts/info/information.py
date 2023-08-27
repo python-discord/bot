@@ -11,6 +11,7 @@ from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -22,7 +23,6 @@ from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
-from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 

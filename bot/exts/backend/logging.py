@@ -15,7 +15,7 @@ class Logging(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-        scheduling.create_task(self.startup_greeting(), event_loop=self.bot.loop)
+        scheduling.create_task(self.startup_greeting())
 
     async def startup_greeting(self) -> None:
         """Announce our presence to the configured devlog channel."""

@@ -1,11 +1,11 @@
 import discord
 from discord.ext.commands import Cog, Context, command, has_any_role
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
-from bot.constants import Emojis, MODERATION_ROLES
+from bot.constants import BaseURLs, Emojis, MODERATION_ROLES
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
-from bot.utils.services import PasteTooLongError, PasteUploadError, send_to_paste_service
 
 log = get_logger(__name__)
 
@@ -53,8 +53,14 @@ class DMRelay(Cog):
             f"User: {user} ({user.id})\n"
             f"Channel ID: {user.dm_channel.id}\n\n"
         )
+        file = PasteFile(content=metadata + output, lexer="text")
         try:
-            message = await send_to_paste_service(metadata + output, extension="txt")
+            resp = await send_to_paste_service(
+                files=[file],
+                http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
+            )
+            message = resp.link
         except PasteTooLongError:
             message = f"{Emojis.cross_mark} Too long to upload to paste service."
         except PasteUploadError:

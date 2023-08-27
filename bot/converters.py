@@ -520,7 +520,7 @@ if t.TYPE_CHECKING:
     HushDurationConverter = int  # noqa: F811
     UnambiguousUser = discord.User  # noqa: F811
     UnambiguousMember = discord.Member  # noqa: F811
-    Infraction = t.Optional[dict]  # noqa: F811
+    Infraction = dict | None  # noqa: F811
 
 Expiry = Duration | ISODateTime
 DurationOrExpiry = DurationDelta | ISODateTime

@@ -12,8 +12,13 @@ from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._settings_types.settings_entry import SettingsEntry
 from bot.exts.filtering._ui.filter import filter_overrides_for_ui
 from bot.exts.filtering._ui.ui import (
-    COMPONENT_TIMEOUT, CustomCallbackSelect, EditBaseView, MISSING, SETTINGS_DELIMITER, parse_value,
-    populate_embed_from_dict
+    COMPONENT_TIMEOUT,
+    CustomCallbackSelect,
+    EditBaseView,
+    MISSING,
+    SETTINGS_DELIMITER,
+    parse_value,
+    populate_embed_from_dict,
 )
 
 

@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -20,7 +21,6 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_in_category, is_mod_channel
-from bot.utils.members import get_or_fetch_member
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -116,7 +116,7 @@ class ModManagement(commands.Cog):
         infraction: Infraction,
         duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
         *,
-        reason: str = None
+        reason: str = None  # noqa: RUF013
     ) -> None:
         """
         Append text and/or edit the duration of an infraction.
@@ -156,7 +156,7 @@ class ModManagement(commands.Cog):
         infraction: Infraction,
         duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
         *,
-        reason: str = None
+        reason: str = None  # noqa: RUF013
     ) -> None:
         """
         Edit the duration and/or the reason of an infraction.
@@ -309,7 +309,8 @@ class ModManagement(commands.Cog):
             title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
-        prefix = f"{user.mention} - {user.id}"
+        # Manually form mention from ID as discord.Object doesn't have a `.mention` attr
+        prefix = f"<@{user.id}> - {user.id}"
         await self.send_infraction_list(ctx, embed, infraction_list, prefix, ("user",))
 
     @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))

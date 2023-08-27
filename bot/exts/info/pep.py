@@ -4,11 +4,11 @@ from io import StringIO
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, command
+from pydis_core.utils.caching import AsyncCache
 
 from bot.bot import Bot
 from bot.constants import Keys
 from bot.log import get_logger
-from bot.utils.caching import AsyncCache
 
 log = get_logger(__name__)
 
@@ -29,12 +29,8 @@ class PythonEnhancementProposals(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: dict[int, str] = {}
-        # To avoid situations where we don't have last datetime, set this to now.
-        self.last_refreshed_peps: datetime = datetime.now(tz=UTC)
-
-    async def cog_load(self) -> None:
-        """Carry out cog asynchronous initialisation."""
-        await self.refresh_peps_urls()
+        # Ensure peps are refreshed the first time this is checked
+        self.last_refreshed_peps: datetime = datetime.min.replace(tzinfo=UTC)
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
@@ -104,7 +100,7 @@ class PythonEnhancementProposals(Cog):
         # Assemble the embed
         pep_embed = Embed(
             title=f"**PEP {pep_nr} - {title}**",
-            description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
+            url=f"{BASE_PEP_URL}{pep_nr:04}",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)

@@ -1,6 +1,6 @@
 from typing import ClassVar, Self
 
-from pydantic import validator
+from pydantic import field_validator
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
@@ -25,7 +25,7 @@ class Ping(ActionEntry):
     guild_pings: set[str]
     dm_pings: set[str]
 
-    @validator("*", pre=True)
+    @field_validator("*", mode="before")
     @classmethod
     def init_sequence_if_none(cls, pings: list[str] | None) -> list[str]:
         """Initialize an empty sequence if the value is None."""
