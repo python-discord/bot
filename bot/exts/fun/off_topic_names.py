@@ -112,8 +112,9 @@ class OffTopicNames(Cog):
                     deactivated_ot_names.append(new_channel_name)
                     log.debug(f"Successfully removed {new_channel_name} from the pool of off-topic channel names.")
 
-                    # Add a replacement off-topic channel name to the pool
-                    channel_name_pool = iter([*channel_name_pool, *await self._fetch_ot_names(1)])
+                    # Add a replacement off-topic channel name to the pool if it will be used
+                    if len(deactivated_ot_names) < (num_ot_channels * MAX_RENAME_ATTEMPTS):
+                        channel_name_pool = iter([*channel_name_pool, *await self._fetch_ot_names(1)])
                 else:
                     renamed_ot_channels.add(ot_channel.id)
                     break
