@@ -49,22 +49,24 @@ class OffTopicNames(Cog):
         self.update_names.clear_exception_types()
         self.update_names.stop()
 
+    async def _fetch_ot_names(self, count: int) -> list[str]:
+        try:
+            return await self.bot.api_client.get(
+                "bot/off-topic-channel-names", params={"random_items": count}
+            )
+        except ResponseCodeError as e:
+            log.error(f"Failed to get new off-topic channel names: code {e.response.status}")
+            raise
+
     @tasks.loop(time=datetime.time(), reconnect=True)
     async def update_names(self) -> None:
         """Background updater task that performs the daily channel name update."""
         await self.bot.wait_until_guild_available()
 
         ot_channels = [await get_or_fetch_channel(self.bot, channel) for channel in CHANNELS]
-        number_of_names_to_fetch = MAX_RENAME_ATTEMPTS * len(CHANNELS)
-        try:
-            channel_name_pool = iter(
-                await self.bot.api_client.get(
-                    "bot/off-topic-channel-names", params={"random_items": number_of_names_to_fetch}
-                )
-            )
-        except ResponseCodeError as e:
-            log.error(f"Failed to get new off-topic channel names: code {e.response.status}")
-            raise
+        num_ot_channels = len(CHANNELS)
+
+        channel_name_pool = iter(await self._fetch_ot_names(num_ot_channels))
 
         renamed_ot_channels: set[int] = set()
         deactivated_ot_names: list[str] = []
@@ -109,6 +111,9 @@ class OffTopicNames(Cog):
                     )
                     deactivated_ot_names.append(new_channel_name)
                     log.debug(f"Successfully removed {new_channel_name} from the pool of off-topic channel names.")
+
+                    # Add a replacement off-topic channel name to the pool
+                    channel_name_pool = iter([*channel_name_pool, *await self._fetch_ot_names(1)])
                 else:
                     renamed_ot_channels.add(ot_channel.id)
                     break
