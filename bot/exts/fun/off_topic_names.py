@@ -71,25 +71,39 @@ class OffTopicNames(Cog):
         renamed_ot_channels: set[int] = set()
         deactivated_ot_names: list[str] = []
 
-        for ot_channel in ot_channels:
+        exit_early = False
+        for ot_indx, ot_channel in enumerate(ot_channels):
+            if exit_early:
+                break
+
             attempt = 0
             while attempt < MAX_RENAME_ATTEMPTS:
                 attempt += 1
                 try:
-                    new_channel_name = next(channel_name_pool)
+                    new_name = next(channel_name_pool)
                 except StopIteration:
                     mod_meta = await get_or_fetch_channel(self.bot, Channels.mod_meta)
+
+                    failed_to_rename = [
+                        ot_channel.mention for ot_channel in ot_channels if ot_channel.id not in renamed_ot_channels
+                    ]
                     await mod_meta.send(
                         f":x: The pool of off-topic names ran out whilst attempting to rename {ot_channel.mention}.\n"
+                        f"The following off-topic channels have not been renamed: {' '.join(failed_to_rename)}"
                     )
+                    exit_early = True
                     break
+
+                new_channel_name = OTN_FORMATTER.format(number=ot_indx, name=new_name)
                 try:
+                    old_channel_name = ot_channel.name
                     log.debug(
                         f"Attempt #{attempt} / {MAX_RENAME_ATTEMPTS} to rename "
-                        f"#{ot_channel.name} to #{new_channel_name}"
+                        f"#{old_channel_name} to #{new_channel_name}"
                     )
-                    await ot_channel.update(name=new_channel_name)
-                    log.debug(f"Successfully updated off-topic name #{ot_channel.name} to #{new_channel_name}")
+
+                    await ot_channel.edit(name=new_channel_name)
+                    log.debug(f"Successfully updated off-topic name #{old_channel_name} to #{new_channel_name}")
                 except HTTPException as e:
                     # We need to handle code 50035 ("invalid form body"),
                     # which we get when the new channel name isn't allowed.
@@ -106,11 +120,11 @@ class OffTopicNames(Cog):
                         "a valid name for servers in Server Discovery so removing it from the rota."
                     )
                     await self.bot.api_client.patch(
-                        f"bot/off-topic-channel-names/{new_channel_name}",
+                        f"bot/off-topic-channel-names/{new_name}",
                         data={"active": False}
                     )
-                    deactivated_ot_names.append(new_channel_name)
-                    log.debug(f"Successfully removed {new_channel_name} from the pool of off-topic channel names.")
+                    deactivated_ot_names.append(new_name)
+                    log.debug(f"Successfully removed {new_name} from the pool of off-topic channel names.")
 
                     # Add a replacement off-topic channel name to the pool if it will be used
                     if len(deactivated_ot_names) < (num_ot_channels * MAX_RENAME_ATTEMPTS):
@@ -142,11 +156,11 @@ class OffTopicNames(Cog):
             its_or_theyre = "they're"
             deactivated_names_joined = (
                 ", ".join(f"`{name}`" for name in deactivated_names[:-1]) +
-                f" and `{deactivated_names[-1]}`"
+                f", and `{deactivated_names[-1]}`"
             )
 
         message = (
-            f":warning: The following {num_failures} off-topic channel {name_or_names} failed, as {its_or_theyre}"
+            f":warning: The following {num_failures} off-topic channel {name_or_names} failed, as {its_or_theyre} "
             f"not valid for servers in Server Discovery: {deactivated_names_joined}."
         )
         if num_ot_channels_not_renamed := len(ot_channels_not_renamed):
@@ -161,6 +175,8 @@ class OffTopicNames(Cog):
                 f"\n:x: Was unable to rename {ot_channels_not_renamed_joined} "
                 f"within the configured maximum {MAX_RENAME_ATTEMPTS} attempts."
             )
+        else:
+            message += ("\n:white_check_mark: All off-topic channels were successfully renamed to other names.")
 
         mod_meta_channel = await get_or_fetch_channel(bot, Channels.mod_meta)
         await mod_meta_channel.send(message)
@@ -280,7 +296,7 @@ class OffTopicNames(Cog):
             "bot/off-topic-channel-names", params={"random_items": 1}
         )
         try:
-            new_channel_name = response[0]
+            new_name = response[0]
         except IndexError:
             await ctx.send("Out of active off-topic names. Add new names to reroll.")
             return
@@ -288,16 +304,16 @@ class OffTopicNames(Cog):
         async def rename_channel() -> None:
             """Rename off-topic channel and log events."""
             await channel.edit(
-                name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name)
+                name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_name)
             )
             log.info(
                 f"{ctx.author} Off-topic channel re-named from `{old_ot_name}` "
-                f"to `{new_channel_name}`."
+                f"to `{new_name}`."
             )
 
             await ctx.message.reply(
                 f":ok_hand: Off-topic channel re-named from `{old_ot_name}` "
-                f"to `{new_channel_name}`. "
+                f"to `{new_name}`. "
             )
 
         try:
