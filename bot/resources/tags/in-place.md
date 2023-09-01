@@ -23,5 +23,4 @@ On the other hand, the `sorted()` function is out-of-place, so it returns a new 
 >>> my_list
 [5, 2, 3, 1]
 ```
-In general, methods of mutable objects tend to be in-place (since it can be expensive to create a new object), whereas operations on immutable objects are always out-of-place (since they cannot be modified)
-.
+In general, methods of mutable objects tend to be in-place (since it can be expensive to create a new object), whereas operations on immutable objects are always out-of-place (since they cannot be modified).
