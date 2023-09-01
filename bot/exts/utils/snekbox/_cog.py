@@ -560,7 +560,7 @@ class Snekbox(Cog):
         If multiple codeblocks are in a message, all of them will be joined and evaluated,
         ignoring the text outside them.
 
-        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
+        Currently only 3.11 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
@@ -596,7 +596,7 @@ class Snekbox(Cog):
         If multiple formatted codeblocks are provided, the first one will be the setup code, which will
         not be timed. The remaining codeblocks will be joined together and timed.
 
-        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
+        Currently only 3.11 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
