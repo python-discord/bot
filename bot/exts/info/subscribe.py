@@ -5,12 +5,12 @@ import discord
 from discord.ext import commands
 from discord.interactions import Interaction
 from pydis_core.utils import members
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
 from bot.decorators import redirect_output
 from bot.log import get_logger
-from bot.utils.channel import get_or_fetch_channel
 
 
 @dataclass(frozen=True)
@@ -198,7 +198,7 @@ class Subscribe(commands.Cog):
         If the initial message isn't found, a new one will be created.
         This message will always be needed to attach the persistent view to it
         """
-        roles_channel: discord.TextChannel = await get_or_fetch_channel(constants.Channels.roles)
+        roles_channel: discord.TextChannel = await get_or_fetch_channel(self.bot, constants.Channels.roles)
 
         async for message in roles_channel.history(limit=30):
             if message.content == self.SELF_ASSIGNABLE_ROLES_MESSAGE:

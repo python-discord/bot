@@ -18,7 +18,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
-from pydis_core.utils.paste_service import PasteTooLongError, PasteUploadError, send_to_paste_service
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
@@ -1464,14 +1464,14 @@ class Filtering(Cog):
             if e.code != 50035:  # Content too long
                 raise
             report = discord.utils.remove_markdown(report)
+            file = PasteFile(content=report, lexer="text")
             try:
                 resp = await send_to_paste_service(
-                    contents=report,
+                    files=[file],
                     http_session=self.bot.http_session,
-                    lexer="text",
                     paste_url=BaseURLs.paste_url,
                 )
-                paste_resp = resp["link"]
+                paste_resp = resp.link
             except (ValueError, PasteTooLongError, PasteUploadError):
                 paste_resp = ":warning: Failed to upload report to paste service"
             file_buffer = io.StringIO(report)
