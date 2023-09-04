@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # The current version (v2) of Docker's build-push action uses
       # buildx, which comes with BuildKit features that help us speed
@@ -61,7 +61,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout Kubernetes repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: python-discord/kubernetes
 
