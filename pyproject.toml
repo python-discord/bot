@@ -34,7 +34,7 @@ pydantic-settings = "2.0.3"
 [tool.poetry.dev-dependencies]
 coverage = "7.3.0"
 httpx = "0.24.1"
-pre-commit = "3.3.3"
+pre-commit = "3.4.0"
 pip-licenses = "4.3.2"
 pytest = "7.4.1"
 pytest-cov = "4.1.0"
