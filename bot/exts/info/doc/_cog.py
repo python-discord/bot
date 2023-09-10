@@ -233,7 +233,7 @@ class DocCog(commands.Cog):
         """
         doc_item = self.doc_symbols.get(symbol_name)
         if doc_item is None and " " in symbol_name:
-            symbol_name = symbol_name.split(" ", maxsplit=1)[0]
+            symbol_name = symbol_name.split(maxsplit=1)[0]
             doc_item = self.doc_symbols.get(symbol_name)
 
         return symbol_name, doc_item
