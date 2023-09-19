@@ -28,7 +28,7 @@ class SettingsEntry(BaseModel, FieldRequiring):
     def __init__(self, defaults: SettingsEntry | None = None, /, **data):
         overrides = set()
         if defaults:
-            defaults_dict = defaults.dict()
+            defaults_dict = defaults.model_dump()
             for field_name, field_value in list(data.items()):
                 if field_value is None:
                     data[field_name] = defaults_dict[field_name]

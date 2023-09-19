@@ -2,7 +2,6 @@ import asyncio
 
 import aiohttp
 from pydis_core import BotBase
-from pydis_core.utils import scheduling
 from sentry_sdk import push_scope
 
 from bot import constants, exts
@@ -45,10 +44,7 @@ class Bot(BotBase):
     async def setup_hook(self) -> None:
         """Default async initialisation method for discord.py."""
         await super().setup_hook()
-
-        # This is not awaited to avoid a deadlock with any cogs that have
-        # wait_until_guild_available in their cog_load method.
-        scheduling.create_task(self.load_extensions(exts))
+        await self.load_extensions(exts)
 
     async def on_error(self, event: str, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""

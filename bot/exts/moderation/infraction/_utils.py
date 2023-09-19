@@ -39,14 +39,23 @@ INFRACTION_APPEAL_MODMAIL_FOOTER = (
     "\nIf you would like to discuss or appeal this infraction, "
     f"send a message to the ModMail bot (<@{MODMAIL_ACCOUNT_ID}>)."
 )
+INFRACTION_MODMAIL_FOOTER = (
+    "\nIf you would like to discuss this infraction, "
+    f"send a message to the ModMail bot (<@{MODMAIL_ACCOUNT_ID}>)."
+)
 INFRACTION_AUTHOR_NAME = "Infraction information"
 
 LONGEST_EXTRAS = max(len(INFRACTION_APPEAL_SERVER_FOOTER), len(INFRACTION_APPEAL_MODMAIL_FOOTER))
 
-INFRACTION_DESCRIPTION_TEMPLATE = (
+INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE = (
     "**Type:** {type}\n"
     "**Duration:** {duration}\n"
     "**Expires:** {expires}\n"
+    "**Reason:** {reason}\n"
+)
+
+INFRACTION_DESCRIPTION_WARNING_TEMPLATE = (
+    "**Type:** Warning\n"
     "**Reason:** {reason}\n"
 )
 
@@ -98,7 +107,7 @@ async def post_infraction(
     if any(
         is_in_category(ctx.channel, category)
         for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-    ):
+    ) or ctx.message is None:
         jump_url = None
     else:
         jump_url = ctx.message.jump_url
@@ -213,18 +222,27 @@ async def notify_infraction(
     if reason is None:
         reason = infraction["reason"]
 
-    text = INFRACTION_DESCRIPTION_TEMPLATE.format(
-        type=infr_type.title(),
-        expires=expires_at,
-        duration=duration,
-        reason=reason or "No reason provided."
-    )
+    if infraction["type"] == "warning":
+        text = INFRACTION_DESCRIPTION_WARNING_TEMPLATE.format(
+            reason=reason or "No reason provided."
+        )
+    else:
+        text = INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE.format(
+            type=infr_type.title(),
+            expires=expires_at,
+            duration=duration,
+            reason=reason or "No reason provided."
+        )
 
     # For case when other fields than reason is too long and this reach limit, then force-shorten string
     if len(text) > 4096 - LONGEST_EXTRAS:
         text = f"{text[:4093-LONGEST_EXTRAS]}..."
 
-    text += INFRACTION_APPEAL_SERVER_FOOTER if infraction["type"] == "ban" else INFRACTION_APPEAL_MODMAIL_FOOTER
+    text += (
+        INFRACTION_APPEAL_SERVER_FOOTER if infraction["type"] == "ban"
+        else INFRACTION_MODMAIL_FOOTER if infraction["type"] == "warning"
+        else INFRACTION_APPEAL_MODMAIL_FOOTER
+    )
 
     embed = discord.Embed(
         description=text,

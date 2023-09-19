@@ -159,7 +159,7 @@ class HelpQueryNotFoundError(ValueError):
     query, where keys are the possible matched command names and values are the likeness match scores.
     """
 
-    def __init__(self, arg: str, possible_matches: dict = None):
+    def __init__(self, arg: str, possible_matches: dict | None = None):
         super().__init__(arg)
         self.possible_matches = possible_matches
 
@@ -179,7 +179,7 @@ class CustomHelpCommand(HelpCommand):
         super().__init__(command_attrs={"help": "Shows help for bot commands"})
 
     @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_PARTNERS_COMMUNITY_ROLES)
-    async def command_callback(self, ctx: Context, *, command: str = None) -> None:
+    async def command_callback(self, ctx: Context, *, command: str | None = None) -> None:
         """Attempts to match the provided query with a valid command or cog."""
         # the only reason we need to tamper with this is because d.py does not support "categories",
         # so we need to deal with them ourselves.
@@ -310,7 +310,7 @@ class CustomHelpCommand(HelpCommand):
 
         # Remove line breaks from docstrings, if not used to separate paragraphs.
         # Allow overriding this behaviour via putting \u2003 at the start of a line.
-        formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help)
+        formatted_doc = re.sub("(?<!\n)\n(?![\n\u2003])", " ", command.help) if command.help else None
         command_details += f"{formatted_doc or 'No details provided.'}\n"
         embed.description = command_details
 

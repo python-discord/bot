@@ -7,7 +7,7 @@ import pkgutil
 import types
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from functools import cache
 from typing import Any, Self, TypeVar, Union, get_args, get_origin
@@ -15,6 +15,7 @@ from typing import Any, Self, TypeVar, Union, get_args, get_origin
 import discord
 import regex
 from discord.ext.commands import Command
+from pydantic_core import core_schema
 
 import bot
 from bot.bot import Bot
@@ -252,12 +253,16 @@ class CustomIOField:
         self.value = self.process_value(value)
 
     @classmethod
-    def __get_validators__(cls):
+    def __get_pydantic_core_schema__(
+        cls,
+        _source: type[Any],
+        _handler: Callable[[Any], core_schema.CoreSchema],
+    ) -> core_schema.CoreSchema:
         """Boilerplate for Pydantic."""
-        yield cls.validate
+        return core_schema.general_plain_validator_function(cls.validate)
 
     @classmethod
-    def validate(cls, v: Any) -> Self:
+    def validate(cls, v: Any, _info: core_schema.ValidationInfo) -> Self:
         """Takes the given value and returns a class instance with that value."""
         if isinstance(v, CustomIOField):
             return cls(v.value)

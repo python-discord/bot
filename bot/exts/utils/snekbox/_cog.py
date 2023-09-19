@@ -10,20 +10,19 @@ from typing import Literal, NamedTuple, TYPE_CHECKING
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
-from pydis_core.utils import interactions
+from pydis_core.utils import interactions, paste_service
+from pydis_core.utils.paste_service import PasteFile, send_to_paste_service
 from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, MODERATION_ROLES, Roles, URLs
+from bot.constants import BaseURLs, Channels, Emojis, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
 from bot.exts.filtering._filter_lists.extension import TXT_LIKE_FILES
 from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
-from bot.utils import send_to_paste_service
 from bot.utils.lock import LockedResourceError, lock_arg
-from bot.utils.services import PasteTooLongError, PasteUploadError
 
 if TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
@@ -74,7 +73,6 @@ if not hasattr(sys, "_setup_finished"):
 {setup}
 """
 
-MAX_PASTE_LENGTH = 10_000
 # Max to display in a codeblock before sending to a paste service
 # This also applies to text files
 MAX_OUTPUT_BLOCK_LINES = 10
@@ -88,7 +86,8 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-PythonVersion = Literal["3.10", "3.11"]
+SupportedPythonVersions = Literal["3.11"]
+
 
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
@@ -137,7 +136,7 @@ class PythonVersionSwitcherButton(ui.Button):
 
     def __init__(
         self,
-        version_to_switch_to: PythonVersion,
+        version_to_switch_to: SupportedPythonVersions,
         snekbox_cog: Snekbox,
         ctx: Context,
         job: EvalJob,
@@ -176,48 +175,50 @@ class Snekbox(Cog):
 
     def build_python_version_switcher_view(
         self,
-        current_python_version: PythonVersion,
+        current_python_version: SupportedPythonVersions,
         ctx: Context,
         job: EvalJob,
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
-        alt_python_version: PythonVersion
+        alt_python_version: SupportedPythonVersions
         if current_python_version == "3.10":
             alt_python_version = "3.11"
         else:
-            alt_python_version = "3.10"
+            alt_python_version = "3.10"  # noqa: F841
 
         view = interactions.ViewWithUserAndRoleCheck(
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
         )
-        view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
+        # Temp disabled until snekbox multi-version support is complete
+        # https://github.com/python-discord/snekbox/issues/158
+        # view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
         view.add_item(interactions.DeleteMessageButton())
 
         return view
 
     async def post_job(self, job: EvalJob) -> EvalResult:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
-        if job.version == "3.10":
-            url = URLs.snekbox_eval_api
-        else:
-            url = URLs.snekbox_311_eval_api
-
         data = job.to_dict()
 
-        async with self.bot.http_session.post(url, json=data, raise_for_status=True) as resp:
+        async with self.bot.http_session.post(URLs.snekbox_eval_api, json=data, raise_for_status=True) as resp:
             return EvalResult.from_dict(await resp.json())
 
-    @staticmethod
-    async def upload_output(output: str) -> str | None:
+    async def upload_output(self, output: str) -> str | None:
         """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
+        file = PasteFile(content=output, lexer="text")
         try:
-            return await send_to_paste_service(output, extension="txt", max_length=MAX_PASTE_LENGTH)
-        except PasteTooLongError:
+            paste_response = await send_to_paste_service(
+                files=[file],
+                http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
+            )
+            return paste_response.link
+        except paste_service.PasteTooLongError:
             return "too long to upload"
-        except PasteUploadError:
+        except paste_service.PasteUploadError:
             return "unable to upload"
 
     @staticmethod
@@ -332,7 +333,7 @@ class Snekbox(Cog):
             # This is done to make sure the last line of output contains the error
             # and the error is not manually printed by the author with a syntax error.
             if result.stdout.rstrip().endswith("EOFError: EOF when reading a line") and result.returncode == 1:
-                msg += ":warning: Note: `input` is not supported by the bot :warning:\n\n"
+                msg += "\n:warning: Note: `input` is not supported by the bot :warning:\n"
 
             # Skip output if it's empty and there are file uploads
             if result.stdout or not result.has_files:
@@ -544,7 +545,7 @@ class Snekbox(Cog):
     async def eval_command(
         self,
         ctx: Context,
-        python_version: PythonVersion | None,
+        python_version: SupportedPythonVersions | None,
         *,
         code: CodeblockConverter
     ) -> None:
@@ -561,7 +562,7 @@ class Snekbox(Cog):
         If multiple codeblocks are in a message, all of them will be joined and evaluated,
         ignoring the text outside them.
 
-        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
+        Currently only 3.11 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
@@ -583,7 +584,7 @@ class Snekbox(Cog):
     async def timeit_command(
         self,
         ctx: Context,
-        python_version: PythonVersion | None,
+        python_version: SupportedPythonVersions | None,
         *,
         code: CodeblockConverter
     ) -> None:
@@ -597,7 +598,7 @@ class Snekbox(Cog):
         If multiple formatted codeblocks are provided, the first one will be the setup code, which will
         not be timed. The remaining codeblocks will be joined together and timed.
 
-        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
+        Currently only 3.11 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!

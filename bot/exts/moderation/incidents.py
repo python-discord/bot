@@ -134,7 +134,8 @@ def is_incident(message: discord.Message) -> bool:
         message.channel.id == Channels.incidents,  # Message sent in #incidents
         not message.author.bot,                    # Not by a bot
         not message.content.startswith("#"),       # Doesn't start with a hash
-        not message.pinned,                        # And isn't header
+        not message.pinned,                        # Isn't header
+        not message.reference,                     # And is not a reply
     )
     return all(conditions)
 
@@ -318,10 +319,10 @@ class Incidents(Cog):
         self.bot = bot
         self.incidents_webhook = None
 
-        scheduling.create_task(self.fetch_webhook(), event_loop=self.bot.loop)
+        scheduling.create_task(self.fetch_webhook())
 
         self.event_lock = asyncio.Lock()
-        self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
+        self.crawl_task = scheduling.create_task(self.crawl_incidents())
 
     async def fetch_webhook(self) -> None:
         """Fetch the incidents webhook object, so we can post message link embeds to it."""
@@ -415,7 +416,7 @@ class Incidents(Cog):
             return payload.message_id == incident.id
 
         coroutine = self.bot.wait_for("raw_message_delete", check=check, timeout=timeout)
-        return scheduling.create_task(coroutine, event_loop=self.bot.loop)
+        return scheduling.create_task(coroutine)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """
