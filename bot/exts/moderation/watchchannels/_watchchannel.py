@@ -12,6 +12,7 @@ from discord.ext.commands import Cog, Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.logging import CustomLogger
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
@@ -19,7 +20,7 @@ from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, 
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
 from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
-from bot.log import CustomLogger, get_logger
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, time
 
