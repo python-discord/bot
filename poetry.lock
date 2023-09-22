@@ -1515,13 +1515,13 @@ python-dotenv = ">=0.21.0"
 
 [[package]]
 name = "pydis-core"
-version = "10.2.0"
+version = "10.3.0"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 optional = false
 python-versions = ">=3.10.dev0,<3.12.dev0"
 files = [
-    {file = "pydis_core-10.2.0-py3-none-any.whl", hash = "sha256:a9cc6980d8ecf977c9011b713750026711845a8610ab5e58930f8a6e3c8d28a4"},
-    {file = "pydis_core-10.2.0.tar.gz", hash = "sha256:2185e54bbe7c1758e427ab9e4103ba2068462487bcac514c6357f3301e4fe2a0"},
+    {file = "pydis_core-10.3.0-py3-none-any.whl", hash = "sha256:4cabca495a81ed6eb559620cb705a1a3bf0a8be96a704c4f7a0732e45b5ab2a3"},
+    {file = "pydis_core-10.3.0.tar.gz", hash = "sha256:9dad93d104afbe08a8dc80b3214285acfdf0ada98e5b8650718891331fb064b9"},
 ]
 
 [package.dependencies]
@@ -2340,4 +2340,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "2f5e8d90c6bf562c2e90763d7717667d76b461cffb9a23eba62e7551c8bdf0e8"
+content-hash = "fce2b93b9b304ed1f7dc1217ff2dd7cdd3e2fa175480bf12ab3469afbc28018a"
