@@ -108,11 +108,14 @@ class HelpForum(commands.Cog):
             # Silently fail in channels other than help posts
             return
 
-        if not await commands.has_any_role(constants.Roles.helpers).predicate(ctx):
-            # Silently fail for non-helpers
-            return
+        # First check that the user is the OP as `has_any_role` will only return True
+        # or raise an exception instead of False
 
-        await ctx.channel.edit(name=title)
+        if (
+            ctx.author.id == ctx.channel.owner_id
+            or await commands.has_any_role(constants.Roles.helpers).predicate(ctx)
+        ):
+            await ctx.channel.edit(name=title)
 
     @commands.Cog.listener("on_message")
     async def new_post_listener(self, message: discord.Message) -> None:
