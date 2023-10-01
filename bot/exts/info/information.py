@@ -7,6 +7,7 @@ from textwrap import shorten
 from typing import Any, TYPE_CHECKING
 
 import rapidfuzz
+import discord
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
@@ -43,6 +44,10 @@ class Information(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.raw_context_menu = discord.app_commands.ContextMenu(
+            name="Raw Text",
+            callback=self._raw_context_menu_callback,
+        )
 
     @staticmethod
     def get_channel_type_counts(guild: Guild) -> defaultdict[str, int]:
@@ -527,6 +532,9 @@ class Information(Cog):
     async def raw(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response."""
         await self.send_raw_content(ctx, message)
+
+    async def _raw_context_menu_callback(self, interaction: discord.Interaction):
+        pass
 
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
