@@ -533,7 +533,7 @@ class Information(Cog):
         """Shows information about the raw API response."""
         await self.send_raw_content(ctx, message)
 
-    async def _raw_context_menu_callback(self, interaction: discord.Interaction):
+    async def _raw_context_menu_callback(self, interaction: discord.Interaction) -> None:
         pass
 
     @raw.command()
