@@ -8,6 +8,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels import _caches, _channel, _message
 from bot.log import get_logger
+from bot.utils.checks import has_any_role_check
 
 log = get_logger(__name__)
 
@@ -108,14 +109,13 @@ class HelpForum(commands.Cog):
             # Silently fail in channels other than help posts
             return
 
-        # First check that the user is the OP as `has_any_role` will only return True
-        # or raise an exception instead of False
+        user_is_op = ctx.author.id == ctx.channel.owner_id
+        user_is_staff = await has_any_role_check(ctx, constants.Roles.helpers)
 
-        if (
-            ctx.author.id == ctx.channel.owner_id
-            or await commands.has_any_role(constants.Roles.helpers).predicate(ctx)
-        ):
-            await ctx.channel.edit(name=title)
+        if not (user_is_op or user_is_staff):
+            return
+
+        await ctx.channel.edit(name=title)
 
     @commands.Cog.listener("on_message")
     async def new_post_listener(self, message: discord.Message) -> None:
