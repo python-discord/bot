@@ -142,7 +142,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE.format(
                         type="Ban",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="No reason provided."
@@ -160,7 +160,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (dict(id=0, type="warning", reason="Test reason.", expires_at=None), self.user),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE.format(
                         type="Warning",
                         expires="N/A",
                         reason="Test reason."
@@ -180,7 +180,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (dict(id=0, type="note", reason=None, expires_at=None), self.user),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE.format(
                         type="Note",
                         expires="N/A",
                         reason="No reason provided."
@@ -201,7 +201,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 ),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE.format(
                         type="Mute",
                         expires="2020-02-26 09:20 (23 hours and 59 minutes)",
                         reason="Test"
@@ -219,7 +219,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 "args": (dict(id=0, type="mute", reason="foo bar" * 4000, expires_at=None), self.user),
                 "expected_output": Embed(
                     title=utils.INFRACTION_TITLE,
-                    description=utils.INFRACTION_DESCRIPTION_TEMPLATE.format(
+                    description=utils.INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE.format(
                         type="Mute",
                         expires="N/A",
                         reason="foo bar" * 4000

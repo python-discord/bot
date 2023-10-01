@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, parse_obj_as
+from pydantic import BaseModel, Field, TypeAdapter
 from pydis_core.site_api import APIClient
 
 
@@ -50,13 +50,13 @@ class NominationAPI:
             params["user__id"] = str(user_id)
 
         data = await self.site_api.get("bot/nominations", params=params)
-        nominations = parse_obj_as(list[Nomination], data)
+        nominations = TypeAdapter(list[Nomination]).validate_python(data)
         return nominations
 
     async def get_nomination(self, nomination_id: int) -> Nomination:
         """Fetch a nomination by ID."""
         data = await self.site_api.get(f"bot/nominations/{nomination_id}")
-        nomination = Nomination.parse_obj(data)
+        nomination = Nomination.model_validate(data)
         return nomination
 
     async def edit_nomination(
@@ -84,7 +84,7 @@ class NominationAPI:
             data["thread_id"] = thread_id
 
         result = await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
-        return Nomination.parse_obj(result)
+        return Nomination.model_validate(result)
 
     async def edit_nomination_entry(
         self,
@@ -96,7 +96,7 @@ class NominationAPI:
         """Edit a nomination entry."""
         data = {"actor": actor_id, "reason": reason}
         result = await self.site_api.patch(f"bot/nominations/{nomination_id}", json=data)
-        return Nomination.parse_obj(result)
+        return Nomination.model_validate(result)
 
     async def post_nomination(
         self,
@@ -111,7 +111,7 @@ class NominationAPI:
             "user": user_id,
         }
         result = await self.site_api.post("bot/nominations", json=data)
-        return Nomination.parse_obj(result)
+        return Nomination.model_validate(result)
 
     async def get_activity(
         self,
