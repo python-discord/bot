@@ -10,8 +10,13 @@ from pydis_core.site_api import ResponseCodeError
 
 from bot.exts.filtering._filter_lists import FilterList, ListType
 from bot.exts.filtering._ui.ui import (
-    CustomCallbackSelect, EditBaseView, MISSING, SETTINGS_DELIMITER, format_response_error, parse_value,
-    populate_embed_from_dict
+    CustomCallbackSelect,
+    EditBaseView,
+    MISSING,
+    SETTINGS_DELIMITER,
+    format_response_error,
+    parse_value,
+    populate_embed_from_dict,
 )
 from bot.exts.filtering._utils import repr_equals, to_serializable
 
@@ -50,7 +55,7 @@ def build_filterlist_repr_dict(filter_list: FilterList, list_type: ListType, new
     default_setting_values = {}
     for settings_group in filter_list[list_type].defaults:
         for _, setting in settings_group.items():
-            default_setting_values.update(to_serializable(setting.dict(), ui_repr=True))
+            default_setting_values.update(to_serializable(setting.model_dump(), ui_repr=True))
 
     # Add new values. It's done in this way to preserve field order, since the new_values won't have all settings.
     total_values = {}

@@ -4,17 +4,17 @@ from io import StringIO
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, command
+from pydis_core.utils.caching import AsyncCache
 
 from bot.bot import Bot
 from bot.constants import Keys
 from bot.log import get_logger
-from bot.utils.caching import AsyncCache
 
 log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 BASE_PEP_URL = "https://peps.python.org/pep-"
-PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=main"
+PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents/peps?ref=main"
 
 pep_cache = AsyncCache()
 
@@ -100,7 +100,7 @@ class PythonEnhancementProposals(Cog):
         # Assemble the embed
         pep_embed = Embed(
             title=f"**PEP {pep_nr} - {title}**",
-            description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
+            url=f"{BASE_PEP_URL}{pep_nr:04}",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
