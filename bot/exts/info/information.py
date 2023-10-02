@@ -485,19 +485,16 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    async def send_raw_content(self, ctx: Context, message: Message, json: bool = False) -> None:
+    async def get_raw_content(self, message: Message, json: bool = False) -> Paginator:
         """
-        Send information about the raw API response for a `discord.Message`.
+        Gets information about the raw API response for a `discord.Message`.
 
         If `json` is True, send the information in a copy-pasteable Python format.
         """
-        if not message.channel.permissions_for(ctx.author).read_messages:
-            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
-            return
 
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
-        raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
+        raw_data = await self.bot.http.get_message(message.channel.id, message.id)
 
         paginator = Paginator()
 
@@ -523,15 +520,22 @@ class Information(Cog):
                 title = f"Raw {field_name} ({current}/{total})"
                 add_content(title, transformer(item))
 
-        for page in paginator.pages:
-            await ctx.send(page, allowed_mentions=AllowedMentions.none())
+        return paginator
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     async def raw(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response."""
-        await self.send_raw_content(ctx, message)
+
+        if not message.channel.permissions_for(ctx.author).read_messages:
+            await ctx.send(":x: You do not have permissions to see the channel this message is in.")
+            return
+
+        paginator = await self.get_raw_content(message)
+
+        for page in paginator.pages:
+            await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
     async def _raw_context_menu_callback(self, interaction: discord.Interaction) -> None:
         pass
