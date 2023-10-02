@@ -6,9 +6,9 @@ from collections.abc import Mapping
 from textwrap import shorten
 from typing import Any, TYPE_CHECKING
 
-import rapidfuzz
 import discord
-from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
+import rapidfuzz
+from discord import AllowedMentions, Colour, Embed, Guild, Interaction, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
@@ -48,6 +48,7 @@ class Information(Cog):
             name="Raw Text",
             callback=self._raw_context_menu_callback,
         )
+        self.bot.tree.add_command(self.raw_context_menu, guild=discord.Object(bot.guild_id))
 
     @staticmethod
     def get_channel_type_counts(guild: Guild) -> defaultdict[str, int]:
@@ -491,7 +492,6 @@ class Information(Cog):
 
         If `json` is True, send the information in a copy-pasteable Python format.
         """
-
         # I *guess* it could be deleted right as the command is invoked but I felt like it wasn't worth handling
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await self.bot.http.get_message(message.channel.id, message.id)
@@ -527,7 +527,6 @@ class Information(Cog):
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     async def raw(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response."""
-
         if not message.channel.permissions_for(ctx.author).read_messages:
             await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
@@ -537,8 +536,10 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
-    async def _raw_context_menu_callback(self, interaction: discord.Interaction) -> None:
-        pass
+    async def _raw_context_menu_callback(self, interaction: Interaction, message: Message) -> None:
+        """The callback to be ran when the Raw Text context menu button is used."""
+        paginator = await self.get_raw_content(message)
+        await interaction.response.send_message(paginator.pages[1], ephemeral=True)
 
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
