@@ -50,7 +50,7 @@ class InfractionDuration(CustomIOField):
             if not (delta := parse_duration_string(v)):
                 raise ValueError(f"`{v}` is not a valid duration string.")
         else:
-            delta = relativedelta(seconds=float(v)).normalized()
+            delta = relativedelta(seconds=v).normalized()
 
         return delta
 
@@ -172,11 +172,14 @@ class InfractionAndNotification(ActionEntry):
         if dm_content or dm_embed:
             formatting = {"domain": ctx.notification_domain}
             dm_content = f"Hey {ctx.author.mention}!\n{dm_content.format(**formatting)}"
-            if dm_embed:
-                dm_embed = Embed(description=dm_embed.format(**formatting), colour=Colour.og_blurple())
-            else:
-                dm_embed = None
-
+            dm_embed = (
+                Embed(
+                    description=dm_embed.format(**formatting),
+                    colour=Colour.og_blurple(),
+                )
+                if dm_embed
+                else None
+            )
             try:
                 await ctx.author.send(dm_content, embed=dm_embed)
                 ctx.action_descriptions.append("notified")

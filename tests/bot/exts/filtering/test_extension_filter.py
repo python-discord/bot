@@ -20,13 +20,19 @@ class ExtensionsListTests(unittest.IsolatedAsyncioTestCase):
         """Sets up fresh objects for each test."""
         self.filter_list = ExtensionsList(MagicMock())
         now = arrow.utcnow().timestamp()
-        filters = []
         self.whitelist = [".first", ".second", ".third"]
-        for i, filter_content in enumerate(self.whitelist, start=1):
-            filters.append({
-                "id": i, "content": filter_content, "description": None, "settings": {},
-                "additional_settings": {}, "created_at": now, "updated_at": now
-            })
+        filters = [
+            {
+                "id": i,
+                "content": filter_content,
+                "description": None,
+                "settings": {},
+                "additional_settings": {},
+                "created_at": now,
+                "updated_at": now,
+            }
+            for i, filter_content in enumerate(self.whitelist, start=1)
+        ]
         self.filter_list.add_list({
             "id": 1,
             "list_type": 1,

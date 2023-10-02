@@ -439,12 +439,10 @@ class InfractionScheduler:
                     f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
                 )
                 log_text["Failure"] = "User left the guild."
-                log_content = mod_role.mention
             else:
                 log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
                 log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
-                log_content = mod_role.mention
-
+            log_content = mod_role.mention
         # Check if the user is currently being watched by Big Brother.
         try:
             log.trace(f"Determining if user {user_id} is currently being watched by Big Brother.")
@@ -473,7 +471,7 @@ class InfractionScheduler:
                 data["reason"] = ""
                 # Append pardon reason to infraction in database.
                 if (punish_reason := infraction["reason"]) is not None:
-                    data["reason"] = punish_reason + " | "
+                    data["reason"] = f"{punish_reason} | "
 
                 data["reason"] += f"Pardoned: {pardon_reason}"
 

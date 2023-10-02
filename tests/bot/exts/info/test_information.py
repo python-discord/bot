@@ -367,21 +367,25 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         nomination_counts.assert_called_once_with(user)
 
         self.assertEqual(
-            textwrap.dedent(f"""
-                Created: {"<t:1:R>"}
+            textwrap.dedent(
+                f"""
+                Created: <t:1:R>
                 Profile: {user.mention}
                 ID: {user.id}
-            """).strip(),
-            embed.fields[0].value
+            """
+            ).strip(),
+            embed.fields[0].value,
         )
 
         self.assertEqual(
-            textwrap.dedent(f"""
-                Joined: {"<t:1:R>"}
-                Verified: {"True"}
+            textwrap.dedent(
+                '
+                Joined: <t:1:R>
+                Verified: True
                 Roles: &Moderators
-            """).strip(),
-            embed.fields[1].value
+            '
+            ).strip(),
+            embed.fields[1].value,
         )
 
     @unittest.mock.patch(f"{COG_PATH}.basic_user_infraction_counts", new_callable=unittest.mock.AsyncMock)
@@ -406,20 +410,24 @@ class UserEmbedTests(unittest.IsolatedAsyncioTestCase):
         infraction_counts.assert_called_once_with(user)
 
         self.assertEqual(
-            textwrap.dedent(f"""
-                Created: {"<t:1:R>"}
+            textwrap.dedent(
+                f"""
+                Created: <t:1:R>
                 Profile: {user.mention}
                 ID: {user.id}
-            """).strip(),
-            embed.fields[0].value
+            """
+            ).strip(),
+            embed.fields[0].value,
         )
 
         self.assertEqual(
-            textwrap.dedent(f"""
-                Joined: {"<t:1:R>"}
+            textwrap.dedent(
+                '
+                Joined: <t:1:R>
                 Roles: &Moderators
-            """).strip(),
-            embed.fields[1].value
+            '
+            ).strip(),
+            embed.fields[1].value,
         )
 
         self.assertEqual(
@@ -618,7 +626,14 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
 
                 self.assertEqual(
                     self.ctx.send.call_args,
-                    unittest.mock.call(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ...")))
+                    unittest.mock.call(
+                        shorten(
+                            f":x: Invalid rule indices: {invalid}",
+                            75,
+                            placeholder=" ...",
+                        )
+                    ),
+                )
                 self.assertEqual(None, final_rule_numbers)
 
     async def test_return_correct_rule_numbers(self):

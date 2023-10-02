@@ -68,10 +68,12 @@ def _find_elements_until_tag(
 
     for element in func(start_element, name=Strainer(include_strings=include_strings), limit=limit):
         if isinstance(element, Tag):
-            if use_container_filter:
-                if element.name in end_tag_filter:
-                    break
-            elif end_tag_filter(element):
+            if (
+                use_container_filter
+                and element.name in end_tag_filter
+                or not use_container_filter
+                and end_tag_filter(element)
+            ):
                 break
         elements.append(element)
 
@@ -130,8 +132,7 @@ def get_signatures(start_signature: PageElement) -> list[str]:
         for tag in element.find_all(_filter_signature_links, recursive=False):
             tag.decompose()
 
-        signature = element.text
-        if signature:
+        if signature := element.text:
             signatures.append(signature)
 
     return signatures

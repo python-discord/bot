@@ -15,10 +15,7 @@ from bot import constants
 TRACE_LEVEL = 5
 
 
-if TYPE_CHECKING:
-    LoggerClass = Logger
-else:
-    LoggerClass = logging.getLoggerClass()
+LoggerClass = Logger if TYPE_CHECKING else logging.getLoggerClass()
 
 
 class CustomLogger(LoggerClass):
@@ -118,8 +115,7 @@ def _set_trace_loggers() -> None:
     Otherwise if the env var begins with a "*",
     the root logger is set to the trace level and other contents are ignored.
     """
-    level_filter = constants.Bot.trace_loggers
-    if level_filter:
+    if level_filter := constants.Bot.trace_loggers:
         if level_filter.startswith("*"):
             get_logger().setLevel(TRACE_LEVEL)
 

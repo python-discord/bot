@@ -132,8 +132,7 @@ async def post_infraction(
     # Try to apply the infraction. If it fails because the user doesn't exist, try to add it.
     for should_post_user in (True, False):
         try:
-            response = await ctx.bot.api_client.post("bot/infractions", json=payload)
-            return response
+            return await ctx.bot.api_client.post("bot/infractions", json=payload)
         except ResponseCodeError as e:
             if e.status == 400 and "user" in e.response_json:
                 # Only one attempt to add the user to the database, not two:

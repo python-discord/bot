@@ -150,8 +150,7 @@ class CodeBlockCog(Cog, name="Code Block"):
             log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
             return
 
-        instructions = get_instructions(msg.content)
-        if instructions:
+        if instructions := get_instructions(msg.content):
             await self.send_instructions(msg, instructions)
 
             if msg.channel.id not in constants.CodeBlock.channel_whitelist:

@@ -186,7 +186,7 @@ class ErrorHandler(Cog):
             if await tags_get_command(ctx, maybe_tag_name):
                 return
 
-            if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            if all(role.id not in MODERATION_ROLES for role in ctx.author.roles):
                 await self.send_command_suggestion(ctx, maybe_tag_name)
         except Exception as err:
             log.debug("Error while attempting to invoke tag fallback.")
@@ -206,7 +206,7 @@ class ErrorHandler(Cog):
         msg = copy.copy(ctx.message)
 
         command, sep, end = msg.content.partition("```")
-        msg.content = command + " " + sep + end
+        msg.content = f"{command} {sep}{end}"
         new_ctx = await self.bot.get_context(msg)
 
         if new_ctx.command is None:

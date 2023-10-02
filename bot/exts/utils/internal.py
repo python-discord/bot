@@ -50,9 +50,7 @@ class Internal(Cog):
         res = ""
 
         # Erase temp input we made
-        if inp.startswith("_ = "):
-            inp = inp[4:]
-
+        inp = inp.removeprefix("_ = ")
         # Get all non-empty lines
         lines = [line for line in inp.split("\n") if line.strip()]
         if len(lines) != 1:
@@ -60,29 +58,7 @@ class Internal(Cog):
 
         # Create the input dialog
         for i, line in enumerate(lines):
-            if i == 0:
-                # Start dialog
-                start = f"In [{self.ln}]: "
-
-            else:
-                # Indent the 3 dots correctly;
-                # Normally, it's something like
-                # In [X]:
-                #    ...:
-                #
-                # But if it's
-                # In [XX]:
-                #    ...:
-                #
-                # You can see it doesn't look right.
-                # This code simply indents the dots
-                # far enough to align them.
-                # we first `str()` the line number
-                # then we get the length
-                # and use `str.rjust()`
-                # to indent it.
-                start = "...: ".rjust(len(str(self.ln)) + 7)
-
+            start = f"In [{self.ln}]: " if i == 0 else "...: ".rjust(len(str(self.ln)) + 7)
             if i == len(lines) - 2:
                 if line.startswith("return"):
                     line = line[6:].strip()
@@ -238,7 +214,7 @@ async def func():  # (None,) -> Any
                 r"^(return|import|for|while|def|class|"
                 r"from|exit|[a-zA-Z0-9]+\s*=)", code, re.M) and len(
                     code.split("\n")) == 1:
-            code = "_ = " + code
+            code = f"_ = {code}"
 
         await self._eval(ctx, code)
 

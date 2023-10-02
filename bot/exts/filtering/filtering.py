@@ -416,7 +416,9 @@ class Filtering(Cog):
         embed.description = f"`{filter_.content}`"
         if filter_.description:
             embed.description += f" - {filter_.description}"
-        embed.set_author(name=f"Filter {id_} - " + f"{filter_list[list_type].label}".title())
+        embed.set_author(
+            name=f'Filter {id_} - {f"{filter_list[list_type].label}".title()}'
+        )
         embed.set_footer(text=(
             "Field names with an asterisk have values which override the defaults of the containing filter list. "
             f"To view all defaults of the list, "
@@ -451,9 +453,9 @@ class Filtering(Cog):
             filter_type = self.loaded_filters.get(filter_name)
             if not filter_type:
                 filter_type = self.loaded_filters.get(filter_name[:-1])  # A plural form or a typo.
-                if not filter_type:
-                    await ctx.send(f":x: There's no filter type named {filter_name!r}.")
-                    return
+            if not filter_type:
+                await ctx.send(f":x: There's no filter type named {filter_name!r}.")
+                return
             # Use the class's docstring, and ignore single newlines.
             embed = Embed(description=re.sub(r"(?<!\n)\n(?!\n)", " ", filter_type.__doc__), colour=Colour.blue())
             embed.set_author(name=f"Description of the {filter_name} filter")
@@ -676,10 +678,7 @@ class Filtering(Cog):
                 self.loaded_filters.get(filter_type_name[:-1])  # In case the user tried to specify the plural form.
         # If settings were provided with no filter_type, discord.py will capture the first word as the filter type.
         if filter_type is None and filter_type_name is not None:
-            if settings:
-                settings = f"{filter_type_name} {settings}"
-            else:
-                settings = filter_type_name
+            settings = f"{filter_type_name} {settings}" if settings else filter_type_name
             filter_type_name = None
 
         settings, filter_settings, filter_type = search_criteria_converter(
@@ -956,10 +955,7 @@ class Filtering(Cog):
             if list_message:
                 messages[filter_list] = list_message
 
-        result_actions = None
-        if actions:
-            result_actions = reduce(ActionSettings.union, actions)
-
+        result_actions = reduce(ActionSettings.union, actions) if actions else None
         return result_actions, messages, triggers
 
     async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, Iterable[str]]) -> None:
@@ -1054,8 +1050,8 @@ class Filtering(Cog):
         if not filter_list:
             if list_name.endswith("s"):  # The user may have attempted to use the plural form.
                 filter_list = self.filter_lists.get(list_name[:-1])
-            if not filter_list:
-                raise BadArgument(f"There's no filter list named {list_name!r}.")
+        if not filter_list:
+            raise BadArgument(f"There's no filter list named {list_name!r}.")
         log.trace(f"Found list named {filter_list.name}")
         return filter_list
 
@@ -1181,8 +1177,7 @@ class Filtering(Cog):
                 return
 
         if infraction_type != Infraction.NONE:
-            filter_log = bot.instance.get_channel(Channels.filter_log)
-            if filter_log:
+            if filter_log := bot.instance.get_channel(Channels.filter_log):
                 await filter_log.send(
                     f":warning: Heads up! The new {filter_list[list_type].label} filter "
                     f"({filter_}) will automatically {infraction_type.name.lower()} users."
@@ -1218,7 +1213,7 @@ class Filtering(Cog):
         if new_filter:
             await self._maybe_alert_auto_infraction(filter_list, list_type, new_filter)
             extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
-            await msg.reply(f"✅ Added filter: {new_filter}" + extra_msg)
+            await msg.reply(f"✅ Added filter: {new_filter}{extra_msg}")
         else:
             await msg.reply(":x: Could not create the filter. Are you sure it's implemented?")
 
@@ -1269,7 +1264,7 @@ class Filtering(Cog):
         log.info(f"Successfully patched filter {edited_filter}.")
         await self._maybe_alert_auto_infraction(filter_list, list_type, edited_filter, filter_)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
-        await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
+        await msg.reply(f"✅ Edited filter: {edited_filter}{extra_msg}")
 
     async def _post_filter_list(self, msg: Message, list_name: str, list_type: ListType, settings: dict) -> None:
         """POST the new data of the filter list to the site API."""
@@ -1345,8 +1340,9 @@ class Filtering(Cog):
             if filter_type and filter_type not in filter_list.filter_types:
                 continue
             for atomic_list in filter_list.values():
-                list_results = self._search_filter_list(atomic_list, filter_type, settings, filter_settings)
-                if list_results:
+                if list_results := self._search_filter_list(
+                    atomic_list, filter_type, settings, filter_settings
+                ):
                     lines.append(f"**{atomic_list.label.title()}**")
                     lines.extend(map(str, list_results))
                     lines.append("")
@@ -1360,8 +1356,7 @@ class Filtering(Cog):
     async def _delete_offensive_msg(self, msg: Mapping[str, int]) -> None:
         """Delete an offensive message, and then delete it from the DB."""
         try:
-            channel = self.bot.get_channel(msg["channel_id"])
-            if channel:
+            if channel := self.bot.get_channel(msg["channel_id"]):
                 msg_obj = await channel.fetch_message(msg["id"])
                 await msg_obj.delete()
         except discord.NotFound:
@@ -1451,9 +1446,13 @@ class Filtering(Cog):
 
         # Nicely format the output so each filter list type is grouped
         lines = [f"**Auto-infraction filters added since {seven_days_ago.format('YYYY-MM-DD')}**"]
-        for list_label, filters in found_filters.items():
-            lines.append("\n".join([f"**{list_label.title()}**"]+[f"{filter_} ({infr})" for filter_, infr in filters]))
-
+        lines.extend(
+            "\n".join(
+                [f"**{list_label.title()}**"]
+                + [f"{filter_} ({infr})" for filter_, infr in filters]
+            )
+            for list_label, filters in found_filters.items()
+        )
         if len(lines) == 1:
             lines.append("Nothing to show")
 

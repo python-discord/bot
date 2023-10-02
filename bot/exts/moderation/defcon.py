@@ -109,37 +109,38 @@ class Defcon(Cog):
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """Check newly joining users to see if they meet the account age threshold."""
-        if self.threshold:
-            now = arrow.utcnow()
+        if not self.threshold:
+            return
+        now = arrow.utcnow()
 
-            if now - member.created_at < time.relativedelta_to_timedelta(self.threshold):
-                log.info(f"Rejecting user {member}: Account is too new")
+        if now - member.created_at < time.relativedelta_to_timedelta(self.threshold):
+            log.info(f"Rejecting user {member}: Account is too new")
 
-                message_sent = False
+            message_sent = False
 
-                try:
-                    await member.send(REJECTION_MESSAGE.format(user=member.mention))
-                    message_sent = True
-                except Forbidden:
-                    log.debug(f"Cannot send DEFCON rejection DM to {member}: DMs disabled")
-                except Exception:
-                    # Broadly catch exceptions because DM isn't critical, but it's imperative to kick them.
-                    log.exception(f"Error sending DEFCON rejection message to {member}")
+            try:
+                await member.send(REJECTION_MESSAGE.format(user=member.mention))
+                message_sent = True
+            except Forbidden:
+                log.debug(f"Cannot send DEFCON rejection DM to {member}: DMs disabled")
+            except Exception:
+                # Broadly catch exceptions because DM isn't critical, but it's imperative to kick them.
+                log.exception(f"Error sending DEFCON rejection message to {member}")
 
-                await member.kick(reason="DEFCON active, user is too new")
-                self.bot.stats.incr("defcon.leaves")
+            await member.kick(reason="DEFCON active, user is too new")
+            self.bot.stats.incr("defcon.leaves")
 
-                message = (
-                    f"{format_user(member)} was denied entry because their account is too new."
-                )
+            message = (
+                f"{format_user(member)} was denied entry because their account is too new."
+            )
 
-                if not message_sent:
-                    message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
+            if not message_sent:
+                message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
 
-                await (await self.get_mod_log()).send_log_message(
-                    Icons.defcon_denied, Colours.soft_red, "Entry denied",
-                    message, member.display_avatar.url
-                )
+            await (await self.get_mod_log()).send_log_message(
+                Icons.defcon_denied, Colours.soft_red, "Entry denied",
+                message, member.display_avatar.url
+            )
 
     @group(name="defcon", aliases=("dc",), invoke_without_command=True)
     @has_any_role(*MODERATION_ROLES)

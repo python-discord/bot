@@ -19,7 +19,7 @@ def _serialise_session_participants(participants: set[int]) -> str:
 
 def _deserialise_session_participants(s: str) -> set[int]:
     """Convert a comma separated string into a set."""
-    return set(int(user_id) for user_id in s.split(",") if user_id != "")
+    return {int(user_id) for user_id in s.split(",") if user_id != ""}
 
 
 @lock.lock_arg(NAMESPACE, "message", attrgetter("channel.id"))

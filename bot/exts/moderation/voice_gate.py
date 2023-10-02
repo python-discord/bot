@@ -233,7 +233,10 @@ class VoiceGate(Cog):
                 return
 
         # Then check is member moderator+, because we don't want to delete their messages.
-        if any(role.id in MODERATION_ROLES for role in message.author.roles) and is_verify_command is False:
+        if (
+            any(role.id in MODERATION_ROLES for role in message.author.roles)
+            and not is_verify_command
+        ):
             log.trace(f"Excluding moderator message {message.id} from deletion in #{message.channel}.")
             return
 

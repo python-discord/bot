@@ -38,7 +38,7 @@ _EMBED_CODE_BLOCK_LINE_LENGTH = 61
 _MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LINE_LENGTH + 8) * MAX_SIGNATURE_AMOUNT
 # Maximum embed description length - signatures on top
 _MAX_DESCRIPTION_LENGTH = 4096 - _MAX_SIGNATURES_LENGTH
-_TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
+_TRUNCATE_STRIP_CHARACTERS = f"!?:;.{string.whitespace}"
 
 BracketPair = namedtuple("BracketPair", ["opening_bracket", "closing_bracket"])
 _BRACKET_PAIRS = {
@@ -81,14 +81,13 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
                 yield parameters_string[last_split:index]
                 last_split = index + 1
 
-        else:
-            if character == current_search.opening_bracket:
-                depth += 1
+        elif character == current_search.opening_bracket:
+            depth += 1
 
-            elif character == current_search.closing_bracket:
-                depth -= 1
-                if depth == 0:
-                    current_search = None
+        elif character == current_search.closing_bracket:
+            depth -= 1
+            if depth == 0:
+                current_search = None
 
     yield parameters_string[last_split:]
 
@@ -157,21 +156,20 @@ def _get_truncated_description(
         is_tag = isinstance(element, Tag)
         element_length = len(element.text) if is_tag else len(element)
 
-        if rendered_length + element_length < max_length:
-            if is_tag:
-                element_markdown = markdown_converter.process_tag(element, convert_as_inline=False)
-            else:
-                element_markdown = markdown_converter.process_text(element)
-
-            rendered_length += element_length
-            tag_end_index += len(element_markdown)
-
-            if not element_markdown.isspace():
-                markdown_element_ends.append(tag_end_index)
-            result += element_markdown
-        else:
+        if rendered_length + element_length >= max_length:
             break
 
+        element_markdown = (
+            markdown_converter.process_tag(element, convert_as_inline=False)
+            if is_tag
+            else markdown_converter.process_text(element)
+        )
+        rendered_length += element_length
+        tag_end_index += len(element_markdown)
+
+        if not element_markdown.isspace():
+            markdown_element_ends.append(tag_end_index)
+        result += element_markdown
     if not markdown_element_ends:
         return ""
 
@@ -188,9 +186,14 @@ def _get_truncated_description(
     if truncate_index >= markdown_element_ends[-1]:
         return result
 
-    # Determine the actual truncation index.
-    possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
-    if not possible_truncation_indices:
+    if possible_truncation_indices := [
+        cut for cut in markdown_element_ends if cut < truncate_index
+    ]:
+        # Truncate at the last Markdown element that comes before the truncation index.
+        markdown_truncate_index = possible_truncation_indices[-1]
+        truncated_result = result[:markdown_truncate_index]
+
+    else:
         # In case there is no Markdown element ending before the truncation index, try to find a good cutoff point.
         force_truncated = result[:truncate_index]
         # If there is an incomplete codeblock, cut it out.
@@ -206,12 +209,7 @@ def _get_truncated_description(
         else:
             truncated_result = force_truncated
 
-    else:
-        # Truncate at the last Markdown element that comes before the truncation index.
-        markdown_truncate_index = possible_truncation_indices[-1]
-        truncated_result = result[:markdown_truncate_index]
-
-    return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
+    return f"{truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS)}..."
 
 
 def _create_markdown(signatures: list[str] | None, description: Iterable[Tag], url: str) -> str:

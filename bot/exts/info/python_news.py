@@ -196,10 +196,12 @@ class PythonNews(Cog):
                 # Build an embed and send a message to the webhook
                 embed = discord.Embed(
                     title=self.escape_markdown(thread_information["subject"]),
-                    description=content[:1000] + f"... [continue reading]({link})" if len(content) > 1000 else content,
+                    description=f"{content[:1000]}... [continue reading]({link})"
+                    if len(content) > 1000
+                    else content,
                     timestamp=new_date,
                     url=link,
-                    colour=constants.Colours.soft_green
+                    colour=constants.Colours.soft_green,
                 )
                 embed.set_author(
                     name=f"{email_information['sender_name']} ({email_information['sender']['address']})",

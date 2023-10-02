@@ -40,8 +40,7 @@ class LinksFilter(UniqueFilter):
         total_links = 0
         messages_with_links = 0
         for msg in detected_messages:
-            total_matches = len(LINK_RE.findall(msg.content))
-            if total_matches:
+            if total_matches := len(LINK_RE.findall(msg.content)):
                 messages_with_links += 1
                 total_links += total_matches
 

@@ -115,7 +115,7 @@ class CodeblockConverter(Converter):
                 codeblocks = [block.group("code") for block in blocks]
                 info = "several code blocks"
             else:
-                match = match[0] if len(blocks) == 0 else blocks[0]
+                match = match[0] if not blocks else blocks[0]
                 code, block, lang, delim = match.group("code", "block", "lang", "delim")
                 codeblocks = [dedent(code)]
                 if block:
@@ -181,11 +181,7 @@ class Snekbox(Cog):
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
         alt_python_version: SupportedPythonVersions
-        if current_python_version == "3.10":
-            alt_python_version = "3.11"
-        else:
-            alt_python_version = "3.10"  # noqa: F841
-
+        alt_python_version = "3.11" if current_python_version == "3.10" else "3.10"
         view = interactions.ViewWithUserAndRoleCheck(
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
@@ -228,12 +224,14 @@ class Snekbox(Cog):
 
         If there are multiple codeblocks, insert the first one into the wrapped setup code.
         """
-        args = ["-m", "timeit"]
         setup_code = codeblocks.pop(0) if len(codeblocks) > 1 else ""
         code = "\n".join(codeblocks)
 
-        args.extend(["-s", TIMEIT_SETUP_WRAPPER.format(setup=setup_code), code])
-        return args
+        return [
+            "-m",
+            "timeit",
+            *["-s", TIMEIT_SETUP_WRAPPER.format(setup=setup_code), code],
+        ]
 
     async def format_output(
         self,
@@ -320,9 +318,7 @@ class Snekbox(Cog):
         async with ctx.typing():
             result = await self.post_job(job)
             msg = result.get_message(job)
-            error = result.error_message
-
-            if error:
+            if error := result.error_message:
                 output, paste_link = error, None
             else:
                 log.trace("Formatting output...")
@@ -395,7 +391,7 @@ class Snekbox(Cog):
             blocked.extend(self._filter_files(ctx, failed_files, blocked_exts).blocked)
             # Add notice if any files were blocked
             if blocked:
-                blocked_sorted = sorted(set(f.suffix for f in blocked))
+                blocked_sorted = sorted({f.suffix for f in blocked})
                 # Only no extension
                 if len(blocked_sorted) == 1 and blocked_sorted[0] == "":
                     blocked_msg = "Files with no extension can't be uploaded."
@@ -486,12 +482,10 @@ class Snekbox(Cog):
         if new_ctx.command is command:
             log.trace(f"Message {message.id} invokes {command} command.")
             split = message.content.split(maxsplit=1)
-            code = split[1] if len(split) > 1 else None
+            return split[1] if len(split) > 1 else None
         else:
             log.trace(f"Message {message.id} does not invoke {command} command.")
-            code = message.content
-
-        return code
+            return message.content
 
     async def run_job(
         self,

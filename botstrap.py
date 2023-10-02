@@ -237,12 +237,11 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     config_str += "\n#Webhooks\n"
 
     for webhook_name, webhook_model in Webhooks:
-        webhook = discord_client.webhook_exists(webhook_model.id)
-        if not webhook:
+        if webhook := discord_client.webhook_exists(webhook_model.id):
+            webhook_id = webhook_model.id
+        else:
             webhook_channel_id = int(all_channels[webhook_name])
             webhook_id = discord_client.create_webhook(webhook_name, webhook_channel_id)
-        else:
-            webhook_id = webhook_model.id
         config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
         config_str += f"webhooks_{webhook_name}__channel={all_channels[webhook_name]}\n"
 

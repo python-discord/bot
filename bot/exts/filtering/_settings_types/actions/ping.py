@@ -29,9 +29,7 @@ class Ping(ActionEntry):
     @classmethod
     def init_sequence_if_none(cls, pings: list[str] | None) -> list[str]:
         """Initialize an empty sequence if the value is None."""
-        if pings is None:
-            return []
-        return pings
+        return [] if pings is None else pings
 
     async def action(self, ctx: FilterContext) -> None:
         """Add the stored pings to the alert message content."""

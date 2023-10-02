@@ -166,11 +166,7 @@ class DiscordTokenFilter(UniqueFilter):
         try:
             decoded_bytes = base64.urlsafe_b64decode(b64_content)
             string = decoded_bytes.decode("utf-8")
-            if not (string.isascii() and string.isdigit()):
-                # This case triggers if there are fancy unicode digits in the base64 encoding,
-                # that means it's not a valid user id.
-                return None
-            return int(string)
+            return None if not string.isascii() or not string.isdigit() else int(string)
         except ValueError:
             return None
 

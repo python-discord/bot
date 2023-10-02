@@ -41,8 +41,8 @@ class DomainFilter(Filter):
         for found_url in ctx.content:
             extract = tldextract.extract(found_url)
             if self.content.lower() in found_url and extract.registered_domain == domain:
-                if self.extra_fields.only_subdomains:
-                    if not extract.subdomain and not urlparse(f"https://{found_url}").path:
+                if not extract.subdomain and not urlparse(f"https://{found_url}").path:
+                    if self.extra_fields.only_subdomains:
                         return False
                 ctx.matches.append(found_url)
                 ctx.notification_domain = self.content

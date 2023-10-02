@@ -50,14 +50,12 @@ class NominationAPI:
             params["user__id"] = str(user_id)
 
         data = await self.site_api.get("bot/nominations", params=params)
-        nominations = TypeAdapter(list[Nomination]).validate_python(data)
-        return nominations
+        return TypeAdapter(list[Nomination]).validate_python(data)
 
     async def get_nomination(self, nomination_id: int) -> Nomination:
         """Fetch a nomination by ID."""
         data = await self.site_api.get(f"bot/nominations/{nomination_id}")
-        nomination = Nomination.model_validate(data)
-        return nomination
+        return Nomination.model_validate(data)
 
     async def edit_nomination(
         self,

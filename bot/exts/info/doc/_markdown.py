@@ -33,9 +33,7 @@ class DocMarkdownConverter(markdownify.MarkdownConverter):
 
     def convert_hn(self, _n: int, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Convert h tags to bold text with ** instead of adding #."""
-        if convert_as_inline:
-            return text
-        return f"**{text}**\n\n"
+        return text if convert_as_inline else f"**{text}**\n\n"
 
     def convert_code(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Undo `markdownify`s underscore escaping."""

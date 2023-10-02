@@ -103,9 +103,9 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
 
     # If the description will be too long (>4096 total characters), truncate the incident content
     if len(incident.content) > (allowed_content_chars := 4096-len(reported_on_msg)-2):  # -2 for the newlines
-        description = incident.content[:allowed_content_chars-3] + f"...\n\n{reported_on_msg}"
+        description = f"{incident.content[:allowed_content_chars - 3]}...\n\n{reported_on_msg}"
     else:
-        description = incident.content + f"\n\n{reported_on_msg}"
+        description = f"{incident.content}\n\n{reported_on_msg}"
 
     embed = discord.Embed(
         description=description,
@@ -165,7 +165,7 @@ def shorten_text(text: str) -> str:
     text = "\n".join(text.split("\n", maxsplit=3)[:3])
 
     # If it is a single word, then truncate it to 50 characters
-    if text.find(" ") == -1:
+    if " " not in text:
         text = text[:50]
 
     # Remove extra whitespaces from the `text`
@@ -657,7 +657,7 @@ class Incidents(Cog):
     async def delete_msg_link_embed(self, message_id: int) -> None:
         """Delete the Discord message link message found in cache for `message_id`."""
         log.trace("Deleting Discord message link's webhook message.")
-        webhook_msg_id = await self.message_link_embeds_cache.get(int(message_id))
+        webhook_msg_id = await self.message_link_embeds_cache.get(message_id)
 
         if webhook_msg_id:
             try:

@@ -297,12 +297,11 @@ class ModManagement(commands.Cog):
 
         if isinstance(user, discord.Member | discord.User):
             user_str = escape_markdown(str(user))
+        elif infraction_list:
+            user = infraction_list[0]["user"]
+            user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
         else:
-            if infraction_list:
-                user = infraction_list[0]["user"]
-                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
-            else:
-                user_str = str(user.id)
+            user_str = str(user.id)
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
@@ -332,7 +331,7 @@ class ModManagement(commands.Cog):
             colour=discord.Colour.orange()
         )
         if len(reason) > 500:
-            reason = reason[:500] + "..."
+            reason = f"{reason[:500]}..."
         await self.send_infraction_list(ctx, embed, infraction_list, reason)
 
     # endregion
@@ -355,11 +354,7 @@ class ModManagement(commands.Cog):
         if isinstance(actor, str):
             actor = ctx.author
 
-        if oldest_first:
-            ordering = "inserted_at"  # oldest infractions first
-        else:
-            ordering = "-inserted_at"  # newest infractions first
-
+        ordering = "inserted_at" if oldest_first else "-inserted_at"
         infraction_list = await self.bot.api_client.get(
             "bot/infractions/expanded",
             params={
@@ -388,9 +383,7 @@ class ModManagement(commands.Cog):
         API limits returned infractions to a maximum of 100, so if `infraction_count`
         is 100 then we return `"100+"`. Otherwise, return `str(infraction_count)`.
         """
-        if infraction_count == 100:
-            return "100+"
-        return str(infraction_count)
+        return "100+" if infraction_count == 100 else str(infraction_count)
 
     async def send_infraction_list(
         self,
@@ -445,7 +438,7 @@ class ModManagement(commands.Cog):
         if "actor" not in ignore_fields:
             actor_str = f"By <@{infraction['actor']['id']}>"
 
-        issued = "Issued " + time.discord_timestamp(inserted_at)
+        issued = f"Issued {time.discord_timestamp(inserted_at)}"
 
         duration = ""
         if infraction["type"] not in NO_DURATION_INFRACTIONS:

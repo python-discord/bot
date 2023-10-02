@@ -57,9 +57,7 @@ class TagIdentifier(NamedTuple):
         return fuzzy_score
 
     def __str__(self) -> str:
-        if self.group is not None:
-            return f"{self.group} {self.name}"
-        return self.name
+        return f"{self.group} {self.name}" if self.group is not None else self.name
 
     @classmethod
     def from_string(cls, string: str) -> TagIdentifier:
@@ -157,12 +155,11 @@ class Tags(Cog):
     def _get_suggestions(self, tag_identifier: TagIdentifier) -> list[tuple[TagIdentifier, Tag]]:
         """Return a list of suggested tags for `tag_identifier`."""
         for threshold in [100, 90, 80, 70, 60]:
-            suggestions = [
+            if suggestions := [
                 (identifier, tag)
                 for identifier, tag in self.tags.items()
                 if identifier.get_fuzzy_score(tag_identifier) >= threshold
-            ]
-            if suggestions:
+            ]:
                 return suggestions
 
         return []

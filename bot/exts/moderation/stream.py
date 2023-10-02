@@ -203,7 +203,10 @@ class Stream(commands.Cog):
         non_staff_partners_community_members_with_stream = [
             member
             for member in ctx.guild.get_role(Roles.video).members
-            if not any(role.id in STAFF_PARTNERS_COMMUNITY_ROLES for role in member.roles)
+            if all(
+                role.id not in STAFF_PARTNERS_COMMUNITY_ROLES
+                for role in member.roles
+            )
         ]
 
         # List of tuples (UtcPosixTimestamp, str)

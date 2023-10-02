@@ -438,7 +438,7 @@ class TalentPool(Cog, name="Talentpool"):
         # If not specified, assume the invoker is editing their own nomination reason.
         nominator = nominator or ctx.author
 
-        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+        if all(role.id not in MODERATION_ROLES for role in ctx.author.roles):
             if ctx.channel.id != Channels.nominations:
                 await ctx.send(f":x: Nomination edits must be run in the <#{Channels.nominations}> channel.")
                 return

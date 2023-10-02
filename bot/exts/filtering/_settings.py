@@ -89,10 +89,9 @@ class Settings(FieldRequiring, dict[str, T]):
             else:
                 try:
                     entry_defaults = None if defaults is None else defaults[entry_name]
-                    new_entry = entry_cls.create(
+                    if new_entry := entry_cls.create(
                         entry_data, defaults=entry_defaults, keep_empty=keep_empty
-                    )
-                    if new_entry:
+                    ):
                         self[entry_name] = new_entry
                 except TypeError as e:
                     raise TypeError(
@@ -110,10 +109,14 @@ class Settings(FieldRequiring, dict[str, T]):
 
     def get_setting(self, key: str, default: Any | None = None) -> Any:
         """Get the setting matching the key, or fall back to the default value if the key is missing."""
-        for entry in self.values():
-            if hasattr(entry, key):
-                return getattr(entry, key)
-        return default
+        return next(
+            (
+                getattr(entry, key)
+                for entry in self.values()
+                if hasattr(entry, key)
+            ),
+            default,
+        )
 
     @classmethod
     def create(
@@ -128,10 +131,7 @@ class Settings(FieldRequiring, dict[str, T]):
         settings = cls(settings_data, defaults=defaults, keep_empty=keep_empty)
         # If an entry doesn't hold any values, its `create` method will return None.
         # If all entries are None, then the settings object holds no values.
-        if not keep_empty and not any(settings.values()):
-            return None
-
-        return settings
+        return None if not keep_empty and not any(settings.values()) else settings
 
 
 class ValidationSettings(Settings[ValidationEntry]):
@@ -177,13 +177,12 @@ class ActionSettings(Settings[ActionEntry]):
 
     def union(self, other: Self) -> Self:
         """Combine the entries of two collections of settings into a new ActionsSettings."""
-        actions = {}
-        # A settings object doesn't necessarily have all types of entries (e.g in the case of filter overrides).
-        for entry in self:
-            if entry in other:
-                actions[entry] = self[entry].union(other[entry])
-            else:
-                actions[entry] = self[entry]
+        actions = {
+            entry: self[entry].union(other[entry])
+            if entry in other
+            else self[entry]
+            for entry in self
+        }
         for entry in other:
             if entry not in actions:
                 actions[entry] = other[entry]

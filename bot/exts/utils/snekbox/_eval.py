@@ -77,10 +77,7 @@ class EvalResult:
         """Return an emoji corresponding to the status code or lack of output in result."""
         if not self.has_output:
             return ":warning:"
-        if self.returncode == 0:  # No error
-            return ":white_check_mark:"
-        # Exception
-        return ":x:"
+        return ":white_check_mark:" if self.returncode == 0 else ":x:"
 
     @property
     def error_message(self) -> str:
@@ -130,7 +127,7 @@ class EvalResult:
                 break
 
             if len(file) > char_max:
-                names.append(file[:char_max] + "...")
+                names.append(f"{file[:char_max]}...")
                 break
             char_max -= len(file)
             names.append(file)

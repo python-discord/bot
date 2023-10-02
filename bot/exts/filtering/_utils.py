@@ -62,10 +62,10 @@ def past_tense(word: str) -> str:
     if not word:
         return word
     if word.endswith("e"):
-        return word + "d"
+        return f"{word}d"
     if word.endswith("y") and len(word) > 1 and word[-2] not in "aeiou":
-        return word[:-1] + "ied"
-    return word + "ed"
+        return f"{word[:-1]}ied"
+    return f"{word}ed"
 
 
 def to_serializable(item: Any, *, ui_repr: bool = False) -> Serializable:
@@ -95,7 +95,7 @@ def to_serializable(item: Any, *, ui_repr: bool = False) -> Serializable:
 def resolve_mention(mention: str) -> str:
     """Return the appropriate formatting for the mention, be it a literal, a user ID, or a role ID."""
     guild = bot.instance.get_guild(Guild.id)
-    if mention in ("here", "everyone"):
+    if mention in {"here", "everyone"}:
         return f"@{mention}"
     try:
         mention = int(mention)  # It's an ID.
@@ -110,10 +110,10 @@ def resolve_mention(mention: str) -> str:
     for role in guild.roles:
         if role.name == mention:
             return role.mention
-    for member in guild.members:
-        if str(member) == mention:
-            return member.mention
-    return mention
+    return next(
+        (member.mention for member in guild.members if str(member) == mention),
+        mention,
+    )
 
 
 def repr_equals(override: Any, default: Any) -> bool:
@@ -139,11 +139,10 @@ def normalize_type(type_: type, *, prioritize_nonetype: bool = True) -> type:
         if type(None) in args:
             if prioritize_nonetype:
                 return type(None)
-            args = tuple(set(args) - {type(None)})
+            else:
+                args = tuple(set(args) - {type(None)})
         type_ = args[0]  # Pick one, doesn't matter
-    if origin := get_origin(type_):  # In case of a parameterized List, Set, Dict etc.
-        return origin
-    return type_
+    return origin if (origin := get_origin(type_)) else type_
 
 
 def starting_value(type_: type[T]) -> T:
@@ -264,10 +263,7 @@ class CustomIOField:
     @classmethod
     def validate(cls, v: Any, _info: core_schema.ValidationInfo) -> Self:
         """Takes the given value and returns a class instance with that value."""
-        if isinstance(v, CustomIOField):
-            return cls(v.value)
-
-        return cls(v)
+        return cls(v.value) if isinstance(v, CustomIOField) else cls(v)
 
     def __eq__(self, other: CustomIOField):
         if not isinstance(other, CustomIOField):

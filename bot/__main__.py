@@ -36,13 +36,7 @@ async def _create_redis_session() -> RedisSession:
 
 async def main() -> None:
     """Entry async method for starting the bot."""
-    statsd_url = constants.Stats.statsd_host
-    if constants.DEBUG_MODE:
-        # Since statsd is UDP, there are no errors for sending to a down port.
-        # For this reason, setting the statsd host to 127.0.0.1 for development
-        # will effectively disable stats.
-        statsd_url = LOCALHOST
-
+    statsd_url = LOCALHOST if constants.DEBUG_MODE else constants.Stats.statsd_host
     allowed_roles = list({discord.Object(id_) for id_ in constants.MODERATION_ROLES})
     intents = discord.Intents.all()
     intents.presences = False

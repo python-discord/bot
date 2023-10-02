@@ -260,8 +260,8 @@ class DocCog(commands.Cog):
                 log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
                 return "Unable to parse the requested symbol due to an error."
 
-            if markdown is None:
-                return "Unable to parse the requested symbol."
+        if markdown is None:
+            return "Unable to parse the requested symbol."
         return markdown
 
     async def create_symbol_embed(self, symbol_name: str) -> discord.Embed | None:
@@ -289,7 +289,9 @@ class DocCog(commands.Cog):
             # with a max of 200 chars.
             if symbol_name in self.renamed_symbols:
                 renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
-                footer_text = textwrap.shorten("Similar names: " + renamed_symbols, 200, placeholder=" ...")
+                footer_text = textwrap.shorten(
+                    f"Similar names: {renamed_symbols}", 200, placeholder=" ..."
+                )
             else:
                 footer_text = ""
 
@@ -433,10 +435,10 @@ class DocCog(commands.Cog):
         new_inventories = set(self.base_urls)
 
         if added := ", ".join(new_inventories - old_inventories):
-            added = "+ " + added
+            added = f"+ {added}"
 
         if removed := ", ".join(old_inventories - new_inventories):
-            removed = "- " + removed
+            removed = f"- {removed}"
 
         embed = discord.Embed(
             title="Inventories refreshed",

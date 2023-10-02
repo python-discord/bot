@@ -85,19 +85,16 @@ class Information(Cog):
     async def get_extended_server_info(self, ctx: Context) -> str:
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
-        talentpool_cog: TalentPool | None = self.bot.get_cog("Talentpool")
-        if talentpool_cog:
+        if talentpool_cog := self.bot.get_cog("Talentpool"):
             num_nominated = len(await talentpool_cog.api.get_nominations(active=True))
             talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
-        bb_cog: BigBrother | None = self.bot.get_cog("Big Brother")
-        if bb_cog:
+        if bb_cog := self.bot.get_cog("Big Brother"):
             bb_info = f"BB-watched: {len(bb_cog.watched_users)}\n"
 
         defcon_info = ""
-        defcon_cog: Defcon | None = self.bot.get_cog("Defcon")
-        if defcon_cog:
+        if defcon_cog := self.bot.get_cog("Defcon"):
             threshold = time.humanize_delta(defcon_cog.threshold) if defcon_cog.threshold else "-"
             defcon_info = f"Defcon threshold: {threshold}\n"
 
@@ -120,11 +117,7 @@ class Information(Cog):
         # Sort the roles alphabetically and remove the @everyone role
         roles = sorted(ctx.guild.roles[1:], key=lambda role: role.name)
 
-        # Build a list
-        role_list = []
-        for role in roles:
-            role_list.append(f"`{role.id}` - {role.mention}")
-
+        role_list = [f"`{role.id}` - {role.mention}" for role in roles]
         # Build an embed
         embed = Embed(
             title=f"Role information (Total {len(roles)} role{'s' * (len(role_list) > 1)})",
@@ -556,7 +549,7 @@ class Information(Cog):
         keywords, rule_numbers = [], []
 
         full_rules = await self.bot.api_client.get("rules", params={"link_format": "md"})
-        keyword_to_rule_number = dict()
+        keyword_to_rule_number = {}
 
         for rule_number, (_, rule_keywords) in enumerate(full_rules, start=1):
             for rule_keyword in rule_keywords:
@@ -581,12 +574,16 @@ class Information(Cog):
         # Remove duplicates and sort the rule indices
         rule_numbers = sorted(set(rule_numbers))
 
-        invalid = ", ".join(
-            str(rule_number) for rule_number in rule_numbers
-            if rule_number < 1 or rule_number > len(full_rules))
-
-        if invalid:
-            await ctx.send(shorten(":x: Invalid rule indices: " + invalid, 75, placeholder=" ..."))
+        if invalid := ", ".join(
+            str(rule_number)
+            for rule_number in rule_numbers
+            if rule_number < 1 or rule_number > len(full_rules)
+        ):
+            await ctx.send(
+                shorten(
+                    f":x: Invalid rule indices: {invalid}", 75, placeholder=" ..."
+                )
+            )
             return None
 
         final_rules = []

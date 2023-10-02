@@ -95,19 +95,18 @@ class AtomicList:
 
         relevant_filters = []
         for filter_ in filters:
-            if not filter_.validations:
-                if default_answer and await filter_.triggered_on(ctx):
-                    relevant_filters.append(filter_)
-            else:
+            if filter_.validations:
                 passed, failed = filter_.validations.evaluate(ctx)
                 if not failed and failed_by_default < passed:
                     if await filter_.triggered_on(ctx):
                         relevant_filters.append(filter_)
 
+            elif default_answer and await filter_.triggered_on(ctx):
+                relevant_filters.append(filter_)
         if ctx.event == Event.MESSAGE_EDIT and ctx.message and self.list_type == ListType.DENY:
-            previously_triggered = ctx.message_cache.get_message_metadata(ctx.message.id)
-            # The message might not be cached.
-            if previously_triggered:
+            if previously_triggered := ctx.message_cache.get_message_metadata(
+                ctx.message.id
+            ):
                 ignore_filters = previously_triggered[self]
                 # This updates the cache. Some filters are ignored, but they're necessary if there's another edit.
                 previously_triggered[self] = relevant_filters
@@ -120,8 +119,8 @@ class AtomicList:
         value = self.defaults.actions.get_setting(setting_name, missing)
         if value is missing:
             value = self.defaults.validations.get_setting(setting_name, missing)
-            if value is missing:
-                raise ValueError(f"Couldn't find a setting named {setting_name!r}.")
+        if value is missing:
+            raise ValueError(f"Couldn't find a setting named {setting_name!r}.")
         return value
 
     def merge_actions(self, filters: list[Filter]) -> ActionSettings | None:
@@ -144,14 +143,12 @@ class AtomicList:
     @staticmethod
     def format_messages(triggers: list[Filter], *, expand_single_filter: bool = True) -> list[str]:
         """Convert the filters into strings that can be added to the alert embed."""
-        if len(triggers) == 1 and expand_single_filter:
-            message = f"#{triggers[0].id} (`{triggers[0].content}`)"
-            if triggers[0].description:
-                message += f" - {triggers[0].description}"
-            messages = [message]
-        else:
-            messages = [f"{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
-        return messages
+        if len(triggers) != 1 or not expand_single_filter:
+            return [f"{filter_.id} (`{filter_.content}`)" for filter_ in triggers]
+        message = f"#{triggers[0].id} (`{triggers[0].content}`)"
+        if triggers[0].description:
+            message += f" - {triggers[0].description}"
+        return [message]
 
     def __hash__(self):
         return hash(id(self))
@@ -177,8 +174,7 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
 
         filters = {}
         for filter_data in list_data["filters"]:
-            new_filter = self._create_filter(filter_data, defaults)
-            if new_filter:
+            if new_filter := self._create_filter(filter_data, defaults):
                 filters[filter_data["id"]] = new_filter
 
         self[list_type] = AtomicList(
@@ -218,8 +214,7 @@ class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
         """Create a filter from the given data."""
         try:
             content = filter_data["content"]
-            filter_type = self.get_filter_type(content)
-            if filter_type:
+            if filter_type := self.get_filter_type(content):
                 return filter_type(filter_data, defaults)
             if content not in self._already_warned:
                 log.warning(f"A filter named {content} was supplied, but no matching implementation found.")
@@ -292,8 +287,7 @@ class UniquesListBase(FilterList[UniqueFilter], ABC):
         filters = {}
         events = set()
         for filter_data in list_data["filters"]:
-            new_filter = self._create_filter(filter_data, defaults)
-            if new_filter:
+            if new_filter := self._create_filter(filter_data, defaults):
                 new_list.subscribe(new_filter, *new_filter.events)
                 filters[filter_data["id"]] = new_filter
                 self.loaded_types[new_filter.name] = type(new_filter)

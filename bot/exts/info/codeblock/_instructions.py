@@ -163,9 +163,10 @@ def get_instructions(content: str) -> str | None:
         instructions = _get_no_ticks_message(content)
     else:
         log.trace("Searching results for a code block with invalid ticks.")
-        block = next((block for block in blocks if block.tick != _parsing.BACKTICK), None)
-
-        if block:
+        if block := next(
+            (block for block in blocks if block.tick != _parsing.BACKTICK),
+            None,
+        ):
             log.trace("A code block exists but has invalid ticks.")
             instructions = _get_bad_ticks_message(block)
         else:

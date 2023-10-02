@@ -62,9 +62,7 @@ class CodeSnippets(Cog):
         async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
             if response_format == "text":
                 return await response.text()
-            if response_format == "json":
-                return await response.json()
-            return None
+            return await response.json() if response_format == "json" else None
 
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
@@ -113,7 +111,7 @@ class CodeSnippets(Cog):
     ) -> str:
         """Fetches a snippet from a GitHub gist."""
         gist_json = await self._fetch_response(
-            f'https://api.github.com/gists/{gist_id}{f"/{revision}" if len(revision) > 0 else ""}',
+            f'https://api.github.com/gists/{gist_id}{f"/{revision}" if revision != "" else ""}',
             "json",
             headers=GITHUB_HEADERS,
         )

@@ -254,7 +254,7 @@ class CustomHelpCommand(HelpCommand):
 
         # Trim query to avoid embed limits when sending the error.
         if len(query) >= 100:
-            query = query[:100] + "..."
+            query = f"{query[:100]}..."
 
         return HelpQueryNotFoundError(f'Query "{query}" not found.', {choice[0]: choice[1] for choice in result})
 
@@ -293,8 +293,7 @@ class CustomHelpCommand(HelpCommand):
         # show command aliases
         aliases = [f"`{alias}`" if not parent else f"`{parent} {alias}`" for alias in command.aliases]
         aliases += [f"`{alias}`" for alias in getattr(command, "root_aliases", ())]
-        aliases = ", ".join(sorted(aliases))
-        if aliases:
+        if aliases := ", ".join(sorted(aliases)):
             command_details += f"**Can also use:** {aliases}\n\n"
 
         # when command is disabled, show message about it,
@@ -337,9 +336,7 @@ class CustomHelpCommand(HelpCommand):
             details.append(
                 f"\n**`{PREFIX}{command.qualified_name}{signature}`**\n{command.short_doc or 'No details provided'}"
             )
-        if return_as_list:
-            return details
-        return "".join(details)
+        return details if return_as_list else "".join(details)
 
     async def format_group_help(self, group: Group) -> tuple[Embed, CommandView | None]:
         """Formats help for a group command."""
@@ -354,8 +351,7 @@ class CustomHelpCommand(HelpCommand):
 
         embed, _ = await self.command_formatting(group)
 
-        command_details = self.get_commands_brief_details(commands_)
-        if command_details:
+        if command_details := self.get_commands_brief_details(commands_):
             embed.description += f"\n**Subcommands:**\n{command_details}"
 
         # If the help is invoked in the context of an error, don't show subcommand navigation.
@@ -377,8 +373,7 @@ class CustomHelpCommand(HelpCommand):
         embed.set_author(name="Command Help", icon_url=constants.Icons.questionmark)
         embed.description = f"**{cog.qualified_name}**\n{cog.description}"
 
-        command_details = self.get_commands_brief_details(commands_)
-        if command_details:
+        if command_details := self.get_commands_brief_details(commands_):
             embed.description += f"\n\n**Commands:**\n{command_details}"
 
         message = await self.context.send(embed=embed)

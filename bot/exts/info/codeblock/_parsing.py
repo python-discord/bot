@@ -170,15 +170,14 @@ def parse_bad_language(content: str) -> BadLanguage | None:
     """
     log.trace("Parsing bad language.")
 
-    match = _RE_LANGUAGE.match(content)
-    if not match:
+    if match := _RE_LANGUAGE.match(content):
+        return BadLanguage(
+            language=match["lang"],
+            has_leading_spaces=match["spaces"] is not None,
+            has_terminal_newline=match["newline"] is not None,
+        )
+    else:
         return None
-
-    return BadLanguage(
-        language=match["lang"],
-        has_leading_spaces=match["spaces"] is not None,
-        has_terminal_newline=match["newline"] is not None,
-    )
 
 
 def _get_leading_spaces(content: str) -> int:
@@ -227,7 +226,4 @@ def _fix_indentation(content: str) -> str:
     # All lines must be dedented at least by the same amount as the first line.
     first_indent = max(first_indent, second_indent)
 
-    # Dedent the rest of the lines and join them together with the first line.
-    content = first_line + "".join(line[first_indent:] for line in lines[1:])
-
-    return content
+    return first_line + "".join(line[first_indent:] for line in lines[1:])

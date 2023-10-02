@@ -69,9 +69,7 @@ def _stringify_time_unit(value: int, unit: str) -> str:
         return "0 seconds"
     if value == 1:
         return f"{value} {unit[:-1]}"
-    if value == 0:
-        return f"less than a {unit[:-1]}"
-    return f"{value} {unit}"
+    return f"less than a {unit[:-1]}" if value == 0 else f"{value} {unit}"
 
 
 def discord_timestamp(timestamp: Timestamp, format: TimestampFormats = TimestampFormats.DATE_TIME) -> str:
@@ -192,7 +190,7 @@ def humanize_delta(
     if args and kwargs:
         raise ValueError("Unsupported combination of positional and keyword arguments.")
 
-    if len(args) == 0:
+    if not args:
         delta = relativedelta(**kwargs)
     elif len(args) == 1 and isinstance(args[0], relativedelta):
         delta = args[0]
@@ -234,13 +232,11 @@ def humanize_delta(
         time_strings[-1] = f"{time_strings[-2]} and {time_strings[-1]}"
         del time_strings[-2]
 
-    # If nothing has been found, just make the value 0 precision, e.g. `0 days`.
-    if not time_strings:
-        humanized = _stringify_time_unit(0, precision)
-    else:
-        humanized = ", ".join(time_strings)
-
-    return humanized
+    return (
+        _stringify_time_unit(0, precision)
+        if not time_strings
+        else ", ".join(time_strings)
+    )
 
 
 def parse_duration_string(duration: str) -> relativedelta | None:
@@ -265,9 +261,7 @@ def parse_duration_string(duration: str) -> relativedelta | None:
         return None
 
     duration_dict = {unit: int(amount) for unit, amount in match.groupdict(default=0).items()}
-    delta = relativedelta(**duration_dict)
-
-    return delta
+    return relativedelta(**duration_dict)
 
 
 def relativedelta_to_timedelta(delta: relativedelta) -> datetime.timedelta:
@@ -327,10 +321,7 @@ def until_expiration(expiry: Timestamp | None) -> str:
         return "Permanent"
 
     expiry = arrow.get(expiry)
-    if expiry < arrow.utcnow():
-        return "Expired"
-
-    return format_relative(expiry)
+    return "Expired" if expiry < arrow.utcnow() else format_relative(expiry)
 
 
 def unpack_duration(
