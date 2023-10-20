@@ -48,6 +48,16 @@ VOICE_PING_DM = (
 )
 
 
+class VerifyView(discord.ui.View):
+    def __init__(self, bot: Bot) -> None:
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(label="Voice Verify", style=discord.ButtonStyle.primary, custom_id="voice_verify_button",)
+    async def voice_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        ...
+
+
 class VoiceGate(Cog):
     """Voice channels verification management."""
 
