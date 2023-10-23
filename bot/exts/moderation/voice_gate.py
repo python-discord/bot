@@ -55,7 +55,44 @@ class VerifyView(discord.ui.View):
 
     @discord.ui.button(label="Voice Verify", style=discord.ButtonStyle.primary, custom_id="voice_verify_button",)
     async def voice_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        ...
+        """A button that checks to see if the user qualifies for voice verification and verifies them if they do."""
+        try:
+            data = await self.bot.api_client.get(
+                f"bot/users/{interaction.user.id}/metricity_data",
+                raise_for_status=True
+            )
+        except ResponseCodeError as err:
+            if err.response.status == 404:
+                await interaction.response.send_message((
+                    "We were unable to find user data for you. "
+                    "Please try again shortly. "
+                    "If this problem persists, please contact the server staff through ModMail."),
+                    ephemeral=True,
+                    delete_after=15,
+                )
+                log.info(f"Unable to find Metricity data about {interaction.user} ({interaction.user.id})")
+            else:
+                await interaction.response.send_message((
+                    "We encountered an error while attempting to find data for your user. "
+                    "Please try again and let us know if the problem persists."),
+                    ephemeral=True,
+                    delete_after=15,
+                )
+                log.warning(f"Got response code {err.status} while trying to get {interaction.user.id} Metricity data.")
+            return
+
+        checks = {
+            "joined_at": (
+                interaction.user.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
+            ),
+            "total_messages": data["total_messages"] < GateConf.minimum_messages,
+            "voice_gate_blocked": data["voice_gate_blocked"],
+            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
+        }
+
+        failed = any(checks.values())
+        failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
+        
 
 
 class VoiceGate(Cog):
