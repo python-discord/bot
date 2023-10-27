@@ -2,13 +2,13 @@
 
 [[package]]
 name = "aiodns"
-version = "3.0.0"
+version = "3.1.1"
 description = "Simple DNS resolver for asyncio"
 optional = false
 python-versions = "*"
 files = [
-    {file = "aiodns-3.0.0-py3-none-any.whl", hash = "sha256:2b19bc5f97e5c936638d28e665923c093d8af2bf3aa88d35c43417fa25d136a2"},
-    {file = "aiodns-3.0.0.tar.gz", hash = "sha256:946bdfabe743fceeeb093c8a010f5d1645f708a241be849e17edfb0e49e08cd6"},
+    {file = "aiodns-3.1.1-py3-none-any.whl", hash = "sha256:a387b63da4ced6aad35b1dda2d09620ad608a1c7c0fb71efa07ebb4cd511928d"},
+    {file = "aiodns-3.1.1.tar.gz", hash = "sha256:1073eac48185f7a4150cad7f96a5192d6911f12b4fb894de80a088508c9b3a99"},
 ]
 
 [package.dependencies]
@@ -1520,17 +1520,17 @@ python-dotenv = ">=0.21.0"
 
 [[package]]
 name = "pydis-core"
-version = "10.2.0"
+version = "10.4.0"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 optional = false
 python-versions = ">=3.10.dev0,<3.12.dev0"
 files = [
-    {file = "pydis_core-10.2.0-py3-none-any.whl", hash = "sha256:a9cc6980d8ecf977c9011b713750026711845a8610ab5e58930f8a6e3c8d28a4"},
-    {file = "pydis_core-10.2.0.tar.gz", hash = "sha256:2185e54bbe7c1758e427ab9e4103ba2068462487bcac514c6357f3301e4fe2a0"},
+    {file = "pydis_core-10.4.0-py3-none-any.whl", hash = "sha256:caffb572aac37196f52262a58fc926b6f7db50012268ceab38f86b3e16b44db0"},
+    {file = "pydis_core-10.4.0.tar.gz", hash = "sha256:06cdaf71079ceaf31e80406a7ced32f089b57c292b79aafdb418118d739d1a80"},
 ]
 
 [package.dependencies]
-aiodns = "3.0.0"
+aiodns = "3.1.1"
 async-rediscache = {version = "1.0.0rc2", extras = ["fakeredis"], optional = true, markers = "extra == \"async-rediscache\""}
 "discord.py" = "2.3.2"
 pydantic = ">=1.7.4,<3.0.0"
@@ -2356,4 +2356,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "7b67a0a4ad7ba2350ce15adeeb8caf2da44b8fb7908d6ee60926ed0770298344"
+content-hash = "231ef16be4d18f22575e9c0f8ee7aed0717d5bf80746925afae3ccf8c2ca34dc"
