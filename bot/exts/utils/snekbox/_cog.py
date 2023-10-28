@@ -86,7 +86,7 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-SupportedPythonVersions = Literal["3.11"]
+SupportedPythonVersions = Literal["3.12"]
 
 
 class FilteredFiles(NamedTuple):
@@ -562,13 +562,13 @@ class Snekbox(Cog):
         If multiple codeblocks are in a message, all of them will be joined and evaluated,
         ignoring the text outside them.
 
-        Currently only 3.11 version is supported.
+        Currently only 3.12 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         code: list[str]
-        python_version = python_version or "3.11"
+        python_version = python_version or "3.12"
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
@@ -598,13 +598,13 @@ class Snekbox(Cog):
         If multiple formatted codeblocks are provided, the first one will be the setup code, which will
         not be timed. The remaining codeblocks will be joined together and timed.
 
-        Currently only 3.11 version is supported.
+        Currently only 3.12 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         code: list[str]
-        python_version = python_version or "3.11"
+        python_version = python_version or "3.12"
         args = self.prepare_timeit_input(code)
         job = EvalJob(args, version=python_version, name="timeit")
 
