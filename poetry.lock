@@ -530,13 +530,13 @@ toml = ["tomli"]
 
 [[package]]
 name = "deepdiff"
-version = "6.6.1"
+version = "6.7.1"
 description = "Deep Difference and Search of any Python object/data. Recreate objects by adding adding deltas to each other."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "deepdiff-6.6.1-py3-none-any.whl", hash = "sha256:891b3cb12837e5d376ac0b58f4c8a2764e3a8bbceabb7108ff82235f1f2c4460"},
-    {file = "deepdiff-6.6.1.tar.gz", hash = "sha256:75c75b1511f0e48edef2b70d785a9c32b2631666b465fa8c32270a77a7b950b5"},
+    {file = "deepdiff-6.7.1-py3-none-any.whl", hash = "sha256:58396bb7a863cbb4ed5193f548c56f18218060362311aa1dc36397b2f25108bd"},
+    {file = "deepdiff-6.7.1.tar.gz", hash = "sha256:b367e6fa6caac1c9f500adc79ada1b5b1242c50d5f716a1a4362030197847d30"},
 ]
 
 [package.dependencies]
@@ -758,18 +758,19 @@ socks = ["socksio (==1.*)"]
 
 [[package]]
 name = "httpx"
-version = "0.25.0"
+version = "0.25.1"
 description = "The next generation HTTP client."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "httpx-0.25.0-py3-none-any.whl", hash = "sha256:181ea7f8ba3a82578be86ef4171554dd45fec26a02556a744db029a0a27b7100"},
-    {file = "httpx-0.25.0.tar.gz", hash = "sha256:47ecda285389cb32bb2691cc6e069e3ab0205956f681c5b2ad2325719751d875"},
+    {file = "httpx-0.25.1-py3-none-any.whl", hash = "sha256:fec7d6cc5c27c578a391f7e87b9aa7d3d8fbcd034f6399f9f79b45bcc12a866a"},
+    {file = "httpx-0.25.1.tar.gz", hash = "sha256:ffd96d5cf901e63863d9f1b4b6807861dbea4d301613415d9e6e57ead15fc5d0"},
 ]
 
 [package.dependencies]
+anyio = "*"
 certifi = "*"
-httpcore = ">=0.18.0,<0.19.0"
+httpcore = "*"
 idna = "*"
 sniffio = "*"
 
@@ -1605,13 +1606,13 @@ pytest = ">=7.0"
 
 [[package]]
 name = "pytest-xdist"
-version = "3.3.1"
+version = "3.4.0"
 description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-xdist-3.3.1.tar.gz", hash = "sha256:d5ee0520eb1b7bcca50a60a518ab7a7707992812c578198f8b44fdfac78e8c93"},
-    {file = "pytest_xdist-3.3.1-py3-none-any.whl", hash = "sha256:ff9daa7793569e6a68544850fd3927cd257cc03a7ef76c95e86915355e82b5f2"},
+    {file = "pytest-xdist-3.4.0.tar.gz", hash = "sha256:3a94a931dd9e268e0b871a877d09fe2efb6175c2c23d60d56a6001359002b832"},
+    {file = "pytest_xdist-3.4.0-py3-none-any.whl", hash = "sha256:e513118bf787677a427e025606f55e95937565e06dfaac8d87f55301e57ae607"},
 ]
 
 [package.dependencies]
@@ -1653,13 +1654,13 @@ cli = ["click (>=5.0)"]
 
 [[package]]
 name = "python-frontmatter"
-version = "1.0.0"
+version = "1.0.1"
 description = "Parse and manage posts with YAML (or other) frontmatter"
 optional = false
 python-versions = "*"
 files = [
-    {file = "python-frontmatter-1.0.0.tar.gz", hash = "sha256:e98152e977225ddafea6f01f40b4b0f1de175766322004c826ca99842d19a7cd"},
-    {file = "python_frontmatter-1.0.0-py3-none-any.whl", hash = "sha256:766ae75f1b301ffc5fe3494339147e0fd80bc3deff3d7590a93991978b579b08"},
+    {file = "python-frontmatter-1.0.1.tar.gz", hash = "sha256:a6a082844fc601f34e4dd576bed8fcb5ef19112166e087629e4d6ba9bf4f7c35"},
+    {file = "python_frontmatter-1.0.1-py3-none-any.whl", hash = "sha256:0599198cc01b445e5d0be74ff35be0a6c7442dddbdb0803e018be4e055397f6a"},
 ]
 
 [package.dependencies]
@@ -1983,39 +1984,39 @@ six = "*"
 
 [[package]]
 name = "ruff"
-version = "0.0.291"
-description = "An extremely fast Python linter, written in Rust."
+version = "0.1.5"
+description = "An extremely fast Python linter and code formatter, written in Rust."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "ruff-0.0.291-py3-none-macosx_10_7_x86_64.whl", hash = "sha256:b97d0d7c136a85badbc7fd8397fdbb336e9409b01c07027622f28dcd7db366f2"},
-    {file = "ruff-0.0.291-py3-none-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:6ab44ea607967171e18aa5c80335237be12f3a1523375fa0cede83c5cf77feb4"},
-    {file = "ruff-0.0.291-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a04b384f2d36f00d5fb55313d52a7d66236531195ef08157a09c4728090f2ef0"},
-    {file = "ruff-0.0.291-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:b727c219b43f903875b7503a76c86237a00d1a39579bb3e21ce027eec9534051"},
-    {file = "ruff-0.0.291-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:87671e33175ae949702774071b35ed4937da06f11851af75cd087e1b5a488ac4"},
-    {file = "ruff-0.0.291-py3-none-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:b75f5801547f79b7541d72a211949754c21dc0705c70eddf7f21c88a64de8b97"},
-    {file = "ruff-0.0.291-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:b09b94efdcd162fe32b472b2dd5bf1c969fcc15b8ff52f478b048f41d4590e09"},
-    {file = "ruff-0.0.291-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:8d5b56bc3a2f83a7a1d7f4447c54d8d3db52021f726fdd55d549ca87bca5d747"},
-    {file = "ruff-0.0.291-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:13f0d88e5f367b2dc8c7d90a8afdcfff9dd7d174e324fd3ed8e0b5cb5dc9b7f6"},
-    {file = "ruff-0.0.291-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:b3eeee1b1a45a247758ecdc3ab26c307336d157aafc61edb98b825cadb153df3"},
-    {file = "ruff-0.0.291-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:6c06006350c3bb689765d71f810128c9cdf4a1121fd01afc655c87bab4fb4f83"},
-    {file = "ruff-0.0.291-py3-none-musllinux_1_2_i686.whl", hash = "sha256:fd17220611047de247b635596e3174f3d7f2becf63bd56301fc758778df9b629"},
-    {file = "ruff-0.0.291-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:5383ba67ad360caf6060d09012f1fb2ab8bd605ab766d10ca4427a28ab106e0b"},
-    {file = "ruff-0.0.291-py3-none-win32.whl", hash = "sha256:1d5f0616ae4cdc7a938b493b6a1a71c8a47d0300c0d65f6e41c281c2f7490ad3"},
-    {file = "ruff-0.0.291-py3-none-win_amd64.whl", hash = "sha256:8a69bfbde72db8ca1c43ee3570f59daad155196c3fbe357047cd9b77de65f15b"},
-    {file = "ruff-0.0.291-py3-none-win_arm64.whl", hash = "sha256:d867384a4615b7f30b223a849b52104214442b5ba79b473d7edd18da3cde22d6"},
-    {file = "ruff-0.0.291.tar.gz", hash = "sha256:c61109661dde9db73469d14a82b42a88c7164f731e6a3b0042e71394c1c7ceed"},
+    {file = "ruff-0.1.5-py3-none-macosx_10_7_x86_64.whl", hash = "sha256:32d47fc69261c21a4c48916f16ca272bf2f273eb635d91c65d5cd548bf1f3d96"},
+    {file = "ruff-0.1.5-py3-none-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:171276c1df6c07fa0597fb946139ced1c2978f4f0b8254f201281729981f3c17"},
+    {file = "ruff-0.1.5-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:17ef33cd0bb7316ca65649fc748acc1406dfa4da96a3d0cde6d52f2e866c7b39"},
+    {file = "ruff-0.1.5-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:b2c205827b3f8c13b4a432e9585750b93fd907986fe1aec62b2a02cf4401eee6"},
+    {file = "ruff-0.1.5-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:bb408e3a2ad8f6881d0f2e7ad70cddb3ed9f200eb3517a91a245bbe27101d379"},
+    {file = "ruff-0.1.5-py3-none-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:f20dc5e5905ddb407060ca27267c7174f532375c08076d1a953cf7bb016f5a24"},
+    {file = "ruff-0.1.5-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:aafb9d2b671ed934998e881e2c0f5845a4295e84e719359c71c39a5363cccc91"},
+    {file = "ruff-0.1.5-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:a4894dddb476597a0ba4473d72a23151b8b3b0b5f958f2cf4d3f1c572cdb7af7"},
+    {file = "ruff-0.1.5-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a00a7ec893f665ed60008c70fe9eeb58d210e6b4d83ec6654a9904871f982a2a"},
+    {file = "ruff-0.1.5-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:a8c11206b47f283cbda399a654fd0178d7a389e631f19f51da15cbe631480c5b"},
+    {file = "ruff-0.1.5-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:fa29e67b3284b9a79b1a85ee66e293a94ac6b7bb068b307a8a373c3d343aa8ec"},
+    {file = "ruff-0.1.5-py3-none-musllinux_1_2_i686.whl", hash = "sha256:9b97fd6da44d6cceb188147b68db69a5741fbc736465b5cea3928fdac0bc1aeb"},
+    {file = "ruff-0.1.5-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:721f4b9d3b4161df8dc9f09aa8562e39d14e55a4dbaa451a8e55bdc9590e20f4"},
+    {file = "ruff-0.1.5-py3-none-win32.whl", hash = "sha256:f80c73bba6bc69e4fdc73b3991db0b546ce641bdcd5b07210b8ad6f64c79f1ab"},
+    {file = "ruff-0.1.5-py3-none-win_amd64.whl", hash = "sha256:c21fe20ee7d76206d290a76271c1af7a5096bc4c73ab9383ed2ad35f852a0087"},
+    {file = "ruff-0.1.5-py3-none-win_arm64.whl", hash = "sha256:82bfcb9927e88c1ed50f49ac6c9728dab3ea451212693fe40d08d314663e412f"},
+    {file = "ruff-0.1.5.tar.gz", hash = "sha256:5cbec0ef2ae1748fb194f420fb03fb2c25c3258c86129af7172ff8f198f125ab"},
 ]
 
 [[package]]
 name = "sentry-sdk"
-version = "1.34.0"
+version = "1.35.0"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = "*"
 files = [
-    {file = "sentry-sdk-1.34.0.tar.gz", hash = "sha256:e5d0d2b25931d88fa10986da59d941ac6037f742ab6ff2fce4143a27981d60c3"},
-    {file = "sentry_sdk-1.34.0-py2.py3-none-any.whl", hash = "sha256:76dd087f38062ac6c1e30ed6feb533ee0037ff9e709974802db7b5dbf2e5db21"},
+    {file = "sentry-sdk-1.35.0.tar.gz", hash = "sha256:04e392db9a0d59bd49a51b9e3a92410ac5867556820465057c2ef89a38e953e9"},
+    {file = "sentry_sdk-1.35.0-py2.py3-none-any.whl", hash = "sha256:a7865952701e46d38b41315c16c075367675c48d049b90a4cc2e41991ebc7efa"},
 ]
 
 [package.dependencies]
@@ -2152,13 +2153,13 @@ tomli = {version = ">=2.0.1,<3.0.0", markers = "python_version >= \"3.7\" and py
 
 [[package]]
 name = "tldextract"
-version = "5.0.1"
+version = "5.1.0"
 description = "Accurately separates a URL's subdomain, domain, and public suffix, using the Public Suffix List (PSL). By default, this includes the public ICANN TLDs and their exceptions. You can optionally support the Public Suffix List's private domains as well."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tldextract-5.0.1-py3-none-any.whl", hash = "sha256:8322fa2b73d9572c6bde31e96f66b694abb86d85b32ed6082593da806a6d33b4"},
-    {file = "tldextract-5.0.1.tar.gz", hash = "sha256:ac1c5daa02616e9c2608f5fb6dd93049db03d0cf46c7f6fad46e2850a984f019"},
+    {file = "tldextract-5.1.0-py3-none-any.whl", hash = "sha256:c8eecb15f556b43db6eebd21667640fb6fba9bc9539b48707432014913a78d13"},
+    {file = "tldextract-5.1.0.tar.gz", hash = "sha256:366acfb099c7eb5dc83545c391d73da6e3afe4eaec652417c3cf13b002a160e1"},
 ]
 
 [package.dependencies]
@@ -2166,6 +2167,9 @@ filelock = ">=3.0.8"
 idna = "*"
 requests = ">=2.1.0"
 requests-file = ">=1.4"
+
+[package.extras]
+testing = ["black", "mypy", "pytest", "pytest-gitignore", "pytest-mock", "responses", "ruff", "tox", "types-filelock", "types-requests"]
 
 [[package]]
 name = "tomli"
@@ -2338,4 +2342,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "22ac28d82b3e850de8efb0d8411956b23082fabebba7f56e3ca9054a0053effd"
+content-hash = "b3ea6ad20d91db5da33108106646f28deb3a048db593f615816f2d571bbf1ffb"
