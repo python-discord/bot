@@ -279,7 +279,7 @@ class TalentPool(Cog, name="Talentpool"):
             return ["*None*"]
 
         for nomination in nominations:
-            line = f"• `{nomination.user_id}`"
+            line = f"- `{nomination.user_id}`"
 
             member = await get_or_fetch_member(ctx.guild, nomination.user_id)
             if member:

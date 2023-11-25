@@ -353,7 +353,7 @@ class WatchChannel(metaclass=CogABCMeta):
         list_data["info"] = {}
         for user_id, user_data in watched_iter:
             member = await get_or_fetch_member(ctx.guild, user_id)
-            line = f"• `{user_id}`"
+            line = f"- `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data["inserted_at"]

@@ -23,6 +23,6 @@ If you run this module named `bar.py`, it will execute the code in `foo.py`. Fir
 
 **Why would I do this?**
 
-• Your module is a library, but also has a special case where it can be run directly
-• Your module is a library and you want to safeguard it against people running it directly (like what `pip` does)
-• Your module is the main program, but has unit tests and the testing framework works by importing your module, and you want to avoid having your main code run during the test
+- Your module is a library, but also has a special case where it can be run directly
+- Your module is a library and you want to safeguard it against people running it directly (like what `pip` does)
+- Your module is the main program, but has unit tests and the testing framework works by importing your module, and you want to avoid having your main code run during the test
