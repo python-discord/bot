@@ -9,7 +9,7 @@ from bot.log import get_logger
 
 log = get_logger(__name__)
 
-Argument = t.Union[int, str]
+Argument = int | str
 BoundArgs = t.OrderedDict[str, t.Any]
 Decorator = t.Callable[[t.Callable], t.Callable]
 ArgValGetter = t.Callable[[BoundArgs], t.Any]
@@ -51,7 +51,7 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
 def get_arg_value_wrapper(
     decorator_func: t.Callable[[ArgValGetter], Decorator],
     name_or_pos: Argument,
-    func: t.Callable[[t.Any], t.Any] = None,
+    func: t.Callable[[t.Any], t.Any] | None = None,
 ) -> Decorator:
     """
     Call `decorator_func` with the value of the arg at the given name/position.
@@ -72,7 +72,7 @@ def get_arg_value_wrapper(
     return decorator_func(wrapper)
 
 
-def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) -> BoundArgs:
+def get_bound_args(func: t.Callable, args: tuple, kwargs: dict[str, t.Any]) -> BoundArgs:
     """
     Bind `args` and `kwargs` to `func` and return a mapping of parameter names to argument values.
 
@@ -89,7 +89,7 @@ def update_wrapper_globals(
         wrapper: types.FunctionType,
         wrapped: types.FunctionType,
         *,
-        ignored_conflict_names: t.Set[str] = frozenset(),
+        ignored_conflict_names: set[str] = frozenset(),
 ) -> types.FunctionType:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
@@ -134,7 +134,7 @@ def command_wraps(
         assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
         updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
         *,
-        ignored_conflict_names: t.Set[str] = frozenset(),
+        ignored_conflict_names: set[str] = frozenset(),
 ) -> t.Callable[[types.FunctionType], types.FunctionType]:
     """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
     def decorator(wrapper: types.FunctionType) -> types.FunctionType:

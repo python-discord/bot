@@ -1,8 +1,7 @@
 import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
 
 import discord
 from async_rediscache import RedisCache
@@ -53,10 +52,10 @@ ALL_SIGNALS: set[str] = {signal.value for signal in Signal}
 
 # An embed coupled with an optional file to be dispatched
 # If the file is not None, the embed attempts to show it in its body
-FileEmbed = tuple[discord.Embed, Optional[discord.File]]
+FileEmbed = tuple[discord.Embed, discord.File | None]
 
 
-async def download_file(attachment: discord.Attachment) -> Optional[discord.File]:
+async def download_file(attachment: discord.Attachment) -> discord.File | None:
     """
     Download & return `attachment` file.
 
@@ -111,7 +110,7 @@ async def make_embed(incident: discord.Message, outcome: Signal, actioned_by: di
     embed = discord.Embed(
         description=description,
         colour=colour,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(UTC)
     )
     embed.set_footer(text=footer, icon_url=actioned_by.display_avatar.url)
 
@@ -135,7 +134,8 @@ def is_incident(message: discord.Message) -> bool:
         message.channel.id == Channels.incidents,  # Message sent in #incidents
         not message.author.bot,                    # Not by a bot
         not message.content.startswith("#"),       # Doesn't start with a hash
-        not message.pinned,                        # And isn't header
+        not message.pinned,                        # Isn't header
+        not message.reference,                     # And is not a reply
     )
     return all(conditions)
 
@@ -178,7 +178,7 @@ def shorten_text(text: str) -> str:
     return text
 
 
-async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[discord.Embed]:
+async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Embed | None:
     """
     Create an embedded representation of the discord message link contained in the incident report.
 
@@ -228,7 +228,7 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> Optional[d
                 f"Helpers don't have read permissions in #{channel.name},"
                 f" not sending message link embed for {message_link}"
             )
-            return
+            return None
 
         embed = discord.Embed(
             colour=discord.Colour.gold(),
@@ -319,19 +319,19 @@ class Incidents(Cog):
         self.bot = bot
         self.incidents_webhook = None
 
-        scheduling.create_task(self.fetch_webhook(), event_loop=self.bot.loop)
+        scheduling.create_task(self.fetch_webhook())
 
         self.event_lock = asyncio.Lock()
-        self.crawl_task = scheduling.create_task(self.crawl_incidents(), event_loop=self.bot.loop)
+        self.crawl_task = scheduling.create_task(self.crawl_incidents())
 
     async def fetch_webhook(self) -> None:
         """Fetch the incidents webhook object, so we can post message link embeds to it."""
         await self.bot.wait_until_guild_available()
 
         try:
-            self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents)
+            self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents.id)
         except discord.HTTPException:
-            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents}`.")
+            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents.id}`.")
 
     async def crawl_incidents(self) -> None:
         """
@@ -389,7 +389,7 @@ class Incidents(Cog):
         embed, attachment_file = await make_embed(incident, outcome, actioned_by)
 
         try:
-            webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive)
+            webhook = await self.bot.fetch_webhook(Webhooks.incidents_archive.id)
             await webhook.send(
                 embed=embed,
                 username=sub_clyde(incident.author.display_name),
@@ -416,7 +416,7 @@ class Incidents(Cog):
             return payload.message_id == incident.id
 
         coroutine = self.bot.wait_for("raw_message_delete", check=check, timeout=timeout)
-        return scheduling.create_task(coroutine, event_loop=self.bot.loop)
+        return scheduling.create_task(coroutine)
 
     async def process_event(self, reaction: str, incident: discord.Message, member: discord.Member) -> None:
         """
@@ -487,7 +487,7 @@ class Incidents(Cog):
             # Deletes the message link embeds found in cache from the channel and cache.
             await self.delete_msg_link_embed(incident.id)
 
-    async def resolve_message(self, message_id: int) -> Optional[discord.Message]:
+    async def resolve_message(self, message_id: int) -> discord.Message | None:
         """
         Get `discord.Message` for `message_id` from cache, or API.
 
@@ -502,7 +502,7 @@ class Incidents(Cog):
         """
         await self.bot.wait_until_guild_available()  # First make sure that the cache is ready
         log.trace(f"Resolving message for: {message_id=}")
-        message: Optional[discord.Message] = self.bot._connection._get_message(message_id)
+        message: discord.Message | None = self.bot._connection._get_message(message_id)
 
         if message is not None:
             log.trace("Message was found in cache")
@@ -595,7 +595,7 @@ class Incidents(Cog):
         if self.incidents_webhook:
             await self.delete_msg_link_embed(payload.message_id)
 
-    async def extract_message_links(self, message: discord.Message) -> Optional[list[discord.Embed]]:
+    async def extract_message_links(self, message: discord.Message) -> list[discord.Embed] | None:
         """
         Check if there's any message links in the text content.
 
@@ -612,7 +612,7 @@ class Incidents(Cog):
             log.trace(
                 f"No message links detected on incident message with id {message.id}."
             )
-            return
+            return None
 
         embeds = []
         for message_link in message_links[:10]:
@@ -628,7 +628,7 @@ class Incidents(Cog):
             webhook_embed_list: list,
             message: discord.Message,
             webhook: discord.Webhook,
-    ) -> Optional[int]:
+    ) -> int | None:
         """
         Send message link embeds to #incidents channel.
 

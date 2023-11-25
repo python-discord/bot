@@ -4,23 +4,25 @@ import textwrap
 from abc import abstractmethod
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 import discord
 from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.logging import CustomLogger
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
-from bot.exts.filters.token_remover import TokenRemover
-from bot.exts.filters.webhook_remover import WEBHOOK_URL_RE
+from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
+from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
-from bot.log import CustomLogger, get_logger
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, time
-from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 
@@ -31,8 +33,8 @@ URL_RE = re.compile(r"(https?://[^\s]+)")
 class MessageHistory:
     """Represents a watch channel's message history."""
 
-    last_author: Optional[int] = None
-    last_channel: Optional[int] = None
+    last_author: int | None = None
+    last_channel: int | None = None
     message_count: int = 0
 
 
@@ -53,7 +55,7 @@ class WatchChannel(metaclass=CogABCMeta):
     ) -> None:
         self.bot = bot
 
-        self.destination = destination  # E.g., Channels.big_brother_logs
+        self.destination = destination  # E.g., Channels.big_brother
         self.webhook_id = webhook_id  # E.g.,  Webhooks.big_brother
         self.api_endpoint = api_endpoint  # E.g., 'bot/infractions'
         self.api_default_params = api_default_params  # E.g., {'active': 'true', 'type': 'watch'}
@@ -97,7 +99,7 @@ class WatchChannel(metaclass=CogABCMeta):
         await self.bot.wait_until_guild_available()
 
         try:
-            self.channel = await self.bot.fetch_channel(self.destination)
+            self.channel = await get_or_fetch_channel(self.bot, self.destination)
         except HTTPException:
             self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
 
@@ -158,7 +160,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.watched_users = defaultdict(dict)
 
         for entry in data:
-            user_id = entry.pop('user')
+            user_id = entry.pop("user")
             self.watched_users[user_id] = entry
 
         return True
@@ -168,7 +170,7 @@ class WatchChannel(metaclass=CogABCMeta):
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:
             if not self.consuming_messages:
-                self._consume_task = scheduling.create_task(self.consume_messages(), event_loop=self.bot.loop)
+                self._consume_task = scheduling.create_task(self.consume_messages())
 
             self.log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
             self.message_queue[msg.author.id][msg.channel.id].append(msg)
@@ -198,19 +200,16 @@ class WatchChannel(metaclass=CogABCMeta):
 
         if self.message_queue:
             self.log.trace("Channel queue not empty: Continuing consuming queues")
-            self._consume_task = scheduling.create_task(
-                self.consume_messages(delay_consumption=False),
-                event_loop=self.bot.loop,
-            )
+            self._consume_task = scheduling.create_task(self.consume_messages(delay_consumption=False))
         else:
             self.log.trace("Done consuming messages.")
 
     async def webhook_send(
         self,
-        content: Optional[str] = None,
-        username: Optional[str] = None,
-        avatar_url: Optional[str] = None,
-        embed: Optional[Embed] = None,
+        content: str | None = None,
+        username: str | None = None,
+        avatar_url: str | None = None,
+        embed: Embed | None = None,
     ) -> None:
         """Sends a message to the webhook with the specified kwargs."""
         username = messages.sub_clyde(username)
@@ -235,7 +234,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
             await self.send_header(msg)
 
-        if TokenRemover.find_token_in_message(msg) or WEBHOOK_URL_RE.search(msg.content):
+        if DiscordTokenFilter.find_token_in_message(msg.content) or WEBHOOK_URL_RE.search(msg.content):
             cleaned_content = "Content is censored because it contains a bot or webhook token."
         elif cleaned_content := msg.clean_content:
             # Put all non-media URLs in a code block to prevent embeds
@@ -280,13 +279,13 @@ class WatchChannel(metaclass=CogABCMeta):
         user_id = msg.author.id
 
         guild = self.bot.get_guild(GuildConfig.id)
-        actor = await get_or_fetch_member(guild, self.watched_users[user_id]['actor'])
-        actor = actor.display_name if actor else self.watched_users[user_id]['actor']
+        actor = await get_or_fetch_member(guild, self.watched_users[user_id]["actor"])
+        actor = actor.display_name if actor else self.watched_users[user_id]["actor"]
 
-        inserted_at = self.watched_users[user_id]['inserted_at']
+        inserted_at = self.watched_users[user_id]["inserted_at"]
         time_delta = time.format_relative(inserted_at)
 
-        reason = self.watched_users[user_id]['reason']
+        reason = self.watched_users[user_id]["reason"]
 
         if isinstance(msg.channel, DMChannel):
             # If a watched user DMs the bot there won't be a channel name or jump URL
@@ -326,7 +325,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
     async def prepare_watched_users_data(
         self, ctx: Context, oldest_first: bool = False, update_cache: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Prepare overview information of watched users to list.
 
@@ -354,10 +353,10 @@ class WatchChannel(metaclass=CogABCMeta):
         list_data["info"] = {}
         for user_id, user_data in watched_iter:
             member = await get_or_fetch_member(ctx.guild, user_id)
-            line = f"• `{user_id}`"
+            line = f"- `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
-            inserted_at = user_data['inserted_at']
+            inserted_at = user_data["inserted_at"]
             line += f", added {time.format_relative(inserted_at)}"
             if not member:  # Cross off users who left the server.
                 line = f"~~{line}~~"

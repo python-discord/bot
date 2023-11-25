@@ -80,7 +80,7 @@ class InfractionScheduler:
     async def reapply_infraction(
         self,
         infraction: _utils.Infraction,
-        action: t.Optional[Callable[[], Awaitable[None]]]
+        action: Callable[[], Awaitable[None]] | None
     ) -> None:
         """
         Reapply an infraction if it's still active or deactivate it if less than 60 sec left.
@@ -89,7 +89,7 @@ class InfractionScheduler:
         to prevent getting a RuntimeWarning if it is not used (e.g. in mocked tests).
         """
         if infraction["expires_at"] is not None:
-            # Calculate the time remaining, in seconds, for the mute.
+            # Calculate the time remaining, in seconds, for the infraction.
             expiry = dateutil.parser.isoparse(infraction["expires_at"])
             delta = (expiry - arrow.utcnow()).total_seconds()
         else:
@@ -127,8 +127,8 @@ class InfractionScheduler:
         ctx: Context,
         infraction: _utils.Infraction,
         user: MemberOrUser,
-        action: t.Optional[Callable[[], Awaitable[None]]] = None,
-        user_reason: t.Optional[str] = None,
+        action: Callable[[], Awaitable[None]] | None = None,
+        user_reason: str | None = None,
         additional_info: str = "",
     ) -> bool:
         """
@@ -146,7 +146,8 @@ class InfractionScheduler:
         infr_type = infraction["type"]
         icon = _utils.INFRACTION_ICONS[infr_type][0]
         reason = infraction["reason"]
-        id_ = infraction['id']
+        id_ = infraction["id"]
+        jump_url = infraction["jump_url"]
         expiry = time.format_with_duration(
             infraction["expires_at"],
             infraction["last_applied"]
@@ -261,6 +262,11 @@ class InfractionScheduler:
         mentions = discord.AllowedMentions(users=[user], roles=False)
         await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
+        if jump_url is None:
+            jump_url = "(Infraction issued in a ModMail channel.)"
+        else:
+            jump_url = f"[Click here.]({jump_url})"
+
         # Send a log message to the mod log.
         # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
@@ -273,6 +279,7 @@ class InfractionScheduler:
                 Member: {messages.format_user(user)}
                 Actor: {ctx.author.mention}{dm_log_text}{expiry_log_text}
                 Reason: {reason}
+                Jump URL: {jump_url}
                 {additional_info}
             """),
             content=log_content,
@@ -283,14 +290,14 @@ class InfractionScheduler:
         return not failed
 
     async def pardon_infraction(
-            self,
-            ctx: Context,
-            infr_type: str,
-            user: MemberOrUser,
-            pardon_reason: t.Optional[str] = None,
-            *,
-            send_msg: bool = True,
-            notify: bool = True
+        self,
+        ctx: Context,
+        infr_type: str,
+        user: MemberOrUser,
+        pardon_reason: str | None = None,
+        *,
+        send_msg: bool = True,
+        notify: bool = True
     ) -> None:
         """
         Prematurely end an infraction for a user and log the action in the mod log.
@@ -308,11 +315,11 @@ class InfractionScheduler:
         # Check the current active infraction
         log.trace(f"Fetching active {infr_type} infractions for {user}.")
         response = await self.bot.api_client.get(
-            'bot/infractions',
+            "bot/infractions",
             params={
-                'active': 'true',
-                'type': infr_type,
-                'user__id': user.id
+                "active": "true",
+                "type": infr_type,
+                "user__id": user.id
             }
         )
 
@@ -327,7 +334,7 @@ class InfractionScheduler:
         log_text["Member"] = messages.format_user(user)
         log_text["Actor"] = ctx.author.mention
         log_content = None
-        id_ = response[0]['id']
+        id_ = response[0]["id"]
         footer = f"ID: {id_}"
 
         # Accordingly display whether the user was successfully notified via DM.
@@ -375,11 +382,11 @@ class InfractionScheduler:
     async def deactivate_infraction(
         self,
         infraction: _utils.Infraction,
-        pardon_reason: t.Optional[str] = None,
+        pardon_reason: str | None = None,
         *,
         send_log: bool = True,
         notify: bool = True
-    ) -> t.Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
 
@@ -517,7 +524,7 @@ class InfractionScheduler:
         self,
         infraction: _utils.Infraction,
         notify: bool
-    ) -> t.Optional[t.Dict[str, str]]:
+    ) -> dict[str, str] | None:
         """
         Execute deactivation steps specific to the infraction's type and return a log dict.
 

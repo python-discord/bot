@@ -16,11 +16,19 @@ from bot.utils.messages import format_user
 from bot.utils.time import TimestampFormats, discord_timestamp
 from tests.base import RedisTestCase
 from tests.helpers import (
-    MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
-    MockUser
+    MockAsyncWebhook,
+    MockAttachment,
+    MockBot,
+    MockMember,
+    MockMessage,
+    MockReaction,
+    MockRole,
+    MockTextChannel,
+    MockUser,
+    no_create_task,
 )
 
-CURRENT_TIME = datetime.datetime(2022, 1, 1, tzinfo=datetime.timezone.utc)
+CURRENT_TIME = datetime.datetime(2022, 1, 1, tzinfo=datetime.UTC)
 
 
 class MockAsyncIterable:
@@ -185,6 +193,7 @@ class TestIsIncident(unittest.TestCase):
             content="this is an incident",
             author=MockUser(bot=False),
             pinned=False,
+            reference=None,
         )
 
     def test_is_incident_true(self):
@@ -305,7 +314,8 @@ class TestIncidents(RedisTestCase):
         Note that this will not schedule `crawl_incidents` in the background, as everything
         is being mocked. The `crawl_task` attribute will end up being None.
         """
-        self.cog_instance = incidents.Incidents(MockBot())
+        with no_create_task():
+            self.cog_instance = incidents.Incidents(MockBot())
 
 
 @patch("asyncio.sleep", AsyncMock())  # Prevent the coro from sleeping to speed up the test
@@ -457,7 +467,8 @@ class TestMakeConfirmationTask(TestIncidents):
         If this function begins to fail, first check that `created_check` is being retrieved
         correctly. It should be the function that is built locally in the tested method.
         """
-        self.cog_instance.make_confirmation_task(MockMessage(id=123))
+        with no_create_task():
+            self.cog_instance.make_confirmation_task(MockMessage(id=123))
 
         self.cog_instance.bot.wait_for.assert_called_once()
         created_check = self.cog_instance.bot.wait_for.call_args.kwargs["check"]
@@ -799,7 +810,7 @@ class TestMessageLinkEmbeds(TestIncidents):
 
             "\n".join("Lets make a new line test".split()): "Lets\nmake\na...",
 
-            'Hello, World!' * 300: (
+            "Hello, World!" * 300: (
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"

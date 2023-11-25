@@ -144,13 +144,13 @@ class DiscordMocksTests(unittest.TestCase):
     def test_mocks_allows_access_to_attributes_part_of_spec(self):
         """Accessing attributes that are valid for the objects they mock should succeed."""
         mocks = (
-            (helpers.MockGuild(), 'name'),
-            (helpers.MockRole(), 'hoist'),
-            (helpers.MockMember(), 'display_name'),
-            (helpers.MockBot(), 'user'),
-            (helpers.MockContext(), 'invoked_with'),
-            (helpers.MockTextChannel(), 'last_message'),
-            (helpers.MockMessage(), 'mention_everyone'),
+            (helpers.MockGuild(), "name"),
+            (helpers.MockRole(), "hoist"),
+            (helpers.MockMember(), "display_name"),
+            (helpers.MockBot(), "user"),
+            (helpers.MockContext(), "invoked_with"),
+            (helpers.MockTextChannel(), "last_message"),
+            (helpers.MockMessage(), "mention_everyone"),
         )
 
         for mock, valid_attribute in mocks:
@@ -161,8 +161,8 @@ class DiscordMocksTests(unittest.TestCase):
                     msg = f"accessing valid attribute `{valid_attribute}` raised an AttributeError"
                     self.fail(msg)
 
-    @unittest.mock.patch(f'{__name__}.DiscordMocksTests.subTest')
-    @unittest.mock.patch(f'{__name__}.getattr')
+    @unittest.mock.patch(f"{__name__}.DiscordMocksTests.subTest")
+    @unittest.mock.patch(f"{__name__}.getattr")
     def test_mock_allows_access_to_attributes_test(self, mock_getattr, mock_subtest):
         """The valid attribute test should raise an AssertionError after an AttributeError."""
         mock_getattr.side_effect = AttributeError
@@ -184,9 +184,8 @@ class DiscordMocksTests(unittest.TestCase):
         )
 
         for mock in mocks:
-            with self.subTest(mock=mock):
-                with self.assertRaises(AttributeError):
-                    mock.the_cake_is_a_lie
+            with self.subTest(mock=mock), self.assertRaises(AttributeError):
+                mock.the_cake_is_a_lie  # noqa: B018
 
     def test_mocks_use_mention_when_provided_as_kwarg(self):
         """The mock should use the passed `mention` instead of the default one if present."""
@@ -317,7 +316,6 @@ class MockObjectTests(unittest.TestCase):
         class MyMock(helpers.CustomMockMixin, unittest.mock.MagicMock):
 
             child_mock_type = unittest.mock.MagicMock
-            pass
 
         mock = MyMock()
         unittest.mock.seal(mock)
@@ -333,9 +331,9 @@ class MockObjectTests(unittest.TestCase):
             (helpers.MockBot, "owner_id"),
             (helpers.MockContext, "command_failed"),
             (helpers.MockMessage, "mention_everyone"),
-            (helpers.MockEmoji, 'managed'),
-            (helpers.MockPartialEmoji, 'url'),
-            (helpers.MockReaction, 'me'),
+            (helpers.MockEmoji, "managed"),
+            (helpers.MockPartialEmoji, "url"),
+            (helpers.MockReaction, "me"),
         )
 
         for mock_type, valid_attribute in test_values:

@@ -7,7 +7,7 @@ class ResourceValidationTests(unittest.TestCase):
     """Validates resources used by the bot."""
     def test_stars_valid(self):
         """The resource `bot/resources/stars.json` should contain a list of strings."""
-        path = Path('bot', 'resources', 'stars.json')
+        path = Path("bot", "resources", "stars.json")
         content = path.read_text()
         data = json.loads(content)
 

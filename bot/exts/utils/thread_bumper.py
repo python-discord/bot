@@ -1,14 +1,13 @@
-import typing as t
 
 import discord
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import channel
 
 log = get_logger(__name__)
 THREAD_BUMP_ENDPOINT = "bot/bumped-threads"
@@ -31,11 +30,10 @@ class ThreadBumper(commands.Cog):
         ) as response:
             if response.status == 204:
                 return True
-            elif response.status == 404:
+            if response.status == 404:
                 return False
-            else:
-                # A status other than 204/404 is undefined behaviour from site. Raise error for investigation.
-                raise ResponseCodeError(response, response.text())
+            # A status other than 204/404 is undefined behaviour from site. Raise error for investigation.
+            raise ResponseCodeError(response, response.text())
 
     async def unarchive_threads_not_manually_archived(self, threads: list[discord.Thread]) -> None:
         """
@@ -71,7 +69,7 @@ class ThreadBumper(commands.Cog):
         threads_to_maybe_bump = []
         for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT):
             try:
-                thread = await channel.get_or_fetch_channel(thread_id)
+                thread = await get_or_fetch_channel(self.bot, thread_id)
             except discord.NotFound:
                 log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
                 await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
@@ -94,7 +92,7 @@ class ThreadBumper(commands.Cog):
             await ctx.send_help(ctx.command)
 
     @thread_bump_group.command(name="add", aliases=("a",))
-    async def add_thread_to_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
+    async def add_thread_to_bump_list(self, ctx: commands.Context, thread: discord.Thread | None) -> None:
         """Add a thread to the bump list."""
         if not thread:
             if isinstance(ctx.channel, discord.Thread):
@@ -109,7 +107,7 @@ class ThreadBumper(commands.Cog):
         await ctx.send(f":ok_hand:{thread.mention} has been added to the bump list.")
 
     @thread_bump_group.command(name="remove", aliases=("r", "rem", "d", "del", "delete"))
-    async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: t.Optional[discord.Thread]) -> None:
+    async def remove_thread_from_bump_list(self, ctx: commands.Context, thread: discord.Thread | None) -> None:
         """Remove a thread from the bump list."""
         if not thread:
             if isinstance(ctx.channel, discord.Thread):

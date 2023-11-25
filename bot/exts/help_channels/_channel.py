@@ -4,7 +4,7 @@ from datetime import timedelta
 
 import arrow
 import discord
-from pydis_core.utils import members, scheduling
+from pydis_core.utils import scheduling
 
 import bot
 from bot import constants
@@ -14,55 +14,60 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
-
+BRANDING_REPO_RAW_URL = "https://raw.githubusercontent.com/python-discord/branding"
 POST_TITLE = "Python help channel"
-NEW_POST_MSG = f"""
+
+NEW_POST_MSG = """
 **Remember to:**
-• **Ask** your Python question, not if you can ask or if there's an expert who can help.
-• **Show** a code sample as text (rather than a screenshot) and the error message, if you got one.
-• **Explain** what you expect to happen and what actually happens.
+- **Ask** your Python question, not if you can ask or if there's an expert who can help.
+- **Show** a code sample as text (rather than a screenshot) and the error message, if you've got one.
+- **Explain** what you expect to happen and what actually happens.
 
-For more tips, check out our guide on [asking good questions]({ASKING_GUIDE_URL}).
+:warning: Do not pip install anything that isn't related to your question, especially if asked to over DMs.
 """
-POST_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
+NEW_POST_FOOTER = f"Closes after a period of inactivity, or when you send {constants.Bot.prefix}close."
+NEW_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/checkmark/green-checkmark-dist.png"
 
-DORMANT_MSG = f"""
-This help channel has been marked as **dormant** and locked. \
-It is no longer possible to send messages in this channel.
-
-If your question wasn't answered yet, you can create a new post in <#{constants.Channels.help_system_forum}>. \
-Consider rephrasing the question to maximize your chance of getting a good answer. \
-If you're not sure how, have a look through our guide for **[asking a good question]({ASKING_GUIDE_URL})**.
+CLOSED_POST_MSG = f"""
+This help channel has been closed and it's no longer possible to send messages here. \
+If your question wasn't answered, feel free to create a new post in <#{constants.Channels.python_help}>. \
+To maximize your chances of getting a response, check out this guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
+CLOSED_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/zzz/zzz-dist.png"
 
 
 def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
     """Return True if `channel` is a post in the help forum."""
     log.trace(f"Checking if #{channel} is a help channel.")
-    return getattr(channel, "parent_id", None) == constants.Channels.help_system_forum
+    return getattr(channel, "parent_id", None) == constants.Channels.python_help
 
 
 async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:
     """Close the help post and record stats."""
-    embed = discord.Embed(description=DORMANT_MSG)
-    await closed_post.send(embed=embed)
-    await closed_post.edit(archived=True, locked=True, reason="Locked a dormant help post")
+    embed = discord.Embed(description=CLOSED_POST_MSG)
+    embed.set_author(name=f"{POST_TITLE} closed", icon_url=CLOSED_POST_ICON_URL)
+    message = ""
+
+    # Include a ping in the close message if no one else engages, to encourage them
+    # to read the guide for asking better questions
+    if closing_reason == _stats.ClosingReason.INACTIVE and closed_post.owner is not None:
+        participant_ids = {
+            message.author.id async for message in closed_post.history(limit=100, oldest_first=False)
+            if not message.author.bot
+        }
+        if participant_ids == {closed_post.owner_id}:
+            message = closed_post.owner.mention
+
+    await closed_post.send(message, embed=embed)
+    await closed_post.edit(
+        name=f"🔒 {closed_post.name}"[:100],
+        archived=True,
+        locked=True,
+        reason="Locked a closed help post",
+    )
 
     _stats.report_post_count()
     await _stats.report_complete_session(closed_post, closing_reason)
-
-    poster = closed_post.owner
-    cooldown_role = closed_post.guild.get_role(constants.Roles.help_cooldown)
-
-    if poster is None:
-        # We can't include the owner ID/name here since the thread only contains None
-        log.info(
-            f"Failed to remove cooldown role for owner of post ({closed_post.id}). "
-            f"The user is likely no longer on the server."
-        )
-        return
-
-    await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
 
 
 async def send_opened_post_message(post: discord.Thread) -> None:
@@ -71,9 +76,9 @@ async def send_opened_post_message(post: discord.Thread) -> None:
         color=constants.Colours.bright_green,
         description=NEW_POST_MSG,
     )
-    embed.set_author(name=POST_TITLE)
-    embed.set_footer(text=POST_FOOTER)
-    await post.send(embed=embed)
+    embed.set_author(name=f"{POST_TITLE} opened", icon_url=NEW_POST_ICON_URL)
+    embed.set_footer(text=NEW_POST_FOOTER)
+    await post.send(embed=embed, content=post.owner.mention)
 
 
 async def send_opened_post_dm(post: discord.Thread) -> None:
@@ -129,16 +134,17 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
     try:
         await opened_post.starter_message.pin()
     except (discord.HTTPException, AttributeError) as e:
-        # Suppress if the message was not found, most likely deleted
+        # Suppress if the message or post were not found, most likely deleted
         # The message being deleted could be surfaced as an AttributeError on .starter_message,
         # or as an exception from the Discord API, depending on timing and cache status.
-        if isinstance(e, discord.HTTPException) and e.code != 10008:
-            raise e
+        # The post being deleting would happen if it had a bad name that would cause the filtering system to delete it.
+        if isinstance(e, discord.HTTPException):
+            if e.code == 10003:  # Post not found.
+                return
+            if e.code != 10008:  # 10008 - Starter message not found.
+                raise e
 
     await send_opened_post_message(opened_post)
-
-    cooldown_role = opened_post.guild.get_role(constants.Roles.help_cooldown)
-    await members.handle_role_change(opened_post.owner, opened_post.owner.add_roles, cooldown_role)
 
 
 async def help_post_closed(closed_post: discord.Thread) -> None:
@@ -165,7 +171,8 @@ async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) ->
     _stats.report_post_count()
     cached_post = deleted_post_event.thread
     if cached_post and not cached_post.archived:
-        # If the post is in the bot's cache, and it was not archived before deleting, report a complete session.
+        # If the post is in the bot's cache, and it was not archived before deleting,
+        # report a complete session.
         await _stats.report_complete_session(cached_post, _stats.ClosingReason.DELETED)
 
 
@@ -205,6 +212,12 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
     If `has_task` is True and rescheduling is required, the extant task to make the post
     dormant will first be cancelled.
     """
+    try:
+        await post.guild.fetch_channel(post.id)
+    except discord.HTTPException:
+        log.trace(f"Not closing missing post #{post} ({post.id}).")
+        return
+
     if post.locked:
         log.trace(f"Not closing already closed post #{post} ({post.id}).")
         return

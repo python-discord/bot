@@ -38,7 +38,7 @@ class Latency(commands.Cog):
             bot_ping = f"{bot_ping:.{ROUND_LATENCY}f} ms"
 
         try:
-            async with self.bot.http_session.get(f"{URLs.site_api_schema}{URLs.site_api}/healthcheck") as request:
+            async with self.bot.http_session.get(f"{URLs.site_api}/healthcheck") as request:
                 request.raise_for_status()
                 site_status = "Healthy"
 
@@ -54,7 +54,7 @@ class Latency(commands.Cog):
 
         embed = Embed(title="Pong!")
 
-        for desc, latency in zip(DESCRIPTIONS, [bot_ping, site_status, discord_ping]):
+        for desc, latency in zip(DESCRIPTIONS, [bot_ping, site_status, discord_ping], strict=True):
             embed.add_field(name=desc, value=latency, inline=False)
 
         await ctx.send(embed=embed)

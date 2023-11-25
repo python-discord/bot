@@ -3,9 +3,7 @@ name: Status Embed
 on:
   workflow_run:
     workflows:
-      - Lint & Test
-      - Build
-      - Deploy
+      - CI
     types:
       - completed
 
@@ -60,7 +58,7 @@ jobs:
       # more information and we can fine tune when we actually want
       # to send an embed.
       - name: GitHub Actions Status Embed for Discord
-        uses: SebastiaanZ/github-status-embed-for-discord@v0.2.1
+        uses: SebastiaanZ/github-status-embed-for-discord@v0.3.0
         with:
           # Our GitHub Actions webhook
           webhook_id: '784184528997842985'

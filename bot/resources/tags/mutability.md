@@ -1,5 +1,7 @@
-**Mutable vs immutable objects**
-
+---
+embed:
+    title: "Mutable vs immutable objects"
+---
 Imagine that you want to make all letters in a string upper case. Conveniently, strings have an `.upper()` method.
 
 You might think that this would work:
@@ -35,3 +37,5 @@ Mutable data types like `list`, on the other hand, can be changed in-place:
 ```
 
 Other examples of mutable data types in Python are `dict` and `set`. Instances of user-defined classes are also mutable.
+
+For an in-depth guide on mutability see [Ned Batchelder's video on names and values](https://youtu.be/_AEJHKGk9ns/).

@@ -1,9 +1,11 @@
-**Off-topic channels**
-
+---
+embed:
+    title: "Off-topic channels"
+---
 There are three off-topic channels:
-• <#291284109232308226>
-• <#463035241142026251>
-• <#463035268514185226>
+- <#291284109232308226>
+- <#463035241142026251>
+- <#463035268514185226>
 
 The channel names change every night at midnight UTC and are often fun meta references to jokes or conversations that happened on the server.
 

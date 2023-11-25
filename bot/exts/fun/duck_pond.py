@@ -1,5 +1,4 @@
 import asyncio
-from typing import Union
 
 import discord
 from discord import Color, Embed, Message, RawReactionActionEvent, errors
@@ -21,19 +20,10 @@ class DuckPond(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.webhook_id = constants.Webhooks.duck_pond
+        self.webhook_id = constants.Webhooks.duck_pond.id
         self.webhook = None
         self.ducked_messages = []
         self.relay_lock = None
-
-    async def cog_load(self) -> None:
-        """Fetches the webhook object, so we can post to it."""
-        await self.bot.wait_until_guild_available()
-
-        try:
-            self.webhook = await self.bot.fetch_webhook(self.webhook_id)
-        except discord.HTTPException:
-            log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
 
     @staticmethod
     def is_staff(member: MemberOrUser) -> bool:
@@ -54,12 +44,11 @@ class DuckPond(Cog):
         return False
 
     @staticmethod
-    def _is_duck_emoji(emoji: Union[str, discord.PartialEmoji, discord.Emoji]) -> bool:
+    def _is_duck_emoji(emoji: str | discord.PartialEmoji | discord.Emoji) -> bool:
         """Check if the emoji is a valid duck emoji."""
         if isinstance(emoji, str):
             return emoji == "🦆"
-        else:
-            return hasattr(emoji, "name") and emoji.name.startswith("ducky_")
+        return hasattr(emoji, "name") and emoji.name.startswith("ducky_")
 
     async def count_ducks(self, message: Message) -> int:
         """
@@ -76,6 +65,12 @@ class DuckPond(Cog):
 
     async def relay_message(self, message: Message) -> None:
         """Relays the message's content and attachments to the duck pond channel."""
+        if not self.webhook:
+            await self.bot.wait_until_guild_available()
+            # Fetching this can fail if using an invalid webhook id.
+            # Letting this error bubble up is fine as it will cause an error log and sentry event.
+            self.webhook = await self.bot.fetch_webhook(self.webhook_id)
+
         if message.clean_content:
             await send_webhook(
                 webhook=self.webhook,

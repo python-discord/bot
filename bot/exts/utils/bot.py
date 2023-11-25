@@ -1,4 +1,3 @@
-from typing import Optional
 
 from discord import Embed, TextChannel
 from discord.ext.commands import Cog, Context, command, group, has_any_role
@@ -21,7 +20,7 @@ class BotCog(Cog, name="Bot"):
         """Bot informational commands."""
         await ctx.send_help(ctx.command)
 
-    @botinfo_group.command(name='about', aliases=('info',), hidden=True)
+    @botinfo_group.command(name="about", aliases=("info",), hidden=True)
     async def about_command(self, ctx: Context) -> None:
         """Get information about the bot."""
         embed = Embed(
@@ -41,9 +40,9 @@ class BotCog(Cog, name="Bot"):
 
         await ctx.send(embed=embed)
 
-    @command(name='echo', aliases=('print',))
+    @command(name="echo", aliases=("print",))
     @has_any_role(*MODERATION_ROLES)
-    async def echo_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+    async def echo_command(self, ctx: Context, channel: TextChannel | None, *, text: str) -> None:
         """Repeat the given message in either a specified channel or the current channel."""
         if channel is None:
             await ctx.send(text)
@@ -52,9 +51,9 @@ class BotCog(Cog, name="Bot"):
         else:
             await channel.send(text)
 
-    @command(name='embed')
+    @command(name="embed")
     @has_any_role(*MODERATION_ROLES)
-    async def embed_command(self, ctx: Context, channel: Optional[TextChannel], *, text: str) -> None:
+    async def embed_command(self, ctx: Context, channel: TextChannel | None, *, text: str) -> None:
         """Send the input within an embed to either a specified channel or the current channel."""
         embed = Embed(description=text)
 

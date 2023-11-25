@@ -1,6 +1,8 @@
-**Mutable Default Arguments**
-
-Default arguments in python are evaluated *once* when the function is
+---
+embed:
+    title: "Mutable default arguments"
+---
+Default arguments in Python are evaluated *once* when the function is
 **defined**, *not* each time the function is **called**. This means that if
 you have a mutable default argument and mutate it, you will have
 mutated that object for all future calls to the function as well.
@@ -42,7 +44,7 @@ function is **called**:
 
 **Note**:
 
-• This behavior can be used intentionally to maintain state between
+- This behavior can be used intentionally to maintain state between
 calls of a function (eg. when writing a caching function).  
-• This behavior is not unique to mutable objects, all default
+- This behavior is not unique to mutable objects, all default
 arguments are evaulated only once when the function is defined.

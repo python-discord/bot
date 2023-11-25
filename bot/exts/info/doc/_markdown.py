@@ -1,10 +1,14 @@
+import re
 from urllib.parse import urljoin
 
+import markdownify
 from bs4.element import PageElement
-from markdownify import MarkdownConverter
+
+# See https://github.com/matthewwithanm/python-markdownify/issues/31
+markdownify.whitespace_re = re.compile(r"[\r\n\s\t ]+")
 
 
-class DocMarkdownConverter(MarkdownConverter):
+class DocMarkdownConverter(markdownify.MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
     def __init__(self, *, page_url: str, **options):
@@ -45,6 +49,8 @@ class DocMarkdownConverter(MarkdownConverter):
     def convert_a(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Resolve relative URLs to `self.page_url`."""
         el["href"] = urljoin(self.page_url, el["href"])
+        # Discord doesn't handle titles properly, showing links with them as raw text.
+        el["title"] = None
         return super().convert_a(el, text, convert_as_inline)
 
     def convert_p(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
@@ -56,3 +62,7 @@ class DocMarkdownConverter(MarkdownConverter):
         if parent is not None and parent.name == "li":
             return f"{text}\n"
         return super().convert_p(el, text, convert_as_inline)
+
+    def convert_hr(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+        """Ignore `hr` tag."""
+        return ""

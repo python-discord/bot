@@ -1,6 +1,5 @@
 import inspect
 from pathlib import Path
-from typing import Optional, Tuple, Union
 
 from discord import Embed
 from discord.ext import commands
@@ -10,7 +9,7 @@ from bot.constants import URLs
 from bot.converters import SourceConverter
 from bot.exts.info.tags import TagIdentifier
 
-SourceType = Union[commands.HelpCommand, commands.Command, commands.Cog, TagIdentifier, commands.ExtensionNotLoaded]
+SourceType = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded
 
 
 class BotSource(commands.Cog):
@@ -20,7 +19,12 @@ class BotSource(commands.Cog):
         self.bot = bot
 
     @commands.command(name="source", aliases=("src",))
-    async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
+    async def source_command(
+        self,
+        ctx: commands.Context,
+        *,
+        source_item: SourceConverter = None,
+    ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
             embed = Embed(title="Bot's GitHub Repository")
@@ -32,7 +36,7 @@ class BotSource(commands.Cog):
         embed = await self.build_embed(source_item)
         await ctx.send(embed=embed)
 
-    def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
+    def get_source_link(self, source_item: SourceType) -> tuple[str, str, int | None]:
         """
         Build GitHub link of source item, return this link, file location and first line number.
 
@@ -65,7 +69,7 @@ class BotSource(commands.Cog):
 
         # Handle tag file location differently than others to avoid errors in some cases
         if not first_line_no:
-            file_location = Path(filename).relative_to("bot/")
+            file_location = Path(filename)
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
@@ -73,7 +77,7 @@ class BotSource(commands.Cog):
 
         return url, file_location, first_line_no or None
 
-    async def build_embed(self, source_object: SourceType) -> Optional[Embed]:
+    async def build_embed(self, source_object: SourceType) -> Embed | None:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 

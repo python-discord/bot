@@ -1,7 +1,7 @@
 import copy
 import difflib
 
-from discord import Embed
+from discord import Embed, Member
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
 from sentry_sdk import push_scope
@@ -64,18 +64,31 @@ class ErrorHandler(Cog):
         )
 
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
-            if await self.try_silence(ctx):
-                return
-            if await self.try_run_eval(ctx):
-                return
-            await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
+            # We might not invoke a command from the error handler, but it's easier and safer to ensure
+            # this is always set rather than trying to get it exact, and shouldn't cause any issues.
+            ctx.invoked_from_error_handler = True
+
+            # All errors from attempting to execute these commands should be handled by the error handler.
+            # We wrap non CommandErrors in CommandInvokeError to mirror the behaviour of normal commands.
+            try:
+                if await self.try_silence(ctx):
+                    return
+                if await self.try_run_fixed_codeblock(ctx):
+                    return
+                await self.try_get_tag(ctx)
+            except Exception as err:
+                log.info("Re-handling error raised by command in error handler")
+                if isinstance(err, errors.CommandError):
+                    await self.on_command_error(ctx, err)
+                else:
+                    await self.on_command_error(ctx, errors.CommandInvokeError(err))
         elif isinstance(e, errors.UserInputError):
             log.debug(debug_message)
             await self.handle_user_input_error(ctx, e)
         elif isinstance(e, errors.CheckFailure):
             log.debug(debug_message)
             await self.handle_check_failure(ctx, e)
-        elif isinstance(e, (errors.CommandOnCooldown, errors.MaxConcurrencyReached)):
+        elif isinstance(e, errors.CommandOnCooldown | errors.MaxConcurrencyReached):
             log.debug(debug_message)
             await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):
@@ -123,7 +136,6 @@ class ErrorHandler(Cog):
 
         command = ctx.invoked_with.lower()
         args = ctx.message.content.lower().split(" ")
-        ctx.invoked_from_error_handler = True
 
         try:
             if not await silence_command.can_run(ctx):
@@ -154,45 +166,40 @@ class ErrorHandler(Cog):
         if command.startswith("shh"):
             await ctx.invoke(silence_command, duration_or_channel=channel, duration=duration, kick=kick)
             return True
-        elif command.startswith("unshh"):
+        if command.startswith("unshh"):
             await ctx.invoke(self.bot.get_command("unsilence"), channel=channel)
             return True
         return False
 
     async def try_get_tag(self, ctx: Context) -> None:
-        """
-        Attempt to display a tag by interpreting the command name as a tag name.
+        """Attempt to display a tag by interpreting the command name as a tag name."""
+        tags_cog = self.bot.get_cog("Tags")
+        if not tags_cog:
+            log.debug("Not attempting to parse message as a tag as could not find `Tags` cog.")
+            return
+        tags_get_command = tags_cog.get_command_ctx
 
-        The invocation of tags get respects its checks. Any CommandErrors raised will be handled
-        by `on_command_error`, but the `invoked_from_error_handler` attribute will be added to
-        the context to prevent infinite recursion in the case of a CommandNotFound exception.
-        """
-        tags_get_command = self.bot.get_command("tags get")
-        if not tags_get_command:
-            log.debug("Not attempting to parse message as a tag as could not find `tags get` command.")
+        maybe_tag_name = ctx.invoked_with
+        if not maybe_tag_name or not isinstance(ctx.author, Member):
             return
 
-        ctx.invoked_from_error_handler = True
-
-        log_msg = "Cancelling attempt to fall back to a tag due to failed checks."
         try:
-            if not await tags_get_command.can_run(ctx):
-                log.debug(log_msg)
+            if not await self.bot.can_run(ctx):
+                log.debug("Cancelling attempt to fall back to a tag due to failed checks.")
                 return
-        except errors.CommandError as tag_error:
-            log.debug(log_msg)
-            await self.on_command_error(ctx, tag_error)
+        except errors.CommandError:
+            log.debug("Cancelling attempt to fall back to a tag due to failed checks.")
             return
 
-        if await ctx.invoke(tags_get_command, argument_string=ctx.message.content):
+        if await tags_get_command(ctx, maybe_tag_name):
             return
 
         if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
-            await self.send_command_suggestion(ctx, ctx.invoked_with)
+            await self.send_command_suggestion(ctx, maybe_tag_name)
 
-    async def try_run_eval(self, ctx: Context) -> bool:
+    async def try_run_fixed_codeblock(self, ctx: Context) -> bool:
         """
-        Attempt to run eval command with backticks directly after command.
+        Attempt to run eval or timeit command with triple backticks directly after command.
 
         For example: !eval```print("hi")```
 
@@ -204,11 +211,18 @@ class ErrorHandler(Cog):
         msg.content = command + " " + sep + end
         new_ctx = await self.bot.get_context(msg)
 
-        eval_command = self.bot.get_command("eval")
-        if eval_command is None or new_ctx.command != eval_command:
+        if new_ctx.command is None:
             return False
 
-        log.debug("Running fixed eval command.")
+        allowed_commands = [
+            self.bot.get_command("eval"),
+            self.bot.get_command("timeit"),
+        ]
+
+        if new_ctx.command not in allowed_commands:
+            return False
+
+        log.debug("Running %r command with fixed codeblock.", new_ctx.command.qualified_name)
         new_ctx.invoked_from_error_handler = True
         await self.bot.invoke(new_ctx)
 
@@ -307,7 +321,7 @@ class ErrorHandler(Cog):
             await ctx.send(
                 "Sorry, it looks like I don't have the permissions or roles I need to do that."
             )
-        elif isinstance(e, (ContextCheckFailure, errors.NoPrivateMessage)):
+        elif isinstance(e, ContextCheckFailure | errors.NoPrivateMessage):
             ctx.bot.stats.incr("errors.wrong_channel_or_dm_error")
             await ctx.send(e)
 

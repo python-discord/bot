@@ -2,21 +2,20 @@ import csv
 import json
 from datetime import timedelta
 from io import StringIO
-from typing import Dict, List, Literal, Optional
+from typing import Literal
 
 import arrow
 from aiohttp.client_exceptions import ClientResponseError
 from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext.commands import Cog, Context, group, has_any_role
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
-from bot.constants import Metabase as MetabaseConfig, Roles
+from bot.constants import BaseURLs, Metabase as MetabaseConfig, Roles
 from bot.log import get_logger
-from bot.utils import send_to_paste_service
 from bot.utils.channel import is_mod_channel
-from bot.utils.services import PasteTooLongError, PasteUploadError
 
 log = get_logger(__name__)
 
@@ -34,11 +33,11 @@ class Metabase(Cog):
         self.bot = bot
         self._session_scheduler = Scheduler(self.__class__.__name__)
 
-        self.session_token: Optional[str] = None  # session_info["session_token"]: str
-        self.session_expiry: Optional[float] = None  # session_info["session_expiry"]: UtcPosixTimestamp
+        self.session_token: str | None = None  # session_info["session_token"]: str
+        self.session_expiry: float | None = None  # session_info["session_expiry"]: UtcPosixTimestamp
         self.headers = BASE_HEADERS
 
-        self.exports: Dict[int, List[Dict]] = {}  # Saves the output of each question, so internal eval can access it
+        self.exports: dict[int, list[dict]] = {}  # Saves the output of each question, so internal eval can access it
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Handle ClientResponseError errors locally to invalidate token if needed."""
@@ -129,6 +128,7 @@ class Metabase(Cog):
 
         async with self.bot.http_session.post(url, headers=self.headers, raise_for_status=True) as resp:
             if extension == "csv":
+                extension = "text"  # paste site doesn't support csv as a lexer
                 out = await resp.text(encoding="utf-8")
                 # Save the output for use with int e
                 self.exports[question_id] = list(csv.DictReader(StringIO(out)))
@@ -141,14 +141,19 @@ class Metabase(Cog):
                 # Format it nicely for human eyes
                 out = json.dumps(out, indent=4, sort_keys=True)
 
+        file = PasteFile(content=out, lexer=extension)
         try:
-            paste_link = await send_to_paste_service(out, extension=extension)
+            resp = await send_to_paste_service(
+                files=[file],
+                http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
+            )
         except PasteTooLongError:
             message = f":x: {ctx.author.mention} Too long to upload to paste service."
         except PasteUploadError:
             message = f":x: {ctx.author.mention} Failed to upload to paste service."
         else:
-            message = f":+1: {ctx.author.mention} Here's your link: {paste_link}"
+            message = f":+1: {ctx.author.mention} Here's your link: {resp.link}"
 
         await ctx.send(
             f"{message}\nYou can also access this data within internal eval by doing: "

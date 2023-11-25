@@ -1,6 +1,6 @@
 import re
 import typing as t
-from datetime import date, datetime
+from datetime import UTC, datetime, timedelta
 
 import discord
 import feedparser
@@ -39,20 +39,31 @@ class PythonNews(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.webhook_names = {}
-        self.webhook: t.Optional[discord.Webhook] = None
-
-    async def cog_load(self) -> None:
-        """Carry out cog asynchronous initialisation."""
-        await self.get_webhook_names()
-        await self.get_webhook_and_channel()
-
-    async def start_tasks(self) -> None:
-        """Start the tasks for fetching new PEPs and mailing list messages."""
+        self.webhook: discord.Webhook | None = None
         self.fetch_new_media.start()
+
+    async def cog_unload(self) -> None:
+        """Stop news posting tasks on cog unload."""
+        self.fetch_new_media.cancel()
+
+    async def get_webhooks(self) -> None:
+        """Get webhook author names from maillist API."""
+        await self.bot.wait_until_guild_available()
+
+        async with self.bot.http_session.get("https://mail.python.org/archives/api/lists") as resp:
+            lists = await resp.json()
+
+        for mail in lists:
+            if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
+                self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
+        self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
 
     @loop(minutes=20)
     async def fetch_new_media(self) -> None:
         """Fetch new mailing list messages and then new PEPs."""
+        if not self.webhook:
+            await self.get_webhooks()
+
         await self.post_maillist_news()
         await self.post_pep_news()
 
@@ -71,17 +82,6 @@ class PythonNews(Cog):
             response["data"]["pep"] = []
 
         await self.bot.api_client.put("bot/bot-settings/news", json=response)
-
-    async def get_webhook_names(self) -> None:
-        """Get webhook author names from maillist API."""
-        await self.bot.wait_until_guild_available()
-
-        async with self.bot.http_session.get("https://mail.python.org/archives/api/lists") as resp:
-            lists = await resp.json()
-
-        for mail in lists:
-            if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
-                self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
 
     @staticmethod
     def escape_markdown(content: str) -> str:
@@ -108,14 +108,18 @@ class PythonNews(Cog):
         data["entries"].reverse()
         for new in data["entries"]:
             try:
-                new_datetime = datetime.strptime(new["published"], "%a, %d %b %Y %X %Z")
+                # %Z doesn't actually set the tzinfo of the datetime object, manually set this to UTC
+                pep_creation = datetime.strptime(new["published"], "%a, %d %b %Y %X %Z").replace(tzinfo=UTC)
             except ValueError:
                 log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
                 continue
             pep_nr = new["title"].split(":")[0].split()[1]
             if (
                     pep_nr in pep_numbers
-                    or new_datetime.date() < date.today()
+                    # A PEP is assigned a creation date before it is reviewed and published to the RSS feed.
+                    # The time between creation date and it appearing in the RSS feed is usually not long,
+                    # but we allow up to 6 weeks to be safe.
+                    or pep_creation < datetime.now(tz=UTC) - timedelta(weeks=6)
             ):
                 continue
 
@@ -123,7 +127,7 @@ class PythonNews(Cog):
             embed = discord.Embed(
                 title=self.escape_markdown(new["title"]),
                 description=self.escape_markdown(new["summary"]),
-                timestamp=new_datetime,
+                timestamp=pep_creation,
                 url=new["link"],
                 colour=constants.Colours.soft_green
             )
@@ -181,8 +185,8 @@ class PythonNews(Cog):
 
                 if (
                         thread_information["thread_id"] in existing_news["data"][maillist]
-                        or 'Re: ' in thread_information["subject"]
-                        or new_date.date() < date.today()
+                        or "Re: " in thread_information["subject"]
+                        or new_date.date() < datetime.now(tz=UTC).date()
                 ):
                     continue
 
@@ -223,7 +227,7 @@ class PythonNews(Cog):
 
         await self.bot.api_client.put("bot/bot-settings/news", json=payload)
 
-    async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> t.Tuple[t.Any, t.Any]:
+    async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> tuple[t.Any, t.Any]:
         """Get mail thread and first mail from mail.python.org based on `maillist` and `thread_identifier`."""
         async with self.bot.http_session.get(
                 THREAD_TEMPLATE_URL.format(name=maillist, id=thread_identifier)
@@ -233,17 +237,6 @@ class PythonNews(Cog):
         async with self.bot.http_session.get(thread_information["starting_email"]) as resp:
             email_information = await resp.json()
         return thread_information, email_information
-
-    async def get_webhook_and_channel(self) -> None:
-        """Storage #python-news channel Webhook and `TextChannel` to `News.webhook` and `channel`."""
-        await self.bot.wait_until_guild_available()
-        self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
-
-        await self.start_tasks()
-
-    async def cog_unload(self) -> None:
-        """Stop news posting tasks on cog unload."""
-        self.fetch_new_media.cancel()
 
 
 async def setup(bot: Bot) -> None:

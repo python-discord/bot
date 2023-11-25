@@ -6,17 +6,17 @@ import textwrap
 import traceback
 from collections import Counter
 from io import StringIO
-from typing import Any, Optional, Tuple
+from typing import Any
 
 import arrow
 import discord
 from discord.ext.commands import Cog, Context, group, has_any_role, is_owner
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot.bot import Bot
-from bot.constants import DEBUG_MODE, Roles
+from bot.constants import BaseURLs, DEBUG_MODE, Roles
 from bot.log import get_logger
-from bot.utils import find_nth_occurrence, send_to_paste_service
-from bot.utils.services import PasteTooLongError, PasteUploadError
+from bot.utils import find_nth_occurrence
 
 log = get_logger(__name__)
 
@@ -43,7 +43,7 @@ class Internal(Cog):
         self.socket_event_total += 1
         self.socket_events[event_type] += 1
 
-    def _format(self, inp: str, out: Any) -> Tuple[str, Optional[discord.Embed]]:
+    def _format(self, inp: str, out: Any) -> tuple[str, discord.Embed | None]:
         """Format the eval output into a string & attempt to format it into an Embed."""
         self._ = out
 
@@ -137,7 +137,7 @@ class Internal(Cog):
 
         return res  # Return (text, embed)
 
-    async def _eval(self, ctx: Context, code: str) -> Optional[discord.Message]:
+    async def _eval(self, ctx: Context, code: str) -> discord.Message | None:
         """Eval the input code string & send an embed to the invoking context."""
         self.ln += 1
 
@@ -166,18 +166,18 @@ class Internal(Cog):
 async def func():  # (None,) -> Any
     try:
         with contextlib.redirect_stdout(self.stdout):
-{0}
+{}
         if '_' in locals():
             if inspect.isawaitable(_):
                 _ = await _
             return _
     finally:
         self.env.update(locals())
-""".format(textwrap.indent(code, '            '))
+""".format(textwrap.indent(code, "            "))
 
         try:
-            exec(code_, self.env)  # noqa: B102,S102
-            func = self.env['func']
+            exec(code_, self.env)  # noqa: S102
+            func = self.env["func"]
             res = await func()
 
         except Exception:
@@ -195,37 +195,43 @@ async def func():  # (None,) -> Any
             truncate_index = newline_truncate_index
 
         if len(out) > truncate_index:
+            file = PasteFile(content=out)
             try:
-                paste_link = await send_to_paste_service(out, extension="py")
+                resp = await send_to_paste_service(
+                    files=[file],
+                    http_session=self.bot.http_session,
+                    paste_url=BaseURLs.paste_url,
+                )
             except PasteTooLongError:
                 paste_text = "too long to upload to paste service."
             except PasteUploadError:
                 paste_text = "failed to upload contents to paste service."
             else:
-                paste_text = f"full contents at {paste_link}"
+                paste_text = f"full contents at {resp.link}"
 
             await ctx.send(
                 f"```py\n{out[:truncate_index]}\n```"
                 f"... response truncated; {paste_text}",
                 embed=embed
             )
-            return
+            return None
 
         await ctx.send(f"```py\n{out}```", embed=embed)
+        return None
 
-    @group(name='internal', aliases=('int',))
+    @group(name="internal", aliases=("int",))
     @has_any_role(Roles.owners, Roles.admins, Roles.core_developers)
     async def internal_group(self, ctx: Context) -> None:
         """Internal commands. Top secret!"""
         if not ctx.invoked_subcommand:
             await ctx.send_help(ctx.command)
 
-    @internal_group.command(name='eval', aliases=('e',))
+    @internal_group.command(name="eval", aliases=("e",))
     @has_any_role(Roles.admins, Roles.owners)
     async def eval(self, ctx: Context, *, code: str) -> None:
         """Run eval in a REPL-like format."""
         code = code.strip("`")
-        if re.match('py(thon)?\n', code):
+        if re.match("py(thon)?\n", code):
             code = "\n".join(code.split("\n")[1:])
 
         if not re.search(  # Check if it's an expression
@@ -236,7 +242,7 @@ async def func():  # (None,) -> Any
 
         await self._eval(ctx, code)
 
-    @internal_group.command(name='socketstats', aliases=('socket', 'stats'))
+    @internal_group.command(name="socketstats", aliases=("socket", "stats"))
     @has_any_role(Roles.admins, Roles.owners, Roles.core_developers)
     async def socketstats(self, ctx: Context) -> None:
         """Fetch information on the socket events received from Discord."""

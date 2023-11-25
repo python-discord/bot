@@ -3,7 +3,8 @@
 import ast
 import re
 import textwrap
-from typing import NamedTuple, Optional, Sequence
+from collections.abc import Sequence
+from typing import NamedTuple
 
 from bot import constants
 from bot.log import get_logger
@@ -69,7 +70,7 @@ class BadLanguage(NamedTuple):
     has_terminal_newline: bool
 
 
-def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
+def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     """
     Find and return all Markdown code blocks in the `message`.
 
@@ -90,7 +91,7 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
         if groups["tick"] == BACKTICK and language:
             log.trace("Message has a valid code block with a language; returning None.")
             return None
-        elif has_lines(groups["code"], constants.CodeBlock.minimum_lines):
+        if has_lines(groups["code"], constants.CodeBlock.minimum_lines):
             code_block = CodeBlock(groups["code"], language, groups["tick"])
             code_blocks.append(code_block)
         else:
@@ -119,9 +120,9 @@ def _is_python_code(content: str) -> bool:
     if not all(isinstance(node, ast.Expr) for node in tree.body):
         log.trace("Code is valid python.")
         return True
-    else:
-        log.trace("Code consists only of expressions.")
-        return False
+
+    log.trace("Code consists only of expressions.")
+    return False
 
 
 def _is_repl_code(content: str, threshold: int = 3) -> bool:
@@ -161,7 +162,7 @@ def is_python_code(content: str) -> bool:
     )
 
 
-def parse_bad_language(content: str) -> Optional[BadLanguage]:
+def parse_bad_language(content: str) -> BadLanguage | None:
     """
     Return information about a poorly formatted Python language in code block `content`.
 
@@ -188,6 +189,7 @@ def _get_leading_spaces(content: str) -> int:
             leading_spaces += 1
         else:
             return leading_spaces
+    return None
 
 
 def _fix_indentation(content: str) -> str:

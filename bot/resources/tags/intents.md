@@ -1,5 +1,7 @@
-**Using intents in discord.py**
-
+---
+embed:
+    title: "Using intents in discord.py"
+---
 Intents are a feature of Discord that tells the gateway exactly which events to send your bot. Various features of discord.py rely on having particular intents enabled, further detailed [in its documentation](https://discordpy.readthedocs.io/en/stable/api.html#intents). Since discord.py v2.0.0, it has become **mandatory** for developers to explicitly define the values of these intents in their code.
 
 There are *standard* and *privileged* intents. To use privileged intents like `Presences`, `Server Members`, and `Message Content`, you have to first enable them in the [Discord Developer Portal](https://discord.com/developers/applications). In there, go to the `Bot` page of your application, scroll down to the `Privileged Gateway Intents` section, and enable the privileged intents that you need. Standard intents can be used without any changes in the developer portal.

@@ -1,8 +1,16 @@
-from typing import Callable, Container, Iterable, Optional, Union
+from collections.abc import Callable, Container, Iterable
 
 from discord.ext.commands import (
-    BucketType, CheckFailure, Cog, Command, CommandOnCooldown, Context, Cooldown, CooldownMapping, NoPrivateMessage,
-    has_any_role
+    BucketType,
+    CheckFailure,
+    Cog,
+    Command,
+    CommandOnCooldown,
+    Context,
+    Cooldown,
+    CooldownMapping,
+    NoPrivateMessage,
+    has_any_role,
 )
 
 from bot import constants
@@ -14,7 +22,7 @@ log = get_logger(__name__)
 class ContextCheckFailure(CheckFailure):
     """Raised when a context-specific check fails."""
 
-    def __init__(self, redirect_channel: Optional[int]) -> None:
+    def __init__(self, redirect_channel: int | None) -> None:
         self.redirect_channel = redirect_channel
 
         if redirect_channel:
@@ -36,7 +44,7 @@ def in_whitelist_check(
     channels: Container[int] = (),
     categories: Container[int] = (),
     roles: Container[int] = (),
-    redirect: Optional[int] = constants.Channels.bot_commands,
+    redirect: int | None = constants.Channels.bot_commands,
     fail_silently: bool = False,
 ) -> bool:
     """
@@ -86,7 +94,7 @@ def in_whitelist_check(
     return False
 
 
-async def has_any_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
+async def has_any_role_check(ctx: Context, *roles: str | int) -> bool:
     """
     Returns True if the context's author has any of the specified roles.
 
@@ -99,7 +107,7 @@ async def has_any_role_check(ctx: Context, *roles: Union[str, int]) -> bool:
         return False
 
 
-async def has_no_roles_check(ctx: Context, *roles: Union[str, int]) -> bool:
+async def has_no_roles_check(ctx: Context, *roles: str | int) -> bool:
     """
     Returns True if the context's author doesn't have any of the specified roles.
 
@@ -114,8 +122,13 @@ async def has_no_roles_check(ctx: Context, *roles: Union[str, int]) -> bool:
         return True
 
 
-def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketType.default, *,
-                              bypass_roles: Iterable[int]) -> Callable:
+def cooldown_with_role_bypass(
+    rate: int,
+    per: float,
+    type: BucketType = BucketType.default,
+    *,
+    bypass_roles: Iterable[int]
+) -> Callable:
     """
     Applies a cooldown to a command, but allows members with certain roles to be ignored.
 
@@ -148,8 +161,10 @@ def cooldown_with_role_bypass(rate: int, per: float, type: BucketType = BucketTy
         #
         # if the `before_invoke` detail is ever a problem then I can quickly just swap over.
         if not isinstance(command, Command):
-            raise TypeError('Decorator `cooldown_with_role_bypass` must be applied after the command decorator. '
-                            'This means it has to be above the command decorator in the code.')
+            raise TypeError(
+                "Decorator `cooldown_with_role_bypass` must be applied after the command decorator. "
+                "This means it has to be above the command decorator in the code."
+            )
 
         command._before_invoke = predicate
 

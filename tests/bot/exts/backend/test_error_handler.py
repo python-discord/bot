@@ -47,18 +47,21 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         )
         self.cog.try_silence = AsyncMock()
         self.cog.try_get_tag = AsyncMock()
-        self.cog.try_run_eval = AsyncMock(return_value=False)
+        self.cog.try_run_fixed_codeblock = AsyncMock(return_value=False)
 
         for case in test_cases:
             with self.subTest(try_silence_return=case["try_silence_return"], try_get_tag=case["called_try_get_tag"]):
                 self.ctx.reset_mock()
                 self.cog.try_silence.reset_mock(return_value=True)
                 self.cog.try_get_tag.reset_mock()
+                self.ctx.invoked_from_error_handler = False
 
                 self.cog.try_silence.return_value = case["try_silence_return"]
                 self.ctx.channel.id = 1234
 
                 self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
+
+                self.assertTrue(self.ctx.invoked_from_error_handler)
 
                 if case["try_silence_return"]:
                     self.cog.try_get_tag.assert_not_awaited()
@@ -75,7 +78,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.try_silence = AsyncMock()
         self.cog.try_get_tag = AsyncMock()
-        self.cog.try_run_eval = AsyncMock()
+        self.cog.try_run_fixed_codeblock = AsyncMock()
 
         error = errors.CommandNotFound()
 
@@ -83,7 +86,7 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
 
         self.cog.try_silence.assert_not_awaited()
         self.cog.try_get_tag.assert_not_awaited()
-        self.cog.try_run_eval.assert_not_awaited()
+        self.cog.try_run_fixed_codeblock.assert_not_awaited()
         self.ctx.send.assert_not_awaited()
 
     async def test_error_handler_user_input_error(self):
@@ -202,13 +205,6 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         self.guild = MockGuild(**guild_overrides)
         self.ctx = MockContext(bot=self.bot, guild=self.guild)
         self.cog = error_handler.ErrorHandler(self.bot)
-
-    async def test_try_silence_context_invoked_from_error_handler(self):
-        """Should set `Context.invoked_from_error_handler` to `True`."""
-        self.ctx.invoked_with = "foo"
-        await self.cog.try_silence(self.ctx)
-        self.assertTrue(hasattr(self.ctx, "invoked_from_error_handler"))
-        self.assertTrue(self.ctx.invoked_from_error_handler)
 
     async def test_try_silence_get_command(self):
         """Should call `get_command` with `silence`."""
@@ -334,38 +330,24 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         self.ctx = MockContext()
         self.tag = Tags(self.bot)
         self.cog = error_handler.ErrorHandler(self.bot)
-        self.bot.get_command.return_value = self.tag.get_command
+        self.bot.get_cog.return_value = self.tag
 
     async def test_try_get_tag_get_command(self):
         """Should call `Bot.get_command` with `tags get` argument."""
-        self.bot.get_command.reset_mock()
+        self.bot.get_cog.reset_mock()
         await self.cog.try_get_tag(self.ctx)
-        self.bot.get_command.assert_called_once_with("tags get")
-
-    async def test_try_get_tag_invoked_from_error_handler(self):
-        """`self.ctx` should have `invoked_from_error_handler` `True`."""
-        self.ctx.invoked_from_error_handler = False
-        await self.cog.try_get_tag(self.ctx)
-        self.assertTrue(self.ctx.invoked_from_error_handler)
+        self.bot.get_cog.assert_called_once_with("Tags")
 
     async def test_try_get_tag_no_permissions(self):
         """Test how to handle checks failing."""
-        self.tag.get_command.can_run = AsyncMock(return_value=False)
+        self.bot.can_run = AsyncMock(return_value=False)
         self.ctx.invoked_with = "foo"
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-
-    async def test_try_get_tag_command_error(self):
-        """Should call `on_command_error` when `CommandError` raised."""
-        err = errors.CommandError()
-        self.tag.get_command.can_run = AsyncMock(side_effect=err)
-        self.cog.on_command_error = AsyncMock()
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-        self.cog.on_command_error.assert_awaited_once_with(self.ctx, err)
 
     async def test_dont_call_suggestion_tag_sent(self):
         """Should never call command suggestion if tag is already sent."""
         self.ctx.message = MagicMock(content="foo")
-        self.ctx.invoke = AsyncMock(return_value=True)
+        self.tag.get_command_ctx = AsyncMock(return_value=True)
         self.cog.send_command_suggestion = AsyncMock()
 
         await self.cog.try_get_tag(self.ctx)
@@ -375,7 +357,7 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
     async def test_dont_call_suggestion_if_user_mod(self):
         """Should not call command suggestion if user is a mod."""
         self.ctx.invoked_with = "foo"
-        self.ctx.invoke = AsyncMock(return_value=False)
+        self.tag.get_command_ctx = AsyncMock(return_value=False)
         self.ctx.author.roles = [MockRole(id=1234)]
         self.cog.send_command_suggestion = AsyncMock()
 
@@ -385,7 +367,7 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
     async def test_call_suggestion(self):
         """Should call command suggestion if user is not a mod."""
         self.ctx.invoked_with = "foo"
-        self.ctx.invoke = AsyncMock(return_value=False)
+        self.tag.get_command_ctx = AsyncMock(return_value=False)
         self.cog.send_command_suggestion = AsyncMock()
 
         await self.cog.try_get_tag(self.ctx)

@@ -1,12 +1,12 @@
 import json
 import random
 import textwrap
-import typing as t
 from pathlib import Path
 
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
 from discord.utils import escape_markdown
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -16,7 +16,6 @@ from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
@@ -110,9 +109,9 @@ class Superstarify(InfractionScheduler, Cog):
         self,
         ctx: Context,
         member: Member,
-        duration: t.Optional[DurationOrExpiry],
+        duration: DurationOrExpiry | None,
         *,
-        reason: str = '',
+        reason: str = "",
     ) -> None:
         """
         Temporarily force a random superstar name (like Taylor Swift) to be the user's nickname.
@@ -131,7 +130,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         An optional reason can be provided, which would be added to a message stating their old nickname
         and linking to the nickname policy.
-        """
+        """  # noqa: RUF002
         if member.top_role >= ctx.me.top_role:
             await ctx.send(":x: I can't starify users above or equal to me in the role hierarchy.")
             return
@@ -144,7 +143,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Post the infraction to the API
         old_nick = member.display_name
-        infraction_reason = f'Old nickname: {old_nick}. {reason}'
+        infraction_reason = f"Old nickname: {old_nick}. {reason}"
         infraction = await _utils.post_infraction(ctx, member, "superstar", infraction_reason, duration, active=True)
         id_ = infraction["id"]
 
@@ -177,7 +176,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         successful = await self.apply_infraction(
             ctx, infraction, member, action,
-            user_reason=user_message(reason=f'**Additional details:** {reason}\n\n' if reason else ''),
+            user_reason=user_message(reason=f"**Additional details:** {reason}\n\n" if reason else ""),
             additional_info=nickname_info
         )
 
@@ -187,7 +186,7 @@ class Superstarify(InfractionScheduler, Cog):
             embed = Embed(
                 title="Superstarified!",
                 colour=constants.Colours.soft_orange,
-                description=user_message(reason='')
+                description=user_message(reason="")
             )
             await ctx.send(embed=embed)
 
@@ -196,10 +195,10 @@ class Superstarify(InfractionScheduler, Cog):
         """Remove the superstarify infraction and allow the user to change their nickname."""
         await self.pardon_infraction(ctx, "superstar", member)
 
-    async def _pardon_action(self, infraction: _utils.Infraction, notify: bool) -> t.Optional[t.Dict[str, str]]:
+    async def _pardon_action(self, infraction: _utils.Infraction, notify: bool) -> dict[str, str] | None:
         """Pardon a superstar infraction, optionally notify the user via DM, and return a log dict."""
         if infraction["type"] != "superstar":
-            return
+            return None
 
         guild = self.bot.get_guild(constants.Guild.id)
         user = await get_or_fetch_member(guild, infraction["user"])

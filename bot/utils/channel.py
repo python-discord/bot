@@ -1,4 +1,3 @@
-from typing import Union
 
 import discord
 
@@ -9,7 +8,7 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 
-def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
+def is_mod_channel(channel: discord.TextChannel | discord.Thread) -> bool:
     """True if channel, or channel.parent for threads, is considered a mod channel."""
     if isinstance(channel, discord.Thread):
         channel = channel.parent
@@ -18,13 +17,12 @@ def is_mod_channel(channel: Union[discord.TextChannel, discord.Thread]) -> bool:
         log.trace(f"Channel #{channel} is a configured mod channel")
         return True
 
-    elif any(is_in_category(channel, category) for category in constants.MODERATION_CATEGORIES):
+    if any(is_in_category(channel, category) for category in constants.MODERATION_CATEGORIES):
         log.trace(f"Channel #{channel} is in a configured mod category")
         return True
 
-    else:
-        log.trace(f"Channel #{channel} is not a mod channel")
-        return False
+    log.trace(f"Channel #{channel} is not a mod channel")
+    return False
 
 
 def is_staff_channel(channel: discord.TextChannel) -> bool:
@@ -46,18 +44,3 @@ def is_staff_channel(channel: discord.TextChannel) -> bool:
 def is_in_category(channel: discord.TextChannel, category_id: int) -> bool:
     """Return True if `channel` is within a category with `category_id`."""
     return getattr(channel, "category_id", None) == category_id
-
-
-async def get_or_fetch_channel(
-        channel_id: int
-) -> discord.abc.GuildChannel | discord.abc.PrivateChannel | discord.Thread:
-    """Attempt to get or fetch a channel and return it."""
-    log.trace(f"Getting the channel {channel_id}.")
-
-    channel = bot.instance.get_channel(channel_id)
-    if not channel:
-        log.debug(f"Channel {channel_id} is not in cache; fetching from API.")
-        channel = await bot.instance.fetch_channel(channel_id)
-
-    log.trace(f"Channel #{channel} ({channel_id}) retrieved.")
-    return channel

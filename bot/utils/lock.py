@@ -2,8 +2,9 @@ import asyncio
 import inspect
 import types
 from collections import defaultdict
+from collections.abc import Awaitable, Callable, Hashable
 from functools import partial
-from typing import Any, Awaitable, Callable, Hashable, Union
+from typing import Any
 from weakref import WeakValueDictionary
 
 from bot.errors import LockedResourceError
@@ -14,9 +15,9 @@ from bot.utils.function import command_wraps
 log = get_logger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
 
-_IdCallableReturn = Union[Hashable, Awaitable[Hashable]]
+_IdCallableReturn = Hashable | Awaitable[Hashable]
 _IdCallable = Callable[[function.BoundArgs], _IdCallableReturn]
-ResourceId = Union[Hashable, _IdCallable]
+ResourceId = Hashable | _IdCallable
 
 
 class SharedEvent:
@@ -110,6 +111,7 @@ def lock(
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
+                return None
 
         return wrapper
     return decorator
@@ -118,7 +120,7 @@ def lock(
 def lock_arg(
     namespace: Hashable,
     name_or_pos: function.Argument,
-    func: Callable[[Any], _IdCallableReturn] = None,
+    func: Callable[[Any], _IdCallableReturn] | None = None,
     *,
     raise_error: bool = False,
     wait: bool = False,

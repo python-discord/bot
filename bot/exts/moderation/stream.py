@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import UTC, timedelta
 from operator import itemgetter
 
 import arrow
@@ -7,16 +7,22 @@ from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext import commands
 from pydis_core.utils import scheduling
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import (
-    Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
+    Colours,
+    Emojis,
+    Guild,
+    MODERATION_ROLES,
+    Roles,
+    STAFF_PARTNERS_COMMUNITY_ROLES,
+    VideoPermission,
 )
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 
@@ -85,7 +91,12 @@ class Stream(commands.Cog):
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def stream(self, ctx: commands.Context, member: discord.Member, duration: Expiry = None) -> None:
+    async def stream(
+        self,
+        ctx: commands.Context,
+        member: discord.Member,
+        duration: Expiry = None,
+    ) -> None:
         """
         Temporarily grant streaming permissions to a member for a given duration.
 
@@ -100,7 +111,7 @@ class Stream(commands.Cog):
         \u2003`s` - seconds
 
         Alternatively, an ISO 8601 timestamp can be provided for the duration.
-        """
+        """  # noqa: RUF002
         log.trace(f"Attempting to give temporary streaming permission to {member} ({member.id}).")
 
         if duration is None:
@@ -110,7 +121,7 @@ class Stream(commands.Cog):
         elif duration.tzinfo is None:
             # Make duration tz-aware.
             # ISODateTime could already include tzinfo, this check is so it isn't overwritten.
-            duration.replace(tzinfo=timezone.utc)
+            duration.replace(tzinfo=UTC)
 
         # Check if the member already has streaming permission
         already_allowed = any(Roles.video == role.id for role in member.roles)
@@ -185,7 +196,7 @@ class Stream(commands.Cog):
 
         await self._suspend_stream(ctx, member)
 
-    @commands.command(aliases=('lstream',))
+    @commands.command(aliases=("lstream",))
     @commands.has_any_role(*MODERATION_ROLES)
     async def liststream(self, ctx: commands.Context) -> None:
         """Lists all users who aren't staff, partners or members of the python community and have stream permissions."""

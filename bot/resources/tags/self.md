@@ -1,5 +1,7 @@
-**Class instance**
-
+---
+embed:
+    title: "Class instance"
+---
 When calling a method from a class instance (ie. `instance.method()`), the instance itself will automatically be passed as the first argument implicitly. By convention, we call this `self`, but it could technically be called any valid variable name.
 
 ```py

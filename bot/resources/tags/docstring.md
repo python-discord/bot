@@ -1,3 +1,7 @@
+---
+embed:
+    title: "Docstrings"
+---
 A [`docstring`](https://docs.python.org/3/glossary.html#term-docstring) is a string - always using triple quotes - that's placed at the top of files, classes and functions. A docstring should contain a clear explanation of what it's describing. You can also include descriptions of the subject's parameter(s) and what it returns, as shown below:
 ```py
 def greet(name: str, age: int) -> str:

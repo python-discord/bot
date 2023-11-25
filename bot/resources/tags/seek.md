@@ -1,5 +1,7 @@
-**Seek**
-
+---
+embed:
+    title: "Seek"
+---
 In the context of a [file object](https://docs.python.org/3/glossary.html#term-file-object), the `seek` function changes the stream position to a given byte offset, with an optional argument of where to offset from. While you can find the official documentation [here](https://docs.python.org/3/library/io.html#io.IOBase.seek), it can be unclear how to actually use this feature, so keep reading to see examples on how to use it.
 
 File named `example`:
@@ -18,5 +20,5 @@ Now lets do `f.seek(4, 1)`. This will move our stream position 4 bytes forward r
 Finally, lets do `f.seek(-4, 2)`, moving our stream position *backwards* 4 bytes relative to the **end** of the stream. Now if we did `f.read()` to read everything after our position in the file, it would return the string `'eggs'` and also move our stream position to the end of the file.
 
 **Note**  
-• For the second argument in `seek()`, use `os.SEEK_SET`, `os.SEEK_CUR`, and `os.SEEK_END` in place of 0, 1, and 2 respectively.  
-• `os.SEEK_CUR` is only usable when the file is in byte mode.
+- For the second argument in `seek()`, use `os.SEEK_SET`, `os.SEEK_CUR`, and `os.SEEK_END` in place of 0, 1, and 2 respectively.  
+- `os.SEEK_CUR` is only usable when the file is in byte mode.

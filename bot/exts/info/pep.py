@@ -1,21 +1,20 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from email.parser import HeaderParser
 from io import StringIO
-from typing import Dict, Optional, Tuple
 
 from discord import Colour, Embed
 from discord.ext.commands import Cog, Context, command
+from pydis_core.utils.caching import AsyncCache
 
 from bot.bot import Bot
 from bot.constants import Keys
 from bot.log import get_logger
-from bot.utils.caching import AsyncCache
 
 log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 BASE_PEP_URL = "https://peps.python.org/pep-"
-PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=main"
+PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents/peps?ref=main"
 
 pep_cache = AsyncCache()
 
@@ -29,20 +28,16 @@ class PythonEnhancementProposals(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.peps: Dict[int, str] = {}
-        # To avoid situations where we don't have last datetime, set this to now.
-        self.last_refreshed_peps: datetime = datetime.now()
-
-    async def cog_load(self) -> None:
-        """Carry out cog asynchronous initialisation."""
-        await self.refresh_peps_urls()
+        self.peps: dict[int, str] = {}
+        # Ensure peps are refreshed the first time this is checked
+        self.last_refreshed_peps: datetime = datetime.min.replace(tzinfo=UTC)
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""
         # Wait until HTTP client is available
         await self.bot.wait_until_ready()
         log.trace("Started refreshing PEP URLs.")
-        self.last_refreshed_peps = datetime.now()
+        self.last_refreshed_peps = datetime.now(tz=UTC)
 
         async with self.bot.http_session.get(
             PEPS_LISTING_API_URL,
@@ -78,11 +73,11 @@ class PythonEnhancementProposals(Cog):
 
         return pep_embed
 
-    async def validate_pep_number(self, pep_nr: int) -> Optional[Embed]:
+    async def validate_pep_number(self, pep_nr: int) -> Embed | None:
         """Validate is PEP number valid. When it isn't, return error embed, otherwise None."""
         if (
             pep_nr not in self.peps
-            and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now()
+            and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now(tz=UTC)
             and len(str(pep_nr)) < 5
         ):
             await self.refresh_peps_urls()
@@ -97,7 +92,7 @@ class PythonEnhancementProposals(Cog):
 
         return None
 
-    def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> Embed:
+    def generate_pep_embed(self, pep_header: dict, pep_nr: int) -> Embed:
         """Generate PEP embed based on PEP headers data."""
         # the parsed header can be wrapped to multiple lines, so we need to make sure that is removed
         # for an example of a pep with this issue, see pep 500
@@ -105,7 +100,7 @@ class PythonEnhancementProposals(Cog):
         # Assemble the embed
         pep_embed = Embed(
             title=f"**PEP {pep_nr} - {title}**",
-            description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
+            url=f"{BASE_PEP_URL}{pep_nr:04}",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
@@ -121,7 +116,7 @@ class PythonEnhancementProposals(Cog):
         return pep_embed
 
     @pep_cache(arg_offset=1)
-    async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
+    async def get_pep_embed(self, pep_nr: int) -> tuple[Embed, bool]:
         """Fetch, generate and return PEP embed. Second item of return tuple show does getting success."""
         response = await self.bot.http_session.get(self.peps[pep_nr])
 
@@ -132,17 +127,17 @@ class PythonEnhancementProposals(Cog):
             # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
             pep_header = HeaderParser().parse(StringIO(pep_content))
             return self.generate_pep_embed(pep_header, pep_nr), True
-        else:
-            log.trace(
-                f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
-            )
-            return Embed(
-                title="Unexpected error",
-                description="Unexpected HTTP error during PEP search. Please let us know.",
-                colour=Colour.red()
-            ), False
 
-    @command(name='pep', aliases=('get_pep', 'p'))
+        log.trace(
+            f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
+        )
+        return Embed(
+            title="Unexpected error",
+            description="Unexpected HTTP error during PEP search. Please let us know.",
+            colour=Colour.red()
+        ), False
+
+    @command(name="pep", aliases=("get_pep", "p"))
     async def pep_command(self, ctx: Context, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
         # Trigger typing in chat to show users that bot is responding
