@@ -157,7 +157,7 @@ class Branding(commands.Cog):
 
         timeout = 10  # Seconds.
         try:
-            with asyncio.timeout(timeout):  # Raise after `timeout` seconds.
+            async with asyncio.timeout(timeout):  # Raise after `timeout` seconds.
                 await pydis.edit(**{asset_type.value: file})
         except discord.HTTPException:
             log.exception("Asset upload to Discord failed.")
