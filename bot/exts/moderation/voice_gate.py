@@ -92,7 +92,27 @@ class VerifyView(discord.ui.View):
 
         failed = any(checks.values())
         failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
-        
+        for key, value in checks.items():
+            if value:
+                self.bot.stats.incr(f"voice_gate.failed.{key}")
+
+        if failed:
+            embed = discord.Embed(
+                title="Voice Gate failed",
+                description=FAILED_MESSAGE.format(reasons="\n".join(f"• You {reason}." for reason in failed_reasons)),
+                color=Colour.red()
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title="Voice gate passed",
+            description="You have been granted permission to use voice channels in Python Discord.",
+            color=Colour.green()
+        )
+
+        if interaction.user.voice:
+            embed.description += "\n\nPlease reconnect to your voice channel to be granted your new permissions."
 
 
 class VoiceGate(Cog):
@@ -105,6 +125,10 @@ class VoiceGate(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+
+    async def cog_load(self) -> None:
+        """Adds verify button to be monitored by the bot."""
+        self.bot.add_view(VerifyView(self.bot))
 
     @property
     def mod_log(self) -> ModLog:
