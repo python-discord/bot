@@ -18,7 +18,7 @@ colorama = { version = "0.4.6", markers = "sys_platform == 'win32'" }
 coloredlogs = "15.0.1"
 deepdiff = "6.7.1"
 emoji = "2.9.0"
-feedparser = "6.0.10"
+feedparser = "6.0.11"
 lxml = "4.9.3"
 markdownify = "0.11.6"
 more-itertools = "10.1.0"
