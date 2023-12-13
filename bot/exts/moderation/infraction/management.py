@@ -1,3 +1,4 @@
+import gettext
 import re
 import textwrap
 import typing as t
@@ -313,6 +314,10 @@ class ModManagement(commands.Cog):
         )
         # Manually form mention from ID as discord.Object doesn't have a `.mention` attr
         prefix = f"<@{user.id}> - {user.id}"
+        # If the user has alts show in the prefix
+        if infraction_list and (alts := infraction_list[0]["user"]["alts"]):
+            prefix += f" ({len(alts)} associated {gettext.ngettext('account', 'accounts', len(alts))})"
+
         await self.send_infraction_list(ctx, embed, infraction_list, prefix, ("user",))
 
     @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
