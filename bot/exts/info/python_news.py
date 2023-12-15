@@ -69,21 +69,6 @@ class PythonNews(Cog):
         await self.post_maillist_news()
         await self.post_pep_news()
 
-    async def sync_maillists(self) -> None:
-        """Sync currently in-use maillists with API."""
-        # Wait until guild is available to avoid running before everything is ready
-        await self.bot.wait_until_guild_available()
-
-        response = await self.bot.api_client.get("bot/bot-settings/news")
-        for mail in constants.PythonNews.mail_lists:
-            if mail not in response["data"]:
-                response["data"][mail] = []
-
-        # Because we are handling PEPs differently, we don't include it to mail lists
-        if "pep" not in response["data"]:
-            response["data"]["pep"] = []
-
-        await self.bot.api_client.put("bot/bot-settings/news", json=response)
 
     @staticmethod
     def escape_markdown(content: str) -> str:
@@ -97,7 +82,6 @@ class PythonNews(Cog):
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
         # Wait until everything is ready and http_session available
         await self.bot.wait_until_guild_available()
-        await self.sync_maillists()
 
         async with self.bot.http_session.get(PEPS_RSS_URL) as resp:
             data = feedparser.parse(await resp.text("utf-8"))
@@ -156,7 +140,6 @@ class PythonNews(Cog):
     async def post_maillist_news(self) -> None:
         """Send new maillist threads to #python-news that is listed in configuration."""
         await self.bot.wait_until_guild_available()
-        await self.sync_maillists()
         existing_news = await self.bot.api_client.get("bot/bot-settings/news")
         payload = existing_news.copy()
 
