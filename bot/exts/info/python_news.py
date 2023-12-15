@@ -41,6 +41,7 @@ class PythonNews(Cog):
         self.webhook_names = {}
         self.webhook: discord.Webhook | None = None
         self.fetch_new_media.start()
+        self.seen_items: dict[str, set[str]] = {}
 
     async def cog_unload(self) -> None:
         """Stop news posting tasks on cog unload."""
@@ -54,8 +55,9 @@ class PythonNews(Cog):
             lists = await resp.json()
 
         for mail in lists:
-            if mail["name"].split("@")[0] in constants.PythonNews.mail_lists:
-                self.webhook_names[mail["name"].split("@")[0]] = mail["display_name"]
+            mailing_list_name = mail["name"].split("@")[0]
+            if mailing_list_name in constants.PythonNews.mail_lists:
+                self.webhook_names[mailing_list_name] = mail["display_name"]
         self.webhook = await self.bot.fetch_webhook(constants.PythonNews.webhook)
 
     @loop(minutes=20)
@@ -237,6 +239,12 @@ class PythonNews(Cog):
         async with self.bot.http_session.get(thread_information["starting_email"]) as resp:
             email_information = await resp.json()
         return thread_information, email_information
+
+    async def cog_load(self) -> None:
+        """Load all existing seen items from db."""
+        response = await self.bot.api_client.get("/bot/mailing-lists")
+        for mailing_list in response:
+            self.seen_items[mailing_list["name"]] = set(mailing_list["seen_items"])
 
 
 async def setup(bot: Bot) -> None:
