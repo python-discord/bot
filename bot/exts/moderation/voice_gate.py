@@ -5,8 +5,8 @@ from datetime import timedelta
 import arrow
 import discord
 from async_rediscache import RedisCache
-from discord import Colour, Member, VoiceState
-from discord.ext.commands import Cog, Context, command
+from discord import Colour, Member, TextChannel, VoiceState
+from discord.ext.commands import Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
@@ -49,6 +49,8 @@ VOICE_PING_DM = (
 
 
 class VerifyView(discord.ui.View):
+    """Persistent view to add a Voice Verify button."""
+
     def __init__(self, bot: Bot) -> None:
         super().__init__(timeout=None)
         self.bot = bot
@@ -113,6 +115,10 @@ class VerifyView(discord.ui.View):
 
         if interaction.user.voice:
             embed.description += "\n\nPlease reconnect to your voice channel to be granted your new permissions."
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.user.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
+        self.bot.stats.incr("voice_gate.passed")
 
 
 class VoiceGate(Cog):
@@ -189,128 +195,6 @@ class VoiceGate(Cog):
         await self.redis_cache.set(member.id, message.id)
         return True, message.channel
 
-    @command(aliases=("voiceverify", "voice-verify",))
-    @has_no_roles(Roles.voice_verified)
-    @in_whitelist(channels=(Channels.voice_gate,), redirect=None)
-    async def voice_verify(self, ctx: Context, *_) -> None:
-        """
-        Apply to be able to use voice within the Discord server.
-
-        In order to use voice you must meet all three of the following criteria:
-        - You must have over a certain number of messages within the Discord server
-        - You must have accepted our rules over a certain number of days ago
-        - You must not be actively banned from using our voice channels
-        - You must have been active for over a certain number of 10-minute blocks
-        """
-        await self._delete_ping(ctx.author.id)  # If user has received a ping in voice_verification, delete the message
-
-        try:
-            data = await self.bot.api_client.get(f"bot/users/{ctx.author.id}/metricity_data")
-        except ResponseCodeError as e:
-            if e.status == 404:
-                embed = discord.Embed(
-                    title="Not found",
-                    description=(
-                        "We were unable to find user data for you. "
-                        "Please try again shortly, "
-                        "if this problem persists please contact the server staff through Modmail."
-                    ),
-                    color=Colour.red()
-                )
-                log.info(f"Unable to find Metricity data about {ctx.author} ({ctx.author.id})")
-            else:
-                embed = discord.Embed(
-                    title="Unexpected response",
-                    description=(
-                        "We encountered an error while attempting to find data for your user. "
-                        "Please try again and let us know if the problem persists."
-                    ),
-                    color=Colour.red()
-                )
-                log.warning(f"Got response code {e.status} while trying to get {ctx.author.id} Metricity data.")
-            try:
-                await ctx.author.send(embed=embed)
-            except discord.Forbidden:
-                log.info("Could not send user DM. Sending in voice-verify channel and scheduling delete.")
-                await ctx.send(embed=embed)
-
-            return
-
-        checks = {
-            "joined_at": (
-                ctx.author.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
-            ),
-            "total_messages": data["total_messages"] < GateConf.minimum_messages,
-            "voice_gate_blocked": data["voice_gate_blocked"],
-            "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
-        }
-
-        failed = any(checks.values())
-        failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
-        [self.bot.stats.incr(f"voice_gate.failed.{key}") for key, value in checks.items() if value is True]
-
-        if failed:
-            embed = discord.Embed(
-                title="Voice Gate failed",
-                description=FAILED_MESSAGE.format(reasons="\n".join(f"• You {reason}." for reason in failed_reasons)),
-                color=Colour.red()
-            )
-            try:
-                await ctx.author.send(embed=embed)
-                await ctx.send(f"{ctx.author}, please check your DMs.")
-            except discord.Forbidden:
-                await ctx.channel.send(ctx.author.mention, embed=embed)
-            return
-
-        embed = discord.Embed(
-            title="Voice gate passed",
-            description="You have been granted permission to use voice channels in Python Discord.",
-            color=Colour.green()
-        )
-
-        if ctx.author.voice:
-            embed.description += "\n\nPlease reconnect to your voice channel to be granted your new permissions."
-
-        try:
-            await ctx.author.send(embed=embed)
-            await ctx.send(f"{ctx.author}, please check your DMs.")
-        except discord.Forbidden:
-            await ctx.channel.send(ctx.author.mention, embed=embed)
-
-        # wait a little bit so those who don't get DMs see the response in-channel before losing perms to see it.
-        await asyncio.sleep(3)
-        await ctx.author.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
-
-        self.bot.stats.incr("voice_gate.passed")
-
-    @Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
-        """Delete all non-staff messages from voice gate channel that don't invoke voice verify command."""
-        # Check is channel voice gate
-        if message.channel.id != Channels.voice_gate:
-            return
-
-        ctx = await self.bot.get_context(message)
-        is_verify_command = ctx.command is not None and ctx.command.name == "voice_verify"
-
-        # When it's a bot sent message, delete it after some time
-        if message.author.bot:
-            # Comparing the message with the voice ping constant
-            if message.content.endswith(VOICE_PING):
-                log.trace("Message is the voice verification ping. Ignore.")
-                return
-            with suppress(discord.NotFound):
-                await message.delete(delay=GateConf.bot_message_delete_delay)
-                return
-
-        # Then check is member moderator+, because we don't want to delete their messages.
-        if any(role.id in MODERATION_ROLES for role in message.author.roles) and is_verify_command is False:
-            log.trace(f"Excluding moderator message {message.id} from deletion in #{message.channel}.")
-            return
-
-        with suppress(discord.NotFound):
-            await message.delete()
-
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         """Pings a user if they've never joined the voice chat before and aren't voice verified."""
@@ -341,6 +225,17 @@ class VoiceGate(Cog):
         """Check for & ignore any InWhitelistCheckFailure."""
         if isinstance(error, InWhitelistCheckFailure):
             error.handled = True
+
+    @command(name="prepare_voice")
+    @has_any_role(*MODERATION_ROLES)
+    async def prepare_voice_button(self, ctx: Context, channel: TextChannel | None, *, text: str) -> None:
+        """Sends a message that includes the Voice Verify button. Should only need to be run once."""
+        if channel is None:
+            await ctx.send(text, view=VerifyView(self.bot))
+        elif not channel.permissions_for(ctx.author).send_messages:
+            await ctx.send("You don't have permission to send messages to that channel.")
+        else:
+            await channel.send(text, view=VerifyView(self.bot))
 
 
 async def setup(bot: Bot) -> None:
