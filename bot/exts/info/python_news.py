@@ -7,6 +7,7 @@ import feedparser
 from bs4 import BeautifulSoup
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop
+from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot
@@ -40,7 +41,6 @@ class PythonNews(Cog):
         self.bot = bot
         self.webhook_names = {}
         self.webhook: discord.Webhook | None = None
-        self.fetch_new_media.start()
         self.seen_items: dict[str, set[str]] = {}
 
     async def cog_unload(self) -> None:
@@ -49,8 +49,6 @@ class PythonNews(Cog):
 
     async def get_webhooks(self) -> None:
         """Get webhook author names from maillist API."""
-        await self.bot.wait_until_guild_available()
-
         async with self.bot.http_session.get("https://mail.python.org/archives/api/lists") as resp:
             lists = await resp.json()
 
@@ -63,12 +61,12 @@ class PythonNews(Cog):
     @loop(minutes=20)
     async def fetch_new_media(self) -> None:
         """Fetch new mailing list messages and then new PEPs."""
+        await self.bot.wait_until_guild_available()
         if not self.webhook:
             await self.get_webhooks()
 
         await self.post_maillist_news()
         await self.post_pep_news()
-
 
     @staticmethod
     def escape_markdown(content: str) -> str:
@@ -80,15 +78,10 @@ class PythonNews(Cog):
 
     async def post_pep_news(self) -> None:
         """Fetch new PEPs and when they don't have announcement in #python-news, create it."""
-        # Wait until everything is ready and http_session available
-        await self.bot.wait_until_guild_available()
-
         async with self.bot.http_session.get(PEPS_RSS_URL) as resp:
             data = feedparser.parse(await resp.text("utf-8"))
 
-        news_listing = await self.bot.api_client.get("bot/bot-settings/news")
-        payload = news_listing.copy()
-        pep_numbers = news_listing["data"]["pep"]
+        pep_numbers = self.seen_items["pep"]
 
         # Reverse entries to send oldest first
         data["entries"].reverse()
@@ -125,21 +118,25 @@ class PythonNews(Cog):
                 avatar_url=AVATAR_URL,
                 wait=True,
             )
-            payload["data"]["pep"].append(pep_nr)
 
-            # Increase overall PEP new stat
-            self.bot.stats.incr("python_news.posted.pep")
+            try:
+                # Update the seen peps in DB
+                await self.bot.api_client.post("bot/mailing-lists/pep/seen-items", json=pep_nr)
+                # Increase overall PEP new stat
+                self.bot.stats.incr("python_news.posted.pep")
+                self.seen_items["pep"].add(pep_nr)
 
-            if msg.channel.is_news():
-                log.trace("Publishing PEP announcement because it was in a news channel")
-                await msg.publish()
-
-        # Apply new sent news to DB to avoid duplicate sending
-        await self.bot.api_client.put("bot/bot-settings/news", json=payload)
+                if msg.channel.is_news():
+                    log.trace("Publishing PEP announcement because it was in a news channel")
+                    await msg.publish()
+            except ResponseCodeError as e:
+                non_field_errors = e.response_json.get("non_field_errors", [])
+                if non_field_errors == ["Seen item already known."]:
+                    continue
+                raise e
 
     async def post_maillist_news(self) -> None:
         """Send new maillist threads to #python-news that is listed in configuration."""
-        await self.bot.wait_until_guild_available()
         existing_news = await self.bot.api_client.get("bot/bot-settings/news")
         payload = existing_news.copy()
 
@@ -225,9 +222,11 @@ class PythonNews(Cog):
 
     async def cog_load(self) -> None:
         """Load all existing seen items from db."""
-        response = await self.bot.api_client.get("/bot/mailing-lists")
+        response = await self.bot.api_client.get("bot/mailing-lists")
         for mailing_list in response:
             self.seen_items[mailing_list["name"]] = set(mailing_list["seen_items"])
+
+        self.fetch_new_media.start()
 
 
 async def setup(bot: Bot) -> None:
