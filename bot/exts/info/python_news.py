@@ -137,10 +137,12 @@ class PythonNews(Cog):
 
     async def post_maillist_news(self) -> None:
         """Send new maillist threads to #python-news that is listed in configuration."""
-        existing_news = await self.bot.api_client.get("bot/bot-settings/news")
-        payload = existing_news.copy()
-
         for maillist in constants.PythonNews.mail_lists:
+            if maillist not in self.seen_items:
+                # If for some reason we have a mailing list that isn't tracked.
+                log.warning("Mailing list %s doesn't exist in the database", maillist)
+                continue
+
             async with self.bot.http_session.get(RECENT_THREADS_TEMPLATE.format(name=maillist)) as resp:
                 recents = BeautifulSoup(await resp.text(), features="lxml")
 
@@ -165,8 +167,9 @@ class PythonNews(Cog):
                     log.warning(f"Invalid datetime from Thread email: {email_information['date']}")
                     continue
 
+                thread_id = thread_information["thread_id"]
                 if (
-                        thread_information["thread_id"] in existing_news["data"][maillist]
+                        thread_id in self.seen_items[maillist]
                         or "Re: " in thread_information["subject"]
                         or new_date.date() < datetime.now(tz=UTC).date()
                 ):
@@ -198,16 +201,21 @@ class PythonNews(Cog):
                     avatar_url=AVATAR_URL,
                     wait=True,
                 )
-                payload["data"][maillist].append(thread_information["thread_id"])
+                try:
+                    await self.bot.api_client.post(f"bot/mailing-lists/{maillist}/seen-items", json=thread_id)
+                    self.seen_items[maillist].add(thread_id)
+                    # Increase this specific maillist counter in stats
+                    self.bot.stats.incr(f"python_news.posted.{maillist.replace('-', '_')}")
 
-                # Increase this specific maillist counter in stats
-                self.bot.stats.incr(f"python_news.posted.{maillist.replace('-', '_')}")
+                    if msg.channel.is_news():
+                        log.trace("Publishing mailing list message because it was in a news channel")
+                        await msg.publish()
+                except ResponseCodeError as e:
+                    non_field_errors = e.response_json.get("non_field_errors", [])
+                    if non_field_errors == ["Seen item already known."]:
+                        continue
+                    raise e
 
-                if msg.channel.is_news():
-                    log.trace("Publishing mailing list message because it was in a news channel")
-                    await msg.publish()
-
-        await self.bot.api_client.put("bot/bot-settings/news", json=payload)
 
     async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> tuple[t.Any, t.Any]:
         """Get mail thread and first mail from mail.python.org based on `maillist` and `thread_identifier`."""
