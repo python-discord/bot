@@ -118,22 +118,10 @@ class PythonNews(Cog):
                 avatar_url=AVATAR_URL,
                 wait=True,
             )
-
-            try:
-                # Update the seen peps in DB
-                await self.bot.api_client.post("bot/mailing-lists/pep/seen-items", json=pep_nr)
-                # Increase overall PEP new stat
-                self.bot.stats.incr("python_news.posted.pep")
-                self.seen_items["pep"].add(pep_nr)
-
-                if msg.channel.is_news():
-                    log.trace("Publishing PEP announcement because it was in a news channel")
-                    await msg.publish()
-            except ResponseCodeError as e:
-                non_field_errors = e.response_json.get("non_field_errors", [])
-                if non_field_errors == ["Seen item already known."]:
-                    continue
-                raise e
+            pep_successfully_added = await self.add_item_to_mail_list("pep", pep_nr)
+            if pep_successfully_added and msg.channel.is_news():
+                log.trace("Publishing PEP announcement because it was in a news channel")
+                await msg.publish()
 
     async def post_maillist_news(self) -> None:
         """Send new maillist threads to #python-news that is listed in configuration."""
@@ -201,21 +189,30 @@ class PythonNews(Cog):
                     avatar_url=AVATAR_URL,
                     wait=True,
                 )
-                try:
-                    await self.bot.api_client.post(f"bot/mailing-lists/{maillist}/seen-items", json=thread_id)
-                    self.seen_items[maillist].add(thread_id)
-                    # Increase this specific maillist counter in stats
-                    self.bot.stats.incr(f"python_news.posted.{maillist.replace('-', '_')}")
+                thread_successfully_added = await self.add_item_to_mail_list(maillist, thread_id)
+                if thread_successfully_added and msg.channel.is_news():
+                    log.trace("Publishing mailing list message because it was in a news channel")
+                    await msg.publish()
 
-                    if msg.channel.is_news():
-                        log.trace("Publishing mailing list message because it was in a news channel")
-                        await msg.publish()
-                except ResponseCodeError as e:
-                    non_field_errors = e.response_json.get("non_field_errors", [])
-                    if non_field_errors == ["Seen item already known."]:
-                        continue
-                    raise e
+    async def add_item_to_mail_list(self, mail_list: str, item_identifier: str) -> bool:
+        """Adds a new item to a particular mailing_list."""
+        try:
+            await self.bot.api_client.post(f"bot/mailing-lists/{mail_list}/seen-items", json=item_identifier)
+            self.seen_items[mail_list].add(item_identifier)
+            # Increase this specific mailing list counter in stats
+            self.bot.stats.incr(f"python_news.posted.{mail_list.replace('-', '_')}")
+            return True
 
+        except ResponseCodeError as e:
+            non_field_errors = e.response_json.get("non_field_errors", [])
+            if non_field_errors != ["Seen item already known."]:
+                raise e
+            log.trace(
+                "Item %s has already been seen in the following mailing list: %s",
+                item_identifier,
+                mail_list
+            )
+            return False
 
     async def get_thread_and_first_mail(self, maillist: str, thread_identifier: str) -> tuple[t.Any, t.Any]:
         """Get mail thread and first mail from mail.python.org based on `maillist` and `thread_identifier`."""
