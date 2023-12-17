@@ -226,10 +226,15 @@ class PythonNews(Cog):
         return thread_information, email_information
 
     async def cog_load(self) -> None:
-        """Load all existing seen items from db."""
+        """Load all existing seen items from db and create any missing mailing lists."""
         response = await self.bot.api_client.get("bot/mailing-lists")
         for mailing_list in response:
             self.seen_items[mailing_list["name"]] = set(mailing_list["seen_items"])
+
+        for mailing_list in ("pep", *constants.PythonNews.mail_lists):
+            if mailing_list not in self.seen_items:
+                await self.bot.api_client.post("bot/mailing-lists", json={"name": mailing_list})
+                self.seen_items[mailing_list] = set()
 
         self.fetch_new_media.start()
 
