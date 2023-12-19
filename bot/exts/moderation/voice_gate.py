@@ -1,5 +1,3 @@
-import asyncio
-from contextlib import suppress
 from datetime import timedelta
 
 import arrow
@@ -10,8 +8,7 @@ from discord.ext.commands import Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
 
 from bot.bot import Bot
-from bot.constants import Bot as BotConfig, Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
-from bot.decorators import has_no_roles, in_whitelist
+from bot.constants import Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils.checks import InWhitelistCheckFailure
@@ -37,14 +34,14 @@ MESSAGE_FIELD_MAP = {
 
 VOICE_PING = (
     "Wondering why you can't talk in the voice channels? "
-    f"Use the `{BotConfig.prefix}voiceverify` command in here to verify. "
+    "Click the Voice Verify button in here to verify. "
     "If you don't yet qualify, you'll be told why!"
 )
 
 VOICE_PING_DM = (
     "Wondering why you can't talk in the voice channels? "
-    f"Use the `{BotConfig.prefix}voiceverify` command in "
-    "{channel_mention} to verify. If you don't yet qualify, you'll be told why!"
+    "Click the Voice Verify button in the {channel_mention} channel to verify. "
+    "If you don't yet qualify, you'll be told why!"
 )
 
 
@@ -70,7 +67,7 @@ class VerifyView(discord.ui.View):
                     "Please try again shortly. "
                     "If this problem persists, please contact the server staff through ModMail."),
                     ephemeral=True,
-                    delete_after=15,
+                    delete_after=GateConf.delete_after_delay,
                 )
                 log.info(f"Unable to find Metricity data about {interaction.user} ({interaction.user.id})")
             else:
@@ -78,9 +75,19 @@ class VerifyView(discord.ui.View):
                     "We encountered an error while attempting to find data for your user. "
                     "Please try again and let us know if the problem persists."),
                     ephemeral=True,
-                    delete_after=15,
+                    delete_after=GateConf.delete_after_delay,
                 )
                 log.warning(f"Got response code {err.status} while trying to get {interaction.user.id} Metricity data.")
+            return
+
+        if interaction.user.get_role(Roles.voice_verified):
+            await interaction.response.send_message((
+                "You have already verified! "
+                "If you have received this message in error, "
+                "please send a message to the ModMail bot."),
+                ephemeral=True,
+                delete_after=GateConf.delete_after_delay,
+            )
             return
 
         checks = {
@@ -93,30 +100,42 @@ class VerifyView(discord.ui.View):
         }
 
         failed = any(checks.values())
-        failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
-        for key, value in checks.items():
-            if value:
-                self.bot.stats.incr(f"voice_gate.failed.{key}")
+
 
         if failed:
+            failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
+            for key, value in checks.items():
+                if value:
+                    self.bot.stats.incr(f"voice_gate.failed.{key}")
+
             embed = discord.Embed(
                 title="Voice Gate failed",
                 description=FAILED_MESSAGE.format(reasons="\n".join(f"• You {reason}." for reason in failed_reasons)),
                 color=Colour.red()
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+            await interaction.response.send_message(
+                embed=embed,
+                ephemeral=True,
+                delete_after=GateConf.delete_after_delay,
+            )
             return
 
         embed = discord.Embed(
             title="Voice gate passed",
             description="You have been granted permission to use voice channels in Python Discord.",
-            color=Colour.green()
+            color=Colour.green(),
         )
 
+        # interaction.user.voice will return None if the user is not in a voice channel
         if interaction.user.voice:
             embed.description += "\n\nPlease reconnect to your voice channel to be granted your new permissions."
 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=True,
+            delete_after=GateConf.delete_after_delay,
+        )
         await interaction.user.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
         self.bot.stats.incr("voice_gate.passed")
 
@@ -126,7 +145,7 @@ class VoiceGate(Cog):
 
     # RedisCache[discord.User.id | discord.Member.id, discord.Message.id | int]
     # The cache's keys are the IDs of members who are verified or have joined a voice channel
-    # The cache's values are either the message ID of the ping message or 0 (NO_MSG) if no message is present
+    # The cache's values are set to 0, as we only need to track which users have connected before
     redis_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
@@ -141,65 +160,43 @@ class VoiceGate(Cog):
         """Get the currently loaded ModLog cog instance."""
         return self.bot.get_cog("ModLog")
 
-    @redis_cache.atomic_transaction  # Fully process each call until starting the next
-    async def _delete_ping(self, member_id: int) -> None:
-        """
-        If `redis_cache` holds a message ID for `member_id`, delete the message.
-
-        If the message was deleted, the value under the `member_id` key is then set to `NO_MSG`.
-        When `member_id` is not in the cache, or has a value of `NO_MSG` already, this function
-        does nothing.
-        """
-        if message_id := await self.redis_cache.get(member_id):
-            log.trace(f"Removing voice gate reminder message for user: {member_id}")
-            with suppress(discord.NotFound):
-                await self.bot.http.delete_message(Channels.voice_gate, message_id)
-            await self.redis_cache.set(member_id, NO_MSG)
-        else:
-            log.trace(f"Voice gate reminder message for user {member_id} was already removed")
-
     @redis_cache.atomic_transaction
-    async def _ping_newcomer(self, member: discord.Member) -> tuple:
-        """
-        See if `member` should be sent a voice verification notification, and send it if so.
-
-        Returns (False, None) if the notification was not sent. This happens when:
-        * The `member` has already received the notification
-        * The `member` is already voice-verified
-
-        Otherwise, the notification message ID is stored in `redis_cache` and return (True, channel).
-        channel is either [discord.TextChannel, discord.DMChannel].
-        """
+    async def _ping_newcomer(self, member: discord.Member) -> None:
+        """See if `member` should be sent a voice verification notification, and send it if so."""
         if await self.redis_cache.contains(member.id):
             log.trace("User already in cache. Ignore.")
-            return False, None
+            return
 
         log.trace("User not in cache and is in a voice channel.")
-        verified = any(Roles.voice_verified == role.id for role in member.roles)
-        if verified:
+        if member.get_role(Roles.voice_verified):
             log.trace("User is verified, add to the cache and ignore.")
             await self.redis_cache.set(member.id, NO_MSG)
-            return False, None
-
+            return
         log.trace("User is unverified. Send ping.")
-
         await self.bot.wait_until_guild_available()
         voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
 
         try:
-            message = await member.send(VOICE_PING_DM.format(channel_mention=voice_verification_channel.mention))
+            await member.send(VOICE_PING_DM.format(channel_mention=voice_verification_channel.mention))
         except discord.Forbidden:
             log.trace("DM failed for Voice ping message. Sending in channel.")
-            message = await voice_verification_channel.send(f"Hello, {member.mention}! {VOICE_PING}")
+            await voice_verification_channel.send(
+                f"Hello, {member.mention}! {VOICE_PING}",
+                delete_after=GateConf.delete_after_delay,
+            )
 
-        await self.redis_cache.set(member.id, message.id)
-        return True, message.channel
+        await self.redis_cache.set(member.id, NO_MSG)
+        log.trace("User added to cache to not be pinged again.")
 
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         """Pings a user if they've never joined the voice chat before and aren't voice verified."""
         if member.bot:
             log.trace("User is a bot. Ignore.")
+            return
+
+        if member.get_role(Roles.voice_verified):
+            log.trace("User already verified. Ignore")
             return
 
         # member.voice will return None if the user is not in a voice channel
@@ -213,13 +210,7 @@ class VoiceGate(Cog):
 
         # To avoid race conditions, checking if the user should receive a notification
         # and sending it if appropriate is delegated to an atomic helper
-        notification_sent, message_channel = await self._ping_newcomer(member)
-
-        # Schedule the channel ping notification to be deleted after the configured delay, which is
-        # again delegated to an atomic helper
-        if notification_sent and isinstance(message_channel, discord.TextChannel):
-            await asyncio.sleep(GateConf.voice_ping_delete_delay)
-            await self._delete_ping(member.id)
+        await self._ping_newcomer(member)
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Check for & ignore any InWhitelistCheckFailure."""
