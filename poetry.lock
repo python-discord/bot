@@ -2023,13 +2023,13 @@ files = [
 
 [[package]]
 name = "sentry-sdk"
-version = "1.39.0"
+version = "1.39.1"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = "*"
 files = [
-    {file = "sentry-sdk-1.39.0.tar.gz", hash = "sha256:67f62238af273eebd6432f85116dc6cd5422d4bc02df886514e8139e755f48e4"},
-    {file = "sentry_sdk-1.39.0-py2.py3-none-any.whl", hash = "sha256:9d3644b7c36a2c290f0d3275cba250202773f37545ef9097c8bcf561c6f5cdea"},
+    {file = "sentry-sdk-1.39.1.tar.gz", hash = "sha256:320a55cdf9da9097a0bead239c35b7e61f53660ef9878861824fd6d9b2eaf3b5"},
+    {file = "sentry_sdk-1.39.1-py2.py3-none-any.whl", hash = "sha256:81b5b9ffdd1a374e9eb0c053b5d2012155db9cbe76393a8585677b753bd5fdc1"},
 ]
 
 [package.dependencies]
@@ -2055,7 +2055,7 @@ huey = ["huey (>=2)"]
 loguru = ["loguru (>=0.5)"]
 opentelemetry = ["opentelemetry-distro (>=0.35b0)"]
 opentelemetry-experimental = ["opentelemetry-distro (>=0.40b0,<1.0)", "opentelemetry-instrumentation-aiohttp-client (>=0.40b0,<1.0)", "opentelemetry-instrumentation-django (>=0.40b0,<1.0)", "opentelemetry-instrumentation-fastapi (>=0.40b0,<1.0)", "opentelemetry-instrumentation-flask (>=0.40b0,<1.0)", "opentelemetry-instrumentation-requests (>=0.40b0,<1.0)", "opentelemetry-instrumentation-sqlite3 (>=0.40b0,<1.0)", "opentelemetry-instrumentation-urllib (>=0.40b0,<1.0)"]
-pure-eval = ["asttokens", "executing", "pure_eval"]
+pure-eval = ["asttokens", "executing", "pure-eval"]
 pymongo = ["pymongo (>=3.1)"]
 pyspark = ["pyspark (>=2.4.4)"]
 quart = ["blinker (>=1.1)", "quart (>=0.16.1)"]
@@ -2370,4 +2370,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "95272e620e9e70d404a695663d426f393fd1ee9c16b3850b709098013f8dae3d"
+content-hash = "93a1909e8507c6bc7662354c09c59e72263c0c601a8b908015a5255b9703b7dd"
