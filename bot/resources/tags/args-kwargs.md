@@ -11,9 +11,9 @@ These special parameters allow functions to take arbitrary amounts of positional
 `**kwargs` will ingest an arbitrary amount of **keyword arguments**, and store it in a dictionary. There can be **no** additional parameters **after** `**kwargs` in the parameter list.
 
 **Use cases**  
-• **Decorators** (see `/tag decorators`)  
-• **Inheritance** (overriding methods)  
-• **Future proofing** (in the case of the first two bullet points, if the parameters change, your code won't break)  
-• **Flexibility** (writing functions that behave like `dict()` or `print()`)  
+- **Decorators** (see `/tag decorators`)  
+- **Inheritance** (overriding methods)  
+- **Future proofing** (in the case of the first two bullet points, if the parameters change, your code won't break)  
+- **Flexibility** (writing functions that behave like `dict()` or `print()`)  
 
 *See* `/tag positional-keyword` *for information about positional and keyword arguments*

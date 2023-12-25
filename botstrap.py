@@ -176,7 +176,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
 
     all_roles = discord_client.get_all_roles()
 
-    for role_name in _Roles.__fields__:
+    for role_name in _Roles.model_fields:
 
         role_id = all_roles.get(role_name, None)
         if not role_id:
@@ -209,7 +209,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
         python_help_channel_id = discord_client.create_forum_channel(python_help_channel_name, python_help_category_id)
         all_channels[PYTHON_HELP_CHANNEL_NAME] = python_help_channel_id
 
-    for channel_name in _Channels.__fields__:
+    for channel_name in _Channels.model_fields:
         channel_id = all_channels.get(channel_name, None)
         if not channel_id:
             log.warning(
@@ -222,7 +222,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
 
     config_str += "\n#Categories\n"
 
-    for category_name in _Categories.__fields__:
+    for category_name in _Categories.model_fields:
         category_id = all_categories.get(category_name, None)
         if not category_id:
             log.warning(

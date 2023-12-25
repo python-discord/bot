@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -20,7 +21,6 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_in_category, is_mod_channel
-from bot.utils.members import get_or_fetch_member
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -299,8 +299,8 @@ class ModManagement(commands.Cog):
             user_str = escape_markdown(str(user))
         else:
             if infraction_list:
-                user = infraction_list[0]["user"]
-                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+                user_data = infraction_list[0]["user"]
+                user_str = escape_markdown(user_data["name"]) + f"#{user_data['discriminator']:04}"
             else:
                 user_str = str(user.id)
 

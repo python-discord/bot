@@ -16,8 +16,16 @@ from bot.utils.messages import format_user
 from bot.utils.time import TimestampFormats, discord_timestamp
 from tests.base import RedisTestCase
 from tests.helpers import (
-    MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
-    MockUser, no_create_task
+    MockAsyncWebhook,
+    MockAttachment,
+    MockBot,
+    MockMember,
+    MockMessage,
+    MockReaction,
+    MockRole,
+    MockTextChannel,
+    MockUser,
+    no_create_task,
 )
 
 CURRENT_TIME = datetime.datetime(2022, 1, 1, tzinfo=datetime.UTC)

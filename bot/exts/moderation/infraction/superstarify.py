@@ -6,6 +6,7 @@ from pathlib import Path
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
 from discord.utils import escape_markdown
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -15,7 +16,6 @@ from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
