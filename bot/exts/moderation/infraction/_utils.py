@@ -1,4 +1,3 @@
-
 import arrow
 import discord
 from discord import ButtonStyle, Interaction
@@ -291,7 +290,7 @@ class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
     @discord.ui.button(label="Confirm", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "confirm" button is pressed."""
-        await interaction.response.defer() # `ViewWithuserAndRoleCheck` view will remove the buttons
+        await interaction.response.defer()
 
         self.confirmed = True
         self.stop()

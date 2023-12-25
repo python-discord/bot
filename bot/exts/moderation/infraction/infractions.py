@@ -503,13 +503,14 @@ class Infractions(InfractionScheduler, commands.Cog):
         async def action() -> None:
             await ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
 
+        # If user has an elevated role (staff, partner, or community), require
+        # confirmation before banning.
         if isinstance(user, Member) and any(role.id in constants.STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
             confirmation_view = _utils.StaffBanConfirmationView(
                 allowed_users=(ctx.author.id,),
                 allowed_roles=constants.MODERATION_ROLES,
                 timeout=10,
             )
-
             confirmation_view.message = await ctx.send(
                 f"{user} has an elevated role. Are you sure you want to ban them?",
                 view=confirmation_view
@@ -517,27 +518,13 @@ class Infractions(InfractionScheduler, commands.Cog):
 
             timed_out = await confirmation_view.wait()
             if timed_out:
-                log.trace(
-                    "Attempted ban of user %s by moderator %s cancelled due to timeout.",
-                    str(user),
-                    str(ctx.author),
-                )
-
+                log.trace(f"Attempted ban of user {user} by moderator {ctx.author} cancelled due to timeout.")
                 return None
 
             if confirmation_view.confirmed is False:
-                log.trace(
-                    "Attempted ban of user %s by moderator %s cancelled due to manual cancel.",
-                    str(user),
-                    str(ctx.author),
-                )
-
+                log.trace(f"Attempted ban of user {user} by moderator {ctx.author} cancelled due to manual cancel.")
                 return None
 
-        # There are a few ways we could get here:
-        # The user was not a member, which means they can't be staff
-        # The user was a member and not staff, so just ban them
-        # The user was a staff and the ban was confirmed
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
             return None
