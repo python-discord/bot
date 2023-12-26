@@ -359,7 +359,6 @@ class _VoiceGate(EnvConfig, env_prefix="voice_gate_"):
     minimum_messages: int = 50
 
 
-
 VoiceGate = _VoiceGate()
 
 
