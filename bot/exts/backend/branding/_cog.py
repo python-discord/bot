@@ -592,8 +592,24 @@ class Branding(commands.Cog):
         log.info("Performing command-requested event cache refresh.")
 
         async with ctx.typing():
-            available_events = await self.repository.get_events()
-            await self.populate_cache_events(available_events)
+            try:
+                available_events = await self.repository.get_events()
+            except Exception:
+                log.exception("Refresh aborted: failed to fetch events.")
+                resp = make_embed(
+                    "Refresh aborted",
+                    "Failed to fetch events. See log for details.",
+                    success=False,
+                )
+            else:
+                await self.populate_cache_events(available_events)
+                resp = make_embed(
+                    "Refresh successful",
+                    "The event calendar has been refreshed.",
+                    success=True,
+                )
+
+        await ctx.send(embed=resp)
 
         await ctx.invoke(self.branding_calendar_group)
 
