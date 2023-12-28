@@ -85,6 +85,7 @@ retry_on_server_error = backoff.on_exception(
     backoff.expo,
     GitHubServerError,
     max_tries=5,
+    jitter=None,
 )
 
 
