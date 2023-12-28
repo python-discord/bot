@@ -342,13 +342,13 @@ class Branding(commands.Cog):
         """
         log.debug("Synchronise: fetching current event.")
 
-        current_event, available_events = await self.repository.get_current_event()
+        try:
+            current_event, available_events = await self.repository.get_current_event()
+        except Exception:
+            log.exception("Synchronisation aborted: failed to fetch events.")
+            return False, False
 
         await self.populate_cache_events(available_events)
-
-        if current_event is None:
-            log.error("Failed to fetch event. Cannot synchronise!")
-            return False, False
 
         return await self.enter_event(current_event)
 
@@ -432,10 +432,6 @@ class Branding(commands.Cog):
         new_event, available_events = await self.repository.get_current_event()
 
         await self.populate_cache_events(available_events)
-
-        if new_event is None:
-            log.warning("Daemon main: failed to get current event from branding repository, will do nothing.")
-            return
 
         if new_event.path != await self.cache_information.get("event_path"):
             log.debug("Daemon main: new event detected!")

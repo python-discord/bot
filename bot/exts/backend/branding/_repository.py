@@ -202,14 +202,14 @@ class BrandingRepository:
 
         return instances
 
-    async def get_current_event(self) -> tuple[Event | None, list[Event]]:
+    async def get_current_event(self) -> tuple[Event, list[Event]]:
         """
         Get the currently active event, or the fallback event.
 
         The second return value is a list of all available events. The caller may discard it, if not needed.
         Returning all events alongside the current one prevents having to query the API twice in some cases.
 
-        The current event may be None in the case that no event is active, and no fallback event is found.
+        If no event is active and the fallback event cannot be found, raise an error.
         """
         utc_now = datetime.now(tz=UTC)
         log.debug(f"Finding active event for: {utc_now}.")
@@ -232,5 +232,4 @@ class BrandingRepository:
             if event.meta.is_fallback:
                 return event, available_events
 
-        log.warning("No event is currently active and no fallback event was found!")
-        return None, available_events
+        raise RuntimeError("No event is currently active and no fallback event was found!")
