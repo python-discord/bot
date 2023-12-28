@@ -186,26 +186,19 @@ class BrandingRepository:
         """
         Discover available events in the branding repository.
 
-        Misconfigured events are skipped. May return an empty list in the catastrophic case.
+        Propagate errors if an event fails to fetch or deserialize. Such errors cannot be handled
+        and the operation should be retried in the future.
         """
         log.debug("Discovering events in branding repository.")
 
-        try:
-            event_directories = await self.fetch_directory("events", types=("dir",))  # Skip files.
-        except Exception:
-            log.exception("Failed to fetch 'events' directory.")
-            return []
+        event_directories = await self.fetch_directory("events", types=("dir",))  # Skip files.
 
         instances: list[Event] = []
 
         for event_directory in event_directories.values():
-            log.trace(f"Attempting to construct event from directory: '{event_directory.path}'.")
-            try:
-                instance = await self.construct_event(event_directory)
-            except Exception as exc:
-                log.warning(f"Could not construct event '{event_directory.path}'.", exc_info=exc)
-            else:
-                instances.append(instance)
+            log.trace(f"Reading event directory: '{event_directory.path}'.")
+            instance = await self.construct_event(event_directory)
+            instances.append(instance)
 
         return instances
 
