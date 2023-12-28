@@ -119,7 +119,7 @@ class BrandingRepository:
         """
         log.trace(f"Response status: {response.status}")
         if response.status >= 500:
-            raise GitHubServerError()
+            raise GitHubServerError
         response.raise_for_status()
 
     @retry_on_server_error
