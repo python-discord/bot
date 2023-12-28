@@ -81,6 +81,13 @@ class GitHubServerError(Exception):
     """
 
 
+retry_on_server_error = backoff.on_exception(
+    backoff.expo,
+    GitHubServerError,
+    max_tries=5,
+)
+
+
 class BrandingRepository:
     """
     Branding repository abstraction.
@@ -114,7 +121,7 @@ class BrandingRepository:
             raise GitHubServerError()
         response.raise_for_status()
 
-    @backoff.on_exception(backoff.expo, GitHubServerError, max_tries=5)
+    @retry_on_server_error
     async def fetch_directory(self, path: str, types: t.Container[str] = ("file", "dir")) -> dict[str, RemoteObject]:
         """
         Fetch directory found at `path` in the branding repository.
@@ -132,7 +139,7 @@ class BrandingRepository:
 
         return {file["name"]: RemoteObject(file) for file in json_directory if file["type"] in types}
 
-    @backoff.on_exception(backoff.expo, GitHubServerError, max_tries=5)
+    @retry_on_server_error
     async def fetch_file(self, download_url: str) -> bytes:
         """
         Fetch file as bytes from `download_url`.
