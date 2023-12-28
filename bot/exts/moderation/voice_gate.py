@@ -6,6 +6,7 @@ from async_rediscache import RedisCache
 from discord import Colour, Member, TextChannel, VoiceState
 from discord.ext.commands import Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot.bot import Bot
 from bot.constants import Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
@@ -99,9 +100,10 @@ class VoiceVerificationView(discord.ui.View):
         failed = any(checks.values())
 
         if failed:
-            failed_reasons = [MESSAGE_FIELD_MAP[key] for key, value in checks.items() if value is True]
+            failed_reasons = []
             for key, value in checks.items():
-                if value:
+                if value is True:
+                    failed_reasons.append(MESSAGE_FIELD_MAP[key])
                     self.bot.stats.incr(f"voice_gate.failed.{key}")
 
             embed = discord.Embed(
@@ -161,7 +163,7 @@ class VoiceGate(Cog):
 
         log.trace("User %s is unverified and has not been pinged before. Sending ping.", member.id)
         await self.bot.wait_until_guild_available()
-        voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
+        voice_verification_channel = await get_or_fetch_channel(self.bot, Channels.voice_gate)
 
         await voice_verification_channel.send(
             f"Hello, {member.mention}! {VOICE_PING}",
