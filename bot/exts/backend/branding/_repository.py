@@ -1,7 +1,9 @@
 import typing as t
 from datetime import UTC, date, datetime
 
+import backoff
 import frontmatter
+from aiohttp import ClientResponse
 
 from bot.bot import Bot
 from bot.constants import Keys
@@ -71,6 +73,14 @@ class Event(t.NamedTuple):
         return f"<Event at '{self.path}'>"
 
 
+class GitHubServerError(Exception):
+    """
+    GitHub request has failed due to a server error.
+
+    Such requests shall be retried.
+    """
+
+
 class BrandingRepository:
     """
     Branding repository abstraction.
@@ -93,6 +103,18 @@ class BrandingRepository:
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
+    def _raise_for_status(self, response: ClientResponse) -> None:
+        """
+        Raise GitHubServerError if the response status is >= 500.
+
+        The server error indicates that the request shall be retried.
+        """
+        log.trace(f"Response status: {response.status}")
+        if response.status >= 500:
+            raise GitHubServerError()
+        response.raise_for_status()
+
+    @backoff.on_exception(backoff.expo, GitHubServerError, max_tries=5)
     async def fetch_directory(self, path: str, types: t.Container[str] = ("file", "dir")) -> dict[str, RemoteObject]:
         """
         Fetch directory found at `path` in the branding repository.
@@ -105,14 +127,12 @@ class BrandingRepository:
         log.debug(f"Fetching directory from branding repository: '{full_url}'.")
 
         async with self.bot.http_session.get(full_url, params=PARAMS, headers=HEADERS) as response:
-            if response.status != 200:
-                raise RuntimeError(f"Failed to fetch directory due to status: {response.status}")
-
-            log.debug("Fetch successful, reading JSON response.")
+            self._raise_for_status(response)
             json_directory = await response.json()
 
         return {file["name"]: RemoteObject(file) for file in json_directory if file["type"] in types}
 
+    @backoff.on_exception(backoff.expo, GitHubServerError, max_tries=5)
     async def fetch_file(self, download_url: str) -> bytes:
         """
         Fetch file as bytes from `download_url`.
@@ -122,10 +142,7 @@ class BrandingRepository:
         log.debug(f"Fetching file from branding repository: '{download_url}'.")
 
         async with self.bot.http_session.get(download_url, params=PARAMS, headers=HEADERS) as response:
-            if response.status != 200:
-                raise RuntimeError(f"Failed to fetch file due to status: {response.status}")
-
-            log.debug("Fetch successful, reading payload.")
+            self._raise_for_status(response)
             return await response.read()
 
     def parse_meta_file(self, raw_file: bytes) -> MetaFile:
