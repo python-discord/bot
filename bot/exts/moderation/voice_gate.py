@@ -72,7 +72,7 @@ class VoiceVerificationView(discord.ui.View):
                     ephemeral=True,
                     delete_after=GateConf.delete_after_delay,
                 )
-                log.info(f"Unable to find Metricity data about {interaction.user} ({interaction.user.id})")
+                log.info("Unable to find Metricity data about %s (%s)", interaction.user, interaction.user.id)
             else:
                 await interaction.response.send_message((
                     "We encountered an error while attempting to find data for your user. "
@@ -80,7 +80,11 @@ class VoiceVerificationView(discord.ui.View):
                     ephemeral=True,
                     delete_after=GateConf.delete_after_delay,
                 )
-                log.warning(f"Got response code {err.status} while trying to get {interaction.user.id} Metricity data.")
+                log.warning(
+                    "Got response code %s while trying to get %s Metricity data.",
+                    err.status,
+                    interaction.user.id
+                )
             return
 
         checks = {
@@ -152,10 +156,10 @@ class VoiceGate(Cog):
         """See if `member` should be sent a voice verification notification, and send it if so."""
         log.trace("User is not verified. Checking cache.")
         if await self.redis_cache.contains(member.id):
-            log.trace("User already in cache. Ignore.")
+            log.trace("User %s already in cache. Ignore.", member.id)
             return
 
-        log.trace("User is unverified and has not been pinged before. Sending ping.")
+        log.trace("User %s is unverified and has not been pinged before. Sending ping.", member.id)
         await self.bot.wait_until_guild_available()
         voice_verification_channel = self.bot.get_channel(Channels.voice_gate)
 
@@ -165,26 +169,26 @@ class VoiceGate(Cog):
         )
 
         await self.redis_cache.set(member.id, NO_MSG)
-        log.trace("User added to cache to not be pinged again.")
+        log.trace("User %s added to cache to not be pinged again.", member.id)
 
     @Cog.listener()
     async def on_voice_state_update(self, member: Member, before: VoiceState, after: VoiceState) -> None:
         """Pings a user if they've never joined the voice chat before and aren't voice verified."""
         if member.bot:
-            log.trace("User is a bot. Ignore.")
+            log.trace("User %s is a bot. Ignore.", member.id)
             return
 
         if member.get_role(Roles.voice_verified):
-            log.trace("User already verified. Ignore")
+            log.trace("User %s already verified. Ignore", member.id)
             return
 
         # member.voice will return None if the user is not in a voice channel
         if member.voice is None:
-            log.trace("User not in a voice channel. Ignore.")
+            log.trace("User %s not in a voice channel. Ignore.", member.id)
             return
 
         if isinstance(after.channel, discord.StageChannel):
-            log.trace("User joined a stage channel. Ignore.")
+            log.trace("User %s joined a stage channel. Ignore.", member.id)
             return
 
         # To avoid race conditions, checking if the user should receive a notification
