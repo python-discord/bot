@@ -611,8 +611,6 @@ class Branding(commands.Cog):
 
         await ctx.send(embed=resp)
 
-        await ctx.invoke(self.branding_calendar_group)
-
     # endregion
     # region: Command interface (branding daemon)
 
