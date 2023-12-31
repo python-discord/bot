@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Formatting code on discord"
+    title: "Formatting code on Discord"
 ---
 Here's how to format Python code on Discord:
 
