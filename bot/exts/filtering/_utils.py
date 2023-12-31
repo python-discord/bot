@@ -266,7 +266,7 @@ class CustomIOField:
         _handler: Callable[[Any], core_schema.CoreSchema],
     ) -> core_schema.CoreSchema:
         """Boilerplate for Pydantic."""
-        return core_schema.general_plain_validator_function(cls.validate)
+        return core_schema.with_info_plain_validator_function(cls.validate)
 
     @classmethod
     def validate(cls, v: Any, _info: core_schema.ValidationInfo) -> Self:
