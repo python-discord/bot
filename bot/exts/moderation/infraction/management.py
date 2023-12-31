@@ -299,8 +299,8 @@ class ModManagement(commands.Cog):
             user_str = escape_markdown(str(user))
         else:
             if infraction_list:
-                user = infraction_list[0]["user"]
-                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+                user_data = infraction_list[0]["user"]
+                user_str = escape_markdown(user_data["name"]) + f"#{user_data['discriminator']:04}"
             else:
                 user_str = str(user.id)
 

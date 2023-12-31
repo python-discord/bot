@@ -26,14 +26,14 @@ y ━━ 1
 ```
 **Names are created in multiple ways**  
 You might think that the only way to bind a name to an object is by using assignment, but that isn't the case. All of the following work exactly the same as assignment:  
-• `import` statements  
-• `class` and `def`  
-• `for` loop headers  
-• `as` keyword when used with `except`, `import`, and `with`  
-• formal parameters in function headers  
+- `import` statements  
+- `class` and `def`  
+- `for` loop headers  
+- `as` keyword when used with `except`, `import`, and `with`  
+- formal parameters in function headers  
 
 There is also `del` which has the purpose of *unbinding* a name.
 
 **More info**  
-• Please watch [Ned Batchelder's talk](https://youtu.be/_AEJHKGk9ns) on names in python for a detailed explanation with examples  
-• [Official documentation](https://docs.python.org/3/reference/executionmodel.html#naming-and-binding)
+- Please watch [Ned Batchelder's talk](https://youtu.be/_AEJHKGk9ns) on names in python for a detailed explanation with examples  
+- [Official documentation](https://docs.python.org/3/reference/executionmodel.html#naming-and-binding)

@@ -5,6 +5,7 @@ import importlib.util
 import inspect
 import pkgutil
 import types
+import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Callable, Iterable
@@ -15,6 +16,7 @@ from typing import Any, Self, TypeVar, Union, get_args, get_origin
 import discord
 import regex
 from discord.ext.commands import Command
+from pydantic import PydanticDeprecatedSince20
 from pydantic_core import core_schema
 
 import bot
@@ -181,11 +183,16 @@ class FieldRequiring(ABC):
 
         # If a new attribute with the value MUST_SET_UNIQUE was defined in an abstract class, record it.
         if inspect.isabstract(cls):
-            for attribute in dir(cls):
-                if getattr(cls, attribute, None) is FieldRequiring.MUST_SET_UNIQUE:
-                    if not inherited(attribute):
-                        # A new attribute with the value MUST_SET_UNIQUE.
-                        FieldRequiring.__unique_attributes[cls][attribute] = set()
+            with warnings.catch_warnings():
+                # The code below will raise a warning about the use the __fields__ attr on a pydantic model
+                # This will continue to be warned about until removed in pydantic 3.0
+                # This warning is a false-positive as only the custom MUST_SET_UNIQUE attr is used here
+                warnings.simplefilter("ignore", category=PydanticDeprecatedSince20)
+                for attribute in dir(cls):
+                    if getattr(cls, attribute, None) is FieldRequiring.MUST_SET_UNIQUE:
+                        if not inherited(attribute):
+                            # A new attribute with the value MUST_SET_UNIQUE.
+                            FieldRequiring.__unique_attributes[cls][attribute] = set()
             return
 
         for attribute in dir(cls):
