@@ -13,9 +13,9 @@ concurrency:
 
 
 jobs:
+
   lint-test:
     uses: ./.github/workflows/lint-test.yml
-
 
   generate-sha-tag:
     if: github.ref == 'refs/heads/main'
@@ -31,7 +31,6 @@ jobs:
 
 
   build-deploy:
-    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-deploy.yml
     needs:
       - lint-test

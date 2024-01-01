@@ -64,7 +64,8 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
         len(ctx.uploaded_attachments) > 0,
         ctx.content.count("\n") > 15
     )):
-        url = await upload_log(ctx.related_messages, bot.instance.user.id, ctx.uploaded_attachments)
+        to_upload = {ctx.message} | ctx.related_messages if ctx.message else ctx.related_messages
+        url = await upload_log(to_upload, bot.instance.user.id, ctx.uploaded_attachments)
         return f"A complete log of the offending messages can be found [here]({url})"
 
     alert_content = escape_markdown(ctx.content)
@@ -154,13 +155,13 @@ def format_response_error(e: ResponseCodeError) -> Embed:
     """Format the response error into an embed."""
     description = ""
     if isinstance(e.response_json, list):
-        description = "\n".join(f"• {error}" for error in e.response_json)
+        description = "\n".join(f"- {error}" for error in e.response_json)
     elif isinstance(e.response_json, dict):
         if "non_field_errors" in e.response_json:
             non_field_errors = e.response_json.pop("non_field_errors")
-            description += "\n".join(f"• {error}" for error in non_field_errors) + "\n"
+            description += "\n".join(f"- {error}" for error in non_field_errors) + "\n"
         for field, errors in e.response_json.items():
-            description += "\n".join(f"• {field} - {error}" for error in errors) + "\n"
+            description += "\n".join(f"- {field} - {error}" for error in errors) + "\n"
 
     description = description.strip()
     if len(description) > MAX_EMBED_DESCRIPTION:

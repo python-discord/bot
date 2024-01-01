@@ -1,4 +1,5 @@
 import datetime
+import io
 import json
 import re
 import unicodedata
@@ -17,12 +18,13 @@ from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, command, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Guild, MODERATION_ROLES, Roles
+from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
@@ -31,12 +33,19 @@ from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
-    build_filter_repr_dict, description_and_settings_converter, filter_overrides_for_ui, populate_embed_from_dict
+    build_filter_repr_dict,
+    description_and_settings_converter,
+    filter_overrides_for_ui,
+    populate_embed_from_dict,
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
 from bot.exts.filtering._ui.search import SearchEditView, search_criteria_converter
 from bot.exts.filtering._ui.ui import (
-    AlertView, ArgumentCompletionView, DeleteConfirmationView, build_mod_alert, format_response_error
+    AlertView,
+    ArgumentCompletionView,
+    DeleteConfirmationView,
+    build_mod_alert,
+    format_response_error,
 )
 from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
 from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_BAN_REASON
@@ -179,7 +188,7 @@ class Filtering(Cog):
                     extra_fields_type,
                     type_hints[field_name]
                 )
-                for field_name in extra_fields_type.__fields__
+                for field_name in extra_fields_type.model_fields
             }
 
     async def schedule_offending_messages_deletion(self) -> None:
@@ -231,6 +240,9 @@ class Filtering(Cog):
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         """Filter the contents of an edited message. Don't reinvoke filters already invoked on the `before` version."""
+        if before.author.bot or before.webhook_id or before.type == MessageType.auto_moderation_action:
+            return
+
         # Only check changes to the message contents/attachments and embed additions, not pin status etc.
         if all((
             before.content == after.content,  # content hasn't changed
@@ -255,7 +267,7 @@ class Filtering(Cog):
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
         """Checks for bad words in usernames when users join, switch or leave a voice channel."""
         ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
-        await self._check_bad_name(ctx)
+        await self._check_bad_display_name(ctx)
 
     @Cog.listener()
     async def on_thread_create(self, thread: Thread) -> None:
@@ -710,7 +722,8 @@ class Filtering(Cog):
 
         settings = (
             "remove_context=True "
-            "dm_pings=Moderators "
+            'guild_pings="" '
+            'dm_pings="" '
             "infraction_type=BAN "
             "infraction_channel=1 "  # Post the ban in #mod-alerts
             f"infraction_duration={COMP_BAN_DURATION.total_seconds()} "
@@ -748,7 +761,7 @@ class Filtering(Cog):
         setting_values = {}
         for settings_group in filter_list[list_type].defaults:
             for _, setting in settings_group.items():
-                setting_values.update(to_serializable(setting.dict(), ui_repr=True))
+                setting_values.update(to_serializable(setting.model_dump(), ui_repr=True))
 
         embed = Embed(colour=Colour.blue())
         populate_embed_from_dict(embed, setting_values)
@@ -1233,7 +1246,13 @@ class Filtering(Cog):
         for current_settings in (filter_.actions, filter_.validations):
             if current_settings:
                 for setting_entry in current_settings.values():
-                    settings.update({setting: None for setting in setting_entry.dict() if setting not in settings})
+                    settings.update(
+                        {
+                            setting: None
+                            for setting in setting_entry.model_dump()
+                            if setting not in settings
+                        }
+                    )
 
         # Even though the list ID remains unchanged, it still needs to be provided for correct serializer validation.
         list_id = filter_list[list_type].id
@@ -1289,7 +1308,7 @@ class Filtering(Cog):
         if not (differ_by_default <= override_matches):  # The overrides didn't cover for the default mismatches.
             return False
 
-        filter_settings = filter_.extra_fields.dict() if filter_.extra_fields else {}
+        filter_settings = filter_.extra_fields.model_dump() if filter_.extra_fields else {}
         # If the dict changes then some fields were not the same.
         return (filter_settings | filter_settings_query) == filter_settings
 
@@ -1396,11 +1415,14 @@ class Filtering(Cog):
 
         await self.send_weekly_auto_infraction_report()
 
-    async def send_weekly_auto_infraction_report(self, channel: discord.TextChannel | discord.Thread = None) -> None:
+    async def send_weekly_auto_infraction_report(
+        self,
+        channel: discord.TextChannel | discord.Thread | None = None,
+    ) -> None:
         """
         Send a list of auto-infractions added in the last 7 days to the specified channel.
 
-        If `channel` is not specified, it is sent to #mod-meta.
+        If `channel` is not specified, the report is sent to #mod-meta instead.
         """
         log.trace("Preparing weekly auto-infraction report.")
         seven_days_ago = arrow.utcnow().shift(days=-7)
@@ -1435,9 +1457,30 @@ class Filtering(Cog):
         if len(lines) == 1:
             lines.append("Nothing to show")
 
-        await channel.send("\n\n".join(lines))
-        log.info("Successfully sent auto-infraction report.")
+        report = "\n\n".join(lines)
+        try:
+            await channel.send(report)
+        except discord.HTTPException as e:
+            if e.code != 50035:  # Content too long
+                raise
+            report = discord.utils.remove_markdown(report)
+            file = PasteFile(content=report, lexer="text")
+            try:
+                resp = await send_to_paste_service(
+                    files=[file],
+                    http_session=self.bot.http_session,
+                    paste_url=BaseURLs.paste_url,
+                )
+                paste_resp = resp.link
+            except (ValueError, PasteTooLongError, PasteUploadError):
+                paste_resp = ":warning: Failed to upload report to paste service"
+            file_buffer = io.StringIO(report)
+            await channel.send(
+                f"**{lines[0]}**\n\n{paste_resp}",
+                file=discord.File(file_buffer, "last_weeks_autoban_filters.txt"),
+            )
 
+        log.info("Successfully sent auto-infraction report.")
     # endregion
 
     async def cog_unload(self) -> None:

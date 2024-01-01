@@ -19,7 +19,12 @@ class BotSource(commands.Cog):
         self.bot = bot
 
     @commands.command(name="source", aliases=("src",))
-    async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
+    async def source_command(
+        self,
+        ctx: commands.Context,
+        *,
+        source_item: SourceConverter = None,
+    ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
             embed = Embed(title="Bot's GitHub Repository")
@@ -64,7 +69,7 @@ class BotSource(commands.Cog):
 
         # Handle tag file location differently than others to avoid errors in some cases
         if not first_line_no:
-            file_location = Path(filename).relative_to("bot/")
+            file_location = Path(filename)
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 

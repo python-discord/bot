@@ -2,11 +2,11 @@ import re
 import textwrap
 import typing as t
 
-import arrow
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from discord.utils import escape_markdown
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -21,10 +21,22 @@ from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_in_category, is_mod_channel
-from bot.utils.members import get_or_fetch_member
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
+
+NO_DURATION_INFRACTIONS = ("note", "warning", "kick")
+
+FAILED_DM_SYMBOL = constants.Emojis.failmail
+HIDDEN_INFRACTION_SYMBOL = "🕵️"
+EDITED_DURATION_SYMBOL = "✏️"
+
+SYMBOLS_GUIDE = f"""
+Symbols guide:
+\u2003{FAILED_DM_SYMBOL} - The infraction DM failed to deliver.
+\u2003{HIDDEN_INFRACTION_SYMBOL} - The infraction is hidden.
+\u2003{EDITED_DURATION_SYMBOL}- The duration was edited.
+"""
 
 
 class ModManagement(commands.Cog):
@@ -34,6 +46,16 @@ class ModManagement(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+        # Add the symbols guide to the help embeds of the appropriate commands.
+        for command in (
+            self.infraction_group,
+            self.infraction_search_group,
+            self.search_reason,
+            self.search_user,
+            self.search_by_actor
+        ):
+            command.help += f"\n{SYMBOLS_GUIDE}"
 
     @property
     def mod_log(self) -> ModLog:
@@ -58,10 +80,10 @@ class ModManagement(commands.Cog):
             return
 
         embed = discord.Embed(
-            title=f"Infraction #{infraction['id']}",
+            title=f"{self.format_infraction_title(infraction)}",
             colour=discord.Colour.orange()
         )
-        await self.send_infraction_list(ctx, embed, [infraction])
+        await self.send_infraction_list(ctx, embed, [infraction], ignore_fields=("id",))
 
     @infraction_group.command(name="resend", aliases=("send", "rs", "dm"))
     async def infraction_resend(self, ctx: Context, infraction: Infraction) -> None:
@@ -94,7 +116,7 @@ class ModManagement(commands.Cog):
         infraction: Infraction,
         duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
         *,
-        reason: str = None
+        reason: str = None  # noqa: RUF013
     ) -> None:
         """
         Append text and/or edit the duration of an infraction.
@@ -134,7 +156,7 @@ class ModManagement(commands.Cog):
         infraction: Infraction,
         duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
         *,
-        reason: str = None
+        reason: str = None  # noqa: RUF013
     ) -> None:
         """
         Edit the duration and/or the reason of an infraction.
@@ -277,8 +299,8 @@ class ModManagement(commands.Cog):
             user_str = escape_markdown(str(user))
         else:
             if infraction_list:
-                user = infraction_list[0]["user"]
-                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+                user_data = infraction_list[0]["user"]
+                user_str = escape_markdown(user_data["name"]) + f"#{user_data['discriminator']:04}"
             else:
                 user_str = str(user.id)
 
@@ -287,7 +309,9 @@ class ModManagement(commands.Cog):
             title=f"Infractions for {user_str} ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
-        await self.send_infraction_list(ctx, embed, infraction_list)
+        # Manually form mention from ID as discord.Object doesn't have a `.mention` attr
+        prefix = f"<@{user.id}> - {user.id}"
+        await self.send_infraction_list(ctx, embed, infraction_list, prefix, ("user",))
 
     @infraction_search_group.command(name="reason", aliases=("match", "regex", "re"))
     async def search_reason(self, ctx: Context, reason: str) -> None:
@@ -304,10 +328,12 @@ class ModManagement(commands.Cog):
 
         formatted_infraction_count = self.format_infraction_count(len(infraction_list))
         embed = discord.Embed(
-            title=f"Infractions matching `{reason}` ({formatted_infraction_count} total)",
+            title=f"Infractions with matching context ({formatted_infraction_count} total)",
             colour=discord.Colour.orange()
         )
-        await self.send_infraction_list(ctx, embed, infraction_list)
+        if len(reason) > 500:
+            reason = reason[:500] + "..."
+        await self.send_infraction_list(ctx, embed, infraction_list, reason)
 
     # endregion
     # region: Search for infractions by given actor
@@ -348,7 +374,8 @@ class ModManagement(commands.Cog):
             colour=discord.Colour.orange()
         )
 
-        await self.send_infraction_list(ctx, embed, infraction_list)
+        prefix = f"{actor.mention} - {actor.id}"
+        await self.send_infraction_list(ctx, embed, infraction_list, prefix, ("actor",))
 
     # endregion
     # region: Utility functions
@@ -369,94 +396,93 @@ class ModManagement(commands.Cog):
         self,
         ctx: Context,
         embed: discord.Embed,
-        infractions: t.Iterable[dict[str, t.Any]]
+        infractions: t.Iterable[dict[str, t.Any]],
+        prefix: str = "",
+        ignore_fields: tuple[str, ...] = ()
     ) -> None:
         """Send a paginated embed of infractions for the specified user."""
         if not infractions:
             await ctx.send(":warning: No infractions could be found for that query.")
             return
 
-        lines = tuple(
-            self.infraction_to_string(infraction)
-            for infraction in infractions
-        )
+        lines = [self.infraction_to_string(infraction, ignore_fields) for infraction in infractions]
 
         await LinePaginator.paginate(
             lines,
             ctx=ctx,
             embed=embed,
+            prefix=f"{prefix}\n",
             empty=True,
             max_lines=3,
             max_size=1000
         )
 
-    def infraction_to_string(self, infraction: dict[str, t.Any]) -> str:
+    def infraction_to_string(self, infraction: dict[str, t.Any], ignore_fields: tuple[str, ...]) -> str:
         """Convert the infraction object to a string representation."""
-        active = infraction["active"]
-        user = infraction["user"]
         expires_at = infraction["expires_at"]
         inserted_at = infraction["inserted_at"]
         last_applied = infraction["last_applied"]
-        created = time.discord_timestamp(inserted_at)
-        applied = time.discord_timestamp(last_applied)
-        duration_edited = arrow.get(last_applied) > arrow.get(inserted_at)
-        dm_sent = infraction["dm_sent"]
         jump_url = infraction["jump_url"]
 
-        # Format the user string.
-        if user_obj := self.bot.get_user(user["id"]):
-            # The user is in the cache.
-            user_str = messages.format_user(user_obj)
-        else:
-            # Use the user data retrieved from the DB.
-            name = escape_markdown(user["name"])
-            user_str = f"<@{user['id']}> ({name}#{user['discriminator']:04})"
+        title = ""
+        if "id" not in ignore_fields:
+            title = f"**{self.format_infraction_title(infraction)}**"
 
-        if active:
-            remaining = time.until_expiration(expires_at)
-        else:
-            remaining = "Inactive"
+        symbols = []
+        if not infraction["hidden"] and infraction["dm_sent"] is False:
+            symbols.append(FAILED_DM_SYMBOL)
+        if infraction["hidden"]:
+            symbols.append(HIDDEN_INFRACTION_SYMBOL)
+        if inserted_at != infraction["last_applied"]:
+            symbols.append(EDITED_DURATION_SYMBOL)
+        symbols = " ".join(symbols)
 
-        if expires_at is None:
-            duration = "*Permanent*"
-        else:
-            duration = time.humanize_delta(last_applied, expires_at)
+        user_str = ""
+        if "user" not in ignore_fields:
+            user_str = "For " + self.format_user_from_record(infraction["user"])
 
-        # Notice if infraction expiry was edited.
-        if duration_edited:
-            duration += f" (edited {applied})"
+        actor_str = ""
+        if "actor" not in ignore_fields:
+            actor_str = f"By <@{infraction['actor']['id']}>"
 
-        # Format `dm_sent`
-        if dm_sent is None:
-            dm_sent_text = "N/A"
-        else:
-            dm_sent_text = "Yes" if dm_sent else "No"
+        issued = "Issued " + time.discord_timestamp(inserted_at)
+
+        duration = ""
+        if infraction["type"] not in NO_DURATION_INFRACTIONS:
+            if expires_at is None:
+                duration = "*Permanent*"
+            else:
+                duration = time.humanize_delta(last_applied, expires_at)
+                if infraction["active"]:
+                    duration = f"{duration} (Expires {time.format_relative(expires_at)})"
+            duration = f"Duration: {duration}"
 
         if jump_url is None:
             # Infraction was issued prior to jump urls being stored in the database
             # or infraction was issued in ModMail category.
-            jump_url = "N/A"
+            context = f"**Context**: {infraction['reason'] or '*None*'}"
         else:
-            jump_url = f"[Click here.]({jump_url})"
+            context = f"**[Context]({jump_url})**: {infraction['reason'] or '*None*'}"
 
-        lines = textwrap.dedent(f"""
-            {"**===============**" if active else "==============="}
-            Status: {"__**Active**__" if active else "Inactive"}
-            User: {user_str}
-            Type: **{infraction["type"]}**
-            DM Sent: {dm_sent_text}
-            Shadow: {infraction["hidden"]}
-            Created: {created}
-            Expires: {remaining}
-            Duration: {duration}
-            Actor: <@{infraction["actor"]["id"]}>
-            ID: `{infraction["id"]}`
-            Jump URL: {jump_url}
-            Reason: {infraction["reason"] or "*None*"}
-            {"**===============**" if active else "==============="}
-        """)
+        return "\n".join(part for part in (title, symbols, user_str, actor_str, issued, duration, context) if part)
 
-        return lines.strip()
+    def format_user_from_record(self, user: dict) -> str:
+        """Create a formatted user string from its DB record."""
+        if user_obj := self.bot.get_user(user["id"]):
+            # The user is in the cache.
+            return messages.format_user(user_obj)
+
+        # Use the user data retrieved from the DB.
+        name = escape_markdown(user["name"])
+        return f"<@{user['id']}> ({name}#{user['discriminator']:04})"
+
+    @staticmethod
+    def format_infraction_title(infraction: Infraction) -> str:
+        """Format the infraction title."""
+        title = infraction["type"].replace("_", " ").title()
+        if infraction["active"]:
+            title = f"__Active__ {title}"
+        return f"{title} #{infraction['id']}"
 
     # endregion
 

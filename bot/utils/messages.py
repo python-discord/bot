@@ -204,21 +204,6 @@ async def count_unique_users_reaction(
     return len(unique_users)
 
 
-async def pin_no_system_message(message: discord.Message) -> bool:
-    """Pin the given message, wait a couple of seconds and try to delete the system message."""
-    await message.pin()
-
-    # Make sure that we give it enough time to deliver the message
-    await asyncio.sleep(2)
-    # Search for the system message in the last 10 messages
-    async for historical_message in message.channel.history(limit=10):
-        if historical_message.type == discord.MessageType.pins_add:
-            await historical_message.delete()
-            return True
-
-    return False
-
-
 def sub_clyde(username: str | None) -> str | None:
     """
     Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"Е" and return the new string.
@@ -259,7 +244,11 @@ def format_channel(channel: discord.abc.Messageable) -> str:
     return formatted
 
 
-async def upload_log(messages: Iterable[Message], actor_id: int, attachments: dict[int, list[str]] = None) -> str:
+async def upload_log(
+    messages: Iterable[Message],
+    actor_id: int,
+    attachments: dict[int, list[str]] | None = None,
+) -> str:
     """Upload message logs to the database and return a URL to a page for viewing the logs."""
     if attachments is None:
         attachments = []

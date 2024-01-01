@@ -11,15 +11,15 @@ import discord
 from async_rediscache import RedisCache
 from discord import Embed, Emoji, Member, Message, NotFound, PartialMessage, TextChannel
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Guild, Roles
 from bot.exts.recruitment.talentpool._api import Nomination, NominationAPI
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.channel import get_or_fetch_channel
-from bot.utils.members import get_or_fetch_member
-from bot.utils.messages import count_unique_users_reaction, pin_no_system_message
+from bot.utils.messages import count_unique_users_reaction
 
 if typing.TYPE_CHECKING:
     from bot.exts.utils.thread_bumper import ThreadBumper
@@ -46,7 +46,7 @@ REVIEW_SCORE_WEIGHT = 1.5
 
 # Regex for finding the first message of a nomination, and extracting the nominee.
 NOMINATION_MESSAGE_REGEX = re.compile(
-    r"<@!?(\d+)> \(.+#\d{4}\) for Helper!\n\n",
+    r"<@!?(\d+)> \(.+(#\d{4})?\) for Helper!\n\n",
     re.MULTILINE
 )
 
@@ -224,8 +224,6 @@ class Reviewer:
         log.info(f"Posting the review of {nominee} ({nominee.id})")
         messages = await self._bulk_send(channel, review)
 
-        await pin_no_system_message(messages[0])
-
         last_message = messages[-1]
         if reviewed_emoji:
             for reaction in (reviewed_emoji, "\N{THUMBS UP SIGN}", "\N{THUMBS DOWN SIGN}"):
@@ -283,6 +281,14 @@ class Reviewer:
         """Archive this vote to #nomination-archive."""
         message = await message.fetch()
 
+        # Thread channel IDs are the same as the message ID of the parent message.
+        nomination_thread = message.guild.get_thread(message.id)
+        if not nomination_thread:
+            try:
+                nomination_thread = await message.guild.fetch_channel(message.id)
+            except NotFound:
+                log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
+
         # We consider the first message in the nomination to contain the user ping, username#discrim, and fixed text
         messages = [message]
         if not NOMINATION_MESSAGE_REGEX.search(message.content):
@@ -327,9 +333,15 @@ class Reviewer:
         colour = Colours.soft_green if passed else Colours.soft_red
         timestamp = datetime.now(tz=UTC).strftime("%Y/%m/%d")
 
+        if nomination_thread:
+            thread_jump = f"[Jump to vote thread]({nomination_thread.jump_url})"
+        else:
+            thread_jump = "Failed to get thread"
+
         embed_content = (
             f"{result} on {timestamp}\n"
-            f"With {reviewed} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n\n"
+            f"With {reviewed} {Emojis.ducky_dave} {upvotes} :+1: {downvotes} :-1:\n"
+            f"{thread_jump}\n\n"
             f"{stripped_content}"
         )
 
@@ -348,21 +360,13 @@ class Reviewer:
                 colour=colour
             ))
 
-        # Thread channel IDs are the same as the message ID of the parent message.
-        nomination_thread = message.guild.get_thread(message.id)
-        if not nomination_thread:
-            try:
-                nomination_thread = await message.guild.fetch_channel(message.id)
-            except NotFound:
-                log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
-                return
-
         for message_ in messages:
             with contextlib.suppress(NotFound):
                 await message_.delete()
 
-        with contextlib.suppress(NotFound):
-            await nomination_thread.edit(archived=True)
+        if nomination_thread:
+            with contextlib.suppress(NotFound):
+                await nomination_thread.edit(archived=True)
 
     async def _construct_review_body(self, member: Member) -> str:
         """Formats the body of the nomination, with details of activity, infractions, and previous nominations."""
@@ -498,7 +502,7 @@ class Reviewer:
             if nomination.thread_id is None:
                 continue
             try:
-                thread = await get_or_fetch_channel(nomination.thread_id)
+                thread = await get_or_fetch_channel(self.bot, nomination.thread_id)
             except discord.HTTPException:
                 # Nothing to do here
                 pass

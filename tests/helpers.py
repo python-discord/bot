@@ -6,6 +6,8 @@ import logging
 import unittest.mock
 from asyncio import AbstractEventLoop
 from collections.abc import Iterable
+from contextlib import contextmanager
+from functools import cached_property
 
 import discord
 from aiohttp import ClientSession
@@ -174,9 +176,16 @@ class MockGuild(CustomMockMixin, unittest.mock.Mock, HashableMixin):
         default_kwargs = {"id": next(self.discord_id), "members": [], "chunked": True}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
-        self.roles = [MockRole(name="@everyone", position=1, id=0)]
         if roles:
-            self.roles.extend(roles)
+            self.roles = [
+                MockRole(name="@everyone", position=1, id=0),
+                *roles
+            ]
+
+    @cached_property
+    def roles(self) -> list[MockRole]:
+        """Cached roles property."""
+        return [MockRole(name="@everyone", position=1, id=0)]
 
 
 # Create a Role instance to get a realistic Mock of `discord.Role`
@@ -247,6 +256,9 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
 
         if "mention" not in kwargs:
             self.mention = f"@{self.name}"
+
+    def get_role(self, role_id: int) -> MockRole | None:
+        return discord.utils.get(self.roles, id=role_id)
 
 
 # Create a User instance to get a realistic Mock of `discord.User`
@@ -322,11 +334,27 @@ class MockBot(CustomMockMixin, unittest.mock.MagicMock):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.loop = _get_mock_loop()
-        self.api_client = MockAPIClient(loop=self.loop)
-        self.http_session = unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
-        self.stats = unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
         self.add_cog = unittest.mock.AsyncMock()
+
+    @cached_property
+    def loop(self) -> unittest.mock.Mock:
+        """Cached loop property."""
+        return _get_mock_loop()
+
+    @cached_property
+    def api_client(self) -> MockAPIClient:
+        """Cached api_client property."""
+        return MockAPIClient()
+
+    @cached_property
+    def http_session(self) -> unittest.mock.Mock:
+        """Cached http_session property."""
+        return unittest.mock.create_autospec(spec=ClientSession, spec_set=True)
+
+    @cached_property
+    def stats(self) -> unittest.mock.Mock:
+        """Cached stats property."""
+        return unittest.mock.create_autospec(spec=AsyncStatsClient, spec_set=True)
 
 
 # Create a TextChannel instance to get a realistic MagicMock of `discord.TextChannel`
@@ -498,7 +526,18 @@ class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
         self.invoked_from_error_handler = kwargs.get("invoked_from_error_handler", False)
 
 
-attachment_instance = discord.Attachment(data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock())
+attachment_data = {
+    "id": 1,
+    "size": 14,
+    "filename": "jchrist.png",
+    "url": "https://google.com",
+    "proxy_url": "https://google.com",
+    "waveform": None,
+}
+attachment_instance = discord.Attachment(
+    data=attachment_data,
+    state=unittest.mock.MagicMock(),
+)
 
 
 class MockAttachment(CustomMockMixin, unittest.mock.MagicMock):
@@ -626,3 +665,12 @@ class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
     """
     spec_set = webhook_instance
     additional_spec_asyncs = ("send", "edit", "delete", "execute")
+
+@contextmanager
+def no_create_task():
+    def side_effect(coro, *_, **__):
+        coro.close()
+
+    with unittest.mock.patch("pydis_core.utils.scheduling.create_task") as create_task:
+        create_task.side_effect = side_effect
+        yield

@@ -11,16 +11,18 @@ from discord import Color, DMChannel, Embed, HTTPException, Message, errors
 from discord.ext.commands import Cog, Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.logging import CustomLogger
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
 from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.exts.moderation.modlog import ModLog
-from bot.log import CustomLogger, get_logger
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, time
-from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 
@@ -97,7 +99,7 @@ class WatchChannel(metaclass=CogABCMeta):
         await self.bot.wait_until_guild_available()
 
         try:
-            self.channel = await self.bot.fetch_channel(self.destination)
+            self.channel = await get_or_fetch_channel(self.bot, self.destination)
         except HTTPException:
             self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
 
@@ -168,7 +170,7 @@ class WatchChannel(metaclass=CogABCMeta):
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:
             if not self.consuming_messages:
-                self._consume_task = scheduling.create_task(self.consume_messages(), event_loop=self.bot.loop)
+                self._consume_task = scheduling.create_task(self.consume_messages())
 
             self.log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
             self.message_queue[msg.author.id][msg.channel.id].append(msg)
@@ -198,10 +200,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
         if self.message_queue:
             self.log.trace("Channel queue not empty: Continuing consuming queues")
-            self._consume_task = scheduling.create_task(
-                self.consume_messages(delay_consumption=False),
-                event_loop=self.bot.loop,
-            )
+            self._consume_task = scheduling.create_task(self.consume_messages(delay_consumption=False))
         else:
             self.log.trace("Done consuming messages.")
 
@@ -354,7 +353,7 @@ class WatchChannel(metaclass=CogABCMeta):
         list_data["info"] = {}
         for user_id, user_data in watched_iter:
             member = await get_or_fetch_member(ctx.guild, user_id)
-            line = f"• `{user_id}`"
+            line = f"- `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data["inserted_at"]

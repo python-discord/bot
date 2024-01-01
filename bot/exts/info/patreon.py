@@ -3,13 +3,13 @@ import datetime
 import arrow
 import discord
 from discord.ext import commands, tasks
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
 from bot.constants import Channels, Guild, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.decorators import in_whitelist
 from bot.log import get_logger
-from bot.utils.channel import get_or_fetch_channel
 
 log = get_logger(__name__)
 
@@ -64,7 +64,7 @@ class Patreon(commands.Cog):
             f":tada: {after.mention} just became a **tier {new_patreon_tier}** patron!\n"
             "Support us on Patreon: https://pydis.com/patreon"
         )
-        channel = await get_or_fetch_channel(Channels.meta)
+        channel = await get_or_fetch_channel(self.bot, Channels.meta)
         await channel.send(message)
 
     async def send_current_supporters(self, channel: discord.abc.Messageable, automatic: bool = False) -> None:
@@ -77,7 +77,7 @@ class Patreon(commands.Cog):
 
             # Filter out any members where this is not their highest tier.
             patrons = [member for member in role.members if get_patreon_tier(member) == tier]
-            patron_names = [f"• {patron}" for patron in patrons]
+            patron_names = [f"- {patron}" for patron in patrons]
 
             embed = discord.Embed(
                 title=role.name,
@@ -120,7 +120,7 @@ class Patreon(commands.Cog):
         """A loop running daily to see if it's the first of the month. If so call `self.send_current_supporters()`."""
         now = arrow.utcnow()
         if now.day == 1:
-            meta_channel = await get_or_fetch_channel(Channels.meta)
+            meta_channel = await get_or_fetch_channel(self.bot, Channels.meta)
             await self.send_current_supporters(meta_channel, automatic=True)
 
 

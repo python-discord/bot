@@ -197,10 +197,10 @@ class LinePaginator(Paginator):
         max_size: int = 500,
         scale_to_size: int = 4000,
         empty: bool = True,
-        restrict_to_user: User = None,
+        restrict_to_user: User | None = None,
         timeout: int = 300,
-        footer_text: str = None,
-        url: str = None,
+        footer_text: str | None = None,
+        url: str | None = None,
         exception_on_empty_embed: bool = False,
         reply: bool = False,
     ) -> discord.Message | None:
@@ -292,7 +292,7 @@ class LinePaginator(Paginator):
 
         for emoji in PAGINATION_EMOJI:
             # Add all the applicable emoji to the message
-            log.trace(f"Adding reaction: {repr(emoji)}")
+            log.trace(f"Adding reaction: {emoji!r}")
             await message.add_reaction(emoji)
 
         check = partial(
