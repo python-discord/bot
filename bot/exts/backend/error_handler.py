@@ -1,12 +1,11 @@
-import contextlib
 import copy
 import difflib
 
 import discord
-from discord import ButtonStyle, Embed, Interaction, Member, Message, NotFound, User
+from discord import ButtonStyle, Embed, Interaction, Member, User
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
-from pydis_core.utils.interactions import DeleteMessageButton
+from pydis_core.utils.interactions import DeleteMessageButton, ViewWithUserAndRoleCheck
 from sentry_sdk import push_scope
 
 from bot.bot import Bot
@@ -18,51 +17,33 @@ from bot.utils.checks import ContextCheckFailure
 log = get_logger(__name__)
 
 
-class CheckedDeleteMessageButton(DeleteMessageButton):
-    """Button to delete a message, restricted to the message owner and moderators."""
-
-    def __init__(self, owner: User | Member):
-        super().__init__()
-        self.owner = owner
-
-    async def callback(self, interaction: Interaction) -> None:
-        """Delete the message if the user is the owner of the message or a moderator."""
-        user = interaction.user
-        if (
-            user.id == self.owner.id or
-            (
-                isinstance(user, Member) and
-                any(user.get_role(role) for role in MODERATION_ROLES)
-            )
-        ):
-            await super().callback(interaction)
-        else:
-            await interaction.response.send_message(
-                "You can only delete responses to your own command invocations!", ephemeral=True
-            )
-
-
-class HelpEmbedView(discord.ui.View):
+class HelpEmbedView(ViewWithUserAndRoleCheck):
     """View to allow showing the help command for command error responses."""
 
     def __init__(self, help_embed: Embed, owner: User | Member):
-        super().__init__()
+        super().__init__(allowed_roles=MODERATION_ROLES, allowed_users=[owner.id])
         self.help_embed = help_embed
-        self.message: Message | None = None
 
-        self.delete_button = CheckedDeleteMessageButton(owner)
+        self.delete_button = DeleteMessageButton()
         self.add_item(self.delete_button)
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """Overriden check to allow anyone to use the help button."""
+        if (interaction.data or {}).get("custom_id") == self.help_button.custom_id:
+            log.trace(
+                "Allowed interaction by %s (%d) on %d as interaction was with the help button.",
+                interaction.user,
+                interaction.user.id,
+                interaction.message.id,
+            )
+            return True
+
+        return await super().interaction_check(interaction)
 
     @discord.ui.button(label="Help", style=ButtonStyle.primary)
     async def help_button(self, interaction: Interaction, button: discord.ui.Button) -> None:
         """Send an ephemeral message with the contents of the help command."""
         await interaction.response.send_message(embed=self.help_embed, ephemeral=True)
-
-    async def on_timeout(self) -> None:
-        """Remove the view from `self.message` if set."""
-        if self.message:
-            with contextlib.suppress(NotFound):
-                await self.message.edit(view=None)
 
 
 class ErrorHandler(Cog):
