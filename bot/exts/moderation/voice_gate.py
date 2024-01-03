@@ -34,7 +34,7 @@ MESSAGE_FIELD_MAP = {
 
 VOICE_PING = (
     "Wondering why you can't talk in the voice channels? "
-    "Click the Voice Verify button in here to verify. "
+    "Click the Voice Verify button above to verify. "
     "If you don't yet qualify, you'll be told why!"
 )
 
