@@ -358,7 +358,8 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_remove].remove(member.id)
             return
 
-        await send_log_message(self.bot,
+        await send_log_message(
+            self.bot,
             Icons.sign_out,
             Colours.soft_red,
             "User left",
@@ -377,7 +378,8 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_unban].remove(member.id)
             return
 
-        await send_log_message(self.bot,
+        await send_log_message(
+            self.bot,
             Icons.user_unban,
             Colour.og_blurple(),
             "User unbanned",

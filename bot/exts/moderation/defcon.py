@@ -139,8 +139,11 @@ class Defcon(Cog):
 
                 await send_log_message(
                     self.bot,
-                    Icons.defcon_denied, Colours.soft_red, "Entry denied",
-                    message, member.display_avatar.url
+                    Icons.defcon_denied,
+                    Colours.soft_red,
+                    "Entry denied",
+                    message,
+                    thumbnail=member.display_avatar.url
                 )
 
     @group(name="defcon", aliases=("dc",), invoke_without_command=True)
