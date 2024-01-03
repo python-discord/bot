@@ -16,6 +16,7 @@ from bot.bot import Bot
 from bot.constants import Colours, Roles
 from bot.converters import MemberOrUser
 from bot.exts.moderation.infraction import _utils
+from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
@@ -35,6 +36,11 @@ class InfractionScheduler:
     async def cog_unload(self) -> None:
         """Cancel scheduled tasks."""
         self.scheduler.cancel_all()
+
+    @property
+    def mod_log(self) -> ModLog:
+        """Get the currently loaded ModLog cog instance."""
+        return self.bot.get_cog("ModLog")
 
     async def cog_load(self) -> None:
         """Schedule expiration for previous infractions."""
