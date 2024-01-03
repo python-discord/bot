@@ -21,6 +21,7 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -136,7 +137,8 @@ class Defcon(Cog):
                 if not message_sent:
                     message = f"{message}\n\nUnable to send rejection message via DM; they probably have DMs disabled."
 
-                await (await self.get_mod_log()).send_log_message(
+                await send_log_message(
+                    self.bot,
                     Icons.defcon_denied, Colours.soft_red, "Entry denied",
                     message, member.display_avatar.url
                 )
@@ -304,7 +306,7 @@ class Defcon(Cog):
         )
         status_msg = f"DEFCON {action.name.lower()}"
 
-        await (await self.get_mod_log()).send_log_message(info.icon, info.color, status_msg, log_msg)
+        await send_log_message(self.bot, info.icon, info.color, status_msg, log_msg)
 
     def _update_notifier(self) -> None:
         """Start or stop the notifier according to the DEFCON status."""

@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from deepdiff import DeepDiff
 from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
-from discord.ext.commands import Cog, Context
+from discord.ext.commands import Cog
 from discord.utils import escape_markdown, format_dt, snowflake_time
 
 from bot.bot import Bot
@@ -16,6 +16,7 @@ from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConsta
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user, upload_log
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -47,63 +48,6 @@ class ModLog(Cog, name="ModLog"):
             if item not in self._ignored[event]:
                 self._ignored[event].append(item)
 
-    async def send_log_message(
-        self,
-        icon_url: str | None,
-        colour: discord.Colour | int,
-        title: str | None,
-        text: str,
-        thumbnail: str | discord.Asset | None = None,
-        channel_id: int = Channels.mod_log,
-        ping_everyone: bool = False,
-        files: list[discord.File] | None = None,
-        content: str | None = None,
-        additional_embeds: list[discord.Embed] | None = None,
-        timestamp_override: datetime | None = None,
-        footer: str | None = None,
-    ) -> Context:
-        """Generate log embed and send to logging channel."""
-        await self.bot.wait_until_guild_available()
-        # Truncate string directly here to avoid removing newlines
-        embed = discord.Embed(
-            description=text[:4093] + "..." if len(text) > 4096 else text
-        )
-
-        if title and icon_url:
-            embed.set_author(name=title, icon_url=icon_url)
-
-        embed.colour = colour
-        embed.timestamp = timestamp_override or datetime.now(tz=UTC)
-
-        if footer:
-            embed.set_footer(text=footer)
-
-        if thumbnail:
-            embed.set_thumbnail(url=thumbnail)
-
-        if ping_everyone:
-            if content:
-                content = f"<@&{Roles.moderators}> {content}"
-            else:
-                content = f"<@&{Roles.moderators}>"
-
-        # Truncate content to 2000 characters and append an ellipsis.
-        if content and len(content) > 2000:
-            content = content[:2000 - 3] + "..."
-
-        channel = self.bot.get_channel(channel_id)
-        log_message = await channel.send(
-            content=content,
-            embed=embed,
-            files=files
-        )
-
-        if additional_embeds:
-            for additional_embed in additional_embeds:
-                await channel.send(embed=additional_embed)
-
-        return await self.bot.get_context(log_message)  # Optionally return for use with antispam
-
     @Cog.listener()
     async def on_guild_channel_create(self, channel: GUILD_CHANNEL) -> None:
         """Log channel create event to mod log."""
@@ -128,7 +72,7 @@ class ModLog(Cog, name="ModLog"):
             else:
                 message = f"{channel.name} (`{channel.id}`)"
 
-        await self.send_log_message(Icons.hash_green, Colours.soft_green, title, message)
+        await send_log_message(self.bot, Icons.hash_green, Colours.soft_green, title, message)
 
     @Cog.listener()
     async def on_guild_channel_delete(self, channel: GUILD_CHANNEL) -> None:
@@ -148,9 +92,12 @@ class ModLog(Cog, name="ModLog"):
         else:
             message = f"{channel.name} (`{channel.id}`)"
 
-        await self.send_log_message(
-            Icons.hash_red, Colours.soft_red,
-            title, message
+        await send_log_message(
+            self.bot,
+            Icons.hash_red,
+            Colours.soft_red,
+            title,
+            message
         )
 
     @Cog.listener()
@@ -211,9 +158,12 @@ class ModLog(Cog, name="ModLog"):
         else:
             message = f"**#{after.name}** (`{after.id}`)\n{message}"
 
-        await self.send_log_message(
-            Icons.hash_blurple, Colour.og_blurple(),
-            "Channel updated", message
+        await send_log_message(
+            self.bot,
+            Icons.hash_blurple,
+            Colour.og_blurple(),
+            "Channel updated",
+            message
         )
 
     @Cog.listener()
@@ -222,9 +172,12 @@ class ModLog(Cog, name="ModLog"):
         if role.guild.id != GuildConstant.id:
             return
 
-        await self.send_log_message(
-            Icons.crown_green, Colours.soft_green,
-            "Role created", f"`{role.id}`"
+        await send_log_message(
+            self.bot,
+            Icons.crown_green,
+            Colours.soft_green,
+            "Role created",
+            f"`{role.id}`"
         )
 
     @Cog.listener()
@@ -233,9 +186,12 @@ class ModLog(Cog, name="ModLog"):
         if role.guild.id != GuildConstant.id:
             return
 
-        await self.send_log_message(
-            Icons.crown_red, Colours.soft_red,
-            "Role removed", f"{role.name} (`{role.id}`)"
+        await send_log_message(
+            self.bot,
+            Icons.crown_red,
+            Colours.soft_red,
+            "Role removed",
+            f"{role.name} (`{role.id}`)"
         )
 
     @Cog.listener()
@@ -286,9 +242,12 @@ class ModLog(Cog, name="ModLog"):
 
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
-        await self.send_log_message(
-            Icons.crown_blurple, Colour.og_blurple(),
-            "Role updated", message
+        await send_log_message(
+            self.bot,
+            Icons.crown_blurple,
+            Colour.og_blurple(),
+            "Role updated",
+            message
         )
 
     @Cog.listener()
@@ -336,9 +295,12 @@ class ModLog(Cog, name="ModLog"):
 
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
-        await self.send_log_message(
-            Icons.guild_update, Colour.og_blurple(),
-            "Guild updated", message,
+        await send_log_message(
+            self.bot,
+            Icons.guild_update,
+            Colour.og_blurple(),
+            "Guild updated",
+            message,
             thumbnail=after.icon.with_static_format("png")
         )
 
@@ -352,9 +314,12 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_ban].remove(member.id)
             return
 
-        await self.send_log_message(
-            Icons.user_ban, Colours.soft_red,
-            "User banned", format_user(member),
+        await send_log_message(
+            self.bot,
+            Icons.user_ban,
+            Colours.soft_red,
+            "User banned",
+            format_user(member),
             thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
@@ -373,9 +338,12 @@ class ModLog(Cog, name="ModLog"):
         if difference.days < 1 and difference.months < 1 and difference.years < 1:  # New user account!
             message = f"{Emojis.new} {message}"
 
-        await self.send_log_message(
-            Icons.sign_in, Colours.soft_green,
-            "User joined", message,
+        await send_log_message(
+            self.bot,
+            Icons.sign_in,
+            Colours.soft_green,
+            "User joined",
+            message,
             thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
@@ -390,9 +358,11 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_remove].remove(member.id)
             return
 
-        await self.send_log_message(
-            Icons.sign_out, Colours.soft_red,
-            "User left", format_user(member),
+        await send_log_message(self.bot,
+            Icons.sign_out,
+            Colours.soft_red,
+            "User left",
+            format_user(member),
             thumbnail=member.display_avatar.url,
             channel_id=Channels.user_log
         )
@@ -407,9 +377,11 @@ class ModLog(Cog, name="ModLog"):
             self._ignored[Event.member_unban].remove(member.id)
             return
 
-        await self.send_log_message(
-            Icons.user_unban, Colour.og_blurple(),
-            "User unbanned", format_user(member),
+        await send_log_message(self.bot,
+            Icons.user_unban,
+            Colour.og_blurple(),
+            "User unbanned",
+            format_user(member),
             thumbnail=member.display_avatar.url,
             channel_id=Channels.mod_log
         )
@@ -471,7 +443,8 @@ class ModLog(Cog, name="ModLog"):
 
         message = f"{format_user(after)}\n{message}"
 
-        await self.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url=Icons.user_update,
             colour=Colour.og_blurple(),
             title="Member updated",
@@ -565,8 +538,10 @@ class ModLog(Cog, name="ModLog"):
 
         response += f"{content}"
 
-        await self.send_log_message(
-            Icons.message_delete, Colours.soft_red,
+        await send_log_message(
+            self.bot,
+            Icons.message_delete,
+            Colours.soft_red,
             "Message deleted",
             response,
             channel_id=Channels.message_log
@@ -606,8 +581,10 @@ class ModLog(Cog, name="ModLog"):
                 "This message was not cached, so the message content cannot be displayed."
             )
 
-        await self.send_log_message(
-            Icons.message_delete, Colours.soft_red,
+        await send_log_message(
+            self.bot,
+            Icons.message_delete,
+            Colours.soft_red,
             "Message deleted",
             response,
             channel_id=Channels.message_log
@@ -687,9 +664,15 @@ class ModLog(Cog, name="ModLog"):
             timestamp = msg_before.created_at
             footer = None
 
-        await self.send_log_message(
-            Icons.message_edit, Colour.og_blurple(), "Message edited", response,
-            channel_id=Channels.message_log, timestamp_override=timestamp, footer=footer
+        await send_log_message(
+            self.bot,
+            Icons.message_edit,
+            Colour.og_blurple(),
+            "Message edited",
+            response,
+            channel_id=Channels.message_log,
+            timestamp_override=timestamp,
+            footer=footer
         )
 
     @Cog.listener()
@@ -734,14 +717,22 @@ class ModLog(Cog, name="ModLog"):
             f"{message.clean_content}"
         )
 
-        await self.send_log_message(
-            Icons.message_edit, Colour.og_blurple(), "Message edited (Before)",
-            before_response, channel_id=Channels.message_log
+        await send_log_message(
+            self.bot,
+            Icons.message_edit,
+            Colour.og_blurple(),
+            "Message edited (Before)",
+            before_response,
+            channel_id=Channels.message_log
         )
 
-        await self.send_log_message(
-            Icons.message_edit, Colour.og_blurple(), "Message edited (After)",
-            after_response, channel_id=Channels.message_log
+        await send_log_message(
+            self.bot,
+            Icons.message_edit,
+            Colour.og_blurple(),
+            "Message edited (After)",
+            after_response,
+            channel_id=Channels.message_log
         )
 
     @Cog.listener()
@@ -752,7 +743,8 @@ class ModLog(Cog, name="ModLog"):
             return
 
         if before.name != after.name:
-            await self.send_log_message(
+            await send_log_message(
+                self.bot,
                 Icons.hash_blurple,
                 Colour.og_blurple(),
                 "Thread name edited",
@@ -774,7 +766,8 @@ class ModLog(Cog, name="ModLog"):
         else:
             return
 
-        await self.send_log_message(
+        await send_log_message(
+            self.bot,
             icon,
             colour,
             f"Thread {action}",
@@ -792,7 +785,8 @@ class ModLog(Cog, name="ModLog"):
             log.trace("Ignoring deletion of thread %s (%d)", thread.mention, thread.id)
             return
 
-        await self.send_log_message(
+        await send_log_message(
+            self.bot,
             Icons.hash_red,
             Colours.soft_red,
             "Thread deleted",
@@ -868,7 +862,8 @@ class ModLog(Cog, name="ModLog"):
         message = "\n".join(f"{Emojis.bullet} {item}" for item in sorted(changes))
         message = f"{format_user(member)}\n{message}"
 
-        await self.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url=icon,
             colour=colour,
             title="Voice state updated",
