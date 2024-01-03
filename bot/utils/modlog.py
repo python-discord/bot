@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 
 import discord
-from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.constants import Channels, Roles
@@ -13,6 +12,7 @@ async def send_log_message(
     colour: discord.Colour | int,
     title: str | None,
     text: str,
+    *,
     thumbnail: str | discord.Asset | None = None,
     channel_id: int = Channels.mod_log,
     ping_everyone: bool = False,
@@ -21,7 +21,7 @@ async def send_log_message(
     additional_embeds: list[discord.Embed] | None = None,
     timestamp_override: datetime | None = None,
     footer: str | None = None,
-) -> Context:
+) -> discord.Message:
     """Generate log embed and send to logging channel."""
     await bot.wait_until_guild_available()
     # Truncate string directly here to avoid removing newlines
@@ -31,6 +31,10 @@ async def send_log_message(
 
     if title and icon_url:
         embed.set_author(name=title, icon_url=icon_url)
+    elif title:
+        raise ValueError("title cannot be set without icon_url")
+    elif icon_url:
+        raise ValueError("icon_url cannot be set without title")
 
     embed.colour = colour
     embed.timestamp = timestamp_override or datetime.now(tz=UTC)
@@ -62,4 +66,4 @@ async def send_log_message(
         for additional_embed in additional_embeds:
             await channel.send(embed=additional_embed)
 
-    return await bot.get_context(log_message)  # Optionally return for use with antispam
+    return log_message
