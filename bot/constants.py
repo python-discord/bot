@@ -141,7 +141,6 @@ class _Roles(EnvConfig, env_prefix="roles_"):
     legacy_help_channels_access: int = 1074780483776417964
 
     contributors: int = 295488872404484098
-    help_cooldown: int = 699189276025421825
     partners: int = 323426753857191936
     python_community: int = 458226413825294336
     voice_verified: int = 764802720779337729

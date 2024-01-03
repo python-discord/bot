@@ -19,18 +19,18 @@ Example:
 >>> from math import *
 >>> sin(pi / 2)  # uses sin from math rather than your custom sin
 ```
-• Potential namespace collision. Names defined from a previous import might get shadowed by a wildcard import.
-• Causes ambiguity. From the example, it is unclear which `sin` function is actually being used. From the Zen of Python **[3]**: `Explicit is better than implicit.`
-• Makes import order significant, which they shouldn't. Certain IDE's `sort import` functionality may end up breaking code due to namespace collision.
+- Potential namespace collision. Names defined from a previous import might get shadowed by a wildcard import.
+- Causes ambiguity. From the example, it is unclear which `sin` function is actually being used. From the Zen of Python **[3]**: `Explicit is better than implicit.`
+- Makes import order significant, which they shouldn't. Certain IDE's `sort import` functionality may end up breaking code due to namespace collision.
 
 **How should you import?**
 
-• Import the module under the module's namespace (Only import the name of the module, and names defined in the module can be used by prefixing the module's name)
+- Import the module under the module's namespace (Only import the name of the module, and names defined in the module can be used by prefixing the module's name)
 ```python
 >>> import math
 >>> math.sin(math.pi / 2)
 ```
-• Explicitly import certain names from the module
+- Explicitly import certain names from the module
 ```python
 >>> from math import sin, pi
 >>> sin(pi / 2)
