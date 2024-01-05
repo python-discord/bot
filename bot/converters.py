@@ -424,7 +424,7 @@ class HushDurationConverter(Converter):
 
 def _is_an_unambiguous_user_argument(argument: str) -> bool:
     """Check if the provided argument is a user mention or user id."""
-    user_id = IDConverter()._get_id_match(argument)
+    user_id = IDConverter._get_id_match(argument)
     user_mention = RE_USER_MENTION.match(argument)
 
     return bool(user_id or user_mention)
