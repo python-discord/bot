@@ -117,6 +117,7 @@ log.*
 *config.yml
 docker-compose.override.yml
 metricity-config.toml
+pyrightconfig.json
 
 # xmlrunner unittest XML reports
 TEST-**.xml
