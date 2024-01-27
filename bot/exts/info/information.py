@@ -292,9 +292,16 @@ class Information(Cog):
             # The 0 is for excluding the default @everyone role,
             # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
             roles = ", ".join(role.mention for role in user.roles[:0:-1])
-            membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
-            if not is_mod_channel(ctx.channel):
-                membership.pop("Verified")
+            membership = {
+                "Joined": joined,
+                "Roles": roles or None,
+            }
+
+            if is_mod_channel(ctx.channel):
+                membership.update({
+                    "Verified": not user.pending,
+                    "Spammer": user.public_flags.spammer,
+                })
 
             membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
