@@ -19,10 +19,10 @@ from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
 from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
-from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, time
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -73,11 +73,6 @@ class WatchChannel(metaclass=CogABCMeta):
         self.disable_header = disable_header
 
     @property
-    def modlog(self) -> ModLog:
-        """Provides access to the ModLog cog for alert purposes."""
-        return self.bot.get_cog("ModLog")
-
-    @property
     def consuming_messages(self) -> bool:
         """Checks if a consumption task is currently running."""
         if self._consume_task is None:
@@ -122,7 +117,8 @@ class WatchChannel(metaclass=CogABCMeta):
                 """
             )
 
-            await self.modlog.send_log_message(
+            await send_log_message(
+                self.bot,
                 title=f"Error: Failed to initialize the {self.__class__.__name__} watch channel",
                 text=message,
                 ping_everyone=True,
@@ -134,7 +130,8 @@ class WatchChannel(metaclass=CogABCMeta):
             return
 
         if not await self.fetch_user_cache():
-            await self.modlog.send_log_message(
+            await send_log_message(
+                self.bot,
                 title=f"Warning: Failed to retrieve user cache for the {self.__class__.__name__} watch channel",
                 text=(
                     "Could not retrieve the list of watched users from the API. "
