@@ -7,16 +7,22 @@ from arrow import Arrow
 from async_rediscache import RedisCache
 from discord.ext import commands
 from pydis_core.utils import scheduling
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import (
-    Colours, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES, VideoPermission
+    Colours,
+    Emojis,
+    Guild,
+    MODERATION_ROLES,
+    Roles,
+    STAFF_PARTNERS_COMMUNITY_ROLES,
+    VideoPermission,
 )
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.members import get_or_fetch_member
 
 log = get_logger(__name__)
 
@@ -85,7 +91,12 @@ class Stream(commands.Cog):
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def stream(self, ctx: commands.Context, member: discord.Member, duration: Expiry = None) -> None:
+    async def stream(
+        self,
+        ctx: commands.Context,
+        member: discord.Member,
+        duration: Expiry = None,
+    ) -> None:
         """
         Temporarily grant streaming permissions to a member for a given duration.
 

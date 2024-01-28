@@ -9,6 +9,8 @@ from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
@@ -18,8 +20,6 @@ from bot.exts.recruitment.talentpool._review import Reviewer
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.channel import get_or_fetch_channel
-from bot.utils.members import get_or_fetch_member
 
 AUTOREVIEW_ENABLED_KEY = "autoreview_enabled"
 REASON_MAX_CHARS = 1000
@@ -146,7 +146,7 @@ class TalentPool(Cog, name="Talentpool"):
             days=DAYS_UNTIL_INACTIVE
         )
 
-        nomination_discussion = await get_or_fetch_channel(Channels.nomination_discussion)
+        nomination_discussion = await get_or_fetch_channel(self.bot, Channels.nomination_discussion)
         for nomination in nominations:
             if messages_per_user[nomination.user_id] > 0:
                 continue
@@ -279,7 +279,7 @@ class TalentPool(Cog, name="Talentpool"):
             return ["*None*"]
 
         for nomination in nominations:
-            line = f"• `{nomination.user_id}`"
+            line = f"- `{nomination.user_id}`"
 
             member = await get_or_fetch_member(ctx.guild, nomination.user_id)
             if member:
@@ -313,7 +313,11 @@ class TalentPool(Cog, name="Talentpool"):
         """
         await self._nominate_user(ctx, user, reason)
 
-    @nomination_group.command(name="nominate", aliases=("w", "add", "a", "watch"), root_aliases=("nominate",))
+    @nomination_group.command(
+        name="nominate",
+        aliases=("nom", "n", "watch", "w", "add", "a"),
+        root_aliases=("nominate", "nom")
+    )
     @has_any_role(*STAFF_ROLES)
     async def nominate_command(self, ctx: Context, user: MemberOrUser, *, reason: str = "") -> None:
         """
@@ -549,7 +553,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def on_member_ban(self, guild: Guild, user: MemberOrUser) -> None:
         """Remove `user` from the talent pool after they are banned."""
         if await self.end_nomination(user.id, "Automatic removal: User was banned"):
-            nomination_discussion = await get_or_fetch_channel(Channels.nomination_discussion)
+            nomination_discussion = await get_or_fetch_channel(self.bot, Channels.nomination_discussion)
             await nomination_discussion.send(
                 f":warning: <@{user.id}> ({user.id})"
                 " was removed from the talentpool due to being banned."
@@ -560,7 +564,6 @@ class TalentPool(Cog, name="Talentpool"):
         """
         Watch for reactions in the #nomination-voting channel to automate it.
 
-        Adding a ticket emoji will unpin the message.
         Adding an incident reaction will archive the message.
         """
         if payload.channel_id != Channels.nomination_voting:
@@ -572,9 +575,7 @@ class TalentPool(Cog, name="Talentpool"):
         message: PartialMessage = self.bot.get_channel(payload.channel_id).get_partial_message(payload.message_id)
         emoji = str(payload.emoji)
 
-        if emoji == "\N{TICKET}":
-            await message.unpin(reason="Admin task created.")
-        elif emoji in {Emojis.incident_actioned, Emojis.incident_unactioned}:
+        if emoji in {Emojis.incident_actioned, Emojis.incident_unactioned}:
             log.info(f"Archiving nomination {message.id}")
             await self.reviewer.archive_vote(message, emoji == Emojis.incident_actioned)
 
@@ -613,7 +614,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         if nomination.thread_id:
             try:
-                thread = await get_or_fetch_channel(nomination.thread_id)
+                thread = await get_or_fetch_channel(self.bot, nomination.thread_id)
             except discord.HTTPException:
                 thread_jump_url = "*Not found*"
             else:

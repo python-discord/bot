@@ -4,7 +4,7 @@ from datetime import timedelta
 
 import arrow
 import discord
-from pydis_core.utils import members, scheduling
+from pydis_core.utils import scheduling
 
 import bot
 from bot import constants
@@ -19,9 +19,9 @@ POST_TITLE = "Python help channel"
 
 NEW_POST_MSG = """
 **Remember to:**
-• **Ask** your Python question, not if you can ask or if there's an expert who can help.
-• **Show** a code sample as text (rather than a screenshot) and the error message, if you've got one.
-• **Explain** what you expect to happen and what actually happens.
+- **Ask** your Python question, not if you can ask or if there's an expert who can help.
+- **Show** a code sample as text (rather than a screenshot) and the error message, if you've got one.
+- **Explain** what you expect to happen and what actually happens.
 
 :warning: Do not pip install anything that isn't related to your question, especially if asked to over DMs.
 """
@@ -68,19 +68,6 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
 
     _stats.report_post_count()
     await _stats.report_complete_session(closed_post, closing_reason)
-
-    poster = closed_post.owner
-    cooldown_role = closed_post.guild.get_role(constants.Roles.help_cooldown)
-
-    if poster is None:
-        # We can't include the owner ID/name here since the thread only contains None
-        log.info(
-            f"Failed to remove cooldown role for owner of post ({closed_post.id}). "
-            f"The user is likely no longer on the server."
-        )
-        return
-
-    await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
 
 
 async def send_opened_post_message(post: discord.Thread) -> None:
@@ -159,9 +146,6 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
 
     await send_opened_post_message(opened_post)
 
-    cooldown_role = opened_post.guild.get_role(constants.Roles.help_cooldown)
-    await members.handle_role_change(opened_post.owner, opened_post.owner.add_roles, cooldown_role)
-
 
 async def help_post_closed(closed_post: discord.Thread) -> None:
     """Apply archive logic to a manually closed help forum post."""
@@ -188,10 +172,7 @@ async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) ->
     cached_post = deleted_post_event.thread
     if cached_post and not cached_post.archived:
         # If the post is in the bot's cache, and it was not archived before deleting,
-        # report a complete session and remove the cooldown.
-        poster = cached_post.owner
-        cooldown_role = cached_post.guild.get_role(constants.Roles.help_cooldown)
-        await members.handle_role_change(poster, poster.remove_roles, cooldown_role)
+        # report a complete session.
         await _stats.report_complete_session(cached_post, _stats.ClosingReason.DELETED)
 
 

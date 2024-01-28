@@ -6,6 +6,7 @@ import logging
 import unittest.mock
 from asyncio import AbstractEventLoop
 from collections.abc import Iterable
+from contextlib import contextmanager
 from functools import cached_property
 
 import discord
@@ -255,6 +256,9 @@ class MockMember(CustomMockMixin, unittest.mock.Mock, ColourMixin, HashableMixin
 
         if "mention" not in kwargs:
             self.mention = f"@{self.name}"
+
+    def get_role(self, role_id: int) -> MockRole | None:
+        return discord.utils.get(self.roles, id=role_id)
 
 
 # Create a User instance to get a realistic Mock of `discord.User`
@@ -522,7 +526,18 @@ class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
         self.invoked_from_error_handler = kwargs.get("invoked_from_error_handler", False)
 
 
-attachment_instance = discord.Attachment(data=unittest.mock.MagicMock(id=1), state=unittest.mock.MagicMock())
+attachment_data = {
+    "id": 1,
+    "size": 14,
+    "filename": "jchrist.png",
+    "url": "https://google.com",
+    "proxy_url": "https://google.com",
+    "waveform": None,
+}
+attachment_instance = discord.Attachment(
+    data=attachment_data,
+    state=unittest.mock.MagicMock(),
+)
 
 
 class MockAttachment(CustomMockMixin, unittest.mock.MagicMock):
@@ -650,3 +665,12 @@ class MockAsyncWebhook(CustomMockMixin, unittest.mock.MagicMock):
     """
     spec_set = webhook_instance
     additional_spec_asyncs = ("send", "edit", "delete", "execute")
+
+@contextmanager
+def no_create_task():
+    def side_effect(coro, *_, **__):
+        coro.close()
+
+    with unittest.mock.patch("pydis_core.utils.scheduling.create_task") as create_task:
+        create_task.side_effect = side_effect
+        yield

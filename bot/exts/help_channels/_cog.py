@@ -8,6 +8,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.exts.help_channels import _caches, _channel, _message
 from bot.log import get_logger
+from bot.utils.checks import has_any_role_check
 
 log = get_logger(__name__)
 
@@ -108,7 +109,7 @@ class HelpForum(commands.Cog):
             # Silently fail in channels other than help posts
             return
 
-        if not await commands.has_any_role(constants.Roles.helpers).predicate(ctx):
+        if not await has_any_role_check(ctx, constants.Roles.helpers):
             # Silently fail for non-helpers
             return
 

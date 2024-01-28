@@ -6,14 +6,23 @@ from operator import itemgetter
 
 import discord
 from dateutil.parser import isoparse
+from discord import Interaction
 from discord.ext.commands import Cog, Context, Greedy, group
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.members import get_or_fetch_member
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import (
-    Channels, Guild, Icons, MODERATION_ROLES, NEGATIVE_REPLIES, POSITIVE_REPLIES, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+    Channels,
+    Guild,
+    Icons,
+    MODERATION_ROLES,
+    NEGATIVE_REPLIES,
+    POSITIVE_REPLIES,
+    Roles,
+    STAFF_PARTNERS_COMMUNITY_ROLES,
 )
 from bot.converters import Duration, UnambiguousUser
 from bot.errors import LockedResourceError
@@ -22,7 +31,6 @@ from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
-from bot.utils.members import get_or_fetch_member
 from bot.utils.messages import send_denial
 
 log = get_logger(__name__)
@@ -30,9 +38,41 @@ log = get_logger(__name__)
 LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
+REMINDER_EDIT_CONFIRMATION_TIMEOUT = 60
 
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
+
+
+class ModifyReminderConfirmationView(discord.ui.View):
+    """A view to confirm modifying someone else's reminder by admins."""
+
+    def __init__(self, author: discord.Member):
+        super().__init__(timeout=REMINDER_EDIT_CONFIRMATION_TIMEOUT)
+        self.author = author
+        self.result: bool | None = None
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """Only allow interactions from the command invoker."""
+        return interaction.user.id == self.author.id
+
+    async def on_timeout(self) -> None:
+        """Default to not modifying if the user doesn't respond."""
+        self.result = False
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.blurple, row=0)
+    async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Confirm the reminder modification."""
+        await interaction.response.edit_message(view=None)
+        self.result = True
+        self.stop()
+
+    @discord.ui.button(label="Cancel", row=0)
+    async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Cancel the reminder modification."""
+        await interaction.response.edit_message(view=None)
+        self.result = False
+        self.stop()
 
 
 class Reminders(Cog):
@@ -520,7 +560,7 @@ class Reminders(Cog):
         """
         Check whether the reminder can be modified by the ctx author.
 
-        The check passes when the user is an admin, or if they created the reminder.
+        The check passes if the user created the reminder, or if they are an admin (with confirmation).
         """
         try:
             api_response = await self.bot.api_client.get(f"bot/reminders/{reminder_id}")
@@ -530,18 +570,41 @@ class Reminders(Cog):
                 if e.status == 404:
                     return False
             raise e
+        owner_id = api_response["author"]
 
-        if await has_any_role_check(ctx, Roles.admins):
+        if owner_id == ctx.author.id:
+            log.debug(f"{ctx.author} is the reminder's author and passes the check.")
             return True
 
-        if api_response["author"] != ctx.author.id:
-            log.debug(f"{ctx.author} is not the reminder author and does not pass the check.")
-            if send_on_denial:
-                await send_denial(ctx, "You can't modify reminders of other users!")
-            return False
+        if await has_any_role_check(ctx, Roles.admins):
+            log.debug(f"{ctx.author} is an admin, asking for confirmation to modify someone else's.")
 
-        log.debug(f"{ctx.author} is the reminder author and passes the check.")
-        return True
+            if ctx.command == self.delete_reminder:
+                modify_action = "delete"
+            else:
+                modify_action = "edit"
+
+            confirmation_view = ModifyReminderConfirmationView(ctx.author)
+            confirmation_message = await ctx.reply(
+                f"Are you sure you want to {modify_action} <@{owner_id}>'s reminder?",
+                view=confirmation_view,
+            )
+            view_timed_out = await confirmation_view.wait()
+            # We don't have access to the message in `on_timeout` so we have to delete the view here
+            if view_timed_out:
+                await confirmation_message.edit(view=None)
+
+            if confirmation_view.result:
+                log.debug(f"{ctx.author} has confirmed reminder modification.")
+            else:
+                await ctx.send("🚫 Operation canceled.")
+                log.debug(f"{ctx.author} has cancelled reminder modification.")
+            return confirmation_view.result
+
+        log.debug(f"{ctx.author} is not the reminder's author and thus does not pass the check.")
+        if send_on_denial:
+            await send_denial(ctx, "You can't modify reminders of other users!")
+        return False
 
 
 async def setup(bot: Bot) -> None:

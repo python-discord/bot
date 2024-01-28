@@ -14,5 +14,5 @@ We can use regex to pull out all the numbers in a sentence:
 ['18', '196', '3', '47']  # Notice the year is cut off
 ```
 **See Also**
-• [The re docs](https://docs.python.org/3/library/re.html) - for functions that use regex
-• [regex101.com](https://regex101.com) - an interactive site for testing your regular expression
+- [The re docs](https://docs.python.org/3/library/re.html) - for functions that use regex
+- [regex101.com](https://regex101.com) - an interactive site for testing your regular expression

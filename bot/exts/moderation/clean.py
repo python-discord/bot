@@ -21,6 +21,7 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
 from bot.utils.messages import upload_log
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -367,7 +368,8 @@ class Clean(Cog):
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 
-        await self.mod_log.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url=Icons.message_bulk_delete,
             colour=Colour(Colours.soft_red),
             title="Bulk message delete",
@@ -517,7 +519,13 @@ class Clean(Cog):
         await self._clean_messages(ctx, users=users, channels=channels, first_limit=message_or_time)
 
     @clean_group.command(name="bots", aliases=["bot"])
-    async def clean_bots(self, ctx: Context, message_or_time: CleanLimit, *, channels: CleanChannels = None) -> None:
+    async def clean_bots(
+        self,
+        ctx: Context,
+        message_or_time: CleanLimit,
+        *,
+        channels: CleanChannels = None,
+    ) -> None:
         """
         Delete all messages posted by a bot, stop cleaning after reaching `message_or_time`.
 

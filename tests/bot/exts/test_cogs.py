@@ -62,8 +62,7 @@ class CommandNameTests(unittest.TestCase):
         """Yield all commands for all cogs in all extensions."""
         for module in self.walk_modules():
             for cog in self.walk_cogs(module):
-                for cmd in self.walk_commands(cog):
-                    yield cmd
+                yield from self.walk_commands(cog)
 
     def test_names_dont_shadow(self):
         """Names and aliases of commands should be unique."""

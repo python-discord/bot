@@ -10,20 +10,19 @@ from typing import Literal, NamedTuple, TYPE_CHECKING
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
-from pydis_core.utils import interactions
+from pydis_core.utils import interactions, paste_service
+from pydis_core.utils.paste_service import PasteFile, send_to_paste_service
 from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 
 from bot.bot import Bot
-from bot.constants import Channels, Emojis, MODERATION_ROLES, Roles, URLs
+from bot.constants import BaseURLs, Channels, Emojis, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
 from bot.exts.filtering._filter_lists.extension import TXT_LIKE_FILES
 from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
-from bot.utils import send_to_paste_service
 from bot.utils.lock import LockedResourceError, lock_arg
-from bot.utils.services import PasteTooLongError, PasteUploadError
 
 if TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
@@ -74,7 +73,6 @@ if not hasattr(sys, "_setup_finished"):
 {setup}
 """
 
-MAX_PASTE_LENGTH = 10_000
 # Max to display in a codeblock before sending to a paste service
 # This also applies to text files
 MAX_OUTPUT_BLOCK_LINES = 10
@@ -88,7 +86,8 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-SupportedPythonVersions = Literal["3.11"]
+SupportedPythonVersions = Literal["3.12"]
+
 
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
@@ -205,16 +204,21 @@ class Snekbox(Cog):
         async with self.bot.http_session.post(URLs.snekbox_eval_api, json=data, raise_for_status=True) as resp:
             return EvalResult.from_dict(await resp.json())
 
-    @staticmethod
-    async def upload_output(output: str) -> str | None:
+    async def upload_output(self, output: str) -> str | None:
         """Upload the job's output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
+        file = PasteFile(content=output, lexer="text")
         try:
-            return await send_to_paste_service(output, extension="txt", max_length=MAX_PASTE_LENGTH)
-        except PasteTooLongError:
+            paste_response = await send_to_paste_service(
+                files=[file],
+                http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
+            )
+            return paste_response.link
+        except paste_service.PasteTooLongError:
             return "too long to upload"
-        except PasteUploadError:
+        except paste_service.PasteUploadError:
             return "unable to upload"
 
     @staticmethod
@@ -558,13 +562,13 @@ class Snekbox(Cog):
         If multiple codeblocks are in a message, all of them will be joined and evaluated,
         ignoring the text outside them.
 
-        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
+        Currently only 3.12 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         code: list[str]
-        python_version = python_version or "3.11"
+        python_version = python_version or "3.12"
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
@@ -594,13 +598,13 @@ class Snekbox(Cog):
         If multiple formatted codeblocks are provided, the first one will be the setup code, which will
         not be timed. The remaining codeblocks will be joined together and timed.
 
-        By default, your code is run on Python 3.11. A `python_version` arg of `3.10` can also be specified.
+        Currently only 3.12 version is supported.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         code: list[str]
-        python_version = python_version or "3.11"
+        python_version = python_version or "3.12"
         args = self.prepare_timeit_input(code)
         job = EvalJob(args, version=python_version, name="timeit")
 
