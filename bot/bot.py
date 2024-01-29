@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from sys import exception
 
 import aiohttp
@@ -55,13 +56,12 @@ class Bot(BotBase):
 
         if isinstance(e_val, Forbidden):
             message = args[0] if event == "on_message" else args[1] if event == "on_message_edit" else None
-            try:
+
+            with contextlib.suppress(Forbidden):
+                # Attempt to handle the error. This reraises the error if's not due to a block,
+                # in which case the error is suppressed and handled normally. Otherwise, it was
+                # handled so return.
                 await handle_forbidden_from_block(e_val, message)
-            except Forbidden:
-                # Error wasn't handled, so handle below
-                pass
-            else:
-                # Error was handled, so return
                 return
 
         self.stats.incr(f"errors.event.{event}")
