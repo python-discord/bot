@@ -500,23 +500,23 @@ class Infraction(Converter):
 
 
 if t.TYPE_CHECKING:
-    ValidDiscordServerInvite = dict  # noqa: F811
+    ValidDiscordServerInvite = dict
     ValidFilterListType = str
-    Extension = str  # noqa: F811
-    PackageName = str  # noqa: F811
-    ValidURL = str  # noqa: F811
-    Inventory = tuple[str, _inventory_parser.InventoryDict]  # noqa: F811
-    Snowflake = int  # noqa: F811
-    SourceConverter = SourceType  # noqa: F811
+    Extension = str
+    PackageName = str
+    ValidURL = str
+    Inventory = tuple[str, _inventory_parser.InventoryDict]
+    Snowflake = int
+    SourceConverter = SourceType
     DurationDelta = relativedelta
-    Duration = datetime  # noqa: F811
-    Age = datetime  # noqa: F811
-    OffTopicName = str  # noqa: F811
-    ISODateTime = datetime  # noqa: F811
-    HushDurationConverter = int  # noqa: F811
-    UnambiguousUser = discord.User  # noqa: F811
-    UnambiguousMember = discord.Member  # noqa: F811
-    Infraction = dict | None  # noqa: F811
+    Duration = datetime
+    Age = datetime
+    OffTopicName = str
+    ISODateTime = datetime
+    HushDurationConverter = int
+    UnambiguousUser = discord.User
+    UnambiguousMember = discord.Member
+    Infraction = dict | None
 
 Expiry = Duration | ISODateTime
 DurationOrExpiry = DurationDelta | ISODateTime

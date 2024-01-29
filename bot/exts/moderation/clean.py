@@ -61,8 +61,8 @@ class Regex(Converter):
 
 
 if TYPE_CHECKING:  # Used to allow method resolution in IDEs like in converters.py.
-    CleanChannels = Literal["*"] | list[TextChannel]  # noqa: F811
-    Regex = re.Pattern  # noqa: F811
+    CleanChannels = Literal["*"] | list[TextChannel]
+    Regex = re.Pattern
 
 
 class Clean(Cog):
