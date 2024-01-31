@@ -9,7 +9,7 @@ license = "MIT"
 python = "3.11.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
-pydis_core = { version = "10.5.1", extras = ["async-rediscache"] }
+pydis_core = { version = "10.7.0", extras = ["async-rediscache"] }
 
 aiohttp = "3.9.3"
 arrow = "1.3.0"
