@@ -76,7 +76,10 @@ def _get_no_ticks_message(content: str) -> str | None:
             "Discord has support for Markdown, which allows you to post code with full "
             "syntax highlighting. Please use these whenever you paste code, as this "
             "helps improve the legibility and makes it easier for us to help you.\n\n"
-            f"**To do this, use the following method:**\n{example_blocks}"
+            f"**To do this, use the following method:**\n{example_blocks}\n"
+            "**These are backticks, not quotes.** Check "
+            "[this](https://superuser.com/questions/254076/how-do-i-type-the-tick-and-backtick-characters-on-windows/254077#254077)"
+            " out if you can't find the backtick key."
         )
     log.trace("Aborting missing code block instructions: content is not Python code.")
     return None
