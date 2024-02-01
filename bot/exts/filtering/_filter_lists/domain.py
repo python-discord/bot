@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import re
 import typing
 
+from bot.constants import URL_RE
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.domain import DomainFilter
@@ -12,8 +12,6 @@ from bot.exts.filtering._utils import clean_input
 
 if typing.TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
-
-URL_RE = re.compile(r"https?://(\S+)", flags=re.IGNORECASE)
 
 
 class DomainsList(FilterList[DomainFilter]):

@@ -6,6 +6,7 @@ By default, the values defined in the classes are used, these can be overridden 
 `.env` and `.env.server` files are used to populate env vars, if present.
 """
 import os
+import re
 from enum import Enum
 
 from pydantic import BaseModel
@@ -32,6 +33,7 @@ Miscellaneous = _Miscellaneous()
 
 FILE_LOGS = Miscellaneous.file_logs
 DEBUG_MODE = Miscellaneous.debug
+URL_RE = re.compile(r"https?://(\S+)", flags=re.IGNORECASE)
 
 
 class _Bot(EnvConfig, env_prefix="bot_"):

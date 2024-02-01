@@ -1,4 +1,3 @@
-import re
 from typing import ClassVar
 from urllib.parse import urlparse
 
@@ -6,10 +5,9 @@ import tldextract
 from discord.ext.commands import BadArgument
 from pydantic import BaseModel
 
+from bot.constants import URL_RE
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
-
-URL_RE = re.compile(r"(?:https?://)?(\S+?)[\\/]*", flags=re.IGNORECASE)
 
 
 class ExtraDomainSettings(BaseModel):
