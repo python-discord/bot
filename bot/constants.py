@@ -33,7 +33,7 @@ Miscellaneous = _Miscellaneous()
 
 FILE_LOGS = Miscellaneous.file_logs
 DEBUG_MODE = Miscellaneous.debug
-URL_RE = re.compile(r"https?://(\S+)", flags=re.IGNORECASE)
+URL_RE = re.compile(r"(https?://[^\)>\s]+)", flags=re.IGNORECASE)
 
 
 class _Bot(EnvConfig, env_prefix="bot_"):
