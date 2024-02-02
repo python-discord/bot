@@ -69,6 +69,10 @@ source = ["tests"]
 [tool.ruff]
 target-version = "py311"
 extend-exclude = [".cache"]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["ANN", "B", "C4", "D", "DTZ", "E", "F", "I", "ISC", "INT", "N", "PGH", "PIE", "Q", "RET", "RSE", "RUF", "S", "SIM", "T20", "TID", "UP", "W"]
 ignore = [
     "ANN002", "ANN003", "ANN101", "ANN102", "ANN204", "ANN206", "ANN401",
     "B904",
@@ -81,15 +85,13 @@ ignore = [
     "S311",
     "SIM102", "SIM108",
 ]
-line-length = 120
-select = ["ANN", "B", "C4", "D", "DTZ", "E", "F", "I", "ISC", "INT", "N", "PGH", "PIE", "Q", "RET", "RSE", "RUF", "S", "SIM", "T20", "TID", "UP", "W"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 order-by-type = false
 case-sensitive = true
 combine-as-imports = true
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ANN", "D"]
 
 [tool.pytest.ini_options]
