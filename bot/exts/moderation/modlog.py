@@ -10,6 +10,7 @@ from discord import Colour, Message, Thread
 from discord.abc import GuildChannel
 from discord.ext.commands import Cog
 from discord.utils import escape_markdown, format_dt, snowflake_time
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot.bot import Bot
 from bot.constants import Channels, Colours, Emojis, Event, Guild as GuildConstant, Icons, Roles
@@ -685,9 +686,9 @@ class ModLog(Cog, name="ModLog"):
 
         await self.bot.wait_until_guild_available()
         try:
-            channel = self.bot.get_channel(int(event.data["channel_id"]))
+            channel = await get_or_fetch_channel(self.bot, int(event.data["channel_id"]))
             message = await channel.fetch_message(event.message_id)
-        except discord.NotFound:  # Was deleted before we got the event
+        except discord.NotFound:  # Channel/message was deleted before we got the event
             return
 
         if self.is_message_blacklisted(message):
