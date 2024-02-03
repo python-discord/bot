@@ -162,7 +162,7 @@ class Branding(commands.Cog):
         except discord.HTTPException:
             log.exception("Asset upload to Discord failed.")
             return False
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.error(f"Asset upload to Discord timed out after {timeout} seconds.")
             return False
         else:

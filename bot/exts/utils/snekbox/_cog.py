@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import re
 from functools import partial
@@ -460,7 +459,7 @@ class Snekbox(Cog):
                 if code is None:
                     return None
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 with contextlib.suppress(HTTPException):
                     await ctx.message.clear_reaction(REDO_EMOJI)
                 return None
