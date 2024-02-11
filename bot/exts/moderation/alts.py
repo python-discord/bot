@@ -88,7 +88,7 @@ class AlternateAccounts(commands.Cog):
             return
         await ctx.send(f"✅ {user_1.mention} and {user_2.mention} successfully marked as alts.")
 
-    @association_group.command(name="edit ", aliases=("e",))
+    @association_group.command(name="edit", aliases=("e",))
     async def edit_association_command(
         self,
         ctx: commands.Context,
