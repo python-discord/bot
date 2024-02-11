@@ -29,6 +29,7 @@ class AlternateAccounts(commands.Cog):
             errors = ", ".join(
                 resp_json.get("non_field_errors", []) +
                 resp_json.get("source", []) +
+                resp_json.get("target", []) +
                 resp_json.get("detail", [])
             )
             if errors:
