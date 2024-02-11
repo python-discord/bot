@@ -72,6 +72,10 @@ class AlternateAccounts(commands.Cog):
         When called directly marks the two users given as alt accounts.
         The context as to why they are believed to be alt accounts must be given.
         """
+        if user_1.bot or user_2.bot:
+            await ctx.send(":x: Cannot mark bots as alts")
+            return
+
         try:
             await self.bot.api_client.post(
                 f"bot/users/{user_1.id}/alts",
