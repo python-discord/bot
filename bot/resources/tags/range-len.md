@@ -2,12 +2,12 @@
 embed:
     title: "Pythonic way of iterating over ordered collections"
 ---
-Iterating over `range(len(...))` is a common approach to accessing each item in an ordered collection.
+Beginners often iterate over `range(len(...))` because they look like Java or C-style loops, but this is almost always a bad practice in Python.
 ```py
 for i in range(len(my_list)):
     do_something(my_list[i])
 ```
-The pythonic syntax is much simpler, and is guaranteed to produce elements in the same order:
+It's much simpler to iterate over the list (or other sequence) directly:
 ```py
 for item in my_list:
     do_something(item)

@@ -77,7 +77,7 @@ class Patreon(commands.Cog):
 
             # Filter out any members where this is not their highest tier.
             patrons = [member for member in role.members if get_patreon_tier(member) == tier]
-            patron_names = [f"• {patron}" for patron in patrons]
+            patron_names = [f"- {patron}" for patron in patrons]
 
             embed = discord.Embed(
                 title=role.name,

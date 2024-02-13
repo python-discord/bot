@@ -12,16 +12,17 @@ from discord.ext.commands import Cog, Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.channel import get_or_fetch_channel
+from pydis_core.utils.logging import CustomLogger
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
 from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
 from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
-from bot.exts.moderation.modlog import ModLog
-from bot.log import CustomLogger, get_logger
+from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import CogABCMeta, messages, time
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -72,11 +73,6 @@ class WatchChannel(metaclass=CogABCMeta):
         self.disable_header = disable_header
 
     @property
-    def modlog(self) -> ModLog:
-        """Provides access to the ModLog cog for alert purposes."""
-        return self.bot.get_cog("ModLog")
-
-    @property
     def consuming_messages(self) -> bool:
         """Checks if a consumption task is currently running."""
         if self._consume_task is None:
@@ -121,7 +117,8 @@ class WatchChannel(metaclass=CogABCMeta):
                 """
             )
 
-            await self.modlog.send_log_message(
+            await send_log_message(
+                self.bot,
                 title=f"Error: Failed to initialize the {self.__class__.__name__} watch channel",
                 text=message,
                 ping_everyone=True,
@@ -133,7 +130,8 @@ class WatchChannel(metaclass=CogABCMeta):
             return
 
         if not await self.fetch_user_cache():
-            await self.modlog.send_log_message(
+            await send_log_message(
+                self.bot,
                 title=f"Warning: Failed to retrieve user cache for the {self.__class__.__name__} watch channel",
                 text=(
                     "Could not retrieve the list of watched users from the API. "
@@ -352,7 +350,7 @@ class WatchChannel(metaclass=CogABCMeta):
         list_data["info"] = {}
         for user_id, user_data in watched_iter:
             member = await get_or_fetch_member(ctx.guild, user_id)
-            line = f"• `{user_id}`"
+            line = f"- `{user_id}`"
             if member:
                 line += f" ({member.name}#{member.discriminator})"
             inserted_at = user_data["inserted_at"]

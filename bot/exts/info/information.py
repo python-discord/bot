@@ -426,7 +426,7 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
-    async def user_messages(self, user: MemberOrUser) -> tuple[bool | str, tuple[str, str]]:
+    async def user_messages(self, user: MemberOrUser) -> tuple[str, str]:
         """
         Gets the amount of messages for `member`.
 
@@ -441,15 +441,21 @@ class Information(Cog):
             if e.status == 404:
                 activity_output = "No activity"
         else:
-            activity_output.append(f"{user_activity['total_messages']:,}" or "No messages")
-            activity_output.append(f"{user_activity['activity_blocks']:,}" or "No activity")
+            total_message_text = (
+                f"{user_activity['total_messages']:,}" if user_activity["total_messages"] else "No messages"
+            )
+            activity_blocks_text = (
+                f"{user_activity['activity_blocks']:,}" if user_activity["activity_blocks"] else "No activity"
+            )
+            activity_output.append(total_message_text)
+            activity_output.append(activity_blocks_text)
 
             activity_output = "\n".join(
                 f"{name}: {metric}"
                 for name, metric in zip(["Messages", "Activity blocks"], activity_output, strict=True)
             )
 
-        return ("Activity", activity_output)
+        return "Activity", activity_output
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: int | None = None) -> str:
         """Format a mapping to be readable to a human."""

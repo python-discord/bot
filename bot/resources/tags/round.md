@@ -20,7 +20,7 @@ The round half up technique creates a slight bias towards the larger number. Wit
 It should be noted that round half to even distorts the distribution by increasing the probability of evens relative to odds, however this is considered less important than the bias explained above.
 
 **References:**  
-• [Wikipedia article about rounding](https://en.wikipedia.org/wiki/Rounding#Round_half_to_even)  
-• [Documentation on `round` function](https://docs.python.org/3/library/functions.html#round)  
-• [`round` in what's new in python 3](https://docs.python.org/3/whatsnew/3.0.html#builtins) (4th bullet down)  
-• [How to force rounding technique](https://stackoverflow.com/a/10826537/4607272)
+- [Wikipedia article about rounding](https://en.wikipedia.org/wiki/Rounding#Round_half_to_even)  
+- [Documentation on `round` function](https://docs.python.org/3/library/functions.html#round)  
+- [`round` in what's new in python 3](https://docs.python.org/3/whatsnew/3.0.html#builtins) (4th bullet down)  
+- [How to force rounding technique](https://stackoverflow.com/a/10826537/4607272)

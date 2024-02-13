@@ -325,7 +325,7 @@ class DocCog(commands.Cog):
                 colour=discord.Colour.blue()
             )
 
-            lines = sorted(f"• [`{name}`]({url})" for name, url in self.base_urls.items())
+            lines = sorted(f"- [`{name}`]({url})" for name, url in self.base_urls.items())
             if self.base_urls:
                 await LinePaginator.paginate(lines, ctx, inventory_embed, max_size=400, empty=False)
 

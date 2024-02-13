@@ -7,7 +7,6 @@ from datetime import timedelta
 from enum import Enum
 from operator import attrgetter
 
-import async_timeout
 import discord
 from arrow import Arrow
 from async_rediscache import RedisCache
@@ -158,12 +157,12 @@ class Branding(commands.Cog):
 
         timeout = 10  # Seconds.
         try:
-            with async_timeout.timeout(timeout):  # Raise after `timeout` seconds.
+            async with asyncio.timeout(timeout):  # Raise after `timeout` seconds.
                 await pydis.edit(**{asset_type.value: file})
         except discord.HTTPException:
             log.exception("Asset upload to Discord failed.")
             return False
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.error(f"Asset upload to Discord timed out after {timeout} seconds.")
             return False
         else:

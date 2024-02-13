@@ -16,11 +16,11 @@ from bot.decorators import ensure_future_timestamp
 from bot.errors import InvalidInfractionError
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction.infractions import Infractions
-from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import messages, time
 from bot.utils.channel import is_in_category, is_mod_channel
+from bot.utils.modlog import send_log_message
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -56,11 +56,6 @@ class ModManagement(commands.Cog):
             self.search_by_actor
         ):
             command.help += f"\n{SYMBOLS_GUIDE}"
-
-    @property
-    def mod_log(self) -> ModLog:
-        """Get currently loaded ModLog cog instance."""
-        return self.bot.get_cog("ModLog")
 
     @property
     def infractions_cog(self) -> Infractions:
@@ -260,7 +255,8 @@ class ModManagement(commands.Cog):
         else:
             jump_url = f"[Click here.]({ctx.message.jump_url})"
 
-        await self.mod_log.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url=constants.Icons.pencil,
             colour=discord.Colour.og_blurple(),
             title="Infraction edited",
@@ -299,8 +295,8 @@ class ModManagement(commands.Cog):
             user_str = escape_markdown(str(user))
         else:
             if infraction_list:
-                user = infraction_list[0]["user"]
-                user_str = escape_markdown(user["name"]) + f"#{user['discriminator']:04}"
+                user_data = infraction_list[0]["user"]
+                user_str = escape_markdown(user_data["name"]) + f"#{user_data['discriminator']:04}"
             else:
                 user_str = str(user.id)
 
