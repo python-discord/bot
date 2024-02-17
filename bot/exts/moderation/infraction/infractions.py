@@ -1,6 +1,6 @@
 import textwrap
 import typing as t
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 import arrow
 import discord
@@ -658,6 +658,32 @@ class Infractions(InfractionScheduler, commands.Cog):
             if discord.User in error.converters or Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        """
+
+        Apply active timeout infractions for returning members.
+
+        This is needed for users who might have had their infraction edited in our database but not in Discord itself.
+        """
+        active_timeouts = await self.bot.api_client.get(
+            endpoint="bot/infractions",
+            params={"active": "true", "type": "timeout", "user__id": member.id}
+        )
+
+        if active_timeouts:
+            timeout_infraction = active_timeouts[0]
+            expiry = arrow.get(timeout_infraction["expires_at"], tzinfo=UTC).datetime.replace(second=0, microsecond=0)
+
+            if member.is_timed_out() and expiry == member.timed_out_until.replace(second=0, microsecond=0):
+                return
+
+            reason = f"Applying active timeout for returning member: {timeout_infraction['id']}"
+
+            async def action() -> None:
+                await member.edit(timed_out_until=expiry, reason=reason)
+            await self.reapply_infraction(timeout_infraction, action)
 
 
 async def setup(bot: Bot) -> None:
