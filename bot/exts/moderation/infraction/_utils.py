@@ -4,16 +4,16 @@ import datetime
 import arrow
 import discord
 from dateutil.relativedelta import relativedelta
-from discord.ext.commands import Context
+from discord.ext.commands import Bot, Context
 from pydis_core.site_api import ResponseCodeError
 
 import bot
-from bot.constants import Categories, Colours, Icons
+from bot.constants import Categories, Channels, Colours, Icons
 from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.channel import is_in_category
+from bot.utils.channel import is_in_category, is_mod_channel
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -64,6 +64,11 @@ INFRACTION_DESCRIPTION_WARNING_TEMPLATE = (
 
 
 MAXIMUM_TIMEOUT_DAYS = datetime.timedelta(days=28)
+TIMEOUT_CAP_MESSAGE = (
+    f"The timeout for {{0}} can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
+    " I'll pretend that's what you meant."
+)
+
 
 async def post_user(ctx: Context, user: MemberOrUser) -> dict | None:
     """
@@ -319,3 +324,13 @@ def cap_timeout_duration(duration: datetime.datetime | relativedelta) -> tuple[b
         # Duration cap is exclusive. This is to still allow specifying "28d".
         duration -= datetime.timedelta(minutes=1)
     return capped, duration
+
+
+async def notify_timeout_cap(bot: Bot, ctx: Context, user: discord.Member) -> None:
+    """Notifies moderators about a timeout duration being capped."""
+    cap_message_for_user = TIMEOUT_CAP_MESSAGE.format(user.mention)
+    if is_mod_channel(ctx.channel):
+        await ctx.reply(f":warning: {cap_message_for_user}")
+    else:
+        await bot.get_channel(Channels.mods).send(
+            f":warning: {ctx.author.mention} {cap_message_for_user}")
