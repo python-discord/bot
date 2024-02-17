@@ -230,10 +230,8 @@ class Infractions(InfractionScheduler, commands.Cog):
         if duration is None:
             duration = await Duration().convert(ctx, "1h")
         else:
-            now = arrow.utcnow()
-            if isinstance(duration, relativedelta):
-                duration += now
-            if duration > now + MAXIMUM_TIMEOUT_DAYS:
+            capped, duration = _utils.cap_timeout_duration(duration)
+            if capped:
                 cap_message_for_user = TIMEOUT_CAP_MESSAGE.format(user.mention)
                 if is_mod_channel(ctx.channel):
                     await ctx.reply(f":warning: {cap_message_for_user}")
@@ -241,10 +239,6 @@ class Infractions(InfractionScheduler, commands.Cog):
                     await self.bot.get_channel(Channels.mods).send(
                         f":warning: {ctx.author.mention} {cap_message_for_user}"
                     )
-                duration = now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1)  # Duration cap is exclusive.
-            elif duration > now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1):
-                # Duration cap is exclusive. This is to still allow specifying "28d".
-                duration -= timedelta(minutes=1)
 
         await self.apply_timeout(ctx, user, reason, duration_or_expiry=duration)
 
