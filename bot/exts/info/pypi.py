@@ -1,7 +1,10 @@
+import arrow
+from datetime import datetime
 import itertools
 import random
 import re
 from contextlib import suppress
+import typing
 
 from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
@@ -11,6 +14,7 @@ from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
 from bot.log import get_logger
 from bot.utils.messages import wait_for_deletion
+
 
 URL = "https://pypi.org/pypi/{package}/json"
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
@@ -22,6 +26,12 @@ INVALID_INPUT_DELETE_DELAY = RedirectOutput.delete_delay
 
 log = get_logger(__name__)
 
+def _get_latest_distribution_timestamp(data: dict[str, typing.Any]) -> datetime | None:
+    """Get upload date of last distribution, or `None` if no distributions were found."""
+    if not data["urls"]:
+        return None
+
+    return max(arrow.get(dist["upload_time"]) for dist in data["urls"]).date()
 
 class PyPi(Cog):
     """Cog for getting information about PyPi packages."""
@@ -62,6 +72,10 @@ class PyPi(Cog):
                         embed.description = escape_markdown(summary)
                     else:
                         embed.description = "No summary provided."
+
+                    upload_date = _get_latest_distribution_timestamp(response_json)
+                    if upload_date:
+                        embed.set_footer(text=f"Uploaded to PyPI on {upload_date}")
 
                     error = False
 
