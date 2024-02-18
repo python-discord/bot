@@ -1,11 +1,11 @@
-import arrow
-from datetime import datetime
 import itertools
 import random
 import re
-from contextlib import suppress
 import typing
+from contextlib import suppress
+from datetime import datetime
 
+import arrow
 from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
 from discord.utils import escape_markdown
@@ -14,7 +14,6 @@ from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
 from bot.log import get_logger
 from bot.utils.messages import wait_for_deletion
-
 
 URL = "https://pypi.org/pypi/{package}/json"
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
