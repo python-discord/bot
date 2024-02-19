@@ -26,6 +26,8 @@ jobs:
       REDDIT_CLIENT_ID: spam
       REDDIT_SECRET: ham
       REDIS_PASSWORD: ''
+      UNITTESTS_EXECUTION_ENV: CI
+      UNITTESTS_CI_CONTEXT: 1
 
     steps:
       - name: Checkout repository
