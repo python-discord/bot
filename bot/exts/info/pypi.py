@@ -5,7 +5,6 @@ import typing
 from contextlib import suppress
 from datetime import datetime
 
-import arrow
 from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
 from discord.utils import escape_markdown
@@ -13,8 +12,8 @@ from discord.utils import escape_markdown
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
 from bot.log import get_logger
-from bot.utils.messages import wait_for_deletion
 from bot.utils import time
+from bot.utils.messages import wait_for_deletion
 
 URL = "https://pypi.org/pypi/{package}/json"
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
@@ -30,9 +29,9 @@ def _get_latest_distribution_timestamp(data: dict[str, typing.Any]) -> datetime 
     """Get upload date of last distribution, or `None` if no distributions were found."""
     if not data["urls"]:
         return None
-    
+
     try:
-        return time.discord_timestamp(data['urls'][-1]["upload_time_iso_8601"], time.TimestampFormats.DATE)
+        return time.discord_timestamp(data["urls"][-1]["upload_time_iso_8601"], time.TimestampFormats.DATE)
     except KeyError:
         log.trace("KeyError trying to fetch upload time: data['urls'][-1]['upload_time_iso_8601']")
         return None
