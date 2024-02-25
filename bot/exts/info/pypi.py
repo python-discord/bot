@@ -78,7 +78,7 @@ class PyPi(Cog):
 
                     upload_date = _get_latest_distribution_timestamp(response_json)
                     if upload_date:
-                        embed.add_field(name = "Released:", value = f"{upload_date}")
+                        embed.description += f"\n\nReleased on {upload_date}."
 
                     error = False
 
