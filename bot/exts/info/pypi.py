@@ -74,7 +74,7 @@ class PyPi(Cog):
 
                     upload_date = _get_latest_distribution_timestamp(response_json)
                     if upload_date:
-                        embed.set_footer(text=f"Uploaded to PyPI on {upload_date}")
+                        embed.set_footer(text=f"Released on {upload_date}")
 
                     error = False
 
