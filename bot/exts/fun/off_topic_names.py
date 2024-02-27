@@ -81,7 +81,7 @@ class OffTopicNames(Cog):
     async def list_ot_names(self, ctx: Context, active: bool = True) -> None:
         """Send an embed containing active/deactivated off-topic channel names."""
         result = await self.bot.api_client.get("bot/off-topic-channel-names", params={"active": json.dumps(active)})
-        lines = sorted(f"• {name}" for name in result)
+        lines = sorted(f"- {name}" for name in result)
         embed = Embed(
             title=f"{'Active' if active else 'Deactivated'} off-topic names (`{len(result)}` total)",
             colour=Colour.blue()
@@ -207,7 +207,7 @@ class OffTopicNames(Cog):
 
         try:
             await asyncio.wait_for(rename_channel(), 3)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Channel rename endpoint rate limited. The task was cancelled by asyncio.
             btn_yes = Button(label="Yes", style=ButtonStyle.success)
             btn_no = Button(label="No", style=ButtonStyle.danger)
@@ -286,7 +286,7 @@ class OffTopicNames(Cog):
         close_matches = difflib.get_close_matches(query, result.keys(), n=10, cutoff=0.70)
 
         # Send Results
-        lines = sorted(f"• {result[name]}" for name in in_matches.union(close_matches))
+        lines = sorted(f"- {result[name]}" for name in in_matches.union(close_matches))
         embed = Embed(
             title="Query results",
             colour=Colour.blue()

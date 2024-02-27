@@ -19,8 +19,8 @@ async def ping(ctx):
 A blocking operation is wherever you do something without `await`ing it. This tells Python that this step must be completed before it can do anything else. Common examples of blocking operations, as simple as they may seem, include: outputting text, adding two numbers and appending an item onto a list. Most common Python libraries have an asynchronous version available to use in asynchronous contexts.
 
 **`async` libraries**
-The standard async library - `asyncio`
-Asynchronous web requests - `aiohttp`
-Talking to PostgreSQL asynchronously - `asyncpg`
-MongoDB interactions asynchronously - `motor`
-Check out [this](https://github.com/timofurrer/awesome-asyncio) list for even more!
+- The standard async library - `asyncio`
+- Asynchronous web requests - `aiohttp`
+- Talking to PostgreSQL asynchronously - `asyncpg`
+- MongoDB interactions asynchronously - `motor`
+- Check out [this](https://github.com/timofurrer/awesome-asyncio) list for even more!

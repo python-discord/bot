@@ -69,7 +69,7 @@ class BotSource(commands.Cog):
 
         # Handle tag file location differently than others to avoid errors in some cases
         if not first_line_no:
-            file_location = Path(filename).relative_to("bot/")
+            file_location = Path(filename)
         else:
             file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 

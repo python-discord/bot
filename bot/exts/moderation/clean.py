@@ -21,6 +21,7 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
 from bot.utils.messages import upload_log
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -60,8 +61,8 @@ class Regex(Converter):
 
 
 if TYPE_CHECKING:  # Used to allow method resolution in IDEs like in converters.py.
-    CleanChannels = Literal["*"] | list[TextChannel]  # noqa: F811
-    Regex = re.Pattern  # noqa: F811
+    CleanChannels = Literal["*"] | list[TextChannel]
+    Regex = re.Pattern
 
 
 class Clean(Cog):
@@ -367,7 +368,8 @@ class Clean(Cog):
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 
-        await self.mod_log.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url=Icons.message_bulk_delete,
             colour=Colour(Colours.soft_red),
             title="Bulk message delete",

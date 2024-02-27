@@ -459,7 +459,10 @@ class Reminders(Cog):
 
         For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
         """
-        await self.edit_reminder(ctx, id_, {"expiration": expiration.isoformat()})
+        formatted_time = time.discord_timestamp(expiration, time.TimestampFormats.DAY_TIME)
+        message = f"It will arrive on {formatted_time}."
+
+        await self.edit_reminder(ctx, id_, {"expiration": expiration.isoformat()}, message)
 
     @edit_reminder_group.command(name="content", aliases=("reason",))
     async def edit_reminder_content(self, ctx: Context, id_: int, *, content: str | None = None) -> None:
@@ -490,7 +493,7 @@ class Reminders(Cog):
         await self.edit_reminder(ctx, id_, {"mentions": mention_ids})
 
     @lock_arg(LOCK_NAMESPACE, "id_", raise_error=True)
-    async def edit_reminder(self, ctx: Context, id_: int, payload: dict) -> None:
+    async def edit_reminder(self, ctx: Context, id_: int, payload: dict, message: str = "") -> None:
         """Edits a reminder with the given payload, then sends a confirmation message."""
         if not await self._can_modify(ctx, id_):
             return
@@ -499,7 +502,7 @@ class Reminders(Cog):
         # Send a confirmation message to the channel
         await self._send_confirmation(
             ctx,
-            on_success="That reminder has been edited successfully!",
+            on_success=" ".join(("That reminder has been edited successfully!", message)).rstrip(),
             reminder_id=id_,
         )
         await self._reschedule_reminder(reminder)
