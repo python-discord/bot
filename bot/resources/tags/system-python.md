@@ -5,7 +5,7 @@ embed:
 
 *Why Avoid System Python for Development on Unix-like Systems:*
 
-- **Critical System Operations Dependency:** Altering the system interpreter may harm system functioning irreversibly.
+- **Critical Operating System Dependencies:** Altering the system Python installation may harm internal operating system dependencies. 
   
 - **Stability and Security Concerns:** System interpreters lag behind current releases, lacking the latest features and security patches.
   
