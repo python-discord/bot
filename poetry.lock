@@ -1600,13 +1600,13 @@ testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtuale
 
 [[package]]
 name = "pytest-subtests"
-version = "0.11.0"
+version = "0.12.1"
 description = "unittest subTest() support and subtests fixture"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-subtests-0.11.0.tar.gz", hash = "sha256:51865c88457545f51fb72011942f0a3c6901ee9e24cbfb6d1b9dc1348bafbe37"},
-    {file = "pytest_subtests-0.11.0-py3-none-any.whl", hash = "sha256:453389984952eec85ab0ce0c4f026337153df79587048271c7fd0f49119c07e4"},
+    {file = "pytest-subtests-0.12.1.tar.gz", hash = "sha256:d6605dcb88647e0b7c1889d027f8ef1c17d7a2c60927ebfdc09c7b0d8120476d"},
+    {file = "pytest_subtests-0.12.1-py3-none-any.whl", hash = "sha256:100d9f7eb966fc98efba7026c802812ae327e8b5b37181fb260a2ea93226495c"},
 ]
 
 [package.dependencies]
@@ -2372,4 +2372,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.*"
-content-hash = "c768d7745a1f527d3b50409dd0d5ea26cda83e19e45f147a8226495ea2776486"
+content-hash = "b2c178f0214f235497eda8f9d2396f69c49658cf6675a913a4e897c15cfdba1d"
