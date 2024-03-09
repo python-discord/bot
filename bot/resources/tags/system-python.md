@@ -16,3 +16,4 @@ embed:
 - **Install Independent Interpreter:** Install Python from source or utilize a virtual environment for flexibility and control.
 
 - **Utilize [Pyenv](https://github.com/pyenv/pyenv) or Similar Tools:** Manage multiple Python versions and create isolated development environments for smoother workflows.
+  
