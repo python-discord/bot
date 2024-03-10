@@ -530,10 +530,9 @@ class Information(Cog):
         if message is None:
             if (reference := ctx.message.reference) and isinstance(reference.resolved, Message):
                 message = reference.resolved
-
-        if message is None:
-            await send_denial(ctx, "Missing message argument. Please provide a message ID/link or reply to a message.")
-            return
+            else:
+                await send_denial(ctx, "Missing message argument. Please provide a message ID/link or reply to a message.")
+                return
 
         await self.send_raw_content(ctx, message)
 
@@ -543,10 +542,9 @@ class Information(Cog):
         if message is None:
             if (reference := ctx.message.reference) and isinstance(reference.resolved, Message):
                 message = reference.resolved
-
-        if message is None:
-            await send_denial(ctx, "Missing message argument. Please provide a message ID/link or reply to a message.")
-            return
+            else:
+                await send_denial(ctx, "Missing message argument. Please provide a message ID/link or reply to a message.")
+                return
 
         await self.send_raw_content(ctx, message, json=True)
 
