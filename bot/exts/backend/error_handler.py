@@ -1,9 +1,10 @@
 import copy
 import difflib
 
-from discord import Embed, Member
+from discord import Embed, Forbidden, Member
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import push_scope
 
 from bot.bot import Bot
@@ -98,6 +99,11 @@ class ErrorHandler(Cog):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
             elif isinstance(e.original, InvalidInfractedUserError):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
+            elif isinstance(e.original, Forbidden):
+                try:
+                    await handle_forbidden_from_block(e.original, ctx.message)
+                except Forbidden:
+                    await self.handle_unexpected_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
         elif isinstance(e, errors.ConversionError):

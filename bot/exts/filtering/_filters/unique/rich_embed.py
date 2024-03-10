@@ -8,7 +8,7 @@ from bot.utils.helpers import remove_subdomain_from_url
 
 log = get_logger(__name__)
 
-URL_RE = re.compile(r"(https?://\S+)", flags=re.IGNORECASE)
+URL_RE = re.compile(r"(https?://[^\)\s]+)", flags=re.IGNORECASE)
 
 
 class RichEmbedFilter(UniqueFilter):

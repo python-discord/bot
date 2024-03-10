@@ -557,7 +557,7 @@ class TestProcessEvent(TestIncidents):
         exception should it propagate out of `process_event`. This is so that we can then manually
         fail the test with a more informative message than just the plain traceback.
         """
-        mock_task = AsyncMock(side_effect=asyncio.TimeoutError())
+        mock_task = AsyncMock(side_effect=TimeoutError())
 
         try:
             with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
@@ -566,7 +566,7 @@ class TestProcessEvent(TestIncidents):
                     incident=MockMessage(id=123, created_at=CURRENT_TIME),
                     member=MockMember(roles=[MockRole(id=1)])
                 )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.fail("TimeoutError was not handled gracefully, and propagated out of `process_event`!")
 
 
