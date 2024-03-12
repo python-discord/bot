@@ -305,18 +305,21 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
 class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
     """The confirmation view that is sent when a moderator attempts to ban a staff member."""
 
+    confirmed = True
+
     @discord.ui.button(label="Confirm", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "confirm" button is pressed."""
         await interaction.response.defer()
-
-        self.confirmed = True
         self.stop()
 
     @discord.ui.button(label="Cancel", style=ButtonStyle.green)
     async def cancel(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "cancel" button is pressed."""
-        await interaction.response.send_message("Cancelled infraction.")
-
         self.confirmed = False
+        await interaction.response.send_message("Cancelled infraction.")
         self.stop()
+
+    async def on_timeout(self) -> None:
+        await super().on_timeout()
+        await self.message.reply("Cancelled infraction due to timeout.")

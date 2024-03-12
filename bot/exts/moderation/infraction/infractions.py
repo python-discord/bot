@@ -497,12 +497,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         self.mod_log.ignore(Event.member_remove, user.id)
 
-        if reason:
-            reason = textwrap.shorten(reason, width=512, placeholder="...")
-
-        async def action() -> None:
-            await ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
-
         # If user has an elevated role (staff, partner, or community), require
         # confirmation before banning.
         if isinstance(user, Member) and any(role.id in constants.STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
@@ -512,8 +506,9 @@ class Infractions(InfractionScheduler, commands.Cog):
                 timeout=10,
             )
             confirmation_view.message = await ctx.send(
-                f"{user} has an elevated role. Are you sure you want to ban them?",
-                view=confirmation_view
+                f"{user.mention} has an elevated role. Are you sure you want to ban them?",
+                view=confirmation_view,
+                allowed_mentions=discord.AllowedMentions.none(),
             )
 
             timed_out = await confirmation_view.wait()
@@ -530,6 +525,11 @@ class Infractions(InfractionScheduler, commands.Cog):
             return None
 
         infraction["purge"] = "purge " if purge_days else ""
+
+        async def action() -> None:
+            # Discord only supports ban reasons up to 512 characters in length.
+            discord_reason = textwrap.shorten(reason or "", width=512, placeholder="...")
+            await ctx.guild.ban(user, reason=discord_reason, delete_message_days=purge_days)
 
         await self.apply_infraction(ctx, infraction, user, action)
 
