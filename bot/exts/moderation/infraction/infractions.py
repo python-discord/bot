@@ -495,8 +495,6 @@ class Infractions(InfractionScheduler, commands.Cog):
             log.trace("Old tempban is being replaced by new permaban.")
             await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
 
-        self.mod_log.ignore(Event.member_remove, user.id)
-
         # If user has an elevated role (staff, partner, or community), require
         # confirmation before banning.
         if isinstance(user, Member) and any(role.id in constants.STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
@@ -531,6 +529,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             discord_reason = textwrap.shorten(reason or "", width=512, placeholder="...")
             await ctx.guild.ban(user, reason=discord_reason, delete_message_days=purge_days)
 
+        self.mod_log.ignore(Event.member_remove, user.id)
         await self.apply_infraction(ctx, infraction, user, action)
 
         bb_cog: BigBrother | None = self.bot.get_cog("Big Brother")
