@@ -58,7 +58,11 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
         if participant_ids == {closed_post.owner_id}:
             message = closed_post.owner.mention
 
-    await closed_post.send(message, embed=embed)
+    try:
+        await closed_post.send(message, embed=embed)
+    except discord.errors.HTTPException:
+        log.info("Could not send closing message in %s (%d), closing anyway", closed_post, closed_post.id)
+
     await closed_post.edit(
         name=f"🔒 {closed_post.name}"[:100],
         archived=True,
