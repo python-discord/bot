@@ -23,6 +23,7 @@ from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
+from bot.utils.messages import send_denial
 
 log = get_logger(__name__)
 
@@ -530,13 +531,31 @@ class Information(Cog):
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
-    async def raw(self, ctx: Context, message: Message) -> None:
+    async def raw(self, ctx: Context, message: Message | None = None) -> None:
         """Shows information about the raw API response."""
+        if message is None:
+            if (reference := ctx.message.reference) and isinstance(reference.resolved, Message):
+                message = reference.resolved
+            else:
+                await send_denial(
+                    ctx, "Missing message argument. Please provide a message ID/link or reply to a message."
+                )
+                return
+
         await self.send_raw_content(ctx, message)
 
     @raw.command()
-    async def json(self, ctx: Context, message: Message) -> None:
+    async def json(self, ctx: Context, message: Message | None = None) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
+        if message is None:
+            if (reference := ctx.message.reference) and isinstance(reference.resolved, Message):
+                message = reference.resolved
+            else:
+                await send_denial(
+                    ctx, "Missing message argument. Please provide a message ID/link or reply to a message."
+                )
+                return
+
         await self.send_raw_content(ctx, message, json=True)
 
     async def _set_rules_command_help(self) -> None:
