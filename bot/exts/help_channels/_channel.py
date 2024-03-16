@@ -205,13 +205,8 @@ async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.Cl
     return time, _stats.ClosingReason.INACTIVE
 
 
-async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler, has_task: bool = True) -> None:
-    """
-    Archive the `post` if idle, or schedule the archive for later if still active.
-
-    If `has_task` is True and rescheduling is required, the extant task to make the post
-    dormant will first be cancelled.
-    """
+async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
+    """Archive the `post` if idle, or schedule the archive for later if still active."""
     try:
         await post.guild.fetch_channel(post.id)
     except discord.HTTPException:
@@ -235,9 +230,10 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
         await _close_help_post(post, closing_reason)
         return
 
-    if has_task:
+    if post.id in scheduler:
+        # Cancel any existing close task
         scheduler.cancel(post.id)
     delay = (closing_time - arrow.utcnow()).seconds
     log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
 
-    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler, has_task=True))
+    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler))
