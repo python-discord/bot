@@ -9,7 +9,7 @@ from typing import Any, TypeVar, get_origin
 
 import discord
 from discord import Embed, Interaction, Member, User
-from discord.ext.commands import Context, Converter
+from discord.ext.commands import BadArgument, Context, Converter
 from discord.ui.select import MISSING as SELECT_MISSING, SelectOption
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
@@ -567,7 +567,10 @@ class PhishConfirmationView(discord.ui.View):
             await interaction.followup.send(message)
         else:
             ctx = FakeContext(interaction.message, interaction.channel, compf_command)
-            await compf_command(ctx, self.target_filter_list.name, self.phishing_content)
+            try:
+                await compf_command(ctx, self.target_filter_list.name, self.phishing_content)
+            except BadArgument as e:
+                await interaction.followup.send(f":x: Could not add the filter: {e}")
 
 
     @discord.ui.button(label="Cancel")
