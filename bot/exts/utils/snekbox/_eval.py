@@ -26,7 +26,7 @@ class EvalJob:
     args: list[str]
     files: list[FileAttachment] = field(default_factory=list)
     name: str = "eval"
-    version: SupportedPythonVersions = "3.11"
+    version: SupportedPythonVersions = "3.12"
 
     @classmethod
     def from_code(cls, code: str, path: str = "main.py") -> EvalJob:

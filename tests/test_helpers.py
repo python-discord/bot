@@ -316,7 +316,6 @@ class MockObjectTests(unittest.TestCase):
         class MyMock(helpers.CustomMockMixin, unittest.mock.MagicMock):
 
             child_mock_type = unittest.mock.MagicMock
-            pass
 
         mock = MyMock()
         unittest.mock.seal(mock)

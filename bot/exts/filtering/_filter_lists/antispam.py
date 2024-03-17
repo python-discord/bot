@@ -93,7 +93,7 @@ class AntispamList(UniquesListBase):
         current_actions.pop("ping", None)
         current_actions.pop("send_alert", None)
 
-        new_infraction = current_actions[InfractionAndNotification.name].copy()
+        new_infraction = current_actions[InfractionAndNotification.name].model_copy()
         # Smaller infraction value => higher in hierarchy.
         if not current_infraction or new_infraction.infraction_type.value < current_infraction.value:
             # Pick the first triggered filter for the reason, there's no good way to decide between them.

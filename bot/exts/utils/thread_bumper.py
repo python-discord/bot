@@ -2,12 +2,12 @@
 import discord
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils import channel
 
 log = get_logger(__name__)
 THREAD_BUMP_ENDPOINT = "bot/bumped-threads"
@@ -69,7 +69,7 @@ class ThreadBumper(commands.Cog):
         threads_to_maybe_bump = []
         for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT):
             try:
-                thread = await channel.get_or_fetch_channel(thread_id)
+                thread = await get_or_fetch_channel(self.bot, thread_id)
             except discord.NotFound:
                 log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
                 await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")

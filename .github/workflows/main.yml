@@ -13,9 +13,9 @@ concurrency:
 
 
 jobs:
+
   lint-test:
     uses: ./.github/workflows/lint-test.yml
-
 
   generate-sha-tag:
     if: github.ref == 'refs/heads/main'

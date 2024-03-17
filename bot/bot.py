@@ -1,8 +1,11 @@
 import asyncio
+import contextlib
+from sys import exception
 
 import aiohttp
+from discord.errors import Forbidden
 from pydis_core import BotBase
-from pydis_core.utils import scheduling
+from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import push_scope
 
 from bot import constants, exts
@@ -45,13 +48,22 @@ class Bot(BotBase):
     async def setup_hook(self) -> None:
         """Default async initialisation method for discord.py."""
         await super().setup_hook()
-
-        # This is not awaited to avoid a deadlock with any cogs that have
-        # wait_until_guild_available in their cog_load method.
-        scheduling.create_task(self.load_extensions(exts))
+        await self.load_extensions(exts)
 
     async def on_error(self, event: str, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""
+        e_val = exception()
+
+        if isinstance(e_val, Forbidden):
+            message = args[0] if event == "on_message" else args[1] if event == "on_message_edit" else None
+
+            with contextlib.suppress(Forbidden):
+                # Attempt to handle the error. This reraises the error if's not due to a block,
+                # in which case the error is suppressed and handled normally. Otherwise, it was
+                # handled so return.
+                await handle_forbidden_from_block(e_val, message)
+                return
+
         self.stats.incr(f"errors.event.{event}")
 
         with push_scope() as scope:

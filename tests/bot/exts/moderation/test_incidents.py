@@ -16,8 +16,16 @@ from bot.utils.messages import format_user
 from bot.utils.time import TimestampFormats, discord_timestamp
 from tests.base import RedisTestCase
 from tests.helpers import (
-    MockAsyncWebhook, MockAttachment, MockBot, MockMember, MockMessage, MockReaction, MockRole, MockTextChannel,
-    MockUser
+    MockAsyncWebhook,
+    MockAttachment,
+    MockBot,
+    MockMember,
+    MockMessage,
+    MockReaction,
+    MockRole,
+    MockTextChannel,
+    MockUser,
+    no_create_task,
 )
 
 CURRENT_TIME = datetime.datetime(2022, 1, 1, tzinfo=datetime.UTC)
@@ -306,7 +314,8 @@ class TestIncidents(RedisTestCase):
         Note that this will not schedule `crawl_incidents` in the background, as everything
         is being mocked. The `crawl_task` attribute will end up being None.
         """
-        self.cog_instance = incidents.Incidents(MockBot())
+        with no_create_task():
+            self.cog_instance = incidents.Incidents(MockBot())
 
 
 @patch("asyncio.sleep", AsyncMock())  # Prevent the coro from sleeping to speed up the test
@@ -458,7 +467,8 @@ class TestMakeConfirmationTask(TestIncidents):
         If this function begins to fail, first check that `created_check` is being retrieved
         correctly. It should be the function that is built locally in the tested method.
         """
-        self.cog_instance.make_confirmation_task(MockMessage(id=123))
+        with no_create_task():
+            self.cog_instance.make_confirmation_task(MockMessage(id=123))
 
         self.cog_instance.bot.wait_for.assert_called_once()
         created_check = self.cog_instance.bot.wait_for.call_args.kwargs["check"]
@@ -547,7 +557,7 @@ class TestProcessEvent(TestIncidents):
         exception should it propagate out of `process_event`. This is so that we can then manually
         fail the test with a more informative message than just the plain traceback.
         """
-        mock_task = AsyncMock(side_effect=asyncio.TimeoutError())
+        mock_task = AsyncMock(side_effect=TimeoutError())
 
         try:
             with patch("bot.exts.moderation.incidents.Incidents.make_confirmation_task", mock_task):
@@ -556,7 +566,7 @@ class TestProcessEvent(TestIncidents):
                     incident=MockMessage(id=123, created_at=CURRENT_TIME),
                     member=MockMember(roles=[MockRole(id=1)])
                 )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.fail("TimeoutError was not handled gracefully, and propagated out of `process_event`!")
 
 

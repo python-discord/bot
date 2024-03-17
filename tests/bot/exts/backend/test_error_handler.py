@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 from discord.ext.commands import errors
 from pydis_core.site_api import ResponseCodeError
@@ -54,11 +54,14 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.reset_mock()
                 self.cog.try_silence.reset_mock(return_value=True)
                 self.cog.try_get_tag.reset_mock()
+                self.ctx.invoked_from_error_handler = False
 
                 self.cog.try_silence.return_value = case["try_silence_return"]
                 self.ctx.channel.id = 1234
 
                 self.assertIsNone(await self.cog.on_command_error(self.ctx, error))
+
+                self.assertTrue(self.ctx.invoked_from_error_handler)
 
                 if case["try_silence_return"]:
                     self.cog.try_get_tag.assert_not_awaited()
@@ -203,13 +206,6 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
         self.ctx = MockContext(bot=self.bot, guild=self.guild)
         self.cog = error_handler.ErrorHandler(self.bot)
 
-    async def test_try_silence_context_invoked_from_error_handler(self):
-        """Should set `Context.invoked_from_error_handler` to `True`."""
-        self.ctx.invoked_with = "foo"
-        await self.cog.try_silence(self.ctx)
-        self.assertTrue(hasattr(self.ctx, "invoked_from_error_handler"))
-        self.assertTrue(self.ctx.invoked_from_error_handler)
-
     async def test_try_silence_get_command(self):
         """Should call `get_command` with `silence`."""
         self.ctx.invoked_with = "foo"
@@ -342,25 +338,11 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.try_get_tag(self.ctx)
         self.bot.get_cog.assert_called_once_with("Tags")
 
-    async def test_try_get_tag_invoked_from_error_handler(self):
-        """`self.ctx` should have `invoked_from_error_handler` `True`."""
-        self.ctx.invoked_from_error_handler = False
-        await self.cog.try_get_tag(self.ctx)
-        self.assertTrue(self.ctx.invoked_from_error_handler)
-
     async def test_try_get_tag_no_permissions(self):
         """Test how to handle checks failing."""
         self.bot.can_run = AsyncMock(return_value=False)
         self.ctx.invoked_with = "foo"
         self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-
-    async def test_try_get_tag_command_error(self):
-        """Should call `on_command_error` when `CommandError` raised."""
-        err = errors.CommandError()
-        self.bot.can_run = AsyncMock(side_effect=err)
-        self.cog.on_command_error = AsyncMock()
-        self.assertIsNone(await self.cog.try_get_tag(self.ctx))
-        self.cog.on_command_error.assert_awaited_once_with(self.ctx, err)
 
     async def test_dont_call_suggestion_tag_sent(self):
         """Should never call command suggestion if tag is already sent."""
@@ -375,7 +357,7 @@ class TryGetTagTests(unittest.IsolatedAsyncioTestCase):
     async def test_dont_call_suggestion_if_user_mod(self):
         """Should not call command suggestion if user is a mod."""
         self.ctx.invoked_with = "foo"
-        self.ctx.invoke = AsyncMock(return_value=False)
+        self.tag.get_command_ctx = AsyncMock(return_value=False)
         self.ctx.author.roles = [MockRole(id=1234)]
         self.cog.send_command_suggestion = AsyncMock()
 
@@ -521,6 +503,10 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.reset_mock()
                 log_mock.reset_mock()
                 push_scope_mock.reset_mock()
+                scope_mock = Mock()
+
+                # Mock `with push_scope_mock() as scope:`
+                push_scope_mock.return_value.__enter__.return_value = scope_mock
 
                 self.ctx.guild = case
                 await self.cog.handle_unexpected_error(self.ctx, errors.CommandError())
@@ -544,8 +530,8 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                     )
                     set_extra_calls.append(call("jump_to", url))
 
-                push_scope_mock.set_tag.has_calls(set_tag_calls)
-                push_scope_mock.set_extra.has_calls(set_extra_calls)
+                scope_mock.set_tag.assert_has_calls(set_tag_calls)
+                scope_mock.set_extra.assert_has_calls(set_extra_calls)
 
 
 class ErrorHandlerSetupTests(unittest.IsolatedAsyncioTestCase):

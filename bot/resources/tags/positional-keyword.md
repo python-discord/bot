@@ -35,6 +35,6 @@ The reverse is also true:
 ```
 
 **More info**  
-• [Keyword only arguments](https://peps.python.org/pep-3102/)  
-• [Positional only arguments](https://peps.python.org/pep-0570/)  
-• `/tag param-arg` (Parameters vs. Arguments)  
+- [Keyword only arguments](https://peps.python.org/pep-3102/)  
+- [Positional only arguments](https://peps.python.org/pep-0570/)  
+- `/tag param-arg` (Parameters vs. Arguments)  

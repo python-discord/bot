@@ -11,6 +11,7 @@ from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
@@ -22,7 +23,7 @@ from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.channel import is_mod_channel, is_staff_channel
 from bot.utils.checks import cooldown_with_role_bypass, has_no_roles_check, in_whitelist_check
-from bot.utils.members import get_or_fetch_member
+from bot.utils.messages import send_denial
 
 log = get_logger(__name__)
 
@@ -238,7 +239,7 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user_or_message: MemberOrUser | Message = None) -> None:  # noqa: RUF013
+    async def user_info(self, ctx: Context, user_or_message: MemberOrUser | Message = None) -> None:
         """Returns info about a user."""
         if passed_as_message := isinstance(user_or_message, Message):
             user = user_or_message.author
@@ -420,7 +421,7 @@ class Information(Cog):
 
         return "Nominations", "\n".join(output)
 
-    async def user_messages(self, user: MemberOrUser) -> tuple[bool | str, tuple[str, str]]:
+    async def user_messages(self, user: MemberOrUser) -> tuple[str, str]:
         """
         Gets the amount of messages for `member`.
 
@@ -435,15 +436,21 @@ class Information(Cog):
             if e.status == 404:
                 activity_output = "No activity"
         else:
-            activity_output.append(f"{user_activity['total_messages']:,}" or "No messages")
-            activity_output.append(f"{user_activity['activity_blocks']:,}" or "No activity")
+            total_message_text = (
+                f"{user_activity['total_messages']:,}" if user_activity["total_messages"] else "No messages"
+            )
+            activity_blocks_text = (
+                f"{user_activity['activity_blocks']:,}" if user_activity["activity_blocks"] else "No activity"
+            )
+            activity_output.append(total_message_text)
+            activity_output.append(activity_blocks_text)
 
             activity_output = "\n".join(
                 f"{name}: {metric}"
                 for name, metric in zip(["Messages", "Activity blocks"], activity_output, strict=True)
             )
 
-        return ("Activity", activity_output)
+        return "Activity", activity_output
 
     def format_fields(self, mapping: Mapping[str, Any], field_width: int | None = None) -> str:
         """Format a mapping to be readable to a human."""
@@ -524,13 +531,31 @@ class Information(Cog):
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @group(invoke_without_command=True)
     @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
-    async def raw(self, ctx: Context, message: Message) -> None:
+    async def raw(self, ctx: Context, message: Message | None = None) -> None:
         """Shows information about the raw API response."""
+        if message is None:
+            if (reference := ctx.message.reference) and isinstance(reference.resolved, Message):
+                message = reference.resolved
+            else:
+                await send_denial(
+                    ctx, "Missing message argument. Please provide a message ID/link or reply to a message."
+                )
+                return
+
         await self.send_raw_content(ctx, message)
 
     @raw.command()
-    async def json(self, ctx: Context, message: Message) -> None:
+    async def json(self, ctx: Context, message: Message | None = None) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
+        if message is None:
+            if (reference := ctx.message.reference) and isinstance(reference.resolved, Message):
+                message = reference.resolved
+            else:
+                await send_denial(
+                    ctx, "Missing message argument. Please provide a message ID/link or reply to a message."
+                )
+                return
+
         await self.send_raw_content(ctx, message, json=True)
 
     async def _set_rules_command_help(self) -> None:

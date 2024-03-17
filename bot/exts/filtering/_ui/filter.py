@@ -13,8 +13,16 @@ from pydis_core.site_api import ResponseCodeError
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter
 from bot.exts.filtering._ui.ui import (
-    COMPONENT_TIMEOUT, CustomCallbackSelect, EditBaseView, MAX_EMBED_DESCRIPTION, MISSING, SETTINGS_DELIMITER,
-    SINGLE_SETTING_PATTERN, format_response_error, parse_value, populate_embed_from_dict
+    COMPONENT_TIMEOUT,
+    CustomCallbackSelect,
+    EditBaseView,
+    MAX_EMBED_DESCRIPTION,
+    MISSING,
+    SETTINGS_DELIMITER,
+    SINGLE_SETTING_PATTERN,
+    format_response_error,
+    parse_value,
+    populate_embed_from_dict,
 )
 from bot.exts.filtering._utils import repr_equals, to_serializable
 from bot.log import get_logger
@@ -34,7 +42,7 @@ def build_filter_repr_dict(
     default_setting_values = {}
     for settings_group in filter_list[list_type].defaults:
         for _, setting in settings_group.items():
-            default_setting_values.update(to_serializable(setting.dict(), ui_repr=True))
+            default_setting_values.update(to_serializable(setting.model_dump(), ui_repr=True))
 
     # Add overrides. It's done in this way to preserve field order, since the filter won't have all settings.
     total_values = {}
@@ -47,7 +55,7 @@ def build_filter_repr_dict(
     # Add the filter-specific settings.
     if filter_type.extra_fields_type:
         # This iterates over the default values of the extra fields model.
-        for name, value in filter_type.extra_fields_type().dict().items():
+        for name, value in filter_type.extra_fields_type().model_dump().items():
             if name not in extra_fields_overrides or repr_equals(extra_fields_overrides[name], value):
                 total_values[f"{filter_type.name}/{name}"] = value
             else:
@@ -287,7 +295,7 @@ class FilterEditView(EditBaseView):
             if "/" in setting_name:
                 filter_name, setting_name = setting_name.split("/", maxsplit=1)
                 dict_to_edit = self.filter_settings_overrides
-                default_value = self.filter_type.extra_fields_type().dict()[setting_name]
+                default_value = self.filter_type.extra_fields_type().model_dump()[setting_name]
             else:
                 dict_to_edit = self.settings_overrides
                 default_value = self.filter_list[self.list_type].default(setting_name)

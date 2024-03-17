@@ -1,6 +1,8 @@
-from typing import ClassVar, Union
+from collections.abc import Sequence
+from typing import ClassVar
 
 from discord import Member
+from pydantic import field_validator
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ValidationEntry
@@ -12,7 +14,26 @@ class RoleBypass(ValidationEntry):
     name: ClassVar[str] = "bypass_roles"
     description: ClassVar[str] = "A list of role IDs or role names. Users with these roles will not trigger the filter."
 
-    bypass_roles: set[Union[int, str]]  # noqa: UP007
+    bypass_roles: set[int | str]
+
+    @field_validator("bypass_roles", mode="before")
+    @classmethod
+    def init_if_bypass_roles_none(cls, bypass_roles: Sequence[int | str] | None) -> Sequence[int | str]:
+        """
+        Initialize an empty sequence if the value is None.
+
+        This also coerces each element of bypass_roles to an int, if possible.
+        """
+        if bypass_roles is None:
+            return []
+
+        def _coerce_to_int(input: int | str) -> int | str:
+            try:
+                return int(input)
+            except ValueError:
+                return input
+
+        return map(_coerce_to_int, bypass_roles)
 
     def triggers_on(self, ctx: FilterContext) -> bool:
         """Return whether the filter should be triggered on this user given their roles."""

@@ -43,7 +43,7 @@ jobs:
           curl -s -H "Authorization: token $GITHUB_TOKEN" ${{ github.event.workflow_run.artifacts_url }} > artifacts.json
           DOWNLOAD_URL=$(cat artifacts.json | jq -r '.artifacts[] | select(.name == "pull-request-payload") | .archive_download_url')
           [ -z "$DOWNLOAD_URL" ] && exit 1
-          wget --quiet --header="Authorization: token $GITHUB_TOKEN" -O pull_request_payload.zip $DOWNLOAD_URL || exit 2
+          curl -sSL -H "Authorization: token $GITHUB_TOKEN" -o pull_request_payload.zip $DOWNLOAD_URL || exit 2
           unzip -p pull_request_payload.zip > pull_request_payload.json
           [ -s pull_request_payload.json ] || exit 3
           echo "::set-output name=pr_author_login::$(jq -r '.user.login // empty' pull_request_payload.json)"

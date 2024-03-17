@@ -210,6 +210,9 @@ class CodeSnippets(Cog):
         if not is_valid_language:
             language = ""
 
+        if language == "pyi":
+            language = "py"
+
         # Adds a label showing the file path to the snippet
         if start_line == end_line:
             ret = f"`{file_path}` line {start_line}\n"

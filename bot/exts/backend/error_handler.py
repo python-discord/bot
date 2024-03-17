@@ -1,9 +1,10 @@
 import copy
 import difflib
 
-from discord import Embed, Member
+from discord import Embed, Forbidden, Member
 from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConverter, VoiceChannelConverter, errors
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import push_scope
 
 from bot.bot import Bot
@@ -64,11 +65,24 @@ class ErrorHandler(Cog):
         )
 
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
-            if await self.try_silence(ctx):
-                return
-            if await self.try_run_fixed_codeblock(ctx):
-                return
-            await self.try_get_tag(ctx)  # Try to look for a tag with the command's name
+            # We might not invoke a command from the error handler, but it's easier and safer to ensure
+            # this is always set rather than trying to get it exact, and shouldn't cause any issues.
+            ctx.invoked_from_error_handler = True
+
+            # All errors from attempting to execute these commands should be handled by the error handler.
+            # We wrap non CommandErrors in CommandInvokeError to mirror the behaviour of normal commands.
+            try:
+                if await self.try_silence(ctx):
+                    return
+                if await self.try_run_fixed_codeblock(ctx):
+                    return
+                await self.try_get_tag(ctx)
+            except Exception as err:
+                log.info("Re-handling error raised by command in error handler")
+                if isinstance(err, errors.CommandError):
+                    await self.on_command_error(ctx, err)
+                else:
+                    await self.on_command_error(ctx, errors.CommandInvokeError(err))
         elif isinstance(e, errors.UserInputError):
             log.debug(debug_message)
             await self.handle_user_input_error(ctx, e)
@@ -85,6 +99,11 @@ class ErrorHandler(Cog):
                 await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
             elif isinstance(e.original, InvalidInfractedUserError):
                 await ctx.send(f"Cannot infract that user. {e.original.reason}")
+            elif isinstance(e.original, Forbidden):
+                try:
+                    await handle_forbidden_from_block(e.original, ctx.message)
+                except Forbidden:
+                    await self.handle_unexpected_error(ctx, e.original)
             else:
                 await self.handle_unexpected_error(ctx, e.original)
         elif isinstance(e, errors.ConversionError):
@@ -123,7 +142,6 @@ class ErrorHandler(Cog):
 
         command = ctx.invoked_with.lower()
         args = ctx.message.content.lower().split(" ")
-        ctx.invoked_from_error_handler = True
 
         try:
             if not await silence_command.can_run(ctx):
@@ -160,13 +178,7 @@ class ErrorHandler(Cog):
         return False
 
     async def try_get_tag(self, ctx: Context) -> None:
-        """
-        Attempt to display a tag by interpreting the command name as a tag name.
-
-        The invocation of tags get respects its checks. Any CommandErrors raised will be handled
-        by `on_command_error`, but the `invoked_from_error_handler` attribute will be added to
-        the context to prevent infinite recursion in the case of a CommandNotFound exception.
-        """
+        """Attempt to display a tag by interpreting the command name as a tag name."""
         tags_cog = self.bot.get_cog("Tags")
         if not tags_cog:
             log.debug("Not attempting to parse message as a tag as could not find `Tags` cog.")
@@ -177,23 +189,19 @@ class ErrorHandler(Cog):
         if not maybe_tag_name or not isinstance(ctx.author, Member):
             return
 
-        ctx.invoked_from_error_handler = True
         try:
             if not await self.bot.can_run(ctx):
                 log.debug("Cancelling attempt to fall back to a tag due to failed checks.")
                 return
+        except errors.CommandError:
+            log.debug("Cancelling attempt to fall back to a tag due to failed checks.")
+            return
 
-            if await tags_get_command(ctx, maybe_tag_name):
-                return
+        if await tags_get_command(ctx, maybe_tag_name):
+            return
 
-            if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
-                await self.send_command_suggestion(ctx, maybe_tag_name)
-        except Exception as err:
-            log.debug("Error while attempting to invoke tag fallback.")
-            if isinstance(err, errors.CommandError):
-                await self.on_command_error(ctx, err)
-            else:
-                await self.on_command_error(ctx, errors.CommandInvokeError(err))
+        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            await self.send_command_suggestion(ctx, maybe_tag_name)
 
     async def try_run_fixed_codeblock(self, ctx: Context) -> bool:
         """

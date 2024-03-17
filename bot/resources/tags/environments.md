@@ -18,12 +18,12 @@ If Python's `sys.executable` doesn't match pip's, then they are currently using 
 
 **Why use a virtual environment?**
 
-• Resolve dependency issues by allowing the use of different versions of a package for different projects. For example, you could use Package A v2.7 for Project X and Package A v1.3 for Project Y.  
-• Make your project self-contained and reproducible by capturing all package dependencies in a requirements file. Try running `pip freeze` to see what you currently have installed!  
-• Keep your global `site-packages/` directory tidy by removing the need to install packages system-wide which you might only need for one project.
+- Resolve dependency issues by allowing the use of different versions of a package for different projects. For example, you could use Package A v2.7 for Project X and Package A v1.3 for Project Y.  
+- Make your project self-contained and reproducible by capturing all package dependencies in a requirements file. Try running `pip freeze` to see what you currently have installed!  
+- Keep your global `site-packages/` directory tidy by removing the need to install packages system-wide which you might only need for one project.
 
 
 **Further reading:**
 
-• [Python Virtual Environments: A Primer](https://realpython.com/python-virtual-environments-a-primer)  
-• [pyenv: Simple Python Version Management](https://github.com/pyenv/pyenv)
+- [Python Virtual Environments: A Primer](https://realpython.com/python-virtual-environments-a-primer)  
+- [pyenv: Simple Python Version Management](https://github.com/pyenv/pyenv)

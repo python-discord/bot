@@ -51,7 +51,7 @@ def autospec(target, *attributes: str, pass_mocks: bool = True, **patch_kwargs) 
 
     # Import the target if it's a string.
     # This is to support both object and string targets like patch.multiple.
-    if type(target) is str:
+    if isinstance(target, str):
         target = pkgutil.resolve_name(target)
 
     def decorator(func):
