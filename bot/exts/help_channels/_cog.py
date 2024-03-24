@@ -6,7 +6,7 @@ from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _caches, _channel, _message
+from bot.exts.help_channels import _caches, _channel
 from bot.log import get_logger
 from bot.utils.checks import has_any_role_check
 
@@ -87,30 +87,6 @@ class HelpForum(commands.Cog):
             if ctx.channel.id in self.scheduler:
                 self.scheduler.cancel(ctx.channel.id)
 
-    @help_forum_group.command(name="dm", root_aliases=("helpdm",))
-    async def help_dm_command(
-        self,
-        ctx: commands.Context,
-        state_bool: bool,
-    ) -> None:
-        """
-        Allows user to toggle "Helping" DMs.
-
-        If this is set to on the user will receive a dm for the channel they are participating in.
-        If this is set to off the user will not receive a dm for channel that they are participating in.
-        """
-        state_str = "ON" if state_bool else "OFF"
-
-        if state_bool == await _caches.help_dm.get(ctx.author.id, False):
-            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state_str}")
-            return
-
-        if state_bool:
-            await _caches.help_dm.set(ctx.author.id, True)
-        else:
-            await _caches.help_dm.delete(ctx.author.id)
-        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")
-
     @help_forum_group.command(name="title", root_aliases=("title",))
     async def rename_help_post(self, ctx: commands.Context, *, title: str) -> None:
         """Rename the help post to the provided title."""
@@ -166,8 +142,6 @@ class HelpForum(commands.Cog):
         """Defer application of new message logic for messages in the help forum to the _message helper."""
         if not _channel.is_help_forum_post(message.channel):
             return
-
-        await _message.notify_session_participants(message)
 
         if not message.author.bot and message.author.id != message.channel.owner_id:
             await _caches.posts_with_non_claimant_messages.set(message.channel.id, "sentinel")
