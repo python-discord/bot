@@ -39,6 +39,9 @@ LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 REMINDER_EDIT_CONFIRMATION_TIMEOUT = 60
+# The number of mentions that can be sent when a reminder arrives is limited by
+# the 2000-character message limit.
+MAXIMUM_REMINDER_MENTION_OPT_INS = 80
 
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
@@ -73,6 +76,99 @@ class ModifyReminderConfirmationView(discord.ui.View):
         await interaction.response.edit_message(view=None)
         self.result = False
         self.stop()
+
+
+class GetNotificationView(discord.ui.View):
+    """A button to get notified of someone else's reminder."""
+
+    def __init__(
+        self,
+        reminder: dict,
+        callback: t.Callable[[list], t.Awaitable[t.Any]],
+    ):
+        super().__init__()
+        self.reminder = reminder
+        self.callback = callback
+        self.first_click: bool = True
+        self.success_message: discord.Message | None = None
+        self.button: discord.ui.Button | None = None
+
+    @discord.ui.button(label="Notify me", style=discord.ButtonStyle.green)
+    async def button_callback(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        """The button callback."""
+
+        self.button = button
+
+        if interaction.user.id in self.reminder['mentions']:
+            await interaction.response.send_message(
+                "You are already in the list of mentions for that reminder!",
+                ephemeral=True,
+            )
+            return
+
+        if interaction.user.id == self.reminder['author']:
+            await interaction.response.send_message(
+                "As the author of that reminder, you will already be notified when the reminder arrives.",
+                ephemeral=True,
+            )
+            return
+
+        if len(self.reminder['mentions']) >= MAXIMUM_REMINDER_MENTION_OPT_INS:
+            await interaction.response.send_message(
+                "Sorry, this reminder has reached the maximum number of allowed mentions.",
+                ephemeral=True,
+            )
+            await self.disable_button("Maximum number of allowed mentions reached!")
+            return
+
+        new_mentions = self.reminder['mentions'] + [interaction.user.id]
+        await self.callback(new_mentions)
+
+        await interaction.response.send_message(
+            "You were successfully added to the list of mentions for that reminder.",
+            ephemeral=True
+        )
+
+        # Edit original message to show the opt-ins
+        if not self.success_message or len(self.success_message.embeds) != 2:
+            log.trace(f"Unable to update the message for the list of member opt-ins for reminder #{self.reminder['id']}.")
+            return
+
+        embeds = self.success_message.embeds
+
+        if self.first_click:
+            embeds[1].description += "\n\nThe following member(s) opted-in to be notified:\n"
+            self.first_click = False
+        embeds[1].description += f"{interaction.user.mention} "
+
+        await self.success_message.edit(embeds=embeds)
+
+    async def disable_button(self, reason: str | None = None) -> None:
+        """Disable the button."""
+        if not self.success_message or not self.button:
+            log.trace("Unable to disable the button for opting-in for the reminder notification.")
+            return
+
+        self.button.disabled = True
+
+        if not reason:
+            await self.success_message.edit(view=self)
+            return
+
+        embeds = self.success_message.embeds
+
+        if len(embeds) != 2:
+            log.trace("Unable to get the button instruction embed for editing reason of disabling the reminder notification button.")
+            return
+
+        description = embeds[1].description
+        if "\n\n" in description:
+            # The button was clicked at least once. Don't remove the text that
+            # shows the list of opt-ins.
+            embeds[1].description = reason + "\n\n"
+            embeds[1].description += description.split("\n\n", maxsplit=2)[1]
+
+        await self.success_message.edit(embeds=embeds, view=self)
 
 
 class Reminders(Cog):
@@ -127,10 +223,12 @@ class Reminders(Cog):
     async def _send_confirmation(
         ctx: Context,
         on_success: str,
-        reminder_id: str | int
-    ) -> None:
+        reminder_id: str | int,
+        embed: discord.Embed | None = None,
+        view: discord.ui.View | None = None,
+    ) -> discord.Message:
         """Send an embed confirming the reminder change was made successfully."""
-        embed = discord.Embed(
+        success_embed = discord.Embed(
             description=on_success,
             colour=discord.Colour.green(),
             title=random.choice(POSITIVE_REPLIES)
@@ -138,9 +236,12 @@ class Reminders(Cog):
 
         footer_str = f"ID: {reminder_id}"
 
-        embed.set_footer(text=footer_str)
+        success_embed.set_footer(text=footer_str)
 
-        await ctx.send(embed=embed)
+        if embed:
+            return await ctx.send(embeds=[success_embed, embed], view=view)
+        else:
+            return await ctx.send(embed=success_embed, view=view)
 
     @staticmethod
     async def _check_mentions(ctx: Context, mentions: t.Iterable[Mentionable]) -> tuple[bool, str]:
@@ -250,6 +351,11 @@ class Reminders(Cog):
 
         log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
+
+        # Remove the button that lets others opt-in to pings.
+        view = reminder.get("notification_view")
+        if view:
+            await view.disable_button()
 
     @staticmethod
     async def try_get_content_from_reply(ctx: Context) -> str | None:
@@ -373,12 +479,29 @@ class Reminders(Cog):
             mention_string += f" and will mention {len(mentions)} other(s)"
         mention_string += "!"
 
+        # Add a button for others to also get notified.
+        button_embed = discord.Embed(
+            description= "Click on the button to also get a ping when the reminder arrives.",
+        )
+
+        async def callback(new_mentions: list):
+            reminder['mentions'] = new_mentions
+            await self._edit_reminder(reminder['id'], { 'mentions': new_mentions })
+
+        view = GetNotificationView(reminder, callback)
+
         # Confirm to the user that it worked.
-        await self._send_confirmation(
+        message = await self._send_confirmation(
             ctx,
             on_success=mention_string,
-            reminder_id=reminder["id"]
+            reminder_id=reminder["id"],
+            embed=button_embed,
+            view=view,
         )
+
+        view.success_message = message
+
+        reminder['notification_view'] = view
 
         self.schedule_reminder(reminder)
 
