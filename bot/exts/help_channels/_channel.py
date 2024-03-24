@@ -1,5 +1,4 @@
 """Contains all logic to handle changes to posts in the help forum."""
-import textwrap
 from datetime import timedelta
 
 import arrow
@@ -86,44 +85,6 @@ async def send_opened_post_message(post: discord.Thread) -> None:
     await post.send(embed=embed, content=post.owner.mention)
 
 
-async def send_opened_post_dm(post: discord.Thread) -> None:
-    """Send the opener a DM message with a jump link to their new post."""
-    embed = discord.Embed(
-        title="Help post opened",
-        description=f"You opened {post.mention}.",
-        colour=constants.Colours.bright_green,
-        timestamp=post.created_at,
-    )
-    embed.set_thumbnail(url=constants.Icons.green_questionmark)
-    message = post.starter_message
-    if not message:
-        try:
-            message = await post.fetch_message(post.id)
-        except discord.HTTPException:
-            log.warning(f"Could not fetch message for post {post.id}")
-            return
-
-    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...").strip()
-    if not formatted_message:
-        # This most likely means the initial message is only an image or similar
-        formatted_message = "No text content."
-
-    embed.add_field(name="Your message", value=formatted_message, inline=False)
-    embed.add_field(
-        name="Conversation",
-        value=f"[Jump to message!]({message.jump_url})",
-        inline=False,
-    )
-
-    try:
-        await post.owner.send(embed=embed)
-        log.trace(f"Sent DM to {post.owner} ({post.owner_id}) after posting in help forum.")
-    except discord.errors.Forbidden:
-        log.trace(
-            f"Ignoring to send DM to {post.owner} ({post.owner_id}) after posting in help forum: DMs disabled.",
-        )
-
-
 async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False) -> None:
     """Apply new post logic to a new help forum post."""
     _stats.report_post_count()
@@ -133,8 +94,6 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
         log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
         await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP)
         return
-
-    await send_opened_post_dm(opened_post)
 
     try:
         await opened_post.starter_message.pin()
