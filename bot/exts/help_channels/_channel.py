@@ -5,6 +5,7 @@ from datetime import timedelta
 import arrow
 import discord
 from pydis_core.utils import scheduling
+from pydis_core.utils.channel import get_or_fetch_channel
 
 import bot
 from bot import constants
@@ -212,7 +213,7 @@ async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.Cl
 async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
     """Archive the `post` if idle, or schedule the archive for later if still active."""
     try:
-        await post.guild.fetch_channel(post.id)
+        await get_or_fetch_channel(bot.instance, post.id)
     except discord.HTTPException:
         log.trace(f"Not closing missing post #{post} ({post.id}).")
         return
