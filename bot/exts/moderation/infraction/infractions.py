@@ -17,7 +17,6 @@ from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, Unambi
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
-from bot.exts.moderation.infraction._views import InfractionConfirmationView
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
 from bot.utils.messages import format_user
@@ -479,6 +478,9 @@ class Infractions(InfractionScheduler, commands.Cog):
             await ctx.send(":x: I can't ban users above or equal to me in the role hierarchy.")
             return None
 
+        if not await _utils.confirm_elevated_user_ban(ctx, user):
+            return None
+
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
         is_temporary = kwargs.get("duration_or_expiry") is not None
         active_infraction = await _utils.get_active_infraction(ctx, user, "ban", is_temporary)
@@ -495,29 +497,6 @@ class Infractions(InfractionScheduler, commands.Cog):
 
             log.trace("Old tempban is being replaced by new permaban.")
             await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
-
-        # If user has an elevated role (staff, partner, or community), require
-        # confirmation before banning.
-        if isinstance(user, Member) and any(role.id in constants.STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
-            confirmation_view = InfractionConfirmationView(
-                allowed_users=(ctx.author.id,),
-                allowed_roles=constants.MODERATION_ROLES,
-                timeout=10,
-            )
-            confirmation_view.message = await ctx.send(
-                f"{user.mention} has an elevated role. Are you sure you want to ban them?",
-                view=confirmation_view,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-
-            timed_out = await confirmation_view.wait()
-            if timed_out:
-                log.trace(f"Attempted ban of user {user} by moderator {ctx.author} cancelled due to timeout.")
-                return None
-
-            if confirmation_view.confirmed is False:
-                log.trace(f"Attempted ban of user {user} by moderator {ctx.author} cancelled due to manual cancel.")
-                return None
 
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:

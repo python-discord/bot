@@ -1,12 +1,14 @@
 import arrow
 import discord
+from discord import Member
 from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
 
 import bot
-from bot.constants import Categories, Colours, Icons
+from bot.constants import Categories, Colours, Icons, MODERATION_ROLES, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
+from bot.exts.moderation.infraction._views import InfractionConfirmationView
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.channel import is_in_category
@@ -297,3 +299,37 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
             "The user either could not be retrieved or probably disabled their DMs."
         )
         return False
+
+
+async def confirm_elevated_user_ban(ctx: Context, user: MemberOrUser) -> bool:
+    """
+    If user has an elevated role, require confirmation before banning.
+
+    A member with the staff, partner, or community roles are considered elevated.
+
+    Returns a boolean indicating whether the infraction should proceed.
+    """
+    if not isinstance(user, Member) or not any(role.id in STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
+        return True
+
+    confirmation_view = InfractionConfirmationView(
+        allowed_users=(ctx.author.id,),
+        allowed_roles=MODERATION_ROLES,
+        timeout=10,
+    )
+    confirmation_view.message = await ctx.send(
+        f"{user.mention} has an elevated role. Are you sure you want to ban them?",
+        view=confirmation_view,
+        allowed_mentions=discord.AllowedMentions.none(),
+    )
+
+    timed_out = await confirmation_view.wait()
+    if timed_out:
+        log.trace(f"Attempted ban of user {user} by moderator {ctx.author} cancelled due to timeout.")
+        return False
+
+    if confirmation_view.confirmed is False:
+        log.trace(f"Attempted ban of user {user} by moderator {ctx.author} cancelled due to manual cancel.")
+        return False
+
+    return True
