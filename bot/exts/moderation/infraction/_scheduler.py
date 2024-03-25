@@ -20,6 +20,7 @@ from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
 from bot.utils import messages, time
 from bot.utils.channel import is_mod_channel
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -270,7 +271,8 @@ class InfractionScheduler:
         # Send a log message to the mod log.
         # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
-        await self.mod_log.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url=icon,
             colour=Colours.soft_red,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
@@ -369,7 +371,8 @@ class InfractionScheduler:
         log_text["Reason"] = log_text.pop("Reason")
 
         # Send a log message to the mod log.
-        await self.mod_log.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url=_utils.INFRACTION_ICONS[infr_type][1],
             colour=Colours.soft_green,
             title=f"Infraction {log_title}: {' '.join(infr_type.split('_'))}",
@@ -507,7 +510,8 @@ class InfractionScheduler:
             log_text["Reason"] = log_text.pop("Reason")
 
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
-            await self.mod_log.send_log_message(
+            await send_log_message(
+                self.bot,
                 icon_url=_utils.INFRACTION_ICONS[type_][1],
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {type_}",
