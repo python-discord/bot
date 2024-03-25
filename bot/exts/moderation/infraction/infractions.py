@@ -17,6 +17,7 @@ from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, Unambi
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
+from bot.exts.moderation.infraction._views import InfractionConfirmationView
 from bot.log import get_logger
 from bot.utils.channel import is_mod_channel
 from bot.utils.messages import format_user
@@ -498,7 +499,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         # If user has an elevated role (staff, partner, or community), require
         # confirmation before banning.
         if isinstance(user, Member) and any(role.id in constants.STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
-            confirmation_view = _utils.StaffBanConfirmationView(
+            confirmation_view = InfractionConfirmationView(
                 allowed_users=(ctx.author.id,),
                 allowed_roles=constants.MODERATION_ROLES,
                 timeout=10,

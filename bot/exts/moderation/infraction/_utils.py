@@ -1,10 +1,7 @@
 import arrow
 import discord
-from discord import ButtonStyle, Interaction
 from discord.ext.commands import Context
-from discord.ui import Button
 from pydis_core.site_api import ResponseCodeError
-from pydis_core.utils import interactions
 
 import bot
 from bot.constants import Categories, Colours, Icons
@@ -300,26 +297,3 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
             "The user either could not be retrieved or probably disabled their DMs."
         )
         return False
-
-
-class StaffBanConfirmationView(interactions.ViewWithUserAndRoleCheck):
-    """The confirmation view that is sent when a moderator attempts to ban a staff member."""
-
-    confirmed = False
-
-    @discord.ui.button(label="Confirm", style=ButtonStyle.red)
-    async def confirm(self, interaction: Interaction, button: Button) -> None:
-        """Callback coroutine that is called when the "confirm" button is pressed."""
-        self.confirmed = True
-        await interaction.response.defer()
-        self.stop()
-
-    @discord.ui.button(label="Cancel", style=ButtonStyle.green)
-    async def cancel(self, interaction: Interaction, button: Button) -> None:
-        """Callback coroutine that is called when the "cancel" button is pressed."""
-        await interaction.response.send_message("Cancelled infraction.")
-        self.stop()
-
-    async def on_timeout(self) -> None:
-        await super().on_timeout()
-        await self.message.reply("Cancelled infraction due to timeout.")
