@@ -321,6 +321,7 @@ class Information(Cog):
         if is_mod_channel(ctx.channel):
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
+            fields.append(await self.user_alt_count(user))
         else:
             fields.append(await self.basic_user_infraction_counts(user))
 
@@ -337,6 +338,12 @@ class Information(Cog):
         embed.colour = user.colour if user.colour != Colour.default() else Colour.og_blurple()
 
         return embed
+
+    async def user_alt_count(self, user: MemberOrUser) -> tuple[str, int | str]:
+        """Get the number oif alts for the given member."""
+        resp = await self.bot.api_client.get(f"bot/users/{user.id}")
+        return ("Associated accounts", len(resp["alts"]) or "No associated accounts")
+
 
     async def basic_user_infraction_counts(self, user: MemberOrUser) -> tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
