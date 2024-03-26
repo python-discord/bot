@@ -5,6 +5,7 @@ from datetime import timedelta
 import arrow
 import discord
 from pydis_core.utils import scheduling
+from pydis_core.utils.channel import get_or_fetch_channel
 
 import bot
 from bot import constants
@@ -58,7 +59,11 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
         if participant_ids == {closed_post.owner_id}:
             message = closed_post.owner.mention
 
-    await closed_post.send(message, embed=embed)
+    try:
+        await closed_post.send(message, embed=embed)
+    except discord.errors.HTTPException:
+        log.info("Could not send closing message in %s (%d), closing anyway", closed_post, closed_post.id)
+
     await closed_post.edit(
         name=f"🔒 {closed_post.name}"[:100],
         archived=True,
@@ -205,15 +210,10 @@ async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.Cl
     return time, _stats.ClosingReason.INACTIVE
 
 
-async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler, has_task: bool = True) -> None:
-    """
-    Archive the `post` if idle, or schedule the archive for later if still active.
-
-    If `has_task` is True and rescheduling is required, the extant task to make the post
-    dormant will first be cancelled.
-    """
+async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
+    """Archive the `post` if idle, or schedule the archive for later if still active."""
     try:
-        await post.guild.fetch_channel(post.id)
+        await get_or_fetch_channel(bot.instance, post.id)
     except discord.HTTPException:
         log.trace(f"Not closing missing post #{post} ({post.id}).")
         return
@@ -235,9 +235,10 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
         await _close_help_post(post, closing_reason)
         return
 
-    if has_task:
+    if post.id in scheduler:
+        # Cancel any existing close task
         scheduler.cancel(post.id)
     delay = (closing_time - arrow.utcnow()).seconds
     log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
 
-    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler, has_task=True))
+    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler))
