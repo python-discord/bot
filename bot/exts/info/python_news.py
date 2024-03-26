@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import discord
 import feedparser
+import sentry_sdk
 from bs4 import BeautifulSoup
 from discord.ext.commands import Cog
 from discord.ext.tasks import loop
@@ -42,6 +43,22 @@ class PythonNews(Cog):
         self.webhook_names = {}
         self.webhook: discord.Webhook | None = None
         self.seen_items: dict[str, set[str]] = {}
+
+    async def cog_load(self) -> None:
+        """Load all existing seen items from db and create any missing mailing lists."""
+        with sentry_sdk.start_span(description="Fetch mailing lists from site"):
+            response = await self.bot.api_client.get("bot/mailing-lists")
+
+        for mailing_list in response:
+            self.seen_items[mailing_list["name"]] = set(mailing_list["seen_items"])
+
+        with sentry_sdk.start_span(description="Update site with new mailing lists"):
+            for mailing_list in ("pep", *constants.PythonNews.mail_lists):
+                if mailing_list not in self.seen_items:
+                    await self.bot.api_client.post("bot/mailing-lists", json={"name": mailing_list})
+                    self.seen_items[mailing_list] = set()
+
+        self.fetch_new_media.start()
 
     async def cog_unload(self) -> None:
         """Stop news posting tasks on cog unload."""
@@ -224,19 +241,6 @@ class PythonNews(Cog):
         async with self.bot.http_session.get(thread_information["starting_email"]) as resp:
             email_information = await resp.json()
         return thread_information, email_information
-
-    async def cog_load(self) -> None:
-        """Load all existing seen items from db and create any missing mailing lists."""
-        response = await self.bot.api_client.get("bot/mailing-lists")
-        for mailing_list in response:
-            self.seen_items[mailing_list["name"]] = set(mailing_list["seen_items"])
-
-        for mailing_list in ("pep", *constants.PythonNews.mail_lists):
-            if mailing_list not in self.seen_items:
-                await self.bot.api_client.post("bot/mailing-lists", json={"name": mailing_list})
-                self.seen_items[mailing_list] = set()
-
-        self.fetch_new_media.start()
 
 
 async def setup(bot: Bot) -> None:
