@@ -3,6 +3,7 @@ import unittest
 import discord
 
 from bot.exts.moderation.modlog import ModLog
+from bot.utils.modlog import send_log_message
 from tests.helpers import MockBot, MockTextChannel
 
 
@@ -17,7 +18,8 @@ class ModLogTests(unittest.IsolatedAsyncioTestCase):
     async def test_log_entry_description_truncation(self):
         """Test that embed description for ModLog entry is truncated."""
         self.bot.get_channel.return_value = self.channel
-        await self.cog.send_log_message(
+        await send_log_message(
+            self.bot,
             icon_url="foo",
             colour=discord.Colour.blue(),
             title="bar",

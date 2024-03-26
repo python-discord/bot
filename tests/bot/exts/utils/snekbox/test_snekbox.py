@@ -113,7 +113,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                 result = EvalResult(stdout=stdout, returncode=returncode)
                 job = EvalJob([])
                 # Check all 3 message types
-                msg = result.get_message(job)
+                msg = result.get_status_message(job)
                 self.assertEqual(msg, exp_msg)
                 error = result.error_message
                 self.assertEqual(error, exp_err)
@@ -166,7 +166,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     def test_eval_result_message_invalid_signal(self, _mock_signals: Mock):
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
-            result.get_message(EvalJob([], version="3.10")),
+            result.get_status_message(EvalJob([], version="3.10")),
             "Your 3.10 eval job has completed with return code 127"
         )
         self.assertEqual(result.error_message, "")
@@ -177,7 +177,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mock_signals.return_value.name = "SIGTEST"
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
-            result.get_message(EvalJob([], version="3.12")),
+            result.get_status_message(EvalJob([], version="3.12")),
             "Your 3.12 eval job has completed with return code 127 (SIGTEST)"
         )
 
@@ -386,12 +386,19 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.send = AsyncMock()
         ctx.author.mention = "@user#7700"
 
-        eval_result = EvalResult("", 0, files=[FileAttachment("test.disallowed", b"test")])
+        files = [
+            FileAttachment("test.disallowed2", b"test"),
+            FileAttachment("test.disallowed", b"test"),
+            FileAttachment("test.allowed", b"test"),
+            FileAttachment("test." + ("a" * 100), b"test")
+        ]
+        eval_result = EvalResult("", 0, files=files)
         self.cog.post_job = AsyncMock(return_value=eval_result)
         self.cog.upload_output = AsyncMock()  # This function isn't called
 
+        disallowed_exts = [".disallowed", "." + ("a" * 100), ".disallowed2"]
         mocked_filter_cog = MagicMock()
-        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, [".disallowed"]))
+        mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, disallowed_exts))
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode").as_version("3.12")
@@ -402,7 +409,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             res.startswith("@user#7700 :white_check_mark: Your 3.12 eval job has completed with return code 0.")
         )
-        self.assertIn("Files with disallowed extensions can't be uploaded: **.disallowed**", res)
+        self.assertIn("Files with disallowed extensions can't be uploaded: **.disallowed, .disallowed2, ...**", res)
 
         self.cog.post_job.assert_called_once_with(job)
         self.cog.upload_output.assert_not_called()

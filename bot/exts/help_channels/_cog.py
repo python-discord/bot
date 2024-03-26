@@ -38,9 +38,18 @@ class HelpForum(commands.Cog):
         self.help_forum_channel = self.bot.get_channel(constants.Channels.python_help)
         if not isinstance(self.help_forum_channel, discord.ForumChannel):
             raise TypeError("Channels.python_help is not a forum channel!")
+        await self.check_all_open_posts_have_close_task()
 
+    async def check_all_open_posts_have_close_task(self, delay: int = 5*60) -> None:
+        """
+        Check that each open help post has a scheduled task to close, adding one if not.
+
+        Once complete, schedule another check after `delay` seconds.
+        """
         for post in self.help_forum_channel.threads:
-            await _channel.maybe_archive_idle_post(post, self.scheduler, has_task=False)
+            if post.id not in self.scheduler:
+                await _channel.maybe_archive_idle_post(post, self.scheduler)
+        self.scheduler.schedule_later(delay, "help_channel_idle_check", self.check_all_open_posts_have_close_task())
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is a help post, and the user is the claimant or has a whitelisted role."""

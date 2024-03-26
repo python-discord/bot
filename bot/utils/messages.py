@@ -1,4 +1,3 @@
-import asyncio
 import random
 import re
 from collections.abc import Callable, Iterable, Sequence
@@ -102,7 +101,7 @@ async def wait_for_deletion(
     try:
         try:
             await bot.instance.wait_for("reaction_add", check=check, timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             await message.clear_reactions()
         else:
             await message.delete()

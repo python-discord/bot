@@ -478,7 +478,7 @@ class Incidents(Cog):
         log.trace(f"Awaiting deletion confirmation: {timeout=} seconds")
         try:
             await confirmation_task
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.info(f"Did not receive incident deletion confirmation within {timeout} seconds!")
         else:
             log.trace("Deletion was confirmed")

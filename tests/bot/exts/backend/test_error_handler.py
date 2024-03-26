@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 
 from discord.ext.commands import errors
 from pydis_core.site_api import ResponseCodeError
@@ -414,12 +414,13 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         for case in test_cases:
             with self.subTest(error=case["error"], call_prepared=case["call_prepared"]):
                 self.ctx.reset_mock()
+                self.cog.send_error_with_help = AsyncMock()
                 self.assertIsNone(await self.cog.handle_user_input_error(self.ctx, case["error"]))
-                self.ctx.send.assert_awaited_once()
                 if case["call_prepared"]:
-                    self.ctx.send_help.assert_awaited_once()
+                    self.cog.send_error_with_help.assert_awaited_once()
                 else:
-                    self.ctx.send_help.assert_not_awaited()
+                    self.ctx.send.assert_awaited_once()
+                    self.cog.send_error_with_help.assert_not_awaited()
 
     async def test_handle_check_failure_errors(self):
         """Should await `ctx.send` when error is check failure."""
@@ -503,6 +504,10 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 self.ctx.reset_mock()
                 log_mock.reset_mock()
                 push_scope_mock.reset_mock()
+                scope_mock = Mock()
+
+                # Mock `with push_scope_mock() as scope:`
+                push_scope_mock.return_value.__enter__.return_value = scope_mock
 
                 self.ctx.guild = case
                 await self.cog.handle_unexpected_error(self.ctx, errors.CommandError())
@@ -526,8 +531,8 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                     )
                     set_extra_calls.append(call("jump_to", url))
 
-                push_scope_mock.set_tag.has_calls(set_tag_calls)
-                push_scope_mock.set_extra.has_calls(set_extra_calls)
+                scope_mock.set_tag.assert_has_calls(set_tag_calls)
+                scope_mock.set_extra.assert_has_calls(set_extra_calls)
 
 
 class ErrorHandlerSetupTests(unittest.IsolatedAsyncioTestCase):
