@@ -340,7 +340,7 @@ class Snekbox(Cog):
 
         return f"\n{Emojis.failed_file} {blocked_msg}"
 
-    def join_blocked_extensions(self, extensions: Iterable, delimiter: str = ", ", char_limit: int = 100) -> str:
+    def join_blocked_extensions(self, extensions: Iterable[str], delimiter: str = ", ", char_limit: int = 100) -> str:
         joined = ""
         for ext in extensions:
             cur_delimiter = delimiter if joined else ""
