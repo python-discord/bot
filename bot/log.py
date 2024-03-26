@@ -60,6 +60,7 @@ def setup_sentry() -> None:
             AsyncioIntegration(),
         ],
         release=f"bot@{constants.GIT_SHA}",
+        enable_tracing=True,
     )
 
 
