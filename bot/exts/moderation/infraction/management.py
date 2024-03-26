@@ -197,8 +197,8 @@ class ModManagement(commands.Cog):
             # Update `last_applied` if expiry changes.
             request_data["last_applied"] = origin.isoformat()
             request_data["expires_at"] = expiry.isoformat()
-            expiry = time.format_with_duration(expiry, origin)
-            confirm_messages.append(f"set to expire on {expiry}")
+            formatted_expiry = time.format_with_duration(expiry, origin)
+            confirm_messages.append(f"set to expire on {formatted_expiry}")
         else:
             confirm_messages.append("expiry unchanged")
 
@@ -218,6 +218,10 @@ class ModManagement(commands.Cog):
             json=request_data,
         )
 
+        # Get information about the infraction's user
+        user_id = new_infraction["user"]
+        user = await get_or_fetch_member(ctx.guild, user_id)
+
         # Re-schedule infraction if the expiration has been updated
         if "expires_at" in request_data:
             # A scheduled task should only exist if the old infraction wasn't permanent
@@ -227,6 +231,12 @@ class ModManagement(commands.Cog):
             # If the infraction was not marked as permanent, schedule a new expiration task
             if request_data["expires_at"]:
                 self.infractions_cog.schedule_expiration(new_infraction)
+                # Timeouts are handled by Discord itself, so we need to edit the expiry in Discord as well
+                if user and infraction["type"] == "timeout":
+                    capped, duration = _utils.cap_timeout_duration(expiry)
+                    if capped:
+                        await _utils.notify_timeout_cap(self.bot, ctx, user)
+                    await user.edit(reason=reason, timed_out_until=expiry)
 
             log_text += f"""
                 Previous expiry: {time.until_expiration(infraction['expires_at'])}
@@ -235,10 +245,6 @@ class ModManagement(commands.Cog):
 
         changes = " & ".join(confirm_messages)
         await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
-
-        # Get information about the infraction's user
-        user_id = new_infraction["user"]
-        user = await get_or_fetch_member(ctx.guild, user_id)
 
         if user:
             user_text = messages.format_user(user)
