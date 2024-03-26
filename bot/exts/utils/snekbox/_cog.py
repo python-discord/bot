@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import re
+from collections.abc import Iterable
 from functools import partial
 from operator import attrgetter
 from textwrap import dedent
@@ -289,6 +290,69 @@ class Snekbox(Cog):
 
         return output, paste_link
 
+    async def format_file_text(self, text_files: list[FileAttachment], output: str) -> str:
+        # Inline until budget, then upload to paste service
+        # Budget is shared with stdout, so subtract what we've already used
+        budget_lines = MAX_OUTPUT_BLOCK_LINES - (output.count("\n") + 1)
+        budget_chars = MAX_OUTPUT_BLOCK_CHARS - len(output)
+        msg = ""
+
+        for file in text_files:
+            file_text = file.content.decode("utf-8", errors="replace") or "[Empty]"
+            # Override to always allow 1 line and <= 50 chars, since this is less than a link
+            if len(file_text) <= 50 and not file_text.count("\n"):
+                msg += f"\n`{file.name}`\n```\n{file_text}\n```"
+            # otherwise, use budget
+            else:
+                format_text, link_text = await self.format_output(
+                    file_text,
+                    budget_lines,
+                    budget_chars,
+                    line_nums=False,
+                    output_default="[Empty]"
+                )
+                # With any link, use it (don't use budget)
+                if link_text:
+                    msg += f"\n`{file.name}`\n{link_text}"
+                else:
+                    msg += f"\n`{file.name}`\n```\n{format_text}\n```"
+                    budget_lines -= format_text.count("\n") + 1
+                    budget_chars -= len(file_text)
+
+        return msg
+
+    def format_blocked_extensions(self, blocked: list[FileAttachment]) -> str:
+        # Sort by length and then lexicographically to fit as many as possible before truncating.
+        blocked_sorted = sorted(set(f.suffix for f in blocked),  key=lambda e: (len(e), e))
+
+        # Only no extension
+        if len(blocked_sorted) == 1 and blocked_sorted[0] == "":
+            blocked_msg = "Files with no extension can't be uploaded."
+        # Both
+        elif "" in blocked_sorted:
+            blocked_str = self.join_blocked_extensions(ext for ext in blocked_sorted if ext)
+            blocked_msg = (
+                f"Files with no extension or disallowed extensions can't be uploaded: **{blocked_str}**"
+            )
+        else:
+            blocked_str = self.join_blocked_extensions(blocked_sorted)
+            blocked_msg = f"Files with disallowed extensions can't be uploaded: **{blocked_str}**"
+
+        return f"\n{Emojis.failed_file} {blocked_msg}"
+
+    def join_blocked_extensions(self, extensions: Iterable[str], delimiter: str = ", ", char_limit: int = 100) -> str:
+        joined = ""
+        for ext in extensions:
+            cur_delimiter = delimiter if joined else ""
+            if len(joined) + len(cur_delimiter) + len(ext) >= char_limit:
+                joined += f"{cur_delimiter}..."
+                break
+
+            joined += f"{cur_delimiter}{ext}"
+
+        return joined
+
+
     def _filter_files(self, ctx: Context, files: list[FileAttachment], blocked_exts: set[str]) -> FilteredFiles:
         """Filter to restrict files to allowed extensions. Return a named tuple of allowed and blocked files lists."""
         # Filter files into allowed and blocked
@@ -318,16 +382,18 @@ class Snekbox(Cog):
         """
         async with ctx.typing():
             result = await self.post_job(job)
-            msg = result.get_message(job)
-            error = result.error_message
-
-            if error:
-                output, paste_link = error, None
+            # Collect stats of job fails + successes
+            if result.returncode != 0:
+                self.bot.stats.incr("snekbox.python.fail")
             else:
-                log.trace("Formatting output...")
-                output, paste_link = await self.format_output(result.stdout)
+                self.bot.stats.incr("snekbox.python.success")
 
-            msg = f"{ctx.author.mention} {result.status_emoji} {msg}.\n"
+            log.trace("Formatting output...")
+            output = result.error_message if result.error_message else result.stdout
+            output, paste_link = await self.format_output(output)
+
+            status_msg = result.get_status_message(job)
+            msg = f"{ctx.author.mention} {result.status_emoji} {status_msg}.\n"
 
             # This is done to make sure the last line of output contains the error
             # and the error is not manually printed by the author with a syntax error.
@@ -345,39 +411,9 @@ class Snekbox(Cog):
             if files_error := result.files_error_message:
                 msg += f"\n{files_error}"
 
-            # Collect stats of job fails + successes
-            if result.returncode != 0:
-                self.bot.stats.incr("snekbox.python.fail")
-            else:
-                self.bot.stats.incr("snekbox.python.success")
-
             # Split text files
             text_files = [f for f in result.files if f.suffix in TXT_LIKE_FILES]
-            # Inline until budget, then upload to paste service
-            # Budget is shared with stdout, so subtract what we've already used
-            budget_lines = MAX_OUTPUT_BLOCK_LINES - (output.count("\n") + 1)
-            budget_chars = MAX_OUTPUT_BLOCK_CHARS - len(output)
-            for file in text_files:
-                file_text = file.content.decode("utf-8", errors="replace") or "[Empty]"
-                # Override to always allow 1 line and <= 50 chars, since this is less than a link
-                if len(file_text) <= 50 and not file_text.count("\n"):
-                    msg += f"\n`{file.name}`\n```\n{file_text}\n```"
-                # otherwise, use budget
-                else:
-                    format_text, link_text = await self.format_output(
-                        file_text,
-                        budget_lines,
-                        budget_chars,
-                        line_nums=False,
-                        output_default="[Empty]"
-                    )
-                    # With any link, use it (don't use budget)
-                    if link_text:
-                        msg += f"\n`{file.name}`\n{link_text}"
-                    else:
-                        msg += f"\n`{file.name}`\n```\n{format_text}\n```"
-                        budget_lines -= format_text.count("\n") + 1
-                        budget_chars -= len(file_text)
+            msg += await self.format_file_text(text_files, output)
 
             filter_cog: Filtering | None = self.bot.get_cog("Filtering")
             blocked_exts = set()
@@ -392,23 +428,8 @@ class Snekbox(Cog):
             # Filter file extensions
             allowed, blocked = self._filter_files(ctx, result.files, blocked_exts)
             blocked.extend(self._filter_files(ctx, failed_files, blocked_exts).blocked)
-            # Add notice if any files were blocked
             if blocked:
-                blocked_sorted = sorted(set(f.suffix for f in blocked))
-                # Only no extension
-                if len(blocked_sorted) == 1 and blocked_sorted[0] == "":
-                    blocked_msg = "Files with no extension can't be uploaded."
-                # Both
-                elif "" in blocked_sorted:
-                    blocked_str = ", ".join(ext for ext in blocked_sorted if ext)
-                    blocked_msg = (
-                        f"Files with no extension or disallowed extensions can't be uploaded: **{blocked_str}**"
-                    )
-                else:
-                    blocked_str = ", ".join(blocked_sorted)
-                    blocked_msg = f"Files with disallowed extensions can't be uploaded: **{blocked_str}**"
-
-                msg += f"\n{Emojis.failed_file} {blocked_msg}"
+                msg += self.format_blocked_extensions(blocked)
 
             # Upload remaining non-text files
             files = [f.to_file() for f in allowed if f not in text_files]

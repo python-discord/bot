@@ -3,13 +3,10 @@
 **/bot/exts/moderation/*silence.py      @MarkKoz
 bot/exts/info/codeblock/**              @MarkKoz
 bot/exts/utils/extensions.py            @MarkKoz
-bot/exts/utils/snekbox.py               @MarkKoz @jb3
-bot/exts/moderation/**                  @mbaruh @Den4200 @ks129 @jb3
-bot/exts/info/**                        @Den4200 @jb3
-bot/exts/info/information.py            @mbaruh @jb3
+bot/exts/utils/snekbox.py               @MarkKoz
+bot/exts/moderation/**                  @mbaruh
+bot/exts/info/information.py            @mbaruh
 bot/exts/filtering/**                   @mbaruh
-bot/exts/fun/**                         @ks129
-bot/exts/utils/**                       @ks129 @jb3
 bot/exts/recruitment/**                 @wookie184
 
 # Utils
@@ -21,10 +18,6 @@ tests/_autospec.py                      @MarkKoz
 tests/bot/exts/test_cogs.py             @MarkKoz
 
 # CI & Docker
-.github/workflows/**                    @MarkKoz @SebastiaanZ @Den4200 @jb3
-Dockerfile                              @MarkKoz @Den4200 @jb3
-docker-compose.yml                      @MarkKoz @Den4200 @jb3
-
-# Statistics
-bot/async_stats.py                      @jb3
-bot/exts/info/stats.py                  @jb3
+.github/workflows/**                    @MarkKoz
+Dockerfile                              @MarkKoz
+docker-compose.yml                      @MarkKoz

@@ -478,6 +478,9 @@ class Infractions(InfractionScheduler, commands.Cog):
             await ctx.send(":x: I can't ban users above or equal to me in the role hierarchy.")
             return None
 
+        if not await _utils.confirm_elevated_user_ban(ctx, user):
+            return None
+
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
         is_temporary = kwargs.get("duration_or_expiry") is not None
         active_infraction = await _utils.get_active_infraction(ctx, user, "ban", is_temporary)
@@ -501,14 +504,12 @@ class Infractions(InfractionScheduler, commands.Cog):
 
         infraction["purge"] = "purge " if purge_days else ""
 
-        self.mod_log.ignore(Event.member_remove, user.id)
-
-        if reason:
-            reason = textwrap.shorten(reason, width=512, placeholder="...")
-
         async def action() -> None:
-            await ctx.guild.ban(user, reason=reason, delete_message_days=purge_days)
+            # Discord only supports ban reasons up to 512 characters in length.
+            discord_reason = textwrap.shorten(reason or "", width=512, placeholder="...")
+            await ctx.guild.ban(user, reason=discord_reason, delete_message_days=purge_days)
 
+        self.mod_log.ignore(Event.member_remove, user.id)
         await self.apply_infraction(ctx, infraction, user, action)
 
         bb_cog: BigBrother | None = self.bot.get_cog("Big Brother")
