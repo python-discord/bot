@@ -56,6 +56,10 @@ class DomainsList(FilterList[DomainFilter]):
 
         triggers = await self[ListType.DENY].filter_list_result(new_ctx)
         ctx.notification_domain = new_ctx.notification_domain
+        unknown_urls = urls - {filter_.content for filter_ in triggers}
+        if unknown_urls:
+            ctx.potential_phish[self] = unknown_urls
+
         actions = None
         messages = []
         if triggers:
