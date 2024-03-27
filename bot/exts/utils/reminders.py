@@ -93,21 +93,22 @@ class OptInReminderMentionView(discord.ui.View):
             REMINDER_MENTION_BUTTON_TIMEOUT
         )
 
-    async def get_embed_description(
+    async def get_embed(
         self,
         message: str = "Click on the button to add yourself to the list of mentions."
-    ) -> str:
-        """Return a string for use in the embed that shows the button."""
+    ) -> discord.Embed:
+        """Return an embed to show the button together with."""
         description = "The following user(s) will be notified when the reminder arrives:\n"
         description += " ".join([
             mentionable.mention async for mentionable in self.cog.get_mentionables(
                 [self.reminder["author"]] + self.reminder["mentions"]
             )
         ])
+
         if message:
             description += f"\n\n{message}"
 
-        return description
+        return discord.Embed(description=description)
 
     @discord.ui.button(emoji="🔔", label="Notify me", style=discord.ButtonStyle.green)
     async def button_callback(self, interaction: Interaction, button: discord.ui.Button) -> None:
@@ -164,12 +165,7 @@ class OptInReminderMentionView(discord.ui.View):
         )
 
         # Update the embed to show the new list of mentions.
-        try:
-            embed = interaction.message.embeds[0]
-            embed.description = await self.get_embed_description()
-            await interaction.message.edit(embed=embed)
-        except Exception:
-            log.trace(f"Unable to edit the interaction message for reminder #{self.reminder['id']}.")
+        await interaction.message.edit(embed=await self.get_embed())
 
     async def handle_api_error(
         self,
@@ -208,16 +204,10 @@ class OptInReminderMentionView(discord.ui.View):
     async def disable(self, interaction: Interaction, button: discord.ui.Button, reason: str = "") -> None:
         """Disable the button and add an optional reason to the original interaction message."""
         button.disabled = True
-
-        embeds = interaction.message.embeds
-
-        try:
-            embed = embeds[0]
-            embed.description = await self.get_embed_description(reason)
-            await interaction.message.edit(embed=embed, view=self)
-        except Exception:
-            log.trace("Unable to disable the reminder notification button.")
-            await interaction.message.edit(embeds=[], view=None)
+        await interaction.message.edit(
+            embed=await self.get_embed(reason),
+            view=self,
+        )
 
 
 class Reminders(Cog):
@@ -535,11 +525,7 @@ class Reminders(Cog):
 
         # Add a button for others to also get notified.
         view = OptInReminderMentionView(self, reminder, expiration)
-        await ctx.send(
-            view=view,
-            delete_after=view.timeout,
-            embed=discord.Embed(description=await view.get_embed_description())
-        )
+        await ctx.send(embed=await view.get_embed(), view=view, delete_after=view.timeout)
 
         self.schedule_reminder(reminder)
 
