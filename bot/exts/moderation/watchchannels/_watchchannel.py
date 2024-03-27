@@ -1,5 +1,4 @@
 import asyncio
-import re
 import textwrap
 from abc import abstractmethod
 from collections import defaultdict, deque
@@ -16,7 +15,7 @@ from pydis_core.utils.logging import CustomLogger
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot.bot import Bot
-from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons
+from bot.constants import BigBrother as BigBrotherConfig, Guild as GuildConfig, Icons, URL_RE
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
 from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.log import get_logger
@@ -25,8 +24,6 @@ from bot.utils import CogABCMeta, messages, time
 from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
-
-URL_RE = re.compile(r"(https?://[^\s]+)")
 
 
 @dataclass

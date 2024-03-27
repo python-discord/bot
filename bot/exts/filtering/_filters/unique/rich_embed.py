@@ -1,14 +1,12 @@
-import re
 
 from pydis_core.utils.logging import get_logger
 
+from bot.constants import URL_RE
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
 from bot.utils.helpers import remove_subdomain_from_url
 
 log = get_logger(__name__)
-
-URL_RE = re.compile(r"(https?://[^\)\s]+)", flags=re.IGNORECASE)
 
 
 class RichEmbedFilter(UniqueFilter):
