@@ -13,14 +13,14 @@ class InfractionConfirmationView(interactions.ViewWithUserAndRoleCheck):
         super().__init__(*args, **kwargs)
         self.confirmed = False
 
-    @discord.ui.button(label="Confirm", style=ButtonStyle.red)
+    @discord.ui.button(label="Ban", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "confirm" button is pressed."""
         self.confirmed = True
         await interaction.response.defer()
         self.stop()
 
-    @discord.ui.button(label="Cancel", style=ButtonStyle.green)
+    @discord.ui.button(label="Cancel", style=ButtonStyle.gray)
     async def cancel(self, interaction: Interaction, button: Button) -> None:
         """Callback coroutine that is called when the "cancel" button is pressed."""
         await interaction.response.send_message("Cancelled infraction.")
