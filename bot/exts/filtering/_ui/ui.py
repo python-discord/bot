@@ -16,6 +16,7 @@ from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.logging import get_logger
 from pydis_core.utils.members import get_or_fetch_member
+from pydis_core.utils.regex import DISCORD_INVITE
 
 import bot
 from bot.constants import Colours
@@ -685,7 +686,7 @@ class AlertView(discord.ui.View):
                 return "", None
             if content_list:
                 current_content = next(iter(content_list))
-                if filter_list.name == "domain" and "discord.gg" in current_content:
+                if filter_list.name == "domain" and re.fullmatch(DISCORD_INVITE, current_content):
                     # Leave invites to the invite filterlist.
                     continue
                 if encountered:
