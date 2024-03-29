@@ -25,7 +25,7 @@ TEST_CHANNELS = (
 )
 
 REGEX_NON_ALPHABET = re.compile(r"[^a-z]", re.MULTILINE & re.IGNORECASE)
-FOOTER_TEXT = f"To show a tag, type {constants.Bot.prefix}tags <tagname>."
+FOOTER_TEXT = "To show a tag, use /tag <tagname>."
 
 
 class COOLDOWN(enum.Enum):
