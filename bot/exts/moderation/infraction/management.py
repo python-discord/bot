@@ -233,6 +233,7 @@ class ModManagement(commands.Cog):
                 self.infractions_cog.schedule_expiration(new_infraction)
                 # Timeouts are handled by Discord itself, so we need to edit the expiry in Discord as well
                 if user and infraction["type"] == "timeout":
+                    _, duration = _utils.cap_timeout_duration(expiry)
                     await user.edit(reason=reason, timed_out_until=expiry)
 
             log_text += f"""

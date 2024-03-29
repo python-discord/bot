@@ -1,5 +1,9 @@
+
+import datetime
+
 import arrow
 import discord
+from dateutil.relativedelta import relativedelta
 from discord import Member
 from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
@@ -60,6 +64,8 @@ INFRACTION_DESCRIPTION_WARNING_TEMPLATE = (
     "**Reason:** {reason}\n"
 )
 
+
+MAXIMUM_TIMEOUT_DAYS = datetime.timedelta(days=28)
 
 async def post_user(ctx: Context, user: MemberOrUser) -> dict | None:
     """
@@ -299,6 +305,22 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
             "The user either could not be retrieved or probably disabled their DMs."
         )
         return False
+
+
+def cap_timeout_duration(duration: datetime.datetime | relativedelta) -> tuple[bool, datetime.datetime]:
+    """Caps the duration of a duration to Discord's limit."""
+    now = arrow.utcnow()
+    capped = False
+    if isinstance(duration, relativedelta):
+        duration += now
+
+    if duration > now + MAXIMUM_TIMEOUT_DAYS:
+        duration = now + MAXIMUM_TIMEOUT_DAYS - datetime.timedelta(minutes=1)  # Duration cap is exclusive.
+        capped = True
+    elif duration > now + MAXIMUM_TIMEOUT_DAYS - datetime.timedelta(minutes=1):
+        # Duration cap is exclusive. This is to still allow specifying "28d".
+        duration -= datetime.timedelta(minutes=1)
+    return capped, duration
 
 
 async def confirm_elevated_user_ban(ctx: Context, user: MemberOrUser) -> bool:
