@@ -12,13 +12,12 @@ from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Event
+from bot.constants import Event
 from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
-from bot.utils.channel import is_mod_channel
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
@@ -46,12 +45,6 @@ COMP_BAN_REASON = (
     "this message to appeal your ban."
 )
 COMP_BAN_DURATION = timedelta(days=4)
-# Timeout
-MAXIMUM_TIMEOUT_DAYS = timedelta(days=28)
-TIMEOUT_CAP_MESSAGE = (
-    f"The timeout for {{0}} can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
-    " I'll pretend that's what you meant."
-)
 
 
 class Infractions(InfractionScheduler, commands.Cog):
@@ -232,13 +225,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         else:
             capped, duration = _utils.cap_timeout_duration(duration)
             if capped:
-                cap_message_for_user = TIMEOUT_CAP_MESSAGE.format(user.mention)
-                if is_mod_channel(ctx.channel):
-                    await ctx.reply(f":warning: {cap_message_for_user}")
-                else:
-                    await self.bot.get_channel(Channels.mods).send(
-                        f":warning: {ctx.author.mention} {cap_message_for_user}"
-                    )
+                await _utils.notify_timeout_cap(self.bot, ctx, user)
 
         await self.apply_timeout(ctx, user, reason, duration_or_expiry=duration)
 
@@ -662,7 +649,6 @@ class Infractions(InfractionScheduler, commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """
-
         Apply active timeout infractions for returning members.
 
         This is needed for users who might have had their infraction edited in our database but not in Discord itself.
