@@ -9,9 +9,11 @@ from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot.bot import Bot
-from bot.constants import Channels, MODERATION_ROLES, Roles, VoiceGate as GateConf
+from bot.constants import Channels, Icons, MODERATION_ROLES, Roles, VoiceGate as GateConf
 from bot.log import get_logger
 from bot.utils.checks import InWhitelistCheckFailure
+from bot.utils.messages import format_user
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -119,6 +121,19 @@ class VoiceVerificationView(discord.ui.View):
                 ephemeral=True,
                 delete_after=GateConf.delete_after_delay,
             )
+
+            log_reasons = "\n".join(f"- Has {reason}." for reason in failed_reasons)
+
+            await send_log_message(
+                self.bot,
+                icon_url=Icons.defcon_denied,
+                colour=Colour.red(),
+                title="Voice gate failed",
+                text=f"{format_user(interaction.user)} failed the voice gate.\n\n{log_reasons}",
+                thumbnail=interaction.user.avatar,
+                channel_id=Channels.voice_log,
+            )
+
             return
 
         embed = discord.Embed(
@@ -137,6 +152,17 @@ class VoiceVerificationView(discord.ui.View):
             delete_after=GateConf.delete_after_delay,
         )
         await interaction.user.add_roles(discord.Object(Roles.voice_verified), reason="Voice Gate passed")
+
+        await send_log_message(
+            self.bot,
+            icon_url=Icons.defcon_unshutdown,
+            colour=Colour.green(),
+            title="Voice gate passed",
+            text=f"{format_user(interaction.user)} passed the voice gate.",
+            thumbnail=interaction.user.avatar,
+            channel_id=Channels.voice_log,
+        )
+
         self.bot.stats.incr("voice_gate.passed")
 
 
