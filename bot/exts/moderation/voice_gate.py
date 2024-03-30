@@ -26,10 +26,10 @@ FAILED_MESSAGE = (
 )
 
 MESSAGE_FIELD_MAP = {
-    "joined_at": f"have been on the server for less than {GateConf.minimum_days_member} days",
-    "voice_gate_blocked": "have an active voice infraction",
-    "total_messages": f"have sent less than {GateConf.minimum_messages} messages",
-    "activity_blocks": f"have been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
+    "joined_at": f"been on the server for less than {GateConf.minimum_days_member} days",
+    "voice_gate_blocked": "an active voice infraction",
+    "total_messages": f"sent less than {GateConf.minimum_messages} messages",
+    "activity_blocks": f"been active for fewer than {GateConf.minimum_activity_blocks} ten-minute blocks",
 }
 
 VOICE_PING = (
@@ -108,7 +108,9 @@ class VoiceVerificationView(discord.ui.View):
 
             embed = discord.Embed(
                 title="Voice Gate failed",
-                description=FAILED_MESSAGE.format(reasons="\n".join(f"- You {reason}." for reason in failed_reasons)),
+                description=FAILED_MESSAGE.format(
+                    reasons="\n".join(f"- You have {reason}." for reason in failed_reasons)
+                ),
                 color=Colour.red()
             )
 
