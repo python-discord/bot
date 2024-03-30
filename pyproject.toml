@@ -6,7 +6,7 @@ authors = ["Python Discord <info@pythondiscord.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "3.11.*"
+python = "3.12.*"
 
 # See https://bot-core.pythondiscord.com/ for docs.
 pydis_core = { version = "11.1.0", extras = ["all"] }
@@ -67,7 +67,7 @@ source_pkgs = ["bot"]
 source = ["tests"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 extend-exclude = [".cache"]
 line-length = 120
 
