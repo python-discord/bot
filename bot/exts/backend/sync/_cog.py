@@ -21,7 +21,7 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.guild: Guild = None
+        self.guild: Guild | None = None
 
 
     async def cog_load(self) -> None:
