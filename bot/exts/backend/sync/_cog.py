@@ -1,10 +1,11 @@
 import asyncio
 from typing import Any
 
-from discord import Member, Role, User
+from discord import Guild, Member, Role, User
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.scheduling import create_task
 
 from bot import constants
 from bot.bot import Bot
@@ -20,33 +21,39 @@ class Sync(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.guild: Guild = None
+
 
     async def cog_load(self) -> None:
         """Syncs the roles/users of the guild with the database."""
         await self.bot.wait_until_guild_available()
 
-        guild = self.bot.get_guild(constants.Guild.id)
-        if guild is None:
-            return
+        self.guild = self.bot.get_guild(constants.Guild.id)
+        if self.guild is None:
+            raise ValueError("Could not fetch guild from cache, not loading sync cog.")
 
         attempts = 0
         while True:
             attempts += 1
-            if guild.chunked:
+            if self.guild.chunked:
                 log.info("Guild was found to be chunked after %d attempt(s).", attempts)
                 break
 
             if attempts == MAX_ATTEMPTS:
                 log.info("Guild not chunked after %d attempts, calling chunk manually.", MAX_ATTEMPTS)
-                await guild.chunk()
+                await self.guild.chunk()
                 break
 
             log.info("Attempt %d/%d: Guild not yet chunked, checking again in 10s.", attempts, MAX_ATTEMPTS)
             await asyncio.sleep(10)
+        create_task(self.sync())
+
+    async def sync(self) -> None:
+        await asyncio.sleep(10)  # Give time to other cogs starting up
 
         log.info("Starting syncers.")
         for syncer in (_syncers.RoleSyncer, _syncers.UserSyncer):
-            await syncer.sync(guild)
+            await syncer.sync(self.guild)
 
     async def patch_user(self, user_id: int, json: dict[str, Any], ignore_404: bool = False) -> None:
         """Send a PATCH request to partially update a user in the database."""
