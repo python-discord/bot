@@ -447,7 +447,7 @@ class Snekbox(Cog):
                     reference=message
                 )
             else:
-                # The command was directed so a reply wont work, send a normal message with a mention.
+                # The command was redirected so a reply wont work, send a normal message with a mention.
                 msg = f"{ctx.author.mention} {msg}"
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
             view.message = response
