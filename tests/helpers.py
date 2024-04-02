@@ -500,10 +500,12 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         super().__init__(**kwargs)
         self.me = kwargs.get("me", MockMember())
         self.bot = kwargs.get("bot", MockBot())
-        self.guild = kwargs.get("guild", MockGuild())
-        self.author = kwargs.get("author", MockMember())
-        self.channel = kwargs.get("channel", MockTextChannel())
-        self.message = kwargs.get("message", MockMessage())
+
+        self.message = kwargs.get("message", MockMessage(guild=self.guild))
+        self.author = kwargs.get("author", self.message.author)
+        self.channel = kwargs.get("channel", self.message.channel)
+        self.guild = kwargs.get("guild", self.channel.guild)
+
         self.invoked_from_error_handler = kwargs.get("invoked_from_error_handler", False)
 
 
@@ -519,10 +521,12 @@ class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
         super().__init__(**kwargs)
         self.me = kwargs.get("me", MockMember())
         self.client = kwargs.get("client", MockBot())
-        self.guild = kwargs.get("guild", MockGuild())
-        self.user = kwargs.get("user", MockMember())
-        self.channel = kwargs.get("channel", MockTextChannel())
-        self.message = kwargs.get("message", MockMessage())
+
+        self.message = kwargs.get("message", MockMessage(guild=self.guild))
+        self.user = kwargs.get("user", self.message.author)
+        self.channel = kwargs.get("channel", self.message.channel)
+        self.guild = kwargs.get("guild", self.channel.guild)
+
         self.invoked_from_error_handler = kwargs.get("invoked_from_error_handler", False)
 
 
