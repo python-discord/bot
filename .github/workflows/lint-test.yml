@@ -34,7 +34,7 @@ jobs:
       - name: Install Python Dependencies
         uses: HassanAbouelela/actions/setup-python@setup-python_v1.4.2
         with:
-          python_version: '3.11'
+          python_version: '3.12'
 
       # Check all of our non-dev dependencies are compatible with the MIT license.
       # If you added a new dependencies that is being rejected,
@@ -53,7 +53,7 @@ jobs:
         run: "ruff check --output-format=github ."
 
       - name: Run tests and generate coverage report
-        run: pytest -n auto --cov --disable-warnings -q
+        run: pytest -n auto --cov -q
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's

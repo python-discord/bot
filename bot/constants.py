@@ -8,7 +8,7 @@ By default, the values defined in the classes are used, these can be overridden 
 import os
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from pydantic_settings import BaseSettings
 
 
@@ -322,7 +322,7 @@ class _DuckPond(EnvConfig, env_prefix="duck_pond_"):
 
     threshold: int = 7
 
-    channel_blacklist: tuple[int, ...] = (
+    default_channel_blacklist: tuple[int, ...] = (
         Channels.announcements,
         Channels.python_news,
         Channels.python_events,
@@ -336,6 +336,12 @@ class _DuckPond(EnvConfig, env_prefix="duck_pond_"):
         Channels.staff_info,
     )
 
+    extra_channel_blacklist: tuple[int, ...] = tuple()
+
+    @computed_field
+    @property
+    def channel_blacklist(self) -> tuple[int, ...]:
+        return self.default_channel_blacklist + self.extra_channel_blacklist
 
 DuckPond = _DuckPond()
 
