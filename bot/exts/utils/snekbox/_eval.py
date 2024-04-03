@@ -141,7 +141,7 @@ class EvalResult:
         text = escape_mentions(text)
         return text
 
-    def get_message(self, job: EvalJob) -> str:
+    def get_status_message(self, job: EvalJob) -> str:
         """Return a user-friendly message corresponding to the process's return code."""
         msg = f"Your {job.version} {job.name} job"
 

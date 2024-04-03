@@ -1,3 +1,5 @@
+import re
+
 from discord import NotFound
 from discord.ext.commands import BadArgument
 from pydis_core.utils.regex import DISCORD_INVITE
@@ -33,8 +35,12 @@ class InviteFilter(Filter):
         """
         match = DISCORD_INVITE.fullmatch(content)
         if not match or not match.group("invite"):
-            raise BadArgument(f"`{content}` is not a valid Discord invite.")
-        invite_code = match.group("invite")
+            if not re.fullmatch(r"\S+", content):
+                raise BadArgument(f"`{content}` is not a valid Discord invite.")
+            invite_code = content
+        else:
+            invite_code = match.group("invite")
+
         try:
             invite = await bot.instance.fetch_invite(invite_code)
         except NotFound:

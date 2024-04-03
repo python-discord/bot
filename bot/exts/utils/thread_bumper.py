@@ -1,5 +1,6 @@
 
 import discord
+import sentry_sdk
 from discord.ext import commands
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
@@ -67,23 +68,28 @@ class ThreadBumper(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         threads_to_maybe_bump = []
-        for thread_id in await self.bot.api_client.get(THREAD_BUMP_ENDPOINT):
-            try:
-                thread = await get_or_fetch_channel(self.bot, thread_id)
-            except discord.NotFound:
-                log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
-                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
-                continue
+        with sentry_sdk.start_span(description="Fetch threads to bump from site"):
+            bumped_threads_from_site = await self.bot.api_client.get(THREAD_BUMP_ENDPOINT)
 
-            if not isinstance(thread, discord.Thread):
-                await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
-                continue
+        with sentry_sdk.start_span(description="Sync bumped threads in site with current guild state"):
+            for thread_id in bumped_threads_from_site:
+                try:
+                    thread = await get_or_fetch_channel(self.bot, thread_id)
+                except discord.NotFound:
+                    log.info("Thread %d has been deleted, removing from bumped threads.", thread_id)
+                    await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
+                    continue
 
-            if thread.archived:
-                threads_to_maybe_bump.append(thread)
+                if not isinstance(thread, discord.Thread):
+                    await self.bot.api_client.delete(f"{THREAD_BUMP_ENDPOINT}/{thread_id}")
+                    continue
 
-        if threads_to_maybe_bump:
-            await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
+                if thread.archived:
+                    threads_to_maybe_bump.append(thread)
+
+        with sentry_sdk.start_span(description="Unarchive threads that should be bumped"):
+            if threads_to_maybe_bump:
+                await self.unarchive_threads_not_manually_archived(threads_to_maybe_bump)
 
     @commands.group(name="bump")
     async def thread_bump_group(self, ctx: commands.Context) -> None:

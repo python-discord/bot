@@ -145,6 +145,9 @@ class InviteList(FilterList[InviteFilter]):
         blocked_invites |= unknown_invites
         ctx.matches += {match[0] for match in matches if refined_invites.get(match.group("invite")) in blocked_invites}
         ctx.alert_embeds += (self._guild_embed(invite) for invite in blocked_invites.values() if invite)
+        if unknown_invites:
+            ctx.potential_phish[self] = set(unknown_invites)
+
         messages = self[ListType.DENY].format_messages(triggered)
         messages += [
             f"`{code} - {invite.guild.id}`" if invite else f"`{code}`" for code, invite in unknown_invites.items()

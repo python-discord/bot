@@ -1,10 +1,10 @@
 """Contains all logic to handle changes to posts in the help forum."""
-import textwrap
 from datetime import timedelta
 
 import arrow
 import discord
 from pydis_core.utils import scheduling
+from pydis_core.utils.channel import get_or_fetch_channel
 
 import bot
 from bot import constants
@@ -58,7 +58,11 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
         if participant_ids == {closed_post.owner_id}:
             message = closed_post.owner.mention
 
-    await closed_post.send(message, embed=embed)
+    try:
+        await closed_post.send(message, embed=embed)
+    except discord.errors.HTTPException:
+        log.info("Could not send closing message in %s (%d), closing anyway", closed_post, closed_post.id)
+
     await closed_post.edit(
         name=f"🔒 {closed_post.name}"[:100],
         archived=True,
@@ -81,44 +85,6 @@ async def send_opened_post_message(post: discord.Thread) -> None:
     await post.send(embed=embed, content=post.owner.mention)
 
 
-async def send_opened_post_dm(post: discord.Thread) -> None:
-    """Send the opener a DM message with a jump link to their new post."""
-    embed = discord.Embed(
-        title="Help post opened",
-        description=f"You opened {post.mention}.",
-        colour=constants.Colours.bright_green,
-        timestamp=post.created_at,
-    )
-    embed.set_thumbnail(url=constants.Icons.green_questionmark)
-    message = post.starter_message
-    if not message:
-        try:
-            message = await post.fetch_message(post.id)
-        except discord.HTTPException:
-            log.warning(f"Could not fetch message for post {post.id}")
-            return
-
-    formatted_message = textwrap.shorten(message.content, width=100, placeholder="...").strip()
-    if not formatted_message:
-        # This most likely means the initial message is only an image or similar
-        formatted_message = "No text content."
-
-    embed.add_field(name="Your message", value=formatted_message, inline=False)
-    embed.add_field(
-        name="Conversation",
-        value=f"[Jump to message!]({message.jump_url})",
-        inline=False,
-    )
-
-    try:
-        await post.owner.send(embed=embed)
-        log.trace(f"Sent DM to {post.owner} ({post.owner_id}) after posting in help forum.")
-    except discord.errors.Forbidden:
-        log.trace(
-            f"Ignoring to send DM to {post.owner} ({post.owner_id}) after posting in help forum: DMs disabled.",
-        )
-
-
 async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False) -> None:
     """Apply new post logic to a new help forum post."""
     _stats.report_post_count()
@@ -128,8 +94,6 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
         log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
         await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP)
         return
-
-    await send_opened_post_dm(opened_post)
 
     try:
         await opened_post.starter_message.pin()
@@ -205,15 +169,10 @@ async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.Cl
     return time, _stats.ClosingReason.INACTIVE
 
 
-async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler, has_task: bool = True) -> None:
-    """
-    Archive the `post` if idle, or schedule the archive for later if still active.
-
-    If `has_task` is True and rescheduling is required, the extant task to make the post
-    dormant will first be cancelled.
-    """
+async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
+    """Archive the `post` if idle, or schedule the archive for later if still active."""
     try:
-        await post.guild.fetch_channel(post.id)
+        await get_or_fetch_channel(bot.instance, post.id)
     except discord.HTTPException:
         log.trace(f"Not closing missing post #{post} ({post.id}).")
         return
@@ -235,9 +194,10 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
         await _close_help_post(post, closing_reason)
         return
 
-    if has_task:
+    if post.id in scheduler:
+        # Cancel any existing close task
         scheduler.cancel(post.id)
     delay = (closing_time - arrow.utcnow()).seconds
     log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
 
-    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler, has_task=True))
+    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler))

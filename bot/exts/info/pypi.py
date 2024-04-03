@@ -1,7 +1,9 @@
 import itertools
 import random
 import re
+import typing
 from contextlib import suppress
+from datetime import datetime
 
 from discord import Embed, NotFound
 from discord.ext.commands import Cog, Context, command
@@ -10,6 +12,7 @@ from discord.utils import escape_markdown
 from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
 from bot.log import get_logger
+from bot.utils import time
 from bot.utils.messages import wait_for_deletion
 
 URL = "https://pypi.org/pypi/{package}/json"
@@ -22,6 +25,16 @@ INVALID_INPUT_DELETE_DELAY = RedirectOutput.delete_delay
 
 log = get_logger(__name__)
 
+def _get_latest_distribution_timestamp(data: dict[str, typing.Any]) -> datetime | None:
+    """Get upload date of last distribution, or `None` if no distributions were found."""
+    if not data["urls"]:
+        return None
+
+    try:
+        return time.discord_timestamp(data["urls"][-1]["upload_time_iso_8601"], time.TimestampFormats.DATE)
+    except KeyError:
+        log.trace("KeyError trying to fetch upload time: data['urls'][-1]['upload_time_iso_8601']")
+        return None
 
 class PyPi(Cog):
     """Cog for getting information about PyPi packages."""
@@ -62,6 +75,10 @@ class PyPi(Cog):
                         embed.description = escape_markdown(summary)
                     else:
                         embed.description = "No summary provided."
+
+                    upload_date = _get_latest_distribution_timestamp(response_json)
+                    if upload_date:
+                        embed.description += f"\n\nReleased on {upload_date}."
 
                     error = False
 
