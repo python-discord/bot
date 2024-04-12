@@ -234,7 +234,7 @@ class Tags(Cog):
             if not tag.on_cooldown_in(channel)
         )
         return Embed(
-            title="Did you mean ...",
+            title="Did you mean...",
             description=suggested_tags_text
         )
 
@@ -264,7 +264,7 @@ class Tags(Cog):
                     group_accessible = False
                     result_lines.append(f"\n\N{BULLET} **{current_group}**")
                 else:
-                    result_lines.append("\n\N{BULLET}")
+                    result_lines.append("\n")
 
             if tag.accessible_by(member):
                 result_lines.append(f"**\N{RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK}** {identifier.name}")
