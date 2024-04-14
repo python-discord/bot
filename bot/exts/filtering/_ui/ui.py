@@ -619,7 +619,8 @@ class AlertView(discord.ui.View):
         super().__init__(timeout=ALERT_VIEW_TIMEOUT)
         self.ctx = ctx
         if "banned" in self.ctx.action_descriptions:
-            # If the user has already been banned, do not attempt to add phishing button
+            # If the user has already been banned, do not attempt to add phishing button since the URL or guild invite
+            # is probably already added as a filter
             return
         phishing_content, target_filter_list =  self._extract_potential_phish(triggered_filters)
         if phishing_content:
