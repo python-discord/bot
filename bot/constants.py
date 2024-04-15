@@ -8,7 +8,7 @@ By default, the values defined in the classes are used, these can be overridden 
 import os
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from pydantic_settings import BaseSettings
 
 
@@ -322,7 +322,7 @@ class _DuckPond(EnvConfig, env_prefix="duck_pond_"):
 
     threshold: int = 7
 
-    channel_blacklist: tuple[int, ...] = (
+    default_channel_blacklist: tuple[int, ...] = (
         Channels.announcements,
         Channels.python_news,
         Channels.python_events,
@@ -336,6 +336,12 @@ class _DuckPond(EnvConfig, env_prefix="duck_pond_"):
         Channels.staff_info,
     )
 
+    extra_channel_blacklist: tuple[int, ...] = tuple()
+
+    @computed_field
+    @property
+    def channel_blacklist(self) -> tuple[int, ...]:
+        return self.default_channel_blacklist + self.extra_channel_blacklist
 
 DuckPond = _DuckPond()
 
@@ -428,7 +434,7 @@ Metabase = _Metabase()
 class _BaseURLs(EnvConfig, env_prefix="urls_"):
 
     # Snekbox endpoints
-    snekbox_eval_api: str = "http://snekbox.default.svc.cluster.local/eval"
+    snekbox_eval_api: str = "http://snekbox.snekbox.svc.cluster.local/eval"
 
     # Discord API
     discord_api: str = "https://discordapp.com/api/v7/"
@@ -438,7 +444,7 @@ class _BaseURLs(EnvConfig, env_prefix="urls_"):
     github_bot_repo: str = "https://github.com/python-discord/bot"
 
     # Site
-    site_api: str = "http://site.default.svc.cluster.local/api"
+    site_api: str = "http://site.web.svc.cluster.local/api"
     paste_url: str = "https://paste.pythondiscord.com"
 
 

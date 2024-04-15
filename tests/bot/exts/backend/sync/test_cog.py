@@ -1,4 +1,6 @@
+import types
 import unittest
+import unittest.mock
 from unittest import mock
 
 import discord
@@ -60,40 +62,54 @@ class SyncCogTestCase(unittest.IsolatedAsyncioTestCase):
 class SyncCogTests(SyncCogTestCase):
     """Tests for the Sync cog."""
 
-    async def test_sync_cog_sync_on_load(self):
-        """Roles and users should be synced on cog load."""
-        guild = helpers.MockGuild()
-        self.bot.get_guild = mock.MagicMock(return_value=guild)
-
-        self.RoleSyncer.reset_mock()
-        self.UserSyncer.reset_mock()
-
-        await self.cog.cog_load()
-
-        self.RoleSyncer.sync.assert_called_once_with(guild)
-        self.UserSyncer.sync.assert_called_once_with(guild)
-
-    async def test_sync_cog_sync_guild(self):
-        """Roles and users should be synced only if a guild is successfully retrieved."""
+    @unittest.mock.patch("bot.exts.backend.sync._cog.create_task", new_callable=unittest.mock.MagicMock)
+    async def test_sync_cog_sync_on_load(self, mock_create_task: unittest.mock.MagicMock):
+        """Sync function should be synced on cog load only if guild is found."""
         for guild in (helpers.MockGuild(), None):
             with self.subTest(guild=guild):
+                mock_create_task.reset_mock()
                 self.bot.reset_mock()
                 self.RoleSyncer.reset_mock()
                 self.UserSyncer.reset_mock()
 
                 self.bot.get_guild = mock.MagicMock(return_value=guild)
-
-                await self.cog.cog_load()
-
-                self.bot.wait_until_guild_available.assert_called_once()
-                self.bot.get_guild.assert_called_once_with(constants.Guild.id)
+                error_raised = False
+                try:
+                    await self.cog.cog_load()
+                except ValueError:
+                    if guild is None:
+                        error_raised = True
+                    else:
+                        raise
 
                 if guild is None:
-                    self.RoleSyncer.sync.assert_not_called()
-                    self.UserSyncer.sync.assert_not_called()
+                    self.assertTrue(error_raised)
+                    mock_create_task.assert_not_called()
                 else:
-                    self.RoleSyncer.sync.assert_called_once_with(guild)
-                    self.UserSyncer.sync.assert_called_once_with(guild)
+                    mock_create_task.assert_called_once()
+                    create_task_arg = mock_create_task.call_args[0][0]
+                    self.assertIsInstance(create_task_arg, types.CoroutineType)
+                    self.assertEqual(create_task_arg.__qualname__, self.cog.sync.__qualname__)
+                    create_task_arg.close()
+
+    async def test_sync_cog_sync_guild(self):
+        """Roles and users should be synced only if a guild is successfully retrieved."""
+        guild = helpers.MockGuild()
+        self.bot.reset_mock()
+        self.RoleSyncer.reset_mock()
+        self.UserSyncer.reset_mock()
+
+        self.bot.get_guild = mock.MagicMock(return_value=guild)
+        await self.cog.cog_load()
+
+        with mock.patch("asyncio.sleep", new_callable=unittest.mock.AsyncMock):
+            await self.cog.sync()
+
+        self.bot.wait_until_guild_available.assert_called_once()
+        self.bot.get_guild.assert_called_once_with(constants.Guild.id)
+
+        self.RoleSyncer.sync.assert_called_once()
+        self.UserSyncer.sync.assert_called_once()
 
     async def patch_user_helper(self, side_effect: BaseException) -> None:
         """Helper to set a side effect for bot.api_client.patch and then assert it is called."""
