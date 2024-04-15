@@ -444,7 +444,7 @@ class _BaseURLs(EnvConfig, env_prefix="urls_"):
     github_bot_repo: str = "https://github.com/python-discord/bot"
 
     # Site
-    site_api: str = "http://site.default.svc.cluster.local/api"
+    site_api: str = "http://site.web.svc.cluster.local/api"
     paste_url: str = "https://paste.pythondiscord.com"
 
 
