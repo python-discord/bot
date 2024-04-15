@@ -434,7 +434,7 @@ Metabase = _Metabase()
 class _BaseURLs(EnvConfig, env_prefix="urls_"):
 
     # Snekbox endpoints
-    snekbox_eval_api: str = "http://snekbox.default.svc.cluster.local/eval"
+    snekbox_eval_api: str = "http://snekbox.snekbox.svc.cluster.local/eval"
 
     # Discord API
     discord_api: str = "https://discordapp.com/api/v7/"
