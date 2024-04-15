@@ -423,7 +423,7 @@ class _Metabase(EnvConfig, env_prefix="metabase_"):
 
     username: str = ""
     password: str = ""
-    base_url: str = "http://metabase.default.svc.cluster.local"
+    base_url: str = "http://metabase.tooling.svc.cluster.local"
     public_url: str = "https://metabase.pythondiscord.com"
     max_session_age: int = 20_160
 
