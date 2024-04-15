@@ -385,7 +385,7 @@ VideoPermission = _VideoPermission()
 
 class _Redis(EnvConfig, env_prefix="redis_"):
 
-    host: str = "redis.default.svc.cluster.local"
+    host: str = "redis.databases.svc.cluster.local"
     password: str = ""
     port: int = 6379
     use_fakeredis: bool = False  # If this is True, Bot will use fakeredis.aioredis
