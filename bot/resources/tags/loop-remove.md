@@ -9,7 +9,7 @@ for item in data:
     data.remove(item)
 print(data)  # [2, 4] <-- every OTHER item was removed!
 ```
-`for` loops track the index of the current item with a kind of pointer. Removing an element causes all other elements to shift, but the pointer is not changed:
+While iterating with a for loop, an index tracks the current position in the list. If the list is modified, this index may no longer refer to the same element, causing elements to be repeated or skipped.
 ```py
 [1, 2, 3, 4] # First iteration: point to the first element
  ^
