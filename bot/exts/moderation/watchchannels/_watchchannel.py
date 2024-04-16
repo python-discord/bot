@@ -192,7 +192,7 @@ class WatchChannel(metaclass=CogABCMeta):
 
                     if watch_info := self.watched_users.get(user_id, None):
                         self.log.trace(f"Consuming message {msg.id} ({len(msg.attachments)} attachments)")
-                        await self.relay_message(msg)
+                        await self.relay_message(msg, watch_info)
                     else:
                         self.log.trace(f"Not consuming message {msg.id} as user {user_id} is no longer watched.")
 
@@ -221,7 +221,7 @@ class WatchChannel(metaclass=CogABCMeta):
                 exc_info=exc
             )
 
-    async def relay_message(self, msg: Message) -> None:
+    async def relay_message(self, msg: Message, watch_info: dict) -> None:
         """Relays the message to the relevant watch channel."""
         limit = BigBrotherConfig.header_message_limit
 
@@ -232,7 +232,7 @@ class WatchChannel(metaclass=CogABCMeta):
         ):
             self.message_history = MessageHistory(last_author=msg.author.id, last_channel=msg.channel.id)
 
-            await self.send_header(msg)
+            await self.send_header(msg, watch_info)
 
         if DiscordTokenFilter.find_token_in_message(msg.content) or WEBHOOK_URL_RE.search(msg.content):
             cleaned_content = "Content is censored because it contains a bot or webhook token."
@@ -271,21 +271,19 @@ class WatchChannel(metaclass=CogABCMeta):
 
         self.message_history.message_count += 1
 
-    async def send_header(self, msg: Message) -> None:
+    async def send_header(self, msg: Message, watch_info: dict) -> None:
         """Sends a header embed with information about the relayed messages to the watch channel."""
         if self.disable_header:
             return
 
-        user_id = msg.author.id
-
         guild = self.bot.get_guild(GuildConfig.id)
-        actor = await get_or_fetch_member(guild, self.watched_users[user_id]["actor"])
-        actor = actor.display_name if actor else self.watched_users[user_id]["actor"]
+        actor = await get_or_fetch_member(guild, watch_info["actor"])
+        actor = actor.display_name if actor else watch_info["actor"]
 
-        inserted_at = self.watched_users[user_id]["inserted_at"]
+        inserted_at = watch_info["inserted_at"]
         time_delta = time.format_relative(inserted_at)
 
-        reason = self.watched_users[user_id]["reason"]
+        reason = watch_info["reason"]
 
         if isinstance(msg.channel, DMChannel):
             # If a watched user DMs the bot there won't be a channel name or jump URL
