@@ -185,7 +185,7 @@ class WatchChannel(metaclass=CogABCMeta):
             self.consumption_queue = self.message_queue.copy()
             self.message_queue.clear()
 
-        for user_id, channel_queues in self.consumption_queue.values():
+        for user_id, channel_queues in self.consumption_queue.items():
             for channel_queue in channel_queues.values():
                 while channel_queue:
                     msg = channel_queue.popleft()
