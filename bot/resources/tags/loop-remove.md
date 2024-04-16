@@ -16,8 +16,7 @@ print(data)  # [2, 4] <-- every OTHER item was removed!
 [2, 3, 4]    # Remove current: all elements shift
  ^
 [2, 3, 4]    # Next iteration: move the pointer
-    ^
-# and so on
+    ^        # and so on...
 ```
 You can avoid this pitfall by:
 - using a list comprehension to produce a new list (as a way of filtering items):
