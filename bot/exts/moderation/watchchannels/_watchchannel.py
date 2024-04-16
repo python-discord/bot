@@ -185,13 +185,16 @@ class WatchChannel(metaclass=CogABCMeta):
             self.consumption_queue = self.message_queue.copy()
             self.message_queue.clear()
 
-        for user_channel_queues in self.consumption_queue.values():
-            for channel_queue in user_channel_queues.values():
+        for user_id, channel_queues in self.consumption_queue.values():
+            for channel_queue in channel_queues.values():
                 while channel_queue:
                     msg = channel_queue.popleft()
 
-                    self.log.trace(f"Consuming message {msg.id} ({len(msg.attachments)} attachments)")
-                    await self.relay_message(msg)
+                    if watch_info := self.watched_users.get(user_id, None):
+                        self.log.trace(f"Consuming message {msg.id} ({len(msg.attachments)} attachments)")
+                        await self.relay_message(msg)
+                    else:
+                        self.log.trace(f"Not consuming message {msg.id} as user {user_id} is no longer watched.")
 
         self.consumption_queue.clear()
 
@@ -366,8 +369,6 @@ class WatchChannel(metaclass=CogABCMeta):
     def _remove_user(self, user_id: int) -> None:
         """Removes a user from a watch channel."""
         self.watched_users.pop(user_id, None)
-        self.message_queue.pop(user_id, None)
-        self.consumption_queue.pop(user_id, None)
 
     async def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
