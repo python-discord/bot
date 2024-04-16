@@ -12,7 +12,7 @@ print(data)  # [2, 4] <-- every OTHER item was removed!
 ```
 Inside the loop, an index tracks the current position. If the list is modified, this index may no longer refer to the same element, causing elements to be repeated or skipped.
 
-Above, `1` is removed, shifting `2` to index *0*. The loop then moves to index *1*, removing `3` (and skipping `2`!).
+In the example above, `1` is removed, shifting `2` to index *0*. The loop then moves to index *1*, removing `3` (and skipping `2`!).
 
 You can avoid this pitfall by:
 - using a **list comprehension** to produce a new list (as a way of filtering items):
