@@ -385,7 +385,7 @@ VideoPermission = _VideoPermission()
 
 class _Redis(EnvConfig, env_prefix="redis_"):
 
-    host: str = "redis.default.svc.cluster.local"
+    host: str = "redis.databases.svc.cluster.local"
     password: str = ""
     port: int = 6379
     use_fakeredis: bool = False  # If this is True, Bot will use fakeredis.aioredis
@@ -423,7 +423,7 @@ class _Metabase(EnvConfig, env_prefix="metabase_"):
 
     username: str = ""
     password: str = ""
-    base_url: str = "http://metabase.default.svc.cluster.local"
+    base_url: str = "http://metabase.tooling.svc.cluster.local"
     public_url: str = "https://metabase.pythondiscord.com"
     max_session_age: int = 20_160
 
