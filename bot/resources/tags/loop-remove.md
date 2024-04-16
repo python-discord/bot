@@ -9,7 +9,7 @@ for item in data:
     data.remove(item)
 print(data)  # [2, 4] <-- every OTHER item was removed!
 ```
-While iterating with a for loop, an index tracks the current position in the list. If the list is modified, this index may no longer refer to the same element, causing elements to be repeated or skipped.
+Inside the loop, an index tracks the current position. If the list is modified, this index may no longer refer to the same element, causing elements to be repeated or skipped.
 ```py
 [1, 2, 3, 4] # First iteration: point to the first element
  ^
