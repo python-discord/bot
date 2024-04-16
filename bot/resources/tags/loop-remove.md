@@ -1,8 +1,9 @@
 ---
+aliases: ["loop-add", "loop-modify"]
 embed:
     title: "Removing items inside a for loop"
 ---
-Avoid removing items from a collection, such as a list, as you iterate that collection in a `for` loop:
+Avoid adding to or removing from a collection, such as a list, as you iterate that collection in a `for` loop:
 ```py
 data = [1, 2, 3, 4]
 for item in data:
