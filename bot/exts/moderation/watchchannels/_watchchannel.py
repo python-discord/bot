@@ -62,7 +62,7 @@ class WatchChannel(metaclass=CogABCMeta):
         self.log = logger  # Logger of the child cog for a correct name in the logs
 
         self._consume_task = None
-        self.watched_users = defaultdict(dict)
+        self.watched_users = {}
         self.message_queue = defaultdict(lambda: defaultdict(deque))
         self.consumption_queue = {}
         self.retries = 5
@@ -154,7 +154,7 @@ class WatchChannel(metaclass=CogABCMeta):
             self.log.exception("Failed to fetch the watched users from the API", exc_info=err)
             return False
 
-        self.watched_users = defaultdict(dict)
+        self.watched_users.clear()
 
         for entry in data:
             user_id = entry.pop("user")
