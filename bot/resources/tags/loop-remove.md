@@ -19,7 +19,7 @@ print(data)  # [2, 4] <-- every OTHER item was removed!
     ^        # and so on...
 ```
 You can avoid this pitfall by:
-- using a list comprehension to produce a new list (as a way of filtering items):
+- using a **list comprehension** to produce a new list (as a way of filtering items):
   ```py
   data = [x for x in data if x % 2 == 0]
   ```
@@ -28,4 +28,4 @@ You can avoid this pitfall by:
   while data:
       item = data.pop()
   ```
-- consider: you may not need to remove items in the first place!
+- considering whether you need to remove items in the first place!
