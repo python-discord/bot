@@ -11,16 +11,13 @@ print(data)  # [2, 4] <-- every OTHER item was removed!
 ```
 `for` loops track the index of the current item with a kind of pointer. Removing an element causes all other elements to shift, but the pointer is not changed:
 ```py
-# Start the loop:
 [1, 2, 3, 4] # First iteration: point to the first element
  ^
 [2, 3, 4]    # Remove current: all elements shift
  ^
 [2, 3, 4]    # Next iteration: move the pointer
     ^
-[2, 4]       # Remove current: all elements shift
-    ^
-# Done
+# and so on
 ```
 You can avoid this pitfall by:
 - using a list comprehension to produce a new list (as a way of filtering items):
