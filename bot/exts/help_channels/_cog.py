@@ -154,6 +154,6 @@ class HelpForum(commands.Cog):
             if thread.archived:
                 continue
 
-            log.debug(f"Notifying help thread {thread.id} that owner {member.id} has left the server.")
+            log.debug(f"Notifying help thread {thread.id} that owner {member.id} is no longer in the server.")
             with contextlib.suppress(discord.NotFound):
-                await thread.send(":warning: The owner of this post has left the server.")
+                await thread.send(":warning: The owner of this post is no longer in the server.")
