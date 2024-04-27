@@ -77,6 +77,7 @@ jobs:
       - name: Deploy to Kubernetes
         uses: azure/k8s-deploy@v5
         with:
+          namespace: bots
           manifests: |
-            infra/kubernetes/namespaces/default/bot/deployment.yaml
+            infra/kubernetes/namespaces/bots/bot/deployment.yaml
           images: 'ghcr.io/python-discord/bot:${{ inputs.sha-tag }}'
