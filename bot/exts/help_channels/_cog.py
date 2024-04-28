@@ -1,5 +1,7 @@
 """Contains the Cog that receives discord.py events and defers most actions to other files in the module."""
 
+import contextlib
+
 import discord
 from discord.ext import commands, tasks
 from pydis_core.utils import scheduling
@@ -141,3 +143,17 @@ class HelpForum(commands.Cog):
 
         if not message.author.bot and message.author.id != message.channel.owner_id:
             await _caches.posts_with_non_claimant_messages.set(message.channel.id, "sentinel")
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member) -> None:
+        """Notify a help thread if the owner is no longer a member of the server."""
+        for thread in self.help_forum_channel.threads:
+            if thread.owner_id != member.id:
+                continue
+
+            if thread.archived:
+                continue
+
+            log.debug(f"Notifying help thread {thread.id} that owner {member.id} is no longer in the server.")
+            with contextlib.suppress(discord.NotFound):
+                await thread.send(":warning: The owner of this post is no longer in the server.")
