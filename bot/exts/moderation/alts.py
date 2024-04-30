@@ -37,7 +37,7 @@ class AlternateAccounts(commands.Cog):
             return str(error.response_json)
         return error.response_text
 
-    async def alts_to_string(self, alts: list[dict[str: str | int | list[int]]]) -> list[str]:
+    async def alts_to_string(self, alts: list[dict]) -> list[str]:
         """Convert a list of alts to a list of string representations."""
         lines = []
         guild = self.bot.get_guild(self.bot.guild_id)
