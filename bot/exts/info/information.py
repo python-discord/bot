@@ -342,7 +342,7 @@ class Information(Cog):
         return embed
 
     async def user_alt_count(self, user: MemberOrUser) -> tuple[str, int | str]:
-        """Get the number oif alts for the given member."""
+        """Get the number of alts for the given member."""
         resp = await self.bot.api_client.get(f"bot/users/{user.id}")
         return ("Associated accounts", len(resp["alts"]) or "No associated accounts")
 
