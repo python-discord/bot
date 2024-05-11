@@ -199,7 +199,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
 
         too_many_lines = (
             "001 | v\n002 | e\n003 | r\n004 | y\n005 | l\n006 | o\n"
-            "007 | n\n008 | g\n009 | b\n010 | e\n011 | a\n... (truncated - too many lines)"
+            "007 | n\n008 | g\n009 | b\n010 | e\n... (truncated - too many lines)"
         )
         too_long_too_many_lines = (
             "\n".join(
