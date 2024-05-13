@@ -477,7 +477,7 @@ class TalentPool(Cog, name="Talentpool"):
                 await ctx.send(f":x: {nominee_or_nomination_id.mention} doesn't have an active nomination.")
                 return
 
-        old_reason = next (e.reason for e in nomination_entries if e.actor_id == nominator.id)
+        old_reason = next((e.reason for e in nomination_entries if e.actor_id == nominator.id), None)
 
         if old_reason is not None and reason is not None:
             add_period = not old_reason.endswith((".", "!", "?"))
