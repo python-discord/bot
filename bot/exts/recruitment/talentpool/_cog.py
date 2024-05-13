@@ -450,6 +450,9 @@ class TalentPool(Cog, name="Talentpool"):
                     "or the reason of a nominator other than themselves."
                 )
 
+        if not reason:
+            await ctx.send(":x: You must include an additional reason when appending to an existing nomination.")
+
         if isinstance(nominee_or_nomination_id, int):
             nomination_id = nominee_or_nomination_id
             try:
@@ -479,7 +482,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         old_reason = next((e.reason for e in nomination_entries if e.actor_id == nominator.id), None)
 
-        if old_reason is not None and reason is not None:
+        if old_reason is not None:
             add_period = not old_reason.endswith((".", "!", "?"))
             reason = old_reason + (". " if add_period else " ") + reason
 
