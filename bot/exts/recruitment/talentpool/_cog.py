@@ -452,7 +452,18 @@ class TalentPool(Cog, name="Talentpool"):
 
         if isinstance(nominee_or_nomination_id, int):
             nomination_id = nominee_or_nomination_id
-            original_nomination = await self.api.get_nomination(nomination_id=nomination_id)
+            try:
+                original_nomination = await self.api.get_nomination(nomination_id=nomination_id)
+            except ResponseCodeError as e:
+                match (e.status, e.response_json):
+                    case (400, {"actor": _}):
+                        await ctx.send(f":x: {nominator.mention} doesn't have an entry in this nomination.")
+                        return
+                    case (404, _):
+                        await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
+                        return
+                raise
+
             if original_nomination:
                 nomination_entries = original_nomination.entries
             else:
