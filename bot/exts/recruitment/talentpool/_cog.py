@@ -432,6 +432,13 @@ class TalentPool(Cog, name="Talentpool"):
 
             reason += f"\n\n{message.jump_url}"
 
+            if len(reason) > REASON_MAX_CHARS:
+                await interaction.response.send_message(
+                    ":x: Cannot add additional context due to nomination reason character limit.",
+                    ephemeral=True
+                )
+                return
+
             await self.api.edit_nomination_entry(
                 nomination.id,
                 actor_id=interaction.user.id,
