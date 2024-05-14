@@ -8,7 +8,7 @@ import bot
 from bot.constants import Categories, Colours, Icons, MODERATION_ROLES, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
-from bot.exts.moderation.infraction._views import InfractionConfirmationView
+from bot.exts.moderation.infraction._views import BanConfirmationView
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.channel import is_in_category
@@ -312,7 +312,7 @@ async def confirm_elevated_user_ban(ctx: Context, user: MemberOrUser) -> bool:
     if not isinstance(user, Member) or not any(role.id in STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
         return True
 
-    confirmation_view = InfractionConfirmationView(
+    confirmation_view = BanConfirmationView(
         allowed_users=(ctx.author.id,),
         allowed_roles=MODERATION_ROLES,
         timeout=10,

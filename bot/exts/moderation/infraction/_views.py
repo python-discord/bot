@@ -6,7 +6,7 @@ from discord.ui import Button
 from pydis_core.utils import interactions
 
 
-class InfractionConfirmationView(interactions.ViewWithUserAndRoleCheck):
+class BanConfirmationView(interactions.ViewWithUserAndRoleCheck):
     """A confirmation view to be sent before issuing potentially suspect infractions."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
