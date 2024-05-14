@@ -1,17 +1,21 @@
+
+import datetime
+
 import arrow
 import discord
+from dateutil.relativedelta import relativedelta
 from discord import Member
-from discord.ext.commands import Context
+from discord.ext.commands import Bot, Context
 from pydis_core.site_api import ResponseCodeError
 
 import bot
-from bot.constants import Categories, Colours, Icons, MODERATION_ROLES, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import Categories, Channels, Colours, Icons, MODERATION_ROLES, STAFF_PARTNERS_COMMUNITY_ROLES
 from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.exts.moderation.infraction._views import BanConfirmationView
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.channel import is_in_category
+from bot.utils.channel import is_in_category, is_mod_channel
 from bot.utils.time import unpack_duration
 
 log = get_logger(__name__)
@@ -58,6 +62,13 @@ INFRACTION_DESCRIPTION_NOT_WARNING_TEMPLATE = (
 INFRACTION_DESCRIPTION_WARNING_TEMPLATE = (
     "**Type:** Warning\n"
     "**Reason:** {reason}\n"
+)
+
+
+MAXIMUM_TIMEOUT_DAYS = datetime.timedelta(days=28)
+TIMEOUT_CAP_MESSAGE = (
+    f"The timeout for {{0}} can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
+    " I'll pretend that's what you meant."
 )
 
 
@@ -301,6 +312,22 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
         return False
 
 
+def cap_timeout_duration(duration: datetime.datetime | relativedelta) -> tuple[bool, datetime.datetime]:
+    """Cap the duration of a duration to Discord's limit."""
+    now = arrow.utcnow()
+    capped = False
+    if isinstance(duration, relativedelta):
+        duration += now
+
+    if duration > now + MAXIMUM_TIMEOUT_DAYS:
+        duration = now + MAXIMUM_TIMEOUT_DAYS - datetime.timedelta(minutes=1)  # Duration cap is exclusive.
+        capped = True
+    elif duration > now + MAXIMUM_TIMEOUT_DAYS - datetime.timedelta(minutes=1):
+        # Duration cap is exclusive. This is to still allow specifying "28d".
+        duration -= datetime.timedelta(minutes=1)
+    return capped, duration
+
+
 async def confirm_elevated_user_ban(ctx: Context, user: MemberOrUser) -> bool:
     """
     If user has an elevated role, require confirmation before banning.
@@ -333,3 +360,13 @@ async def confirm_elevated_user_ban(ctx: Context, user: MemberOrUser) -> bool:
         return False
 
     return True
+
+
+async def notify_timeout_cap(bot: Bot, ctx: Context, user: discord.Member) -> None:
+    """Notify moderators about a timeout duration being capped."""
+    cap_message_for_user = TIMEOUT_CAP_MESSAGE.format(user.mention)
+    if is_mod_channel(ctx.channel):
+        await ctx.reply(f":warning: {cap_message_for_user}")
+    else:
+        await bot.get_channel(Channels.mods).send(
+            f":warning: {ctx.author.mention} {cap_message_for_user}")

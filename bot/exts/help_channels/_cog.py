@@ -1,7 +1,9 @@
 """Contains the Cog that receives discord.py events and defers most actions to other files in the module."""
 
+import contextlib
+
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from pydis_core.utils import scheduling
 
 from bot import constants
@@ -38,18 +40,14 @@ class HelpForum(commands.Cog):
         self.help_forum_channel = self.bot.get_channel(constants.Channels.python_help)
         if not isinstance(self.help_forum_channel, discord.ForumChannel):
             raise TypeError("Channels.python_help is not a forum channel!")
-        await self.check_all_open_posts_have_close_task()
+        self.check_all_open_posts_have_close_task.start()
 
-    async def check_all_open_posts_have_close_task(self, delay: int = 5*60) -> None:
-        """
-        Check that each open help post has a scheduled task to close, adding one if not.
-
-        Once complete, schedule another check after `delay` seconds.
-        """
+    @tasks.loop(minutes=5)
+    async def check_all_open_posts_have_close_task(self) -> None:
+        """Check that each open help post has a scheduled task to close, adding one if not."""
         for post in self.help_forum_channel.threads:
             if post.id not in self.scheduler:
                 await _channel.maybe_archive_idle_post(post, self.scheduler)
-        self.scheduler.schedule_later(delay, "help_channel_idle_check", self.check_all_open_posts_have_close_task())
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is a help post, and the user is the claimant or has a whitelisted role."""
@@ -145,3 +143,17 @@ class HelpForum(commands.Cog):
 
         if not message.author.bot and message.author.id != message.channel.owner_id:
             await _caches.posts_with_non_claimant_messages.set(message.channel.id, "sentinel")
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member) -> None:
+        """Notify a help thread if the owner is no longer a member of the server."""
+        for thread in self.help_forum_channel.threads:
+            if thread.owner_id != member.id:
+                continue
+
+            if thread.archived:
+                continue
+
+            log.debug(f"Notifying help thread {thread.id} that owner {member.id} is no longer in the server.")
+            with contextlib.suppress(discord.NotFound):
+                await thread.send(":warning: The owner of this post is no longer in the server.")

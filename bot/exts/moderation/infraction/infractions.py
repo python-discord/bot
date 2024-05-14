@@ -1,6 +1,6 @@
 import textwrap
 import typing as t
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 import arrow
 import discord
@@ -12,13 +12,12 @@ from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Event
+from bot.constants import Event
 from bot.converters import Age, Duration, DurationOrExpiry, MemberOrUser, UnambiguousMemberOrUser
 from bot.decorators import ensure_future_timestamp, respect_role_hierarchy
 from bot.exts.moderation.infraction import _utils
 from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
-from bot.utils.channel import is_mod_channel
 from bot.utils.messages import format_user
 
 log = get_logger(__name__)
@@ -46,12 +45,6 @@ COMP_BAN_REASON = (
     "this message to appeal your ban."
 )
 COMP_BAN_DURATION = timedelta(days=4)
-# Timeout
-MAXIMUM_TIMEOUT_DAYS = timedelta(days=28)
-TIMEOUT_CAP_MESSAGE = (
-    f"The timeout for {{0}} can't be longer than {MAXIMUM_TIMEOUT_DAYS.days} days."
-    " I'll pretend that's what you meant."
-)
 
 
 class Infractions(InfractionScheduler, commands.Cog):
@@ -230,21 +223,9 @@ class Infractions(InfractionScheduler, commands.Cog):
         if duration is None:
             duration = await Duration().convert(ctx, "1h")
         else:
-            now = arrow.utcnow()
-            if isinstance(duration, relativedelta):
-                duration += now
-            if duration > now + MAXIMUM_TIMEOUT_DAYS:
-                cap_message_for_user = TIMEOUT_CAP_MESSAGE.format(user.mention)
-                if is_mod_channel(ctx.channel):
-                    await ctx.reply(f":warning: {cap_message_for_user}")
-                else:
-                    await self.bot.get_channel(Channels.mods).send(
-                        f":warning: {ctx.author.mention} {cap_message_for_user}"
-                    )
-                duration = now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1)  # Duration cap is exclusive.
-            elif duration > now + MAXIMUM_TIMEOUT_DAYS - timedelta(minutes=1):
-                # Duration cap is exclusive. This is to still allow specifying "28d".
-                duration -= timedelta(minutes=1)
+            capped, duration = _utils.cap_timeout_duration(duration)
+            if capped:
+                await _utils.notify_timeout_cap(self.bot, ctx, user)
 
         await self.apply_timeout(ctx, user, reason, duration_or_expiry=duration)
 
@@ -490,13 +471,16 @@ class Infractions(InfractionScheduler, commands.Cog):
                 log.trace("Tempban ignored as it cannot overwrite an active ban.")
                 return None
 
-            if active_infraction.get("duration_or_expiry") is None:
+            if active_infraction.get("expires_at") is None:
                 log.trace("Permaban already exists, notify.")
                 await ctx.send(f":x: User is already permanently banned (#{active_infraction['id']}).")
-                return None
+            else:
+                log.trace("Tempban exists, notify.")
+                await ctx.send(
+                    f":x: Can't permanently ban user with existing temporary ban (#{active_infraction['id']}). "
+                )
 
-            log.trace("Old tempban is being replaced by new permaban.")
-            await self.pardon_infraction(ctx, "ban", user, send_msg=is_temporary)
+            return None
 
         infraction = await _utils.post_infraction(ctx, user, "ban", reason, active=True, **kwargs)
         if infraction is None:
@@ -664,6 +648,31 @@ class Infractions(InfractionScheduler, commands.Cog):
             if discord.User in error.converters or Member in error.converters:
                 await ctx.send(str(error.errors[0]))
                 error.handled = True
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        """
+        Apply active timeout infractions for returning members.
+
+        This is needed for users who might have had their infraction edited in our database but not in Discord itself.
+        """
+        active_timeouts = await self.bot.api_client.get(
+            endpoint="bot/infractions",
+            params={"active": "true", "type": "timeout", "user__id": member.id}
+        )
+
+        if active_timeouts:
+            timeout_infraction = active_timeouts[0]
+            expiry = arrow.get(timeout_infraction["expires_at"], tzinfo=UTC).datetime.replace(second=0, microsecond=0)
+
+            if member.is_timed_out() and expiry == member.timed_out_until.replace(second=0, microsecond=0):
+                return
+
+            reason = f"Applying active timeout for returning member: {timeout_infraction['id']}"
+
+            async def action() -> None:
+                await member.edit(timed_out_until=expiry, reason=reason)
+            await self.reapply_infraction(timeout_infraction, action)
 
 
 async def setup(bot: Bot) -> None:
