@@ -15,7 +15,7 @@ class InfractionConfirmationView(interactions.ViewWithUserAndRoleCheck):
 
     @discord.ui.button(label="Ban", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
-        """Callback coroutine that is called when the "confirm" button is pressed."""
+        """Callback coroutine that is called when the "Ban" button is pressed."""
         self.confirmed = True
         await interaction.response.defer()
         self.stop()
