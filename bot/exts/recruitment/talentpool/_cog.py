@@ -560,6 +560,88 @@ class TalentPool(Cog, name="Talentpool"):
         else:
             await ctx.send(f":x: {user.mention} doesn't have an active nomination.")
 
+    @nomination_group.group(name="append", aliases=("amend",), invoke_without_command=True)
+    @has_any_role(*STAFF_ROLES)
+    async def nomination_append_group(self, ctx: Context) -> None:
+        """Commands to append additional text to nominations."""
+        await ctx.send_help(ctx.command)
+
+    @nomination_append_group.command(name="reason")
+    @has_any_role(*STAFF_ROLES)
+    async def append_reason_command(
+        self,
+        ctx: Context,
+        nominee_or_nomination_id: UnambiguousMemberOrUser | int,
+        nominator: UnambiguousMemberOrUser | None = None,
+        *,
+        reason: str
+    ) -> None:
+        """
+        Append additional text to the nomination reason of a specific nominator for a given nomination.
+
+        If nominee_or_nomination_id resolves to a member or user,
+        append the text to the currently active nomination for that person.
+        Otherwise, if it's an int, look up that nomination ID to edit.
+
+        If no nominator is specified, assume the invoker is editing their own nomination reason.
+        Otherwise, edit the reason from that specific nominator.
+
+        Raise a permission error if a non-mod staff member invokes this command on a
+        specific nomination ID, or with an nominator other than themselves.
+        """
+        # If not specified, assume the invoker is editing their own nomination reason.
+        nominator = nominator or ctx.author
+
+        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            if ctx.channel.id != Channels.nominations:
+                await ctx.send(f":x: Nomination edits must be run in the <#{Channels.nominations}> channel.")
+                return
+
+            if nominator != ctx.author or isinstance(nominee_or_nomination_id, int):
+                raise BadArgument(
+                    "Only moderators can edit specific nomination IDs, "
+                    "or the reason of a nominator other than themselves."
+                )
+
+        if not reason:
+            await ctx.send(":x: You must include an additional reason when appending to an existing nomination.")
+
+        if isinstance(nominee_or_nomination_id, int):
+            nomination_id = nominee_or_nomination_id
+            try:
+                original_nomination = await self.api.get_nomination(nomination_id=nomination_id)
+            except ResponseCodeError as e:
+                match (e.status, e.response_json):
+                    case (400, {"actor": _}):
+                        await ctx.send(f":x: {nominator.mention} doesn't have an entry in this nomination.")
+                        return
+                    case (404, _):
+                        await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
+                        return
+                raise
+
+            nomination_entries = original_nomination.entries
+        else:
+            active_nominations = await self.api.get_nominations(user_id=nominee_or_nomination_id.id, active=True)
+            if active_nominations:
+                nomination_entries = active_nominations[0].entries
+            else:
+                await ctx.send(f":x: {nominee_or_nomination_id.mention} doesn't have an active nomination.")
+                return
+
+        old_reason = next((e.reason for e in nomination_entries if e.actor_id == nominator.id), None)
+
+        if old_reason:
+            add_period = not old_reason.endswith((".", "!", "?"))
+            reason = old_reason + (". " if add_period else " ") + reason
+
+        await self._edit_nomination_reason(
+            ctx,
+            target=nominee_or_nomination_id,
+            actor=nominator,
+            reason=reason
+        )
+
     @nomination_group.group(name="edit", aliases=("e",), invoke_without_command=True)
     @has_any_role(*STAFF_ROLES)
     async def nomination_edit_group(self, ctx: Context) -> None:
