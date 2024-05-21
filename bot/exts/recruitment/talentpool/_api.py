@@ -62,6 +62,15 @@ class NominationAPI:
         nomination = Nomination.model_validate(data)
         return nomination
 
+    async def get_active_nomination(self, user_id: int) -> Nomination | None:
+        """Search for an active nomination for a user and return it."""
+        nominations = await self.get_nominations(user_id=user_id, active=True)
+
+        if len(nominations) >= 1:
+            return nominations[0]
+
+        return None
+
     async def get_nomination_reason(self, user_id: int, actor_id: int) -> tuple[Nomination, str] | None:
         """Search for a nomination & reason for a specific actor on a specific user."""
         nominations = await self.get_nominations(user_id, True)
