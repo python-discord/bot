@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 from bot.exts.recruitment.talentpool import _review
-from tests.helpers import MockBot, MockMember, MockMessage, MockTextChannel
+from tests.helpers import MockBot, MockMember, MockMessage, MockReaction, MockTextChannel
 
 
 class AsyncIterator:
@@ -63,8 +63,10 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
         """Tests for the `is_ready_for_review` function."""
         too_recent = datetime.now(UTC) - timedelta(hours=1)
         not_too_recent = datetime.now(UTC) - timedelta(days=7)
+        ticket_reaction = MockReaction(users=[self.bot_user], emoji="\N{TICKET}")
+
         cases = (
-            # Only one review, and not too recent, so ready.
+            # Only one active review, and not too recent, so ready.
             (
                 [
                     MockMessage(author=self.bot_user, content="wookie for Helper!", created_at=not_too_recent),
@@ -75,7 +77,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                 True,
             ),
 
-            # Three reviews, so not ready.
+            # Three active reviews, so not ready.
             (
                 [
                     MockMessage(author=self.bot_user, content="Chrisjl for Helper!", created_at=not_too_recent),
@@ -86,7 +88,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                 False,
             ),
 
-            # Only one review, but too recent, so not ready.
+            # Only one active review, but too recent, so not ready.
             (
                 [
                     MockMessage(author=self.bot_user, content="Chrisjl for Helper!", created_at=too_recent),
@@ -95,7 +97,7 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                 False,
             ),
 
-            # Only two reviews, and not too recent, so ready.
+            # Only two active reviews, and not too recent, so ready.
             (
                 [
                     MockMessage(author=self.bot_user, content="Not a review", created_at=too_recent),
@@ -105,6 +107,34 @@ class ReviewerTests(unittest.IsolatedAsyncioTestCase):
                 ],
                 not_too_recent.timestamp(),
                 True,
+            ),
+
+            # Over the active threshold, but below the total threshold
+            (
+                [
+                    MockMessage(
+                        author=self.bot_user,
+                        content="joe for Helper!",
+                        created_at=not_too_recent,
+                        reactions=[ticket_reaction]
+                    )
+                ] * 6,
+                not_too_recent.timestamp(),
+                True
+            ),
+
+            # Over the total threshold
+            (
+                [
+                    MockMessage(
+                        author=self.bot_user,
+                        content="joe for Helper!",
+                        created_at=not_too_recent,
+                        reactions=[ticket_reaction]
+                    )
+                ] * 11,
+                not_too_recent.timestamp(),
+                False
             ),
 
             # No messages, so ready.

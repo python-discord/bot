@@ -16,6 +16,7 @@ from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.logging import get_logger
 from pydis_core.utils.members import get_or_fetch_member
+from pydis_core.utils.regex import DISCORD_INVITE
 
 import bot
 from bot.constants import Colours
@@ -617,6 +618,10 @@ class AlertView(discord.ui.View):
     def __init__(self, ctx: FilterContext, triggered_filters: dict[FilterList, list[str]] | None = None):
         super().__init__(timeout=ALERT_VIEW_TIMEOUT)
         self.ctx = ctx
+        if "banned" in self.ctx.action_descriptions:
+            # If the user has already been banned, do not attempt to add phishing button since the URL or guild invite
+            # is probably already added as a filter
+            return
         phishing_content, target_filter_list =  self._extract_potential_phish(triggered_filters)
         if phishing_content:
             self.add_item(PhishHandlingButton(ctx.author, phishing_content, target_filter_list))
@@ -681,12 +686,14 @@ class AlertView(discord.ui.View):
             if len(content_list) > 1:
                 return "", None
             if content_list:
-                content = next(iter(content_list))
-                if filter_list.name == "domain" and "discord" in content:  # Leave invites to the invite filterlist.
+                current_content = next(iter(content_list))
+                if filter_list.name == "domain" and re.fullmatch(DISCORD_INVITE, current_content):
+                    # Leave invites to the invite filterlist.
                     continue
                 if encountered:
                     return "", None
                 target_filter_list = filter_list
+                content = current_content
                 encountered = True
 
         if encountered:

@@ -7,7 +7,7 @@ from discord.ext.commands import ChannelNotFound, Cog, Context, TextChannelConve
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.error_handling import handle_forbidden_from_block
 from pydis_core.utils.interactions import DeleteMessageButton, ViewWithUserAndRoleCheck
-from sentry_sdk import push_scope
+from sentry_sdk import new_scope
 
 from bot.bot import Bot
 from bot.constants import Colours, Icons, MODERATION_ROLES
@@ -400,7 +400,7 @@ class ErrorHandler(Cog):
 
         ctx.bot.stats.incr("errors.unexpected")
 
-        with push_scope() as scope:
+        with new_scope() as scope:
             scope.user = {
                 "id": ctx.author.id,
                 "username": str(ctx.author)

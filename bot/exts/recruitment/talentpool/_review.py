@@ -33,6 +33,8 @@ MAX_EMBED_SIZE = 4000
 
 # Maximum number of active reviews
 MAX_ONGOING_REVIEWS = 3
+# Maximum number of total reviews
+MAX_TOTAL_REVIEWS = 10
 # Minimum time between reviews
 MIN_REVIEW_INTERVAL = timedelta(days=1)
 # Minimum time between nomination and sending a review
@@ -100,7 +102,9 @@ class Reviewer:
         else:
             log.info("Date of last vote not found in cache, a vote may be sent early")
 
-        review_count = 0
+        ongoing_count = 0
+        total_count = 0
+
         async for msg in voting_channel.history():
             # Try and filter out any non-review messages. We also only want to count
             # one message from reviews split over multiple messages. We use fixed text
@@ -108,10 +112,22 @@ class Reviewer:
             if not msg.author.bot or "for Helper!" not in msg.content:
                 continue
 
-            review_count += 1
+            total_count += 1
 
-            if review_count >= MAX_ONGOING_REVIEWS:
-                log.debug("There are already at least %s ongoing reviews, cancelling check.", MAX_ONGOING_REVIEWS)
+            is_ticketed = False
+            for reaction in msg.reactions:
+                if reaction.emoji == "\N{TICKET}":
+                    is_ticketed = True
+
+            if not is_ticketed:
+                ongoing_count += 1
+
+            if ongoing_count >= MAX_ONGOING_REVIEWS or total_count >= MAX_TOTAL_REVIEWS:
+                log.debug(
+                    "There are %s ongoing and %s total reviews, above thresholds of %s and %s",
+                    ongoing_count, total_count,
+                    MAX_ONGOING_REVIEWS, MAX_TOTAL_REVIEWS
+                )
                 return False
 
         return True
