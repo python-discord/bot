@@ -1,15 +1,25 @@
+import enum
 import inspect
 from pathlib import Path
 
 from discord import Embed
 from discord.ext import commands
+from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import URLs
-from bot.converters import SourceConverter
 from bot.exts.info.tags import TagIdentifier
 
-SourceType = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded
+SourceObject = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded
+
+class SourceType(enum.StrEnum):
+    """The types of source objects recognized by the source command."""
+
+    help_command = enum.auto()
+    command = enum.auto()
+    cog = enum.auto()
+    tag = enum.auto()
+    extension_not_loaded = enum.auto()
 
 
 class BotSource(commands.Cog):
@@ -23,7 +33,7 @@ class BotSource(commands.Cog):
         self,
         ctx: commands.Context,
         *,
-        source_item: SourceConverter = None,
+        source_item: str | None = None,
     ) -> None:
         """Display information and a GitHub link to the source code of a command, tag, or cog."""
         if not source_item:
@@ -33,20 +43,51 @@ class BotSource(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        embed = await self.build_embed(source_item)
+        obj, source_type = await self.get_source_object(ctx, source_item)
+        embed = await self.build_embed(obj, source_type)
         await ctx.send(embed=embed)
 
-    def get_source_link(self, source_item: SourceType) -> tuple[str, str, int | None]:
+    @staticmethod
+    async def get_source_object(ctx: commands.Context, argument: str) -> tuple[SourceObject, SourceType]:
+        """Convert argument into the source object and source type."""
+        if argument.lower() == "help":
+            return ctx.bot.help_command, SourceType.help_command
+
+        cog = ctx.bot.get_cog(argument)
+        if cog:
+            return cog, SourceType.cog
+
+        cmd = ctx.bot.get_command(argument)
+        if cmd:
+            return cmd, SourceType.command
+
+        tags_cog = ctx.bot.get_cog("Tags")
+        show_tag = True
+
+        if not tags_cog:
+            show_tag = False
+        else:
+            identifier = TagIdentifier.from_string(argument.lower())
+            if identifier in tags_cog.tags:
+                return identifier, SourceType.tag
+
+        escaped_arg = escape_markdown(argument)
+
+        raise commands.BadArgument(
+            f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or Cog."
+        )
+
+    def get_source_link(self, source_item: SourceObject, source_type: SourceType) -> tuple[str, str, int | None]:
         """
         Build GitHub link of source item, return this link, file location and first line number.
 
         Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
         """
-        if isinstance(source_item, commands.Command):
+        if source_type == SourceType.command:
             source_item = inspect.unwrap(source_item.callback)
             src = source_item.__code__
             filename = src.co_filename
-        elif isinstance(source_item, TagIdentifier):
+        elif source_type == SourceType.tag:
             tags_cog = self.bot.get_cog("Tags")
             filename = tags_cog.tags[source_item].file_path
         else:
@@ -56,7 +97,7 @@ class BotSource(commands.Cog):
             except TypeError:
                 raise commands.BadArgument("Cannot get source for a dynamically-created object.")
 
-        if not isinstance(source_item, TagIdentifier):
+        if source_type != SourceType.tag:
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
@@ -77,17 +118,17 @@ class BotSource(commands.Cog):
 
         return url, file_location, first_line_no or None
 
-    async def build_embed(self, source_object: SourceType) -> Embed | None:
+    async def build_embed(self, source_object: SourceObject, source_type: SourceType) -> Embed | None:
         """Build embed based on source object."""
-        url, location, first_line = self.get_source_link(source_object)
+        url, location, first_line = self.get_source_link(source_object, source_type)
 
-        if isinstance(source_object, commands.HelpCommand):
+        if source_type == SourceType.help_command:
             title = "Help Command"
             description = source_object.__doc__.splitlines()[1]
-        elif isinstance(source_object, commands.Command):
+        elif source_type == SourceType.command:
             description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
-        elif isinstance(source_object, TagIdentifier):
+        elif source_type == SourceType.tag:
             title = f"Tag: {source_object}"
             description = ""
         else:

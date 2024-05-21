@@ -5,12 +5,13 @@ from io import StringIO
 
 import discord
 from async_rediscache import RedisCache
-from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User
+from discord import Color, Embed, Member, PartialMessage, RawReactionActionEvent, User, app_commands
 from discord.ext import commands, tasks
 from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.channel import get_or_fetch_channel
 from pydis_core.utils.members import get_or_fetch_member
+from sentry_sdk import new_scope
 
 from bot.bot import Bot
 from bot.constants import Bot as BotConfig, Channels, Emojis, Guild, MODERATION_ROLES, Roles, STAFF_ROLES
@@ -30,6 +31,66 @@ DAYS_UNTIL_INACTIVE = 45
 
 log = get_logger(__name__)
 
+class NominationContextModal(discord.ui.Modal, title="New Nomination"):
+    nomination = discord.ui.TextInput(
+        label="Additional nomination context:",
+        style=discord.TextStyle.long,
+        placeholder="Additional context for nomination...",
+        required=False,
+        # Take some length off for the URL that is going to be appended
+        max_length=REASON_MAX_CHARS - 110
+    )
+
+    def __init__(self, api: NominationAPI, message: discord.Message, noms_channel: discord.TextChannel):
+        self.message = message
+        self.api = api
+        self.noms_channel = noms_channel
+
+        super().__init__()
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        reason = ""
+
+        if self.nomination.value and self.nomination.value != "":
+            reason += f"{self.nomination.value}\n\n"
+
+        reason += f"Nominated from: {self.message.jump_url}"
+
+        try:
+            await self.api.post_nomination(self.message.author.id, interaction.user.id, reason)
+        except ResponseCodeError as e:
+            match (e.status, e.response_json):
+                case (400, {"user": _}):
+                    await interaction.response.send_message(
+                        f":x: {self.target.mention} can't be found in the database tables.",
+                        ephemeral=True
+                    )
+                    log.warning(f"Could not find {self.target.author} in the site database tables, sync may be broken")
+                    return
+
+            raise e
+
+        await interaction.response.send_message(
+            f":white_check_mark: The nomination for {self.message.author.mention}"
+            " has been added to the talent pool",
+            ephemeral=True
+        )
+
+        noms_channel_message = (
+            f":star: {interaction.user.mention} has nominated "
+            f"{self.message.author.mention} from {self.message.jump_url}"
+        )
+
+        if self.nomination.value and self.nomination.value != "":
+            noms_channel_message += "\n```\n"
+            noms_channel_message += self.nomination.value
+            noms_channel_message += "```"
+
+        await self.noms_channel.send(noms_channel_message)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        """Handle any exceptions in the processing of the modal."""
+        await TalentPool._nominate_context_error(interaction, error)
 
 class TalentPool(Cog, name="Talentpool"):
     """Used to nominate potential helper candidates."""
@@ -44,6 +105,15 @@ class TalentPool(Cog, name="Talentpool"):
         self.reviewer = Reviewer(bot, self.api)
         # This lock lets us avoid cancelling the reviewer loop while the review code is running.
         self.autoreview_lock = asyncio.Lock()
+
+        # Setup the context menu command for message-based nomination
+        self.nominate_user_context_menu = app_commands.ContextMenu(
+            name="Nominate User",
+            callback=self._nominate_context_callback,
+        )
+        self.nominate_user_context_menu.default_permissions = discord.Permissions.none()
+        self.nominate_user_context_menu.error(self._nominate_context_error)
+        self.bot.tree.add_command(self.nominate_user_context_menu, guild=discord.Object(Guild.id))
 
     async def cog_load(self) -> None:
         """Start autoreview loop if enabled."""
@@ -338,6 +408,89 @@ class TalentPool(Cog, name="Talentpool"):
 
         await self._nominate_user(ctx, user, reason)
 
+    @app_commands.checks.has_any_role(*STAFF_ROLES)
+    async def _nominate_context_callback(self, interaction: discord.Interaction, message: discord.Message) -> None:
+        """Create or update a nomination for the author of the selected message."""
+        if message.author.bot:
+            await interaction.response.send_message(
+                ":x: I'm afraid I can't do that. Only humans can be nominated.",
+                ephemeral=True
+            )
+            return
+
+        if isinstance(message.author, Member) and any(role.id in STAFF_ROLES for role in message.author.roles):
+            await interaction.response.send_message(
+                ":x: Nominating staff members, eh? Here's a cookie :cookie:",
+                ephemeral=True
+            )
+            return
+
+        maybe_nom = await self.api.get_nomination_reason(message.author.id, interaction.user.id)
+
+        if maybe_nom:
+            nomination, reason = maybe_nom
+
+            reason += f"\n\n{message.jump_url}"
+
+            if len(reason) > REASON_MAX_CHARS:
+                await interaction.response.send_message(
+                    ":x: Cannot add additional context due to nomination reason character limit.",
+                    ephemeral=True
+                )
+                return
+
+            await self.api.edit_nomination_entry(
+                nomination.id,
+                actor_id=interaction.user.id,
+                reason=reason
+            )
+
+            await interaction.response.send_message(
+                ":white_check_mark: Existing nomination updated",
+                ephemeral=True
+            )
+            return
+
+        nominations_channel = self.bot.get_channel(Channels.nominations)
+
+        await interaction.response.send_modal(NominationContextModal(self.api, message, nominations_channel))
+
+    @staticmethod
+    async def _nominate_context_error(
+            interaction: discord.Interaction,
+            error: app_commands.AppCommandError
+    ) -> None:
+        """Handle any errors that occur with the nomination context command."""
+        if isinstance(error, app_commands.errors.MissingAnyRole):
+            await interaction.response.send_message(
+                ":x: You do not have permission to use this command", ephemeral=True
+            )
+            return
+
+        message = (
+            f":x: An unexpected error occured, Please let us know!\n\n"
+            f"```{error.__class__.__name__}: {error}```"
+        )
+
+        if not interaction.response.is_done():
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            await interaction.followup.send(message, ephemeral=True)
+
+        with new_scope() as scope:
+            scope.user = {
+                "id": interaction.user.id,
+                "username": str(interaction.user)
+            }
+
+            scope.set_tag("command", interaction.command.name)
+            scope.set_extra("interaction_data", interaction.data)
+
+            log.error(
+                f"Error executing application command '{interaction.command.name}' invoked by {interaction.user}",
+                exc_info=error
+            )
+
     async def _nominate_user(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
         """Adds the given user to the talent pool."""
         if user.bot:
@@ -406,6 +559,88 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(f":white_check_mark: Successfully un-nominated {user.mention}.")
         else:
             await ctx.send(f":x: {user.mention} doesn't have an active nomination.")
+
+    @nomination_group.group(name="append", aliases=("amend",), invoke_without_command=True)
+    @has_any_role(*STAFF_ROLES)
+    async def nomination_append_group(self, ctx: Context) -> None:
+        """Commands to append additional text to nominations."""
+        await ctx.send_help(ctx.command)
+
+    @nomination_append_group.command(name="reason")
+    @has_any_role(*STAFF_ROLES)
+    async def append_reason_command(
+        self,
+        ctx: Context,
+        nominee_or_nomination_id: UnambiguousMemberOrUser | int,
+        nominator: UnambiguousMemberOrUser | None = None,
+        *,
+        reason: str
+    ) -> None:
+        """
+        Append additional text to the nomination reason of a specific nominator for a given nomination.
+
+        If nominee_or_nomination_id resolves to a member or user,
+        append the text to the currently active nomination for that person.
+        Otherwise, if it's an int, look up that nomination ID to edit.
+
+        If no nominator is specified, assume the invoker is editing their own nomination reason.
+        Otherwise, edit the reason from that specific nominator.
+
+        Raise a permission error if a non-mod staff member invokes this command on a
+        specific nomination ID, or with an nominator other than themselves.
+        """
+        # If not specified, assume the invoker is editing their own nomination reason.
+        nominator = nominator or ctx.author
+
+        if not any(role.id in MODERATION_ROLES for role in ctx.author.roles):
+            if ctx.channel.id != Channels.nominations:
+                await ctx.send(f":x: Nomination edits must be run in the <#{Channels.nominations}> channel.")
+                return
+
+            if nominator != ctx.author or isinstance(nominee_or_nomination_id, int):
+                raise BadArgument(
+                    "Only moderators can edit specific nomination IDs, "
+                    "or the reason of a nominator other than themselves."
+                )
+
+        if not reason:
+            await ctx.send(":x: You must include an additional reason when appending to an existing nomination.")
+
+        if isinstance(nominee_or_nomination_id, int):
+            nomination_id = nominee_or_nomination_id
+            try:
+                original_nomination = await self.api.get_nomination(nomination_id=nomination_id)
+            except ResponseCodeError as e:
+                match (e.status, e.response_json):
+                    case (400, {"actor": _}):
+                        await ctx.send(f":x: {nominator.mention} doesn't have an entry in this nomination.")
+                        return
+                    case (404, _):
+                        await ctx.send(f":x: Can't find a nomination with id `{nomination_id}`.")
+                        return
+                raise
+
+            nomination_entries = original_nomination.entries
+        else:
+            active_nominations = await self.api.get_nominations(user_id=nominee_or_nomination_id.id, active=True)
+            if active_nominations:
+                nomination_entries = active_nominations[0].entries
+            else:
+                await ctx.send(f":x: {nominee_or_nomination_id.mention} doesn't have an active nomination.")
+                return
+
+        old_reason = next((e.reason for e in nomination_entries if e.actor_id == nominator.id), None)
+
+        if old_reason:
+            add_period = not old_reason.endswith((".", "!", "?"))
+            reason = old_reason + (". " if add_period else " ") + reason
+
+        await self._edit_nomination_reason(
+            ctx,
+            target=nominee_or_nomination_id,
+            actor=nominator,
+            reason=reason
+        )
 
     @nomination_group.group(name="edit", aliases=("e",), invoke_without_command=True)
     @has_any_role(*STAFF_ROLES)
@@ -660,3 +895,9 @@ class TalentPool(Cog, name="Talentpool"):
             self.autoreview_loop.cancel()
 
         self.prune_talentpool.cancel()
+
+        self.bot.tree.remove_command(
+            self.nominate_user_context_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.nominate_user_context_menu.type
+        )

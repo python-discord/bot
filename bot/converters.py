@@ -10,7 +10,7 @@ import discord
 from aiohttp import ClientConnectorError
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import BadArgument, Context, Converter, IDConverter, MemberConverter, UserConverter
-from discord.utils import escape_markdown, snowflake_time
+from discord.utils import snowflake_time
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import unqualify
 from pydis_core.utils.regex import DISCORD_INVITE
@@ -19,7 +19,6 @@ from bot import exts, instance as bot_instance
 from bot.constants import URLs
 from bot.errors import InvalidInfractionError
 from bot.exts.info.doc import _inventory_parser
-from bot.exts.info.tags import TagIdentifier
 from bot.log import get_logger
 from bot.utils import time
 
@@ -218,39 +217,6 @@ class Snowflake(IDConverter):
             raise BadArgument(f"{error}: timestamp is too far into the future.")
 
         return snowflake
-
-
-class SourceConverter(Converter):
-    """Convert an argument into a help command, tag, command, or cog."""
-
-    @staticmethod
-    async def convert(ctx: Context, argument: str) -> SourceType:
-        """Convert argument into source object."""
-        if argument.lower() == "help":
-            return ctx.bot.help_command
-
-        cog = ctx.bot.get_cog(argument)
-        if cog:
-            return cog
-
-        cmd = ctx.bot.get_command(argument)
-        if cmd:
-            return cmd
-
-        tags_cog = ctx.bot.get_cog("Tags")
-        show_tag = True
-
-        if not tags_cog:
-            show_tag = False
-        else:
-            identifier = TagIdentifier.from_string(argument.lower())
-            if identifier in tags_cog.tags:
-                return identifier
-        escaped_arg = escape_markdown(argument)
-
-        raise BadArgument(
-            f"Unable to convert '{escaped_arg}' to valid command{', tag,' if show_tag else ''} or Cog."
-        )
 
 
 class DurationDelta(Converter):
