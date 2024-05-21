@@ -482,7 +482,7 @@ class TalentPool(Cog, name="Talentpool"):
 
         old_reason = next((e.reason for e in nomination_entries if e.actor_id == nominator.id), None)
 
-        if old_reason is not None:
+        if old_reason:
             add_period = not old_reason.endswith((".", "!", "?"))
             reason = old_reason + (". " if add_period else " ") + reason
 
