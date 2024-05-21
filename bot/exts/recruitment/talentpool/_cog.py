@@ -800,9 +800,12 @@ class TalentPool(Cog, name="Talentpool"):
             await ctx.send(f":x: There doesn't appear to be an active nomination for {user_id}")
             return
 
-        review, _, _ = await self.reviewer.make_review(nominations[0])
-        file = discord.File(StringIO(review), f"{user_id}_review.md")
-        await ctx.send(file=file)
+        review, _, _, nominations = await self.reviewer.make_review(nominations[0])
+
+        review_file = discord.File(StringIO(review), f"{user_id}_review.md")
+        nominations_file = discord.File(StringIO("\n\n".join(nominations)), f"{user_id}_nominations.md")
+
+        await ctx.send(files=[review_file, nominations_file])
 
     @nomination_group.command(aliases=("review",))
     @has_any_role(*MODERATION_ROLES)
