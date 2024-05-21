@@ -1,3 +1,4 @@
+import types
 import unittest
 import unittest.mock
 from unittest import mock
@@ -86,8 +87,10 @@ class SyncCogTests(SyncCogTestCase):
                     mock_create_task.assert_not_called()
                 else:
                     mock_create_task.assert_called_once()
-                    self.assertIsInstance(mock_create_task.call_args[0][0], type(self.cog.sync()))
-
+                    create_task_arg = mock_create_task.call_args[0][0]
+                    self.assertIsInstance(create_task_arg, types.CoroutineType)
+                    self.assertEqual(create_task_arg.__qualname__, self.cog.sync.__qualname__)
+                    create_task_arg.close()
 
     async def test_sync_cog_sync_guild(self):
         """Roles and users should be synced only if a guild is successfully retrieved."""
