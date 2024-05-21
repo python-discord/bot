@@ -467,11 +467,7 @@ class TalentPool(Cog, name="Talentpool"):
                         return
                 raise
 
-            if original_nomination:
-                nomination_entries = original_nomination.entries
-            else:
-                await ctx.send(f":x: {nominee_or_nomination_id} is not a valid nomination id.")
-                return
+            nomination_entries = original_nomination.entries
         else:
             active_nominations = await self.api.get_nominations(user_id=nominee_or_nomination_id.id, active=True)
             if active_nominations:
