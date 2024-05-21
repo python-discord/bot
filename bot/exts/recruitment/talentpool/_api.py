@@ -36,6 +36,7 @@ class NominationAPI:
         self,
         user_id: int | None = None,
         active: bool | None = None,
+        reviewed: bool | None = None,
         ordering: str = "-inserted_at"
     ) -> list[Nomination]:
         """
@@ -46,6 +47,8 @@ class NominationAPI:
         params = {"ordering": ordering}
         if active is not None:
             params["active"] = str(active)
+        if reviewed is not None:
+            params["reviewed"] = str(reviewed)
         if user_id is not None:
             params["user__id"] = str(user_id)
 
