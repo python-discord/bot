@@ -41,10 +41,12 @@ class NominationContextModal(discord.ui.Modal, title="New Nomination"):
         max_length=REASON_MAX_CHARS - 110
     )
 
-    def __init__(self, api: NominationAPI, message: discord.Message, noms_channel: discord.TextChannel):
+    def __init__(self, cog: "TalentPool", message: discord.Message, noms_channel: discord.TextChannel):
         self.message = message
-        self.api = api
+        self.api = cog.api
         self.noms_channel = noms_channel
+        self.bot = cog.bot
+        self.cog = cog
 
         super().__init__()
 
@@ -77,7 +79,7 @@ class NominationContextModal(discord.ui.Modal, title="New Nomination"):
         )
 
         noms_channel_message = (
-            f":star: {interaction.user.mention} has nominated "
+            f":new: {interaction.user.mention} has nominated "
             f"{self.message.author.mention} from {self.message.jump_url}"
         )
 
@@ -88,9 +90,11 @@ class NominationContextModal(discord.ui.Modal, title="New Nomination"):
 
         await self.noms_channel.send(noms_channel_message)
 
+        await self.cog.maybe_relay_update(self.message.author.id, noms_channel_message)
+
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         """Handle any exceptions in the processing of the modal."""
-        await TalentPool._nominate_context_error(interaction, error)
+        await self.cog._nominate_context_error(interaction, error)
 
 class TalentPool(Cog, name="Talentpool"):
     """Used to nominate potential helper candidates."""
@@ -369,6 +373,20 @@ class TalentPool(Cog, name="Talentpool"):
             lines.append(line)
         return lines
 
+    async def maybe_relay_update(self, nominee_id: int, update: str) -> None:
+        """
+        Checks for an active nomination thread for the user, if one is found relay the given update there.
+
+        This is used to relay new nominations and nomination updates to active vote channels.
+        """
+        nomination = await self.api.get_active_nomination(nominee_id)
+
+        if nomination and nomination.thread_id:
+            log.debug(f"Found thread ID for {nominee_id} nomination, relaying new context.")
+            thread = await get_or_fetch_channel(self.bot, nomination.thread_id)
+
+            await thread.send(update)
+
     @nomination_group.command(
         name="forcenominate",
         aliases=("fw", "forceadd", "fa", "fn", "forcewatch"),
@@ -449,14 +467,20 @@ class TalentPool(Cog, name="Talentpool"):
                 ":white_check_mark: Existing nomination updated",
                 ephemeral=True
             )
+
+            await self.maybe_relay_update(
+                message.author.id,
+                f":new: {interaction.user.mention} has attached {message.jump_url} to their nomination"
+            )
+
             return
 
         nominations_channel = self.bot.get_channel(Channels.nominations)
 
-        await interaction.response.send_modal(NominationContextModal(self.api, message, nominations_channel))
+        await interaction.response.send_modal(NominationContextModal(self, message, nominations_channel))
 
-    @staticmethod
     async def _nominate_context_error(
+            self,
             interaction: discord.Interaction,
             error: app_commands.AppCommandError
     ) -> None:
@@ -518,6 +542,15 @@ class TalentPool(Cog, name="Talentpool"):
             raise
 
         await ctx.send(f"✅ The nomination for {user.mention} has been added to the talent pool.")
+
+        thread_update = f":new: **{ctx.author.mention} has nominated {user.mention}"
+
+        if reason:
+            thread_update += f" with reason:** {reason}"
+        else:
+            thread_update += "**"
+
+        await self.maybe_relay_update(user.id, thread_update)
 
     @nomination_group.command(name="history", aliases=("info", "search"))
     @has_any_role(*MODERATION_ROLES)
@@ -730,6 +763,10 @@ class TalentPool(Cog, name="Talentpool"):
             raise
 
         await ctx.send(f":white_check_mark: Updated the nomination reason for <@{nomination.user_id}>.")
+
+        thread_update = f":pencil: **{actor.mention} has edited their nomination:** {reason}"
+
+        await self.maybe_relay_update(nomination.user_id, thread_update)
 
     @nomination_edit_group.command(name="end_reason")
     @has_any_role(*MODERATION_ROLES)
