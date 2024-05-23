@@ -272,7 +272,10 @@ class Snekbox(Cog):
 
         if len(lines) > max_lines:
             truncated = True
-            lines = lines[:max_lines]
+            if len(lines) == max_lines + 1:
+                lines = lines[:max_lines - 1]
+            else:
+                lines = lines[:max_lines]
             output = "\n".join(lines)
             if len(output) >= max_chars:
                 output = f"{output[:max_chars]}\n... (truncated - too long, too many lines)"
