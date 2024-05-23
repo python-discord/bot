@@ -396,7 +396,7 @@ class Snekbox(Cog):
             output, paste_link = await self.format_output(output)
 
             status_msg = result.get_status_message(job)
-            msg = f"{ctx.author.mention} {result.status_emoji} {status_msg}.\n"
+            msg = f"{result.status_emoji} {status_msg}.\n"
 
             # This is done to make sure the last line of output contains the error
             # and the error is not manually printed by the author with a syntax error.
@@ -438,7 +438,21 @@ class Snekbox(Cog):
             files = [f.to_file() for f in allowed if f not in text_files]
             allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
             view = self.build_python_version_switcher_view(job.version, ctx, job)
-            response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
+
+            if ctx.message.channel == ctx.channel:
+                # Don't fail if the command invoking message was deleted.
+                message = ctx.message.to_reference(fail_if_not_exists=False)
+                response = await ctx.send(
+                    msg,
+                    allowed_mentions=allowed_mentions,
+                    view=view,
+                    files=files,
+                    reference=message
+                )
+            else:
+                # The command was redirected so a reply wont work, send a normal message with a mention.
+                msg = f"{ctx.author.mention} {msg}"
+                response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
             view.message = response
 
             log.info(f"{ctx.author}'s {job.name} job had a return code of {result.returncode}")

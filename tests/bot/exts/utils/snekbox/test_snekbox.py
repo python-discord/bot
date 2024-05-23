@@ -292,7 +292,6 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_send_job(self):
         """Test the send_job function."""
         ctx = MockContext()
-        ctx.message = MockMessage()
         ctx.send = AsyncMock()
         ctx.author = MockUser(mention="@LemonLemonishBeard#0042")
 
@@ -311,7 +310,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
-            "@LemonLemonishBeard#0042 :warning: Your 3.12 eval job has completed "
+            ":warning: Your 3.12 eval job has completed "
             "with return code 0.\n\n```\n[No output]\n```"
         )
         allowed_mentions = ctx.send.call_args.kwargs["allowed_mentions"]
@@ -325,9 +324,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_send_job_with_paste_link(self):
         """Test the send_job function with a too long output that generate a paste link."""
         ctx = MockContext()
-        ctx.message = MockMessage()
         ctx.send = AsyncMock()
-        ctx.author.mention = "@LemonLemonishBeard#0042"
 
         eval_result = EvalResult("Way too long beard", 0)
         self.cog.post_job = AsyncMock(return_value=eval_result)
@@ -343,7 +340,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
-            "@LemonLemonishBeard#0042 :white_check_mark: Your 3.12 eval job "
+            ":white_check_mark: Your 3.12 eval job "
             "has completed with return code 0."
             "\n\n```\nWay too long beard\n```\nFull output: lookatmybeard.com"
         )
@@ -354,9 +351,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_send_job_with_non_zero_eval(self):
         """Test the send_job function with a code returning a non-zero code."""
         ctx = MockContext()
-        ctx.message = MockMessage()
         ctx.send = AsyncMock()
-        ctx.author.mention = "@LemonLemonishBeard#0042"
 
         eval_result = EvalResult("ERROR", 127)
         self.cog.post_job = AsyncMock(return_value=eval_result)
@@ -372,7 +367,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
-            "@LemonLemonishBeard#0042 :x: Your 3.12 eval job has completed with return code 127."
+            ":x: Your 3.12 eval job has completed with return code 127."
             "\n\n```\nERROR\n```"
         )
 
@@ -382,9 +377,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_send_job_with_disallowed_file_ext(self):
         """Test send_job with disallowed file extensions."""
         ctx = MockContext()
-        ctx.message = MockMessage()
         ctx.send = AsyncMock()
-        ctx.author.mention = "@user#7700"
 
         files = [
             FileAttachment("test.disallowed2", b"test"),
@@ -407,7 +400,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.send.assert_called_once()
         res = ctx.send.call_args.args[0]
         self.assertTrue(
-            res.startswith("@user#7700 :white_check_mark: Your 3.12 eval job has completed with return code 0.")
+            res.startswith(":white_check_mark: Your 3.12 eval job has completed with return code 0.")
         )
         self.assertIn("Files with disallowed extensions can't be uploaded: **.disallowed, .disallowed2, ...**", res)
 

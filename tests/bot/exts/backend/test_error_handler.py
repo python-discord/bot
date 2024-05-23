@@ -495,26 +495,26 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     log_mock.debug.assert_called_once()
 
-    @patch("bot.exts.backend.error_handler.push_scope")
+    @patch("bot.exts.backend.error_handler.new_scope")
     @patch("bot.exts.backend.error_handler.log")
-    async def test_handle_unexpected_error(self, log_mock, push_scope_mock):
+    async def test_handle_unexpected_error(self, log_mock, new_scope_mock):
         """Should `ctx.send` this error, error log this and sent to Sentry."""
         for case in (None, MockGuild()):
             with self.subTest(guild=case):
                 self.ctx.reset_mock()
                 log_mock.reset_mock()
-                push_scope_mock.reset_mock()
+                new_scope_mock.reset_mock()
                 scope_mock = Mock()
 
                 # Mock `with push_scope_mock() as scope:`
-                push_scope_mock.return_value.__enter__.return_value = scope_mock
+                new_scope_mock.return_value.__enter__.return_value = scope_mock
 
                 self.ctx.guild = case
                 await self.cog.handle_unexpected_error(self.ctx, errors.CommandError())
 
                 self.ctx.send.assert_awaited_once()
                 log_mock.error.assert_called_once()
-                push_scope_mock.assert_called_once()
+                new_scope_mock.assert_called_once()
 
                 set_tag_calls = [
                     call("command", self.ctx.command.qualified_name),
