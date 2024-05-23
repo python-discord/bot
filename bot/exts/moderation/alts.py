@@ -58,7 +58,7 @@ class AlternateAccounts(commands.Cog):
             )
         return lines
 
-    @commands.group(name="association ", aliases=("alt", "assoc"), invoke_without_command=True)
+    @commands.group(name="association", aliases=("alt", "assoc"), invoke_without_command=True)
     async def association_group(
         self,
         ctx: commands.Context,
