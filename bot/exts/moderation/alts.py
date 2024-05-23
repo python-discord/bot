@@ -58,7 +58,7 @@ class AlternateAccounts(commands.Cog):
             )
         return lines
 
-    @commands.group(name="association ", aliases=("alt", "alts", "assoc"), invoke_without_command=True)
+    @commands.group(name="association ", aliases=("alt", "assoc"), invoke_without_command=True)
     async def association_group(
         self,
         ctx: commands.Context,
@@ -128,7 +128,7 @@ class AlternateAccounts(commands.Cog):
             return
         await ctx.send(f"✅ {user_1.mention} and {user_2.mention} are no longer marked as alts.")
 
-    @association_group.command(name="info", root_aliases=("alt-info",))
+    @association_group.command(name="info", root_aliases=("alts",))
     async def alt_info_command(
         self,
         ctx: commands.Context,
