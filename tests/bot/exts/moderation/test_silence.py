@@ -111,7 +111,6 @@ class SilenceNotifierTests(SilenceTest):
                 self.alert_channel.send.assert_not_called()
 
 
-@autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
 class SilenceCogTests(SilenceTest):
     """Tests for the general functionality of the Silence cog."""
 
@@ -311,7 +310,6 @@ class SilenceArgumentParserTests(SilenceTest):
         self.assertEqual(15, duration)
 
 
-@autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
 class RescheduleTests(RedisTestCase):
     """Tests for the rescheduling of cached unsilences."""
 
@@ -328,7 +326,7 @@ class RescheduleTests(RedisTestCase):
 
     async def test_skipped_missing_channel(self):
         """Did nothing because the channel couldn't be retrieved."""
-        self.cog.unsilence_timestamps.items.return_value = [(123, -1), (123, 1), (123, 10000000000)]
+        await self.cog.unsilence_timestamps.set(123, -1)
         self.bot.get_channel.return_value = None
 
         await self.cog._reschedule()
@@ -341,8 +339,8 @@ class RescheduleTests(RedisTestCase):
         """Permanently silenced channels were added to the notifier."""
         channels = [MockTextChannel(id=123), MockTextChannel(id=456)]
         self.bot.get_channel.side_effect = channels
-        self.cog.unsilence_timestamps.items.return_value = [(123, -1), (456, -1)]
-
+        await self.cog.unsilence_timestamps.set(123, -1)
+        await self.cog.unsilence_timestamps.set(456, -1)
         await self.cog._reschedule()
 
         self.cog.notifier.add_channel.assert_any_call(channels[0])
@@ -355,7 +353,8 @@ class RescheduleTests(RedisTestCase):
         """Unsilenced expired silences."""
         channels = [MockTextChannel(id=123), MockTextChannel(id=456)]
         self.bot.get_channel.side_effect = channels
-        self.cog.unsilence_timestamps.items.return_value = [(123, 100), (456, 200)]
+        await self.cog.unsilence_timestamps.set(123, 100)
+        await self.cog.unsilence_timestamps.set(456, 200)
 
         await self.cog._reschedule()
 
@@ -370,7 +369,8 @@ class RescheduleTests(RedisTestCase):
         """Rescheduled active silences."""
         channels = [MockTextChannel(id=123), MockTextChannel(id=456)]
         self.bot.get_channel.side_effect = channels
-        self.cog.unsilence_timestamps.items.return_value = [(123, 2000), (456, 3000)]
+        await self.cog.unsilence_timestamps.set(123, 2000)
+        await self.cog.unsilence_timestamps.set(456, 3000)
         silence.datetime.now.return_value = datetime.fromtimestamp(1000, tz=UTC)
 
         self.cog._unsilence_wrapper = mock.MagicMock()
@@ -398,7 +398,6 @@ def voice_sync_helper(function):
     return inner
 
 
-@autospec(silence.Silence, "previous_overwrites", "unsilence_timestamps", pass_mocks=False)
 class SilenceTests(SilenceTest):
     """Tests for the silence command and its related helper methods."""
 
@@ -619,7 +618,7 @@ class SilenceTests(SilenceTest):
             '"create_public_threads": false, "send_messages_in_threads": true}'
         )
         await self.cog._set_silence_overwrites(self.text_channel)
-        self.cog.previous_overwrites.set.assert_awaited_once_with(self.text_channel.id, overwrite_json)
+        self.assertEqual(await self.cog.previous_overwrites.get(self.text_channel.id), overwrite_json)
 
     @autospec(silence, "datetime")
     async def test_cached_unsilence_time(self, datetime_mock):
@@ -632,14 +631,14 @@ class SilenceTests(SilenceTest):
         ctx = MockContext(channel=self.text_channel)
         await self.cog.silence.callback(self.cog, ctx, duration)
 
-        self.cog.unsilence_timestamps.set.assert_awaited_once_with(ctx.channel.id, timestamp)
+        self.assertEqual(await self.cog.unsilence_timestamps.get(ctx.channel.id), timestamp)
         datetime_mock.now.assert_called_once_with(tz=UTC)  # Ensure it's using an aware dt.
 
     async def test_cached_indefinite_time(self):
         """A value of -1 was cached for a permanent silence."""
         ctx = MockContext(channel=self.text_channel)
         await self.cog.silence.callback(self.cog, ctx, None, None)
-        self.cog.unsilence_timestamps.set.assert_awaited_once_with(ctx.channel.id, -1)
+        self.assertEqual(await self.cog.unsilence_timestamps.get(ctx.channel.id), -1)
 
     async def test_scheduled_task(self):
         """An unsilence task was scheduled."""
@@ -665,7 +664,6 @@ class SilenceTests(SilenceTest):
             unsilence.assert_awaited_once_with(ctx, ctx.channel, None)
 
 
-@autospec(silence.Silence, "unsilence_timestamps", pass_mocks=False)
 class UnsilenceTests(SilenceTest):
     """Tests for the unsilence command and its related helper methods."""
 
@@ -680,13 +678,6 @@ class UnsilenceTests(SilenceTest):
         self.voice_channel = MockVoiceChannel()
         self.voice_overwrite = PermissionOverwrite(connect=True, speak=True)
         self.voice_channel.overwrites_for.return_value = self.voice_overwrite
-
-    async def asyncSetUp(self) -> None:
-        await super().asyncSetUp()
-        overwrites_cache = mock.create_autospec(self.cog.previous_overwrites, spec_set=True)
-        self.cog.previous_overwrites = overwrites_cache
-
-        overwrites_cache.get.return_value = '{"send_messages": true, "add_reactions": false}'
 
     async def test_sent_correct_message(self):
         """Appropriate failure/success message was sent by the command."""
@@ -720,7 +711,6 @@ class UnsilenceTests(SilenceTest):
     async def test_skipped_already_unsilenced(self):
         """Permissions were not set and `False` was returned for an already unsilenced channel."""
         self.cog.scheduler.__contains__.return_value = False
-        self.cog.previous_overwrites.get.return_value = None
 
         for channel in (MockVoiceChannel(), MockTextChannel()):
             with self.subTest(channel=channel):
@@ -729,6 +719,7 @@ class UnsilenceTests(SilenceTest):
 
     async def test_restored_overwrites_text(self):
         """Text channel's `send_message` and `add_reactions` overwrites were restored."""
+        await self.cog.previous_overwrites.set(self.text_channel.id, '{"send_messages": true, "add_reactions": false}')
         await self.cog._unsilence(self.text_channel)
         self.text_channel.set_permissions.assert_awaited_once_with(
             self.cog._everyone_role,
@@ -741,19 +732,18 @@ class UnsilenceTests(SilenceTest):
 
     async def test_restored_overwrites_voice(self):
         """Voice channel's `connect` and `speak` overwrites were restored."""
+        await self.cog.previous_overwrites.set(self.voice_channel.id, '{"connect": true, "speak": true}')
         await self.cog._unsilence(self.voice_channel)
         self.voice_channel.set_permissions.assert_awaited_once_with(
             self.cog._verified_voice_role,
             overwrite=self.voice_overwrite,
         )
 
-        # Recall that these values are determined by the fixture.
         self.assertTrue(self.voice_overwrite.connect)
         self.assertTrue(self.voice_overwrite.speak)
 
     async def test_cache_miss_used_default_overwrites_text(self):
         """Text overwrites were set to None due previous values not being found in the cache."""
-        self.cog.previous_overwrites.get.return_value = None
 
         await self.cog._unsilence(self.text_channel)
         self.text_channel.set_permissions.assert_awaited_once_with(
@@ -766,7 +756,6 @@ class UnsilenceTests(SilenceTest):
 
     async def test_cache_miss_used_default_overwrites_voice(self):
         """Voice overwrites were set to None due previous values not being found in the cache."""
-        self.cog.previous_overwrites.get.return_value = None
 
         await self.cog._unsilence(self.voice_channel)
         self.voice_channel.set_permissions.assert_awaited_once_with(
@@ -779,13 +768,11 @@ class UnsilenceTests(SilenceTest):
 
     async def test_cache_miss_sent_mod_alert_text(self):
         """A message was sent to the mod alerts channel upon muting a text channel."""
-        self.cog.previous_overwrites.get.return_value = None
         await self.cog._unsilence(self.text_channel)
         self.cog._mod_alerts_channel.send.assert_awaited_once()
 
     async def test_cache_miss_sent_mod_alert_voice(self):
         """A message was sent to the mod alerts channel upon muting a voice channel."""
-        self.cog.previous_overwrites.get.return_value = None
         await self.cog._unsilence(MockVoiceChannel())
         self.cog._mod_alerts_channel.send.assert_awaited_once()
 
@@ -796,13 +783,15 @@ class UnsilenceTests(SilenceTest):
 
     async def test_deleted_cached_overwrite(self):
         """Channel was deleted from the overwrites cache."""
+        await self.cog.previous_overwrites.set(self.text_channel.id, '{"send_messages": true, "add_reactions": false}')
         await self.cog._unsilence(self.text_channel)
-        self.cog.previous_overwrites.delete.assert_awaited_once_with(self.text_channel.id)
+        self.assertEqual(await self.cog.previous_overwrites.get(self.text_channel.id), None)
 
     async def test_deleted_cached_time(self):
         """Channel was deleted from the timestamp cache."""
+        await self.cog.unsilence_timestamps.set(self.text_channel.id, 100)
         await self.cog._unsilence(self.text_channel)
-        self.cog.unsilence_timestamps.delete.assert_awaited_once_with(self.text_channel.id)
+        self.assertEqual(await self.cog.unsilence_timestamps.get(self.text_channel.id), None)
 
     async def test_cancelled_task(self):
         """The scheduled unsilence task should be cancelled."""
@@ -813,7 +802,10 @@ class UnsilenceTests(SilenceTest):
         """Text channel's other unrelated overwrites were not changed, including cache misses."""
         for overwrite_json in ('{"send_messages": true, "add_reactions": null}', None):
             with self.subTest(overwrite_json=overwrite_json):
-                self.cog.previous_overwrites.get.return_value = overwrite_json
+                if overwrite_json is None:
+                    await self.cog.previous_overwrites.delete(self.text_channel.id)
+                else:
+                    await self.cog.previous_overwrites.set(self.text_channel.id, overwrite_json)
 
                 prev_overwrite_dict = dict(self.text_overwrite)
                 await self.cog._unsilence(self.text_channel)
@@ -831,7 +823,10 @@ class UnsilenceTests(SilenceTest):
         """Voice channel's other unrelated overwrites were not changed, including cache misses."""
         for overwrite_json in ('{"connect": true, "speak": true}', None):
             with self.subTest(overwrite_json=overwrite_json):
-                self.cog.previous_overwrites.get.return_value = overwrite_json
+                if overwrite_json is None:
+                    await self.cog.previous_overwrites.delete(self.voice_channel.id)
+                else:
+                    await self.cog.previous_overwrites.set(self.voice_channel.id, overwrite_json)
 
                 prev_overwrite_dict = dict(self.voice_overwrite)
                 await self.cog._unsilence(self.voice_channel)
