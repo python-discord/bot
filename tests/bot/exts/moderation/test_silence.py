@@ -37,7 +37,6 @@ class SilenceTest(RedisTestCase):
         self.bot = MockBot(get_channel=lambda _id: MockTextChannel(id=_id))
         self.cog = silence.Silence(self.bot)
 
-    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def asyncSetUp(self) -> None:
         await super().asyncSetUp()
         await self.cog.cog_load()  # Populate instance attributes.
@@ -117,29 +116,25 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
 class SilenceCogTests(SilenceTest):
     """Tests for the general functionality of the Silence cog."""
 
-    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_cog_load_got_guild(self):
         """Bot got guild after it became available."""
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.bot.get_guild.assert_called_once_with(Guild.id)
 
-    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def test_cog_load_got_channels(self):
         """Got channels from bot."""
-        await self.cog.cog_load()
         self.assertEqual(self.cog._mod_alerts_channel.id, Channels.mod_alerts)
 
-    @autospec(silence, "SilenceNotifier")
-    async def test_cog_load_got_notifier(self, notifier):
+    async def test_cog_load_got_notifier(self):
         """Notifier was started with channel."""
-        await self.cog.cog_load()
+        with mock.patch.object(silence, "SilenceNotifier") as notifier:
+            await self.cog.cog_load()
         notifier.assert_called_once_with(MockTextChannel(id=Channels.mod_log))
         self.assertEqual(self.cog.notifier, notifier.return_value)
 
-    @autospec(silence, "SilenceNotifier", pass_mocks=False)
     async def testcog_load_rescheduled(self):
         """`_reschedule_` coroutine was awaited."""
-        self.cog._reschedule = mock.create_autospec(self.cog._reschedule)
+        self.cog._reschedule = AsyncMock()
         await self.cog.cog_load()
         self.cog._reschedule.assert_awaited_once_with()
 
@@ -601,19 +596,28 @@ class SilenceTests(SilenceTest):
 
     async def test_temp_not_added_to_notifier(self):
         """Channel was not added to notifier if a duration was set for the silence."""
-        with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True):
+        with (
+            mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True),
+            mock.patch.object(self.cog.notifier, "add_channel")
+        ):
             await self.cog.silence.callback(self.cog, MockContext(), 15)
             self.cog.notifier.add_channel.assert_not_called()
 
     async def test_indefinite_added_to_notifier(self):
         """Channel was added to notifier if a duration was not set for the silence."""
-        with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True):
+        with (
+            mock.patch.object(self.cog, "_set_silence_overwrites", return_value=True),
+            mock.patch.object(self.cog.notifier, "add_channel")
+        ):
             await self.cog.silence.callback(self.cog, MockContext(), None, None)
             self.cog.notifier.add_channel.assert_called_once()
 
     async def test_silenced_not_added_to_notifier(self):
         """Channel was not added to the notifier if it was already silenced."""
-        with mock.patch.object(self.cog, "_set_silence_overwrites", return_value=False):
+        with (
+            mock.patch.object(self.cog, "_set_silence_overwrites", return_value=False),
+            mock.patch.object(self.cog.notifier, "add_channel")
+        ):
             await self.cog.silence.callback(self.cog, MockContext(), 15)
             self.cog.notifier.add_channel.assert_not_called()
 
@@ -784,8 +788,9 @@ class UnsilenceTests(SilenceTest):
 
     async def test_removed_notifier(self):
         """Channel was removed from `notifier`."""
-        await self.cog._unsilence(self.text_channel)
-        self.cog.notifier.remove_channel.assert_called_once_with(self.text_channel)
+        with mock.patch.object(silence.SilenceNotifier, "remove_channel"):
+            await self.cog._unsilence(self.text_channel)
+            self.cog.notifier.remove_channel.assert_called_once_with(self.text_channel)
 
     async def test_deleted_cached_overwrite(self):
         """Channel was deleted from the overwrites cache."""
