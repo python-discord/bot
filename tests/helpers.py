@@ -388,11 +388,16 @@ class MockTextChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     spec_set = text_channel_instance
 
     def __init__(self, **kwargs) -> None:
-        default_kwargs = {"id": next(self.discord_id), "name": "channel", "guild": MockGuild()}
+        default_kwargs = {"id": next(self.discord_id), "name": "channel"}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
         if "mention" not in kwargs:
             self.mention = f"#{self.name}"
+
+    @cached_property
+    def guild(self) -> MockGuild:
+        """Cached guild property."""
+        return MockGuild()
 
 
 class MockVoiceChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
@@ -405,11 +410,16 @@ class MockVoiceChannel(CustomMockMixin, unittest.mock.Mock, HashableMixin):
     spec_set = voice_channel_instance
 
     def __init__(self, **kwargs) -> None:
-        default_kwargs = {"id": next(self.discord_id), "name": "channel", "guild": MockGuild()}
+        default_kwargs = {"id": next(self.discord_id), "name": "channel"}
         super().__init__(**collections.ChainMap(kwargs, default_kwargs))
 
         if "mention" not in kwargs:
             self.mention = f"#{self.name}"
+
+    @cached_property
+    def guild(self) -> MockGuild:
+        """Cached guild property."""
+        return MockGuild()
 
 
 # Create data for the DMChannel instance
