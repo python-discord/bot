@@ -53,32 +53,36 @@ class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
     def test_add_channel_adds_channel(self):
         """Channel is added to `_silenced_channels` with the current loop."""
         channel = Mock()
-        with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
-            self.notifier.add_channel(channel)
-        silenced_channels.__setitem__.assert_called_with(channel, self.notifier._current_loop)
+        self.notifier.add_channel(channel)
+        self.assertDictEqual(self.notifier._silenced_channels, {channel: self.notifier._current_loop})
 
-    def test_add_channel_starts_loop(self):
-        """Loop is started if `_silenced_channels` was empty."""
+    def test_add_channel_loop_called_correctly(self):
+        """Loop is called only in correct scenarios."""
+
+        # Loop is started if `_silenced_channels` was empty.
         self.notifier.add_channel(Mock())
         self.notifier_start_mock.assert_called_once()
 
-    def test_add_channel_skips_start_with_channels(self):
-        """Loop start is not called when `_silenced_channels` is not empty."""
-        with mock.patch.object(self.notifier, "_silenced_channels"):
-            self.notifier.add_channel(Mock())
+        self.notifier_start_mock.reset_mock()
+
+        # Loop start is not called when `_silenced_channels` is not empty.
+        self.notifier.add_channel(Mock())
         self.notifier_start_mock.assert_not_called()
 
     def test_remove_channel_removes_channel(self):
         """Channel is removed from `_silenced_channels`."""
         channel = Mock()
-        with mock.patch.object(self.notifier, "_silenced_channels") as silenced_channels:
-            self.notifier.remove_channel(channel)
-        silenced_channels.__delitem__.assert_called_with(channel)
+        self.notifier.add_channel(channel)
+        self.notifier.remove_channel(channel)
+        self.assertDictEqual(self.notifier._silenced_channels, {})
 
     def test_remove_channel_stops_loop(self):
         """Notifier loop is stopped if `_silenced_channels` is empty after remove."""
-        with mock.patch.object(self.notifier, "_silenced_channels", __bool__=lambda _: False):
-            self.notifier.remove_channel(Mock())
+        channel = Mock()
+        self.notifier.add_channel(channel)
+        self.notifier_stop_mock.assert_not_called()
+
+        self.notifier.remove_channel(channel)
         self.notifier_stop_mock.assert_called_once()
 
     def test_remove_channel_skips_stop_with_channels(self):
