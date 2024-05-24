@@ -252,6 +252,7 @@ class InfractionScheduler:
                     if infr_type == "warning" and not ctx.channel.permissions_for(user).view_channel:
                         failed = True
                         log_title = "failed to apply"
+                        additional_info += "\n*Failed to show the warning to the user*"
                         confirm_msg = (f":x: Failed to apply **warning** to {user.mention} "
                                        "because DMing the user was unsuccessful")
 
