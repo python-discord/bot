@@ -43,9 +43,8 @@ class SilenceTest(RedisTestCase):
         await self.cog.cog_load()  # Populate instance attributes.
 
 
-class SilenceNotifierTests(SilenceTest):
+class SilenceNotifierTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        super().setUp()
         self.alert_channel = MockTextChannel()
         self.notifier = silence.SilenceNotifier(self.alert_channel)
         self.notifier.stop = self.notifier_stop_mock = Mock()
@@ -241,7 +240,7 @@ class SilenceCogTests(SilenceTest):
             self.assertEqual(member.move_to.call_count, 1 if member == failing_member else 2)
 
 
-class SilenceArgumentParserTests(SilenceTest):
+class SilenceArgumentParserTests(unittest.IsolatedAsyncioTestCase):
     """Tests for the silence argument parser utility function."""
 
     @autospec(silence.Silence, "send_message", pass_mocks=False)
@@ -249,6 +248,9 @@ class SilenceArgumentParserTests(SilenceTest):
     @autospec(silence.Silence, "parse_silence_args")
     async def test_command(self, parser_mock):
         """Test that the command passes in the correct arguments for different calls."""
+        bot = MockBot()
+        cog = silence.Silence(bot)
+
         test_cases = (
             (),
             (15, ),
@@ -261,7 +263,7 @@ class SilenceArgumentParserTests(SilenceTest):
 
         for case in test_cases:
             with self.subTest("Test command converters", args=case):
-                await self.cog.silence.callback(self.cog, ctx, *case)
+                await cog.silence.callback(cog, ctx, *case)
 
                 try:
                     first_arg = case[0]
@@ -280,7 +282,7 @@ class SilenceArgumentParserTests(SilenceTest):
     async def test_no_arguments(self):
         """Test the parser when no arguments are passed to the command."""
         ctx = MockContext()
-        channel, duration = self.cog.parse_silence_args(ctx, None, 10)
+        channel, duration = silence.Silence.parse_silence_args(ctx, None, 10)
 
         self.assertEqual(ctx.channel, channel)
         self.assertEqual(10, duration)
@@ -288,7 +290,7 @@ class SilenceArgumentParserTests(SilenceTest):
     async def test_channel_only(self):
         """Test the parser when just the channel argument is passed."""
         expected_channel = MockTextChannel()
-        actual_channel, duration = self.cog.parse_silence_args(MockContext(), expected_channel, 10)
+        actual_channel, duration = silence.Silence.parse_silence_args(MockContext(), expected_channel, 10)
 
         self.assertEqual(expected_channel, actual_channel)
         self.assertEqual(10, duration)
@@ -296,7 +298,7 @@ class SilenceArgumentParserTests(SilenceTest):
     async def test_duration_only(self):
         """Test the parser when just the duration argument is passed."""
         ctx = MockContext()
-        channel, duration = self.cog.parse_silence_args(ctx, 15, 10)
+        channel, duration = silence.Silence.parse_silence_args(ctx, 15, 10)
 
         self.assertEqual(ctx.channel, channel)
         self.assertEqual(15, duration)
@@ -304,7 +306,7 @@ class SilenceArgumentParserTests(SilenceTest):
     async def test_all_args(self):
         """Test the parser when both channel and duration are passed."""
         expected_channel = MockTextChannel()
-        actual_channel, duration = self.cog.parse_silence_args(MockContext(), expected_channel, 15)
+        actual_channel, duration = silence.Silence.parse_silence_args(MockContext(), expected_channel, 15)
 
         self.assertEqual(expected_channel, actual_channel)
         self.assertEqual(15, duration)
