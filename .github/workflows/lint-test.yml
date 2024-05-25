@@ -54,6 +54,9 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: pytest -n auto --cov -q
+        env:
+          # Use "sys.monitoring" based coverage backend for better speed (see #3075)
+          COVERAGE_CORE: sysmon
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's
