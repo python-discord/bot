@@ -59,7 +59,7 @@ services:
     logging : *default-logging
     restart: unless-stopped
     image: ghcr.io/python-discord/site:latest
-    command: ["run", "--debug"]
+    command: ["python", "manage.py", "run"]
     networks:
       default:
         aliases:
