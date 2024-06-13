@@ -42,6 +42,7 @@ jobs:
       # and add it to the ALLOWED_LICENSE variable
       - name: Check Dependencies License
         run: |
+          poetry self add poetry-plugin-export
           pip-licenses --allow-only="$ALLOWED_LICENSE" \
             --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
 
