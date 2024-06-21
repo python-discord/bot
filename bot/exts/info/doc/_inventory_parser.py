@@ -69,6 +69,13 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
 
     async for line in ZlibStreamReader(stream):
         m = _V2_LINE_RE.match(line.rstrip())
+
+        # If we don't have a match, the package is probably doing something
+        # funky with new-lines and we can discount this line, it's likely a
+        # multi-line figure description or something similar.
+        if not m:
+            continue
+
         name, type_, _prio, location, _dispname = m.groups()  # ignore the parsed items we don't need
         if location.endswith("$"):
             location = location[:-1] + name
