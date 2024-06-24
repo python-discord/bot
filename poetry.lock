@@ -527,22 +527,22 @@ optimize = ["orjson"]
 
 [[package]]
 name = "discord-py"
-version = "2.3.2"
+version = "2.4.0"
 description = "A Python wrapper for the Discord API"
 optional = false
-python-versions = ">=3.8.0"
+python-versions = ">=3.8"
 files = [
-    {file = "discord.py-2.3.2-py3-none-any.whl", hash = "sha256:9da4679fc3cb10c64b388284700dc998663e0e57328283bbfcfc2525ec5960a6"},
-    {file = "discord.py-2.3.2.tar.gz", hash = "sha256:4560f70f2eddba7e83370ecebd237ac09fbb4980dc66507482b0c0e5b8f76b9c"},
+    {file = "discord.py-2.4.0-py3-none-any.whl", hash = "sha256:b8af6711c70f7e62160bfbecb55be699b5cb69d007426759ab8ab06b1bd77d1d"},
+    {file = "discord_py-2.4.0.tar.gz", hash = "sha256:d07cb2a223a185873a1d0ee78b9faa9597e45b3f6186df21a95cec1e9bcdc9a5"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.7.4,<4"
 
 [package.extras]
-docs = ["sphinx (==4.4.0)", "sphinxcontrib-trio (==1.1.2)", "sphinxcontrib-websupport", "typing-extensions (>=4.3,<5)"]
+docs = ["sphinx (==4.4.0)", "sphinx-inline-tabs (==2023.4.21)", "sphinxcontrib-applehelp (==1.0.4)", "sphinxcontrib-devhelp (==1.0.2)", "sphinxcontrib-htmlhelp (==2.0.1)", "sphinxcontrib-jsmath (==1.0.1)", "sphinxcontrib-qthelp (==1.0.3)", "sphinxcontrib-serializinghtml (==1.1.5)", "sphinxcontrib-trio (==1.1.2)", "sphinxcontrib-websupport (==1.2.4)", "typing-extensions (>=4.3,<5)"]
 speed = ["Brotli", "aiodns (>=1.1)", "cchardet (==2.1.7)", "orjson (>=3.5.4)"]
-test = ["coverage[toml]", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "typing-extensions (>=4.3,<5)"]
+test = ["coverage[toml]", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "typing-extensions (>=4.3,<5)", "tzdata"]
 voice = ["PyNaCl (>=1.3.0,<1.6)"]
 
 [[package]]
@@ -1567,19 +1567,19 @@ yaml = ["pyyaml (>=6.0.1)"]
 
 [[package]]
 name = "pydis-core"
-version = "11.1.0"
+version = "11.2.0"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 optional = false
-python-versions = "<3.13.dev0,>=3.11.dev0"
+python-versions = "<4.0,>=3.11"
 files = [
-    {file = "pydis_core-11.1.0-py3-none-any.whl", hash = "sha256:e64b7e6adf9cf6bcd3d5faebf0d829654bd7e921cdb5bced1d92fea854d7a04e"},
-    {file = "pydis_core-11.1.0.tar.gz", hash = "sha256:21de861ca458c4d1bddb49ff1d7f21a3d0071486489fb8fc8b9593b0c1e3e842"},
+    {file = "pydis_core-11.2.0-py3-none-any.whl", hash = "sha256:e06adeb17b25c88e8531712ea3910a7c35b977e0b04711cdecd2089efce1b546"},
+    {file = "pydis_core-11.2.0.tar.gz", hash = "sha256:8ecdc3a564ef7f34c4688c1bc064e4871555f22f239845fb2d9cb74df9006ae8"},
 ]
 
 [package.dependencies]
 aiodns = ">=3.1,<4.0"
 async-rediscache = {version = "1.0.0rc2", optional = true, markers = "extra == \"async-rediscache\" or extra == \"all\""}
-"discord.py" = ">=2.3.2,<2.4.0"
+"discord.py" = ">=2.4,<3.0"
 fakeredis = {version = ">=2.0,<3.0", extras = ["lua"], optional = true, markers = "extra == \"fakeredis\" or extra == \"all\""}
 pydantic = ">=2.6,<3.0"
 statsd = ">=4.0,<5.0"
@@ -2404,4 +2404,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.*"
-content-hash = "647e0dcd83bd88189d24da33a32c31c373375bb56e950632e86e4ecf655b6a28"
+content-hash = "ca593af9b3836356e6479037ee09a3dc1d00a0c0e63bcafe503dddb6dca4f0ea"
