@@ -597,7 +597,7 @@ class ModLog(Cog, name="ModLog"):
     async def gather_replies(self, message: discord.Message) -> list:
         """Gather replies to the given message."""
         replies = []
-        async for msg in message.channel.history(after=message.created_at, limit=100):
+        async for msg in message.channel.history(after=message.created_at, limit=10):
             if msg.reference and msg.reference.message_id == message.id:
                 replies.append(msg)
         return replies
