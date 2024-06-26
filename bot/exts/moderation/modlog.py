@@ -490,6 +490,7 @@ class ModLog(Cog, name="ModLog"):
 
         return channel.id in GuildConstant.modlog_blacklist
 
+
     async def log_cached_deleted_message(self, message: discord.Message) -> None:
         """
         Log the message's details to message change log.
@@ -513,7 +514,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                "\n"
+                #"\n"
             )
         else:
             response = (
@@ -522,14 +523,57 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                "\n"
+                #"\n"
             )
+
+        # If the message is a reply, add the reference to the response
+        if message.reference is not None and message.reference.resolved is not None:
+            resolved_message = message.reference.resolved
+
+            if isinstance(resolved_message, discord.Message):
+                jump_url = resolved_message.jump_url
+                if resolved_message.channel.category:
+                    resolved_message_text = (
+                        f"{resolved_message.author} in "
+                        f"{resolved_message.channel.category}/#{resolved_message.channel.name}:"
+                    )
+                else:
+                    resolved_message_text = (
+                        f"{resolved_message.author} in "
+                        f"#{resolved_message.channel.name}:"
+                    )
+
+                #Shorten the message content if necessary
+                if len(resolved_message.clean_content) > 10:
+                    resolved_clean_content = resolved_message.clean_content[:10] + "..."
+                else:
+                    resolved_clean_content = resolved_message.clean_content
+
+                reference_line = (
+                    f"**In reply to:** [{resolved_message_text}]({jump_url}) {resolved_clean_content}\n"
+                )
+                response = reference_line + response
+
+        # If the message is a parent messages and has replies to it, add the replies to the response
+        replies = await self.gather_replies(message)
+        if replies:
+            reply_lines: str = ""
+            for reply in replies:
+                if len(reply.clean_content) > 10:
+                    short_content = reply.clean_content[:10] + "..."
+                    reply_lines += f"\n- {format_user(reply.author)}[Jump to message]({reply.jump_url}) {short_content}"
+                else:
+                    full_content = reply.clean_content
+                    reply_lines += f"\n- {format_user(reply.author)}[Jump to message]({reply.jump_url}) {full_content}"
+
+            response += "**Replies:**" + f"{reply_lines}\n"
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments
             response = f"**Attachments:** {len(message.attachments)}\n" + response
 
         # Shorten the message content if necessary
+        response += "\n**Deleted Message:**:\n"
         content = message.clean_content
         remaining_chars = 4090 - len(response)
 
@@ -549,6 +593,14 @@ class ModLog(Cog, name="ModLog"):
             response,
             channel_id=Channels.message_log
         )
+
+    async def gather_replies(self, message: discord.Message) -> list:
+        """Gather replies to the given message."""
+        replies = []
+        async for msg in message.channel.history(after=message.created_at, limit=100):
+            if msg.reference and msg.reference.message_id == message.id:
+                replies.append(msg)
+        return replies
 
     async def log_uncached_deleted_message(self, event: discord.RawMessageDeleteEvent) -> None:
         """
