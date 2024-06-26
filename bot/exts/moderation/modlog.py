@@ -564,7 +564,7 @@ class ModLog(Cog, name="ModLog"):
                     content = content[:10] + "..."
                 reply_lines += f"\n- {format_user(reply.author)}[Jump to message]({reply.jump_url}) {content}"
 
-            response += "**Replies:**" + f"{reply_lines}\n"
+            response += f"**Replies:** {reply_lines}\n"
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments
