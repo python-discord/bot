@@ -559,12 +559,10 @@ class ModLog(Cog, name="ModLog"):
         if replies:
             reply_lines: str = ""
             for reply in replies:
-                if len(reply.clean_content) > 10:
-                    short_content = reply.clean_content[:10] + "..."
-                    reply_lines += f"\n- {format_user(reply.author)}[Jump to message]({reply.jump_url}) {short_content}"
-                else:
-                    full_content = reply.clean_content
-                    reply_lines += f"\n- {format_user(reply.author)}[Jump to message]({reply.jump_url}) {full_content}"
+                content = reply.clean_content
+                if len(content) > 10:
+                    content = content[:10] + "..."
+                reply_lines += f"\n- {format_user(reply.author)}[Jump to message]({reply.jump_url}) {content}"
 
             response += "**Replies:**" + f"{reply_lines}\n"
 
