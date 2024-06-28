@@ -532,39 +532,12 @@ class ModLog(Cog, name="ModLog"):
 
             if isinstance(resolved_message, discord.Message):
                 jump_url = resolved_message.jump_url
-                if resolved_message.channel.category:
-                    resolved_message_text = (
-                        f"{resolved_message.author} in "
-                        f"{resolved_message.channel.category}/#{resolved_message.channel.name}:"
-                    )
-                else:
-                    resolved_message_text = (
-                        f"{resolved_message.author} in "
-                        f"#{resolved_message.channel.name}:"
-                    )
-
-                #Shorten the message content if necessary
-                if len(resolved_message.clean_content) > 10:
-                    resolved_clean_content = resolved_message.clean_content[:10] + "..."
-                else:
-                    resolved_clean_content = resolved_message.clean_content
+                author = resolved_message.author.mention
 
                 reference_line = (
-                    f"**In reply to:** [{resolved_message_text}]({jump_url}) {resolved_clean_content}\n"
+                    f"**In reply to:** {author} [Jump to message]({jump_url})\n"
                 )
                 response = reference_line + response
-
-        # If the message is a parent messages and has replies to it, add the replies to the response
-        replies = await self.gather_replies(message)
-        if replies:
-            reply_lines: str = ""
-            for reply in replies:
-                content = reply.clean_content
-                if len(content) > 10:
-                    content = content[:10] + "..."
-                reply_lines += f"\n- {format_user(reply.author)}[Jump to message]({reply.jump_url}) {content}"
-
-            response += f"**Replies:** {reply_lines}\n"
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments
@@ -591,14 +564,6 @@ class ModLog(Cog, name="ModLog"):
             response,
             channel_id=Channels.message_log
         )
-
-    async def gather_replies(self, message: discord.Message) -> list[Message]:
-        """Gather replies to the given message."""
-        replies = []
-        async for msg in message.channel.history(after=message.created_at, limit=10):
-            if msg.reference and msg.reference.message_id == message.id:
-                replies.append(msg)
-        return replies
 
     async def log_uncached_deleted_message(self, event: discord.RawMessageDeleteEvent) -> None:
         """
