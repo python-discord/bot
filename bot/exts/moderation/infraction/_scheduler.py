@@ -237,16 +237,8 @@ class InfractionScheduler:
                     log.exception(log_msg)
                 failed = True
 
-        if failed:
-            log.trace(f"Trying to delete infraction {id_} from database because applying infraction failed.")
-            try:
-                await self.bot.api_client.delete(f"bot/infractions/{id_}")
-            except ResponseCodeError as e:
-                confirm_msg += " and failed to delete"
-                log_title += " and failed to delete"
-                log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
-            infr_message = ""
-        else:
+
+        if not failed:
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
 
             # If we need to DM and haven't already tried to
@@ -257,6 +249,22 @@ class InfractionScheduler:
                 else:
                     dm_result = f"{constants.Emojis.failmail} "
                     dm_log_text = "\nDM: **Failed**"
+                    if infr_type == "warning" and not ctx.channel.permissions_for(user).view_channel:
+                        failed = True
+                        log_title = "failed to apply"
+                        additional_info += "\n*Failed to show the warning to the user*"
+                        confirm_msg = (f":x: Failed to apply **warning** to {user.mention} "
+                                       "because DMing the user was unsuccessful")
+
+        if failed:
+            log.trace(f"Trying to delete infraction {id_} from database because applying infraction failed.")
+            try:
+                await self.bot.api_client.delete(f"bot/infractions/{id_}")
+            except ResponseCodeError as e:
+                confirm_msg += " and failed to delete"
+                log_title += " and failed to delete"
+                log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
+            infr_message = ""
 
         # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
@@ -288,7 +296,7 @@ class InfractionScheduler:
             footer=f"ID: {id_}"
         )
 
-        log.info(f"Applied {purge}{infr_type} infraction #{id_} to {user}.")
+        log.info(f"{'Failed to apply' if failed else 'Applied'} {purge}{infr_type} infraction #{id_} to {user}.")
         return not failed
 
     async def pardon_infraction(
