@@ -490,6 +490,7 @@ class ModLog(Cog, name="ModLog"):
 
         return channel.id in GuildConstant.modlog_blacklist
 
+
     async def log_cached_deleted_message(self, message: discord.Message) -> None:
         """
         Log the message's details to message change log.
@@ -513,7 +514,7 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                "\n"
+                #"\n"
             )
         else:
             response = (
@@ -522,14 +523,28 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                "\n"
+                #"\n"
             )
+
+        # If the message is a reply, add the reference to the response
+        if message.reference is not None and message.reference.resolved is not None:
+            resolved_message = message.reference.resolved
+
+            if isinstance(resolved_message, discord.Message):
+                jump_url = resolved_message.jump_url
+                author = resolved_message.author.mention
+
+                reference_line = (
+                    f"**In reply to:** {author} [Jump to message]({jump_url})\n"
+                )
+                response = reference_line + response
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments
             response = f"**Attachments:** {len(message.attachments)}\n" + response
 
         # Shorten the message content if necessary
+        response += "\n**Deleted Message:**:\n"
         content = message.clean_content
         remaining_chars = 4090 - len(response)
 
