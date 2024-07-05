@@ -514,7 +514,6 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                #"\n"
             )
         else:
             response = (
@@ -523,7 +522,6 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                #"\n"
             )
 
         # If the message is a reply, add the reference to the response
