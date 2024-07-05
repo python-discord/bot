@@ -489,8 +489,6 @@ class ModLog(Cog, name="ModLog"):
             return True
 
         return channel.id in GuildConstant.modlog_blacklist
-
-
     async def log_cached_deleted_message(self, message: discord.Message) -> None:
         """
         Log the message's details to message change log.
