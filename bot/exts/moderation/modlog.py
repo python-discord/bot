@@ -489,6 +489,7 @@ class ModLog(Cog, name="ModLog"):
             return True
 
         return channel.id in GuildConstant.modlog_blacklist
+
     async def log_cached_deleted_message(self, message: discord.Message) -> None:
         """
         Log the message's details to message change log.
@@ -526,12 +527,17 @@ class ModLog(Cog, name="ModLog"):
         if message.reference is not None and message.reference.resolved is not None:
             resolved_message = message.reference.resolved
 
-            if isinstance(resolved_message, discord.Message):
+            if isinstance(resolved_message, discord.DeletedReferencedMessage):
+                # Reference is a deleted message
+                reference_line = "**In reply to:** Deleted Message"
+                response = reference_line + response
+
+            elif isinstance(resolved_message, discord.Message):
                 jump_url = resolved_message.jump_url
                 author = resolved_message.author.mention
 
                 reference_line = (
-                    f"**In reply to:** {author} [Jump to message]({jump_url})\n"
+                    f"**In reply to:** {author} [Jump to referenced message]({jump_url})\n"
                 )
                 response = reference_line + response
 
