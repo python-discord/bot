@@ -529,7 +529,7 @@ class ModLog(Cog, name="ModLog"):
 
             if isinstance(resolved_message, discord.DeletedReferencedMessage):
                 # Reference is a deleted message
-                reference_line = "**In reply to:** Deleted Message"
+                reference_line = "**In reply to:** Deleted Message\n"
                 response = reference_line + response
 
             elif isinstance(resolved_message, discord.Message):
