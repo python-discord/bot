@@ -178,12 +178,6 @@ class Silence(commands.Cog):
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
 
-        # Since threads don't have specific overrides, we cannot silence them individually.
-        # The parent channel has to be muted or the thread should be archived.
-        if isinstance(channel, Thread):
-            await ctx.send(":x: Threads cannot be silenced.")
-            return
-
         if not await self._set_silence_overwrites(channel, kick=kick):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
             await self.send_message(MSG_SILENCE_FAIL, ctx.channel, channel, alert_target=False)
@@ -241,6 +235,13 @@ class Silence(commands.Cog):
                 create_public_threads=overwrite.create_public_threads,
                 send_messages_in_threads=overwrite.send_messages_in_threads
             )
+        
+        elif isinstance(channel, Thread):
+            if channel.id in self.scheduler:
+                return False
+            else:
+                await channel.edit(locked=True)
+                return True
 
         else:
             role = self._verified_voice_role
@@ -297,6 +298,11 @@ class Silence(commands.Cog):
             if isinstance(channel, VoiceChannel):
                 overwrite = channel.overwrites_for(self._verified_voice_role)
                 has_channel_overwrites = overwrite.speak is False
+            
+            elif isinstance(channel, Thread):
+                await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel, alert_target=False)
+                return
+
             else:
                 overwrite = channel.overwrites_for(self._everyone_role)
                 has_channel_overwrites = overwrite.send_messages is False or overwrite.add_reactions is False
@@ -318,8 +324,11 @@ class Silence(commands.Cog):
         it, cancel the task, and remove it from the notifier. Notify admins if it has a task but
         not cached overwrites.
 
-        Return `True` if channel permissions were changed, `False` otherwise.
+        Return `True` if channel was unsilenced, `False` otherwise.
         """
+        if isinstance(channel, Thread):
+            return await self._unsilence_thread(channel)
+
         # Get stored overwrites, and return if channel is unsilenced
         prev_overwrites = await self.previous_overwrites.get(channel.id)
         if channel.id not in self.scheduler and prev_overwrites is None:
@@ -371,6 +380,24 @@ class Silence(commands.Cog):
                 f"overwrites for {role.mention} are at their desired values."
             )
 
+        return True
+    
+    async def _unsilence_thread(self, channel: Thread) -> bool:
+        """
+        Unsilence a thread.
+
+        This function works the same as `_unsilence`, the only different behaviour regards unsilencing the channel which doesn't require an edit of the overwrites, instead we unlock the thread.
+
+        Return `True` if the thread was unlocked, `False` otherwise.
+        """
+        if channel.id not in self.scheduler:
+            log.info(f"Tried to unsilence channel #{channel} ({channel.id}) but the channel was not silenced.")
+            return False
+
+        await channel.edit(locked=False)
+        log.info(f"Unsilenced channel #{channel} ({channel.id}).")
+        self.scheduler.cancel(channel.id)
+        self.notifier.remove_channel(channel)
         return True
 
     @staticmethod
