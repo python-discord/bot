@@ -343,8 +343,16 @@ class Information(Cog):
 
     async def user_alt_count(self, user: MemberOrUser) -> tuple[str, int | str]:
         """Get the number of alts for the given member."""
-        resp = await self.bot.api_client.get(f"bot/users/{user.id}")
-        return ("Associated accounts", len(resp["alts"]) or "No associated accounts")
+        try:
+            resp = await self.bot.api_client.get(f"bot/users/{user.id}")
+            return ("Associated accounts", len(resp["alts"]) or "No associated accounts")
+        except ResponseCodeError as e:
+            # If user is not found, return a soft-error regarding this.
+            if e.response.status == 404:
+                return ("Associated accounts", "User not found in site database.")
+
+            # If we have any other issue, re-raise the exception
+            raise e
 
 
     async def basic_user_infraction_counts(self, user: MemberOrUser) -> tuple[str, str]:
