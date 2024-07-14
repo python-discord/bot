@@ -235,13 +235,12 @@ class Silence(commands.Cog):
                 create_public_threads=overwrite.create_public_threads,
                 send_messages_in_threads=overwrite.send_messages_in_threads
             )
-        
+
         elif isinstance(channel, Thread):
             if channel.id in self.scheduler:
                 return False
-            else:
-                await channel.edit(locked=True)
-                return True
+            await channel.edit(locked=True)
+            return True
 
         else:
             role = self._verified_voice_role
@@ -298,7 +297,7 @@ class Silence(commands.Cog):
             if isinstance(channel, VoiceChannel):
                 overwrite = channel.overwrites_for(self._verified_voice_role)
                 has_channel_overwrites = overwrite.speak is False
-            
+
             elif isinstance(channel, Thread):
                 await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel, alert_target=False)
                 return
@@ -381,12 +380,13 @@ class Silence(commands.Cog):
             )
 
         return True
-    
+
     async def _unsilence_thread(self, channel: Thread) -> bool:
         """
         Unsilence a thread.
 
-        This function works the same as `_unsilence`, the only different behaviour regards unsilencing the channel which doesn't require an edit of the overwrites, instead we unlock the thread.
+        This function works the same as `_unsilence`, the only different behaviour regards unsilencing the channel
+        which doesn't require an edit of the overwrites, instead we unlock the thread.
 
         Return `True` if the thread was unlocked, `False` otherwise.
         """
