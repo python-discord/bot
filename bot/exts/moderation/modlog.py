@@ -529,7 +529,7 @@ class ModLog(Cog, name="ModLog"):
 
             if isinstance(resolved_message, discord.DeletedReferencedMessage):
                 # Reference is a deleted message
-                reference_line = "**In reply to:** Deleted Message\n"
+                reference_line = f"**In reply to:** `{resolved_message.id}`(Deleted Message)\n"
                 response = reference_line + response
 
             elif isinstance(resolved_message, discord.Message):
@@ -538,6 +538,12 @@ class ModLog(Cog, name="ModLog"):
 
                 reference_line = (
                     f"**In reply to:** {author} [Jump to referenced message]({jump_url})\n"
+                )
+                response = reference_line + response
+
+        elif message.reference is not None and message.reference.resolved is None:
+                reference_line = (
+                    "**In reply to:** (Message could not be resolved)\n"
                 )
                 response = reference_line + response
 
