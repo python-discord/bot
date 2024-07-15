@@ -542,10 +542,10 @@ class ModLog(Cog, name="ModLog"):
                 response = reference_line + response
 
         elif message.reference is not None and message.reference.resolved is None:
-                reference_line = (
-                    "**In reply to:** (Message could not be resolved)\n"
-                )
-                response = reference_line + response
+            reference_line = (
+                "**In reply to:** (Message could not be resolved)\n"
+            )
+            response = reference_line + response
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments
