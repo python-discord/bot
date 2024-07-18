@@ -344,12 +344,13 @@ class WatchChannel(metaclass=CogABCMeta):
                 update_cache = False
         list_data["updated"] = update_cache
 
-        watched_iter = self.watched_users.items()
+        # Copy into list to prevent issues if it is modified elsewhere while it's being iterated over.
+        watched_list = list(self.watched_users.items())
         if oldest_first:
-            watched_iter = reversed(watched_iter)
+            watched_list.reverse()
 
         list_data["info"] = {}
-        for user_id, user_data in watched_iter:
+        for user_id, user_data in watched_list:
             member = await get_or_fetch_member(ctx.guild, user_id)
             line = f"- `{user_id}`"
             if member:
