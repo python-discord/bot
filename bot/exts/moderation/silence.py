@@ -299,8 +299,7 @@ class Silence(commands.Cog):
                 has_channel_overwrites = overwrite.speak is False
 
             elif isinstance(channel, Thread):
-                await self.send_message(MSG_UNSILENCE_FAIL, msg_channel, channel, alert_target=False)
-                return
+                has_channel_overwrites = False
 
             else:
                 overwrite = channel.overwrites_for(self._everyone_role)
