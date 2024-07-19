@@ -230,7 +230,17 @@ class BrandingRepository:
 
         for event in available_events:
             meta = event.meta
-            if not meta.is_fallback and (meta.start_date <= lookup_now <= meta.end_date):
+            if meta.is_fallback:
+                continue
+
+            start_date, end_date = meta.start_date, meta.end_date
+
+            # Case where the event starts and ends in the same year.
+            if start_date <= lookup_now <= end_date:
+                return event, available_events
+
+            # Case where the event spans across two years.
+            if start_date > end_date and (lookup_now >= start_date or lookup_now <= end_date):
                 return event, available_events
 
         log.trace("No active event found. Looking for fallback event.")

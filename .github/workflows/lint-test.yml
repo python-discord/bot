@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Python Dependencies
-        uses: HassanAbouelela/actions/setup-python@setup-python_v1.4.2
+        uses: HassanAbouelela/actions/setup-python@setup-python_v1.6.0
         with:
           python_version: '3.12'
 
@@ -42,6 +42,7 @@ jobs:
       # and add it to the ALLOWED_LICENSE variable
       - name: Check Dependencies License
         run: |
+          poetry self add poetry-plugin-export
           pip-licenses --allow-only="$ALLOWED_LICENSE" \
             --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
 
@@ -54,6 +55,9 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: pytest -n auto --cov -q
+        env:
+          # Use "sys.monitoring" based coverage backend for better speed (see #3075)
+          COVERAGE_CORE: sysmon
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's

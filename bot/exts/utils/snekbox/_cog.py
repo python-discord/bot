@@ -266,14 +266,17 @@ class Snekbox(Cog):
         truncated = False
         lines = output.splitlines()
 
-        if len(lines) > 1:
-            if line_nums:
-                lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
-            lines = lines[:max_lines+1]  # Limiting to max+1 lines
+        if len(lines) > 1 and line_nums:
+            lines = [f"{i:03d} | {line}" for i, line in enumerate(lines, 1)]
             output = "\n".join(lines)
 
         if len(lines) > max_lines:
             truncated = True
+            if len(lines) == max_lines + 1:
+                lines = lines[:max_lines - 1]
+            else:
+                lines = lines[:max_lines]
+            output = "\n".join(lines)
             if len(output) >= max_chars:
                 output = f"{output[:max_chars]}\n... (truncated - too long, too many lines)"
             else:
@@ -393,7 +396,7 @@ class Snekbox(Cog):
             output, paste_link = await self.format_output(output)
 
             status_msg = result.get_status_message(job)
-            msg = f"{ctx.author.mention} {result.status_emoji} {status_msg}.\n"
+            msg = f"{result.status_emoji} {status_msg}.\n"
 
             # This is done to make sure the last line of output contains the error
             # and the error is not manually printed by the author with a syntax error.
@@ -435,7 +438,21 @@ class Snekbox(Cog):
             files = [f.to_file() for f in allowed if f not in text_files]
             allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
             view = self.build_python_version_switcher_view(job.version, ctx, job)
-            response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
+
+            if ctx.message.channel == ctx.channel:
+                # Don't fail if the command invoking message was deleted.
+                message = ctx.message.to_reference(fail_if_not_exists=False)
+                response = await ctx.send(
+                    msg,
+                    allowed_mentions=allowed_mentions,
+                    view=view,
+                    files=files,
+                    reference=message
+                )
+            else:
+                # The command was redirected so a reply wont work, send a normal message with a mention.
+                msg = f"{ctx.author.mention} {msg}"
+                response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
             view.message = response
 
             log.info(f"{ctx.author}'s {job.name} job had a return code of {result.returncode}")
