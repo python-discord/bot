@@ -2,10 +2,11 @@ import json
 from collections import OrderedDict
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import Any
 
 from async_rediscache import RedisCache
 from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
+from discord.abc import Messageable
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from discord.utils import MISSING
@@ -16,9 +17,6 @@ from bot.bot import Bot
 from bot.converters import HushDurationConverter
 from bot.log import get_logger
 from bot.utils.lock import LockedResourceError, lock, lock_arg
-
-if TYPE_CHECKING:
-    from discord.abc import MessageableChannel
 
 log = get_logger(__name__)
 
@@ -97,7 +95,7 @@ class SilenceNotifier(tasks.Loop):
             )
 
 
-async def _select_lock_channel(args: OrderedDict[str, any]) -> SilenceableChannel:
+async def _select_lock_channel(args: OrderedDict[str, Any]) -> SilenceableChannel:
     """Passes the channel to be silenced to the resource lock."""
     channel, _ = Silence.parse_silence_args(args["ctx"], args["duration_or_channel"], args["duration"])
     return channel
@@ -135,7 +133,7 @@ class Silence(commands.Cog):
     async def send_message(
         self,
         message: str,
-        source_channel: "MessageableChannel",
+        source_channel: Messageable,
         target_channel: SilenceableChannel,
         *,
         alert_target: bool = False
@@ -245,6 +243,7 @@ class Silence(commands.Cog):
             )
 
         elif isinstance(channel, Thread):
+            log.info(f"Silencing thread #{channel.parent}/{channel} ({channel.parent.id}/{channel.id}).")
             await channel.edit(locked=True)
             return True
 
