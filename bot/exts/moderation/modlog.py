@@ -513,7 +513,6 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                "\n"
             )
         else:
             response = (
@@ -522,14 +521,38 @@ class ModLog(Cog, name="ModLog"):
                 f"**Message ID:** `{message.id}`\n"
                 f"**Sent at:** {format_dt(message.created_at)}\n"
                 f"[Jump to message]({message.jump_url})\n"
-                "\n"
             )
+
+        # If the message is a reply, add the reference to the response
+        if message.reference is not None and message.reference.resolved is not None:
+            resolved_message = message.reference.resolved
+
+            if isinstance(resolved_message, discord.DeletedReferencedMessage):
+                # Reference is a deleted message
+                reference_line = f"**In reply to:** `{resolved_message.id}`(Deleted Message)\n"
+                response = reference_line + response
+
+            elif isinstance(resolved_message, discord.Message):
+                jump_url = resolved_message.jump_url
+                author = resolved_message.author.mention
+
+                reference_line = (
+                    f"**In reply to:** {author} [Jump to referenced message]({jump_url})\n"
+                )
+                response = reference_line + response
+
+        elif message.reference is not None and message.reference.resolved is None:
+            reference_line = (
+                "**In reply to:** (Message could not be resolved)\n"
+            )
+            response = reference_line + response
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments
             response = f"**Attachments:** {len(message.attachments)}\n" + response
 
         # Shorten the message content if necessary
+        response += "\n**Deleted Message:**:\n"
         content = message.clean_content
         remaining_chars = 4090 - len(response)
 
