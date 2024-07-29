@@ -343,7 +343,7 @@ class Silence(commands.Cog):
             permissions = "`Send Messages` and `Add Reactions`"
         elif isinstance(channel, Thread):
             await channel.edit(locked=False)
-            log.info(f"Unsilenced channel #{channel} ({channel.id}).")
+            log.info(f"Unsilenced thread #{channel.parent}/{channel} ({channel.parent_id}/{channel.id}).")
             self.scheduler.cancel(channel.id)
             self.notifier.remove_channel(channel)
             return True
