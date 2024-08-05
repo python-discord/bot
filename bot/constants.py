@@ -138,7 +138,7 @@ class _Roles(EnvConfig, env_prefix="roles_"):
     lovefest: int = 542431903886606399
     pyweek_announcements: int = 897568414044938310
     revival_of_code: int = 988801794668908655
-    legacy_help_channels_access: int = 1074780483776417964
+    archived_channels_access: int = 1074780483776417964
 
     contributors: int = 295488872404484098
     partners: int = 323426753857191936
