@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bot"
-version = "1.0.0"
+version = "1.0.1"
 description = "The community bot for the Python Discord community."
 authors = ["Python Discord <info@pythondiscord.com>"]
 license = "MIT"
