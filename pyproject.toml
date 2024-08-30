@@ -39,7 +39,7 @@ pytest = "8.2.2"
 pytest-cov = "5.0.0"
 pytest-subtests = "0.13.1"
 pytest-xdist = "3.6.1"
-ruff = "0.5.2"
+ruff = "0.6.2"
 taskipy = "1.13.0"
 
 
