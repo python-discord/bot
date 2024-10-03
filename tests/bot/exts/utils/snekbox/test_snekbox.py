@@ -35,8 +35,8 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         context_manager = MagicMock()
         context_manager.__aenter__.return_value = resp
         self.bot.http_session.post.return_value = context_manager
-
-        job = EvalJob.from_code("import random").as_version("3.10")
+        py_version = "3.12"
+        job = EvalJob.from_code("import random").as_version(py_version)
         self.assertEqual(await self.cog.post_job(job), EvalResult("Hi", 137))
 
         expected = {
@@ -44,9 +44,10 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             "files": [
                 {
                     "path": "main.py",
-                    "content": b64encode(b"import random").decode()
+                    "content": b64encode(b"import random").decode(),
                 }
-            ]
+            ],
+            "executable_path": f"/snekbin/python/{py_version}/bin/python",
         }
         self.bot.http_session.post.assert_called_with(
             constants.URLs.snekbox_eval_api,

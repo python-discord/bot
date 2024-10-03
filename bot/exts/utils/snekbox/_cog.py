@@ -86,7 +86,7 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-SupportedPythonVersions = Literal["3.12"]
+SupportedPythonVersions = Literal["3.12", "3.13"]
 
 
 class FilteredFiles(NamedTuple):
@@ -181,18 +181,16 @@ class Snekbox(Cog):
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
         alt_python_version: SupportedPythonVersions
-        if current_python_version == "3.10":
-            alt_python_version = "3.11"
+        if current_python_version == "3.12":
+            alt_python_version = "3.13"
         else:
-            alt_python_version = "3.10"  # noqa: F841
+            alt_python_version = "3.12"
 
         view = interactions.ViewWithUserAndRoleCheck(
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
         )
-        # Temp disabled until snekbox multi-version support is complete
-        # https://github.com/python-discord/snekbox/issues/158
-        # view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
+        view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
         view.add_item(interactions.DeleteMessageButton())
 
         return view

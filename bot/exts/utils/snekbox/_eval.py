@@ -50,6 +50,7 @@ class EvalJob:
         return {
             "args": self.args,
             "files": [file.to_dict() for file in self.files],
+            "executable_path": f"/snekbin/python/{self.version}/bin/python",
         }
 
 
