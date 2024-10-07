@@ -144,7 +144,8 @@ class EvalResult:
 
     def get_status_message(self, job: EvalJob) -> str:
         """Return a user-friendly message corresponding to the process's return code."""
-        msg = f"Your {job.version} {job.name} job"
+        version_text = job.version.replace("t", " [free threaded](<https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>)")
+        msg = f"Your {version_text} {job.name} job"
 
         if self.returncode is None:
             msg += " has failed"
