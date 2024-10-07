@@ -136,13 +136,13 @@ class PythonVersionSwitcherButton(ui.Button):
 
     def __init__(
         self,
-        version_to_switch_to: SupportedPythonVersions,
+        version_to_run: SupportedPythonVersions,
         snekbox_cog: Snekbox,
         ctx: Context,
         job: EvalJob,
     ) -> None:
-        self.version_to_switch_to = version_to_switch_to
-        super().__init__(label=f"Run in {self.version_to_switch_to}", style=enums.ButtonStyle.primary)
+        self.version_to_run = version_to_run
+        super().__init__(label=f"Run in {self.version_to_run}", style=enums.ButtonStyle.primary)
 
         self.snekbox_cog = snekbox_cog
         self.ctx = ctx
@@ -163,7 +163,7 @@ class PythonVersionSwitcherButton(ui.Button):
             # The log arg on send_job will stop the actual job from running.
             await interaction.message.delete()
 
-        await self.snekbox_cog.run_job(self.ctx, self.job.as_version(self.version_to_switch_to))
+        await self.snekbox_cog.run_job(self.ctx, self.job.as_version(self.version_to_run))
 
 
 class Snekbox(Cog):
