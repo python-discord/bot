@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from functools import partial
 from operator import attrgetter
 from textwrap import dedent
-from typing import Literal, NamedTuple, TYPE_CHECKING
+from typing import Literal, NamedTuple, TYPE_CHECKING, get_args
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
@@ -180,17 +180,13 @@ class Snekbox(Cog):
         job: EvalJob,
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
-        alt_python_version: SupportedPythonVersions
-        if current_python_version == "3.12":
-            alt_python_version = "3.13"
-        else:
-            alt_python_version = "3.12"
-
+        other_versions = set(get_args(SupportedPythonVersions)) - {current_python_version}
         view = interactions.ViewWithUserAndRoleCheck(
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
         )
-        view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
+        for version in other_versions:
+            view.add_item(PythonVersionSwitcherButton(version, self, ctx, job))
         view.add_item(interactions.DeleteMessageButton())
 
         return view
