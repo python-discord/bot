@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from functools import partial
 from operator import attrgetter
 from textwrap import dedent
-from typing import Literal, NamedTuple, TYPE_CHECKING
+from typing import Literal, NamedTuple, TYPE_CHECKING, get_args
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
@@ -86,8 +86,7 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-SupportedPythonVersions = Literal["3.12", "3.13"]
-
+SupportedPythonVersions = Literal["3.12", "3.13", "3.13t"]
 
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
@@ -136,13 +135,13 @@ class PythonVersionSwitcherButton(ui.Button):
 
     def __init__(
         self,
-        version_to_switch_to: SupportedPythonVersions,
+        version_to_run: SupportedPythonVersions,
         snekbox_cog: Snekbox,
         ctx: Context,
         job: EvalJob,
     ) -> None:
-        self.version_to_switch_to = version_to_switch_to
-        super().__init__(label=f"Run in {self.version_to_switch_to}", style=enums.ButtonStyle.primary)
+        self.version_to_run = version_to_run
+        super().__init__(label=f"Run in {self.version_to_run}", style=enums.ButtonStyle.primary)
 
         self.snekbox_cog = snekbox_cog
         self.ctx = ctx
@@ -163,7 +162,7 @@ class PythonVersionSwitcherButton(ui.Button):
             # The log arg on send_job will stop the actual job from running.
             await interaction.message.delete()
 
-        await self.snekbox_cog.run_job(self.ctx, self.job.as_version(self.version_to_switch_to))
+        await self.snekbox_cog.run_job(self.ctx, self.job.as_version(self.version_to_run))
 
 
 class Snekbox(Cog):
@@ -180,17 +179,15 @@ class Snekbox(Cog):
         job: EvalJob,
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
-        alt_python_version: SupportedPythonVersions
-        if current_python_version == "3.12":
-            alt_python_version = "3.13"
-        else:
-            alt_python_version = "3.12"
+        other_versions = list(get_args(SupportedPythonVersions))
+        other_versions.remove(current_python_version)
 
         view = interactions.ViewWithUserAndRoleCheck(
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
         )
-        view.add_item(PythonVersionSwitcherButton(alt_python_version, self, ctx, job))
+        for version in other_versions:
+            view.add_item(PythonVersionSwitcherButton(version, self, ctx, job))
         view.add_item(interactions.DeleteMessageButton())
 
         return view
