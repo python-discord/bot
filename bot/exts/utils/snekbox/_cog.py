@@ -88,7 +88,6 @@ REDO_TIMEOUT = 30
 
 SupportedPythonVersions = Literal["3.12", "3.13", "3.13t"]
 
-
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
     blocked: list[FileAttachment]
@@ -180,7 +179,9 @@ class Snekbox(Cog):
         job: EvalJob,
     ) -> interactions.ViewWithUserAndRoleCheck:
         """Return a view that allows the user to change what version of Python their code is run on."""
-        other_versions = set(get_args(SupportedPythonVersions)) - {current_python_version}
+        other_versions = list(get_args(SupportedPythonVersions))
+        other_versions.remove(current_python_version)
+
         view = interactions.ViewWithUserAndRoleCheck(
             allowed_users=(ctx.author.id,),
             allowed_roles=MODERATION_ROLES,
