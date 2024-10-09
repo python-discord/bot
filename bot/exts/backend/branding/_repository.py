@@ -94,7 +94,7 @@ def _raise_for_status(resp: ClientResponse) -> None:
         raise
 
 
-_retry_fetch = retry(
+_retry_server_error = retry(
     retry=retry_if_exception_type(GitHubServerError),  # Only retry this error.
     stop=stop_after_attempt(5),  # Up to 5 attempts.
     wait=wait_exponential(),  # Exponential backoff: 1, 2, 4, 8 seconds.
@@ -124,7 +124,7 @@ class BrandingRepository:
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    @_retry_fetch
+    @_retry_server_error
     async def fetch_directory(self, path: str, types: t.Container[str] = ("file", "dir")) -> dict[str, RemoteObject]:
         """
         Fetch directory found at `path` in the branding repository.
@@ -142,7 +142,7 @@ class BrandingRepository:
 
         return {file["name"]: RemoteObject(file) for file in json_directory if file["type"] in types}
 
-    @_retry_fetch
+    @_retry_server_error
     async def fetch_file(self, download_url: str) -> bytes:
         """
         Fetch file as bytes from `download_url`.
