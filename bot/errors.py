@@ -59,7 +59,7 @@ class InvalidInfractionError(ConversionError):
 
 
 class BrandingMisconfigurationError(RuntimeError):
-    """Raised by the Branding cog when a misconfigured event is encountered."""
+    """Raised by the Branding cog when branding misconfiguration is detected."""
 
 
 
