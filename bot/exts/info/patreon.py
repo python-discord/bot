@@ -37,10 +37,10 @@ def get_patreon_tier(member: discord.Member) -> int:
 
     A patreon tier of 0 indicates the user is not a patron.
     """
-    for tier, role_id in PATREON_TIERS:
-        if member.get_role(role_id):
-            return tier
-    return 0
+    return next(
+        (tier for tier, role_id in PATREON_TIERS if member.get_role(role_id)),
+        0,
+    )
 
 
 class Patreon(commands.Cog):

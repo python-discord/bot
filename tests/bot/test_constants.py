@@ -47,7 +47,7 @@ class ConstantsTests(unittest.TestCase):
 
                     if origin is typing.Union:
                         is_instance = is_any_instance(value, annotation_args)
-                        self.assertTrue(is_instance, failure_msg)
                     else:
                         is_instance = is_annotation_instance(value, annotation)
-                        self.assertTrue(is_instance, failure_msg)
+
+                    self.assertTrue(is_instance, failure_msg)

@@ -328,13 +328,12 @@ class Silence(commands.Cog):
         # Select the role based on channel type, and get current overwrites
         if isinstance(channel, TextChannel):
             role = self._everyone_role
-            overwrite = channel.overwrites_for(role)
             permissions = "`Send Messages` and `Add Reactions`"
         else:
             role = self._verified_voice_role
-            overwrite = channel.overwrites_for(role)
             permissions = "`Speak` and `Connect`"
 
+        overwrite = channel.overwrites_for(role)
         # Check if old overwrites were not stored
         if prev_overwrites is None:
             log.info(f"Missing previous overwrites for #{channel} ({channel.id}); defaulting to None.")

@@ -239,8 +239,7 @@ class Reviewer:
 
         await self.api.edit_nomination(nomination.id, reviewed=True, thread_id=thread.id)
 
-        bump_cog: ThreadBumper = self.bot.get_cog("ThreadBumper")
-        if bump_cog:
+        if bump_cog := self.bot.get_cog("ThreadBumper"):
             context = await self.bot.get_context(message)
             await bump_cog.add_thread_to_bump_list(context, thread)
 
@@ -302,8 +301,9 @@ class Reviewer:
 
         parts = []
         for message_ in messages[::-1]:
-            parts.append(message_.content)
-            parts.append("\n" if message_.content.endswith(".") else " ")
+            parts.extend(
+                (message_.content, "\n" if message_.content.endswith(".") else " ")
+            )
         content = "".join(parts)
 
         # We assume that the first user mentioned is the user that we are voting on
@@ -354,11 +354,13 @@ class Reviewer:
         for number, part in enumerate(
                 textwrap.wrap(embed_content, width=MAX_EMBED_SIZE, replace_whitespace=False, placeholder="")
         ):
-            await channel.send(embed=Embed(
-                title=embed_title if number == 0 else None,
-                description="[...] " + part if number != 0 else part,
-                colour=colour
-            ))
+            await channel.send(
+                embed=Embed(
+                    title=embed_title if number == 0 else None,
+                    description=f"[...] {part}" if number != 0 else part,
+                    colour=colour,
+                )
+            )
 
         for message_ in messages:
             with contextlib.suppress(NotFound):
@@ -412,12 +414,7 @@ class Reviewer:
                 channels += f", and {last_channel[1]} in {last_channel[0]}"
 
         joined_at_formatted = time.format_relative(member.joined_at)
-        review = (
-            f"{member.name} joined the server **{joined_at_formatted}**"
-            f" and has **{messages} messages**{channels}."
-        )
-
-        return review
+        return f"{member.name} joined the server **{joined_at_formatted}** and has **{messages} messages**{channels}."
 
     async def _infractions_review(self, member: Member) -> str:
         """
@@ -516,22 +513,13 @@ class Reviewer:
 
         end_time = time.format_relative(history[0].ended_at)
 
-        review = (
-            f"They were nominated **{nomination_times}** before"
-            f", but their nomination was called off **{rejection_times}**."
-            f"\nList of all of their nomination threads: {nomination_vote_threads}"
-            f"\nThe last one ended {end_time} with the reason: {history[0].end_reason}"
-        )
-
-        return review
+        return f"They were nominated **{nomination_times}** before, but their nomination was called off **{rejection_times}**.\nList of all of their nomination threads: {nomination_vote_threads}\nThe last one ended {end_time} with the reason: {history[0].end_reason}"
 
     @staticmethod
     def _random_ducky(guild: Guild) -> Emoji | str:
         """Picks a random ducky emoji. If no duckies found returns 👀."""
         duckies = [emoji for emoji in guild.emojis if emoji.name.startswith("ducky")]
-        if not duckies:
-            return "\N{EYES}"
-        return random.choice(duckies)
+        return "\N{EYES}" if not duckies else random.choice(duckies)
 
     @staticmethod
     async def _bulk_send(channel: TextChannel, text: str) -> list[Message]:

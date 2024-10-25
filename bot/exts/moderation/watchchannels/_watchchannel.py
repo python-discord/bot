@@ -83,8 +83,7 @@ class WatchChannel(metaclass=CogABCMeta):
             return False
 
         if self._consume_task.done():
-            exc = self._consume_task.exception()
-            if exc:
+            if exc := self._consume_task.exception():
                 self.log.exception(
                     "The message queue consume task has failed with:",
                     exc_info=exc
@@ -339,17 +338,14 @@ class WatchChannel(metaclass=CogABCMeta):
         The dictionary additionally has an "updated" field which is true if a cache update was
         requested and it succeeded.
         """
-        list_data = {}
         if update_cache:
             if not await self.fetch_user_cache():
                 update_cache = False
-        list_data["updated"] = update_cache
-
         watched_iter = self.watched_users.items()
         if oldest_first:
             watched_iter = reversed(watched_iter)
 
-        list_data["info"] = {}
+        list_data = {"updated": update_cache, "info": {}}
         for user_id, user_data in watched_iter:
             member = await get_or_fetch_member(ctx.guild, user_id)
             line = f"• `{user_id}`"

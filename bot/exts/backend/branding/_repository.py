@@ -43,8 +43,7 @@ class RemoteObject:
 
     def __init__(self, dictionary: dict[str, t.Any]) -> None:
         """Initialize by grabbing annotated attributes from `dictionary`."""
-        missing_keys = self.__annotations__.keys() - dictionary.keys()
-        if missing_keys:
+        if missing_keys := self.__annotations__.keys() - dictionary.keys():
             raise KeyError(f"Fetched object lacks expected keys: {missing_keys}")
         for annotation in self.__annotations__:
             setattr(self, annotation, dictionary[annotation])
@@ -163,9 +162,10 @@ class BrandingRepository:
         """
         contents = await self.fetch_directory(directory.path)
 
-        missing_assets = {"meta.md", "server_icons", "banners"} - contents.keys()
-
-        if missing_assets:
+        if (
+            missing_assets := {"meta.md", "server_icons", "banners"}
+            - contents.keys()
+        ):
             raise BrandingMisconfigurationError(f"Directory is missing following assets: {missing_assets}")
 
         server_icons = await self.fetch_directory(contents["server_icons"].path, types=("file",))

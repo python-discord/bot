@@ -66,7 +66,7 @@ class ModLog(Cog, name="ModLog"):
         await self.bot.wait_until_guild_available()
         # Truncate string directly here to avoid removing newlines
         embed = discord.Embed(
-            description=text[:4093] + "..." if len(text) > 4096 else text
+            description=f"{text[:4093]}..." if len(text) > 4096 else text
         )
 
         if title and icon_url:
@@ -89,7 +89,7 @@ class ModLog(Cog, name="ModLog"):
 
         # Truncate content to 2000 characters and append an ellipsis.
         if content and len(content) > 2000:
-            content = content[:2000 - 3] + "..."
+            content = f"{content[:2000 - 3]}..."
 
         channel = self.bot.get_channel(channel_id)
         log_message = await channel.send(
@@ -201,11 +201,7 @@ class ModLog(Cog, name="ModLog"):
         if not changes:
             return
 
-        message = ""
-
-        for item in sorted(changes):
-            message += f"{Emojis.bullet} {item}\n"
-
+        message = "".join(f"{Emojis.bullet} {item}\n" for item in sorted(changes))
         if after.category:
             message = f"**{after.category}/#{after.name} (`{after.id}`)**\n{message}"
         else:
@@ -279,11 +275,7 @@ class ModLog(Cog, name="ModLog"):
         if not changes:
             return
 
-        message = ""
-
-        for item in sorted(changes):
-            message += f"{Emojis.bullet} {item}\n"
-
+        message = "".join(f"{Emojis.bullet} {item}\n" for item in sorted(changes))
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
@@ -329,11 +321,7 @@ class ModLog(Cog, name="ModLog"):
         if not changes:
             return
 
-        message = ""
-
-        for item in sorted(changes):
-            message += f"{Emojis.bullet} {item}\n"
-
+        message = "".join(f"{Emojis.bullet} {item}\n" for item in sorted(changes))
         message = f"**{after.name}** (`{after.id}`)\n{message}"
 
         await self.send_log_message(
@@ -417,16 +405,17 @@ class ModLog(Cog, name="ModLog"):
     @staticmethod
     def get_role_diff(before: list[discord.Role], after: list[discord.Role]) -> list[str]:
         """Return a list of strings describing the roles added and removed."""
-        changes = []
         before_roles = set(before)
         after_roles = set(after)
 
-        for role in (before_roles - after_roles):
-            changes.append(f"**Role removed:** {role.name} (`{role.id}`)")
-
-        for role in (after_roles - before_roles):
-            changes.append(f"**Role added:** {role.name} (`{role.id}`)")
-
+        changes = [
+            f"**Role removed:** {role.name} (`{role.id}`)"
+            for role in (before_roles - after_roles)
+        ]
+        changes.extend(
+            f"**Role added:** {role.name} (`{role.id}`)"
+            for role in (after_roles - before_roles)
+        )
         return changes
 
     @Cog.listener()
@@ -464,11 +453,7 @@ class ModLog(Cog, name="ModLog"):
         if not changes:
             return
 
-        message = ""
-
-        for item in sorted(changes):
-            message += f"{Emojis.bullet} {item}\n"
-
+        message = "".join(f"{Emojis.bullet} {item}\n" for item in sorted(changes))
         message = f"{format_user(after)}\n{message}"
 
         await self.send_log_message(
@@ -551,7 +536,7 @@ class ModLog(Cog, name="ModLog"):
 
         if message.attachments:
             # Prepend the message metadata with the number of attachments
-            response = f"**Attachments:** {len(message.attachments)}\n" + response
+            response = f"**Attachments:** {len(message.attachments)}\n{response}"
 
         # Shorten the message content if necessary
         content = message.clean_content
@@ -649,11 +634,7 @@ class ModLog(Cog, name="ModLog"):
 
         for index, (diff_type, words) in enumerate(diff_groups):
             sub = " ".join(words)
-            if diff_type == "-":
-                content_before.append(f"[{sub}](http://o.hi)")
-            elif diff_type == "+":
-                content_after.append(f"[{sub}](http://o.hi)")
-            elif diff_type == " ":
+            if diff_type == " ":
                 if len(words) > 2:
                     sub = (
                         f"{words[0] if index > 0 else ''}"
@@ -663,6 +644,10 @@ class ModLog(Cog, name="ModLog"):
                 content_before.append(sub)
                 content_after.append(sub)
 
+            elif diff_type == "+":
+                content_after.append(f"[{sub}](http://o.hi)")
+            elif diff_type == "-":
+                content_before.append(f"[{sub}](http://o.hi)")
         response = (
             f"**Author:** {format_user(msg_before.author)}\n"
             f"**Channel:** {channel_name} (`{channel.id}`)\n"

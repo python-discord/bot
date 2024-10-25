@@ -40,9 +40,7 @@ class DMRelay(Cog):
             if (embeds := len(msg.embeds)) > 0:
                 output += f"<{embeds} embed{'s' if embeds > 1 else ''}>\n"
 
-            # Attachments
-            attachments = "\n".join(a.url for a in msg.attachments)
-            if attachments:
+            if attachments := "\n".join(a.url for a in msg.attachments):
                 output += attachments + "\n"
 
         if not output:

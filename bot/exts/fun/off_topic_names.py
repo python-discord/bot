@@ -107,9 +107,9 @@ class OffTopicNames(Cog):
         The name is not added if it is too similar to an existing name.
         """
         existing_names = await self.bot.api_client.get("bot/off-topic-channel-names")
-        close_match = difflib.get_close_matches(name, existing_names, n=1, cutoff=0.8)
-
-        if close_match:
+        if close_match := difflib.get_close_matches(
+            name, existing_names, n=1, cutoff=0.8
+        ):
             match = close_match[0]
             log.info(
                 f"{ctx.author} tried to add channel name '{name}' but it was too similar to '{match}'"

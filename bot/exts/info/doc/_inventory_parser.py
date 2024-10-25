@@ -56,10 +56,10 @@ async def _load_v1(stream: aiohttp.StreamReader) -> InventoryDict:
         # version 1 did not add anchors to the location
         if type_ == "mod":
             type_ = "py:module"
-            location += "#module-" + name
+            location += f"#module-{name}"
         else:
-            type_ = "py:" + type_
-            location += "#" + name
+            type_ = f"py:{type_}"
+            location += f"#{name}"
         invdata[type_].append((name, location))
     return invdata
 

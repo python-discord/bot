@@ -31,7 +31,7 @@ def settings_converter(loaded_settings: dict, input_data: str) -> dict[str, Any]
         return {}
 
     try:
-        settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
+        settings = dict([part.split("=", maxsplit=1) for part in parsed])
     except ValueError:
         raise BadArgument("The settings provided are not in the correct format.")
 

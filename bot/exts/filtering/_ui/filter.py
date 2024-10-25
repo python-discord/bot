@@ -288,7 +288,9 @@ class FilterEditView(EditBaseView):
             if description and description is not self._REMOVE:
                 self.embed.description += f" - {description}"
             if len(self.embed.description) > MAX_EMBED_DESCRIPTION:
-                self.embed.description = self.embed.description[:MAX_EMBED_DESCRIPTION - 5] + "[...]"
+                self.embed.description = (
+                    f"{self.embed.description[:MAX_EMBED_DESCRIPTION - 5]}[...]"
+                )
 
         if setting_name:
             # Find the right dictionary to update.
@@ -300,15 +302,18 @@ class FilterEditView(EditBaseView):
                 dict_to_edit = self.settings_overrides
                 default_value = self.filter_list[self.list_type].default(setting_name)
             # Update the setting override value or remove it
-            if setting_value is not self._REMOVE:
-                if not repr_equals(setting_value, default_value):
-                    dict_to_edit[setting_name] = setting_value
-                # If there's already an override, remove it, since the new value is the same as the default.
-                elif setting_name in dict_to_edit:
-                    dict_to_edit.pop(setting_name)
-            elif setting_name in dict_to_edit:
+            if setting_value is not self._REMOVE and not repr_equals(
+                setting_value, default_value
+            ):
+                dict_to_edit[setting_name] = setting_value
+            elif (
+                setting_value is not self._REMOVE
+                and repr_equals(setting_value, default_value)
+                and setting_name in dict_to_edit
+                or setting_value is self._REMOVE
+                and setting_name in dict_to_edit
+            ):
                 dict_to_edit.pop(setting_name)
-
         # This is inefficient, but otherwise the selects go insane if the user attempts to edit the same setting
         # multiple times, even when replacing the select with a new one.
         self.embed.clear_fields()
@@ -396,11 +401,8 @@ def description_and_settings_converter(
     if not SINGLE_SETTING_PATTERN.match(parsed[0]):
         description, *parsed = parsed
 
-    settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
-    template = None
-    if "--template" in settings:
-        template = settings.pop("--template")
-
+    settings = dict([part.split("=", maxsplit=1) for part in parsed])
+    template = settings.pop("--template") if "--template" in settings else None
     filter_settings = {}
     for setting, _ in list(settings.items()):
         if setting in loaded_settings:  # It's a filter list setting

@@ -38,9 +38,7 @@ class Filter(FieldRequiring):
     @property
     def overrides(self) -> tuple[dict[str, Any], dict[str, Any]]:
         """Return a tuple of setting overrides and filter setting overrides."""
-        settings = {}
-        if self.actions:
-            settings = self.actions.overrides
+        settings = self.actions.overrides if self.actions else {}
         if self.validations:
             settings |= self.validations.overrides
 

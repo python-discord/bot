@@ -52,8 +52,7 @@ class ValidDiscordServerInvite(Converter):
 
     async def convert(self, ctx: Context, server_invite: str) -> dict:
         """Check whether the string is a valid Discord server invite."""
-        invite_code = DISCORD_INVITE.match(server_invite)
-        if invite_code:
+        if invite_code := DISCORD_INVITE.match(server_invite):
             response = await ctx.bot.http_session.get(
                 f"{URLs.discord_invite_api}/{invite_code.group('invite')}"
             )
@@ -78,7 +77,7 @@ class Extension(Converter):
     async def convert(self, ctx: Context, argument: str) -> str:
         """Fully qualify the name of an extension and ensure it exists."""
         # Special values to reload all extensions
-        if argument == "*" or argument == "**":
+        if argument in {"*", "**"}:
             return argument
 
         argument = argument.lower()
@@ -89,11 +88,11 @@ class Extension(Converter):
         if (qualified_arg := f"{exts.__name__}.{argument}") in bot_instance.all_extensions:
             return qualified_arg
 
-        matches = []
-        for ext in bot_instance.all_extensions:
-            if argument == unqualify(ext):
-                matches.append(ext)
-
+        matches = [
+            ext
+            for ext in bot_instance.all_extensions
+            if argument == unqualify(ext)
+        ]
         if len(matches) > 1:
             matches.sort()
             names = "\n".join(matches)
@@ -229,12 +228,10 @@ class SourceConverter(Converter):
         if argument.lower() == "help":
             return ctx.bot.help_command
 
-        cog = ctx.bot.get_cog(argument)
-        if cog:
+        if cog := ctx.bot.get_cog(argument):
             return cog
 
-        cmd = ctx.bot.get_command(argument)
-        if cmd:
+        if cmd := ctx.bot.get_command(argument):
             return cmd
 
         tags_cog = ctx.bot.get_cog("Tags")
@@ -386,11 +383,7 @@ class ISODateTime(Converter):
         except ValueError:
             raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
 
-        if dt.tzinfo:
-            dt = dt.astimezone(UTC)
-        else:  # Without a timezone, assume it represents UTC.
-            dt = dt.replace(tzinfo=UTC)
-
+        dt = dt.astimezone(UTC) if dt.tzinfo else dt.replace(tzinfo=UTC)
         return dt
 
 
@@ -477,7 +470,7 @@ class Infraction(Converter):
 
     async def convert(self, ctx: Context, arg: str) -> dict | None:
         """Attempts to convert `arg` into an infraction `dict`."""
-        if arg in ("l", "last", "recent"):
+        if arg in {"l", "last", "recent"}:
             params = {
                 "actor__id": ctx.author.id,
                 "ordering": "-inserted_at"

@@ -66,10 +66,7 @@ class Utils(Cog):
 
         def get_info(char: str) -> tuple[str, str]:
             digit = f"{ord(char):x}"
-            if len(digit) <= 4:
-                u_code = f"\\u{digit:>04}"
-            else:
-                u_code = f"\\U{digit:>08}"
+            u_code = f"\\u{digit:>04}" if len(digit) <= 4 else f"\\U{digit:>08}"
             url = f"https://www.compart.com/en/unicode/U+{digit:>04}"
             name = f"[{unicodedata.name(char, '')}]({url})"
             info = f"`{u_code.ljust(10)}`: {name} - {utils.escape_markdown(char)}"

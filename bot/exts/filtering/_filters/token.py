@@ -15,8 +15,7 @@ class TokenFilter(Filter):
         """Searches for a regex pattern within a given context."""
         pattern = self.content
 
-        match = re.search(pattern, ctx.content, flags=re.IGNORECASE)
-        if match:
+        if match := re.search(pattern, ctx.content, flags=re.IGNORECASE):
             ctx.matches.append(match[0])
             return True
         return False

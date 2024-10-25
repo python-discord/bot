@@ -105,9 +105,9 @@ class LinePaginator(Paginator):
         if len(line) > (max_chars := self.max_size - len(self.prefix) - 2):
             if len(line) > self.scale_to_size:
                 line, remaining_words = self._split_remaining_words(line, max_chars)
-                if len(line) > self.scale_to_size:
-                    log.debug("Could not continue to next page, truncating line.")
-                    line = line[:self.scale_to_size]
+            if len(line) > self.scale_to_size:
+                log.debug("Could not continue to next page, truncating line.")
+                line = line[:self.scale_to_size]
 
         # Check if we should start a new page or continue the line on the current one
         if self.max_lines is not None and self._linecount >= self.max_lines:
@@ -167,19 +167,18 @@ class LinePaginator(Paginator):
         is_full = False
 
         for word in line.split(" "):
-            if not is_full:
-                if len(word) + reduced_char_count <= max_chars:
-                    reduced_words.append(word)
-                    reduced_char_count += len(word) + 1
-                else:
-                    # If reduced_words is empty, we were unable to split the words across pages
-                    if not reduced_words:
-                        return line, None
-                    is_full = True
-                    remaining_words.append(word)
-            else:
+            if is_full:
                 remaining_words.append(word)
 
+            elif len(word) + reduced_char_count <= max_chars:
+                reduced_words.append(word)
+                reduced_char_count += len(word) + 1
+            else:
+                # If reduced_words is empty, we were unable to split the words across pages
+                if not reduced_words:
+                    return line, None
+                is_full = True
+                remaining_words.append(word)
         return (
             " ".join(reduced_words) + "..." if remaining_words else "",
             continuation_header + " ".join(remaining_words) if remaining_words else None

@@ -122,25 +122,28 @@ class Clean(Cog):
     ) -> set[TextChannel]:
         """Standardize the input `channels` argument to a usable set of text channels."""
         # Default to using the invoking context's channel or the channel of the message limit(s).
-        if not channels:
-            # Input was validated - if first_limit is a message, second_limit won't point at a different channel.
-            if isinstance(first_limit, Message):
-                channels = {first_limit.channel}
-            elif isinstance(second_limit, Message):
-                channels = {second_limit.channel}
-            else:
-                channels = {ctx.channel}
-        else:
-            if channels == "*":
-                channels = {
-                    channel for channel in itertools.chain(ctx.guild.channels, ctx.guild.threads)
+        if channels:
+            channels = (
+                {
+                    channel
+                    for channel in itertools.chain(
+                        ctx.guild.channels, ctx.guild.threads
+                    )
                     if isinstance(channel, TextChannel | Thread)
                     # Assume that non-public channels are not needed to optimize for speed.
-                    and channel.permissions_for(ctx.guild.default_role).view_channel
+                    and channel.permissions_for(
+                        ctx.guild.default_role
+                    ).view_channel
                 }
-            else:
-                channels = set(channels)
-
+                if channels == "*"
+                else set(channels)
+            )
+        elif isinstance(first_limit, Message):
+            channels = {first_limit.channel}
+        elif isinstance(second_limit, Message):
+            channels = {second_limit.channel}
+        else:
+            channels = {ctx.channel}
         return channels
 
     @staticmethod
@@ -325,7 +328,7 @@ class Clean(Cog):
 
             if not self.cleaning:
                 return deleted
-            if len(to_delete) > 0:
+            if to_delete:
                 # Deleting any leftover messages if there are any
                 with suppress(NotFound):
                     await channel.delete_messages(to_delete)
@@ -448,13 +451,13 @@ class Clean(Cog):
             f"{Emojis.ok_hand} Deleted {len(deleted_messages)} messages. "
             f"A log of the deleted messages can be found here {log_url}."
         )
-        if log_url and is_mod_channel(ctx.channel):
-            try:
-                await ctx.reply(success_message)
-            except errors.HTTPException:
-                await ctx.send(success_message)
-        elif log_url:
-            if mods := self.bot.get_channel(Channels.mods):
+        if log_url:
+            if is_mod_channel(ctx.channel):
+                try:
+                    await ctx.reply(success_message)
+                except errors.HTTPException:
+                    await ctx.send(success_message)
+            elif mods := self.bot.get_channel(Channels.mods):
                 await mods.send(f"{ctx.author.mention} {success_message}")
         return log_url
 

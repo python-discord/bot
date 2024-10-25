@@ -44,7 +44,7 @@ class WebhookFilter(UniqueFilter):
             # Queue the webhook for deletion.
             ctx.additional_actions.append(self._delete_webhook_wrapper(match[0], extra))
             # Don't show the full webhook in places such as the mod alert.
-            ctx.content = ctx.content.replace(match[0], match[1] + "xxx")
+            ctx.content = ctx.content.replace(match[0], f"{match[1]}xxx")
 
         return True
 
@@ -56,8 +56,8 @@ class WebhookFilter(UniqueFilter):
             async with bot.instance.http_session.delete(webhook_url) as resp:
                 # The Discord API Returns a 204 NO CONTENT response on success.
                 if resp.status == 204:
-                    ctx.action_descriptions.append("webhook deleted" + extra_message)
+                    ctx.action_descriptions.append(f"webhook deleted{extra_message}")
                 else:
-                    ctx.action_descriptions.append("failed to delete webhook" + extra_message)
+                    ctx.action_descriptions.append(f"failed to delete webhook{extra_message}")
 
         return _delete_webhook

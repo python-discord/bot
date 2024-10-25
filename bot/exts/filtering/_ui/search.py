@@ -39,14 +39,11 @@ def search_criteria_converter(
         return {}, {}, filter_type
 
     try:
-        settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
+        settings = dict([part.split("=", maxsplit=1) for part in parsed])
     except ValueError:
         raise BadArgument("The settings provided are not in the correct format.")
 
-    template = None
-    if "--template" in settings:
-        template = settings.pop("--template")
-
+    template = settings.pop("--template") if "--template" in settings else None
     filter_settings = {}
     for setting, _ in list(settings.items()):
         if setting in loaded_settings:  # It's a filter list setting

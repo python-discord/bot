@@ -69,10 +69,7 @@ def extract_event_duration(event: Event) -> str:
     start_date = event.meta.start_date.strftime(fmt)
     end_date = event.meta.end_date.strftime(fmt)
 
-    if start_date == end_date:
-        return start_date
-
-    return f"{start_date} - {end_date}"
+    return start_date if start_date == end_date else f"{start_date} - {end_date}"
 
 
 def extract_event_name(event: Event) -> str:
@@ -525,13 +522,14 @@ class Branding(commands.Cog):
         async with ctx.typing():
             banner_success, icon_success = await self.synchronise()
 
-        failed_assets = ", ".join(
+        if failed_assets := ", ".join(
             name
-            for name, status in [("banner", banner_success), ("icon", icon_success)]
+            for name, status in [
+                ("banner", banner_success),
+                ("icon", icon_success),
+            ]
             if status is False
-        )
-
-        if failed_assets:
+        ):
             resp = make_embed("Synchronisation unsuccessful", f"Failed to apply: {failed_assets}.", success=False)
             resp.set_footer(text="Check log for details.")
         else:

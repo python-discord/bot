@@ -77,7 +77,7 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
             log_site_msg = f"The full message can be found [here]({url})"
             # 7 because that's the length of "[...]\n\n"
             return alert_content[:remaining_chars - (7 + len(log_site_msg))] + "[...]\n\n" + log_site_msg
-        return alert_content[:remaining_chars - 5] + "[...]"
+        return f"{alert_content[:remaining_chars - 5]}[...]"
 
     return alert_content
 
@@ -98,10 +98,11 @@ async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList
         triggered_by += "\n"
         triggered_in = ""
 
-    filters = []
-    for filter_list, list_message in triggered_filters.items():
-        if list_message:
-            filters.append(f"**{filter_list.name.title()} Filters:** {', '.join(list_message)}")
+    filters = [
+        f"**{filter_list.name.title()} Filters:** {', '.join(list_message)}"
+        for filter_list, list_message in triggered_filters.items()
+        if list_message
+    ]
     filters = "\n".join(filters)
 
     matches = "**Matches:** " + escape_markdown(", ".join(repr(match) for match in ctx.matches)) if ctx.matches else ""
@@ -130,7 +131,7 @@ def populate_embed_from_dict(embed: Embed, data: dict) -> None:
         else:
             value = str(value) if value not in ("", None) else "-"
         if len(value) > MAX_FIELD_SIZE:
-            value = value[:MAX_FIELD_SIZE] + " [...]"
+            value = f"{value[:MAX_FIELD_SIZE]} [...]"
         embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
 
 
@@ -145,10 +146,7 @@ def parse_value(value: str, type_: type[T]) -> T:
         return list(value.split(","))
     if type_ is bool:
         return value.lower() == "true" or value == "1"
-    if isinstance(type_, EnumMeta):
-        return type_[value.upper()]
-
-    return type_(value)
+    return type_[value.upper()] if isinstance(type_, EnumMeta) else type_(value)
 
 
 def format_response_error(e: ResponseCodeError) -> Embed:
@@ -165,12 +163,13 @@ def format_response_error(e: ResponseCodeError) -> Embed:
 
     description = description.strip()
     if len(description) > MAX_EMBED_DESCRIPTION:
-        description = description[:MAX_EMBED_DESCRIPTION] + "[...]"
+        description = f"{description[:MAX_EMBED_DESCRIPTION]}[...]"
     if not description:
         description = "Something unexpected happened, check the logs."
 
-    embed = Embed(colour=discord.Colour.red(), title="Oops...", description=description)
-    return embed
+    return Embed(
+        colour=discord.Colour.red(), title="Oops...", description=description
+    )
 
 
 class ArgumentCompletionSelect(discord.ui.Select):
@@ -389,7 +388,9 @@ class SequenceEditView(discord.ui.View):
 
     async def apply_edit(self, interaction: Interaction, new_list: str) -> None:
         """Change the contents of the list."""
-        self.stored_value = list(set(part.strip() for part in new_list.split(",") if part.strip()))
+        self.stored_value = list(
+            {part.strip() for part in new_list.split(",") if part.strip()}
+        )
         await interaction.response.edit_message(
             content=f"Current list: [{', '.join(self.stored_value)}]", view=self.copy()
         )

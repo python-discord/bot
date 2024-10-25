@@ -192,12 +192,9 @@ class Reminders(Cog):
 
         Returns the edited reminder.
         """
-        # Send the request to update the reminder in the database
-        reminder = await self.bot.api_client.patch(
-            "bot/reminders/" + str(reminder_id),
-            json=payload
+        return await self.bot.api_client.patch(
+            f"bot/reminders/{reminder_id}", json=payload
         )
-        return reminder
 
     async def _reschedule_reminder(self, reminder: dict) -> None:
         """Reschedule a reminder object."""
@@ -349,9 +346,9 @@ class Reminders(Cog):
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
             content = await self.try_get_content_from_reply(ctx)
-            if not content:
-                # Couldn't get content from reply
-                return
+        if not content:
+            # Couldn't get content from reply
+            return
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
@@ -470,9 +467,9 @@ class Reminders(Cog):
         """
         if not content:
             content = await self.try_get_content_from_reply(ctx)
-            if not content:
-                # Message doesn't have a reply to get content from
-                return
+        if not content:
+            # Message doesn't have a reply to get content from
+            return
         await self.edit_reminder(ctx, id_, {"content": content})
 
     @edit_reminder_group.command(name="mentions", aliases=("pings",))
@@ -579,11 +576,7 @@ class Reminders(Cog):
         if await has_any_role_check(ctx, Roles.admins):
             log.debug(f"{ctx.author} is an admin, asking for confirmation to modify someone else's.")
 
-            if ctx.command == self.delete_reminder:
-                modify_action = "delete"
-            else:
-                modify_action = "edit"
-
+            modify_action = "delete" if ctx.command == self.delete_reminder else "edit"
             confirmation_view = ModifyReminderConfirmationView(ctx.author)
             confirmation_message = await ctx.reply(
                 f"Are you sure you want to {modify_action} <@{owner_id}>'s reminder?",

@@ -42,7 +42,7 @@ class AntispamList(UniquesListBase):
 
     def __init__(self, filtering_cog: "Filtering"):
         super().__init__(filtering_cog)
-        self.message_deletion_queue: dict[Member, DeletionContext] = dict()
+        self.message_deletion_queue: dict[Member, DeletionContext] = {}
 
     def get_filter_type(self, content: str) -> type[UniqueFilter] | None:
         """Get a subclass of filter matching the filter list and the filter's content."""

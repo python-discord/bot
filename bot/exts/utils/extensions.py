@@ -68,9 +68,7 @@ class Extensions(commands.Cog):
             await ctx.send_help(ctx.command)
             return
 
-        blacklisted = "\n".join(UNLOAD_BLACKLIST & set(extensions))
-
-        if blacklisted:
+        if blacklisted := "\n".join(UNLOAD_BLACKLIST & set(extensions)):
             await ctx.send(f":x: The following extension(s) may not be unloaded:```\n{blacklisted}```")
         else:
             if "*" in extensions or "**" in extensions:

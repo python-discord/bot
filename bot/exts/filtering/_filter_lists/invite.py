@@ -85,8 +85,8 @@ class InviteList(FilterList[InviteFilter]):
         check_if_allowed = not failed
 
         # Sort the invites into two categories:
-        invites_for_inspection = dict()  # Found guild invites requiring further inspection.
-        unknown_invites = dict()  # Either don't resolve or group DMs.
+        invites_for_inspection = {}
+        unknown_invites = {}
         for invite_code in refined_invites.values():
             try:
                 invite = await bot.instance.fetch_invite(invite_code)
@@ -131,9 +131,7 @@ class InviteList(FilterList[InviteFilter]):
         if not triggered and not unknown_invites:
             return None, [], all_triggers
 
-        actions = None
-        if unknown_invites:  # There are invites which weren't allowed but aren't explicitly blocked.
-            actions = self[ListType.ALLOW].defaults.actions
+        actions = self[ListType.ALLOW].defaults.actions if unknown_invites else None
         # Blocked invites come second so that their actions have preference.
         if triggered:
             if actions:

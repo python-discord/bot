@@ -74,10 +74,12 @@ class DocRedisCache(RedisObject):
         """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
         pattern = f"{self.namespace}:{package}:*"
 
-        package_keys = [
-            package_key async for package_key in self.redis_session.client.scan_iter(match=pattern)
-        ]
-        if package_keys:
+        if package_keys := [
+            package_key
+            async for package_key in self.redis_session.client.scan_iter(
+                match=pattern
+            )
+        ]:
             await self.redis_session.client.delete(*package_keys)
             log.info(f"Deleted keys from redis: {package_keys}.")
             self._set_expires = {
@@ -102,11 +104,12 @@ class StaleItemCounter(RedisObject):
 
     async def delete(self, package: str) -> bool:
         """Remove all values for `package`; return True if at least one key was deleted, False otherwise."""
-        package_keys = [
+        if package_keys := [
             package_key
-            async for package_key in self.redis_session.client.scan_iter(match=f"{self.namespace}:{package}:*")
-        ]
-        if package_keys:
+            async for package_key in self.redis_session.client.scan_iter(
+                match=f"{self.namespace}:{package}:*"
+            )
+        ]:
             await self.redis_session.client.delete(*package_keys)
             return True
         return False

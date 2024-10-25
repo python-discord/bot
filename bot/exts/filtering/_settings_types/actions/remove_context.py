@@ -67,7 +67,7 @@ class RemoveContext(ActionEntry):
             channel_messages[message.channel].add(message)
 
         success = fail = 0
-        deleted = list()
+        deleted = []
         for channel, messages in channel_messages.items():
             try:
                 await channel.delete_messages(messages)

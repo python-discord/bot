@@ -32,7 +32,7 @@ class LoggingTestsMixin:
     """
 
     @contextmanager
-    def assertNotLogs(self, logger=None, level=None, msg=None):  # noqa: N802
+    def assertNotLogs(self, logger=None, level=None, msg=None):    # noqa: N802
         """
         Asserts that no logs of `level` and higher were emitted by `logger`.
 
@@ -45,11 +45,7 @@ class LoggingTestsMixin:
         if not isinstance(logger, logging.Logger):
             logger = get_logger(logger)
 
-        if level:
-            level = logging._nameToLevel.get(level, level)
-        else:
-            level = logging.INFO
-
+        level = logging._nameToLevel.get(level, level) if level else logging.INFO
         handler = _CaptureLogHandler()
         old_handlers = logger.handlers[:]
         old_level = logger.level
