@@ -627,7 +627,7 @@ NEGATIVE_REPLIES = (
     "Not likely.",
     "No way, José.",
     "Not in a million years.",
-    "I would love to, but unfortunately ... no.",
+    "I would love to, but unfortunately... no.",
     "Certainly not.",
     "NEGATORY.",
     "Nuh-uh.",
