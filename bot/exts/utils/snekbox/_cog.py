@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 log = get_logger(__name__)
 
+ANSI_REGEX = re.compile(r"\N{ESC}\[[0-9;:]*m")
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 
 # The timeit command should only output the very last line, so all other output should be suppressed.
@@ -281,7 +282,10 @@ class Snekbox(Cog):
             output = f"{output[:max_chars]}\n... (truncated - too long)"
 
         if truncated:
-            paste_link = await self.upload_output(original_output)
+            # ANSI colors are quite nice, but don't render in pinwand,
+            #   thus mangling the output
+            ansiless_output = ANSI_REGEX.sub("", original_output)
+            paste_link = await self.upload_output(ansiless_output)
 
         if output_default and not output:
             output = output_default
@@ -400,7 +404,7 @@ class Snekbox(Cog):
 
             # Skip output if it's empty and there are file uploads
             if result.stdout or not result.has_files:
-                msg += f"\n```\n{output}\n```"
+                msg += f"\n```ansi\n{output}\n```"
 
             if paste_link:
                 msg += f"\nFull output: {paste_link}"
