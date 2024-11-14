@@ -312,7 +312,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             ctx.send.call_args.args[0],
             ":warning: Your 3.12 eval job has completed "
-            "with return code 0.\n\n```\n[No output]\n```"
+            "with return code 0.\n\n```ansi\n[No output]\n```"
         )
         allowed_mentions = ctx.send.call_args.kwargs["allowed_mentions"]
         expected_allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
@@ -343,7 +343,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             ctx.send.call_args.args[0],
             ":white_check_mark: Your 3.12 eval job "
             "has completed with return code 0."
-            "\n\n```\nWay too long beard\n```\nFull output: lookatmybeard.com"
+            "\n\n```ansi\nWay too long beard\n```\nFull output: lookatmybeard.com"
         )
 
         self.cog.post_job.assert_called_once_with(job)
@@ -369,7 +369,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             ctx.send.call_args.args[0],
             ":x: Your 3.12 eval job has completed with return code 127."
-            "\n\n```\nERROR\n```"
+            "\n\n```ansi\nERROR\n```"
         )
 
         self.cog.post_job.assert_called_once_with(job)

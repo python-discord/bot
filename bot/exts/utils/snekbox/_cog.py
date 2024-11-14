@@ -400,7 +400,7 @@ class Snekbox(Cog):
 
             # Skip output if it's empty and there are file uploads
             if result.stdout or not result.has_files:
-                msg += f"\n```\n{output}\n```"
+                msg += f"\n```ansi\n{output}\n```"
 
             if paste_link:
                 msg += f"\nFull output: {paste_link}"
