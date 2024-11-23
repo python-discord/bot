@@ -75,7 +75,7 @@ unsafe-fixes = true
 [tool.ruff.lint]
 select = ["ANN", "B", "C4", "D", "DTZ", "E", "F", "I", "ISC", "INT", "N", "PGH", "PIE", "Q", "RET", "RSE", "RUF", "S", "SIM", "T20", "TID", "UP", "W"]
 ignore = [
-    "ANN002", "ANN003", "ANN101", "ANN102", "ANN204", "ANN206", "ANN401",
+    "ANN002", "ANN003", "ANN204", "ANN206", "ANN401",
     "B904",
     "C401", "C408",
     "D100", "D104", "D105", "D107", "D203", "D212", "D214", "D215", "D301",
