@@ -5,6 +5,7 @@ import importlib.util
 import inspect
 import pkgutil
 import types
+import urllib.parse
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -55,8 +56,16 @@ def clean_input(string: str) -> str:
     # For future consideration: remove characters in the Mc, Sk, and Lm categories too.
     # Can be normalised with form C to merge char + combining char into a single char to avoid
     # removing legit diacritics, but this would open up a way to bypass _filters.
-    no_zalgo = ZALGO_RE.sub("", string)
-    return INVISIBLE_RE.sub("", no_zalgo)
+    content = ZALGO_RE.sub("", string)
+
+    # URL quoted strings can be used to hide links to servers
+    content = urllib.parse.unquote(content)
+    # Drop newlines that can be used to bypass filter
+    content = content.replace("\n", "")
+    # Avoid escape characters
+    content = content.replace("\\", "")
+
+    return INVISIBLE_RE.sub("", content)
 
 
 def past_tense(word: str) -> str:

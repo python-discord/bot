@@ -62,9 +62,6 @@ class InviteList(FilterList[InviteFilter]):
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         text = clean_input(ctx.content)
 
-        # Avoid escape characters
-        text = text.replace("\\", "")
-
         matches = list(DISCORD_INVITE.finditer(text))
         invite_codes = {m.group("invite") for m in matches}
         if not invite_codes:
