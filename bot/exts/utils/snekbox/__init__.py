@@ -2,7 +2,7 @@ from bot.bot import Bot
 from bot.exts.utils.snekbox._cog import CodeblockConverter, Snekbox
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 
-__all__ = ("CodeblockConverter", "Snekbox", "EvalJob", "EvalResult")
+__all__ = ("CodeblockConverter", "EvalJob", "EvalResult", "Snekbox")
 
 
 async def setup(bot: Bot) -> None:
