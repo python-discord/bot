@@ -69,6 +69,8 @@ source = ["tests"]
 target-version = "py312"
 extend-exclude = [".cache"]
 line-length = 120
+output-format = "concise"
+unsafe-fixes = true
 
 [tool.ruff.lint]
 select = ["ANN", "B", "C4", "D", "DTZ", "E", "F", "I", "ISC", "INT", "N", "PGH", "PIE", "Q", "RET", "RSE", "RUF", "S", "SIM", "T20", "TID", "UP", "W"]
