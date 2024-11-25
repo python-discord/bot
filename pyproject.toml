@@ -32,7 +32,7 @@ pydantic = "2.10.1"
 pydantic-settings = "2.6.1"
 
 [tool.poetry.dev-dependencies]
-coverage = "7.6.7"
+coverage = "7.6.8"
 httpx = "0.27.2"
 pre-commit = "4.0.1"
 pip-licenses = "5.0.0"
