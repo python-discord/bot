@@ -1152,13 +1152,13 @@ source = ["Cython (>=3.0.11)"]
 
 [[package]]
 name = "markdownify"
-version = "0.13.1"
+version = "0.14.1"
 description = "Convert HTML to markdown."
 optional = false
 python-versions = "*"
 files = [
-    {file = "markdownify-0.13.1-py3-none-any.whl", hash = "sha256:1d181d43d20902bcc69d7be85b5316ed174d0dda72ff56e14ae4c95a4a407d22"},
-    {file = "markdownify-0.13.1.tar.gz", hash = "sha256:ab257f9e6bd4075118828a28c9d02f8a4bfeb7421f558834aa79b2dfeb32a098"},
+    {file = "markdownify-0.14.1-py3-none-any.whl", hash = "sha256:4c46a6c0c12c6005ddcd49b45a5a890398b002ef51380cd319db62df5e09bc2a"},
+    {file = "markdownify-0.14.1.tar.gz", hash = "sha256:a62a7a216947ed0b8dafb95b99b2ef4a0edd1e18d5653c656f68f03db2bfb2f1"},
 ]
 
 [package.dependencies]
@@ -2612,4 +2612,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.*"
-content-hash = "b8abb2cf58988d7179ecd52177055f72f8982cf3c22a8b5d2c207552a9d892a0"
+content-hash = "2b344700d46300d2a6efe80df537357e8e49d5892594e5546d28ce692f8db260"
