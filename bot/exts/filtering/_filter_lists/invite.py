@@ -60,7 +60,7 @@ class InviteList(FilterList[InviteFilter]):
         self, ctx: FilterContext
     ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
-        text = clean_input(ctx.content)
+        text = clean_input(ctx.content, keep_newlines=True)
 
         matches = list(DISCORD_INVITE.finditer(text))
         invite_codes = {m.group("invite") for m in matches}

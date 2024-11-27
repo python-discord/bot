@@ -51,7 +51,7 @@ def subclasses_in_package(package: str, prefix: str, parent: T) -> set[T]:
     return subclasses
 
 
-def clean_input(string: str) -> str:
+def clean_input(string: str, *, keep_newlines: bool = False) -> str:
     """Remove zalgo and invisible characters from `string`."""
     # For future consideration: remove characters in the Mc, Sk, and Lm categories too.
     # Can be normalised with form C to merge char + combining char into a single char to avoid
@@ -60,8 +60,8 @@ def clean_input(string: str) -> str:
 
     # URL quoted strings can be used to hide links to servers
     content = urllib.parse.unquote(content)
-    # Drop newlines that can be used to bypass filter
-    content = content.replace("\n", "")
+    if not keep_newlines:  # Drop newlines that can be used to bypass filter
+        content = content.replace("\n", "")
     # Avoid escape characters
     content = content.replace("\\", "")
 
