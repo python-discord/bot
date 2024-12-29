@@ -41,7 +41,7 @@ pytest-cov = "6.0.0"
 pytest-subtests = "0.13.1"
 pytest-xdist = "3.6.1"
 ruff = "0.8.0"
-taskipy = "1.14.0"
+taskipy = "1.14.1"
 
 
 [build-system]
