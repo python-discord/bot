@@ -186,7 +186,7 @@ def _get_truncated_description(
 
     # Nothing needs to be truncated if the last element ends before the truncation index.
     if truncate_index >= markdown_element_ends[-1]:
-        return result
+        return result.strip(string.whitespace)
 
     # Determine the actual truncation index.
     possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
