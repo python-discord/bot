@@ -96,6 +96,7 @@ class MarkdownCreationTest(TestCase):
         test_cases = (
             ("<p>Hello World</p>", "Hello World"),
             ("<p>Hello</p><p>World</p>", "Hello\n\nWorld"),
+            ("<h1>Title</h1>", "**Title**")
         )
         self._run_tests(test_cases)
 
