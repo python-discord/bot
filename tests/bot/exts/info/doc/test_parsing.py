@@ -1,5 +1,7 @@
 from unittest import TestCase
 
+from bs4 import BeautifulSoup
+
 from bot.exts.info.doc import _parsing as parsing
 from bot.exts.info.doc._markdown import DocMarkdownConverter
 
@@ -87,3 +89,19 @@ class MarkdownConverterTest(TestCase):
             with self.subTest(input_string=input_string):
                 d = DocMarkdownConverter(page_url="https://example.com")
                 self.assertEqual(d.convert(input_string), expected_output)
+
+
+class MarkdownCreationTest(TestCase):
+    def test_surrounding_whitespace(self):
+        test_cases = (
+            ("<p>Hello World</p>", "Hello World"),
+            ("<p>Hello</p><p>World</p>", "Hello\n\nWorld"),
+            ("<h1>Title</h1>", "**Title**")
+        )
+        self._run_tests(test_cases)
+
+    def _run_tests(self, test_cases: tuple[tuple[str, str], ...]):
+        for input_string, expected_output in test_cases:
+            with self.subTest(input_string=input_string):
+                tags = BeautifulSoup(input_string, "html.parser")
+                self.assertEqual(parsing._create_markdown(None, tags, "https://example.com"), expected_output)

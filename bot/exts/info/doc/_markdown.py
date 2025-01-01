@@ -31,7 +31,7 @@ class DocMarkdownConverter(markdownify.MarkdownConverter):
             bullet = bullets[depth % len(bullets)]
         return f"{bullet} {text}\n"
 
-    def convert_hn(self, _n: int, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def _convert_hn(self, _n: int, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Convert h tags to bold text with ** instead of adding #."""
         if convert_as_inline:
             return text
