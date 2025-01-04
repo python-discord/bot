@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import arrow
 import discord
+import pydis_core
 from pydis_core.utils import scheduling
 from pydis_core.utils.channel import get_or_fetch_channel
 
@@ -44,6 +45,9 @@ def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
 
 async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:
     """Close the help post and record stats."""
+    # Get Thread with updated metadata (such as the title)
+    closed_post = await pydis_core.utils.channel.get_or_fetch_channel(bot.instance, closed_post.id)
+
     embed = discord.Embed(description=CLOSED_POST_MSG)
     embed.set_author(name=f"{POST_TITLE} closed", icon_url=CLOSED_POST_ICON_URL)
     message = ""
