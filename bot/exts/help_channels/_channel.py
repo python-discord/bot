@@ -41,7 +41,11 @@ def is_help_forum_post(channel: discord.abc.GuildChannel) -> bool:
     return getattr(channel, "parent_id", None) == constants.Channels.python_help
 
 
-async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.ClosingReason) -> None:
+async def _close_help_post(
+    closed_post: discord.Thread,
+    closing_reason: _stats.ClosingReason,
+    scheduler: scheduling.Scheduler,
+) -> None:
     """Close the help post and record stats."""
     # Get Thread with updated metadata (such as the title)
     closed_post = await get_or_fetch_channel(bot.instance, closed_post.id)
@@ -82,6 +86,8 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
         locked=True,
         reason="Locked a closed help post",
     )
+    if closed_post.id in scheduler:
+        scheduler.cancel(closed_post.id)
 
     _stats.report_post_count()
     await _stats.report_complete_session(closed_post, closing_reason)
@@ -98,14 +104,18 @@ async def send_opened_post_message(post: discord.Thread) -> None:
     await post.send(embed=embed, content=post.owner.mention)
 
 
-async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False) -> None:
+async def help_post_opened(
+    opened_post: discord.Thread,
+    *,
+    scheduler: scheduling.Scheduler,
+) -> None:
     """Apply new post logic to a new help forum post."""
     _stats.report_post_count()
     bot.instance.stats.incr("help.claimed")
 
     if not isinstance(opened_post.owner, discord.Member):
         log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
-        await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP)
+        await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP, scheduler)
         return
 
     try:
@@ -124,12 +134,12 @@ async def help_post_opened(opened_post: discord.Thread, *, reopen: bool = False)
     await send_opened_post_message(opened_post)
 
 
-async def help_post_closed(closed_post: discord.Thread) -> None:
+async def help_post_closed(closed_post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
     """Apply archive logic to a manually closed help forum post."""
-    await _close_help_post(closed_post, _stats.ClosingReason.COMMAND)
+    await _close_help_post(closed_post, _stats.ClosingReason.COMMAND, scheduler)
 
 
-async def help_post_archived(archived_post: discord.Thread) -> None:
+async def help_post_archived(archived_post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
     """Apply archive logic to an archived help forum post."""
     async for thread_update in archived_post.guild.audit_logs(limit=50, action=discord.AuditLogAction.thread_update):
         if thread_update.target.id != archived_post.id:
@@ -140,7 +150,7 @@ async def help_post_archived(archived_post: discord.Thread) -> None:
         if thread_update.user.id == bot.instance.user.id:
             return
 
-    await _close_help_post(archived_post, _stats.ClosingReason.NATIVE)
+    await _close_help_post(archived_post, _stats.ClosingReason.NATIVE, scheduler)
 
 
 async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) -> None:
@@ -204,7 +214,7 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
         log.info(
             f"#{post} ({post.id}) is idle past {closing_time} and will be archived. Reason: {closing_reason.value}"
         )
-        await _close_help_post(post, closing_reason)
+        await _close_help_post(post, closing_reason, scheduler)
         return
 
     if post.id in scheduler:
