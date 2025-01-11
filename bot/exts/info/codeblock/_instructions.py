@@ -52,10 +52,10 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
         log.trace("Language specifier issue found; appending additional instructions.")
 
         # The first line has double newlines which are not desirable when appending the msg.
-        addition_msg = addition_msg.replace("\n\n", " ", 1)
+        addition_msg = addition_msg.replace("\n\n", " ", 1).strip()
 
         # Make the first character of the addition lower case.
-        instructions += "\n\nFurthermore, " + addition_msg[0].lower() + addition_msg[1:]
+        instructions += "\n\nAlso, " + addition_msg[0].lower() + addition_msg[1:]
     else:
         log.trace("No issues with the language specifier found.")
 
@@ -106,10 +106,8 @@ def _get_bad_lang_message(content: str) -> str | None:
         example_blocks = _get_example(language)
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.
-        return (
-            f"It looks like you incorrectly specified a language for your code block.\n\n{lines}"
-            f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
-        )
+        return f"\n\n{lines}\n\n**Here is an example of how it should look:**\n{example_blocks}"
+
     log.trace("Nothing wrong with the language specifier; no instructions to return.")
     return None
 
@@ -126,7 +124,7 @@ def _get_no_lang_message(content: str) -> str | None:
         example_blocks = _get_example("py")
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.
-        return f"Please add a `py` after the three backticks.\n\n{example_blocks}"
+        return f"\n\nAdd a `py` after the three backticks.\n\n{example_blocks}"
 
     log.trace("Aborting missing language instructions: content is not Python code.")
     return None
