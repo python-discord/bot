@@ -28,6 +28,7 @@ from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
+from bot.exts.filtering._filter_lists.extension import EmbedFileHandler
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
@@ -1492,3 +1493,4 @@ class Filtering(Cog):
 async def setup(bot: Bot) -> None:
     """Load the Filtering cog."""
     await bot.add_cog(Filtering(bot))
+    await bot.add_cog(EmbedFileHandler(bot))
