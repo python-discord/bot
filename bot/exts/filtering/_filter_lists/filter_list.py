@@ -157,10 +157,7 @@ class AtomicList:
         return hash(id(self))
 
 
-T = typing.TypeVar("T", bound=Filter)
-
-
-class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
+class FilterList[T: Filter](dict[ListType, AtomicList], FieldRequiring):
     """Dispatches events to lists of _filters, and aggregates the responses into a single list of actions to take."""
 
     # Each subclass must define a name matching the filter_list name we're expecting to receive from the database.
