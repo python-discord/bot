@@ -37,9 +37,8 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
 
     valid_ticks = f"\\{_parsing.BACKTICK}" * 3
     instructions = (
-        "It looks like you are trying to paste code into this channel.\n\n"
-        "You seem to be using the wrong symbols to indicate where the code block should start. "
-        f"The correct symbols would be {valid_ticks}, not `{code_block.tick * 3}`."
+        "You are using the wrong character instead of backticks. "
+        f"Use {valid_ticks}, not `{code_block.tick * 3}`."
     )
 
     log.trace("Check if the bad ticks code block also has issues with the language specifier.")
@@ -53,14 +52,12 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
         log.trace("Language specifier issue found; appending additional instructions.")
 
         # The first line has double newlines which are not desirable when appending the msg.
-        addition_msg = addition_msg.replace("\n\n", " ", 1)
+        addition_msg = addition_msg.replace("\n\n", " ", 1).strip()
 
         # Make the first character of the addition lower case.
-        instructions += "\n\nFurthermore, " + addition_msg[0].lower() + addition_msg[1:]
+        instructions += "\n\nAlso, " + addition_msg[0].lower() + addition_msg[1:]
     else:
         log.trace("No issues with the language specifier found.")
-        example_blocks = _get_example(code_block.language)
-        instructions += f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
 
     return instructions
 
@@ -71,13 +68,7 @@ def _get_no_ticks_message(content: str) -> str | None:
 
     if _parsing.is_python_code(content):
         example_blocks = _get_example("py")
-        return (
-            "It looks like you're trying to paste code into this channel.\n\n"
-            "Discord has support for Markdown, which allows you to post code with full "
-            "syntax highlighting. Please use these whenever you paste code, as this "
-            "helps improve the legibility and makes it easier for us to help you.\n\n"
-            f"**To do this, use the following method:**\n{example_blocks}"
-        )
+        return example_blocks
     log.trace("Aborting missing code block instructions: content is not Python code.")
     return None
 
@@ -115,10 +106,8 @@ def _get_bad_lang_message(content: str) -> str | None:
         example_blocks = _get_example(language)
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.
-        return (
-            f"It looks like you incorrectly specified a language for your code block.\n\n{lines}"
-            f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
-        )
+        return f"\n\n{lines}\n\n**Here is an example of how it should look:**\n{example_blocks}"
+
     log.trace("Nothing wrong with the language specifier; no instructions to return.")
     return None
 
@@ -135,12 +124,8 @@ def _get_no_lang_message(content: str) -> str | None:
         example_blocks = _get_example("py")
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.
-        return (
-            "It looks like you pasted Python code without syntax highlighting.\n\n"
-            "Please use syntax highlighting to improve the legibility of your code and make "
-            "it easier for us to help you.\n\n"
-            f"**To do this, use the following method:**\n{example_blocks}"
-        )
+        return f"\n\nAdd a `py` after the three backticks.\n\n{example_blocks}"
+
     log.trace("Aborting missing language instructions: content is not Python code.")
     return None
 
@@ -176,8 +161,5 @@ def get_instructions(content: str) -> str | None:
             instructions = _get_bad_lang_message(block.content)
             if not instructions:
                 instructions = _get_no_lang_message(block.content)
-
-    if instructions:
-        instructions += "\nYou can **edit your original message** to correct your code block."
 
     return instructions
