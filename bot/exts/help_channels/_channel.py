@@ -47,7 +47,16 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
     closed_post = await get_or_fetch_channel(bot.instance, closed_post.id)
 
     embed = discord.Embed(description=CLOSED_POST_MSG)
-    embed.set_author(name=f"{POST_TITLE} closed", icon_url=CLOSED_POST_ICON_URL)
+    if closing_reason == _stats.ClosingReason.CLEANUP:
+        close_title = "Python help channel closed as OP left server"
+    elif closing_reason == _stats.ClosingReason.COMMAND:
+        close_title = f"Python help channel closed by OP with {constants.Bot.prefix}close"
+    elif closing_reason == _stats.ClosingReason.INACTIVE:
+        close_title = "Python help channel closed for inactivity"
+    else:
+        close_title = "Python help channel closed"
+
+    embed.set_author(name=close_title, icon_url=CLOSED_POST_ICON_URL)
     message = ""
 
     # Include a ping in the close message if no one else engages, to encourage them
