@@ -28,8 +28,8 @@ NEW_POST_FOOTER = f"Closes after a period of inactivity, or when you send {const
 NEW_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/checkmark/green-checkmark-dist.png"
 
 CLOSED_POST_MSG = f"""
-This help channel has been closed and it's no longer possible to send messages here. \
-If your question wasn't answered, feel free to create a new post in <#{constants.Channels.python_help}>. \
+This help channel has been closed. \
+Feel free to create a new post in <#{constants.Channels.python_help}>. \
 To maximize your chances of getting a response, check out this guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
 CLOSED_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/zzz/zzz-dist.png"
