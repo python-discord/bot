@@ -53,6 +53,8 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
         close_title = f"Python help channel closed by OP with {constants.Bot.prefix}close"
     elif closing_reason == _stats.ClosingReason.INACTIVE:
         close_title = "Python help channel closed for inactivity"
+    elif closing_reason == _stats.ClosingReason.NATIVE:
+        close_title = "Python help channel closed by OP"
     else:
         close_title = "Python help channel closed"
 
@@ -138,7 +140,7 @@ async def help_post_archived(archived_post: discord.Thread) -> None:
         if thread_update.user.id == bot.instance.user.id:
             return
 
-    await _close_help_post(archived_post, _stats.ClosingReason.INACTIVE)
+    await _close_help_post(archived_post, _stats.ClosingReason.NATIVE)
 
 
 async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) -> None:
