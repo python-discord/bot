@@ -125,7 +125,7 @@ class HelpForum(commands.Cog):
         if after.parent_id != self.help_forum_channel.id:
             return
         if not before.archived and after.archived:
-            await _channel.help_post_archived(after)
+            await _channel.help_post_archived(after, self.scheduler)
             if after.id in self.scheduler:
                 self.scheduler.cancel(after.id)
 
