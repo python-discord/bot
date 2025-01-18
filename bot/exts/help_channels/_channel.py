@@ -55,7 +55,7 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
     elif closing_reason == _stats.ClosingReason.INACTIVE:
         close_title += " for inactivity"
     elif closing_reason == _stats.ClosingReason.NATIVE:
-        close_title += " by OP"
+        close_title += " using Discord native close action"
 
 
     embed.set_author(name=close_title, icon_url=CLOSED_POST_ICON_URL)
