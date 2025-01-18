@@ -51,7 +51,7 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
     if closing_reason == _stats.ClosingReason.CLEANUP:
         close_title += " as OP left server"
     elif closing_reason == _stats.ClosingReason.COMMAND:
-        close_title += f" by OP with {constants.Bot.prefix}close"
+        close_title += f" with {constants.Bot.prefix}close"
     elif closing_reason == _stats.ClosingReason.INACTIVE:
         close_title += " for inactivity"
     elif closing_reason == _stats.ClosingReason.NATIVE:
