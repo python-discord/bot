@@ -15,7 +15,6 @@ log = get_logger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 BRANDING_REPO_RAW_URL = "https://raw.githubusercontent.com/python-discord/branding"
-POST_TITLE = "Python help channel"
 
 NEW_POST_MSG = """
 **Remember to:**
@@ -83,7 +82,7 @@ async def send_opened_post_message(post: discord.Thread) -> None:
         color=constants.Colours.bright_green,
         description=NEW_POST_MSG,
     )
-    embed.set_author(name=f"{POST_TITLE} opened", icon_url=NEW_POST_ICON_URL)
+    embed.set_author(name="Python help channel opened", icon_url=NEW_POST_ICON_URL)
     embed.set_footer(text=NEW_POST_FOOTER)
     await post.send(embed=embed, content=post.owner.mention)
 
