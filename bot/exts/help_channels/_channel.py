@@ -15,7 +15,6 @@ log = get_logger(__name__)
 
 ASKING_GUIDE_URL = "https://pythondiscord.com/pages/asking-good-questions/"
 BRANDING_REPO_RAW_URL = "https://raw.githubusercontent.com/python-discord/branding"
-POST_TITLE = "Python help channel"
 
 NEW_POST_MSG = """
 **Remember to:**
@@ -29,8 +28,8 @@ NEW_POST_FOOTER = f"Closes after a period of inactivity, or when you send {const
 NEW_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/checkmark/green-checkmark-dist.png"
 
 CLOSED_POST_MSG = f"""
-This help channel has been closed and it's no longer possible to send messages here. \
-If your question wasn't answered, feel free to create a new post in <#{constants.Channels.python_help}>. \
+This help channel has been closed. \
+Feel free to create a new post in <#{constants.Channels.python_help}>. \
 To maximize your chances of getting a response, check out this guide on [asking good questions]({ASKING_GUIDE_URL}).
 """
 CLOSED_POST_ICON_URL = f"{BRANDING_REPO_RAW_URL}/main/icons/zzz/zzz-dist.png"
@@ -48,7 +47,18 @@ async def _close_help_post(closed_post: discord.Thread, closing_reason: _stats.C
     closed_post = await get_or_fetch_channel(bot.instance, closed_post.id)
 
     embed = discord.Embed(description=CLOSED_POST_MSG)
-    embed.set_author(name=f"{POST_TITLE} closed", icon_url=CLOSED_POST_ICON_URL)
+    close_title = "Python help channel closed"
+    if closing_reason == _stats.ClosingReason.CLEANUP:
+        close_title += " as OP left server"
+    elif closing_reason == _stats.ClosingReason.COMMAND:
+        close_title += f" with {constants.Bot.prefix}close"
+    elif closing_reason == _stats.ClosingReason.INACTIVE:
+        close_title += " for inactivity"
+    elif closing_reason == _stats.ClosingReason.NATIVE:
+        close_title += " using Discord native close action"
+
+
+    embed.set_author(name=close_title, icon_url=CLOSED_POST_ICON_URL)
     message = ""
 
     # Include a ping in the close message if no one else engages, to encourage them
@@ -83,7 +93,7 @@ async def send_opened_post_message(post: discord.Thread) -> None:
         color=constants.Colours.bright_green,
         description=NEW_POST_MSG,
     )
-    embed.set_author(name=f"{POST_TITLE} opened", icon_url=NEW_POST_ICON_URL)
+    embed.set_author(name="Python help channel opened", icon_url=NEW_POST_ICON_URL)
     embed.set_footer(text=NEW_POST_FOOTER)
     await post.send(embed=embed, content=post.owner.mention)
 
@@ -130,7 +140,7 @@ async def help_post_archived(archived_post: discord.Thread) -> None:
         if thread_update.user.id == bot.instance.user.id:
             return
 
-    await _close_help_post(archived_post, _stats.ClosingReason.INACTIVE)
+    await _close_help_post(archived_post, _stats.ClosingReason.NATIVE)
 
 
 async def help_post_deleted(deleted_post_event: discord.RawThreadDeleteEvent) -> None:

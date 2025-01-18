@@ -16,6 +16,7 @@ class ClosingReason(Enum):
 
     COMMAND = "command"
     INACTIVE = "auto.inactive"
+    NATIVE = "auto.native"
     DELETED = "auto.deleted"
     CLEANUP = "auto.cleanup"
 
