@@ -81,7 +81,7 @@ class Filtering(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.filter_lists: dict[str, FilterList] = {}
-        self._subscriptions: defaultdict[Event, list[FilterList]] = defaultdict(list)
+        self._subscriptions = defaultdict[Event, list[FilterList]](list)
         self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.webhook: discord.Webhook | None = None
 
@@ -224,6 +224,15 @@ class Filtering(Cog):
         self.message_cache.append(msg)
 
         ctx = FilterContext.from_message(Event.MESSAGE, msg, None, self.message_cache)
+
+        text_contents = [
+            f"{a.filename}: " + (await a.read()).decode()
+            for a in msg.attachments if a.content_type.startswith("text")
+        ]
+        if text_contents:
+            attachment_content = "\n\n".join(text_contents)
+            ctx = ctx.replace(content=f"{ctx.content}\n\n{attachment_content}")
+
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
         self.message_cache.update(msg, metadata=triggers)
         if result_actions:
