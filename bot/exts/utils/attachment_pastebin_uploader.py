@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import re
 
 import aiohttp
@@ -42,10 +41,11 @@ class EmbedFileHandler(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Listens for messages containing attachments and offers to upload them to the pastebin."""
-        # Check if the message contains an embedded file and is not sent by a bot
+        # Check if the message contains an embedded file and is not sent by a bot.
         if message.author.bot or not any(a.content_type.startswith("text") for a in message.attachments):
             return
 
+        # Offer to upload the attachments and wait for the user's reaction.
         bot_reply = await message.reply(f"React with {PASTEBIN_UPLOAD_EMOJI} to upload your file to our paste bin")
         await bot_reply.add_reaction(PASTEBIN_UPLOAD_EMOJI)
 
@@ -57,21 +57,22 @@ class EmbedFileHandler(commands.Cog):
             )
 
         try:
-            # Wait for the reaction with a timeout of 60 seconds
+            # Wait for the reaction with a timeout of 60 seconds.
             await self.bot.wait_for("reaction_add", timeout=60.0, check=wait_for_upload_permission)
         except TimeoutError:
+            # The user does not grant permission before the timeout. Exit early.
             await bot_reply.edit(content=f"~~{bot_reply.content}~~")
             await bot_reply.clear_reactions()
             return
 
-        logging.info({f.filename: f.content_type for f in message.attachments})
-
+        # Extract the attachments.
         files = [
             await self._convert_attachment(f)
             for f in message.attachments
             if f.content_type.startswith("text")
         ]
 
+        # Upload the files to the paste bin, exiting early if there's an error.
         try:
             async with aiohttp.ClientSession() as session:
                 paste_response = await paste_service.send_to_paste_service(files=files, http_session=session)
@@ -82,13 +83,17 @@ class EmbedFileHandler(commands.Cog):
             await bot_reply.edit(content="There was an error uploading your paste.")
             return
 
+        # Send the user a DM with the delete link for the paste.
         # The angle brackets around the remove link are required to stop Discord from visiting the URL to produce a
         # preview, thereby deleting the paste
         await message.author.send(content=f"[Click here](<{paste_response.removal}>) to delete your recent paste.")
 
+        # Edit the bot message to contain the link to the paste.
         await bot_reply.edit(content=f"[Click here]({paste_response.link}) to see this code in our pastebin.")
         await bot_reply.clear_reactions()
         await bot_reply.add_reaction(DELETE_PASTE_EMOJI)
+
+        # Wait for the user to react with a trash can, which they can use to delete the paste.
 
         def wait_for_delete_reaction(reaction: discord.Reaction, user: discord.User) -> bool:
             return (
