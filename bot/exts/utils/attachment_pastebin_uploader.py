@@ -9,6 +9,9 @@ from pydis_core.utils import paste_service
 
 from bot.bot import Bot
 from bot.constants import Emojis
+from bot.log import get_logger
+
+log = get_logger(__name__)
 
 PASTEBIN_UPLOAD_EMOJI = Emojis.check_mark
 DELETE_PASTE_EMOJI = Emojis.trashcan
@@ -45,8 +48,13 @@ class EmbedFileHandler(commands.Cog):
         if message.author.bot or not any(a.content_type.startswith("text") for a in message.attachments):
             return
 
+        log.trace(f"Offering to upload attachments for {message.author} in {message.channel}, message {message.id}")
+
         # Offer to upload the attachments and wait for the user's reaction.
-        bot_reply = await message.reply(f"React with {PASTEBIN_UPLOAD_EMOJI} to upload your file to our paste bin")
+        bot_reply = await message.reply(
+            f"Please react with {PASTEBIN_UPLOAD_EMOJI} to upload your file(s) to our "
+            f"[paste bin](<https://paste.pythondiscord.com/>), which is more accessible for some users."
+        )
         await bot_reply.add_reaction(PASTEBIN_UPLOAD_EMOJI)
 
         def wait_for_upload_permission(reaction: discord.Reaction, user: discord.User) -> bool:
@@ -61,6 +69,7 @@ class EmbedFileHandler(commands.Cog):
             await self.bot.wait_for("reaction_add", timeout=60.0, check=wait_for_upload_permission)
         except TimeoutError:
             # The user does not grant permission before the timeout. Exit early.
+            log.trace(f"{message.author} didn't give permission to upload {message.id} content; aborting.")
             await bot_reply.edit(content=f"~~{bot_reply.content}~~")
             await bot_reply.clear_reactions()
             return
@@ -73,13 +82,16 @@ class EmbedFileHandler(commands.Cog):
         ]
 
         # Upload the files to the paste bin, exiting early if there's an error.
+        log.trace(f"Attempting to upload {len(files)} file(s) to pastebin.")
         try:
             async with aiohttp.ClientSession() as session:
                 paste_response = await paste_service.send_to_paste_service(files=files, http_session=session)
         except (paste_service.PasteTooLongError, ValueError):
+            log.trace(f"{message.author}'s attachments were too long.")
             await bot_reply.edit(content="Your paste is too long, and couldn't be uploaded.")
             return
         except paste_service.PasteUploadError:
+            log.trace(f"Unexpected error uploading {message.author}'s attachments.")
             await bot_reply.edit(content="There was an error uploading your paste.")
             return
 
@@ -103,11 +115,14 @@ class EmbedFileHandler(commands.Cog):
             )
 
         try:
+            log.trace(f"Offering to delete {message.author}'s attachments in {message.channel}, message {message.id}")
             await self.bot.wait_for("reaction_add", timeout=60.0 * 10, check=wait_for_delete_reaction)
-            await paste_response.delete()
+            # Delete the paste by visiting the removal URL.
+            async with aiohttp.ClientSession() as session:
+                await session.get(paste_response.removal)
             await bot_reply.delete()
         except TimeoutError:
-            pass
+            log.trace(f"Offer to delete {message.author}'s attachments timed out.")
 
 
 async def setup(bot: Bot) -> None:
