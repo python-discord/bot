@@ -4,7 +4,7 @@ import typing
 from os.path import splitext
 
 import bot
-from bot.constants import Channels, Emojis
+from bot.constants import Channels
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.extension import ExtensionFilter
@@ -14,26 +14,11 @@ from bot.exts.filtering._settings import ActionSettings
 if typing.TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
 
-PASTE_URL = "https://paste.pythondiscord.com"
-PY_EMBED_DESCRIPTION = (
-    "It looks like you tried to attach a Python file - "
-    f"please use a code-pasting service such as {PASTE_URL}"
-)
-
-TXT_LIKE_FILES = {".txt", ".csv", ".json", ".py"}
-TXT_EMBED_DESCRIPTION = (
-    "You either uploaded a `{blocked_extension}` file or entered a message that was too long. "
-    f"Please use our [paste bin]({PASTE_URL}) instead."
-)
-
 DISALLOWED_EMBED_DESCRIPTION = (
     "It looks like you tried to attach file type(s) that we do not allow ({joined_blacklist}). "
     "We currently allow the following file types: **{joined_whitelist}**.\n\n"
     "Feel free to ask in {meta_channel_mention} if you think this is a mistake."
 )
-
-PASTEBIN_UPLOAD_EMOJI = Emojis.check_mark
-DELETE_PASTE_EMOJI = Emojis.trashcan
 
 
 class ExtensionsList(FilterList[ExtensionFilter]):
@@ -90,30 +75,23 @@ class ExtensionsList(FilterList[ExtensionFilter]):
         not_allowed = {ext: filename for ext, filename in all_ext if ext not in allowed_ext}
 
         if ctx.event == Event.SNEKBOX:
-            not_allowed = {ext: filename for ext, filename in not_allowed.items() if ext not in TXT_LIKE_FILES}
+            not_allowed = dict(not_allowed.items())
 
         if not not_allowed:  # Yes, it's a double negative. Meaning all attachments are allowed :)
             return None, [], {ListType.ALLOW: triggered}
 
         # At this point, something is disallowed.
         if ctx.event != Event.SNEKBOX:  # Don't post the embed if it's a snekbox response.
-            if ".py" in not_allowed:
-                # Provide a pastebin link for .py files.
-                ctx.dm_embed = PY_EMBED_DESCRIPTION
-            elif txt_extensions := {ext for ext in TXT_LIKE_FILES if ext in not_allowed}:
-                # Work around Discord auto-conversion of messages longer than 2000 chars to .txt
-                ctx.dm_embed = TXT_EMBED_DESCRIPTION.format(blocked_extension=txt_extensions.pop())
-            else:
-                meta_channel = bot.instance.get_channel(Channels.meta)
-                if not self._whitelisted_description:
-                    self._whitelisted_description = ", ".join(
-                        filter_.content for filter_ in self[ListType.ALLOW].filters.values()
-                    )
-                ctx.dm_embed = DISALLOWED_EMBED_DESCRIPTION.format(
-                    joined_whitelist=self._whitelisted_description,
-                    joined_blacklist=", ".join(not_allowed),
-                    meta_channel_mention=meta_channel.mention,
+            meta_channel = bot.instance.get_channel(Channels.meta)
+            if not self._whitelisted_description:
+                self._whitelisted_description = ", ".join(
+                    filter_.content for filter_ in self[ListType.ALLOW].filters.values()
                 )
+            ctx.dm_embed = DISALLOWED_EMBED_DESCRIPTION.format(
+                joined_whitelist=self._whitelisted_description,
+                joined_blacklist=", ".join(not_allowed),
+                meta_channel_mention=meta_channel.mention,
+            )
 
         ctx.matches += not_allowed.values()
         ctx.blocked_exts |= set(not_allowed)
