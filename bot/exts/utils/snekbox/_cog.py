@@ -599,7 +599,7 @@ class Snekbox(Cog):
         If multiple codeblocks are in a message, all of them will be joined and evaluated,
         ignoring the text outside them.
 
-        Currently only 3.12 version is supported.
+        The currently supported verisons are 3.12, 3.13, and 3.13t.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
@@ -635,7 +635,7 @@ class Snekbox(Cog):
         If multiple formatted codeblocks are provided, the first one will be the setup code, which will
         not be timed. The remaining codeblocks will be joined together and timed.
 
-        Currently only 3.12 version is supported.
+        The currently supported verisons are 3.12, 3.13, and 3.13t.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!

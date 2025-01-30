@@ -81,9 +81,7 @@ class HelpForum(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await _channel.help_post_closed(ctx.channel)
-            if ctx.channel.id in self.scheduler:
-                self.scheduler.cancel(ctx.channel.id)
+            await _channel.help_post_closed(ctx.channel, self.scheduler)
 
     @help_forum_group.command(name="title", root_aliases=("title",))
     async def rename_help_post(self, ctx: commands.Context, *, title: str) -> None:
@@ -112,7 +110,7 @@ class HelpForum(commands.Cog):
         if thread.parent_id != self.help_forum_channel.id:
             return
 
-        await _channel.help_post_opened(thread)
+        await _channel.help_post_opened(thread, scheduler=self.scheduler)
 
         delay = min(constants.HelpChannels.deleted_idle_minutes, constants.HelpChannels.idle_minutes) * 60
         self.scheduler.schedule_later(
@@ -127,7 +125,9 @@ class HelpForum(commands.Cog):
         if after.parent_id != self.help_forum_channel.id:
             return
         if not before.archived and after.archived:
-            await _channel.help_post_archived(after)
+            await _channel.help_post_archived(after, self.scheduler)
+            if after.id in self.scheduler:
+                self.scheduler.cancel(after.id)
 
     @commands.Cog.listener()
     async def on_raw_thread_delete(self, deleted_thread_event: discord.RawThreadDeleteEvent) -> None:
