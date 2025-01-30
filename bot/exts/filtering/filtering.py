@@ -68,7 +68,8 @@ WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 
 async def _extract_text_file_content(att: discord.Attachment) -> str:
     """Extract up to the first 30 lines and first 2000 characters (whichever is shorter) of an attachment."""
-    file_lines: list[str] = (await att.read()).decode().splitlines()
+    file_encoding = re.search(r"charset=(\S+)", att.content_type).group(1)
+    file_lines: list[str] = (await att.read()).decode(encoding=file_encoding).splitlines()
     first_n_lines = "\n".join(file_lines[:30])[:2_000]
     return f"{att.filename}: {first_n_lines}"
 
@@ -233,7 +234,7 @@ class Filtering(Cog):
 
         text_contents = [
             await _extract_text_file_content(a)
-            for a in msg.attachments if a.content_type.startswith("text")
+            for a in msg.attachments if "charset" in a.content_type
         ]
         if text_contents:
             attachment_content = "\n\n".join(text_contents)

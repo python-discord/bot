@@ -92,7 +92,7 @@ class EmbedFileHandler(commands.Cog):
         files = [
             await self._convert_attachment(f)
             for f in message.attachments
-            if f.content_type.startswith("text")
+            if "charset" in f.content_type
         ]
 
         # Upload the files to the paste bin, exiting early if there's an error.
