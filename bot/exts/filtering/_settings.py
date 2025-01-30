@@ -5,7 +5,7 @@ import traceback
 from abc import abstractmethod
 from copy import copy
 from functools import reduce
-from typing import Any, NamedTuple, Self
+from typing import Any, NamedTuple, Self, TypeVar
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types import settings_types
@@ -13,9 +13,13 @@ from bot.exts.filtering._settings_types.settings_entry import ActionEntry, Setti
 from bot.exts.filtering._utils import FieldRequiring
 from bot.log import get_logger
 
+TSettings = TypeVar("TSettings", bound="Settings")
+
 log = get_logger(__name__)
 
-_already_warned = set[str]()
+_already_warned: set[str] = set()
+
+T = TypeVar("T", bound=SettingsEntry)
 
 
 def create_settings(
@@ -51,7 +55,7 @@ def create_settings(
     )
 
 
-class Settings[T: SettingsEntry](FieldRequiring, dict[str, T]):
+class Settings(FieldRequiring, dict[str, T]):
     """
     A collection of settings.
 
@@ -65,7 +69,7 @@ class Settings[T: SettingsEntry](FieldRequiring, dict[str, T]):
 
     entry_type: type[T]
 
-    _already_warned = set[str]()
+    _already_warned: set[str] = set()
 
     @abstractmethod  # ABCs have to have at least once abstract method to actually count as such.
     def __init__(self, settings_data: dict, *, defaults: Settings | None = None, keep_empty: bool = False):
@@ -100,7 +104,7 @@ class Settings[T: SettingsEntry](FieldRequiring, dict[str, T]):
         """Return a dictionary of overrides across all entries."""
         return reduce(operator.or_, (entry.overrides for entry in self.values() if entry), {})
 
-    def copy(self: Self) -> Self:
+    def copy(self: TSettings) -> TSettings:
         """Create a shallow copy of the object."""
         return copy(self)
 

@@ -66,14 +66,6 @@ OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 
 
-async def _extract_text_file_content(att: discord.Attachment) -> str:
-    """Extract up to the first 30 lines and first 2000 characters (whichever is shorter) of an attachment."""
-    file_encoding = re.search(r"charset=(\S+)", att.content_type).group(1)
-    file_lines: list[str] = (await att.read()).decode(encoding=file_encoding).splitlines()
-    first_n_lines = "\n".join(file_lines[:30])[:2_000]
-    return f"{att.filename}: {first_n_lines}"
-
-
 class Filtering(Cog):
     """Filtering and alerting for content posted on the server."""
 
@@ -88,7 +80,7 @@ class Filtering(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.filter_lists: dict[str, FilterList] = {}
-        self._subscriptions = defaultdict[Event, list[FilterList]](list)
+        self._subscriptions: defaultdict[Event, list[FilterList]] = defaultdict(list)
         self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.webhook: discord.Webhook | None = None
 
@@ -231,15 +223,6 @@ class Filtering(Cog):
         self.message_cache.append(msg)
 
         ctx = FilterContext.from_message(Event.MESSAGE, msg, None, self.message_cache)
-
-        text_contents = [
-            await _extract_text_file_content(a)
-            for a in msg.attachments if "charset" in a.content_type
-        ]
-        if text_contents:
-            attachment_content = "\n\n".join(text_contents)
-            ctx = ctx.replace(content=f"{ctx.content}\n\n{attachment_content}")
-
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
         self.message_cache.update(msg, metadata=triggers)
         if result_actions:
