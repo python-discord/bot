@@ -17,7 +17,6 @@ from pydis_core.utils.regex import FORMATTED_CODE_REGEX, RAW_CODE_REGEX
 from bot.bot import Bot
 from bot.constants import BaseURLs, Channels, Emojis, MODERATION_ROLES, Roles, URLs
 from bot.decorators import redirect_output
-from bot.exts.filtering._filter_lists.extension import TXT_LIKE_FILES
 from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
@@ -31,6 +30,8 @@ log = get_logger(__name__)
 
 ANSI_REGEX = re.compile(r"\N{ESC}\[[0-9;:]*m")
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
+
+TXT_LIKE_FILES = {".txt", ".csv", ".json", ".py"}
 
 # The timeit command should only output the very last line, so all other output should be suppressed.
 # This will be used as the setup code along with any setup code provided.
