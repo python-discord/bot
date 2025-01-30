@@ -43,7 +43,7 @@ class EmbedFileHandler(commands.Cog):
     async def on_message(self, message: discord.Message) -> None:
         """Listens for messages containing attachments and offers to upload them to the pastebin."""
         # Check if the message contains an embedded file and is not sent by a bot
-        if message.author.bot or not message.attachments:
+        if message.author.bot or not any(a.content_type.startswith("text") for a in message.attachments):
             return
 
         bot_reply = await message.reply(f"React with {PASTEBIN_UPLOAD_EMOJI} to upload your file to our paste bin")
@@ -76,7 +76,6 @@ class EmbedFileHandler(commands.Cog):
             async with aiohttp.ClientSession() as session:
                 paste_response = await paste_service.send_to_paste_service(files=files, http_session=session)
         except (paste_service.PasteTooLongError, ValueError):
-            # paste is too long
             await bot_reply.edit(content="Your paste is too long, and couldn't be uploaded.")
             return
         except paste_service.PasteUploadError:
