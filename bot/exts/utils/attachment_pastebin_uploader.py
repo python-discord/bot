@@ -33,6 +33,7 @@ class EmbedFileHandler(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.pending_messages = set[int]()
 
     @staticmethod
     async def _convert_attachment(attachment: discord.Attachment) -> paste_service.PasteFile:
@@ -42,6 +43,11 @@ class EmbedFileHandler(commands.Cog):
         return paste_service.PasteFile(content=file_content, name=attachment.filename)
 
     @commands.Cog.listener()
+    async def on_message_delete(self, message: discord.Message) -> None:
+        """Allows us to know which messages with attachments have been deleted."""
+        self.pending_messages.discard(message.id)
+
+    @commands.Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Listens for messages containing attachments and offers to upload them to the pastebin."""
         # Check if the message contains an embedded file and is not sent by a bot.
@@ -49,6 +55,7 @@ class EmbedFileHandler(commands.Cog):
             return
 
         log.trace(f"Offering to upload attachments for {message.author} in {message.channel}, message {message.id}")
+        self.pending_messages.add(message.id)
 
         # Offer to upload the attachments and wait for the user's reaction.
         bot_reply = await message.reply(
@@ -72,7 +79,14 @@ class EmbedFileHandler(commands.Cog):
             log.trace(f"{message.author} didn't give permission to upload {message.id} content; aborting.")
             await bot_reply.edit(content=f"~~{bot_reply.content}~~")
             await bot_reply.clear_reactions()
+
+        if message.id not in self.pending_messages:
+            log.trace(f"{message.author}'s message was deleted before the attachments could be uploaded; aborting.")
+            await bot_reply.delete()
             return
+
+        # In either case, we do not want the message ID in pending_messages anymore.
+        self.pending_messages.discard(message.id)
 
         # Extract the attachments.
         files = [
