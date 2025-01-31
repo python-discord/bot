@@ -42,6 +42,33 @@ class EmbedFileHandler(commands.Cog):
         file_content = (await attachment.read()).decode(encoding)
         return paste_service.PasteFile(content=file_content, name=attachment.filename)
 
+    async def wait_for_user_reaction(
+        self,
+        message: discord.Message,
+        user: discord.User,
+        emoji: str,
+        timeout: float = 60,
+    ) -> bool:
+        """Wait for `timeout` seconds for `user` to react to `message` with `emoji`."""
+        def wait_for_reaction(reaction: discord.Reaction, reactor: discord.User) -> bool:
+            return (
+                reaction.message.id == message.id
+                and str(reaction.emoji) == emoji
+                and reactor == user
+            )
+
+        await message.add_reaction(emoji)
+        log.trace(f"Waiting for {user.name} to react to {message.id} with {emoji}")
+
+        try:
+            await self.bot.wait_for("reaction_add", timeout=timeout, check=wait_for_reaction)
+        except TimeoutError:
+            log.trace(f"User {user.name} did not react to message {message.id} with {emoji}")
+            await message.clear_reactions()
+            return False
+
+        return True
+
     @commands.Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         """Allows us to know which messages with attachments have been deleted."""
@@ -62,23 +89,15 @@ class EmbedFileHandler(commands.Cog):
             f"Please react with {PASTEBIN_UPLOAD_EMOJI} to upload your file(s) to our "
             f"[paste bin](<https://paste.pythondiscord.com/>), which is more accessible for some users."
         )
-        await bot_reply.add_reaction(PASTEBIN_UPLOAD_EMOJI)
 
-        def wait_for_upload_permission(reaction: discord.Reaction, user: discord.User) -> bool:
-            return (
-                reaction.message.id == bot_reply.id
-                and str(reaction.emoji) == PASTEBIN_UPLOAD_EMOJI
-                and user == message.author
-            )
+        permission_granted = await self.wait_for_user_reaction(
+            bot_reply, message.author, PASTEBIN_UPLOAD_EMOJI, 60. * 3
+        )
 
-        try:
-            # Wait for the reaction with a timeout of 60 seconds.
-            await self.bot.wait_for("reaction_add", timeout=60.0, check=wait_for_upload_permission)
-        except TimeoutError:
-            # The user does not grant permission before the timeout. Exit early.
+        if not permission_granted:
             log.trace(f"{message.author} didn't give permission to upload {message.id} content; aborting.")
             await bot_reply.edit(content=f"~~{bot_reply.content}~~")
-            await bot_reply.clear_reactions()
+            return
 
         if message.id not in self.pending_messages:
             log.trace(f"{message.author}'s message was deleted before the attachments could be uploaded; aborting.")
@@ -120,23 +139,17 @@ class EmbedFileHandler(commands.Cog):
         await bot_reply.add_reaction(DELETE_PASTE_EMOJI)
 
         # Wait for the user to react with a trash can, which they can use to delete the paste.
+        log.trace(f"Offering to delete {message.author}'s attachments in {message.channel}, message {message.id}")
+        user_wants_delete = await self.wait_for_user_reaction(bot_reply, message.author, DELETE_PASTE_EMOJI, 60. * 10)
 
-        def wait_for_delete_reaction(reaction: discord.Reaction, user: discord.User) -> bool:
-            return (
-                reaction.message.id == bot_reply.id
-                and str(reaction.emoji) == DELETE_PASTE_EMOJI
-                and user == message.author
-            )
+        if not user_wants_delete:
+            return
 
-        try:
-            log.trace(f"Offering to delete {message.author}'s attachments in {message.channel}, message {message.id}")
-            await self.bot.wait_for("reaction_add", timeout=60.0 * 10, check=wait_for_delete_reaction)
-            # Delete the paste by visiting the removal URL.
-            async with aiohttp.ClientSession() as session:
-                await session.get(paste_response.removal)
-            await bot_reply.delete()
-        except TimeoutError:
-            log.trace(f"Offer to delete {message.author}'s attachments timed out.")
+        # Delete the paste and the bot's message.
+        async with aiohttp.ClientSession() as session:
+            await session.get(paste_response.removal)
+
+        await bot_reply.delete()
 
 
 async def setup(bot: Bot) -> None:
