@@ -39,7 +39,8 @@ class EmbedFileHandler(commands.Cog):
     async def _convert_attachment(attachment: discord.Attachment) -> paste_service.PasteFile:
         """Converts an attachment to a PasteFile, according to the attachment's file encoding."""
         encoding = re.search(r"charset=(\S+)", attachment.content_type).group(1)
-        file_content = (await attachment.read()).decode(encoding)
+        file_content_bytes = await attachment.read()
+        file_content = file_content_bytes.decode(encoding)
         return paste_service.PasteFile(content=file_content, name=attachment.filename)
 
     async def wait_for_user_reaction(
