@@ -237,6 +237,7 @@ class Filtering(Cog):
             await _extract_text_file_content(a)
             for a in msg.attachments if "charset" in a.content_type
         ]
+
         if text_contents:
             attachment_content = "\n\n".join(text_contents)
             ctx = ctx.replace(content=f"{ctx.content}\n\n{attachment_content}")
