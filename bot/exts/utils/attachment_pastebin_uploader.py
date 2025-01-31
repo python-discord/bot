@@ -13,11 +13,11 @@ from bot.log import get_logger
 
 log = get_logger(__name__)
 
-PASTEBIN_UPLOAD_EMOJI = Emojis.check_mark
-DELETE_PASTE_EMOJI = Emojis.trashcan
+UPLOAD_EMOJI = Emojis.check_mark
+DELETE_EMOJI = Emojis.trashcan
 
 
-class EmbedFileHandler(commands.Cog):
+class AutoTextAttachmentUploader(commands.Cog):
     """
     Handles automatic uploading of attachments to the paste bin.
 
@@ -87,13 +87,11 @@ class EmbedFileHandler(commands.Cog):
 
         # Offer to upload the attachments and wait for the user's reaction.
         bot_reply = await message.reply(
-            f"Please react with {PASTEBIN_UPLOAD_EMOJI} to upload your file(s) to our "
+            f"Please react with {UPLOAD_EMOJI} to upload your file(s) to our "
             f"[paste bin](<https://paste.pythondiscord.com/>), which is more accessible for some users."
         )
 
-        permission_granted = await self.wait_for_user_reaction(
-            bot_reply, message.author, PASTEBIN_UPLOAD_EMOJI, 60. * 3
-        )
+        permission_granted = await self.wait_for_user_reaction(bot_reply, message.author, UPLOAD_EMOJI, 60. * 3)
 
         if not permission_granted:
             log.trace(f"{message.author} didn't give permission to upload {message.id} content; aborting.")
@@ -137,11 +135,11 @@ class EmbedFileHandler(commands.Cog):
         # Edit the bot message to contain the link to the paste.
         await bot_reply.edit(content=f"[Click here]({paste_response.link}) to see this code in our pastebin.")
         await bot_reply.clear_reactions()
-        await bot_reply.add_reaction(DELETE_PASTE_EMOJI)
+        await bot_reply.add_reaction(DELETE_EMOJI)
 
         # Wait for the user to react with a trash can, which they can use to delete the paste.
         log.trace(f"Offering to delete {message.author}'s attachments in {message.channel}, message {message.id}")
-        user_wants_delete = await self.wait_for_user_reaction(bot_reply, message.author, DELETE_PASTE_EMOJI, 60. * 10)
+        user_wants_delete = await self.wait_for_user_reaction(bot_reply, message.author, DELETE_EMOJI, 60. * 10)
 
         if not user_wants_delete:
             return
@@ -155,4 +153,4 @@ class EmbedFileHandler(commands.Cog):
 
 async def setup(bot: Bot) -> None:
     """Load the EmbedFileHandler cog."""
-    await bot.add_cog(EmbedFileHandler(bot))
+    await bot.add_cog(AutoTextAttachmentUploader(bot))
