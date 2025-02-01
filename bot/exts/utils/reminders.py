@@ -39,6 +39,10 @@ LOCK_NAMESPACE = "reminder"
 WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 REMINDER_EDIT_CONFIRMATION_TIMEOUT = 60
+REMINDER_MENTION_BUTTON_TIMEOUT = 5*60
+# The number of mentions that can be sent when a reminder arrives is limited by
+# the 2000-character message limit.
+MAXIMUM_REMINDER_MENTION_OPT_INS = 80
 
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
@@ -73,6 +77,137 @@ class ModifyReminderConfirmationView(discord.ui.View):
         await interaction.response.edit_message(view=None)
         self.result = False
         self.stop()
+
+
+class OptInReminderMentionView(discord.ui.View):
+    """A button to opt-in to get notified of someone else's reminder."""
+
+    def __init__(self, cog: "Reminders", reminder: dict, expiration: Duration):
+        super().__init__()
+
+        self.cog = cog
+        self.reminder = reminder
+
+        self.timeout = min(
+            (expiration - datetime.now(UTC)).total_seconds(),
+            REMINDER_MENTION_BUTTON_TIMEOUT
+        )
+
+    async def get_embed(
+        self,
+        message: str = "Click on the button to add yourself to the list of mentions."
+    ) -> discord.Embed:
+        """Return an embed to show the button together with."""
+        description = "The following user(s) will be notified when the reminder arrives:\n"
+        description += " ".join([
+            mentionable.mention async for mentionable in self.cog.get_mentionables(
+                [self.reminder["author"]] + self.reminder["mentions"]
+            )
+        ])
+
+        if message:
+            description += f"\n\n{message}"
+
+        return discord.Embed(description=description)
+
+    @discord.ui.button(emoji="🔔", label="Notify me", style=discord.ButtonStyle.green)
+    async def button_callback(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """The button callback."""
+        # This is required in case the reminder was edited/deleted between
+        # creation and the opt-in button click.
+        try:
+            api_response = await self.cog.bot.api_client.get(f"bot/reminders/{self.reminder['id']}")
+        except ResponseCodeError as e:
+            await self.handle_api_error(interaction, button, e)
+            return
+
+        self.reminder = api_response
+
+        # Check whether the user should be added.
+        if interaction.user.id == self.reminder["author"]:
+            await interaction.response.send_message(
+                "As the author of that reminder, you will already be notified when the reminder arrives.",
+                ephemeral=True,
+            )
+            return
+
+        if interaction.user.id in self.reminder["mentions"]:
+            await interaction.response.send_message(
+                "You are already in the list of mentions for that reminder.",
+                ephemeral=True,
+                delete_after=5,
+            )
+            return
+
+        if len(self.reminder["mentions"]) >= MAXIMUM_REMINDER_MENTION_OPT_INS:
+            await interaction.response.send_message(
+                "Sorry, this reminder has reached the maximum number of allowed mentions.",
+                ephemeral=True,
+                delete_after=5,
+            )
+            await self.disable(interaction, button, "Maximum number of allowed mentions reached!")
+            return
+
+        # Add the user to the list of mentions.
+        try:
+            api_response = await self.cog.add_mention_opt_in(self.reminder, interaction.user.id)
+        except ResponseCodeError as e:
+            await self.handle_api_error(interaction, button, e)
+            return
+
+        self.reminder = api_response
+
+        # Confirm that it was successful.
+        await interaction.response.send_message(
+            "You were successfully added to the list of mentions for that reminder.",
+            ephemeral=True,
+            delete_after=5,
+        )
+
+        # Update the embed to show the new list of mentions.
+        await interaction.message.edit(embed=await self.get_embed())
+
+    async def handle_api_error(
+        self,
+        interaction: Interaction,
+        button: discord.ui.Button,
+        error: ResponseCodeError
+    ) -> None:
+        """Handle a ResponseCodeError from the API responsibly."""
+        log.trace(f"API returned {error.status} for reminder #{self.reminder['id']}.")
+
+        if error.status == 404:
+            # This might happen if the reminder was edited to arrive before the
+            # button was initially scheduled to timeout.
+            await interaction.response.send_message(
+                "This reminder was either deleted or has already arrived.",
+                ephemeral=True,
+                delete_after=5,
+            )
+            # Don't delete the whole interaction message here or the user will
+            # see the above response message seemingly without context.
+            await self.disable(interaction, button)
+
+        else:
+            await interaction.response.send_message(
+                "Sorry, an unexpected error occurred when performing this operation.\n"
+                "Please create your own reminder instead.",
+                ephemeral=True,
+                delete_after=5,
+            )
+            await self.disable(
+                interaction,
+                button,
+                "An unexpected error occurred when attempting to add users."
+            )
+
+    async def disable(self, interaction: Interaction, button: discord.ui.Button, reason: str = "") -> None:
+        """Disable the button and add an optional reason to the original interaction message."""
+        button.disabled = True
+        await interaction.message.edit(
+            embed=await self.get_embed(reason),
+            view=self,
+        )
 
 
 class Reminders(Cog):
@@ -206,6 +341,18 @@ class Reminders(Cog):
 
         log.trace(f"Scheduling new task #{reminder['id']}")
         self.schedule_reminder(reminder)
+
+    @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
+    async def add_mention_opt_in(self, reminder: dict, user_id: int) -> dict:
+        """Add an opt-in user to a reminder's mentions and return the edited reminder."""
+        if user_id in reminder["mentions"] or user_id == reminder["author"]:
+            return reminder
+
+        reminder["mentions"].append(user_id)
+        reminder = await self._edit_reminder(reminder["id"], {"mentions": reminder["mentions"]})
+
+        await self._reschedule_reminder(reminder)
+        return reminder
 
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(self, reminder: dict, expected_time: time.Timestamp | None = None) -> None:
@@ -367,18 +514,18 @@ class Reminders(Cog):
         )
 
         formatted_time = time.discord_timestamp(expiration, time.TimestampFormats.DAY_TIME)
-        mention_string = f"Your reminder will arrive on {formatted_time}"
-
-        if mentions:
-            mention_string += f" and will mention {len(mentions)} other(s)"
-        mention_string += "!"
+        success_message = f"Your reminder will arrive on {formatted_time}!"
 
         # Confirm to the user that it worked.
         await self._send_confirmation(
             ctx,
-            on_success=mention_string,
+            on_success=success_message,
             reminder_id=reminder["id"]
         )
+
+        # Add a button for others to also get notified.
+        view = OptInReminderMentionView(self, reminder, expiration)
+        await ctx.send(embed=await view.get_embed(), view=view, delete_after=view.timeout)
 
         self.schedule_reminder(reminder)
 
