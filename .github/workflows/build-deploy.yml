@@ -1,39 +1,47 @@
-name: CI
+name: Build & Deploy
 
-on: [push, pull_request]
+on:
+  workflow_call:
+    inputs:
+      sha-tag:
+        description: "A short-form SHA tag for the commit that triggered this workflow"
+        required: true
+        type: string
 
 jobs:
-  build:
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
-
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: production
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.11'
-
-    - name: Cache Poetry
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pypoetry
-        key: python-${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          python-${{ runner.os }}-poetry-
-
-    - name: Install Poetry
-      run: curl -sSL https://install.python-poetry.org | python3 -
+      uses: actions/checkout@v3
 
     - name: Install dependencies
-      run: poetry install
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
     - name: Run tests
-      run: poetry run pytest
+      run: pytest
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v4  # Update to the latest version
+    - name: Checkout Kubernetes repository
+      uses: actions/checkout@v3
       with:
-        name: test-results
-        path: test-results/
+        repository: python-discord/kubernetes
+
+    - uses: azure/setup-kubectl@v3
+
+    - name: Authenticate with Kubernetes
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBECONFIG }}
+
+    - name: Deploy to Kubernetes
+      uses: azure/k8s-deploy@v4
+      with:
+        manifests: |
+          namespaces/default/bot/deployment.yaml
+        images: 'ghcr.io/python-discord/bot:${{ inputs.sha-tag }}'
