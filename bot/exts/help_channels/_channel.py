@@ -47,9 +47,6 @@ async def _close_help_post(
     scheduler: scheduling.Scheduler,
 ) -> None:
     """Close the help post and record stats."""
-    # Get Thread with updated metadata (such as the title)
-    closed_post = await get_or_fetch_channel(bot.instance, closed_post.id)
-
     embed = discord.Embed(description=CLOSED_POST_MSG)
     close_title = "Python help channel closed"
     if closing_reason == _stats.ClosingReason.CLEANUP:
@@ -195,7 +192,8 @@ async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.Cl
 async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
     """Archive the `post` if idle, or schedule the archive for later if still active."""
     try:
-        await get_or_fetch_channel(bot.instance, post.id)
+        # Fetch the post again, to ensure we have the latest info
+        post = await get_or_fetch_channel(bot.instance, post.id)
     except discord.HTTPException:
         log.trace(f"Not closing missing post #{post} ({post.id}).")
         return
