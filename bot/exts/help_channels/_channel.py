@@ -189,11 +189,11 @@ async def get_closing_time(post: discord.Thread) -> tuple[arrow.Arrow, _stats.Cl
     return time, _stats.ClosingReason.INACTIVE
 
 
-async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Scheduler) -> None:
+async def maybe_archive_idle_post(post_id: int, scheduler: scheduling.Scheduler) -> None:
     """Archive the `post` if idle, or schedule the archive for later if still active."""
     try:
         # Fetch the post again, to ensure we have the latest info
-        post = await get_or_fetch_channel(bot.instance, post.id)
+        post = await get_or_fetch_channel(bot.instance, post_id)
     except discord.HTTPException:
         log.trace(f"Not closing missing post #{post} ({post.id}).")
         return
@@ -221,4 +221,4 @@ async def maybe_archive_idle_post(post: discord.Thread, scheduler: scheduling.Sc
     delay = (closing_time - arrow.utcnow()).seconds
     log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
 
-    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post, scheduler))
+    scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post.id, scheduler))
