@@ -47,7 +47,7 @@ class HelpForum(commands.Cog):
         """Check that each open help post has a scheduled task to close, adding one if not."""
         for post in self.help_forum_channel.threads:
             if post.id not in self.scheduler:
-                await _channel.maybe_archive_idle_post(post, self.scheduler)
+                await _channel.maybe_archive_idle_post(post.id, self.scheduler)
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is a help post, and the user is the claimant or has a whitelisted role."""
@@ -116,7 +116,7 @@ class HelpForum(commands.Cog):
         self.scheduler.schedule_later(
             delay,
             thread.id,
-            _channel.maybe_archive_idle_post(thread, self.scheduler)
+            _channel.maybe_archive_idle_post(thread.id, self.scheduler)
         )
 
     @commands.Cog.listener()
