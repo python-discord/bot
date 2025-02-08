@@ -67,7 +67,7 @@ WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 
 
 async def _extract_text_file_content(att: discord.Attachment) -> str:
-    """Extract up to the first 30 lines and first 2000 characters (whichever is shorter) of an attachment."""
+    """Extract up to the first 30 lines or first 2000 characters (whichever is shorter) of an attachment."""
     file_encoding = re.search(r"charset=(\S+)", att.content_type).group(1)
     file_content_bytes = await att.read()
     file_lines = file_content_bytes.decode(file_encoding).splitlines()
