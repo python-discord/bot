@@ -198,7 +198,7 @@ async def maybe_archive_idle_post(post_id: int, scheduler: scheduling.Scheduler)
         log.trace(f"Not closing missing post #{post} ({post.id}).")
         return
 
-    if post.locked:
+    if post.archived or post.locked:
         log.trace(f"Not closing already closed post #{post} ({post.id}).")
         return
 
