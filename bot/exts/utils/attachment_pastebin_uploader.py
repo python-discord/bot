@@ -24,11 +24,11 @@ class AutoTextAttachmentUploader(commands.Cog):
     Whenever a user uploads one or more attachments that is text-based (py, txt, csv, etc.), this cog offers to upload
     all the attachments to the paste bin automatically. The steps are as follows:
     - The bot replies to the message containing the attachments, asking the user to react with a checkmark to consent
-        to having the content uploaded.
+      to having the content uploaded.
     - If consent is given, the bot uploads the contents and edits its own message to contain the link.
     - The bot DMs the user the delete link for the paste.
     - The bot waits for the user to react with a trashcan emoji, in which case the bot deletes the paste and its own
-        message.
+      message.
     """
 
     def __init__(self, bot: Bot):
