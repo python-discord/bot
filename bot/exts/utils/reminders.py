@@ -263,13 +263,9 @@ class Reminders(Cog):
             if isinstance((resolved_message := reference.resolved), discord.Message):
                 content = resolved_message.content
 
-        # If we weren't able to get the content of a replied message
-        if content is None:
-            await send_denial(ctx, "Your reminder must have a content and/or reply to a message.")
-            return None
-
-        # If the replied message has no content (e.g. only attachments/embeds)
-        if content == "":
+        # If the replied message has no content, we couldn't get the content, or no content was provided
+        # (e.g. only attachments/embeds)
+        if content is None or content == "":
             content = "*See referenced message.*"
 
         return content
