@@ -368,14 +368,15 @@ class Clean(Cog):
             f"A log of the deleted messages can be found [here]({log_url})."
         )
 
-        await send_log_message(
-            self.bot,
-            icon_url=Icons.message_bulk_delete,
-            colour=Colour(Colours.soft_red),
-            title="Bulk message delete",
-            text=message,
-            channel_id=Channels.mod_log,
-        )
+        for channel_id in [Channels.mod_log, Channels.message_log]:
+            await send_log_message(
+                self.bot,
+                icon_url=Icons.message_bulk_delete,
+                colour=Colour(Colours.soft_red),
+                title="Bulk message delete",
+                text=message,
+                channel_id=channel_id,
+            )
 
         return log_url
 
