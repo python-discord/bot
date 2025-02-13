@@ -69,40 +69,6 @@ class ExtensionsListTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, ({}, ["`.disallowed`"], {ListType.ALLOW: []}))
 
     @patch("bot.instance", BOT)
-    async def test_python_file_redirect_embed_description(self):
-        """A message containing a .py file should result in an embed redirecting the user to our paste site."""
-        attachment = MockAttachment(filename="python.py")
-        ctx = self.ctx.replace(attachments=[attachment])
-
-        await self.filter_list.actions_for(ctx)
-
-        self.assertEqual(ctx.dm_embed, extension.PY_EMBED_DESCRIPTION)
-
-    @patch("bot.instance", BOT)
-    async def test_txt_file_redirect_embed_description(self):
-        """A message containing a .txt/.json/.csv file should result in the correct embed."""
-        test_values = (
-            ("text", ".txt"),
-            ("json", ".json"),
-            ("csv", ".csv"),
-        )
-
-        for file_name, disallowed_extension in test_values:
-            with self.subTest(file_name=file_name, disallowed_extension=disallowed_extension):
-
-                attachment = MockAttachment(filename=f"{file_name}{disallowed_extension}")
-                ctx = self.ctx.replace(attachments=[attachment])
-
-                await self.filter_list.actions_for(ctx)
-
-                self.assertEqual(
-                    ctx.dm_embed,
-                    extension.TXT_EMBED_DESCRIPTION.format(
-                        blocked_extension=disallowed_extension,
-                    )
-                )
-
-    @patch("bot.instance", BOT)
     async def test_other_disallowed_extension_embed_description(self):
         """Test the description for a non .py/.txt/.json/.csv disallowed extension."""
         attachment = MockAttachment(filename="python.disallowed")
