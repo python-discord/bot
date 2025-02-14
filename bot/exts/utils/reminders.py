@@ -252,9 +252,9 @@ class Reminders(Cog):
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
     @staticmethod
-    async def try_get_content_from_reply(ctx: Context) -> str | None:
+    async def try_get_content_from_reply(ctx: Context) -> str:
         """
-        Attempts to get content from the referenced message, if applicable.
+        Attempts to get content from the referenced message, if applicable, or provides a default.
 
         Differs from pydis_core.utils.commands.clean_text_or_reply as allows for messages with no content.
         """
@@ -345,9 +345,6 @@ class Reminders(Cog):
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
             content = await self.try_get_content_from_reply(ctx)
-            if not content:
-                # Couldn't get content from reply
-                return
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
@@ -469,9 +466,7 @@ class Reminders(Cog):
         """
         if not content:
             content = await self.try_get_content_from_reply(ctx)
-            if not content:
-                # Message doesn't have a reply to get content from
-                return
+
         await self.edit_reminder(ctx, id_, {"content": content})
 
     @edit_reminder_group.command(name="mentions", aliases=("pings",))
