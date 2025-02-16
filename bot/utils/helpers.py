@@ -25,7 +25,7 @@ def has_lines(string: str, count: int) -> bool:
     split = string.split("\n", count - 1)
 
     # Make sure the last part isn't empty, which would happen if there was a final newline.
-    return split[-1] and len(split) == count
+    return split[-1] != "" and len(split) == count
 
 
 def pad_base64(data: str) -> str:
