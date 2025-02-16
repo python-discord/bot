@@ -6,9 +6,9 @@ has to be delivered in a standard, cross-platform format.
 
 ## Project
 
-Name:
+Name: Python Utility Bot
 
-URL:
+URL: https://github.com/python-discord/bot
 
 One or two sentences describing it
 
