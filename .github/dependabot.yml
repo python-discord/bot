@@ -4,6 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    ignore:
+      update-types:
+        - sem-ver:patch
+        - sem-ver:minor
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
