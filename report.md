@@ -80,17 +80,25 @@ its output?
 
 ## Coverage improvement
 
-Show the comments that describe the requirements for the coverage.
+Show the comments that describe the requirements for the coverage:
+- For `utils/helpers.py`, the functions are fairly straightforward. The requirements were already well documented in the one-line docstrings. The only caveat here is the `has_lines` function, which ignores one `\n` character from the end of the string when counting the number of lines.
 
-Report of old coverage: [link]
+Report of old coverage:
+```
+Name                          Stmts   Miss Branch BrPart  Cover   Missing
+-----------------------------------------------------------------------------------
+bot/utils/helpers.py             23      8      4      1    67%   19, 25-28, 38-43
+```
 
-Report of new coverage: [link]
+Report of new coverage:
+```
+Name                          Stmts   Miss Branch BrPart  Cover   Missing
+-----------------------------------------------------------------------------------
+bot/utils/helpers.py             23      0      4      0   100%
+```
 
 Test cases added:
-
-git diff ...
-
-Number of test cases added: two per team member (P) or at least four (P+).
+- For `utils/helpers.py`, [PR #3260](https://github.com/python-discord/bot/pull/3260) had been created by @strengthless, approved and merged into the upstream, which included 7 new test cases.
 
 ## Self-assessment: Way of working
 
@@ -106,4 +114,4 @@ Where is potential for improvement?
 
 What are your main take-aways from this project? What did you learn?
 
-Is there something special you want to mention here?
+As an additional note for P+, we have a working patch ([PR #3260](https://github.com/python-discord/bot/pull/3260)) accepted and merged into the upstream, which included a small fix along with the addition of 7 new test cases.
