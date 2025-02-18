@@ -32,7 +32,7 @@ pydantic = "2.10.1"
 pydantic-settings = "2.7.1"
 
 [tool.poetry.dev-dependencies]
-coverage = "7.6.10"
+coverage = { git = "https://github.com/devdanzin/coveragepy.git", rev = "report_on_regions" }
 httpx = "0.28.1"
 pre-commit = "4.0.1"
 pip-licenses = "5.0.0"
