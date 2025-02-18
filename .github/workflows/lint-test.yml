@@ -40,10 +40,17 @@ jobs:
       # If you added a new dependencies that is being rejected,
       # please make sure it is compatible with the license for this project,
       # and add it to the ALLOWED_LICENSE variable
+
+      # NOTE: at time of writing pip-licenses is not PEP-639 compliant
+      #   so is not detecting the license for packages now following that style.
+      #   As a temp fix, add packages to the ignore list after manually checking
+      #   that the license in use is compatible with ours.
+      #   Ref: https://github.com/raimon49/pip-licenses/issues/225
       - name: Check Dependencies License
         run: |
           poetry self add poetry-plugin-export
           pip-licenses --allow-only="$ALLOWED_LICENSE" \
+            --ignore-packages attrs \
             --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
 
       - name: Run pre-commit hooks
