@@ -1789,19 +1789,19 @@ yaml = ["pyyaml (>=6.0.1)"]
 
 [[package]]
 name = "pydis-core"
-version = "11.5.1"
+version = "11.6.0"
 description = "PyDis core provides core functionality and utility to the bots of the Python Discord community."
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "pydis_core-11.5.1-py3-none-any.whl", hash = "sha256:a4043f2b8c04f671986a86af8f58337dec1b1ac3bd4e56ac5b83e9c011b258e9"},
-    {file = "pydis_core-11.5.1.tar.gz", hash = "sha256:c5eb2c676cc0ac7e1557031810b150fd98af2f2014717b92a19c7420c6881478"},
+    {file = "pydis_core-11.6.0-py3-none-any.whl", hash = "sha256:6f15b3537027a0d8e3946b5fedc33d4fc479ef6bf40da01b6160aff3b8bfc957"},
+    {file = "pydis_core-11.6.0.tar.gz", hash = "sha256:0f4ec853a27206d03a74d5833de3c08ea39191f502b2450a6c10269713610c91"},
 ]
 
 [package.dependencies]
 aiodns = ">=3.1,<4.0"
 async-rediscache = {version = "1.0.0rc2", optional = true, markers = "extra == \"async-rediscache\" or extra == \"all\""}
-"discord.py" = ">=2.4,<3.0"
+"discord.py" = ">=2.5,<3.0"
 fakeredis = {version = ">=2.0,<3.0", extras = ["lua"], optional = true, markers = "extra == \"fakeredis\" or extra == \"all\""}
 pydantic = ">=2.6,<3.0"
 statsd = ">=4.0,<5.0"
@@ -2670,4 +2670,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "3.12.*"
-content-hash = "14148af1ff915153cc7f92a037e78302114c61bd26422a6d0452be6c4210ba32"
+content-hash = "55a29890445ded63065e54076186f58c82effa6e78c4aeec4d80196f4a818811"
