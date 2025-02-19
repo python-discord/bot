@@ -45,11 +45,12 @@ With everything combined, we deemed the project suitable for this assignment.
             - For `apply_infraction@infraction/_scheduler.py`, we get
             - For `deactivate_infraction@infraction/_scheduler.py`, we get
             - For `infraction_edit@infraction/management.py`, we get
-            - For `humanize_delta@utils/time.py`, we get 13 CCN.
+            - For `humanize_delta@utils/time.py`, we get 16 CCN.
             - For `on_command_error@backend/error_handler.py`, we get
     * Are the results clear?
         - Some of us got different results. Upon discussing further, it was discovered that we had different methods in counting CCNs, e.g. how we deal with switch-cases, logical operators, list comprehensions, etc. Once we had those clarified, we started getting consistent results.
-        - The CCNs we counted were different from Lizard's. Upon taking a further look at [how Lizard works](https://github.com/terryyin/lizard/blob/master/theory.rst), it seems that Lizard is taking [logical operators](https://github.com/terryyin/lizard/issues/105) into account, while we did not. If we also take those into account, then we get the same results.
+        - The CCNs we counted were mostly the same as Lizard's. There is, however, one small caveat for `apply_infraction@infraction/_scheduler.py` - we counted 27 CCN instead of 26.
+            - Upon further investigation, it looks like line 299 was not counted by Lizard, which included a ternary operator within a string literal.
 2. Are the functions just complex, or also long?
     - We observe a slight correlation, but no causal effects. Generally speaking, if a function is long, then it's more probable that it contains some sort of complex code. However, there is no strict correlation here, as short functions can still be complex, vice versa.
 3. What is the purpose of the functions?
