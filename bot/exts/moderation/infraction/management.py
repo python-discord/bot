@@ -1,3 +1,4 @@
+import datetime
 import gettext
 import re
 import textwrap
@@ -219,7 +220,50 @@ class ModManagement(commands.Cog):
             json=request_data,
         )
 
+        # Handle user and re-scheduling logic
+        log_text, user_text, thumbnail = await self.handle_infraction_reschedule(
+            ctx, infraction, new_infraction, request_data, reason, log_text, infraction_id, expiry, confirm_messages
+        )
+
+        if any(
+                is_in_category(ctx.channel, category)
+                for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
+        ):
+            jump_url = "(Infraction edited in a ModMail channel.)"
+        else:
+            jump_url = f"[Click here.]({ctx.message.jump_url})"
+
+        await send_log_message(
+            self.bot,
+            icon_url=constants.Icons.pencil,
+            colour=discord.Colour.og_blurple(),
+            title="Infraction edited",
+            thumbnail=thumbnail,
+            text=textwrap.dedent(f"""
+                Member: {user_text}
+                Actor: <@{new_infraction['actor']}>
+                Edited by: {ctx.message.author.mention}{log_text}
+                Jump URL: {jump_url}
+            """),
+            footer=f"ID: {infraction_id}"
+        )
+
+    async def handle_infraction_reschedule(
+    self,
+    ctx: Context,
+    infraction: Infraction,
+    new_infraction: Infraction,
+    request_data: dict,
+    reason: str | None,
+    log_text: str,
+    infraction_id: int,
+    expiry: datetime,
+    confirm_messages: list[str] | None = None,
+    ) -> str:
+        """Reschedule an infraction that has been edited."""
         # Get information about the infraction's user
+        if confirm_messages is None:
+            confirm_messages = []
         user_id = new_infraction["user"]
         user = await get_or_fetch_member(ctx.guild, user_id)
 
@@ -254,28 +298,7 @@ class ModManagement(commands.Cog):
             user_text = f"<@{user_id}>"
             thumbnail = None
 
-        if any(
-                is_in_category(ctx.channel, category)
-                for category in (Categories.modmail, Categories.appeals, Categories.appeals_2)
-        ):
-            jump_url = "(Infraction edited in a ModMail channel.)"
-        else:
-            jump_url = f"[Click here.]({ctx.message.jump_url})"
-
-        await send_log_message(
-            self.bot,
-            icon_url=constants.Icons.pencil,
-            colour=discord.Colour.og_blurple(),
-            title="Infraction edited",
-            thumbnail=thumbnail,
-            text=textwrap.dedent(f"""
-                Member: {user_text}
-                Actor: <@{new_infraction['actor']}>
-                Edited by: {ctx.message.author.mention}{log_text}
-                Jump URL: {jump_url}
-            """),
-            footer=f"ID: {infraction_id}"
-        )
+        return log_text, user_text, thumbnail
 
     # endregion
     # region: Search infractions
