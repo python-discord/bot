@@ -1,6 +1,6 @@
 # Report for assignment 3
 
-This project is an experiment in complexity and coverage metrics, based on [Discord bot](https://github.com/python-discord/bot). The goals are to get an understanding and appreciation of the benefits and drawbacks of metrics and their tools, and to create new test cases or to enhance existing tests that improve statement or branch coverage.
+This project is an experiment in complexity and coverage metrics, based on Python [Discord bot](https://github.com/python-discord/bot). The goals are to get an understanding and appreciation of the benefits and drawbacks of metrics and their tools, and to create new test cases or to enhance existing tests that improve statement or branch coverage.
 
 ## Onboarding experience
 
@@ -26,13 +26,30 @@ Function: `on_command_error@65-149@./bot/exts/backend/error_handler.py`
 
 ## Refactoring
 
-Plan for refactoring complex code:
+### on_command_error()
 
-Estimated impact of refactoring (lower CC, but other drawbacks?).
+The code to handle command_not_found error and command_invoke_error are complex, so I extract two methods from these two code snippets. The reduction of CC is obvious, and these functions become easier to test. There is a recursive call in original function when handling command_not_found error. The refactor makes it more maintainable, and there is no drawback.
 
-Carried out refactoring (optional, P+):
+CC before:
+```shell
+# NLOC    CCN   token  PARAM  length  location
+    76     20     412      3      85  on_command_error@65-149@bot/exts/backend/error_handler.py
+```
 
-git diff ...
+CC after:
+```shell
+# NLOC    CCN   token  PARAM  length  location
+    54     12    249      3      60   on_command_error@65-124@bot/exts/backend/error_handler.py
+    14      5     90      2      16   handle_command_not_found@126-141@bot/exts/backend/error_handler.py
+    14      6    122      3      14   handle_command_invoke_error@143-156@bot/exts/backend/error_handler.py
+```
+
+The CC of on_command_error is reduced by 40%.
+
+The refactored code is in branch [refactor/12-on-command-error](https://github.com/SEF-Group-25/discord-bot/compare/refactor/12-on-command-error). Check the change using:
+```shell
+% git diff 60905d8 61e9ca3
+```
 
 ## Coverage
 
@@ -42,7 +59,10 @@ Discord bot is already integrated with coverage tool `Coverage.py`, and the comm
 
 ### Own coverage tool
 
-Branch [feat/1-cov-error-handler](https://github.com/SEF-Group-25/discord-bot/tree/feat/1-cov-error-handler) shows the instrumented code.
+Branch [feat/1-cov-error-handler](https://github.com/SEF-Group-25/discord-bot/tree/feat/1-cov-error-handler) shows the instrumented code. Check the code and usage of tool using:
+```shell
+% git diff 60905d8 cd2f974
+```
 
 ### Evaluation
 
@@ -60,6 +80,8 @@ filter_ for filter_ in self[ListType.ALLOW].filters.values() if await filter_.tr
 After excluding special cases or refactoring code, the result of our tool is accurate, consistent with the result of `Coverage.py`.
 
 ## Coverage improvement
+
+### on_command_error()
 
 Requirements documentation for uncovered branches:
 
@@ -85,7 +107,7 @@ except Forbidden:
 ```
 
 Report of old coverage:
-```bash
+```shell
 # Name                              Stmts   Miss Branch BrPart  Cover
 bot/exts/backend/error_handler.py     245     68     96      7    73%
 # Missing
@@ -93,29 +115,33 @@ bot/exts/backend/error_handler.py     245     68     96      7    73%
 ```
 
 Report of new coverage:
-```bash
+```shell
 # Name                              Stmts   Miss Branch BrPart  Cover
 bot/exts/backend/error_handler.py     245     58     96      5    77%
 # Missing
 25-29, 33-42, 47, 165-166, 209-210, 215, 221-223, 239-260, 268-269, 271-291, 334-342
 ```
 
-Test cases added:
-
-git diff ...
+There are 4 new test cases in branch [test/2-new-tests-error-handler](https://github.com/SEF-Group-25/discord-bot/tree/test/2-new-tests-error-handler). Check the test cases using:
+```shell
+% git diff 60905d8 f4ba935
+```
 
 ## Self-assessment: Way of working
 
-Current state according to the Essence standard: ...
+The current state is In Place according to the Essence standard. We can proficiently use git commit messages, GitHub issues to manage our code. We use different branches according to the issues to development. These practises and tools are being used by the whole team, although the requirements of different assignments vary greatly. And we get adapted to this way-of-working and benefit from it.
 
-Was the self-assessment unanimous? Any doubts about certain items?
-
-How have you improved so far?
-
-Where is potential for improvement?
+It still takes time to achieve Working well state, because the demand is always changing between assignments, we still need time to combine the the way-of-working and reality.
 
 ## Overall experience
 
-What are your main take-aways from this project? What did you learn?
+I learned a lot of skills and knowledge of testing, and I become more sensitive to bad smells in code. When developing softwares in the future, I will think more about how to make my code easier to test and more maintainable. This project also inspired me a lot on test driven development.
 
-Is there something special you want to mention here?
+## Contributions
+
+| Group member     | Function name      | Function Location                          |
+| ---------------- | ------------------ | ------------------------------------------ |
+| Oscar Hellgren   |                    |                                            |
+| Anton Yderberg   |                    |                                            |
+| Zubair Yousafzai |                    |                                            |
+| Shangxuan Tang   | on_command_error() | 65-149@./bot/exts/backend/error_handler.py |
