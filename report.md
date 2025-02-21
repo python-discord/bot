@@ -152,6 +152,7 @@ Nonetheless the following tests could be implemented:
   - The function should return failure when there is no invite url in the ctx content, i.e. it should return None as action, an empty message and an empty dictionary for the list type.
   - The function should return failure when the invite url is invalid.
   - The function should return success for a different but valid url.
+
 Report of old coverage:
 ```
 Name                                          Stmts   Miss Branch BrPart  Cover   Missing
@@ -179,7 +180,7 @@ Test cases added:
 
 ## Self-assessment: Way of working
 
-We would now argue that we have reached the “In Place” state. We previously estimated that we were close to reaching “In Place” but had to work more as a group on modifying and improving the practices in the group. For this project all group members have participated in trying to modify and improve the Ways of Working. 
+We would now argue that we have reached the “In Place” state. We previously estimated that we were close to reaching “In Place” but had to work more as a group on modifying and improving the practices in the group. For this project all group members have participated in trying to modify and improve the Ways of Working.
 
 To reach the next state “Working Well” we would need to work on becoming more comfortable with the practices, in order to apply them naturally without thinking about them. Additionally we would need to improve the “continually tunes their use of the practices and tools."
 
@@ -188,4 +189,4 @@ To reach the next state “Working Well” we would need to work on becoming mor
 What are your main take-aways from this project? What did you learn?
 One takeaway from this project is that GitHub automatically wants to make pull requests towards the main repository and not the fork. This caused us to bloat the main repository with faulty PRs. More importantly, we learned about function coverage and how to calculate it, helping us write better test cases. The hardest thing to learn was how to implement our own tests in a project built by someone else, many struggled with seemingly random errors that required them to thoroughly read the code and learn how it works. This lesson will be useful for all of us when we contribute to other projects in the future.
 
-As an additional note for P+, we have a working patch ([PR #3260](https://github.com/python-discord/bot/pull/3260)) accepted and merged into the upstream, which included a small fix along with the addition of 7 new test cases.
+As an additional note for P+, we have a working patch ([PR #3260](https://github.com/python-discord/bot/pull/3260)) accepted and merged into the upstream, which included a small fix along with the addition of 7 new test cases. The persons who are aiming for P+ are Johan (@joel90688), Kim (@strengthless) and Marcello (@Celleforst)
