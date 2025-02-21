@@ -109,6 +109,7 @@ Show a patch (or link to a branch) that shows the instrumented code to
 gather coverage measurements:
 - For `humanize_delta@utils/time.py`, we have [PR #10](https://github.com/dd2480-spring-2025-group-1/bot/pull/10)
 - For `infraction_edit@infraction/management.py`: we have [PR #28](https://github.com/dd2480-spring-2025-group-1/bot/pull/28). This PR includes created tests from later in the assignment since the coverage tool will otherwise not run if there are no tests as described in the limitations of the tool.
+- For `actions_for@invite.py`: we have [PR #46](https://github.com/dd2480-spring-2025-group-1/bot/pull/46). This PR includes created tests from later in the assignment since the coverage tool will otherwise not run if there are no tests as described in the limitations of the tool.
 
 What kinds of constructs does your tool support, and how accurate is
 its output?
@@ -148,7 +149,7 @@ Show the comments that describe the requirements for the coverage:
     - The function should not allow editing the duration of a warning or note infraction.
     - The function should not allow editing the duration of an expired infraction.
     - The function should call the `api_client.patch` method to update an infraction when a new reason is provided.
-- For `apply_fpr@./bot/exts/filtering/_filter_lists/invite.py` there were no tests before. The function documentation is very scarce, thus the test cases had to be derived from the code itself. Some parts of the code are inaccessible since they require certain filters to trigger, which is not realizable with the MockBot used which generates random ids and data.
+- For `actions_for@_filter_lists/invite.py` there were no tests before. The function documentation is very scarce, thus the test cases had to be derived from the code itself. Some parts of the code are inaccessible since they require certain filters to trigger, which is not realizable with the MockBot used which generates random ids and data.
 Nonetheless the following tests could be implemented:
   - The function should return success for a valid invite url, i.e. empty action, a message containing the invite code and the list filter that allowed the invite (since no filter triggered it, it should be ListType.ALLOW:[]).
   - The function should return failure when there is no invite url in the ctx content, i.e. it should return None as action, an empty message and an empty dictionary for the list type.
@@ -161,7 +162,7 @@ Name                                          Stmts   Miss Branch BrPart  Cover 
 ------------------------------------------------------------------------------------------
 bot/utils/helpers.py                            23      8      4      1    67%   19, 25-28, 38-43
 infraction_edit@management.py                   51     51     26      0     0%   192-281
-bot/exts/filtering/_filter_lists/invite.py      93     69     32      1    20%   19, 47-48, 52, 57, 63-152, 157-172
+actions_for@invite.py                           55     55     26      0     0%   63-152
 ```
 
 Report of new coverage:
@@ -170,15 +171,14 @@ Name                                          Stmts   Miss Branch BrPart  Cover 
 ------------------------------------------------------------------------------------------
 bot/utils/helpers.py                            23      0      4      0   100%
 infraction_edit@management.py                   51     22     26      7    52%   188, 194-195, 197-202, 214, 229-242, 254-255, 261
-bot/exts/filtering/_filter_lists/invite.py      93     13     32     10    77%   19, 57, 76->78, 90-92, 96-97, 117->128, 129, 132->135, 136-140, 145->148, 161->166, 164
-
+actions_for@invite.py                           55     10     26      7    72%   76->78, 90-92, 96-97, 117->128, 129, 132->135, 136-140, 145->148
 
 ```
 
 Test cases added:
 - For `utils/helpers.py`, [PR #3260](https://github.com/python-discord/bot/pull/3260) had been created by @strengthless, approved and merged into the upstream, which included 7 new test cases.
 - For `infraction_edit@infraction/management.py`, [PR #38](https://github.com/dd2480-spring-2025-group-1/bot/pull/38) has been drafted.
-- For `apply_fpr@./bot/exts/filtering/_filter_lists/invite.py`, [PR #44](https://github.com/dd2480-spring-2025-group-1/bot/pull/44) has been drafted.
+- For `actions_for@./bot/exts/filtering/_filter_lists/invite.py`, [PR #44](https://github.com/dd2480-spring-2025-group-1/bot/pull/44) has been drafted.
 
 ## Self-assessment: Way of working
 
