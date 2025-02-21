@@ -43,7 +43,7 @@ With everything combined, we deemed the project suitable for this assignment.
           ```
         - By counting manually and cross-checking, we reached the following consensus:
             - For `apply_infraction@infraction/_scheduler.py`, we get 27 CCN.
-            - For `deactivate_infraction@infraction/_scheduler.py`, we get
+            - For `deactivate_infraction@infraction/_scheduler.py`, we get 17 CCN.
             - For `infraction_edit@infraction/management.py`, we get
             - For `humanize_delta@utils/time.py`, we get 16 CCN.
             - For `on_command_error@backend/error_handler.py`, we get 20 CCN.
@@ -54,12 +54,14 @@ With everything combined, we deemed the project suitable for this assignment.
 2. Are the functions just complex, or also long?
     - We observe a slight correlation, but no causal effects. Generally speaking, if a function is long, then it's more probable that it contains some sort of complex code. However, there is no strict correlation here, as short functions can still be complex, vice versa.
 3. What is the purpose of the functions?
+    - For `deactivate_infraction@infraction/_scheduler.py`, it is a function that deactivates infraction status for users in the database and returns a log of the removed infraction.
     - For `apply_infraction@infraction/_scheduler.py`, it is a function that applies an infraction to the user and logs the infraction. It can also notify the user of the infraction.
     - For `humanize_delta@utils/time.py`, it is a function that takes in a period of time (e.g. start and end timestamps) as its arguments, then convert it into a human-readable string.
     - For `on_command_error@./bot/exts/backend/error_handler.py`, it is a function that provides error messages given a generic error by deferring errors to local error handlers.
 4. Are exceptions taken into account in the given measurements?
     - Yes, for both Lizard and our manual counting. If we don't take them into account, then the resultant CCN could drop.
 5. Is the documentation clear w.r.t. all the possible outcomes?
+    - For `deactivate_infraction@infraction/_scheduler.py`, some parts of the function were easy to read with regards to all the possible outcomes, as the function utilises if/else statements in variable assignment without documenting the use case.
     - For `apply_infraction@infraction/_scheduler.py`, the function is quite easy to read and understand by the given documentation.  
     - For `humanize_delta@utils/time.py`, exceptions were not explicitly documented. Other than that, the function only produces a string as its outcome, therefore we think the documentation was mostly clear.
     - For `on_command_error@./bot/exts/backend/error_handler.py`, the documentation provides a clear and concise description of most of the functions behaviour, but seems to fail to document the `CommandInvokeError` branch behaviour almost entirely.
