@@ -89,7 +89,7 @@ Carried out refactoring (optional, P+):
 - For `actions_for@./bot/exts/filtering/_filter_lists/invite.py`, we have [PR #22](https://github.com/dd2480-spring-2025-group-1/bot/pull/22) which reduces CCN by 35.1%.
 - For `infraction_edit@infraction/management.py`, we have [PR #21](https://github.com/dd2480-spring-2025-group-1/bot/pull/21) which reduces CCN by about 39%.
 
-Note: since `on_command_error@error_handler.py` already has 100% test coverage as reported by `coverage.py`, we decided to do part 2 of the assignment with `actions_for@invite.py` instead, which is the function with the highest CCN as reported by lizard (CCN 37) and it has 20% test coverage.
+Note: since `on_command_error@error_handler.py` already has 100% test coverage as reported by `coverage.py`, we decided to do part 2 of the assignment with `actions_for@invite.py` instead, which is the function with the highest CCN as reported by lizard (CCN 37) and it has 0% test coverage.
 
 ## Coverage
 
@@ -133,7 +133,8 @@ its output?
 - Another limitation is that there will be no coverage output if no tests exist for the function since the coverage tool will never be run.
 
 3. Are the results of your tool consistent with existing coverage tools?
-- The reported number of total branches are consistent.
+- The reported number of total branches are mostly consistent.
+  - Except for `deactivate_infraction@_scheduler.py`, because `coverage.py` is not taking one-liners (e.g., `x if y else z`, `for x in y`) into account, while our tool does.
 - However, the numbers of missing branches (which you can obtain using `poetry run coverage json ./bot/utils/time.py`) are different.
     - Upon further investigation, we realized that it's because our tool was only checking against `test_time.py` for branch coverage on `time.py`. On the contrary, `coverage.py` records all LoC transitions when running **all** test files, then compares them against a list of possible branch transitions (statically analysed), which yields the final branch coverage report ([ref](https://coverage.readthedocs.io/en/7.6.12/branch.html#how-it-works)).
     - For example, let's assume `humanize_delta@time.py` is used in the function `get_slowmode@slowmode.py`, and `get_slowmode` is tested in `test_slowmode.py`. When the test suite for `test_slowmode.py` runs, some branches within `humanize_delta@time.py` will also be executed, and thereby increasing the branch coverage on `time.py`, despite it not being tested directly.
@@ -189,6 +190,6 @@ To reach the next state “Working Well” we would need to work on becoming mor
 ## Overall experience
 
 What are your main take-aways from this project? What did you learn?
-One takeaway from this project is that GitHub automatically wants to make pull requests towards the main repository and not the fork. This caused us to bloat the main repository with faulty PRs. More importantly, we learned about function coverage and how to calculate it, helping us write better test cases. The hardest thing to learn was how to implement our own tests in a project built by someone else, many struggled with seemingly random errors that required them to thoroughly read the code and learn how it works. This lesson will be useful for all of us when we contribute to other projects in the future.
+- One takeaway from this project is that GitHub automatically wants to make pull requests towards the main repository and not the fork. This caused us to bloat the main repository with faulty PRs. More importantly, we learned about function coverage and how to calculate it, helping us write better test cases. The hardest thing to learn was how to implement our own tests in a project built by someone else, many struggled with seemingly random errors that required them to thoroughly read the code and learn how it works. This lesson will be useful for all of us when we contribute to other projects in the future.
 
 As an additional note for P+, we have a working patch ([PR #3260](https://github.com/python-discord/bot/pull/3260)) accepted and merged into the upstream, which included a small fix along with the addition of 7 new test cases. The persons who are aiming for P+ are Johan (@joel90688), Kim (@strengthless) and Marcello (@Celleforst)
