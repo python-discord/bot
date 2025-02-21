@@ -396,8 +396,7 @@ class InfractionScheduler:
         pardon_reason: str | None = None,
         *,
         send_log: bool = True,
-        notify: bool = True,
-        flags: list[bool] = [False] * 16
+        notify: bool = True
     ) -> dict[str, str]:
         """
         Deactivate an active infraction and return a dictionary of lines to send in a mod log.
@@ -414,7 +413,6 @@ class InfractionScheduler:
 
         Infractions of unsupported types will raise a ValueError.
         """
-
         guild = self.bot.get_guild(constants.Guild.id)
         mod_role = guild.get_role(constants.Roles.moderators)
         user_id = infraction["user"]
@@ -437,21 +435,17 @@ class InfractionScheduler:
             returned_log = await self._pardon_action(infraction, notify)
 
             if returned_log is not None:
-                flags[0] = True
                 log_text = {**log_text, **returned_log}  # Merge the logs together
             else:
                 raise ValueError(
                     f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
                 )
         except discord.Forbidden:
-            flags[1] = True
             log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
             log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
-            flags[2] = True
             if e.code == 10007 or e.status == 404:
-                flags[3] = True
                 log.info(
                     f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
                 )
@@ -474,14 +468,9 @@ class InfractionScheduler:
                     "user__id": user_id
                 }
             )
-            if active_watch:
-                flags[4] = True
-                log_text["Watching"] = "Yes"
 
-            else: 
-                log_text["Watching"] = "No"
+            log_text["Watching"] = "Yes" if active_watch else "No"
         except ResponseCodeError:
-            flags[5] = True
             log.exception(f"Failed to fetch watch status for user {user_id}")
             log_text["Watching"] = "Unknown - failed to fetch watch status."
 
@@ -492,11 +481,9 @@ class InfractionScheduler:
             data = {"active": False}
 
             if pardon_reason is not None:
-                flags[6] = True
                 data["reason"] = ""
                 # Append pardon reason to infraction in database.
                 if (punish_reason := infraction["reason"]) is not None:
-                    flags[7] = True
                     data["reason"] = punish_reason + " | "
 
                 data["reason"] += f"Pardoned: {pardon_reason}"
@@ -506,50 +493,29 @@ class InfractionScheduler:
                 json=data
             )
         except ResponseCodeError as e:
-            flags[8] = True
             log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
             log_line = f"API request failed with code {e.status}."
             log_content = mod_role.mention
 
             # Append to an existing failure message if possible
             if "Failure" in log_text:
-                flags[9] = True
                 log_text["Failure"] += f" {log_line}"
             else:
                 log_text["Failure"] = log_line
 
         # Cancel the expiration task.
         if infraction["expires_at"] is not None:
-            flags[10] = True
             self.scheduler.cancel(infraction["id"])
 
         # Send a log message to the mod log.
         if send_log:
-            flags[11] = True
-            if "Failure" in log_text:
-                flags[12] = True
-                log_title = "expiration failed"
-            else:
-                log_title = "expired"
-
-            #log_title = "expiration failed" if "Failure" in log_text else "expired"
+            log_title = "expiration failed" if "Failure" in log_text else "expired"
 
             user = self.bot.get_user(user_id)
-            if user:
-                flags[13] = True
-                avatar = user.display_avatar.url
-            else: avatar = None
-            
-            #avatar = user.display_avatar.url if user else None
+            avatar = user.display_avatar.url if user else None
 
             # Move reason to end so when reason is too long, this is not gonna cut out required items.
             log_text["Reason"] = log_text.pop("Reason")
-
-            lines = []
-            for k, v in log_text.items():
-                flags[14] = True  # Set your flag for each iteration
-                lines.append(f"{k}: {v}")
-            text_value = "\n".join(lines)
 
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")
             await send_log_message(
@@ -558,8 +524,7 @@ class InfractionScheduler:
                 colour=Colours.soft_green,
                 title=f"Infraction {log_title}: {type_}",
                 thumbnail=avatar,
-                text=text_value,
-                #text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
+                text="\n".join(f"{k}: {v}" for k, v in log_text.items()),
                 footer=f"ID: {id_}",
                 content=log_content,
             )
