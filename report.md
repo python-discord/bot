@@ -106,7 +106,7 @@ There is only one small caveat here: coverage by function or class is not native
 Show a patch (or link to a branch) that shows the instrumented code to
 gather coverage measurements:
 - For `humanize_delta@utils/time.py`, we have [PR #10](https://github.com/dd2480-spring-2025-group-1/bot/pull/10)
-- For `infraction_edit@infraction/management.py`: we have [PR #28](https://github.com/dd2480-spring-2025-group-1/bot/pull/28)
+- For `infraction_edit@infraction/management.py`: we have [PR #28](https://github.com/dd2480-spring-2025-group-1/bot/pull/28). This PR includes created tests from later in the assignment since the coverage tool will otherwise not run if there are no tests as described in the limitations of the tool.
 
 What kinds of constructs does your tool support, and how accurate is
 its output?
