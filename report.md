@@ -71,12 +71,14 @@ With everything combined, we deemed the project suitable for this assignment.
 ## Refactoring
 
 Plan for refactoring complex code:
+- For `apply_infraction@infraction/_scheduler.py`, we can extract most of the code related to logging of the results. This code be handled in a seperate function. This would reduce the amount of CCN significantly.
 - For `deactivate_infraction@infraction/_scheduler.py`, we plan on extracting the 3 different try/exepct blocks into separate methods (pardon_infraction, user_is_watched, update_db).
 - For `humanize_delta@utils/time.py`, we plan on extracting methods, as the function is composed of two main parts, parsing of overload arguments into time delta, and stringification of the delta. Arguably, the former can be delegated to a separate helper function, which should greatly reduce the cyclomatic complexity.  
 - For `actions_for@./bot/exts/filtering/_filter_lists/invite.py`, we plan on extracting methods, as the function is composed of many steps that can be isolated into separate functions. One could extract functionalities like redefining invites, sorting invites, finding blocked invites and cleaning up invites into separate functions.  
 - For `infraction_edit@infraction/management.py`, despite all code being relevant, we can still make changes to the complexity by refactoring and dividing the function into less complex functions which can be used by other functions in the future. More specifically, we can separate the rescheduling functionality from infraction_edit making a helper function which reschedules an infraction when necessary.
 
 Estimated impact of refactoring (lower CC, but other drawbacks?):
+- For `apply_infraction@infraction/_scheduler.py`, no particular drawbacks should arise. It should decrease the CC with about 40%.
 - For `deactivate_infraction@infraction/_scheduler.py`, some drawbacks are decreased readablility of the code and increased function calls.
 - For `humanize_delta@utils/time.py`, no drawbacks are anticipated, except for the use of `typing.Any` in the type signature for the new helper function. However, since type hints are not strongly enforced in Python (they're just **hints** for humans), this should not be a huge deal.  
 - For `actions_for@./bot/exts/filtering/_filter_lists/invite.py`, no drawbacks are anticipated.
