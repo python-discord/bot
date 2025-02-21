@@ -144,6 +144,7 @@ its output?
 ## Coverage improvement
 
 Show the comments that describe the requirements for the coverage:
+- For `apply_infraction@infraction/_scheduler.py`, the code had zero coverage since before the implementation of the two new unittest. One unittest simply tries to run through the function successfully and the other fails by raising a keyerror.
 - For `utils/helpers.py`, the functions are fairly straightforward. The requirements were already well documented in the one-line docstrings. The only caveat here is the `has_lines` function, which ignores one `\n` character from the end of the string when counting the number of lines.
 - For `infraction_edit@infraction/management.py`, there were no tests before but the documentation of the function was clear and helped in creating the requirements, e.g.:
     - The function should raise a BadArgument when a duration and a reason is not provided.
@@ -161,6 +162,7 @@ Report of old coverage:
 ```
 Name                                          Stmts   Miss Branch BrPart  Cover   Missing
 ------------------------------------------------------------------------------------------
+apply_infraction@_scheduler.py                  86     86     34      0     0%   147-300
 bot/utils/helpers.py                            23      8      4      1    67%   19, 25-28, 38-43
 infraction_edit@management.py                   51     51     26      0     0%   192-281
 actions_for@invite.py                           55     55     26      0     0%   63-152
@@ -170,6 +172,7 @@ Report of new coverage:
 ```
 Name                                          Stmts   Miss Branch BrPart  Cover   Missing
 ------------------------------------------------------------------------------------------
+apply_infraction@_scheduler.py                  86     41     34     12    48%   157->160, 167, 183->191 ....221-238, 241->259, 246-256, 260-267
 bot/utils/helpers.py                            23      0      4      0   100%
 infraction_edit@management.py                   51     22     26      7    52%   188, 194-195, 197-202, 214, 229-242, 254-255, 261
 actions_for@invite.py                           55     10     26      7    72%   76->78, 90-92, 96-97, 117->128, 129, 132->135, 136-140, 145->148
@@ -177,9 +180,10 @@ actions_for@invite.py                           55     10     26      7    72%  
 ```
 
 Test cases added:
+- For `apply_infraction@infraction/_scheduler.py`, [PR #54](https://github.com/dd2480-spring-2025-group-1/bot/pull/54) has been drafted, 2 test cases added.
 - For `utils/helpers.py`, [PR #3260](https://github.com/python-discord/bot/pull/3260) had been created by @strengthless, approved and merged into the upstream, which included 7 new test cases.
-- For `infraction_edit@infraction/management.py`, [PR #38](https://github.com/dd2480-spring-2025-group-1/bot/pull/38) has been drafted.
-- For `actions_for@./bot/exts/filtering/_filter_lists/invite.py`, [PR #44](https://github.com/dd2480-spring-2025-group-1/bot/pull/44) has been drafted.
+- For `infraction_edit@infraction/management.py`, [PR #38](https://github.com/dd2480-spring-2025-group-1/bot/pull/38) has been drafted, 4 test cases added.
+- For `actions_for@_filter_lists/invite.py`, [PR #44](https://github.com/dd2480-spring-2025-group-1/bot/pull/44) has been drafted, 4 test cases added.
 
 ## Self-assessment: Way of working
 
