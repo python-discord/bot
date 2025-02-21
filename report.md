@@ -179,13 +179,9 @@ Test cases added:
 
 ## Self-assessment: Way of working
 
-Current state according to the Essence standard: ...
+We would now argue that we have reached the “In Place” state. We previously estimated that we were close to reaching “In Place” but had to work more as a group on modifying and improving the practices in the group. For this project all group members have participated in trying to modify and improve the Ways of Working. 
 
-Was the self-assessment unanimous? Any doubts about certain items?
-
-How have you improved so far?
-
-Where is potential for improvement?
+To reach the next state “Working Well” we would need to work on becoming more comfortable with the practices, in order to apply them naturally without thinking about them. Additionally we would need to improve the “continually tunes their use of the practices and tools."
 
 ## Overall experience
 
