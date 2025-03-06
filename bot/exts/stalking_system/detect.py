@@ -1,13 +1,21 @@
 import discord
 from discord.ext.commands import Cog
+from discord.ext.commands import Context
+
+from detect import send_dm
 
 from bot.bot import Bot
 from bot.log import get_logger
 
+
 log = get_logger(__name__)
 
 
-# Assumes a `channel_word_trackers` dictionary is defined elsewhere
+# Assumes a `channel_word_trackers` dictionary is defined elsewhere. This list is for testing purposes.
+"""channel_word_trackers = {
+    1341835774915514386: {
+    "wow": {
+        166578600798060544}}}"""
 class Detect(Cog):
     """Detects listed words in listed channels and notifies listed users by DMing them"""
 
@@ -15,8 +23,9 @@ class Detect(Cog):
         self.bot = bot
 
     @Cog.listener()
-    async def on_message(message: discord.Message) -> None:
+    async def on_message(self, message: discord.Message) -> None:
         """Listens for a message and checks its relevant"""
+
         # Ignore bot messages
         if message.author.bot:
             return
@@ -33,19 +42,18 @@ class Detect(Cog):
         # Check each tracked word in this channel
         for word, user_ids in tracked_words_for_channel.items():
             if word in content_lower:
-                if is_spam(message):
+                if is_malicious(message):
                     continue
                 else:
                     # If not spam, DM all users who track this word in this channel
                     for user_id in user_ids:
-                        user = bot.get_user(user_id)
+                        user = self.bot.get_user(user_id)
                         if user is None:
                             try:
-                                user = await bot.fetch_user(user_id)
+                                user = await self.bot.fetch_user(user_id)
                             except discord.HTTPException as exc:
                                 log.exception(f"Failed to fetch user {user_id}: {exc}")
                                 return
-
                         await send_dm(
                                 user,
                                 f"A tracked word ('{word}') was mentioned by {message.author.mention} in {message.channel.mention}."
