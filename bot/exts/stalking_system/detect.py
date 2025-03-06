@@ -9,6 +9,7 @@ from bot.log import get_logger
 
 import json
 from pathlib import Path
+from spam_check import RateLimiter
 
 
 log = get_logger(__name__)
@@ -26,6 +27,7 @@ class Detect(Cog):
         self.bot = bot
         self.json_path =Path("/tmp/word_trackers.json")
         self.channel_word_trackers = {}
+        self.limiter = RateLimiter(message_threshold=3, time_window=10)
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -56,10 +58,11 @@ class Detect(Cog):
         # Check each tracked word in this channel
         for word, user_ids in tracked_words_for_channel.items():
             if word in content_lower:
-                if is_malicious(message):
+                if self.limiter.is_malicious(message.author.id, message.created_at.timestamp()):
                     continue
                 else:
                     # If not spam, DM all users who track this word in this channel
+                    self.limiter.record_trigger(message.author.id, message.created_at.timestamp())
                     for user_id in user_ids:
                         user = self.bot.get_user(user_id)
                         if user is None:
