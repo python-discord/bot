@@ -56,6 +56,33 @@ class WordTracker(commands.Cog):
 
         await ctx.send(message)
 
+    @commands.command(name="untrack")
+    async def untrack_word(self, ctx: Context, word: str) -> None:
+        """
+        Stop tracking a word in the current channel.
+
+        Args:
+            word: The word to stop tracking
+        """
+        if ctx.channel.id not in self.channel_word_trackers:
+            await ctx.send("No words are being tracked in this channel.")
+            return
+
+        if word not in self.channel_word_trackers[ctx.channel.id]:
+            await ctx.send(f"The word '{word}' is not being tracked in this channel.")
+            return
+
+        # Remove user from tracking set
+        self.channel_word_trackers[ctx.channel.id][word].discard(ctx.author.id)
+
+        # Clean up empty sets and dictionaries
+        if not self.channel_word_trackers[ctx.channel.id][word]:
+            del self.channel_word_trackers[ctx.channel.id][word]
+        if not self.channel_word_trackers[ctx.channel.id]:
+            del self.channel_word_trackers[ctx.channel.id]
+
+        await ctx.send(f"Stopped tracking the word '{word}' in this channel!")
+
 async def setup(bot: Bot) -> None:
     """Load the WordTracker cog."""
     await bot.add_cog(WordTracker(bot))
