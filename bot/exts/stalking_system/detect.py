@@ -7,6 +7,9 @@ from detect import send_dm
 from bot.bot import Bot
 from bot.log import get_logger
 
+import json
+from pathlib import Path
+
 
 log = get_logger(__name__)
 
@@ -21,6 +24,8 @@ class Detect(Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
+        self.json_path =Path("/tmp/word_trackers.json")
+        self.channel_word_trackers = {}
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -30,13 +35,22 @@ class Detect(Cog):
         if message.author.bot:
             return
 
+
+        if not self.json_path.exists():
+            self.channel_word_trackers = {}
+        try:
+            self.channel_word_trackers = json.loads(self.json_path.read_text())
+        except Exception as e:
+            log.error(f"Failed to read JSON: {e}")
+            self.channel_word_trackers = {}
+
         # Check if this channel has any tracked words
         channel_id = message.channel.id
-        if channel_id not in channel_word_trackers:
+        if channel_id not in self.channel_word_trackers:
             return
 
         # Get the words tracked for this channel
-        tracked_words_for_channel = channel_word_trackers[channel_id]
+        tracked_words_for_channel = self.channel_word_trackers[channel_id]
         content_lower = message.content.lower()
 
         # Check each tracked word in this channel
@@ -58,7 +72,7 @@ class Detect(Cog):
                                 user,
                                 f"A tracked word ('{word}') was mentioned by {message.author.mention} in {message.channel.mention}."
                             )
-    
+
 
 
 
