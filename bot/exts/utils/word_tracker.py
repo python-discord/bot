@@ -1,7 +1,8 @@
-from discord.ext import commands
-from discord.ext.commands import Context
 import json
 from pathlib import Path
+
+from discord.ext import commands
+from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.log import get_logger
@@ -81,7 +82,7 @@ class WordTracker(commands.Cog):
 
         if user_id in data[channel_id][word]:
             data[channel_id][word].remove(user_id)
-            
+
             # Clean up empty entries
             if not data[channel_id][word]:
                 del data[channel_id][word]
