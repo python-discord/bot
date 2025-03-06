@@ -1,8 +1,6 @@
 import discord
 from discord.ext.commands import Cog
-from discord.ext.commands import Context
 
-from detect import send_dm
 
 from bot.bot import Bot
 from bot.log import get_logger
@@ -15,11 +13,8 @@ from spam_check import RateLimiter
 log = get_logger(__name__)
 
 
-# Assumes a `channel_word_trackers` dictionary is defined elsewhere. This list is for testing purposes.
-"""channel_word_trackers = {
-    1341835774915514386: {
-    "wow": {
-        166578600798060544}}}"""
+# Assumes a `channel_word_trackers` dictionary is defined elsewhere. 
+
 class Detect(Cog):
     """Detects listed words in listed channels and notifies listed users by DMing them"""
 
@@ -29,14 +24,15 @@ class Detect(Cog):
         self.channel_word_trackers = {}
         self.limiter = RateLimiter(message_threshold=3, time_window=10)
 
+    
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Listens for a message and checks its relevant"""
+        
 
         # Ignore bot messages
         if message.author.bot:
             return
-
 
         if not self.json_path.exists():
             self.channel_word_trackers = {}
@@ -48,11 +44,10 @@ class Detect(Cog):
 
         # Check if this channel has any tracked words
         channel_id = message.channel.id
-        if channel_id not in self.channel_word_trackers:
+        if str(channel_id) not in self.channel_word_trackers:
             return
-
         # Get the words tracked for this channel
-        tracked_words_for_channel = self.channel_word_trackers[channel_id]
+        tracked_words_for_channel = self.channel_word_trackers[str(channel_id)]
         content_lower = message.content.lower()
 
         # Check each tracked word in this channel
@@ -71,10 +66,11 @@ class Detect(Cog):
                             except discord.HTTPException as exc:
                                 log.exception(f"Failed to fetch user {user_id}: {exc}")
                                 return
-                        await send_dm(
+                        await self.send_dm(
                                 user,
                                 f"A tracked word ('{word}') was mentioned by {message.author.mention} in {message.channel.mention}."
                             )
+
 
 
 
