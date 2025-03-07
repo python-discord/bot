@@ -72,6 +72,35 @@ writing code;
 running code?
 - running the bot and test cases, 1h
 
+## Effort spent (Oscar)
+plenary discussions/meetings;
+- a meeting to decide the issue, 1h
+- a discussion over the plan to solve the issue, 2h
+- a meeting to decide the division of work, 1h
+
+discussions within parts of the group;
+- voice call to confirm technical details, 1h
+- text discussion, 2h
+
+reading documentation;
+- reading documentation and instructions on github page, 3h
+
+configuration and setup;
+- set up and run the bot using docker, 3h, mostly due to it not playing nice with ARM chips and emulation.
+
+analyzing code/output;
+- analyze the source code structure, 7h
+
+writing documentation;
+- write the report, 1h
+
+writing code;
+- write the feature code, 1h
+- write test cases, 2h
+
+running code?
+- running the bot and test cases, 1h
+
 ## Overview of issue(s) and work done.
 
 Title: Keyword Alerts
@@ -101,6 +130,14 @@ Command that takes a string as an argument of what should be kept track of.
 I.e /track hello sets up the bot to track the word "hello".
 
 Test cases: test_word_tracker.py
+
+### Requirement: Add DMs #3 (Oscar)
+Title: Add functionality to send DM
+
+Description:
+Function that sends a DM with a message
+
+Test cases: test_detect.py
 
 ## Code changes
 
@@ -136,6 +173,9 @@ From this project, I learned how to work as a group to solve code issues. We dis
 
 ## Overall experience (Zubair)
 From this project, I learned how to go about understanding large codebases to be able to contribute in a meaningful way. Working with an established project taught me how to integrate new features while maintaining existing code standards and patterns.
+
+## Overall experience (Oscar)
+I learned how annoying it can be when things don't work (ARM emulation) and that some codebases can be daunting to get into. I spent a lot of time looking at a different way to do this task, but at the end concluded that I didn't really understand the code we would've to work with good enough. It was also good to practice working in a team.
 
 Overall experience (Team)
 
