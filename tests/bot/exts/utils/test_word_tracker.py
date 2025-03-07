@@ -1,8 +1,10 @@
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
+from pathlib import Path
 
 from bot.exts.utils.word_tracker import WordTracker
 from tests.helpers import MockBot, MockContext, MockTextChannel
+
 
 
 class WordTrackerTests(unittest.IsolatedAsyncioTestCase):
@@ -20,6 +22,14 @@ class WordTrackerTests(unittest.IsolatedAsyncioTestCase):
                 "test_word": [456]  # User ID
             }
         }
+
+        self.fake_file = ['{}']
+        mock_path = MagicMock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.write_text.side_effect = lambda text: self.fake_file.__setitem__(0, text)
+        mock_path.read_text.side_effect = lambda: self.fake_file[0]
+        self.cog.json_path = mock_path
+
 
     def tearDown(self):
         """Clean up after each test."""
