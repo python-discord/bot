@@ -135,12 +135,12 @@ The command system uses the Decorator Pattern to define and register both comman
 From this project, I learned how to work as a group to solve code issues. We discussed the direction of solving the problem and developed a plan in detail. This is a valuable practical experience.
 
 ## Overall experience (Zubair)
-
 From this project, I learned how to go about understanding large codebases to be able to contribute in a meaningful way. Working with an established project taught me how to integrate new features while maintaining existing code standards and patterns.
 
 Overall experience (Team)
 
-How did you grow as a team, using the Essence standard to evaluate yourself?
+### How did you grow as a team, using the Essence standard to evaluate yourself?
+According to the Essence standard, we meet all the requirements of the Performing state. However, there's some room for improvement. For instance, one requirement states 'The team continuously adapts to changing context', we found ourselves sometimes slow to adapt when facing implementation difficulties. This could have been improved with slightly better team communication. Despite these minor setbacks, we're generally satisfied with how our team functions and collaborates.
 
 Optional (point 6): How would you put your work in context with best software engineering practice?
 
