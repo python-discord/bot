@@ -7,13 +7,12 @@ from bot.log import get_logger
 
 import json
 from pathlib import Path
-from spam_check import RateLimiter
+from bot.utils.spam_check import RateLimiter
 
 
 log = get_logger(__name__)
 
 
-# Assumes a `channel_word_trackers` dictionary is defined elsewhere. 
 
 class Detect(Cog):
     """Detects listed words in listed channels and notifies listed users by DMing them"""
@@ -24,11 +23,11 @@ class Detect(Cog):
         self.channel_word_trackers = {}
         self.limiter = RateLimiter(message_threshold=3, time_window=10)
 
-    
+
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """Listens for a message and checks its relevant"""
-        
+
 
         # Ignore bot messages
         if message.author.bot:

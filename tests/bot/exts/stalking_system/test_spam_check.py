@@ -1,7 +1,7 @@
 import unittest
 import time
 
-from bot.exts.stalking_system.spam_check import RateLimiter
+from bot.utils.spam_check import RateLimiter
 
 class TestRateLimiter(unittest.TestCase):
     def setUp(self):
@@ -15,7 +15,7 @@ class TestRateLimiter(unittest.TestCase):
 
         self.limiter.record_trigger(user_id, current_time)
         self.limiter.record_trigger(user_id, current_time + 2)
-        
+
         self.assertFalse(self.limiter.is_malicious(user_id, current_time + 3))
 
     def test_exceed_threshold(self):
@@ -37,7 +37,7 @@ class TestRateLimiter(unittest.TestCase):
         self.limiter.record_trigger(user_id, current_time - 15)  # Old message
         self.limiter.record_trigger(user_id, current_time - 12)  # Old message
         self.limiter.record_trigger(user_id, current_time)
-        
+
         self.assertFalse(self.limiter.is_malicious(user_id, current_time + 1))
 
     def test_independent_users(self):
@@ -52,4 +52,3 @@ class TestRateLimiter(unittest.TestCase):
 
         self.assertTrue(self.limiter.is_malicious(user1, current_time + 4))
         self.assertFalse(self.limiter.is_malicious(user2, current_time + 4))  # User2 has no triggers
-
