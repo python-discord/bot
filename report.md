@@ -12,8 +12,7 @@ This project is a Discord bot specifically for use with the Python Discord serve
 
 We continue on the previous project, the onboarding experience can be found in the [report for assignment 3](https://github.com/SEF-Group-25/discord-bot/blob/main/report.md)
 
-## Effort spent
-
+## Effort spent (Tang)
 plenary discussions/meetings;
 - a meeting to decide the issue, 1h
 - a discussion over the plan to solve the issue, 2h
@@ -27,7 +26,7 @@ reading documentation;
 - search and read documentation and manual, 3h
 
 configuration and setup;
-- set up and run the bot using docker, 1h
+- set up and run the bot using docker, 30m
 
 analyzing code/output;
 - analyze the source code structure, 2h
@@ -44,6 +43,35 @@ writing code;
 running code?
 - running the bot and test cases, 2h
 
+## Effort spent (Zubair)
+plenary discussions/meetings;
+- a meeting to decide the issue, 1h
+- a discussion over the plan to solve the issue, 2h
+- a meeting to decide the division of work, 1h
+
+discussions within parts of the group;
+- voice call to confirm technical details, 1h
+- text discussion, 1h
+
+reading documentation;
+- reading documentation and instructions on github page, 2h
+
+configuration and setup;
+- set up and run the bot using docker, 30m
+
+analyzing code/output;
+- analyze the source code structure, 5h
+
+writing documentation;
+- write the report, 1h
+
+writing code;
+- write the feature code, 4h
+- write test cases, 2h
+
+running code?
+- running the bot and test cases, 1h
+
 ## Overview of issue(s) and work done.
 
 Title: Keyword Alerts
@@ -56,7 +84,7 @@ To fix this issue, a new command will be added to the bot. It is a new feature s
 
 ## Requirements for the new feature or requirements affected by functionality being refactored
 
-### Requirement: Spam Check #6
+### Requirement: Spam Check #6 (Tang)
 
 Title: Rate Limiting System for Preventing Malicious Trigger Abuse
 
@@ -65,17 +93,20 @@ This system implements a rate limiter to prevent users from excessively triggeri
 
 Test cases: test_spam_check.py
 
+### Requirement: Add `track` command #4 (Zubair)
+Title: Add `track` command to track words
+
+Description:
+Command that takes a string as an argument of what should be kept track of.
+I.e /track hello sets up the bot to track the word "hello".
+
+Test cases: test_word_tracker.py
+
 ## Code changes
 
 ### Patch
 
-(copy your changes or the add git command to show them)
-
-git diff ...
-
-Optional (point 4): the patch is clean.
-
-Optional (point 5): considered for acceptance (passes all automated checks).
+To see code added for the `track` command: `git diff 314ccbb 5760419`.
 
 ## Test results
 
@@ -99,9 +130,15 @@ The bot’s event-driven system follows the Observer Pattern, where multiple eve
 #### Decorator Pattern
 The command system uses the Decorator Pattern to define and register both commands and event listeners. The `@commands.command()` decorator automatically registers a method as a bot command without requiring manual intervention. The `@commands.Cog.listener()` decorator transforms a method into an event handler, making it a part of the bot’s event-driven system. Instead of manually mapping function names to commands or events, decorators enhance readability by explicitly marking functions as commands or listeners.
 
-## Overall experience
+## Overall experience (Tang)
 
 From this project, I learned how to work as a group to solve code issues. We discussed the direction of solving the problem and developed a plan in detail. This is a valuable practical experience.
+
+## Overall experience (Zubair)
+
+From this project, I learned how to go about understanding large codebases to be able to contribute in a meaningful way. Working with an established project taught me how to integrate new features while maintaining existing code standards and patterns.
+
+Overall experience (Team)
 
 How did you grow as a team, using the Essence standard to evaluate yourself?
 
