@@ -101,6 +101,35 @@ writing code;
 running code?
 - running the bot and test cases, 1h
 
+## Effort spent (Anton Yderberg)
+plenary discussions/meetings;
+- a meeting to decide the issue, 1h
+- a discussion over the plan to solve the issue, 2h
+- a meeting to decide the division of work, 1h
+
+discussions within parts of the group;
+- voice call to confirm technical details, 1h
+- text discussions, 1h (roughly)
+
+reading documentation;
+- reading documentation and instructions on github page, 1h
+
+configuration and setup;
+- set up and run the bot using docker, 30m
+
+analyzing code/output;
+- analyze the source code structure, 5h
+
+writing documentation;
+- write the report, 30min
+
+writing code;
+- write the feature code, 3h
+- write test cases, 3h
+
+running code?
+- running the bot and test cases, 2h
+
 ## Overview of issue(s) and work done.
 
 Title: Keyword Alerts
@@ -139,6 +168,15 @@ Function that sends a DM with a message
 
 Test cases: test_detect.py
 
+### Requirement: Add message detection #5 (Anton)
+Title: Word stalker
+
+Description:
+Function to scan for words specified in #4.
+Also responsible for calling spam check and send DM functions if match is found.
+
+Test cases: test_detect.py
+
 ## Code changes
 
 ### Patch
@@ -146,9 +184,19 @@ Test cases: test_detect.py
 To see code added for the `track` command: `git diff 314ccbb 5760419`.
 
 ## Test results
+Before:
+============================================================= short test summary info =============================================================
+FAILED tests/bot/exts/stalking_system/test_detect.py::TestDetect::test_spam_blocked - NameError: name 'Detect' is not defined
+FAILED tests/bot/exts/stalking_system/test_detect.py::TestDetect::test_ignore_bot_message - NameError: name 'Detect' is not defined
+FAILED tests/bot/exts/stalking_system/test_detect.py::TestDetect::test_no_tracked_channel - NameError: name 'Detect' is not defined
+============================================= 3 failed, 431 passed, 1 skipped, 733 warnings in 17.33s =============================================
+Branch be found here https://github.com/SEF-Group-25/stalking-system/tree/origin/test/2-detect-tests
 
-Overall results with link to a copy or excerpt of the logs (before/after
-refactoring).
+After:
+
+=================================================== 451 passed, 1 skipped, 742 warnings in 8.90s ==================================================
+Branch https://github.com/SEF-Group-25/stalking-system
+
 
 ## UML class diagram and its description
 
@@ -177,7 +225,9 @@ From this project, I learned how to go about understanding large codebases to be
 ## Overall experience (Oscar)
 I learned how annoying it can be when things don't work (ARM emulation) and that some codebases can be daunting to get into. I spent a lot of time looking at a different way to do this task, but at the end concluded that I didn't really understand the code we would've to work with good enough. It was also good to practice working in a team.
 
-Overall experience (Team)
+## Overall experience (Anton)
+There were two parts of this whole experience that was interesting. First working as a team and discussing what to do beforehand was very new for me. Im very used to "aiming and shooting" with my work. But a more measured and discussion driven aproach has given me some experience in how to express myself to my peers and ill be taking it with me for future work. It was also very fun working with a bunch of new elements, the testing wasnt much new since it was simailar to what I did in the last labb but it was nice to get some practice. The interesting part mainly was learning and seeing how i was supposed to integrate my work into the already formed structure. All the api calls the bot that the discord bot is based on and most of all the whole "cog" structure was very interestnig. Its interesting to reflect on how my experience was so different from the last asignment where we simply refactored. Actually contributing is a completley different experience.
+
 
 ### How did you grow as a team, using the Essence standard to evaluate yourself?
 According to the Essence standard, we meet all the requirements of the Performing state. However, there's some room for improvement. For instance, one requirement states 'The team continuously adapts to changing context', we found ourselves sometimes slow to adapt when facing implementation difficulties. This could have been improved with slightly better team communication. Despite these minor setbacks, we're generally satisfied with how our team functions and collaborates.
