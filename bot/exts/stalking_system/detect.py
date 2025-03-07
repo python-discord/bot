@@ -13,17 +13,7 @@ from bot.utils.spam_check import RateLimiter
 
 log = get_logger(__name__)
 
-async def send_dm(user, message: str):
-    """Sends a DM to the user object"""
-    try:
-        await user.send(message)
 
-    except discord.NotFound:
-        print("User not found.")
-    except discord.Forbidden:
-        print("Permission denied.")
-    except discord.HTTPException:
-        print("Failed to send DM: HTTP Error")
 
 
 class Detect(Cog):
@@ -81,6 +71,17 @@ class Detect(Cog):
                                 user,
                                 f"A tracked word ('{word}') was mentioned by {message.author.mention} in {message.channel.mention}."
                             )
+    async def send_dm(self, user, message: str):
+        """Sends a DM to the user object"""
+        try:
+            await user.send(message)
+
+        except discord.NotFound:
+            print("User not found.")
+        except discord.Forbidden:
+            print("Permission denied.")
+        except discord.HTTPException:
+            print("Failed to send DM: HTTP Error")
 
 
 
