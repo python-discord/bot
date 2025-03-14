@@ -268,26 +268,22 @@ class DocCog(commands.Cog):
                 return "Unable to parse the requested symbol."
         return markdown
 
-    async def _get_symbols_items(self, symbols: list[str]) -> list[tuple[str, DocItem | None]]:
-        """
-        Get DocItems for the given list of symbols, and update the stats for the fetched doc items.
-
-        Returns (symbol, None) for any symbol for which a DocItem could not be found.
-        """
+    async def _get_symbols_items(self, symbols: list[str]) -> dict[str, DocItem | None]:
+        """Get DocItems for the given list of symbols, and update the stats for the fetched doc items."""
         if not self.refresh_event.is_set():
             log.debug("Waiting for inventories to be refreshed before processing item.")
             await self.refresh_event.wait()
 
         # Ensure a refresh can't run in case of a context switch until the with block is exited
         with self.symbol_get_event:
-            items: list[tuple[str, DocItem | None]] = []
-            for symbol_name in set(symbols):
+            items: dict[str, DocItem | None] = {}
+            for symbol_name in symbols:
                 symbol_name, doc_item = self.get_symbol_item(symbol_name)
                 if doc_item:
-                    items.append((symbol_name, doc_item))
+                    items[symbol_name] = doc_item
                     self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
                 else:
-                    items.append((symbol_name, None))
+                    items[symbol_name] = None
 
         return items
 
@@ -301,7 +297,7 @@ class DocCog(commands.Cog):
         """
         log.trace(f"Building embed for symbol `{symbol_name}`")
         _items = await self._get_symbols_items([symbol_name])
-        symbol_name, doc_item = _items[0]
+        doc_item = _items[symbol_name]
 
         if doc_item is None:
             log.debug(f"{symbol_name=} does not exist.")
@@ -332,7 +328,7 @@ class DocCog(commands.Cog):
         items = await self._get_symbols_items(symbols)
         content = ""
         link_count = 0
-        for symbol_name, doc_item in items:
+        for symbol_name, doc_item in items.items():
             if link_count >= 10:
                 break
             if doc_item is None:
