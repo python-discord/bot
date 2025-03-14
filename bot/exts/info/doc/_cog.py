@@ -151,7 +151,7 @@ class DocCog(commands.Cog):
                 delay = FETCH_RESCHEDULE_DELAY.first
             log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
             self.inventory_scheduler.schedule_later(
-                delay * 60,
+                delay*60,
                 api_package_name,
                 self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url),
             )
@@ -221,8 +221,9 @@ class DocCog(commands.Cog):
         await self.item_fetcher.clear()
 
         coros = [
-            self.update_or_reschedule_inventory(package["package"], package["base_url"], package["inventory_url"])
-            for package in await self.bot.api_client.get("bot/documentation-links")
+            self.update_or_reschedule_inventory(
+                package["package"], package["base_url"], package["inventory_url"]
+            ) for package in await self.bot.api_client.get("bot/documentation-links")
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
@@ -418,7 +419,8 @@ class DocCog(commands.Cog):
         """
         if not symbol_name:
             inventory_embed = discord.Embed(
-                title=f"All inventories (`{len(self.base_urls)}` total)", colour=discord.Colour.blue()
+                title=f"All inventories (`{len(self.base_urls)}` total)",
+                colour=discord.Colour.blue()
             )
 
             lines = sorted(f"- [`{name}`]({url})" for name, url in self.base_urls.items())
@@ -477,7 +479,11 @@ class DocCog(commands.Cog):
         if base_url and not base_url.endswith("/"):
             raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
-        body = {"package": package_name, "base_url": base_url, "inventory_url": inventory_url}
+        body = {
+            "package": package_name,
+            "base_url": base_url,
+            "inventory_url": inventory_url
+        }
         try:
             await self.bot.api_client.post("bot/documentation-links", json=body)
         except ResponseCodeError as err:
@@ -537,7 +543,11 @@ class DocCog(commands.Cog):
 
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def clear_cache_command(self, ctx: commands.Context, package_name: PackageName | Literal["*"]) -> None:
+    async def clear_cache_command(
+        self,
+        ctx: commands.Context,
+        package_name: PackageName | Literal["*"]
+    ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
             await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
