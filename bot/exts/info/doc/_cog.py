@@ -324,13 +324,21 @@ class DocCog(commands.Cog):
         return embed
 
     async def create_compact_doc_message(self, symbols: list[str]) -> str:
-        """Create a markdown bullet list of links to docs for the given list of symbols."""
+        """
+        Create a markdown bullet list of links to docs for the given list of symbols.
+
+        Link to at most 10 items, ignoring the rest.
+        """
         items = await self._get_symbols_items(symbols)
         content = ""
+        link_count = 0
         for symbol_name, doc_item in items:
+            if link_count >= 10:
+                break
             if doc_item is None:
                 log.debug(f"{symbol_name=} does not exist.")
             else:
+                link_count += 1
                 content += f"- [{discord.utils.escape_markdown(symbol_name)}](<{doc_item.url}#{doc_item.symbol_id}>)\n"
 
         return content
