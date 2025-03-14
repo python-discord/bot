@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import re
 import sys
 import textwrap
 from collections import defaultdict
@@ -41,6 +43,10 @@ NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 
 COMMAND_LOCK_SINGLETON = "inventory refresh"
+
+REDO_EMOJI = "\U0001f501"  # :repeat:
+REDO_TIMEOUT = 30
+COMPACT_DOC_REGEX = r"\[\[(?P<symbol>\S*)\]\]"
 
 
 class DocItem(NamedTuple):
@@ -96,7 +102,6 @@ class DocCog(commands.Cog):
 
         for group, items in inventory.items():
             for symbol_name, relative_doc_url in items:
-
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
                 symbol_name = self.ensure_unique_symbol_name(
@@ -146,7 +151,7 @@ class DocCog(commands.Cog):
                 delay = FETCH_RESCHEDULE_DELAY.first
             log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
             self.inventory_scheduler.schedule_later(
-                delay*60,
+                delay * 60,
                 api_package_name,
                 self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url),
             )
@@ -216,9 +221,8 @@ class DocCog(commands.Cog):
         await self.item_fetcher.clear()
 
         coros = [
-            self.update_or_reschedule_inventory(
-                package["package"], package["base_url"], package["inventory_url"]
-            ) for package in await self.bot.api_client.get("bot/documentation-links")
+            self.update_or_reschedule_inventory(package["package"], package["base_url"], package["inventory_url"])
+            for package in await self.bot.api_client.get("bot/documentation-links")
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
@@ -264,6 +268,29 @@ class DocCog(commands.Cog):
                 return "Unable to parse the requested symbol."
         return markdown
 
+    async def _get_symbols_items(self, symbols: list[str]) -> list[tuple[str, DocItem | None]]:
+        """
+        Get DocItems for the given list of symbols, and update the stats for the fetched doc items.
+
+        Returns (symbol, None) for any symbol for which a DocItem could not be found.
+        """
+        if not self.refresh_event.is_set():
+            log.debug("Waiting for inventories to be refreshed before processing item.")
+            await self.refresh_event.wait()
+
+        # Ensure a refresh can't run in case of a context switch until the with block is exited
+        with self.symbol_get_event:
+            items: list[tuple[str, DocItem | None]] = []
+            for symbol_name in symbols:
+                symbol_name, doc_item = self.get_symbol_item(symbol_name)
+                if doc_item:
+                    items.append((symbol_name, doc_item))
+                    self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
+                else:
+                    items.append((symbol_name, None))
+
+        return items
+
     async def create_symbol_embed(self, symbol_name: str) -> discord.Embed | None:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
@@ -273,33 +300,99 @@ class DocCog(commands.Cog):
         First check the DocRedisCache before querying the cog's `BatchParser`.
         """
         log.trace(f"Building embed for symbol `{symbol_name}`")
-        if not self.refresh_event.is_set():
-            log.debug("Waiting for inventories to be refreshed before processing item.")
-            await self.refresh_event.wait()
-        # Ensure a refresh can't run in case of a context switch until the with block is exited
-        with self.symbol_get_event:
-            symbol_name, doc_item = self.get_symbol_item(symbol_name)
+        _items = await self._get_symbols_items([symbol_name])
+        symbol_name, doc_item = _items[0]
+
+        if doc_item is None:
+            log.debug(f"{symbol_name=} does not exist.")
+            return None
+
+        # Show all symbols with the same name that were renamed in the footer,
+        # with a max of 200 chars.
+        if symbol_name in self.renamed_symbols:
+            renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
+            footer_text = textwrap.shorten("Similar names: " + renamed_symbols, 200, placeholder=" ...")
+        else:
+            footer_text = ""
+
+        embed = discord.Embed(
+            title=discord.utils.escape_markdown(symbol_name),
+            url=f"{doc_item.url}#{doc_item.symbol_id}",
+            description=await self.get_symbol_markdown(doc_item),
+        )
+        embed.set_footer(text=footer_text)
+        return embed
+
+    async def create_compact_doc_message(self, symbols: list[str]) -> str:
+        """Create a markdown bullet list of links to docs for the given list of symbols."""
+        items = await self._get_symbols_items(symbols)
+        content = ""
+        for symbol_name, doc_item in items:
             if doc_item is None:
-                log.debug("Symbol does not exist.")
+                log.debug(f"{symbol_name=} does not exist.")
+            else:
+                content += f"- [{discord.utils.escape_markdown(symbol_name)}](<{doc_item.url}#{doc_item.symbol_id}>)\n"
+
+        return content
+
+    async def _handle_edit(self, original: discord.Message, bot_reply: discord.Message) -> bool:
+        """
+        Re-eval a message for symbols if it gets edited.
+
+        The edit logic is essentially the same as that of the code eval (snekbox) command.
+        """
+        def edit_check(before: discord.Message, after: discord.Message) -> bool:
+            return (
+                original.id == before.id
+                and before.content != after.content
+                and len(re.findall(COMPACT_DOC_REGEX, after.content.replace("`", ""))) > 0
+            )
+
+        def reaction_check(rxn: discord.Reaction, user: discord.User) -> bool:
+            return rxn.message.id == original.id and user.id == original.author.id and str(rxn) == REDO_EMOJI
+
+        try:
+            _, new_message = await self.bot.wait_for("message_edit", check=edit_check, timeout=REDO_TIMEOUT)
+            await new_message.add_reaction(REDO_EMOJI)
+            await self.bot.wait_for("reaction_add", check=reaction_check, timeout=10)
+            symbols = re.findall(COMPACT_DOC_REGEX, new_message.content.replace("`", ""))
+            if not symbols:
                 return None
 
-            self.bot.stats.incr(f"doc_fetches.{doc_item.package}")
+            log.trace(f"Getting doc links for {symbols=}, as {original.id=} was edited.")
+            links = await self.create_compact_doc_message(symbols)
+            await bot_reply.edit(content=links)
+            with contextlib.suppress(discord.HTTPException):
+                await original.clear_reaction(REDO_EMOJI)
+            return True
+        except TimeoutError:
+            with contextlib.suppress(discord.HTTPException):
+                await original.clear_reaction(REDO_EMOJI)
+            return False
 
-            # Show all symbols with the same name that were renamed in the footer,
-            # with a max of 200 chars.
-            if symbol_name in self.renamed_symbols:
-                renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
-                footer_text = textwrap.shorten("Similar names: " + renamed_symbols, 200, placeholder=" ...")
-            else:
-                footer_text = ""
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message) -> None:
+        """
+        Scan messages for symbols enclosed in double square brackets i.e [[]].
 
-            embed = discord.Embed(
-                title=discord.utils.escape_markdown(symbol_name),
-                url=f"{doc_item.url}#{doc_item.symbol_id}",
-                description=await self.get_symbol_markdown(doc_item)
-            )
-            embed.set_footer(text=footer_text)
-            return embed
+        Reply with links to documentations for the specified symbols.
+        """
+        if message.author == self.bot.user:
+            return
+
+        symbols = re.findall(COMPACT_DOC_REGEX, message.content.replace("`", ""))
+        if not symbols:
+            return
+
+        log.trace(f"Getting doc links for {symbols=}, {message.id=}")
+        async with message.channel.typing():
+            links = await self.create_compact_doc_message(symbols)
+        reply_msg = await message.reply(links)
+
+        while True:
+            again = await self._handle_edit(message, reply_msg)
+            if not again:
+                break
 
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol_name: str | None) -> None:
@@ -321,8 +414,7 @@ class DocCog(commands.Cog):
         """
         if not symbol_name:
             inventory_embed = discord.Embed(
-                title=f"All inventories (`{len(self.base_urls)}` total)",
-                colour=discord.Colour.blue()
+                title=f"All inventories (`{len(self.base_urls)}` total)", colour=discord.Colour.blue()
             )
 
             lines = sorted(f"- [`{name}`]({url})" for name, url in self.base_urls.items())
@@ -381,11 +473,7 @@ class DocCog(commands.Cog):
         if base_url and not base_url.endswith("/"):
             raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
-        body = {
-            "package": package_name,
-            "base_url": base_url,
-            "inventory_url": inventory_url
-        }
+        body = {"package": package_name, "base_url": base_url, "inventory_url": inventory_url}
         try:
             await self.bot.api_client.post("bot/documentation-links", json=body)
         except ResponseCodeError as err:
@@ -439,18 +527,13 @@ class DocCog(commands.Cog):
             removed = "- " + removed
 
         embed = discord.Embed(
-            title="Inventories refreshed",
-            description=f"```diff\n{added}\n{removed}```" if added or removed else ""
+            title="Inventories refreshed", description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )
         await ctx.send(embed=embed)
 
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
     @commands.has_any_role(*MODERATION_ROLES)
-    async def clear_cache_command(
-        self,
-        ctx: commands.Context,
-        package_name: PackageName | Literal["*"]
-    ) -> None:
+    async def clear_cache_command(self, ctx: commands.Context, package_name: PackageName | Literal["*"]) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
             await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
