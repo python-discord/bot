@@ -281,7 +281,7 @@ class DocCog(commands.Cog):
         # Ensure a refresh can't run in case of a context switch until the with block is exited
         with self.symbol_get_event:
             items: list[tuple[str, DocItem | None]] = []
-            for symbol_name in symbols:
+            for symbol_name in set(symbols):
                 symbol_name, doc_item = self.get_symbol_item(symbol_name)
                 if doc_item:
                     items.append((symbol_name, doc_item))
