@@ -88,16 +88,14 @@ class Utils(Cog):
     async def zen(
         self,
         ctx: Context,
-        zen_rule_index: int | None,
-        *,
-        search_value: str | None = None
+        search_value: str | None,
     ) -> None:
         """
         Show the Zen of Python.
 
         Without any arguments, the full Zen will be produced.
-        If zen_rule_index is provided, the line with that index will be produced.
-        If only a string is provided, the line which matches best will be produced.
+        If an index or a slice is provided, the corresponding lines will be produced.
+        Otherwise, the line which matches best will be produced.
         """
         embed = Embed(
             colour=Colour.og_blurple(),
@@ -105,23 +103,38 @@ class Utils(Cog):
             description=ZEN_OF_PYTHON
         )
 
-        if zen_rule_index is None and search_value is None:
+        if search_value is None:
             embed.title += ", by Tim Peters"
             await ctx.send(embed=embed)
             return
 
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
-        # Prioritize passing the zen rule index
-        if zen_rule_index is not None:
-
+        # Prioritize checking for an index or slice
+        match = re.search(r"^(\d+)(:\d+)?", search_value.split(" ")[0])
+        if match:
             upper_bound = len(zen_lines) - 1
             lower_bound = -1 * len(zen_lines)
-            if not (lower_bound <= zen_rule_index <= upper_bound):
-                raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
 
-            embed.title += f" (line {zen_rule_index % len(zen_lines)}):"
-            embed.description = zen_lines[zen_rule_index]
+            start_index = int(match.group(1))
+
+            if not match.group(2):
+                if not (lower_bound <= start_index <= upper_bound):
+                    raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
+                embed.title += f" (line {start_index % len(zen_lines)}):"
+                embed.description = zen_lines[start_index]
+                await ctx.send(embed=embed)
+                return
+
+            end_index=int(match.group(2)[1:])
+
+            if not ((lower_bound <= start_index <= upper_bound) and (lower_bound <= end_index <= upper_bound)):
+                raise BadArgument(f"Please provide valid indices between {lower_bound} and {upper_bound}.")
+            if not (start_index % len(zen_lines) < end_index % len(zen_lines)):
+                raise BadArgument("The start index for the slice must be smaller than the end index.")
+
+            embed.title += f" (lines {start_index%len(zen_lines)}-{end_index%len(zen_lines)}):"
+            embed.description = "\n".join(zen_lines[start_index:end_index])
             await ctx.send(embed=embed)
             return
 
