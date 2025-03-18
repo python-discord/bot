@@ -111,7 +111,7 @@ class Utils(Cog):
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
         # Prioritize checking for an index or slice
-        match = re.search(r"^(\d+)(:\d+)?", search_value.split(" ")[0])
+        match = re.match(r"(-?\d+)(:-?\d+)?", search_value.split(" ")[0])
         if match:
             upper_bound = len(zen_lines) - 1
             lower_bound = -1 * len(zen_lines)
