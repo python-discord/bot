@@ -111,7 +111,7 @@ class Utils(Cog):
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
         # Prioritize checking for an index or slice
-        match = re.match(r"(-?\d+)(:-?\d+)?", search_value.split(" ")[0])
+        match = re.match(r"(-?\d+)(:(-?\d+)?)?", search_value.split(" ")[0])
         if match:
             upper_bound = len(zen_lines) - 1
             lower_bound = -1 * len(zen_lines)
@@ -126,7 +126,7 @@ class Utils(Cog):
                 await ctx.send(embed=embed)
                 return
 
-            end_index=int(match.group(2)[1:])
+            end_index=  int(match.group(3)) if match.group(3) else len(zen_lines)
 
             if not ((lower_bound <= start_index <= upper_bound) and (lower_bound <= end_index <= len(zen_lines))):
                 raise BadArgument(f"Please provide valid indices between {lower_bound} and {upper_bound}.")
