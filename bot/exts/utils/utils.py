@@ -130,7 +130,7 @@ class Utils(Cog):
 
             if not ((lower_bound <= start_index <= upper_bound) and (lower_bound <= end_index <= len(zen_lines))):
                 raise BadArgument(f"Please provide valid indices between {lower_bound} and {upper_bound}.")
-            if not (start_index % len(zen_lines) < end_index % len(zen_lines)):
+            if not (start_index % len(zen_lines) < end_index % (len(zen_lines) + 1)):
                 raise BadArgument("The start index for the slice must be smaller than the end index.")
 
             embed.title += f" (lines {start_index%len(zen_lines)}-{end_index%len(zen_lines)}):"
