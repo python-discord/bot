@@ -133,7 +133,7 @@ class Utils(Cog):
             if not (start_index % len(zen_lines) < end_index % (len(zen_lines) + 1)):
                 raise BadArgument("The start index for the slice must be smaller than the end index.")
 
-            embed.title += f" (lines {start_index%len(zen_lines)}-{end_index%len(zen_lines)}):"
+            embed.title += f" (lines {start_index%len(zen_lines)}-{(end_index-1)%len(zen_lines)}):"
             embed.description = "\n".join(zen_lines[start_index:end_index])
             await ctx.send(embed=embed)
             return
