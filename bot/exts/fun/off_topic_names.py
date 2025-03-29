@@ -5,7 +5,7 @@ import json
 import random
 from functools import partial
 
-from discord import ButtonStyle, Colour, Embed, Interaction
+from discord import ButtonStyle, Colour, Embed, HTTPException, Interaction
 from discord.ext import tasks
 from discord.ext.commands import Cog, Context, group, has_any_role
 from discord.ui import Button, View
@@ -61,9 +61,18 @@ class OffTopicNames(Cog):
 
         channel_0, channel_1, channel_2 = (self.bot.get_channel(channel_id) for channel_id in CHANNELS)
 
-        await channel_0.edit(name=OTN_FORMATTER.format(number=0, name=channel_0_name))
-        await channel_1.edit(name=OTN_FORMATTER.format(number=1, name=channel_1_name))
-        await channel_2.edit(name=OTN_FORMATTER.format(number=2, name=channel_2_name))
+        try:
+            await channel_0.edit(name=OTN_FORMATTER.format(number=0, name=channel_0_name))
+            await channel_1.edit(name=OTN_FORMATTER.format(number=1, name=channel_1_name))
+            await channel_2.edit(name=OTN_FORMATTER.format(number=2, name=channel_2_name))
+        except HTTPException:
+            await self.bot.get_channel(Channels.mod_meta).send(
+                ":exclamation: Got an error trying to update OT names to"
+                f"{channel_0_name}, {channel_1_name} and {channel_2_name}."
+                "\nI will retry with new names, but please delete the ones that sound bad."
+            )
+            await self.update_names()
+            return
 
         log.debug(
             "Updated off-topic channel names to"

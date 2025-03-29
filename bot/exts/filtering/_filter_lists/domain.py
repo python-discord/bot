@@ -13,7 +13,9 @@ from bot.exts.filtering._utils import clean_input
 if typing.TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
 
-URL_RE = re.compile(r"https?://(\S+)", flags=re.IGNORECASE)
+# Matches words that start with the http(s) protocol prefix
+# Will not include, if present, the trailing closing parenthesis
+URL_RE = re.compile(r"https?://(\S+)(?=\)|\b)", flags=re.IGNORECASE)
 
 
 class DomainsList(FilterList[DomainFilter]):
@@ -56,6 +58,10 @@ class DomainsList(FilterList[DomainFilter]):
 
         triggers = await self[ListType.DENY].filter_list_result(new_ctx)
         ctx.notification_domain = new_ctx.notification_domain
+        unknown_urls = urls - {filter_.content.lower() for filter_ in triggers}
+        if unknown_urls:
+            ctx.potential_phish[self] = unknown_urls
+
         actions = None
         messages = []
         if triggers:

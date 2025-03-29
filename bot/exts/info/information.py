@@ -8,13 +8,15 @@ from typing import Any, TYPE_CHECKING
 
 import rapidfuzz
 from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
-from discord.ext.commands import BucketType, Cog, Context, Paginator, command, group, has_any_role
+from discord.ext.commands import BucketType, Cog, Context, command, group, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.members import get_or_fetch_member
+from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import BaseURLs, Emojis
 from bot.converters import MemberOrUser
 from bot.decorators import in_whitelist
 from bot.errors import NonExistentRoleError
@@ -321,6 +323,7 @@ class Information(Cog):
         if is_mod_channel(ctx.channel):
             fields.append(await self.expanded_user_infraction_counts(user))
             fields.append(await self.user_nomination_counts(user))
+            fields.append(await self.user_alt_count(user))
         else:
             fields.append(await self.basic_user_infraction_counts(user))
 
@@ -337,6 +340,20 @@ class Information(Cog):
         embed.colour = user.colour if user.colour != Colour.default() else Colour.og_blurple()
 
         return embed
+
+    async def user_alt_count(self, user: MemberOrUser) -> tuple[str, int | str]:
+        """Get the number of alts for the given member."""
+        try:
+            resp = await self.bot.api_client.get(f"bot/users/{user.id}")
+            return ("Associated accounts", len(resp["alts"]) or "No associated accounts")
+        except ResponseCodeError as e:
+            # If user is not found, return a soft-error regarding this.
+            if e.response.status == 404:
+                return ("Associated accounts", "User not found in site database.")
+
+            # If we have any other issue, re-raise the exception
+            raise e
+
 
     async def basic_user_infraction_counts(self, user: MemberOrUser) -> tuple[str, str]:
         """Gets the total and active infraction counts for the given `member`."""
@@ -501,14 +518,13 @@ class Information(Cog):
         # doing this extra request is also much easier than trying to convert everything back into a dictionary again
         raw_data = await ctx.bot.http.get_message(message.channel.id, message.id)
 
-        paginator = Paginator()
+        lines = []
 
         def add_content(title: str, content: str) -> None:
-            paginator.add_line(f"== {title} ==\n")
+            lines.append(f"== {title} ==\n")
             # Replace backticks as it breaks out of code blocks.
-            # An invisible character seemed to be the most reasonable solution. We hope it's not close to 2000.
-            paginator.add_line(content.replace("`", "`\u200b"))
-            paginator.close_page()
+            # An invisible character seemed to be the most reasonable solution.
+            lines.append(content.replace("`", "`\u200b"))
 
         if message.content:
             add_content("Raw message", message.content)
@@ -525,8 +541,25 @@ class Information(Cog):
                 title = f"Raw {field_name} ({current}/{total})"
                 add_content(title, transformer(item))
 
-        for page in paginator.pages:
-            await ctx.send(page, allowed_mentions=AllowedMentions.none())
+        output = "\n".join(lines)
+        if len(output) < 2000-8:  # To cover the backticks and newlines added below.
+            await ctx.send(f"```\n{output}\n```", allowed_mentions=AllowedMentions.none())
+            return
+
+        file = PasteFile(content=output, lexer="text")
+        try:
+            resp = await send_to_paste_service(
+                files=[file],
+                http_session=self.bot.http_session,
+                paste_url=BaseURLs.paste_url,
+            )
+            message = f"Message was too long for Discord, posted the output to [our pastebin]({resp.link})."
+        except PasteTooLongError:
+            message = f"{Emojis.cross_mark} Too long to upload to paste service."
+        except PasteUploadError:
+            message = f"{Emojis.cross_mark} Failed to upload to paste service."
+
+        await ctx.send(message)
 
     @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @group(invoke_without_command=True)

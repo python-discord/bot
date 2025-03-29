@@ -7,6 +7,7 @@ from pathlib import Path
 import coloredlogs
 import sentry_sdk
 from pydis_core.utils import logging as core_logging
+from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
@@ -56,12 +57,10 @@ def setup_sentry() -> None:
         integrations=[
             sentry_logging,
             RedisIntegration(),
+            AsyncioIntegration(),
         ],
         release=f"bot@{constants.GIT_SHA}",
-        traces_sample_rate=0.5,
-        _experiments={
-            "profiles_sample_rate": 0.5,
-        },
+        enable_tracing=True,
     )
 
 

@@ -6,7 +6,7 @@ import aiohttp
 from discord.errors import Forbidden
 from pydis_core import BotBase
 from pydis_core.utils.error_handling import handle_forbidden_from_block
-from sentry_sdk import push_scope
+from sentry_sdk import new_scope, start_transaction
 
 from bot import constants, exts
 from bot.log import get_logger
@@ -28,6 +28,11 @@ class Bot(BotBase):
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
+
+    async def load_extension(self, name: str, *args, **kwargs) -> None:
+        """Extend D.py's load_extension function to also record sentry performance stats."""
+        with start_transaction(op="cog-load", name=name):
+            await super().load_extension(name, *args, **kwargs)
 
     async def ping_services(self) -> None:
         """A helper to make sure all the services the bot relies on are available on startup."""
@@ -66,7 +71,7 @@ class Bot(BotBase):
 
         self.stats.incr(f"errors.event.{event}")
 
-        with push_scope() as scope:
+        with new_scope() as scope:
             scope.set_tag("event", event)
             scope.set_extra("args", args)
             scope.set_extra("kwargs", kwargs)

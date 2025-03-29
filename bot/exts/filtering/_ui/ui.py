@@ -2,26 +2,28 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Coroutine, Iterable
+from collections.abc import Callable, Coroutine
 from enum import EnumMeta
 from functools import partial
 from typing import Any, TypeVar, get_origin
 
 import discord
-from discord import Embed, Interaction
-from discord.ext.commands import Context, Converter
+from discord import Embed, Interaction, Member, User
+from discord.ext.commands import BadArgument, Context, Converter
 from discord.ui.select import MISSING as SELECT_MISSING, SelectOption
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
 from pydis_core.utils.logging import get_logger
 from pydis_core.utils.members import get_or_fetch_member
+from pydis_core.utils.regex import DISCORD_INVITE
 
 import bot
 from bot.constants import Colours
-from bot.exts.filtering._filter_context import FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList
 from bot.exts.filtering._utils import FakeContext, normalize_type
+from bot.utils.lock import lock_arg
 from bot.utils.messages import format_channel, format_user, upload_log
 
 log = get_logger(__name__)
@@ -82,7 +84,7 @@ async def _build_alert_message_content(ctx: FilterContext, current_message_lengt
     return alert_content
 
 
-async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList, Iterable[str]]) -> Embed:
+async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList, list[str]]) -> Embed:
     """Build an alert message from the filter context."""
     embed = Embed(color=Colours.soft_orange)
     embed.set_thumbnail(url=ctx.author.display_avatar.url)
@@ -531,12 +533,98 @@ class DeleteConfirmationView(discord.ui.View):
         await interaction.response.edit_message(content="🚫 Operation canceled.", view=None)
 
 
+class PhishConfirmationView(discord.ui.View):
+    """Confirmation buttons for whether the alert was for a phishing attempt."""
+
+    def __init__(
+        self, mod: Member, offender: User | Member | None, phishing_content: str, target_filter_list: FilterList
+    ):
+        super().__init__()
+        self.mod = mod
+        self.offender = offender
+        self.phishing_content = phishing_content
+        self.target_filter_list = target_filter_list
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        """Only allow interactions from the command invoker."""
+        return interaction.user.id == self.mod.id
+
+    @discord.ui.button(label="Do it", style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Auto-ban the user and add the phishing content to the appropriate filter list as an auto-ban filter."""
+        await interaction.response.edit_message(view=None)
+
+        if self.offender:
+            compban_command = bot.instance.get_command("compban")
+            if not compban_command:
+                await interaction.followup.send(':warning: Could not find the command "compban".')
+            else:
+                ctx = FakeContext(interaction.message, interaction.channel, compban_command, author=self.mod)
+                await compban_command(ctx, self.offender)
+
+        compf_command = bot.instance.get_command("compfilter")
+        if not compf_command:
+            message = ':warning: Could not find the command "compfilter".'
+            await interaction.followup.send(message)
+        else:
+            ctx = FakeContext(interaction.message, interaction.channel, compf_command)
+            try:
+                await compf_command(ctx, self.target_filter_list.name, self.phishing_content)
+            except BadArgument as e:
+                await interaction.followup.send(f":x: Could not add the filter: {e}")
+
+
+    @discord.ui.button(label="Cancel")
+    async def cancel(self, interaction: Interaction, button: discord.ui.Button) -> None:
+        """Cancel the operation."""
+        new_message_content = f"~~{interaction.message.content}~~ 🚫 Operation canceled."
+        await interaction.response.edit_message(content=new_message_content, view=None)
+
+class PhishHandlingButton(discord.ui.Button):
+    """
+    A button that handles a phishing attempt.
+
+    When pressed, ask for confirmation.
+    If confirmed, comp-ban the offending user, and add the appropriate domain or invite as an auto-ban filter.
+    """
+
+    def __init__(self, offender: User | Member | None, phishing_content: str, target_filter_list: FilterList):
+        super().__init__(emoji="🎣")
+        self.offender = offender
+        self.phishing_content = phishing_content
+        self.target_filter_list = target_filter_list
+
+    @lock_arg("phishing", "interaction", lambda interaction: interaction.message.id)
+    async def callback(self, interaction: Interaction) -> Any:
+        """Ask for confirmation for handling the phish."""
+        message_content = f"{interaction.user.mention} Is this a phishing attempt? "
+        if self.offender:
+            message_content += f"The user {self.offender.mention} will be comp-banned, and "
+        else:
+            message_content += "The user was not found, but "
+        message_content += (
+            f"`{escape_markdown(self.phishing_content)}` will be added as an auto-ban filter to the "
+            f"denied *{self.target_filter_list.name}s* list."
+        )
+        confirmation_view = PhishConfirmationView(
+            interaction.user, self.offender, self.phishing_content, self.target_filter_list
+        )
+        await interaction.response.send_message(message_content, view=confirmation_view)
+
+
 class AlertView(discord.ui.View):
     """A view providing info about the offending user."""
 
-    def __init__(self, ctx: FilterContext):
+    def __init__(self, ctx: FilterContext, triggered_filters: dict[FilterList, list[str]] | None = None):
         super().__init__(timeout=ALERT_VIEW_TIMEOUT)
         self.ctx = ctx
+        if "banned" in self.ctx.action_descriptions:
+            # If the user has already been banned, do not attempt to add phishing button since the URL or guild invite
+            # is probably already added as a filter
+            return
+        phishing_content, target_filter_list =  self._extract_potential_phish(triggered_filters)
+        if phishing_content:
+            self.add_item(PhishHandlingButton(ctx.author, phishing_content, target_filter_list))
 
     @discord.ui.button(label="ID")
     async def user_id(self, interaction: Interaction, button: discord.ui.Button) -> None:
@@ -570,3 +658,44 @@ class AlertView(discord.ui.View):
         await interaction.response.defer()
         fake_ctx = FakeContext(interaction.message, interaction.channel, command, author=interaction.user)
         await command(fake_ctx, self.ctx.author)
+
+    def _extract_potential_phish(
+        self, triggered_filters: dict[FilterList, list[str]] | None
+    ) -> tuple[str, FilterList | None]:
+        """
+        Check if the alert is potentially for phishing.
+
+        If it is, return the phishing content and the filter list to add it to.
+        Otherwise, return an empty string and None.
+
+        A potential phish is a message event where a single invite or domain is found, and nothing else.
+        Everyone filters are an exception.
+        """
+        if self.ctx.event != Event.MESSAGE or not self.ctx.potential_phish:
+            return "", None
+
+        if triggered_filters:
+            for filter_list, messages in triggered_filters.items():
+                if messages and (filter_list.name != "unique" or len(messages) > 1 or "everyone" not in messages[0]):
+                    return "", None
+
+        encountered = False
+        content = ""
+        target_filter_list = None
+        for filter_list, content_list in self.ctx.potential_phish.items():
+            if len(content_list) > 1:
+                return "", None
+            if content_list:
+                current_content = next(iter(content_list))
+                if filter_list.name == "domain" and re.fullmatch(DISCORD_INVITE, current_content):
+                    # Leave invites to the invite filterlist.
+                    continue
+                if encountered:
+                    return "", None
+                target_filter_list = filter_list
+                content = current_content
+                encountered = True
+
+        if encountered:
+            return content, target_filter_list
+        return "", None

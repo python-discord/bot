@@ -10,7 +10,7 @@ current_path = Path(__file__)
 env_file_path = current_path.parent / ".testenv"
 
 
-class TestEnvConfig(
+class _TestEnvConfig(
     EnvConfig,
     env_file=env_file_path,
 ):
@@ -21,7 +21,7 @@ class NestedModel(BaseModel):
     server_name: str
 
 
-class _TestConfig(TestEnvConfig, env_prefix="unittests_"):
+class _TestConfig(_TestEnvConfig, env_prefix="unittests_"):
 
     goat: str
     execution_env: str = "local"

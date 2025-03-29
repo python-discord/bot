@@ -1,12 +1,14 @@
 """Contains the Cog that receives discord.py events and defers most actions to other files in the module."""
 
+import contextlib
+
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from pydis_core.utils import scheduling
 
 from bot import constants
 from bot.bot import Bot
-from bot.exts.help_channels import _caches, _channel, _message
+from bot.exts.help_channels import _caches, _channel
 from bot.log import get_logger
 from bot.utils.checks import has_any_role_check
 
@@ -38,9 +40,14 @@ class HelpForum(commands.Cog):
         self.help_forum_channel = self.bot.get_channel(constants.Channels.python_help)
         if not isinstance(self.help_forum_channel, discord.ForumChannel):
             raise TypeError("Channels.python_help is not a forum channel!")
+        self.check_all_open_posts_have_close_task.start()
 
+    @tasks.loop(minutes=5)
+    async def check_all_open_posts_have_close_task(self) -> None:
+        """Check that each open help post has a scheduled task to close, adding one if not."""
         for post in self.help_forum_channel.threads:
-            await _channel.maybe_archive_idle_post(post, self.scheduler, has_task=False)
+            if post.id not in self.scheduler:
+                await _channel.maybe_archive_idle_post(post.id, self.scheduler)
 
     async def close_check(self, ctx: commands.Context) -> bool:
         """Return True if the channel is a help post, and the user is the claimant or has a whitelisted role."""
@@ -74,33 +81,7 @@ class HelpForum(commands.Cog):
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
             log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
-            await _channel.help_post_closed(ctx.channel)
-            if ctx.channel.id in self.scheduler:
-                self.scheduler.cancel(ctx.channel.id)
-
-    @help_forum_group.command(name="dm", root_aliases=("helpdm",))
-    async def help_dm_command(
-        self,
-        ctx: commands.Context,
-        state_bool: bool,
-    ) -> None:
-        """
-        Allows user to toggle "Helping" DMs.
-
-        If this is set to on the user will receive a dm for the channel they are participating in.
-        If this is set to off the user will not receive a dm for channel that they are participating in.
-        """
-        state_str = "ON" if state_bool else "OFF"
-
-        if state_bool == await _caches.help_dm.get(ctx.author.id, False):
-            await ctx.send(f"{constants.Emojis.cross_mark} {ctx.author.mention} Help DMs are already {state_str}")
-            return
-
-        if state_bool:
-            await _caches.help_dm.set(ctx.author.id, True)
-        else:
-            await _caches.help_dm.delete(ctx.author.id)
-        await ctx.send(f"{constants.Emojis.ok_hand} {ctx.author.mention} Help DMs {state_str}!")
+            await _channel.help_post_closed(ctx.channel, self.scheduler)
 
     @help_forum_group.command(name="title", root_aliases=("title",))
     async def rename_help_post(self, ctx: commands.Context, *, title: str) -> None:
@@ -129,13 +110,13 @@ class HelpForum(commands.Cog):
         if thread.parent_id != self.help_forum_channel.id:
             return
 
-        await _channel.help_post_opened(thread)
+        await _channel.help_post_opened(thread, scheduler=self.scheduler)
 
         delay = min(constants.HelpChannels.deleted_idle_minutes, constants.HelpChannels.idle_minutes) * 60
         self.scheduler.schedule_later(
             delay,
             thread.id,
-            _channel.maybe_archive_idle_post(thread, self.scheduler)
+            _channel.maybe_archive_idle_post(thread.id, self.scheduler)
         )
 
     @commands.Cog.listener()
@@ -144,7 +125,9 @@ class HelpForum(commands.Cog):
         if after.parent_id != self.help_forum_channel.id:
             return
         if not before.archived and after.archived:
-            await _channel.help_post_archived(after)
+            await _channel.help_post_archived(after, self.scheduler)
+            if after.id in self.scheduler:
+                self.scheduler.cancel(after.id)
 
     @commands.Cog.listener()
     async def on_raw_thread_delete(self, deleted_thread_event: discord.RawThreadDeleteEvent) -> None:
@@ -158,7 +141,19 @@ class HelpForum(commands.Cog):
         if not _channel.is_help_forum_post(message.channel):
             return
 
-        await _message.notify_session_participants(message)
-
         if not message.author.bot and message.author.id != message.channel.owner_id:
             await _caches.posts_with_non_claimant_messages.set(message.channel.id, "sentinel")
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member) -> None:
+        """Notify a help thread if the owner is no longer a member of the server."""
+        for thread in self.help_forum_channel.threads:
+            if thread.owner_id != member.id:
+                continue
+
+            if thread.archived:
+                continue
+
+            log.debug(f"Notifying help thread {thread.id} that owner {member.id} is no longer in the server.")
+            with contextlib.suppress(discord.NotFound):
+                await thread.send(":warning: The owner of this post is no longer in the server.")

@@ -32,17 +32,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Python Dependencies
-        uses: HassanAbouelela/actions/setup-python@setup-python_v1.4.2
+        uses: HassanAbouelela/actions/setup-python@setup-python_v1.6.0
         with:
-          python_version: '3.11'
+          python_version: '3.12'
 
       # Check all of our non-dev dependencies are compatible with the MIT license.
       # If you added a new dependencies that is being rejected,
       # please make sure it is compatible with the license for this project,
       # and add it to the ALLOWED_LICENSE variable
+
+      # NOTE: at time of writing pip-licenses is not PEP-639 compliant
+      #   so is not detecting the license for packages now following that style.
+      #   As a temp fix, add packages to the ignore list after manually checking
+      #   that the license in use is compatible with ours.
+      #   Ref: https://github.com/raimon49/pip-licenses/issues/225
       - name: Check Dependencies License
         run: |
+          poetry self add poetry-plugin-export
           pip-licenses --allow-only="$ALLOWED_LICENSE" \
+            --ignore-packages attrs \
             --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
 
       - name: Run pre-commit hooks
@@ -53,7 +61,10 @@ jobs:
         run: "ruff check --output-format=github ."
 
       - name: Run tests and generate coverage report
-        run: pytest -n auto --cov --disable-warnings -q
+        run: pytest -n auto --cov -q
+        env:
+          # Use "sys.monitoring" based coverage backend for better speed (see #3075)
+          COVERAGE_CORE: sysmon
 
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's

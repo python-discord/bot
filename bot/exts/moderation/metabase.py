@@ -82,6 +82,7 @@ class Metabase(Cog):
             "password": MetabaseConfig.password
         }
         async with self.bot.http_session.post(f"{MetabaseConfig.base_url}/api/session", json=data) as resp:
+            resp.raise_for_status()
             json_data = await resp.json()
             self.session_token = json_data.get("id")
 

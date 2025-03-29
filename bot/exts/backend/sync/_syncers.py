@@ -1,11 +1,11 @@
 import abc
 import typing as t
 from collections import namedtuple
+from itertools import batched
 
 import discord.errors
 from discord import Guild
 from discord.ext.commands import Context
-from more_itertools import chunked
 from pydis_core.site_api import ResponseCodeError
 
 import bot
@@ -170,6 +170,7 @@ class UserSyncer(Syncer):
                 seen_guild_users.add(guild_user.id)
 
                 maybe_update("name", guild_user.name)
+                maybe_update("display_name", guild_user.display_name)
                 maybe_update("discriminator", int(guild_user.discriminator))
                 maybe_update("in_guild", True)
 
@@ -196,6 +197,7 @@ class UserSyncer(Syncer):
                 new_user = {
                     "id": member.id,
                     "name": member.name,
+                    "display_name": member.display_name,
                     "discriminator": int(member.discriminator),
                     "roles": [role.id for role in member.roles],
                     "in_guild": True
@@ -223,10 +225,10 @@ class UserSyncer(Syncer):
         # Using asyncio.gather would still consume too many resources on the site.
         log.trace("Syncing created users...")
         if diff.created:
-            for chunk in chunked(diff.created, CHUNK_SIZE):
+            for chunk in batched(diff.created, CHUNK_SIZE):
                 await bot.instance.api_client.post("bot/users", json=chunk)
 
         log.trace("Syncing updated users...")
         if diff.updated:
-            for chunk in chunked(diff.updated, CHUNK_SIZE):
+            for chunk in batched(diff.updated, CHUNK_SIZE):
                 await bot.instance.api_client.patch("bot/users/bulk_patch", json=chunk)

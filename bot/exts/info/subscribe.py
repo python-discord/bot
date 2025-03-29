@@ -2,6 +2,7 @@ import operator
 from dataclasses import dataclass
 
 import discord
+import sentry_sdk
 from discord.ext import commands
 from discord.interactions import Interaction
 from pydis_core.utils import members
@@ -24,7 +25,7 @@ class AssignableRole:
 ASSIGNABLE_ROLES = (
     AssignableRole(constants.Roles.announcements),
     AssignableRole(constants.Roles.pyweek_announcements),
-    AssignableRole(constants.Roles.legacy_help_channels_access),
+    AssignableRole(constants.Roles.archived_channels_access),
     AssignableRole(constants.Roles.lovefest),
     AssignableRole(constants.Roles.advent_of_code),
     AssignableRole(constants.Roles.revival_of_code),
@@ -157,24 +158,27 @@ class Subscribe(commands.Cog):
         await self.bot.wait_until_guild_available()
         self.guild = self.bot.get_guild(constants.Guild.id)
 
-        for role in ASSIGNABLE_ROLES:
-            discord_role = self.guild.get_role(role.role_id)
-            if discord_role is None:
-                log.warning("Could not resolve %d to a role in the guild, skipping.", role.role_id)
-                continue
-            self.assignable_roles.append(
-                AssignableRole(
-                    role_id=role.role_id,
-                    name=discord_role.name,
+        with sentry_sdk.start_span(description="Prepare assignable roles"):
+            for role in ASSIGNABLE_ROLES:
+                discord_role = self.guild.get_role(role.role_id)
+                if discord_role is None:
+                    log.warning("Could not resolve %d to a role in the guild, skipping.", role.role_id)
+                    continue
+                self.assignable_roles.append(
+                    AssignableRole(
+                        role_id=role.role_id,
+                        name=discord_role.name,
+                    )
                 )
-            )
+            # Sort by role name
+            self.assignable_roles.sort(key=operator.attrgetter("name"))
 
-        # Sort by role name
-        self.assignable_roles.sort(key=operator.attrgetter("name"))
+        with sentry_sdk.start_span(description="Fetch/create the self assignable roles message"):
+            placeholder_message_view_tuple = await self._fetch_or_create_self_assignable_roles_message()
+            self_assignable_roles_message, self_assignable_roles_view = placeholder_message_view_tuple
 
-        placeholder_message_view_tuple = await self._fetch_or_create_self_assignable_roles_message()
-        self_assignable_roles_message, self_assignable_roles_view = placeholder_message_view_tuple
-        self._attach_persistent_roles_view(self_assignable_roles_message, self_assignable_roles_view)
+        with sentry_sdk.start_span(description="Attach self assignable role persistent view"):
+            self._attach_persistent_roles_view(self_assignable_roles_message, self_assignable_roles_view)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command(name="subscribe", aliases=("unsubscribe",))

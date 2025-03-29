@@ -60,10 +60,7 @@ class InviteList(FilterList[InviteFilter]):
         self, ctx: FilterContext
     ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
-        text = clean_input(ctx.content)
-
-        # Avoid escape characters
-        text = text.replace("\\", "")
+        text = clean_input(ctx.content, keep_newlines=True)
 
         matches = list(DISCORD_INVITE.finditer(text))
         invite_codes = {m.group("invite") for m in matches}
@@ -145,6 +142,9 @@ class InviteList(FilterList[InviteFilter]):
         blocked_invites |= unknown_invites
         ctx.matches += {match[0] for match in matches if refined_invites.get(match.group("invite")) in blocked_invites}
         ctx.alert_embeds += (self._guild_embed(invite) for invite in blocked_invites.values() if invite)
+        if unknown_invites:
+            ctx.potential_phish[self] = set(unknown_invites)
+
         messages = self[ListType.DENY].format_messages(triggered)
         messages += [
             f"`{code} - {invite.guild.id}`" if invite else f"`{code}`" for code, invite in unknown_invites.items()

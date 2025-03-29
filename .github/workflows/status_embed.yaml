@@ -13,22 +13,6 @@ concurrency:
 
 jobs:
   status_embed:
-    # We need to send a status embed whenever the workflow
-    # sequence we're running terminates. There are a number
-    # of situations in which that happens:
-    #
-    # 1. We reach the end of the Deploy workflow, without
-    #    it being skipped.
-    #
-    # 2. A `pull_request` triggered a Lint & Test workflow,
-    #    as the sequence always terminates with one run.
-    #
-    # 3. If any workflow ends in failure or was cancelled.
-    if: >-
-      (github.event.workflow_run.name == 'Deploy' && github.event.workflow_run.conclusion != 'skipped') ||
-      github.event.workflow_run.event == 'pull_request' ||
-      github.event.workflow_run.conclusion == 'failure' ||
-      github.event.workflow_run.conclusion == 'cancelled'
     name:  Send Status Embed to Discord
     runs-on: ubuntu-latest
 
@@ -46,10 +30,10 @@ jobs:
           curl -sSL -H "Authorization: token $GITHUB_TOKEN" -o pull_request_payload.zip $DOWNLOAD_URL || exit 2
           unzip -p pull_request_payload.zip > pull_request_payload.json
           [ -s pull_request_payload.json ] || exit 3
-          echo "::set-output name=pr_author_login::$(jq -r '.user.login // empty' pull_request_payload.json)"
-          echo "::set-output name=pr_number::$(jq -r '.number // empty' pull_request_payload.json)"
-          echo "::set-output name=pr_title::$(jq -r '.title // empty' pull_request_payload.json)"
-          echo "::set-output name=pr_source::$(jq -r '.head.label // empty' pull_request_payload.json)"
+          echo "pr_author_login=$(jq -r '.user.login // empty' pull_request_payload.json)" >> $GITHUB_OUTPUT
+          echo "pr_number=$(jq -r '.number // empty' pull_request_payload.json)" >> $GITHUB_OUTPUT
+          echo "pr_title=$(jq -r '.title // empty' pull_request_payload.json)" >> $GITHUB_OUTPUT
+          echo "pr_source=$(jq -r '.head.label // empty' pull_request_payload.json)" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,14 +48,12 @@ jobs:
           webhook_id: '784184528997842985'
           webhook_token: ${{ secrets.GHA_WEBHOOK_TOKEN }}
 
-          # Workflow information
+          # We need to provide the information of the workflow that
+          # triggered this workflow instead of this workflow.
           workflow_name: ${{ github.event.workflow_run.name }}
           run_id: ${{ github.event.workflow_run.id }}
           run_number: ${{ github.event.workflow_run.run_number }}
           status: ${{ github.event.workflow_run.conclusion }}
-          actor: ${{ github.actor }}
-          repository:  ${{ github.repository }}
-          ref: ${{ github.ref }}
           sha: ${{ github.event.workflow_run.head_sha }}
 
           pr_author_login: ${{ steps.pr_info.outputs.pr_author_login }}

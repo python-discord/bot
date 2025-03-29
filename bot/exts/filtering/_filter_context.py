@@ -11,6 +11,7 @@ from discord import DMChannel, Embed, Member, Message, StageChannel, TextChannel
 from bot.utils.message_cache import MessageCache
 
 if typing.TYPE_CHECKING:
+    from bot.exts.filtering._filter_lists import FilterList
     from bot.exts.filtering._filters.filter import Filter
     from bot.exts.utils.snekbox._io import FileAttachment
 
@@ -51,6 +52,7 @@ class FilterContext:
     filter_info: dict[Filter, str] = field(default_factory=dict)  # Additional info from a filter.
     messages_deletion: bool = False  # Whether the messages were deleted. Can't upload deletion log otherwise.
     blocked_exts: set[str] = field(default_factory=set)  # Any extensions blocked (used for snekbox)
+    potential_phish: dict[FilterList, set[str]] = field(default_factory=dict)
     # Additional actions to perform
     additional_actions: list[Callable[[FilterContext], Coroutine]] = field(default_factory=list)
     related_messages: set[Message] = field(default_factory=set)  # Deletion will include these.

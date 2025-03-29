@@ -11,6 +11,7 @@ def fake_user(**kwargs):
     """Fixture to return a dictionary representing a user with default values set."""
     kwargs.setdefault("id", 43)
     kwargs.setdefault("name", "bob the test man")
+    kwargs.setdefault("display_name", "bob")
     kwargs.setdefault("discriminator", 1337)
     kwargs.setdefault("roles", [helpers.MockRole(id=666)])
     kwargs.setdefault("in_guild", True)
@@ -209,8 +210,8 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         diff = _Diff(self.users, [], None)
         await UserSyncer._sync(diff)
 
-        self.bot.api_client.post.assert_any_call("bot/users", json=diff.created[:self.chunk_size])
-        self.bot.api_client.post.assert_any_call("bot/users", json=diff.created[self.chunk_size:])
+        self.bot.api_client.post.assert_any_call("bot/users", json=tuple(diff.created[:self.chunk_size]))
+        self.bot.api_client.post.assert_any_call("bot/users", json=tuple(diff.created[self.chunk_size:]))
         self.assertEqual(self.bot.api_client.post.call_count, self.chunk_count)
 
         self.bot.api_client.put.assert_not_called()
@@ -221,8 +222,8 @@ class UserSyncerSyncTests(unittest.IsolatedAsyncioTestCase):
         diff = _Diff([], self.users, None)
         await UserSyncer._sync(diff)
 
-        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=diff.updated[:self.chunk_size])
-        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=diff.updated[self.chunk_size:])
+        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=tuple(diff.updated[:self.chunk_size]))
+        self.bot.api_client.patch.assert_any_call("bot/users/bulk_patch", json=tuple(diff.updated[self.chunk_size:]))
         self.assertEqual(self.bot.api_client.patch.call_count, self.chunk_count)
 
         self.bot.api_client.post.assert_not_called()
