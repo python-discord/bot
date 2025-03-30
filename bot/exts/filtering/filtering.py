@@ -978,7 +978,10 @@ class Filtering(Cog):
         result_actions = None
         if actions:
             result_actions = reduce(ActionSettings.union, actions)
-
+            # If the action is a ban, mods don't want to be pinged.
+            if infr_action := result_actions.get("infraction_and_notification"):
+                if infr_action.infraction_type == Infraction.BAN:
+                    result_actions.pop("mentions", None)
         return result_actions, messages, triggers
 
     async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, Iterable[str]]) -> None:
