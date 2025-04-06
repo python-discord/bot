@@ -137,13 +137,13 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.send_help(ctx.command)
 
     @nomination_group.group(name="autoreview", aliases=("ar",), invoke_without_command=True)
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def nomination_autoreview_group(self, ctx: Context) -> None:
         """Commands for enabling or disabling autoreview."""
         await ctx.send_help(ctx.command)
 
     @nomination_autoreview_group.command(name="enable", aliases=("on",))
-    @has_any_role(Roles.admins)
+    @has_any_role(Roles.admins, Roles.founders)
     @commands.max_concurrency(1)
     async def autoreview_enable(self, ctx: Context) -> None:
         """
@@ -167,7 +167,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.send(":white_check_mark: Autoreview enabled.")
 
     @nomination_autoreview_group.command(name="disable", aliases=("off",))
-    @has_any_role(Roles.admins)
+    @has_any_role(Roles.admins, Roles.founders)
     @commands.max_concurrency(1)
     async def autoreview_disable(self, ctx: Context) -> None:
         """Disable automatic posting of reviews."""
@@ -183,7 +183,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.send(":white_check_mark: Autoreview disabled.")
 
     @nomination_autoreview_group.command(name="status")
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def autoreview_status(self, ctx: Context) -> None:
         """Show whether automatic posting of reviews is enabled or disabled."""
         if await self.autoreview_enabled():
@@ -246,7 +246,7 @@ class TalentPool(Cog, name="Talentpool"):
         aliases=("nominated", "nominees"),
         invoke_without_command=True
     )
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def list_group(
         self,
         ctx: Context,
@@ -553,7 +553,7 @@ class TalentPool(Cog, name="Talentpool"):
         await self.maybe_relay_update(user.id, thread_update)
 
     @nomination_group.command(name="history", aliases=("info", "search"))
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def history_command(self, ctx: Context, user: MemberOrUser) -> None:
         """Shows the specified user's nomination history."""
         result = await self.api.get_nominations(user.id, ordering="-active,-inserted_at")
@@ -577,7 +577,7 @@ class TalentPool(Cog, name="Talentpool"):
         )
 
     @nomination_group.command(name="end", aliases=("unwatch", "unnominate"), root_aliases=("unnominate",))
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def end_nomination_command(self, ctx: Context, user: MemberOrUser, *, reason: str) -> None:
         """
         Ends the active nomination of the specified user with the given reason.
@@ -769,7 +769,7 @@ class TalentPool(Cog, name="Talentpool"):
         await self.maybe_relay_update(nomination.user_id, thread_update)
 
     @nomination_edit_group.command(name="end_reason")
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """Edits the unnominate reason for the nomination with the given `id`."""
         if len(reason) > REASON_MAX_CHARS:
@@ -792,7 +792,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.send(f":white_check_mark: Updated the nomination end reason for <@{nomination.user_id}>.")
 
     @nomination_group.command(aliases=("gr",))
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def get_review(self, ctx: Context, user_id: int) -> None:
         """Get the user's review as a markdown file."""
         nominations = await self.api.get_nominations(user_id, active=True)
@@ -808,7 +808,7 @@ class TalentPool(Cog, name="Talentpool"):
         await ctx.send(files=[review_file, nominations_file])
 
     @nomination_group.command(aliases=("review",))
-    @has_any_role(*MODERATION_ROLES)
+    @has_any_role(*MODERATION_ROLES, Roles.founders)
     async def post_review(self, ctx: Context, user_id: int) -> None:
         """Post the automatic review for the user ahead of time."""
         nominations = await self.api.get_nominations(user_id, active=True)
