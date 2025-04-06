@@ -13,10 +13,8 @@ from discord.ext.commands import BadArgument, Context, Converter, IDConverter, M
 from discord.utils import snowflake_time
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import unqualify
-from pydis_core.utils.regex import DISCORD_INVITE
 
 from bot import exts, instance as bot_instance
-from bot.constants import URLs
 from bot.errors import InvalidInfractionError
 from bot.exts.info.doc import _inventory_parser
 from bot.log import get_logger
@@ -29,42 +27,6 @@ log = get_logger(__name__)
 
 DISCORD_EPOCH_DT = snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
-
-
-class ValidDiscordServerInvite(Converter):
-    """
-    A converter that validates whether a given string is a valid Discord server invite.
-
-    Raises 'BadArgument' if:
-    - The string is not a valid Discord server invite.
-    - The string is valid, but is an invite for a group DM.
-    - The string is valid, but is expired.
-
-    Returns a (partial) guild object if:
-    - The string is a valid vanity
-    - The string is a full invite URI
-    - The string contains the invite code (the stuff after discord.gg/)
-
-    See the Discord API docs for documentation on the guild object:
-    https://discord.com/developers/docs/resources/guild#guild-object
-    """
-
-    async def convert(self, ctx: Context, server_invite: str) -> dict:
-        """Check whether the string is a valid Discord server invite."""
-        invite_code = DISCORD_INVITE.match(server_invite)
-        if invite_code:
-            response = await ctx.bot.http_session.get(
-                f"{URLs.discord_invite_api}/{invite_code.group('invite')}"
-            )
-            if response.status != 404:
-                invite_data = await response.json()
-                return invite_data.get("guild")
-
-        id_converter = IDConverter()
-        if id_converter._get_id_match(server_invite):
-            raise BadArgument("Guild IDs are not supported, only invites.")
-
-        raise BadArgument("This does not appear to be a valid Discord server invite.")
 
 
 class Extension(Converter):
@@ -466,7 +428,6 @@ class Infraction(Converter):
 
 
 if t.TYPE_CHECKING:
-    ValidDiscordServerInvite = dict
     ValidFilterListType = str
     Extension = str
     PackageName = str
