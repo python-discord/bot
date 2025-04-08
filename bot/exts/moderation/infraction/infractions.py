@@ -8,6 +8,7 @@ from dateutil.relativedelta import relativedelta
 from discord import Member
 from discord.ext import commands
 from discord.ext.commands import Context, command
+from discord import app_commands
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
@@ -45,6 +46,31 @@ COMP_BAN_REASON = (
     "this message to appeal your ban."
 )
 COMP_BAN_DURATION = timedelta(days=4)
+
+
+class NoteModal(discord.ui.Modal, title="Add a Note"):
+    def __init__(self, user_id: int, message_link: str | None = None):
+        super().__init__()
+        self.user_id = user_id
+        self.message_link = message_link
+
+    note = discord.ui.TextInput(
+        label="Note",
+        style=discord.TextStyle.paragraph,
+        placeholder="Enter the note content here...",
+        required=True,
+        max_length=2000,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        note_content = self.note.value
+        if self.message_link:
+            note_content += f"\n\nMessage link: {self.message_link}"
+
+        user = await interaction.client.get_or_fetch_user(self.user_id)
+        ctx = await interaction.client.get_context(interaction)
+        await ctx.invoke(ctx.bot.get_command("note"), user=user, reason=note_content)
+        await interaction.response.send_message(f"Note added for {user.mention}", ephemeral=True)
 
 
 class Infractions(InfractionScheduler, commands.Cog):
@@ -673,6 +699,18 @@ class Infractions(InfractionScheduler, commands.Cog):
             async def action() -> None:
                 await member.edit(timed_out_until=expiry, reason=reason)
             await self.reapply_infraction(timeout_infraction, action)
+
+    @app_commands.context_menu(name="Add Note to User")
+    async def add_note_to_user(self, interaction: discord.Interaction, user: discord.User) -> None:
+        """Context menu command to add a note to a user."""
+        modal = NoteModal(user_id=user.id)
+        await interaction.response.send_modal(modal)
+
+    @app_commands.context_menu(name="Add Note to Message")
+    async def add_note_to_message(self, interaction: discord.Interaction, message: discord.Message) -> None:
+        """Context menu command to add a note to a message."""
+        modal = NoteModal(user_id=message.author.id, message_link=message.jump_url)
+        await interaction.response.send_modal(modal)
 
 
 async def setup(bot: Bot) -> None:
