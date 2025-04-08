@@ -237,7 +237,7 @@ class ModManagement(commands.Cog):
                     capped, duration = _utils.cap_timeout_duration(expiry)
                     if capped:
                         await _utils.notify_timeout_cap(self.bot, ctx, user)
-                    await user.edit(reason=reason, timed_out_until=expiry)
+                    await user.edit(reason=reason, timed_out_until=duration)
 
             log_text += f"""
                 Previous expiry: {time.until_expiration(infraction['expires_at'])}
