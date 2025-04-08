@@ -1,18 +1,17 @@
-import re
 from urllib.parse import urljoin
 
 import markdownify
 from bs4.element import PageElement
-
-# See https://github.com/matthewwithanm/python-markdownify/issues/31
-markdownify.whitespace_re = re.compile(r"[\r\n\s\t ]+")
 
 
 class DocMarkdownConverter(markdownify.MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
     def __init__(self, *, page_url: str, **options):
-        super().__init__(**options)
+        # Reflow text to avoid unwanted line breaks.
+        default_options = {"wrap": True, "wrap_width": None}
+
+        super().__init__(**default_options | options)
         self.page_url = page_url
 
     def convert_li(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
