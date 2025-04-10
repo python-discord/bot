@@ -38,6 +38,13 @@ BITBUCKET_RE = re.compile(
     r"/(?P<file_path>[^#>]+)(\?[^#>]+)?(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)"
 )
 
+PYDIS_PASTEBIN_RE = re.compile(
+    r"https://paste\.(?:pythondiscord\.com|pydis\.wtf)/(?P<paste_id>[a-zA-Z0-9]+)"
+    r"#(?P<selections>(?:\d+L\d+-L\d+)(?:,\d+L\d+-L\d+)*)"
+)
+
+PASTEBIN_LINE_SELECTION_RE = re.compile(r"(\d+)L(\d+)-L(\d+)")
+
 
 class CodeSnippets(Cog):
     """
@@ -54,7 +61,8 @@ class CodeSnippets(Cog):
             (GITHUB_RE, self._fetch_github_snippet),
             (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
             (GITLAB_RE, self._fetch_gitlab_snippet),
-            (BITBUCKET_RE, self._fetch_bitbucket_snippet)
+            (BITBUCKET_RE, self._fetch_bitbucket_snippet),
+            (PYDIS_PASTEBIN_RE, self._fetch_pastebin_snippets),
         ]
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
@@ -170,7 +178,40 @@ class CodeSnippets(Cog):
         )
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
-    def _snippet_to_codeblock(self, file_contents: str, file_path: str, start_line: str, end_line: str) -> str:
+    async def _fetch_pastebin_snippets(self, paste_id: str, selections: str) -> str:
+        """Fetches snippets from paste.pythondiscord.com."""
+        paste_data = await self._fetch_response(
+            f"https://paste.pythondiscord.com/api/v1/paste/{paste_id}",
+            "json"
+            )
+
+        snippets = []
+        for match in PASTEBIN_LINE_SELECTION_RE.finditer(selections):
+            file_num, start, end = match.groups()
+            file_num = int(file_num) - 1
+
+            file = paste_data["files"][file_num]
+            file_name = file.get("name") or f"file {file_num + 1}"
+            snippet = self._snippet_to_codeblock(
+                file["content"],
+                file_name,
+                start,
+                end,
+                language=file["lexer"],
+            )
+
+            snippets.append(snippet)
+
+        return snippets
+
+    def _snippet_to_codeblock(
+            self,
+            file_contents: str,
+            file_path: str,
+            start_line: str,
+            end_line: str|None,
+            language: str|None = None
+            ) -> str:
         """
         Given the entire file contents and target lines, creates a code block.
 
@@ -203,15 +244,16 @@ class CodeSnippets(Cog):
         required = "\n".join(split_file_contents[start_line - 1:end_line])
         required = textwrap.dedent(required).rstrip().replace("`", "`\u200b")
 
-        # Extracts the code language and checks whether it's a "valid" language
-        language = file_path.split("/")[-1].split(".")[-1]
-        trimmed_language = language.replace("-", "").replace("+", "").replace("_", "")
-        is_valid_language = trimmed_language.isalnum()
-        if not is_valid_language:
-            language = ""
+        if language is None:
+            # Extracts the code language and checks whether it's a "valid" language
+            language = file_path.split("/")[-1].split(".")[-1]
+            trimmed_language = language.replace("-", "").replace("+", "").replace("_", "")
+            is_valid_language = trimmed_language.isalnum()
+            if not is_valid_language:
+                language = ""
 
-        if language == "pyi":
-            language = "py"
+            if language == "pyi":
+                language = "py"
 
         # Adds a label showing the file path to the snippet
         if start_line == end_line:
@@ -231,8 +273,7 @@ class CodeSnippets(Cog):
         for pattern, handler in self.pattern_handlers:
             for match in pattern.finditer(content):
                 try:
-                    snippet = await handler(**match.groupdict())
-                    all_snippets.append((match.start(), snippet))
+                    result = await handler(**match.groupdict())
                 except ClientResponseError as error:
                     error_message = error.message
                     log.log(
@@ -241,8 +282,17 @@ class CodeSnippets(Cog):
                         f"{error_message} for GET {error.request_info.real_url.human_repr()}"
                     )
 
-        # Sorts the list of snippets by their match index and joins them into a single message
-        return "\n".join(x[1] for x in sorted(all_snippets))
+                if isinstance(result, list):
+                    # The handler returned multiple snippets (currently only possible with our pastebin)
+                    all_snippets.extend((match.start(), snippet) for snippet in result)
+                else:
+                    all_snippets.append((match.start(), result))
+
+        # Sort the list of snippets by ONLY their match index
+        all_snippets.sort(key=lambda item: item[0])
+
+        # Join them into a single message
+        return "\n".join(x[1] for x in all_snippets)
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
