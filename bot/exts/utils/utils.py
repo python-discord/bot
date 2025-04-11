@@ -125,10 +125,10 @@ class Utils(Cog):
             start_index = int(match.group("start")) if match.group("start") else None
             end_index = int(match.group("end")) if match.group("end") else None
             step_size = int(match.group("step")) if match.group("step") else 1
-            
+
             if step_size == 0:
                 raise BadArgument(f"Step size must not be 0.")
-            
+
             lines = zen_lines[start_index:end_index:step_size]
             if not lines:
                 raise BadArgument(f"Slice returned 0 lines.")
