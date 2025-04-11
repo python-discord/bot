@@ -111,12 +111,15 @@ class Utils(Cog):
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
         # Prioritize checking for an index or slice
-        match = re.match(r"(?P<index>-?\d++(?!:))|(?P<start>(?:-\d+)|\d*):(?:(?P<end>(?:-\d+)|\d*)(?::(?P<step>(?:-\d+)|\d*))?)?", search_value.split(" ")[0])
+        match = re.match(
+            r"(?P<index>-?\d++(?!:))|(?P<start>(?:-\d+)|\d*):(?:(?P<end>(?:-\d+)|\d*)(?::(?P<step>(?:-\d+)|\d*))?)?",
+            search_value.split(" ")[0],
+        )
         if match:
             if match.group("index"):
                 index = int(match.group("index"))
                 if not (-19 <= index <= 18):
-                    raise BadArgument(f"Please provide an index between {-19} and {18}.")
+                    raise BadArgument("Please provide an index between -19 and 18.")
                 embed.title += f" (line {index % 19}):"
                 embed.description = zen_lines[index]
                 await ctx.send(embed=embed)
@@ -127,12 +130,13 @@ class Utils(Cog):
             step_size = int(match.group("step")) if match.group("step") else 1
 
             if step_size == 0:
-                raise BadArgument(f"Step size must not be 0.")
+                raise BadArgument("Step size must not be 0.")
 
             lines = zen_lines[start_index:end_index:step_size]
             if not lines:
-                raise BadArgument(f"Slice returned 0 lines.")
-            elif len(lines) == 1:
+                raise BadArgument("Slice returned 0 lines.")
+
+            if len(lines) == 1:
                 embed.title += f" (line {zen_lines.index(lines[0])}):"
                 embed.description = lines[0]
                 await ctx.send(embed=embed)
