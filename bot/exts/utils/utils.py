@@ -16,7 +16,7 @@ from bot.utils import messages, time
 
 log = get_logger(__name__)
 
-ZEN_OF_PYTHON = """\
+ZEN_OF_PYTHON = """
 Beautiful is better than ugly.
 Explicit is better than implicit.
 Simple is better than complex.
@@ -36,7 +36,7 @@ Although never is often better than *right* now.
 If the implementation is hard to explain, it's a bad idea.
 If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
-"""
+""".strip()
 LEADS_AND_COMMUNITY = (Roles.project_leads, Roles.domain_leads, Roles.partners, Roles.python_community)
 
 
