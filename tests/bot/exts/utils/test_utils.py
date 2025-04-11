@@ -65,11 +65,15 @@ class ZenTests(unittest.IsolatedAsyncioTestCase):
         """ Tests if the `!zen` command reacts properly to valid slices for indexing as an argument. """
 
         expected_results = {
-            "0:19": ("The Zen of Python (lines 0-18):", "\n".join(self.zen_list[0:19])),
-            "0:": ("The Zen of Python (lines 0-18):", "\n".join(self.zen_list[0:])),
-            "-2:-1": ("The Zen of Python (lines 17-17):", self.zen_list[17]),
+            "0:19": ("The Zen of Python, by Tim Peters", "\n".join(self.zen_list)),
+            ":": ("The Zen of Python, by Tim Peters", "\n".join(self.zen_list)),
+            "::": ("The Zen of Python, by Tim Peters", "\n".join(self.zen_list)),
+            "1:": ("The Zen of Python (lines 1-18):", "\n".join(self.zen_list[1:])),
+            "-2:-1": ("The Zen of Python (line 17):", self.zen_list[17]),
             "0:-1": ("The Zen of Python (lines 0-17):", "\n".join(self.zen_list[0:-1])),
-            "10:13": ("The Zen of Python (lines 10-12):", "\n".join(self.zen_list[10:13]))
+            "10:13": ("The Zen of Python (lines 10-12):", "\n".join(self.zen_list[10:13])),
+            "::-1": ("The Zen of Python (step size -1):", "\n".join(self.zen_list[::-1])),
+            "10:5:-1": ("The Zen of Python (lines 6-10, step size -1):", "\n".join(self.zen_list[10:5:-1])),
         }
 
         for input_slice, (title, description) in expected_results.items():
@@ -83,7 +87,7 @@ class ZenTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_zen_with_invalid_slices(self):
         """ Tests if the `!zen` command reacts properly to invalid slices for indexing as an argument. """
-        slices= ["19:", "10:9", "-1:-2", "0:20", "-100:", "0:-100"]
+        slices= ["19:18", "10:9", "-1:-2", "0:-100", "::0", "1:2:-1", "-5:-4:-1"]
 
         for input_slice in slices:
             with self.subTest(input_slice = input_slice), self.assertRaises(BadArgument):

@@ -111,31 +111,50 @@ class Utils(Cog):
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
         # Prioritize checking for an index or slice
-        match = re.match(r"(-?\d+)(:(-?\d+)?)?", search_value.split(" ")[0])
+        match = re.match(r"(?P<index>-?\d++(?!:))|(?P<start>(?:-\d+)|\d*):(?:(?P<end>(?:-\d+)|\d*)(?::(?P<step>(?:-\d+)|\d*))?)?", search_value.split(" ")[0])
         if match:
-            upper_bound = len(zen_lines) - 1
-            lower_bound = -1 * len(zen_lines)
-
-            start_index = int(match.group(1))
-
-            if not match.group(2):
-                if not (lower_bound <= start_index <= upper_bound):
-                    raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
-                embed.title += f" (line {start_index % len(zen_lines)}):"
-                embed.description = zen_lines[start_index]
+            if match.group("index"):
+                index = int(match.group("index"))
+                if not (-19 <= index <= 18):
+                    raise BadArgument(f"Please provide an index between {-19} and {18}.")
+                embed.title += f" (line {index % 19}):"
+                embed.description = zen_lines[index]
                 await ctx.send(embed=embed)
                 return
 
-            end_index=  int(match.group(3)) if match.group(3) else len(zen_lines)
-
-            if not ((lower_bound <= start_index <= upper_bound) and (lower_bound <= end_index <= len(zen_lines))):
-                raise BadArgument(f"Please provide valid indices between {lower_bound} and {upper_bound}.")
-            if not (start_index % len(zen_lines) < end_index % (len(zen_lines) + 1)):
-                raise BadArgument("The start index for the slice must be smaller than the end index.")
-
-            embed.title += f" (lines {start_index%len(zen_lines)}-{(end_index-1)%len(zen_lines)}):"
-            embed.description = "\n".join(zen_lines[start_index:end_index])
-            await ctx.send(embed=embed)
+            start_index = int(match.group("start")) if match.group("start") else None
+            end_index = int(match.group("end")) if match.group("end") else None
+            step_size = int(match.group("step")) if match.group("step") else 1
+            
+            if step_size == 0:
+                raise BadArgument(f"Step size must not be 0.")
+            
+            lines = zen_lines[start_index:end_index:step_size]
+            if not lines:
+                raise BadArgument(f"Slice returned 0 lines.")
+            elif len(lines) == 1:
+                embed.title += f" (line {zen_lines.index(lines[0])}):"
+                embed.description = lines[0]
+                await ctx.send(embed=embed)
+            elif lines == zen_lines:
+                embed.title += ", by Tim Peters"
+                await ctx.send(embed=embed)
+            elif len(lines) == 19:
+                embed.title += f" (step size {step_size}):"
+                embed.description = "\n".join(lines)
+                await ctx.send(embed=embed)
+            else:
+                if step_size != 1:
+                    step_message = f", step size {step_size}"
+                else:
+                    step_message = ""
+                first_position = zen_lines.index(lines[0])
+                second_position = zen_lines.index(lines[-1])
+                if first_position > second_position:
+                    (first_position, second_position) = (second_position, first_position)
+                embed.title += f" (lines {first_position}-{second_position}{step_message}):"
+                embed.description = "\n".join(lines)
+                await ctx.send(embed=embed)
             return
 
         # Try to handle first exact word due difflib.SequenceMatched may use some other similar word instead
