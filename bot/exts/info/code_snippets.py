@@ -178,7 +178,7 @@ class CodeSnippets(Cog):
         )
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
-    async def _fetch_pastebin_snippets(self, paste_id: str, selections: str) -> str:
+    async def _fetch_pastebin_snippets(self, paste_id: str, selections: str) -> list[str]:
         """Fetches snippets from paste.pythondiscord.com."""
         paste_data = await self._fetch_response(
             f"https://paste.pythondiscord.com/api/v1/paste/{paste_id}",
