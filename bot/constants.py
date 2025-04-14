@@ -160,6 +160,7 @@ class _Roles(EnvConfig, env_prefix="roles_"):
     mod_team: int = 267629731250176001
     owners: int = 267627879762755584
     project_leads: int = 815701647526330398
+    founders: int = 1069394343867199590
 
     # Code Jam
     jammers: int = 737249140966162473

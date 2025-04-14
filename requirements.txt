@@ -1,0 +1,9 @@
+discord.py
+python-dotenv
+httpx
+coloredlogs
+sentry_sdk
+pydantic_settings
+redis>=4.0.0
+async_rediscache
+packaging

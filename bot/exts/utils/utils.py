@@ -16,7 +16,7 @@ from bot.utils import messages, time
 
 log = get_logger(__name__)
 
-ZEN_OF_PYTHON = """\
+ZEN_OF_PYTHON = """
 Beautiful is better than ugly.
 Explicit is better than implicit.
 Simple is better than complex.
@@ -36,7 +36,7 @@ Although never is often better than *right* now.
 If the implementation is hard to explain, it's a bad idea.
 If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
-"""
+""".strip()
 LEADS_AND_COMMUNITY = (Roles.project_leads, Roles.domain_leads, Roles.partners, Roles.python_community)
 
 
@@ -88,16 +88,14 @@ class Utils(Cog):
     async def zen(
         self,
         ctx: Context,
-        zen_rule_index: int | None,
-        *,
-        search_value: str | None = None
+        search_value: str | None,
     ) -> None:
         """
         Show the Zen of Python.
 
         Without any arguments, the full Zen will be produced.
-        If zen_rule_index is provided, the line with that index will be produced.
-        If only a string is provided, the line which matches best will be produced.
+        If an index or a slice is provided, the corresponding lines will be produced.
+        Otherwise, the line which matches best will be produced.
         """
         embed = Embed(
             colour=Colour.og_blurple(),
@@ -105,24 +103,62 @@ class Utils(Cog):
             description=ZEN_OF_PYTHON
         )
 
-        if zen_rule_index is None and search_value is None:
+        if search_value is None:
             embed.title += ", by Tim Peters"
             await ctx.send(embed=embed)
             return
 
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
-        # Prioritize passing the zen rule index
-        if zen_rule_index is not None:
+        # Prioritize checking for an index or slice
+        match = re.match(
+            r"(?P<index>-?\d++(?!:))|(?P<start>(?:-\d+)|\d*):(?:(?P<end>(?:-\d+)|\d*)(?::(?P<step>(?:-\d+)|\d*))?)?",
+            search_value.split(" ")[0],
+        )
+        if match:
+            if match.group("index"):
+                index = int(match.group("index"))
+                if not (-19 <= index <= 18):
+                    raise BadArgument("Please provide an index between -19 and 18.")
+                embed.title += f" (line {index % 19}):"
+                embed.description = zen_lines[index]
+                await ctx.send(embed=embed)
+                return
 
-            upper_bound = len(zen_lines) - 1
-            lower_bound = -1 * len(zen_lines)
-            if not (lower_bound <= zen_rule_index <= upper_bound):
-                raise BadArgument(f"Please provide an index between {lower_bound} and {upper_bound}.")
+            start_index = int(match.group("start")) if match.group("start") else None
+            end_index = int(match.group("end")) if match.group("end") else None
+            step_size = int(match.group("step")) if match.group("step") else 1
 
-            embed.title += f" (line {zen_rule_index % len(zen_lines)}):"
-            embed.description = zen_lines[zen_rule_index]
-            await ctx.send(embed=embed)
+            if step_size == 0:
+                raise BadArgument("Step size must not be 0.")
+
+            lines = zen_lines[start_index:end_index:step_size]
+            if not lines:
+                raise BadArgument("Slice returned 0 lines.")
+
+            if len(lines) == 1:
+                embed.title += f" (line {zen_lines.index(lines[0])}):"
+                embed.description = lines[0]
+                await ctx.send(embed=embed)
+            elif lines == zen_lines:
+                embed.title += ", by Tim Peters"
+                await ctx.send(embed=embed)
+            elif len(lines) == 19:
+                embed.title += f" (step size {step_size}):"
+                embed.description = "\n".join(lines)
+                await ctx.send(embed=embed)
+            else:
+                if step_size != 1:
+                    step_message = f", step size {step_size}"
+                else:
+                    step_message = ""
+                first_position = zen_lines.index(lines[0])
+                second_position = zen_lines.index(lines[-1])
+                if first_position > second_position:
+                    (first_position, second_position) = (second_position, first_position)
+                embed.title += f" (lines {first_position}-{second_position}{step_message}):"
+                embed.description = "\n".join(lines)
+                await ctx.send(embed=embed)
             return
 
         # Try to handle first exact word due difflib.SequenceMatched may use some other similar word instead
