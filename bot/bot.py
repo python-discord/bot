@@ -8,7 +8,7 @@ from pydis_core import BotBase
 from pydis_core.utils.error_handling import handle_forbidden_from_block
 from sentry_sdk import new_scope, start_transaction
 
-from bot import constants, exts
+from bot import constants
 from bot.log import get_logger
 
 log = get_logger("bot")
