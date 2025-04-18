@@ -1,21 +1,20 @@
-import re
 from urllib.parse import urljoin
 
 import markdownify
 from bs4.element import PageElement
-
-# See https://github.com/matthewwithanm/python-markdownify/issues/31
-markdownify.whitespace_re = re.compile(r"[\r\n\s\t ]+")
 
 
 class DocMarkdownConverter(markdownify.MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
     def __init__(self, *, page_url: str, **options):
-        super().__init__(**options)
+        # Reflow text to avoid unwanted line breaks.
+        default_options = {"wrap": True, "wrap_width": None}
+
+        super().__init__(**default_options | options)
         self.page_url = page_url
 
-    def convert_li(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_li(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Fix markdownify's erroneous indexing in ol tags."""
         parent = el.parent
         if parent is not None and parent.name == "ol":
@@ -31,38 +30,38 @@ class DocMarkdownConverter(markdownify.MarkdownConverter):
             bullet = bullets[depth % len(bullets)]
         return f"{bullet} {text}\n"
 
-    def _convert_hn(self, _n: int, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def _convert_hn(self, _n: int, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Convert h tags to bold text with ** instead of adding #."""
-        if convert_as_inline:
+        if "_inline" in parent_tags:
             return text
         return f"**{text}**\n\n"
 
-    def convert_code(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_code(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Undo `markdownify`s underscore escaping."""
         return f"`{text}`".replace("\\", "")
 
-    def convert_pre(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_pre(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Wrap any codeblocks in `py` for syntax highlighting."""
         code = "".join(el.strings)
         return f"```py\n{code}```"
 
-    def convert_a(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_a(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Resolve relative URLs to `self.page_url`."""
         el["href"] = urljoin(self.page_url, el["href"])
         # Discord doesn't handle titles properly, showing links with them as raw text.
         el["title"] = None
-        return super().convert_a(el, text, convert_as_inline)
+        return super().convert_a(el, text, parent_tags)
 
-    def convert_p(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_p(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Include only one newline instead of two when the parent is a li tag."""
-        if convert_as_inline:
+        if "_inline" in parent_tags:
             return text
 
         parent = el.parent
         if parent is not None and parent.name == "li":
             return f"{text}\n"
-        return super().convert_p(el, text, convert_as_inline)
+        return super().convert_p(el, text, parent_tags)
 
-    def convert_hr(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_hr(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Ignore `hr` tag."""
         return ""
