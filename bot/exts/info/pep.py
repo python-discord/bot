@@ -59,7 +59,7 @@ class PythonEnhancementProposals(Cog):
         """Generate PEP embed."""
         embed = Embed(
             title=f"**PEP {pep['number']} - {pep['title']}**",
-            description=f"[Link]({pep['url']})",
+            url=pep["url"],
         )
         embed.set_thumbnail(url=ICON_URL)
 
