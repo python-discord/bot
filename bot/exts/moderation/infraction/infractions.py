@@ -102,7 +102,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         """
         await self.apply_ban(ctx, user, reason, duration_or_expiry=duration_or_expiry)
 
-    @command(aliases=("cban", "purgeban", "pban"))
+    @command(aliases=("clban", "purgeban", "pban"))
     @ensure_future_timestamp(timestamp_arg=3)
     async def cleanban(
         self,
@@ -154,7 +154,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         ctx.send = send
         await infr_manage_cog.infraction_append(ctx, infraction, None, reason=f"[Clean log]({log_url})")
 
-    @command()
+    @command(aliases=("cpban",))
     async def compban(self, ctx: Context, user: UnambiguousMemberOrUser) -> None:
         """Same as cleanban, but specifically with the ban reason and duration used for compromised accounts."""
         await self.cleanban(ctx, user, duration=(arrow.utcnow() + COMP_BAN_DURATION).datetime, reason=COMP_BAN_REASON)
