@@ -2,9 +2,11 @@ import json
 from collections import OrderedDict
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from async_rediscache import RedisCache
 from discord import Guild, PermissionOverwrite, TextChannel, Thread, VoiceChannel
+from discord.abc import Messageable
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from discord.utils import MISSING
@@ -33,6 +35,7 @@ MSG_UNSILENCE_MANUAL = (
 MSG_UNSILENCE_SUCCESS = f"{constants.Emojis.check_mark} unsilenced {{channel}}."
 
 TextOrVoiceChannel = TextChannel | VoiceChannel
+SilenceableChannel = TextChannel | VoiceChannel | Thread
 
 VOICE_CHANNELS = {
     constants.Channels.code_help_voice_0: constants.Channels.code_help_chat_0,
@@ -57,17 +60,17 @@ class SilenceNotifier(tasks.Loop):
             time=MISSING,
             name=None
         )
-        self._silenced_channels = {}
+        self._silenced_channels: dict[SilenceableChannel, int] = {}
         self._alert_channel = alert_channel
 
-    def add_channel(self, channel: TextOrVoiceChannel) -> None:
+    def add_channel(self, channel: SilenceableChannel) -> None:
         """Add channel to `_silenced_channels` and start loop if not launched."""
         if not self._silenced_channels:
             self.start()
             log.info("Starting notifier loop.")
         self._silenced_channels[channel] = self._current_loop
 
-    def remove_channel(self, channel: TextChannel) -> None:
+    def remove_channel(self, channel: SilenceableChannel) -> None:
         """Remove channel from `_silenced_channels` and stop loop if no channels remain."""
         with suppress(KeyError):
             del self._silenced_channels[channel]
@@ -92,7 +95,7 @@ class SilenceNotifier(tasks.Loop):
             )
 
 
-async def _select_lock_channel(args: OrderedDict[str, any]) -> TextOrVoiceChannel:
+async def _select_lock_channel(args: OrderedDict[str, Any]) -> SilenceableChannel:
     """Passes the channel to be silenced to the resource lock."""
     channel, _ = Silence.parse_silence_args(args["ctx"], args["duration_or_channel"], args["duration"])
     return channel
@@ -130,8 +133,8 @@ class Silence(commands.Cog):
     async def send_message(
         self,
         message: str,
-        source_channel: TextChannel,
-        target_channel: TextOrVoiceChannel,
+        source_channel: Messageable,
+        target_channel: SilenceableChannel,
         *,
         alert_target: bool = False
     ) -> None:
@@ -159,7 +162,7 @@ class Silence(commands.Cog):
     async def silence(
         self,
         ctx: Context,
-        duration_or_channel: TextOrVoiceChannel | HushDurationConverter = None,
+        duration_or_channel: SilenceableChannel | HushDurationConverter | None = None,
         duration: HushDurationConverter = 10,
         *,
         kick: bool = False
@@ -177,12 +180,6 @@ class Silence(commands.Cog):
 
         channel_info = f"#{channel} ({channel.id})"
         log.debug(f"{ctx.author} is silencing channel {channel_info}.")
-
-        # Since threads don't have specific overrides, we cannot silence them individually.
-        # The parent channel has to be muted or the thread should be archived.
-        if isinstance(channel, Thread):
-            await ctx.send(":x: Threads cannot be silenced.")
-            return
 
         if not await self._set_silence_overwrites(channel, kick=kick):
             log.info(f"Tried to silence channel {channel_info} but the channel was already silenced.")
@@ -210,12 +207,12 @@ class Silence(commands.Cog):
     @staticmethod
     def parse_silence_args(
         ctx: Context,
-        duration_or_channel: TextOrVoiceChannel | int,
+        duration_or_channel: SilenceableChannel | int | None,
         duration: HushDurationConverter
-    ) -> tuple[TextOrVoiceChannel, int | None]:
+    ) -> tuple[SilenceableChannel, int | None]:
         """Helper method to parse the arguments of the silence command."""
         if duration_or_channel:
-            if isinstance(duration_or_channel, TextChannel | VoiceChannel):
+            if isinstance(duration_or_channel, TextChannel | VoiceChannel | Thread):
                 channel = duration_or_channel
             else:
                 channel = ctx.channel
@@ -228,8 +225,11 @@ class Silence(commands.Cog):
 
         return channel, duration
 
-    async def _set_silence_overwrites(self, channel: TextOrVoiceChannel, *, kick: bool = False) -> bool:
+    async def _set_silence_overwrites(self, channel: SilenceableChannel, *, kick: bool = False) -> bool:
         """Set silence permission overwrites for `channel` and return True if successful."""
+        if channel.id in self.scheduler:
+            return False
+
         # Get the original channel overwrites
         if isinstance(channel, TextChannel):
             role = self._everyone_role
@@ -242,6 +242,11 @@ class Silence(commands.Cog):
                 send_messages_in_threads=overwrite.send_messages_in_threads
             )
 
+        elif isinstance(channel, Thread):
+            log.info(f"Silencing thread #{channel.parent}/{channel} ({channel.parent.id}/{channel.id}).")
+            await channel.edit(locked=True)
+            return True
+
         else:
             role = self._verified_voice_role
             overwrite = channel.overwrites_for(role)
@@ -250,7 +255,7 @@ class Silence(commands.Cog):
                 prev_overwrites.update(connect=overwrite.connect)
 
         # Stop if channel was already silenced
-        if channel.id in self.scheduler or all(val is False for val in prev_overwrites.values()):
+        if all(val is False for val in prev_overwrites.values()):
             return False
 
         # Set new permissions, store
@@ -260,7 +265,7 @@ class Silence(commands.Cog):
 
         return True
 
-    async def _schedule_unsilence(self, ctx: Context, channel: TextOrVoiceChannel, duration: int | None) -> None:
+    async def _schedule_unsilence(self, ctx: Context, channel: SilenceableChannel, duration: int | None) -> None:
         """Schedule `ctx.channel` to be unsilenced if `duration` is not None."""
         if duration is None:
             await self.unsilence_timestamps.set(channel.id, -1)
@@ -270,7 +275,7 @@ class Silence(commands.Cog):
             await self.unsilence_timestamps.set(channel.id, unsilence_time.timestamp())
 
     @commands.command(aliases=("unhush",))
-    async def unsilence(self, ctx: Context, *, channel: TextOrVoiceChannel = None) -> None:
+    async def unsilence(self, ctx: Context, *, channel: SilenceableChannel | None = None) -> None:
         """
         Unsilence the given channel if given, else the current one.
 
@@ -282,7 +287,7 @@ class Silence(commands.Cog):
         await self._unsilence_wrapper(channel, ctx)
 
     @lock_arg(LOCK_NAMESPACE, "channel", raise_error=True)
-    async def _unsilence_wrapper(self, channel: TextOrVoiceChannel, ctx: Context | None = None) -> None:
+    async def _unsilence_wrapper(self, channel: SilenceableChannel, ctx: Context | None = None) -> None:
         """
         Unsilence `channel` and send a success/failure message to ctx.channel.
 
@@ -297,6 +302,10 @@ class Silence(commands.Cog):
             if isinstance(channel, VoiceChannel):
                 overwrite = channel.overwrites_for(self._verified_voice_role)
                 has_channel_overwrites = overwrite.speak is False
+
+            elif isinstance(channel, Thread):
+                has_channel_overwrites = False
+
             else:
                 overwrite = channel.overwrites_for(self._everyone_role)
                 has_channel_overwrites = overwrite.send_messages is False or overwrite.add_reactions is False
@@ -310,7 +319,7 @@ class Silence(commands.Cog):
         else:
             await self.send_message(MSG_UNSILENCE_SUCCESS, msg_channel, channel, alert_target=True)
 
-    async def _unsilence(self, channel: TextOrVoiceChannel) -> bool:
+    async def _unsilence(self, channel: SilenceableChannel) -> bool:
         """
         Unsilence `channel`.
 
@@ -318,7 +327,7 @@ class Silence(commands.Cog):
         it, cancel the task, and remove it from the notifier. Notify admins if it has a task but
         not cached overwrites.
 
-        Return `True` if channel permissions were changed, `False` otherwise.
+        Return `True` if channel was unsilenced, `False` otherwise.
         """
         # Get stored overwrites, and return if channel is unsilenced
         prev_overwrites = await self.previous_overwrites.get(channel.id)
@@ -331,6 +340,12 @@ class Silence(commands.Cog):
             role = self._everyone_role
             overwrite = channel.overwrites_for(role)
             permissions = "`Send Messages` and `Add Reactions`"
+        elif isinstance(channel, Thread):
+            await channel.edit(locked=False)
+            log.info(f"Unsilenced thread #{channel.parent}/{channel} ({channel.parent_id}/{channel.id}).")
+            self.scheduler.cancel(channel.id)
+            self.notifier.remove_channel(channel)
+            return True
         else:
             role = self._verified_voice_role
             overwrite = channel.overwrites_for(role)
