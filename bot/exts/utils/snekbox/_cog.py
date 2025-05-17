@@ -569,7 +569,29 @@ class Snekbox(Cog):
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{job}")
 
-    @command(name="eval", aliases=("e",), usage="[python_version] <code, ...>")
+    @command(
+        name="eval",
+        aliases=("e",),
+        usage="[python_version] <code, ...>",
+        help=f"""
+            Run Python code and get the results.
+
+            This command supports multiple lines of code, including formatted code blocks.
+            Code can be re-evaluated by editing the original message within 10 seconds and
+            clicking the reaction that subsequently appears.
+
+            The starting working directory `/home`, is a writeable temporary file system.
+            Files created, excluding names with leading underscores, will be uploaded in the response.
+
+            If multiple codeblocks are in a message, all of them will be joined and evaluated,
+            ignoring the text outside them.
+
+            The currently supported versions are {", ".join(get_args(SupportedPythonVersions))}.
+
+            We've done our best to make this sandboxed, but do let us know if you manage to find an
+            issue with it!
+        """
+    )
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
@@ -585,24 +607,7 @@ class Snekbox(Cog):
         *,
         code: CodeblockConverter
     ) -> None:
-        """
-        Run Python code and get the results.
-
-        This command supports multiple lines of code, including formatted code blocks.
-        Code can be re-evaluated by editing the original message within 10 seconds and
-        clicking the reaction that subsequently appears.
-
-        The starting working directory `/home`, is a writeable temporary file system.
-        Files created, excluding names with leading underscores, will be uploaded in the response.
-
-        If multiple codeblocks are in a message, all of them will be joined and evaluated,
-        ignoring the text outside them.
-
-        The currently supported verisons are 3.12, 3.13, and 3.13t.
-
-        We've done our best to make this sandboxed, but do let us know if you manage to find an
-        issue with it!
-        """
+        """Run Python code and get the results."""
         code: list[str]
         python_version = python_version or get_args(SupportedPythonVersions)[0]
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
