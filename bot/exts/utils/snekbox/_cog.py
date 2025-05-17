@@ -604,7 +604,7 @@ class Snekbox(Cog):
         issue with it!
         """
         code: list[str]
-        python_version = python_version or "3.13"
+        python_version = python_version or get_args(SupportedPythonVersions)[0]
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
