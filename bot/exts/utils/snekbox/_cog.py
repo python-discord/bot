@@ -87,7 +87,7 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-SupportedPythonVersions = Literal["3.12", "3.13", "3.13t"]
+SupportedPythonVersions = Literal["3.13", "3.13t", "3.14"]
 
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
@@ -604,7 +604,7 @@ class Snekbox(Cog):
         issue with it!
         """
         code: list[str]
-        python_version = python_version or "3.12"
+        python_version = python_version or "3.13"
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
