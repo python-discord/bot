@@ -1,6 +1,7 @@
 import asyncio
 import unittest
 from base64 import b64encode
+from typing import get_args
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
 from discord import AllowedMentions
@@ -10,7 +11,7 @@ from pydis_core.utils.paste_service import MAX_PASTE_SIZE
 from bot import constants
 from bot.errors import LockedResourceError
 from bot.exts.utils import snekbox
-from bot.exts.utils.snekbox import EvalJob, EvalResult, Snekbox
+from bot.exts.utils.snekbox import EvalJob, EvalResult, Snekbox, SupportedPythonVersions
 from bot.exts.utils.snekbox._io import FileAttachment
 from tests.helpers import MockBot, MockContext, MockMember, MockMessage, MockReaction, MockUser
 
@@ -21,6 +22,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.cog = Snekbox(bot=self.bot)
         self.job = EvalJob.from_code("import random")
+        self.default_version = get_args(SupportedPythonVersions)[0]
 
     @staticmethod
     def code_args(code: str) -> tuple[EvalJob]:
@@ -35,7 +37,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         context_manager = MagicMock()
         context_manager.__aenter__.return_value = resp
         self.bot.http_session.post.return_value = context_manager
-        py_version = "3.12"
+        py_version = self.default_version
         job = EvalJob.from_code("import random").as_version(py_version)
         self.assertEqual(await self.cog.post_job(job), EvalResult("Hi", 137))
 
@@ -104,9 +106,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     def test_eval_result_message(self):
         """EvalResult.get_message(), should return message."""
         cases = (
-            ("ERROR", None, ("Your 3.12 eval job has failed", "ERROR", "")),
-            ("", 128 + snekbox._eval.SIGKILL, ("Your 3.12 eval job timed out or ran out of memory", "", "")),
-            ("", 255, ("Your 3.12 eval job has failed", "A fatal NsJail error occurred", ""))
+            ("ERROR", None, (f"Your {self.default_version} eval job has failed", "ERROR", "")),
+            (
+                "",
+                128 + snekbox._eval.SIGKILL,
+                (f"Your {self.default_version} eval job timed out or ran out of memory", "", "")
+            ),
+            ("", 255, (f"Your {self.default_version} eval job has failed", "A fatal NsJail error occurred", ""))
         )
         for stdout, returncode, expected in cases:
             exp_msg, exp_err, exp_files_err = expected
@@ -178,8 +184,8 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mock_signals.return_value.name = "SIGTEST"
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
-            result.get_status_message(EvalJob([], version="3.12")),
-            "Your 3.12 eval job has completed with return code 127 (SIGTEST)"
+            result.get_status_message(EvalJob([])),
+            f"Your {self.default_version} eval job has completed with return code 127 (SIGTEST)"
         )
 
     def test_eval_result_status_emoji(self):
@@ -253,7 +259,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.send_job = AsyncMock(return_value=response)
         self.cog.continue_job = AsyncMock(return_value=None)
 
-        await self.cog.eval_command(self.cog, ctx=ctx, python_version="3.12", code=["MyAwesomeCode"])
+        await self.cog.eval_command(self.cog, ctx=ctx, python_version=self.default_version, code=["MyAwesomeCode"])
         job = EvalJob.from_code("MyAwesomeCode")
         self.cog.send_job.assert_called_once_with(ctx, job)
         self.cog.continue_job.assert_called_once_with(ctx, response, "eval")
@@ -267,7 +273,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.cog.continue_job = AsyncMock()
         self.cog.continue_job.side_effect = (EvalJob.from_code("MyAwesomeFormattedCode"), None)
 
-        await self.cog.eval_command(self.cog, ctx=ctx, python_version="3.12", code=["MyAwesomeCode"])
+        await self.cog.eval_command(self.cog, ctx=ctx, python_version=self.default_version, code=["MyAwesomeCode"])
 
         expected_job = EvalJob.from_code("MyAwesomeFormattedCode")
         self.cog.send_job.assert_called_with(ctx, expected_job)
@@ -311,7 +317,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
-            ":warning: Your 3.12 eval job has completed "
+            f":warning: Your {self.default_version} eval job has completed "
             "with return code 0.\n\n```ansi\n[No output]\n```"
         )
         allowed_mentions = ctx.send.call_args.kwargs["allowed_mentions"]
@@ -335,13 +341,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, []))
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        job = EvalJob.from_code("MyAwesomeCode").as_version("3.12")
+        job = EvalJob.from_code("MyAwesomeCode").as_version(self.default_version)
         await self.cog.send_job(ctx, job),
 
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
-            ":white_check_mark: Your 3.12 eval job "
+            f":white_check_mark: Your {self.default_version} eval job "
             "has completed with return code 0."
             "\n\n```ansi\nWay too long beard\n```\nFull output: lookatmybeard.com"
         )
@@ -362,13 +368,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, []))
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        job = EvalJob.from_code("MyAwesomeCode").as_version("3.12")
+        job = EvalJob.from_code("MyAwesomeCode").as_version(self.default_version)
         await self.cog.send_job(ctx, job),
 
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
-            ":x: Your 3.12 eval job has completed with return code 127."
+            f":x: Your {self.default_version} eval job has completed with return code 127."
             "\n\n```ansi\nERROR\n```"
         )
 
@@ -395,13 +401,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         mocked_filter_cog.filter_snekbox_output = AsyncMock(return_value=(False, disallowed_exts))
         self.bot.get_cog.return_value = mocked_filter_cog
 
-        job = EvalJob.from_code("MyAwesomeCode").as_version("3.12")
+        job = EvalJob.from_code("MyAwesomeCode").as_version(self.default_version)
         await self.cog.send_job(ctx, job),
 
         ctx.send.assert_called_once()
         res = ctx.send.call_args.args[0]
         self.assertTrue(
-            res.startswith(":white_check_mark: Your 3.12 eval job has completed with return code 0.")
+            res.startswith(f":white_check_mark: Your {self.default_version} eval job has completed with return code 0.")
         )
         self.assertIn("Files with disallowed extensions can't be uploaded: **.disallowed, .disallowed2, ...**", res)
 
