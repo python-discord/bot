@@ -26,7 +26,7 @@ class EvalJob:
     args: list[str]
     files: list[FileAttachment] = field(default_factory=list)
     name: str = "eval"
-    version: SupportedPythonVersions = "3.12"
+    version: SupportedPythonVersions = "3.13"
 
     @classmethod
     def from_code(cls, code: str, path: str = "main.py") -> EvalJob:
@@ -144,7 +144,12 @@ class EvalResult:
 
     def get_status_message(self, job: EvalJob) -> str:
         """Return a user-friendly message corresponding to the process's return code."""
-        version_text = job.version.replace("t", " [free threaded](<https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>)")
+        if job.version == "3.13t":
+            version_text = job.version.replace("t", " [free threaded](<https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>)")
+        elif job.version == "3.14":
+            version_text = "3.14 [pre-release](<https://docs.python.org/3.14/whatsnew/3.14.html#development>)"
+        else:
+            version_text = job.version
         msg = f"Your {version_text} {job.name} job"
 
         if self.returncode is None:
