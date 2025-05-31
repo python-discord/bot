@@ -639,13 +639,13 @@ class Snekbox(Cog):
         If multiple formatted codeblocks are provided, the first one will be the setup code, which will
         not be timed. The remaining codeblocks will be joined together and timed.
 
-        The currently supported verisons are 3.12, 3.13, and 3.13t.
+        The currently supported verisons are 3.13, 3.13t, and 3.14.
 
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
         code: list[str]
-        python_version = python_version or "3.12"
+        python_version = python_version or "3.13"
         args = self.prepare_timeit_input(code)
         job = EvalJob(args, version=python_version, name="timeit")
 
