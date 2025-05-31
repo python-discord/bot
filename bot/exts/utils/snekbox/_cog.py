@@ -613,7 +613,26 @@ class Snekbox(Cog):
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
-    @command(name="timeit", aliases=("ti",), usage="[python_version] [setup_code] <code, ...>")
+    @command(
+        name="timeit",
+        aliases=("ti",),
+        usage="[python_version] [setup_code] <code, ...>",
+        help=f"""
+            Profile Python code to find execution time.
+
+            This command supports multiple lines of code, including formatted code blocks.
+            Code can be re-evaluated by editing the original message within 10 seconds and
+            clicking the reaction that subsequently appears.
+
+            If multiple formatted codeblocks are provided, the first one will be the setup code,
+            which will not be timed. The remaining codeblocks will be joined together and timed.
+
+            The currently supported versions are {", ".join(get_args(SupportedPythonVersions))}.
+
+            We've done our best to make this sandboxed, but do let us know if you manage to find an
+            issue with it!
+        """
+    )
     @guild_only()
     @redirect_output(
         destination_channel=Channels.bot_commands,
@@ -629,23 +648,9 @@ class Snekbox(Cog):
         *,
         code: CodeblockConverter
     ) -> None:
-        """
-        Profile Python Code to find execution time.
-
-        This command supports multiple lines of code, including code wrapped inside a formatted code
-        block. Code can be re-evaluated by editing the original message within 10 seconds and
-        clicking the reaction that subsequently appears.
-
-        If multiple formatted codeblocks are provided, the first one will be the setup code, which will
-        not be timed. The remaining codeblocks will be joined together and timed.
-
-        The currently supported verisons are 3.13, 3.13t, and 3.14.
-
-        We've done our best to make this sandboxed, but do let us know if you manage to find an
-        issue with it!
-        """
+        """Profile Python Code to find execution time."""
         code: list[str]
-        python_version = python_version or "3.13"
+        python_version = python_version or get_args(SupportedPythonVersions)[0]
         args = self.prepare_timeit_input(code)
         job = EvalJob(args, version=python_version, name="timeit")
 
