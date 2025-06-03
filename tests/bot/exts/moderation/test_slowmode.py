@@ -132,7 +132,7 @@ class SlowmodeTests(RedisTestCase):
         """Schedule slowmode to be reverted"""
         mock_now = datetime.datetime(2025, 6, 2, 12, 0, 0, tzinfo=datetime.UTC)
         mock_datetime.now.return_value = mock_now
-        self.cog.scheduler=mock.MagicMock()
+        self.cog.scheduler=mock.MagicMock(wraps=self.cog.scheduler)
 
         text_channel = MockTextChannel(name="python-general", slowmode_delay=2, id=123)
         await self.cog.set_slowmode(
