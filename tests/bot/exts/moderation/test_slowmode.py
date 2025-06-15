@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 from unittest import mock
 
@@ -168,40 +169,41 @@ class SlowmodeTests(RedisTestCase):
         self.cog._reschedule.assert_called()
         self.cog.scheduler.schedule_at.assert_not_called()
 
+    async def test_reschedule_upon_reload(self) -> None:
+        """ Check that method `_reschedule` is called upon cog reload"""
+        self.cog._reschedule = mock.AsyncMock(wraps=self.cog._reschedule)
+        await self.cog.cog_unload()
+        await self.cog.cog_load()
+
+        self.cog._reschedule.assert_called()
 
     @mock.patch("bot.exts.moderation.slowmode.datetime", wraps=datetime.datetime)
     async def test_reschedules_slowmodes(self, mock_datetime) -> None:
         """Slowmodes are loaded from cache at cog reload and scheduled to be reverted."""
         mock_datetime.now.return_value = datetime.datetime(2025, 6, 2, 12, 0, 0, tzinfo=datetime.UTC)
         mock_now = datetime.datetime(2025, 6, 2, 12, 0, 0, tzinfo=datetime.UTC)
-        self.cog._reschedule = mock.AsyncMock(wraps=self.cog._reschedule)
 
-        channels = []
+        channels = {}
         slowmodes = (
             (123, (mock_now - datetime.timedelta(10)).timestamp(), 2), # expiration in the past
-            (456, (mock_now + datetime.timedelta(10)).timestamp(), 4), # expiration in the future
+            (456, (mock_now + datetime.timedelta(20)).timestamp(), 4), # expiration in the future
         )
 
         for channel_id, expiration_datetime, delay in slowmodes:
             channel = MockTextChannel(slowmode_delay=delay, id=channel_id)
-            channels.append(channel)
-
+            channels[channel_id] = channel
             await self.cog.slowmode_expiration_cache.set(channel_id, expiration_datetime)
             await self.cog.original_slowmode_cache.set(channel_id, delay)
 
+        self.bot.get_channel = mock.MagicMock(side_effect=lambda channel_id: channels.get(channel_id))
         await self.cog.cog_unload()
         await self.cog.cog_load()
+        for channel_id in channels:
+            self.assertIn(channel_id, self.cog.scheduler)
 
-        # check that _reschedule function was called upon cog reload.
-        self.cog._reschedule.assert_called()
-
-        # check that a task was created for every cached slowmode.
-        for channel in channels:
-            self.assertIn(channel.id, self.cog.scheduler)
-
-        # check that one channel with slowmode expiration in the past was edited immediately.
-        channels[0].edit.assert_awaited_once_with(slowmode_delay=channels[0].slowmode_delay)
-        channels[1].edit.assert_not_called()
+        await asyncio.sleep(1) # give scheduled task time to execute
+        channels[123].edit.assert_awaited_once_with(slowmode_delay=channels[123].slowmode_delay)
+        channels[456].edit.assert_not_called()
 
     @mock.patch("bot.exts.moderation.slowmode.has_any_role")
     @mock.patch("bot.exts.moderation.slowmode.MODERATION_ROLES", new=(1, 2, 3))
