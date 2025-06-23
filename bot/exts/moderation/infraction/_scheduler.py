@@ -114,17 +114,18 @@ class InfractionScheduler:
 
         This is used to delete infraction messages after a certain period of time.
         """
-        channel = await get_or_fetch_channel(self.bot, channel_id)
-        if channel is None:
-            log.warning(f"Channel {channel_id} not found for infraction message deletion.")
-            return
-
         try:
+            channel = await get_or_fetch_channel(self.bot, channel_id)
             message = await channel.fetch_message(message_id)
             await message.delete()
             log.trace(f"Deleted infraction message {message_id} in channel {channel_id}.")
         except discord.NotFound:
-            log.warning(f"Message {message_id} not found in channel {channel_id}.")
+            log.warning(f"Channel or message {message_id} not found in channel {channel_id}.")
+        except discord.Forbidden:
+            log.warning(f"Bot lacks permissions to delete message {message_id} in channel {channel_id}.")
+        except discord.HTTPException:
+            log.exception(f"Issue during scheduled deletion of message {message_id} in channel {channel_id}.")
+            return  # Keep the task in Redis on HTTP errors
 
         await self.messages_to_tidy.delete(f"{channel_id}:{message_id}")
 
