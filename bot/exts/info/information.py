@@ -11,6 +11,7 @@ from discord import AllowedMentions, Colour, Embed, Guild, Message, Role
 from discord.ext.commands import BucketType, Cog, Context, command, group, has_any_role
 from discord.utils import escape_markdown
 from pydis_core.site_api import ResponseCodeError
+from pydis_core.utils.channel import get_or_fetch_channel
 from pydis_core.utils.members import get_or_fetch_member
 from pydis_core.utils.paste_service import PasteFile, PasteTooLongError, PasteUploadError, send_to_paste_service
 
@@ -602,6 +603,37 @@ class Information(Cog):
 
         self.rules.help = help_string
 
+    async def _send_rules_alert(self, ctx: Context, requested_rules: list[int]) -> None:
+        """Send an alert to the Rule Alerts thread when a non-staff member uses the rules command."""
+        rules_thread = await get_or_fetch_channel(self.bot, constants.Channels.rule_alerts)
+
+        if rules_thread is None:
+            log.error("Failed to find the rules alert thread channel.")
+            return
+
+        rule_desc = None
+
+        if len(requested_rules) == 1:
+            rule_desc = f"Rule **{requested_rules[0]}** was requested by {ctx.author.mention} in {ctx.channel.mention}."
+        elif len(requested_rules) > 1:
+            rule_desc = (
+                f"Rules **{', '.join(map(str, requested_rules))}** were requested "
+                f"by {ctx.author.mention} in {ctx.channel.mention}."
+            )
+
+        warning_embed = Embed(
+            title="Rules Command Alert",
+            description=rule_desc,
+            color=Colour.red(),
+            url=ctx.message.jump_url
+        )
+
+        warning_embed.set_footer(text="Warnings are sent for invocations from non-staff members.")
+
+        warning_embed.set_author(name=f"{ctx.author} ({ctx.author.id})", icon_url=ctx.author.display_avatar.url)
+
+        await rules_thread.send(embed=warning_embed)
+
     @command(aliases=("rule",))
     async def rules(self, ctx: Context, *, args: str | None) -> set[int] | None:
         """
@@ -651,9 +683,15 @@ class Information(Cog):
         final_rule_numbers = {keyword_to_rule_number[keyword] for keyword in keywords}
         final_rule_numbers.update(rule_numbers)
 
-        for rule_number in sorted(final_rule_numbers):
+        sorted_rules = sorted(final_rule_numbers)
+
+        for rule_number in sorted_rules:
             self.bot.stats.incr(f"rule_uses.{rule_number}")
             final_rules.append(f"**{rule_number}.** {full_rules[rule_number - 1][0]}")
+
+        if constants.Roles.helpers not in {role.id for role in ctx.author.roles}:
+            # If the user is not a helper, send an alert to the rules thread.
+            await self._send_rules_alert(ctx, sorted_rules)
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 
