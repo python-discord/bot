@@ -89,6 +89,8 @@ class _Channels(EnvConfig, env_prefix="channels_"):
     incidents: int = 714214212200562749
     incidents_archive: int = 720668923636351037
     mod_alerts: int = 473092532147060736
+    # Actually a thread, but for bootstrap purposes we treat it as a channel
+    rule_alerts: int = 1386490058739290182
     mod_meta: int = 775412552795947058
     mods: int = 305126844661760000
     nominations: int = 822920136150745168
