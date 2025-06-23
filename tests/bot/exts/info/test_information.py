@@ -599,6 +599,9 @@ class RuleCommandTests(unittest.IsolatedAsyncioTestCase):
             )
         ]
         self.bot.api_client.get.return_value = self.full_rules
+        # Patch get_channel to handle the rule alerts being sent to a thread for non-staff (as our mock user is).
+        self.bot.get_channel.return_value = helpers.MockTextChannel(id=50, name="rules")
+
 
     async def test_return_none_if_one_rule_number_is_invalid(self):
 
