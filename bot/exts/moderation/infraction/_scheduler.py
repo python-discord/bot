@@ -122,7 +122,7 @@ class InfractionScheduler:
         except discord.NotFound:
             log.warning(f"Channel or message {message_id} not found in channel {channel_id}.")
         except discord.Forbidden:
-            log.warning(f"Bot lacks permissions to delete message {message_id} in channel {channel_id}.")
+            log.info(f"Bot lacks permissions to delete message {message_id} in channel {channel_id}.")
         except discord.HTTPException:
             log.exception(f"Issue during scheduled deletion of message {message_id} in channel {channel_id}.")
             return  # Keep the task in Redis on HTTP errors
