@@ -321,7 +321,8 @@ class InfractionScheduler:
         mentions = discord.AllowedMentions(users=[user], roles=False)
         sent_msg = await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
-        if infraction["actor"] == self.bot.user.id:
+        # Only tidy up bot issued infractions in non-mod channels.
+        if infraction["actor"] == self.bot.user.id and not is_mod_channel(ctx.channel):
             expire_message_time = datetime.now(UTC) + timedelta(hours=AUTOMATED_TIDY_UP_HOURS)
 
             log.trace(f"Scheduling message tidy for infraction #{id_} in {AUTOMATED_TIDY_UP_HOURS} hours.")
