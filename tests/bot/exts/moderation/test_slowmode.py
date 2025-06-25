@@ -1,14 +1,16 @@
-import unittest
+import asyncio
+import datetime
 from unittest import mock
 
 from dateutil.relativedelta import relativedelta
 
 from bot.constants import Emojis
 from bot.exts.moderation.slowmode import Slowmode
+from tests.base import RedisTestCase
 from tests.helpers import MockBot, MockContext, MockTextChannel
 
 
-class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
+class SlowmodeTests(RedisTestCase):
 
     def setUp(self) -> None:
         self.bot = MockBot()
@@ -94,6 +96,114 @@ class SlowmodeTests(unittest.IsolatedAsyncioTestCase):
         self.cog.set_slowmode.assert_awaited_once_with(
             self.ctx, text_channel, relativedelta(seconds=0)
         )
+
+    @mock.patch("bot.exts.moderation.slowmode.datetime")
+    async def test_set_slowmode_with_duration(self, mock_datetime) -> None:
+        """Set slowmode with a duration"""
+        mock_datetime.now.return_value = datetime.datetime(2025, 6, 2, 12, 0, 0, tzinfo=datetime.UTC)
+        test_cases = (
+            ("python-general", 6, 6000, f"{Emojis.check_mark} The slowmode delay for #python-general is now 6 seconds"
+             " and expires in <t:1748871600:R>."),
+            ("mod-spam", 5, 600, f"{Emojis.check_mark} The slowmode delay for #mod-spam is now 5 seconds and expires"
+             " in <t:1748866200:R>."),
+            ("changelog", 12, 7200, f"{Emojis.check_mark} The slowmode delay for #changelog is now 12 seconds and"
+             " expires in <t:1748872800:R>.")
+        )
+        for channel_name, seconds, duration, result_msg in test_cases:
+            with self.subTest(
+                channel_mention=channel_name,
+                seconds=seconds,
+                duration=duration,
+                result_msg=result_msg
+            ):
+                text_channel = MockTextChannel(name=channel_name, slowmode_delay=0)
+                await self.cog.set_slowmode(
+                    self.cog,
+                    self.ctx,
+                    text_channel,
+                    relativedelta(seconds=seconds),
+                    duration=relativedelta(seconds=duration)
+                )
+                text_channel.edit.assert_awaited_once_with(slowmode_delay=float(seconds))
+                self.ctx.send.assert_called_once_with(result_msg)
+            self.ctx.reset_mock()
+
+    @mock.patch("bot.exts.moderation.slowmode.datetime", wraps=datetime.datetime)
+    async def test_callback_scheduled(self, mock_datetime, ):
+        """Schedule slowmode to be reverted"""
+        mock_now = datetime.datetime(2025, 6, 2, 12, 0, 0, tzinfo=datetime.UTC)
+        mock_datetime.now.return_value = mock_now
+        self.cog.scheduler=mock.MagicMock(wraps=self.cog.scheduler)
+
+        text_channel = MockTextChannel(name="python-general", slowmode_delay=2, id=123)
+        await self.cog.set_slowmode(
+            self.cog,
+            self.ctx,
+            text_channel,
+            relativedelta(seconds=4),
+            relativedelta(seconds=10))
+
+        args = (mock_now+relativedelta(seconds=10), text_channel.id, mock.ANY)
+        self.cog.scheduler.schedule_at.assert_called_once_with(*args)
+
+    async def test_revert_slowmode_callback(self) -> None:
+        """Check that the slowmode is reverted"""
+        text_channel = MockTextChannel(name="python-general", slowmode_delay=2, id=123)
+        self.bot.get_channel = mock.MagicMock(return_value=text_channel)
+        await self.cog.set_slowmode(
+            self.cog, self.ctx, text_channel, relativedelta(seconds=4), relativedelta(seconds=10)
+            )
+        await self.cog._revert_slowmode(text_channel.id)
+        text_channel.edit.assert_awaited_with(slowmode_delay=2)
+        text_channel.send.assert_called_once_with(
+            f"{Emojis.check_mark} A previously applied slowmode has expired and has been reverted to 2 seconds."
+            )
+
+    async def test_reschedule_slowmodes(self) -> None:
+        """Does not reschedule if cache is empty"""
+        self.cog.scheduler.schedule_at = mock.MagicMock()
+        self.cog._reschedule = mock.AsyncMock()
+        await self.cog.cog_unload()
+        await self.cog.cog_load()
+
+        self.cog._reschedule.assert_called()
+        self.cog.scheduler.schedule_at.assert_not_called()
+
+    async def test_reschedule_upon_reload(self) -> None:
+        """ Check that method `_reschedule` is called upon cog reload"""
+        self.cog._reschedule = mock.AsyncMock(wraps=self.cog._reschedule)
+        await self.cog.cog_unload()
+        await self.cog.cog_load()
+
+        self.cog._reschedule.assert_called()
+
+    @mock.patch("bot.exts.moderation.slowmode.datetime", wraps=datetime.datetime)
+    async def test_reschedules_slowmodes(self, mock_datetime) -> None:
+        """Slowmodes are loaded from cache at cog reload and scheduled to be reverted."""
+        mock_datetime.now.return_value = datetime.datetime(2025, 6, 2, 12, 0, 0, tzinfo=datetime.UTC)
+        mock_now = datetime.datetime(2025, 6, 2, 12, 0, 0, tzinfo=datetime.UTC)
+
+        channels = {}
+        slowmodes = (
+            (123, (mock_now - datetime.timedelta(10)).timestamp(), 2), # expiration in the past
+            (456, (mock_now + datetime.timedelta(20)).timestamp(), 4), # expiration in the future
+        )
+
+        for channel_id, expiration_datetime, delay in slowmodes:
+            channel = MockTextChannel(slowmode_delay=delay, id=channel_id)
+            channels[channel_id] = channel
+            await self.cog.slowmode_expiration_cache.set(channel_id, expiration_datetime)
+            await self.cog.original_slowmode_cache.set(channel_id, delay)
+
+        self.bot.get_channel = mock.MagicMock(side_effect=lambda channel_id: channels.get(channel_id))
+        await self.cog.cog_unload()
+        await self.cog.cog_load()
+        for channel_id in channels:
+            self.assertIn(channel_id, self.cog.scheduler)
+
+        await asyncio.sleep(1) # give scheduled task time to execute
+        channels[123].edit.assert_awaited_once_with(slowmode_delay=channels[123].slowmode_delay)
+        channels[456].edit.assert_not_called()
 
     @mock.patch("bot.exts.moderation.slowmode.has_any_role")
     @mock.patch("bot.exts.moderation.slowmode.MODERATION_ROLES", new=(1, 2, 3))
