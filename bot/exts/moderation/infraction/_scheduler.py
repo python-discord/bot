@@ -28,6 +28,8 @@ log = get_logger(__name__)
 
 AUTOMATED_TIDY_UP_HOURS = 8
 
+# Error when trying to delete a message in an archived thread.
+ARCHIVED_THREAD_ERROR = 50083
 
 class InfractionScheduler:
     """Handles the application, pardoning, and expiration of infractions."""
@@ -122,9 +124,14 @@ class InfractionScheduler:
             log.warning(f"Channel or message {message_id} not found in channel {channel_id}.")
         except discord.Forbidden:
             log.info(f"Bot lacks permissions to delete message {message_id} in channel {channel_id}.")
-        except discord.HTTPException:
-            log.exception(f"Issue during scheduled deletion of message {message_id} in channel {channel_id}.")
-            return  # Keep the task in Redis on HTTP errors
+        except discord.HTTPException as e:
+            if e.code == ARCHIVED_THREAD_ERROR:
+                log.info(
+                    f"Cannot delete message {message_id} in channel {channel_id} because the thread is archived."
+                )
+            else:
+                log.exception(f"Issue during scheduled deletion of message {message_id} in channel {channel_id}.")
+                return  # Keep the task in Redis on HTTP errors
 
         await self.messages_to_tidy.delete(f"{channel_id}:{message_id}")
 
