@@ -691,7 +691,10 @@ class Information(Cog):
 
         if constants.Roles.helpers not in {role.id for role in ctx.author.roles}:
             # If the user is not a helper, send an alert to the rules thread.
-            await self._send_rules_alert(ctx, sorted_rules)
+            #
+            # Exclude the bot commands channel to avoid spamming it with alerts.
+            if ctx.channel.id != constants.Channels.bot_commands:
+                await self._send_rules_alert(ctx, sorted_rules)
 
         await LinePaginator.paginate(final_rules, ctx, rules_embed, max_lines=3)
 

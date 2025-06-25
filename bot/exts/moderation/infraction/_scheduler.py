@@ -12,7 +12,6 @@ from async_rediscache import RedisCache
 from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
-from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
@@ -115,9 +114,9 @@ class InfractionScheduler:
         This is used to delete infraction messages after a certain period of time.
         """
         try:
-            channel = await get_or_fetch_channel(self.bot, channel_id)
-            message = await channel.fetch_message(message_id)
-            await message.delete()
+            partial_channel = self.bot.get_partial_messageable(channel_id)
+            partial_message = partial_channel.get_partial_message(message_id)
+            await partial_message.delete()
             log.trace(f"Deleted infraction message {message_id} in channel {channel_id}.")
         except discord.NotFound:
             log.warning(f"Channel or message {message_id} not found in channel {channel_id}.")
@@ -322,7 +321,8 @@ class InfractionScheduler:
         mentions = discord.AllowedMentions(users=[user], roles=False)
         sent_msg = await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
-        if infraction["actor"] == self.bot.user.id:
+        # Only tidy up bot issued infractions in non-mod channels.
+        if infraction["actor"] == self.bot.user.id and not is_mod_channel(ctx.channel):
             expire_message_time = datetime.now(UTC) + timedelta(hours=AUTOMATED_TIDY_UP_HOURS)
 
             log.trace(f"Scheduling message tidy for infraction #{id_} in {AUTOMATED_TIDY_UP_HOURS} hours.")
