@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from typing import Literal
 
 from async_rediscache import RedisCache
@@ -9,7 +9,7 @@ from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
 from bot.constants import Channels, Emojis, MODERATION_ROLES
-from bot.converters import DurationDelta
+from bot.converters import Duration, DurationDelta
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.time import TimestampFormats, discord_timestamp
@@ -30,11 +30,10 @@ MessageHolder = TextChannel | Thread | None
 class Slowmode(Cog):
     """Commands for getting and setting slowmode delays of text channels."""
 
-    # Stores the expiration timestamp in POSIX format for active slowmodes, keyed by channel ID.
-    slowmode_expiration_cache = RedisCache()
-
-    # Stores the original slowmode interval by channel ID, allowing its restoration after temporary slowmode expires.
-    original_slowmode_cache = RedisCache()
+    # RedisCache[discord.channel.id : f"{delay}, {expiry}"]
+    # `delay` is the slowmode delay assigned to the text channel.
+    # `expiry` is a naïve ISO 8601 string which describes when the slowmode should be removed.
+    slowmode_cache = RedisCache()
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
@@ -53,8 +52,8 @@ class Slowmode(Cog):
             channel = ctx.channel
 
         humanized_delay = time.humanize_delta(seconds=channel.slowmode_delay)
-        if await self.slowmode_expiration_cache.contains(channel.id):
-            expiration_time = await self.slowmode_expiration_cache.get(channel.id)
+        if await self.slowmode_cache.contains(channel.id):
+            expiration_time = await self.slowmode_cache.get(channel.id).split(", ")[1]
             expiration_timestamp = discord_timestamp(expiration_time, TimestampFormats.RELATIVE)
             await ctx.send(
                 f"The slowmode delay for {channel.mention} is {humanized_delay} and expires in {expiration_timestamp}."
@@ -68,12 +67,12 @@ class Slowmode(Cog):
         ctx: Context,
         channel: MessageHolder,
         delay: DurationDelta | Literal["0s", "0seconds"],
-        duration: DurationDelta | None = None
+        expiry: Duration | None = None
     ) -> None:
         """
         Set the slowmode delay for a text channel.
 
-        Supports temporary slowmodes with the `duration` argument that automatically
+        Supports temporary slowmodes with the `expiry` argument that automatically
         revert to the original delay after expiration.
         """
         # Use the channel this command was invoked in if one was not given
@@ -100,22 +99,22 @@ class Slowmode(Cog):
             )
             return
 
-        if duration is not None:
-            slowmode_duration = time.relativedelta_to_timedelta(duration).total_seconds()
-            humanized_duration = time.humanize_delta(duration)
+        if expiry is not None:
+            humanized_expiry = time.humanize_delta(expiry)
+            expiration_timestamp = discord_timestamp(expiry, TimestampFormats.RELATIVE)
 
-            expiration_time = datetime.now(tz=UTC) + timedelta(seconds=slowmode_duration)
-            expiration_timestamp = discord_timestamp(expiration_time, TimestampFormats.RELATIVE)
+            # Only cache the original slowmode delay if there is not already an ongoing temporary slowmode.
+            if not await self.slowmode_cache.contains(channel.id):
+                await self.slowmode_cache.set(channel.id, f"{channel.slowmode_delay}, {expiry}")
+            else:
+                cached_delay = await  self.slowmode_cache.get(channel.id)
+                await self.slowmode_cache.set(channel.id, f"{cached_delay}, {expiry}")
+                self.scheduler.cancel(channel.id)
 
-            # Only update original_slowmode_cache if the last slowmode was not temporary.
-            if not await self.slowmode_expiration_cache.contains(channel.id):
-                await self.original_slowmode_cache.set(channel.id, channel.slowmode_delay)
-            await self.slowmode_expiration_cache.set(channel.id, expiration_time.timestamp())
-
-            self.scheduler.schedule_at(expiration_time, channel.id, self._revert_slowmode(channel.id))
+            self.scheduler.schedule_at(expiry, channel.id, self._revert_slowmode(channel.id))
             log.info(
                 f"{ctx.author} set the slowmode delay for #{channel} to"
-                f"{humanized_delay} which expires in {humanized_duration}."
+                f"{humanized_delay} which expires in {humanized_expiry}."
             )
             await channel.edit(slowmode_delay=slowmode_delay)
             await ctx.send(
@@ -123,9 +122,8 @@ class Slowmode(Cog):
             f" is now {humanized_delay} and expires in {expiration_timestamp}."
         )
         else:
-            if await self.slowmode_expiration_cache.contains(channel.id):
-                await self.slowmode_expiration_cache.delete(channel.id)
-                await self.original_slowmode_cache.delete(channel.id)
+            if await self.slowmode_cache.contains(channel.id):
+                await self.slowmode_cache.delete(channel.id)
                 self.scheduler.cancel(channel.id)
 
             log.info(f"{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.")
@@ -139,14 +137,16 @@ class Slowmode(Cog):
 
     async def _reschedule(self) -> None:
         log.trace("Rescheduling the expiration of temporary slowmodes from cache.")
-        for channel_id, expiration in await self.slowmode_expiration_cache.items():
-            expiration_datetime = datetime.fromtimestamp(expiration, tz=UTC)
+        for channel_id, cached_data in await self.slowmode_cache.items():
+            expiration = cached_data.split(", ")[1]
+            expiration_datetime = datetime.fromisoformat(expiration)
             channel = self.bot.get_channel(channel_id)
             log.info(f"Rescheduling slowmode expiration for #{channel} ({channel_id}).")
             self.scheduler.schedule_at(expiration_datetime, channel_id, self._revert_slowmode(channel_id))
 
     async def _revert_slowmode(self, channel_id: int) -> None:
-        original_slowmode = await self.original_slowmode_cache.get(channel_id)
+        cached_data = await self.slowmode_cache.get(channel_id)
+        original_slowmode = int(cached_data.split(", ")[0])
         slowmode_delay = time.humanize_delta(seconds=original_slowmode)
         channel = self.bot.get_channel(channel_id)
         log.info(f"Slowmode in #{channel} ({channel.id}) has expired and has reverted to {slowmode_delay}.")
@@ -154,8 +154,7 @@ class Slowmode(Cog):
         await channel.send(
             f"{Emojis.check_mark} A previously applied slowmode has expired and has been reverted to {slowmode_delay}."
         )
-        await self.slowmode_expiration_cache.delete(channel.id)
-        await self.original_slowmode_cache.delete(channel.id)
+        await self.slowmode_cache.delete(channel.id)
 
     @slowmode_group.command(name="reset", aliases=["r"])
     async def reset_slowmode(self, ctx: Context, channel: MessageHolder) -> None:
@@ -163,9 +162,8 @@ class Slowmode(Cog):
         await self.set_slowmode(ctx, channel, relativedelta(seconds=0))
         if channel is None:
             channel = ctx.channel
-        if await self.slowmode_expiration_cache.contains(channel.id):
-            await self.slowmode_expiration_cache.delete(channel.id)
-            await self.original_slowmode_cache.delete(channel.id)
+        if await self.slowmode_cache.contains(channel.id):
+            await self.slowmode_cache.delete(channel.id)
             self.scheduler.cancel(channel.id)
 
     async def cog_check(self, ctx: Context) -> bool:
