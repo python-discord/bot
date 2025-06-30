@@ -104,12 +104,12 @@ class SlowmodeTests(RedisTestCase):
         mock_datetime.now.return_value = fixed_datetime
 
         test_cases = (
-            ("python-general", 6, 6000, f"{Emojis.check_mark} The slowmode delay for #python-general is now 6 seconds"
-             " and expires in <t:1748871600:R>."),
-            ("mod-spam", 5, 600, f"{Emojis.check_mark} The slowmode delay for #mod-spam is now 5 seconds and expires"
-             " in <t:1748866200:R>."),
-            ("changelog", 12, 7200, f"{Emojis.check_mark} The slowmode delay for #changelog is now 12 seconds and"
-             " expires in <t:1748872800:R>.")
+            ("python-general", 6, 6000, f"{Emojis.check_mark} The slowmode delay for #python-general is now 6 seconds "
+             "and will revert to 0 seconds <t:1748871600:R>."),
+            ("mod-spam", 5, 600, f"{Emojis.check_mark} The slowmode delay for #mod-spam is now 5 seconds and will "
+             "revert to 0 seconds <t:1748866200:R>."),
+            ("changelog", 12, 7200, f"{Emojis.check_mark} The slowmode delay for #changelog is now 12 seconds and will "
+             "revert to 0 seconds <t:1748872800:R>.")
         )
         for channel_name, seconds, expiry, result_msg in test_cases:
             with self.subTest(
@@ -147,10 +147,15 @@ class SlowmodeTests(RedisTestCase):
         args = (expiry, text_channel.id, mock.ANY)
         self.cog.scheduler.schedule_at.assert_called_once_with(*args)
 
-    async def test_revert_slowmode_callback(self) -> None:
+    @mock.patch("bot.exts.moderation.slowmode.get_or_fetch_channel")
+    async def test_revert_slowmode_callback(self, mock_get_or_fetch_channel) -> None:
         """Check that the slowmode is reverted"""
-        text_channel = MockTextChannel(name="python-general", slowmode_delay=2, id=123)
-        self.bot.get_channel = mock.MagicMock(return_value=text_channel)
+        text_channel = MockTextChannel(name="python-general", slowmode_delay=2, id=123, jump_url="#python-general")
+        mod_channel = MockTextChannel(name="mods", id=999, )
+        # mock.MagicMock(return_value=text_channel)
+
+        mock_get_or_fetch_channel.side_effect = [text_channel, mod_channel]
+
         await self.cog.set_slowmode(
             self.cog,
             self.ctx,
@@ -160,8 +165,9 @@ class SlowmodeTests(RedisTestCase):
             )
         await self.cog._revert_slowmode(text_channel.id)
         text_channel.edit.assert_awaited_with(slowmode_delay=2)
-        text_channel.send.assert_called_once_with(
-            f"{Emojis.check_mark} A previously applied slowmode has expired and has been reverted to 2 seconds."
+        mod_channel.send.assert_called_once_with(
+            f"{Emojis.check_mark} A previously applied slowmode in {text_channel.jump_url} ({text_channel.id}) "
+            "has expired and has been reverted to 2 seconds."
             )
 
     async def test_reschedule_slowmodes(self) -> None:
