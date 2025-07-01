@@ -152,8 +152,6 @@ class SlowmodeTests(RedisTestCase):
         """Check that the slowmode is reverted"""
         text_channel = MockTextChannel(name="python-general", slowmode_delay=2, id=123, jump_url="#python-general")
         mod_channel = MockTextChannel(name="mods", id=999, )
-        # mock.MagicMock(return_value=text_channel)
-
         mock_get_or_fetch_channel.side_effect = [text_channel, mod_channel]
 
         await self.cog.set_slowmode(
