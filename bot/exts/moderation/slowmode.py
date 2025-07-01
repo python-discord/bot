@@ -13,7 +13,6 @@ from bot.constants import Channels, Emojis, MODERATION_ROLES
 from bot.converters import Duration, DurationDelta
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.time import format_relative, humanize_delta
 
 log = get_logger(__name__)
 
@@ -57,7 +56,7 @@ class Slowmode(Cog):
         if cached_data is not None:
             original_delay, expiration_time = cached_data.partition(", ")
             humanized_original_delay = time.humanize_delta(seconds=int(original_delay))
-            expiration_timestamp = format_relative(expiration_time)
+            expiration_timestamp = time.format_relative(expiration_time)
             await ctx.send(
                 f"The slowmode delay for {channel.mention} is {humanized_delay}"
                 f" and will revert to {humanized_original_delay} {expiration_timestamp}."
@@ -104,7 +103,7 @@ class Slowmode(Cog):
             return
 
         if expiry is not None:
-            expiration_timestamp = format_relative(expiry)
+            expiration_timestamp = time.format_relative(expiry)
 
             # Only cache the original slowmode delay if there is not already an ongoing temporary slowmode.
             if not await self.slowmode_cache.contains(channel.id):
@@ -114,12 +113,12 @@ class Slowmode(Cog):
                 delay_to_cache = cached_data.split(", ")[0]
                 self.scheduler.cancel(channel.id)
             await self.slowmode_cache.set(channel.id, f"{delay_to_cache}, {expiry}")
-            humanized_original_delay = humanize_delta(seconds=int(delay_to_cache))
+            humanized_original_delay = time.humanize_delta(seconds=int(delay_to_cache))
 
             self.scheduler.schedule_at(expiry, channel.id, self._revert_slowmode(channel.id))
             log.info(
                 f"{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}"
-                f" which will revert to {humanized_original_delay} in {humanize_delta(expiry)}."
+                f" which will revert to {humanized_original_delay} in {time.humanize_delta(expiry)}."
             )
             await channel.edit(slowmode_delay=slowmode_delay)
             await ctx.send(
