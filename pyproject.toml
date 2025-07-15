@@ -37,7 +37,6 @@ prerelease = "allow"
 dev = [
     "coverage==7.6.12",
     "httpx==0.28.1",
-    "pip-licenses==5.0.0",
     "pre-commit==4.1.0",
     "pytest==8.3.4",
     "pytest-cov==6.0.0",
