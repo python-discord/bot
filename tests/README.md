@@ -24,14 +24,14 @@ We are using the following modules and packages for our unit tests:
 We also use the following package as a test runner:
 - [pytest](https://docs.pytest.org/en/6.2.x/)
 
-To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [Poetry Project](/pyproject.toml). To run your tests with `poetry`, we've provided the following "script" shortcuts:
+To ensure the results you obtain on your personal machine are comparable to those generated in the CI, please make sure to run your tests with the virtual environment defined by our [UV Project](/pyproject.toml). To run your tests with `uv`, we've provided the following "script" shortcuts:
 
-- `poetry run task test` will run `pytest`.
-- `poetry run task test path/to/test.py` will run a specific test.
-- `poetry run task test-cov` will run `pytest` with `pytest-cov`.
-- `poetry run task report` will generate a coverage report of the tests you've run with `poetry run task test-cov`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
+- `uv run task test` will run `pytest`.
+- `uv run task test path/to/test.py` will run a specific test.
+- `uv run task test-cov` will run `pytest` with `pytest-cov`.
+- `uv run task report` will generate a coverage report of the tests you've run with `uv run task test-cov`. If you append the `-m` flag to this command, the report will include the lines and branches not covered by tests in addition to the test coverage report.
 
-If you want a coverage report, make sure to run the tests with `poetry run task test-cov` *first*.
+If you want a coverage report, make sure to run the tests with `uv run task test-cov` *first*.
 
 ## Running tests
 There are multiple ways to run the tests, which one you use will be determined by your goal, and stage in development.
@@ -39,12 +39,12 @@ There are multiple ways to run the tests, which one you use will be determined b
 When actively developing, you'll most likely be working on one portion of the codebase, and as a result, won't need to run the entire test suite.
 To run just one file, and save time, you can use the following command:
 ```shell
-poetry run task test <path/to/file.py>
+uv run task test <path/to/file.py>
 ```
 
 For example:
 ```shell
-poetry run task test tests/bot/exts/test_cogs.py
+uv run task test tests/bot/exts/test_cogs.py
 ```
 will run the test suite in the `test_cogs` file.
 
@@ -53,7 +53,7 @@ If you'd like to collect coverage as well, you can append `--cov` to the command
 
 If you're done and are preparing to commit and push your code, it's a good idea to run the entire test suite as a sanity check:
 ```shell
-poetry run task test
+uv run task test
 ```
 
 ## Writing tests
