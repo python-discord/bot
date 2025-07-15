@@ -31,10 +31,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python Dependencies
-        uses: HassanAbouelela/actions/setup-python@setup-python_v1.6.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python_version: '3.12'
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          activate-environment: true
+        
+      - name: Install dependencies
+        run: uv sync --frozen
 
       # Check all of our non-dev dependencies are compatible with the MIT license.
       # If you added a new dependencies that is being rejected,
@@ -48,10 +53,9 @@ jobs:
       #   Ref: https://github.com/raimon49/pip-licenses/issues/225
       - name: Check Dependencies License
         run: |
-          poetry self add poetry-plugin-export
           pip-licenses --allow-only="$ALLOWED_LICENSE" \
             --ignore-packages attrs \
-            --package $(poetry export -f requirements.txt --without-hashes | sed "s/==.*//g" | tr "\n" " ")
+            --package $(uv export --no-hashes --format requirements.txt --no-header --no-annotate | sed "s/==.*//g" | tr "\n" " ")
 
       - name: Run pre-commit hooks
         run: SKIP=ruff pre-commit run --all-files
