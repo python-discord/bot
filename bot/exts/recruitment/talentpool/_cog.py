@@ -330,7 +330,13 @@ class TalentPool(Cog, name="Talentpool"):
             title="Talent Pool active nominations",
             color=Color.blue()
         )
-        await LinePaginator.paginate(lines, ctx, embed, empty=False)
+        await LinePaginator.paginate(
+            lines,
+            ctx,
+            embed,
+            empty=False,
+            allowed_roles=MODERATION_ROLES,
+        )
 
     async def list_nominations(
         self,
@@ -573,7 +579,8 @@ class TalentPool(Cog, name="Talentpool"):
             embed=embed,
             empty=True,
             max_lines=3,
-            max_size=1000
+            max_size=1000,
+            allowed_roles=MODERATION_ROLES,
         )
 
     @nomination_group.command(name="end", aliases=("unwatch", "unnominate"), root_aliases=("unnominate",))

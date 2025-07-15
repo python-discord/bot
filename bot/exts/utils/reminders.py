@@ -574,7 +574,8 @@ class Reminders(Cog):
 
         await LinePaginator.paginate(
             lines,
-            ctx, embed,
+            ctx,
+            embed,
             max_lines=3,
         )
 
