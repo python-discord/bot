@@ -8,8 +8,6 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 # Install project dependencies with build tools available
 WORKDIR /build
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-  && python -m venv .venv
 
 RUN --mount=type=cache,target=/root/.cache/uv \
   --mount=type=bind,source=uv.lock,target=uv.lock \
