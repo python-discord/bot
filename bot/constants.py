@@ -362,9 +362,9 @@ PythonNews = _PythonNews()
 class _VoiceGate(EnvConfig, env_prefix="voice_gate_"):
 
     delete_after_delay: int = 60
-    minimum_activity_blocks: int = 3
+    minimum_activity_blocks: int = 9 # 1h30m
     minimum_days_member: int = 3
-    minimum_messages: int = 50
+    minimum_messages: int = 25
 
 
 VoiceGate = _VoiceGate()
