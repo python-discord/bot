@@ -1,4 +1,4 @@
-ARG python_version=3.12-slim
+ARG python_version=3.13-slim
 
 FROM python:$python_version AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /bin/
