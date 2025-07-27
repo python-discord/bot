@@ -3,7 +3,7 @@ authors = [
     {name = "Python Discord", email = "info@pythondiscord.com"},
 ]
 license = {text = "MIT"}
-requires-python = "==3.12.*"
+requires-python = "==3.13.*"
 dependencies = [
     "pydis-core[all]==11.6.1",
     "aiohttp==3.12.14",
@@ -65,7 +65,7 @@ source_pkgs = ["bot"]
 source = ["tests"]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 extend-exclude = [".cache"]
 line-length = 120
 output-format = "concise"
