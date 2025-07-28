@@ -1,6 +1,5 @@
-import functools
 import typing as t
-from enum import Enum
+from enum import Enum, member
 
 from discord import Colour, Embed
 from discord.ext import commands
@@ -23,10 +22,9 @@ BASE_PATH_LEN = len(exts.__name__.split("."))
 class Action(Enum):
     """Represents an action to perform on an extension."""
 
-    # Need to be partial otherwise they are considered to be function definitions.
-    LOAD = functools.partial(Bot.load_extension)
-    UNLOAD = functools.partial(Bot.unload_extension)
-    RELOAD = functools.partial(Bot.reload_extension)
+    LOAD = member(Bot.load_extension)
+    UNLOAD = member(Bot.unload_extension)
+    RELOAD = member(Bot.reload_extension)
 
 
 class Extensions(commands.Cog):
