@@ -52,11 +52,8 @@ class Slowmode(Cog):
             channel = ctx.channel
 
         humanized_delay = time.humanize_delta(seconds=channel.slowmode_delay)
-        cached_data = await self.slowmode_cache.get(channel.id, None)
-        if cached_data is not None:
-            original_delay, expiration_time = cached_data.partition(", ")
-            humanized_original_delay = time.humanize_delta(seconds=int(original_delay))
-            expiration_timestamp = time.format_relative(expiration_time)
+        original_delay, humanized_original_delay, expiration_timestamp = await self._fetch_sm_cache(channel.id)
+        if original_delay is not None:
             await ctx.send(
                 f"The slowmode delay for {channel.mention} is {humanized_delay}"
                 f" and will revert to {humanized_original_delay} {expiration_timestamp}."
@@ -87,7 +84,7 @@ class Slowmode(Cog):
         if isinstance(delay, str):
             delay = relativedelta(seconds=0)
 
-        slowmode_delay = time.relativedelta_to_timedelta(delay).total_seconds()
+        slowmode_delay = int(time.relativedelta_to_timedelta(delay).total_seconds())
         humanized_delay = time.humanize_delta(delay)
 
         # Ensure the delay is within discord's limits
@@ -105,15 +102,14 @@ class Slowmode(Cog):
         if expiry is not None:
             expiration_timestamp = time.format_relative(expiry)
 
-            # Only cache the original slowmode delay if there is not already an ongoing temporary slowmode.
-            if not await self.slowmode_cache.contains(channel.id):
-                delay_to_cache = channel.slowmode_delay
+            original_delay, humanized_original_delay, _ = await self._fetch_sm_cache(channel.id)
+            # Cache the channel's current delay if it has no expiry, otherwise use the cached original delay.
+            if original_delay is None:
+                original_delay = channel.slowmode_delay
+                humanized_original_delay = time.humanize_delta(seconds=original_delay)
             else:
-                cached_data = await self.slowmode_cache.get(channel.id)
-                delay_to_cache = cached_data.split(", ")[0]
                 self.scheduler.cancel(channel.id)
-            await self.slowmode_cache.set(channel.id, f"{delay_to_cache}, {expiry}")
-            humanized_original_delay = time.humanize_delta(seconds=int(delay_to_cache))
+            await self.slowmode_cache.set(channel.id, f"{original_delay}, {expiry}")
 
             self.scheduler.schedule_at(expiry, channel.id, self._revert_slowmode(channel.id))
             log.info(
@@ -148,17 +144,34 @@ class Slowmode(Cog):
             log.info(f"Rescheduling slowmode expiration for #{channel} ({channel_id}).")
             self.scheduler.schedule_at(expiration_datetime, channel_id, self._revert_slowmode(channel_id))
 
+    async def _fetch_sm_cache(self, channel_id: int) -> tuple[int | None, str, str]:
+        """
+        Fetch the channel's info from the cache and decode it.
+
+        If no cache for the channel, the returned slowmode is None.
+        """
+        cached_data = await self.slowmode_cache.get(channel_id, None)
+        if not cached_data:
+            return None, "", ""
+
+        original_delay, expiration_time = cached_data.split(", ")
+        original_delay = int(original_delay)
+        humanized_original_delay = time.humanize_delta(seconds=original_delay)
+        expiration_timestamp = time.format_relative(expiration_time)
+
+        return original_delay, humanized_original_delay, expiration_timestamp
+
     async def _revert_slowmode(self, channel_id: int) -> None:
-        cached_data = await self.slowmode_cache.get(channel_id)
-        original_slowmode = int(cached_data.split(", ")[0])
-        slowmode_delay = time.humanize_delta(seconds=original_slowmode)
+        original_delay, humanized_original_delay, _ = await self._fetch_sm_cache(channel_id)
         channel = await get_or_fetch_channel(self.bot, channel_id)
         mod_channel = await get_or_fetch_channel(self.bot, Channels.mods)
-        log.info(f"Slowmode in #{channel.name} ({channel.id}) has expired and has reverted to {slowmode_delay}.")
-        await channel.edit(slowmode_delay=original_slowmode)
+        log.info(
+            f"Slowmode in #{channel.name} ({channel.id}) has expired and has reverted to {humanized_original_delay}."
+        )
+        await channel.edit(slowmode_delay=original_delay)
         await mod_channel.send(
             f"{Emojis.check_mark} A previously applied slowmode in {channel.jump_url} ({channel.id})"
-            f" has expired and has been reverted to {slowmode_delay}."
+            f" has expired and has been reverted to {humanized_original_delay}."
         )
         await self.slowmode_cache.delete(channel.id)
 
