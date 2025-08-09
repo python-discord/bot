@@ -421,7 +421,8 @@ class ModManagement(commands.Cog):
             prefix=f"{prefix}\n",
             empty=True,
             max_lines=3,
-            max_size=1000
+            max_size=1000,
+            allowed_roles=constants.MODERATION_ROLES,
         )
 
     def infraction_to_string(self, infraction: dict[str, t.Any], ignore_fields: tuple[str, ...]) -> str:

@@ -159,6 +159,7 @@ class AlternateAccounts(commands.Cog):
             empty=True,
             max_lines=3,
             max_size=1000,
+            allowed_roles=constants.MODERATION_ROLES,
         )
 
     async def cog_check(self, ctx: commands.Context) -> bool:

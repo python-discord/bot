@@ -13,7 +13,7 @@ repos:
     - id: ruff
       name: ruff
       description: Run ruff linting
-      entry: poetry run ruff check --force-exclude
+      entry: uv run --frozen ruff check --force-exclude
       language: system
       'types_or': [python, pyi]
       require_serial: true

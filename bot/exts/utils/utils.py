@@ -221,7 +221,8 @@ class Utils(Cog):
             ctx=ctx,
             embed=embed,
             max_lines=5,
-            max_size=1000
+            max_size=1000,
+            allowed_roles=MODERATION_ROLES,
         )
 
     @command(aliases=("poll",))
