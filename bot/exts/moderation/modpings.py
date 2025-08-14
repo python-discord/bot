@@ -259,6 +259,16 @@ class ModPings(Cog):
         await self.handle_moderator_state(ctx.author)
         await ctx.reply(f"{Emojis.ok_hand} Deleted your modpings schedule.")
 
+    @modpings_group.command(name="sync")
+    async def sync_command(self, ctx: Context) -> None:
+        """
+        Attempt to re-sync your pingable moderators role with the stored state.
+
+        If there is a reoccurring problem, please report it.
+        """
+        await self.handle_moderator_state(ctx.author)
+        await ctx.reply(f"{Emojis.ok_hand} State re-synced.")
+
     async def cog_unload(self) -> None:
         """Cancel role tasks when the cog unloads."""
         log.trace("Cog unload: cancelling all scheduled tasks.")
