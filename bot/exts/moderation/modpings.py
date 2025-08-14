@@ -5,12 +5,12 @@ import dateutil
 from async_rediscache import RedisCache
 from dateutil.parser import isoparse, parse as dateutil_parse
 from discord import Member
-from discord.ext.commands import BadArgument, Cog, Context, group, has_any_role
+from discord.ext.commands import BadArgument, Cog, Context, group
 from pydis_core.utils.members import get_or_fetch_member
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
-from bot.constants import Emojis, Guild, MODERATION_ROLES, Roles
+from bot.constants import Emojis, Guild, Roles
 from bot.converters import Expiry
 from bot.log import get_logger
 from bot.utils.time import TimestampFormats, discord_timestamp
@@ -44,7 +44,7 @@ class ModPings(Cog):
 
     async def cog_check(self, ctx: Context) -> bool:
         """Only allow moderators to invoke the commands in this cog."""
-        return await has_any_role(*MODERATION_ROLES).predicate(ctx)
+        return ctx.author.get_role(Roles.mod_team) is not None
 
     async def cog_load(self) -> None:
         """Schedule both when to reapply role and all mod ping schedules."""
