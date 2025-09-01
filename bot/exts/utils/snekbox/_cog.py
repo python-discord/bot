@@ -450,18 +450,7 @@ class Snekbox(Cog):
                 )
             else:
                 # The command was redirected so a reply wont work, send a normal message with a mention.
-                try:
-                    paste_response = await send_to_paste_service(
-                        files=[PasteFile(content=ctx.message.content, lexer="markdown")],
-                        http_session=self.bot.http_session,
-                        paste_url=BaseURLs.paste_url,
-                    )
-                    paste_link = paste_response.link
-                    msg = f"Here's the output of your command\n{paste_link}:\n{msg}"
-                except paste_service.PasteUploadError:
-                    # Fallback if paste service fails
-                    msg = f"{ctx.author.mention} {msg}"
-                    log.warning("Pastebin Upload Error")
+                msg = f"{ctx.author.mention} {msg}"
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
             view.message = response
 
