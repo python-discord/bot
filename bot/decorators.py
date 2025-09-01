@@ -165,13 +165,14 @@ def redirect_output(
                         )
                     paste_link = paste_response.link
 
-                if ping_user:
-                    await ctx.send(f"Here's the output of [your command]({paste_link}), {ctx.author.mention}:")
-                else:
-                    await ctx.send(f"Here's the output of [your command]({paste_link}):")
-                scheduling.create_task(func(self, ctx, *args, **kwargs))
             except PasteUploadError:
                 log.exception("Failed to upload message %d in channel %d to paste service when redirecting output", ctx.message.channel.id, ctx.message.id)
+
+            if ping_user:
+                await ctx.send(f"Here's the output of [your command]({paste_link}), {ctx.author.mention}:")
+            else:
+                await ctx.send(f"Here's the output of [your command]({paste_link}):")
+            scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
                 f"Hey, {ctx.author.mention}, you can find the output of your command here: "
