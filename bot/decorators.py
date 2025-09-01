@@ -10,7 +10,7 @@ from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from pydis_core.utils import scheduling
-from pydis_core.utils.paste_service import PasteFile, send_to_paste_service, PasteUploadError
+from pydis_core.utils.paste_service import PasteFile, PasteUploadError, send_to_paste_service
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger
@@ -156,22 +156,34 @@ def redirect_output(
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
 
-            try:
-                paste_link = None
-                async with ClientSession() as session:
+            paste_link = None
+            async with ClientSession() as session:
+                try:
                     paste_response = await send_to_paste_service(
                             files=[PasteFile(content=ctx.message.content, lexer="markdown")],
                             http_session=session,
-                        )
+                    )
                     paste_link = paste_response.link
+                except PasteUploadError:
+                    log.exception(
+                        "Failed to upload message %d in channel %d to paste service when redirecting output",
+                        ctx.message.channel.id, ctx.message.id
+                        )
 
-            except PasteUploadError:
-                log.exception("Failed to upload message %d in channel %d to paste service when redirecting output", ctx.message.channel.id, ctx.message.id)
+            msg = ""
 
             if ping_user:
-                await ctx.send(f"Here's the output of [your command]({paste_link}), {ctx.author.mention}:")
+                msg += f"{ctx.author.mention}, "
+
+            msg += "Here's the output of "
+
+            if paste_link:
+                msg += f"[your command]({paste_link}):"
             else:
-                await ctx.send(f"Here's the output of [your command]({paste_link}):")
+                msg += "your command:"
+
+            await ctx.send(msg)
+
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
