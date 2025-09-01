@@ -12,7 +12,7 @@ from discord.ext.commands import Cog, Context
 from pydis_core.utils import scheduling
 from pydis_core.utils.paste_service import PasteFile, send_to_paste_service
 
-from bot.constants import BaseURLs, Channels, DEBUG_MODE, RedirectOutput
+from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger
 from bot.utils import function
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
@@ -161,7 +161,6 @@ def redirect_output(
                 paste_response = await send_to_paste_service(
                         files=[PasteFile(content=ctx.message.content, lexer="markdown")],
                         http_session=session,
-                        paste_url=BaseURLs.paste_url,
                     )
                 paste_link = paste_response.link
 
