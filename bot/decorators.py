@@ -165,9 +165,9 @@ def redirect_output(
                 paste_link = paste_response.link
 
             if ping_user:
-                await ctx.send(f"Here's the output of [your command]({paste_link}), {ctx.author.mention}")
+                await ctx.send(f"Here's the output of [your command]({paste_link}), {ctx.author.mention}:")
             else:
-                await ctx.send(f"Here's the output of [your command]({paste_link})")
+                await ctx.send(f"Here's the output of [your command]({paste_link}):")
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
