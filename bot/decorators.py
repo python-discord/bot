@@ -5,12 +5,14 @@ import typing as t
 from contextlib import suppress
 
 import arrow
+from aiohttp import ClientSession
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from pydis_core.utils import scheduling
+from pydis_core.utils.paste_service import PasteFile, send_to_paste_service
 
-from bot.constants import Channels, DEBUG_MODE, RedirectOutput
+from bot.constants import BaseURLs, Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger
 from bot.utils import function
 from bot.utils.checks import ContextCheckFailure, in_whitelist_check
@@ -154,8 +156,19 @@ def redirect_output(
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
 
+            paste_link = None
+            async with ClientSession() as session:
+                paste_response = await send_to_paste_service(
+                        files=[PasteFile(content=ctx.message.content, lexer="markdown")],
+                        http_session=session,
+                        paste_url=BaseURLs.paste_url,
+                    )
+                paste_link = paste_response.link
+
             if ping_user:
-                await ctx.send(f"Here's the output of your command, {ctx.author.mention}")
+                await ctx.send(f"Here's the output of [your command]({paste_link}), {ctx.author.mention}")
+            else:
+                await ctx.send(f"Here's the output of [your command]({paste_link})")
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
