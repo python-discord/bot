@@ -160,8 +160,8 @@ def redirect_output(
             async with ClientSession() as session:
                 try:
                     paste_response = await send_to_paste_service(
-                            files=[PasteFile(content=ctx.message.content, lexer="markdown")],
-                            http_session=session,
+                        files=[PasteFile(content=ctx.message.content, lexer="markdown")],
+                        http_session=session,
                     )
                     paste_link = paste_response.link
                 except PasteUploadError:
