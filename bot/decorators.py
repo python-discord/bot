@@ -172,15 +172,9 @@ def redirect_output(
 
             msg = ""
 
-            if ping_user:
-                msg += f"{ctx.author.mention}, "
-
-            msg += "Here's the output of "
-
-            if paste_link:
-                msg += f"[your command]({paste_link}):"
-            else:
-                msg += "your command:"
+            msg = "Here's the output of "
+            msg += f"[your command]({paste_link})" if paste_link else "your command"
+            msg += f", {ctx.author.mention}:" if ping_user else ":"
 
             await ctx.send(msg)
 
