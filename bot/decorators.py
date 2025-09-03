@@ -163,7 +163,6 @@ def redirect_output(
                         files=[PasteFile(content=ctx.message.content, lexer="markdown")],
                         http_session=session,
                     )
-                    paste_link = paste_response.link
                 except PasteUploadError:
                     log.exception(
                         "Failed to upload message %d in channel %d to paste service when redirecting output",
@@ -173,10 +172,17 @@ def redirect_output(
             msg = ""
 
             msg = "Here's the output of "
-            msg += f"[your command]({paste_link})" if paste_link else "your command"
+            print(paste_response.link)
+            msg += f"[your command]({paste_response.link})" if paste_response else "your command"
             msg += f", {ctx.author.mention}:" if ping_user else ":"
 
             await ctx.send(msg)
+
+            #Send a DM to the user about the redirect and pastebin removal
+            await ctx.author.send(
+                content=
+                f"Your command output was redirected to <#{Channels.bot_commands}>. [Click here](<{paste_response.removal}>) to delete the automatically uploaded copy of your original command."
+            )
 
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
