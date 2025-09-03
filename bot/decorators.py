@@ -156,7 +156,6 @@ def redirect_output(
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
 
-            paste_link = None
             async with ClientSession() as session:
                 try:
                     paste_response = await send_to_paste_service(
@@ -172,7 +171,6 @@ def redirect_output(
             msg = ""
 
             msg = "Here's the output of "
-            print(paste_response.link)
             msg += f"[your command]({paste_response.link})" if paste_response else "your command"
             msg += f", {ctx.author.mention}:" if ping_user else ":"
 
@@ -181,7 +179,9 @@ def redirect_output(
             #Send a DM to the user about the redirect and pastebin removal
             await ctx.author.send(
                 content=
-                f"Your command output was redirected to <#{Channels.bot_commands}>. [Click here](<{paste_response.removal}>) to delete the automatically uploaded copy of your original command."
+                f"Your command output was redirected to <#{Channels.bot_commands}>."
+                f" [Click here](<{paste_response.removal}>) to delete the automatically"
+                "uploaded copy of your original command."
             )
 
             scheduling.create_task(func(self, ctx, *args, **kwargs))
