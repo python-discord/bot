@@ -176,12 +176,11 @@ def redirect_output(
 
             await ctx.send(msg)
 
-            #Send a DM to the user about the redirect and pastebin removal
+            # Send a DM to the user about the redirect and paste removal
             await ctx.author.send(
-                content=
-                f"Your command output was redirected to <#{Channels.bot_commands}>."
-                f" [Click here](<{paste_response.removal}>) to delete the automatically"
-                "uploaded copy of your original command."
+                    f"Your command output was redirected to <#{Channels.bot_commands}>."
+                    f" [Click here](<{paste_response.removal}>) to delete the pasted"
+                    " copy of your original command."
             )
 
             scheduling.create_task(func(self, ctx, *args, **kwargs))
