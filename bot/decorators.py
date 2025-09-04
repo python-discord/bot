@@ -168,8 +168,6 @@ def redirect_output(
                         ctx.message.channel.id, ctx.message.id
                     )
 
-            msg = ""
-
             msg = "Here's the output of "
             msg += f"[your command]({paste_response.link})" if paste_response else "your command"
             msg += f", {ctx.author.mention}:" if ping_user else ":"
