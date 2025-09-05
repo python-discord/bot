@@ -166,7 +166,7 @@ def redirect_output(
                 except PasteUploadError:
                     log.exception(
                         "Failed to upload message %d in channel %d to paste service when redirecting output",
-                        ctx.message.channel.id, ctx.message.id
+                        ctx.message.id, ctx.message.channel.id
                     )
 
             msg = "Here's the output of "
