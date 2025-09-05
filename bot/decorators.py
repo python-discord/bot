@@ -183,7 +183,10 @@ def redirect_output(
                         " copy of your original command."
                 )
             except discord.Forbidden:
-                log.warning("Redirect output: Failed to send DM to user. Forbidden.")
+                log.info(
+                    "Failed to DM %s with redirected command paste removal link, user has bot DMs disabled",
+                    ctx.author.name
+                )
 
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
