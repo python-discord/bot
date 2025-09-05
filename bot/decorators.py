@@ -5,8 +5,8 @@ import typing as t
 from contextlib import suppress
 
 import arrow
-from aiohttp import ClientSession
 import discord
+from aiohttp import ClientSession
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
