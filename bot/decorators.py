@@ -174,12 +174,15 @@ def redirect_output(
 
             await ctx.send(msg)
 
-            # Send a DM to the user about the redirect and paste removal
-            await ctx.author.send(
-                    f"Your command output was redirected to <#{Channels.bot_commands}>."
-                    f" [Click here](<{paste_response.removal}>) to delete the pasted"
-                    " copy of your original command."
-            )
+            try:
+                # Send a DM to the user about the redirect and paste removal
+                await ctx.author.send(
+                        f"Your command output was redirected to <#{Channels.bot_commands}>."
+                        f" [Click here](<{paste_response.removal}>) to delete the pasted"
+                        " copy of your original command."
+                )
+            except discord.Forbidden:
+                log.warning("Redirect output: Failed to send DM to user. Forbidden.")
 
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
