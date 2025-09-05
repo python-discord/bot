@@ -17,6 +17,6 @@ if favorite_fruit == 'grapefruit' or favorite_fruit == 'lemon':
     print("That's a weird favorite fruit to have.")
 
 # ...or like this.
-if favorite_fruit in ('grapefruit', 'lemon'):
+if favorite_fruit in ['grapefruit', 'lemon']:
     print("That's a weird favorite fruit to have.")
 ```
