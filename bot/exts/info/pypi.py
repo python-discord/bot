@@ -36,8 +36,8 @@ def _get_latest_distribution_timestamp(data: dict[str, typing.Any]) -> datetime 
         log.trace("KeyError trying to fetch upload time: data['urls'][-1]['upload_time_iso_8601']")
         return None
 
-class PyPi(Cog):
-    """Cog for getting information about PyPi packages."""
+class PyPI(Cog):
+    """Cog for getting information about PyPI packages."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -83,8 +83,8 @@ class PyPi(Cog):
                     error = False
 
                 else:
-                    embed.description = "There was an error when fetching your PyPi package."
-                    log.trace(f"Error when fetching PyPi package: {response.status}.")
+                    embed.description = "There was an error when fetching your PyPI package."
+                    log.trace(f"Error when fetching PyPI package: {response.status}.")
 
         if error:
             error_message = await ctx.send(embed=embed)
@@ -101,5 +101,5 @@ class PyPi(Cog):
 
 
 async def setup(bot: Bot) -> None:
-    """Load the PyPi cog."""
-    await bot.add_cog(PyPi(bot))
+    """Load the PyPI cog."""
+    await bot.add_cog(PyPI(bot))
