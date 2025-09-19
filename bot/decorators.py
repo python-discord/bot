@@ -157,17 +157,19 @@ def redirect_output(
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
 
-            async with ClientSession() as session:
-                try:
-                    paste_response = await send_to_paste_service(
-                        files=[PasteFile(content=ctx.message.content, lexer="markdown")],
-                        http_session=session,
-                    )
-                except PasteUploadError:
-                    log.exception(
-                        "Failed to upload message %d in channel %d to paste service when redirecting output",
-                        ctx.message.id, ctx.message.channel.id
-                    )
+            paste_response = None
+            if RedirectOutput.delete_invocation:
+                async with ClientSession() as session:
+                    try:
+                        paste_response = await send_to_paste_service(
+                            files=[PasteFile(content=ctx.message.content, lexer="markdown")],
+                            http_session=session,
+                        )
+                    except PasteUploadError:
+                        log.exception(
+                            "Failed to upload message %d in channel %d to paste service when redirecting output",
+                            ctx.message.id, ctx.message.channel.id
+                        )
 
             msg = "Here's the output of "
             msg += f"[your command]({paste_response.link})" if paste_response else "your command"
