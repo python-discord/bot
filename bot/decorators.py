@@ -176,19 +176,20 @@ def redirect_output(
             msg += f", {ctx.author.mention}:" if ping_user else ":"
 
             await ctx.send(msg)
-
-            try:
-                # Send a DM to the user about the redirect and paste removal
-                await ctx.author.send(
-                        f"Your command output was redirected to <#{Channels.bot_commands}>."
-                        f" [Click here](<{paste_response.removal}>) to delete the pasted"
-                        " copy of your original command."
-                )
-            except discord.Forbidden:
-                log.info(
-                    "Failed to DM %s with redirected command paste removal link, user has bot DMs disabled",
-                    ctx.author.name
-                )
+            
+            if paste_response:
+                try:
+                    # Send a DM to the user about the redirect and paste removal
+                    await ctx.author.send(
+                            f"Your command output was redirected to <#{Channels.bot_commands}>."
+                            f" [Click here](<{paste_response.removal}>) to delete the pasted"
+                            " copy of your original command."
+                    )
+                except discord.Forbidden:
+                    log.info(
+                        "Failed to DM %s with redirected command paste removal link, user has bot DMs disabled",
+                        ctx.author.name
+                    )
 
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
