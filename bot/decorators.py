@@ -6,7 +6,6 @@ from contextlib import suppress
 
 import arrow
 import discord
-from aiohttp import ClientSession
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
@@ -159,17 +158,16 @@ def redirect_output(
 
             paste_response = None
             if RedirectOutput.delete_invocation:
-                async with ClientSession() as session:
-                    try:
-                        paste_response = await send_to_paste_service(
-                            files=[PasteFile(content=ctx.message.content, lexer="markdown")],
-                            http_session=session,
-                        )
-                    except PasteUploadError:
-                        log.exception(
-                            "Failed to upload message %d in channel %d to paste service when redirecting output",
-                            ctx.message.id, ctx.message.channel.id
-                        )
+                try:
+                    paste_response = await send_to_paste_service(
+                        files=[PasteFile(content=ctx.message.content, lexer="markdown")],
+                        http_session=ctx.bot.http_session,
+                    )
+                except PasteUploadError:
+                    log.exception(
+                        "Failed to upload message %d in channel %d to paste service when redirecting output",
+                        ctx.message.id, ctx.message.channel.id
+                    )
 
             msg = "Here's the output of "
             msg += f"[your command]({paste_response.link})" if paste_response else "your command"
