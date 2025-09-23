@@ -176,7 +176,6 @@ def redirect_output(
             msg += f", {ctx.author.mention}:" if ping_user else ":"
 
             await ctx.send(msg)
-            
             if paste_response:
                 try:
                     # Send a DM to the user about the redirect and paste removal
