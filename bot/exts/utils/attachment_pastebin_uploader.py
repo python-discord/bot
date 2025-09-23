@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-import aiohttp
 import discord
 from discord.ext import commands
 from pydis_core.utils import paste_service
@@ -116,8 +115,7 @@ class AutoTextAttachmentUploader(commands.Cog):
         # Upload the files to the paste bin, exiting early if there's an error.
         log.trace(f"Attempting to upload {len(files)} file(s) to pastebin.")
         try:
-            async with aiohttp.ClientSession() as session:
-                paste_response = await paste_service.send_to_paste_service(files=files, http_session=session)
+            paste_response = await paste_service.send_to_paste_service(files=files, http_session=self.bot.http_session)
         except (paste_service.PasteTooLongError, ValueError):
             log.trace(f"{message.author}'s attachments were too long.")
             await bot_reply.edit(content="Your paste is too long, and couldn't be uploaded.")
@@ -145,8 +143,7 @@ class AutoTextAttachmentUploader(commands.Cog):
             return
 
         # Delete the paste and the bot's message.
-        async with aiohttp.ClientSession() as session:
-            await session.get(paste_response.removal)
+        await self.bot.http_session.get(paste_response.removal)
 
         await bot_reply.delete()
 
