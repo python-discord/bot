@@ -5,10 +5,12 @@ import typing as t
 from contextlib import suppress
 
 import arrow
+import discord
 from discord import Member, NotFound
 from discord.ext import commands
 from discord.ext.commands import Cog, Context
 from pydis_core.utils import scheduling
+from pydis_core.utils.paste_service import PasteFile, PasteUploadError, send_to_paste_service
 
 from bot.constants import Channels, DEBUG_MODE, RedirectOutput
 from bot.log import get_logger
@@ -154,8 +156,38 @@ def redirect_output(
             log.trace(f"Redirecting output of {ctx.author}'s command '{ctx.command.name}' to {redirect_channel.name}")
             ctx.channel = redirect_channel
 
-            if ping_user:
-                await ctx.send(f"Here's the output of your command, {ctx.author.mention}")
+            paste_response = None
+            if RedirectOutput.delete_invocation:
+                try:
+                    paste_response = await send_to_paste_service(
+                        files=[PasteFile(content=ctx.message.content, lexer="markdown")],
+                        http_session=ctx.bot.http_session,
+                    )
+                except PasteUploadError:
+                    log.exception(
+                        "Failed to upload message %d in channel %d to paste service when redirecting output",
+                        ctx.message.id, ctx.message.channel.id
+                    )
+
+            msg = "Here's the output of "
+            msg += f"[your command]({paste_response.link})" if paste_response else "your command"
+            msg += f", {ctx.author.mention}:" if ping_user else ":"
+
+            await ctx.send(msg)
+            if paste_response:
+                try:
+                    # Send a DM to the user about the redirect and paste removal
+                    await ctx.author.send(
+                            f"Your command output was redirected to <#{Channels.bot_commands}>."
+                            f" [Click here](<{paste_response.removal}>) to delete the pasted"
+                            " copy of your original command."
+                    )
+                except discord.Forbidden:
+                    log.info(
+                        "Failed to DM %s with redirected command paste removal link, user has bot DMs disabled",
+                        ctx.author.name
+                    )
+
             scheduling.create_task(func(self, ctx, *args, **kwargs))
 
             message = await old_channel.send(
