@@ -30,8 +30,7 @@ FAILED_MESSAGE = (
 MESSAGE_FIELD_MAP = {
     "joined_at": f"been on the server for fewer than {GateConf.minimum_days_member} days",
     "voice_gate_blocked": "an active voice infraction",
-    "total_messages": "have not been active enough on the server yet.",
-    "activity_blocks": "have not been active enough on the server yet.",
+    "activity_blocks": "have not been active enough on the server yet",
 }
 
 VOICE_PING = (
@@ -94,7 +93,6 @@ class VoiceVerificationView(discord.ui.View):
             "joined_at": (
                 interaction.user.joined_at > arrow.utcnow() - timedelta(days=GateConf.minimum_days_member)
             ),
-            "total_messages": data["total_messages"] < GateConf.minimum_messages,
             "voice_gate_blocked": data["voice_gate_blocked"],
             "activity_blocks": data["activity_blocks"] < GateConf.minimum_activity_blocks,
         }
