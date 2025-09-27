@@ -571,7 +571,7 @@ class Snekbox(Cog):
 
     @command(
         name="eval",
-        aliases=("e",),
+        aliases=("e","exec"),
         usage="[python_version] <code, ...>",
         help=f"""
             Run Python code and get the results.
