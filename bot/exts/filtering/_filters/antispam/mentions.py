@@ -68,8 +68,8 @@ class MentionsFilter(UniqueFilter):
                     # that is both not in the cache, and deleted while running this function.
                     # In such a situation, this will throw an error which we catch.
                     try:
-                        resolved = await bot.instance.get_partial_messageable(resolved.channel_id).fetch_message(
-                            resolved.message_id
+                        resolved = await bot.instance.get_partial_messageable(ref.channel_id).fetch_message(
+                            ref.message_id
                         )
                     except NotFound:
                         log.info("Could not fetch the reference message as it has been deleted.")
