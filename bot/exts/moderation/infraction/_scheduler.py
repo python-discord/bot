@@ -121,7 +121,7 @@ class InfractionScheduler:
             await partial_message.delete()
             log.trace(f"Deleted infraction message {message_id} in channel {channel_id}.")
         except discord.NotFound:
-            log.warning(f"Channel or message {message_id} not found in channel {channel_id}.")
+            log.info(f"Channel or message {message_id} not found in channel {channel_id}.")
         except discord.Forbidden:
             log.info(f"Bot lacks permissions to delete message {message_id} in channel {channel_id}.")
         except discord.HTTPException as e:
