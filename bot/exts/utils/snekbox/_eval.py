@@ -141,7 +141,7 @@ class EvalResult:
 
     def get_status_message(self, job: EvalJob) -> str:
         """Return a user-friendly message corresponding to the process's return code."""
-        if job.version == "3.13t":
+        if job.version[-1] == "t":
             version_text = job.version.replace("t", " [free threaded](<https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>)")
         else:
             version_text = job.version
