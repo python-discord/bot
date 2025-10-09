@@ -19,4 +19,6 @@ SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Ro
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30
 
-SupportedPythonVersions = Literal["3.14", "3.13", "3.13t"]
+SupportedPythonVersions = Literal["3.13", "3.13t", "3.14"]
+
+DEFAULT_PYTHON_VERSION: SupportedPythonVersions = "3.14"

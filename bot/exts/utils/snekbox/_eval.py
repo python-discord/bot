@@ -3,12 +3,11 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, field
 from signal import Signals
-from typing import get_args
 
 from discord.utils import escape_markdown, escape_mentions
 
 from bot.constants import Emojis
-from bot.exts.utils.snekbox._constants import SupportedPythonVersions
+from bot.exts.utils.snekbox._constants import DEFAULT_PYTHON_VERSION, SupportedPythonVersions
 from bot.exts.utils.snekbox._io import FILE_COUNT_LIMIT, FILE_SIZE_LIMIT, FileAttachment, sizeof_fmt
 from bot.log import get_logger
 
@@ -24,7 +23,7 @@ class EvalJob:
     args: list[str]
     files: list[FileAttachment] = field(default_factory=list)
     name: str = "eval"
-    version: SupportedPythonVersions = get_args(SupportedPythonVersions)[0]
+    version: SupportedPythonVersions = DEFAULT_PYTHON_VERSION
 
     @classmethod
     def from_code(cls, code: str, path: str = "main.py") -> EvalJob:

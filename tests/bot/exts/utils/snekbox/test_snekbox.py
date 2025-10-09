@@ -1,7 +1,6 @@
 import asyncio
 import unittest
 from base64 import b64encode
-from typing import get_args
 from unittest.mock import AsyncMock, MagicMock, Mock, call, create_autospec, patch
 
 from discord import AllowedMentions
@@ -11,7 +10,8 @@ from pydis_core.utils.paste_service import MAX_PASTE_SIZE
 from bot import constants
 from bot.errors import LockedResourceError
 from bot.exts.utils import snekbox
-from bot.exts.utils.snekbox import EvalJob, EvalResult, Snekbox, SupportedPythonVersions
+from bot.exts.utils.snekbox import EvalJob, EvalResult, Snekbox
+from bot.exts.utils.snekbox._constants import DEFAULT_PYTHON_VERSION
 from bot.exts.utils.snekbox._io import FileAttachment
 from tests.helpers import MockBot, MockContext, MockMember, MockMessage, MockReaction, MockUser
 
@@ -22,7 +22,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot = MockBot()
         self.cog = Snekbox(bot=self.bot)
         self.job = EvalJob.from_code("import random")
-        self.default_version = get_args(SupportedPythonVersions)[0]
+        self.default_version = DEFAULT_PYTHON_VERSION
 
     @staticmethod
     def code_args(code: str) -> tuple[EvalJob]:

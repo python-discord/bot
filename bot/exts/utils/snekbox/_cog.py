@@ -20,6 +20,7 @@ from bot.exts.filtering._filter_lists.extension import TXT_LIKE_FILES
 from bot.exts.help_channels._channel import is_help_forum_post
 from bot.exts.utils.snekbox._constants import (
     ANSI_REGEX,
+    DEFAULT_PYTHON_VERSION,
     ESCAPE_REGEX,
     MAX_OUTPUT_BLOCK_CHARS,
     MAX_OUTPUT_BLOCK_LINES,
@@ -602,7 +603,7 @@ class Snekbox(Cog):
     ) -> None:
         """Run Python code and get the results."""
         code: list[str]
-        python_version = python_version or get_args(SupportedPythonVersions)[0]
+        python_version = python_version or DEFAULT_PYTHON_VERSION
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
@@ -643,7 +644,7 @@ class Snekbox(Cog):
     ) -> None:
         """Profile Python Code to find execution time."""
         code: list[str]
-        python_version = python_version or get_args(SupportedPythonVersions)[0]
+        python_version = python_version or DEFAULT_PYTHON_VERSION
         args = self.prepare_timeit_input(code)
         job = EvalJob(args, version=python_version, name="timeit")
 
