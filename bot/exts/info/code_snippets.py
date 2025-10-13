@@ -5,6 +5,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 import discord
+import yarl
 from aiohttp import ClientResponseError
 from discord.ext.commands import Cog
 
@@ -272,6 +273,20 @@ class CodeSnippets(Cog):
 
         for pattern, handler in self.pattern_handlers:
             for match in pattern.finditer(content):
+                # ensure that the matched URL meets url normalization rules.
+                # parsing with yarl resolves all parent urls such as `/../`,
+                # we then check the regex again to make sure our groups stay the same
+                unsanitized = match.group(0)
+                normalized = str(yarl.URL(unsanitized))
+                if normalized != unsanitized:
+                    match = pattern.fullmatch(normalized)
+                    if not match:
+                        log.info(
+                            "Received code snippet url %s which "
+                            "attempted to circumvent url normalisation.",
+                            unsanitized
+                        )
+                        continue
                 try:
                     result = await handler(**match.groupdict())
                 except ClientResponseError as error:
