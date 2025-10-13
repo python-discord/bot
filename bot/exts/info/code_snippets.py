@@ -281,6 +281,7 @@ class CodeSnippets(Cog):
                         f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
                         f"{error_message} for GET {error.request_info.real_url.human_repr()}"
                     )
+                    continue
 
                 if isinstance(result, list):
                     # The handler returned multiple snippets (currently only possible with our pastebin)
