@@ -143,6 +143,8 @@ class EvalResult:
         """Return a user-friendly message corresponding to the process's return code."""
         if job.version[-1] == "t":
             version_text = job.version.replace("t", " [free threaded](<https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>)")
+        elif job.version[-1] == "j":
+            version_text = job.version.replace("j", " [JIT-compilation enabled](<https://peps.python.org/pep-0744/>)")
         else:
             version_text = job.version
         msg = f"Your {version_text} {job.name} job"
