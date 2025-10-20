@@ -3,16 +3,13 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, field
 from signal import Signals
-from typing import TYPE_CHECKING
 
 from discord.utils import escape_markdown, escape_mentions
 
 from bot.constants import Emojis
+from bot.exts.utils.snekbox._constants import DEFAULT_PYTHON_VERSION, SupportedPythonVersions
 from bot.exts.utils.snekbox._io import FILE_COUNT_LIMIT, FILE_SIZE_LIMIT, FileAttachment, sizeof_fmt
 from bot.log import get_logger
-
-if TYPE_CHECKING:
-    from bot.exts.utils.snekbox._cog import SupportedPythonVersions
 
 log = get_logger(__name__)
 
@@ -26,7 +23,7 @@ class EvalJob:
     args: list[str]
     files: list[FileAttachment] = field(default_factory=list)
     name: str = "eval"
-    version: SupportedPythonVersions = "3.13"
+    version: SupportedPythonVersions = DEFAULT_PYTHON_VERSION
 
     @classmethod
     def from_code(cls, code: str, path: str = "main.py") -> EvalJob:
@@ -144,10 +141,10 @@ class EvalResult:
 
     def get_status_message(self, job: EvalJob) -> str:
         """Return a user-friendly message corresponding to the process's return code."""
-        if job.version == "3.13t":
+        if job.version[-1] == "t":
             version_text = job.version.replace("t", " [free threaded](<https://docs.python.org/3.13/whatsnew/3.13.html#free-threaded-cpython>)")
-        elif job.version == "3.14":
-            version_text = "3.14 [pre-release](<https://docs.python.org/3.14/whatsnew/3.14.html#development>)"
+        elif job.version[-1] == "j":
+            version_text = job.version.replace("j", " [JIT-compilation enabled](<https://peps.python.org/pep-0744/>)")
         else:
             version_text = job.version
         msg = f"Your {version_text} {job.name} job"

@@ -1,5 +1,6 @@
 from bot.bot import Bot
-from bot.exts.utils.snekbox._cog import CodeblockConverter, Snekbox, SupportedPythonVersions
+from bot.exts.utils.snekbox._cog import CodeblockConverter, Snekbox
+from bot.exts.utils.snekbox._constants import SupportedPythonVersions
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 
 __all__ = ("CodeblockConverter", "EvalJob", "EvalResult", "Snekbox", "SupportedPythonVersions")

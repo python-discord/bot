@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import contextlib
-import re
 from collections.abc import Iterable
 from functools import partial
 from operator import attrgetter
 from textwrap import dedent
-from typing import Literal, NamedTuple, TYPE_CHECKING, get_args
+from typing import NamedTuple, TYPE_CHECKING, get_args
 
 from discord import AllowedMentions, HTTPException, Interaction, Message, NotFound, Reaction, User, enums, ui
 from discord.ext.commands import Cog, Command, Context, Converter, command, guild_only
@@ -19,6 +18,19 @@ from bot.constants import BaseURLs, Channels, Emojis, MODERATION_ROLES, Roles, U
 from bot.decorators import redirect_output
 from bot.exts.filtering._filter_lists.extension import TXT_LIKE_FILES
 from bot.exts.help_channels._channel import is_help_forum_post
+from bot.exts.utils.snekbox._constants import (
+    ANSI_REGEX,
+    DEFAULT_PYTHON_VERSION,
+    ESCAPE_REGEX,
+    MAX_OUTPUT_BLOCK_CHARS,
+    MAX_OUTPUT_BLOCK_LINES,
+    NO_SNEKBOX_CATEGORIES,
+    NO_SNEKBOX_CHANNELS,
+    REDO_EMOJI,
+    REDO_TIMEOUT,
+    SNEKBOX_ROLES,
+    SupportedPythonVersions,
+)
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
@@ -28,9 +40,6 @@ if TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering
 
 log = get_logger(__name__)
-
-ANSI_REGEX = re.compile(r"\N{ESC}\[[0-9;:]*m")
-ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 
 # The timeit command should only output the very last line, so all other output should be suppressed.
 # This will be used as the setup code along with any setup code provided.
@@ -73,21 +82,6 @@ if not hasattr(sys, "_setup_finished"):
     sys._setup_finished = None
 {setup}
 """
-
-# Max to display in a codeblock before sending to a paste service
-# This also applies to text files
-MAX_OUTPUT_BLOCK_LINES = 10
-MAX_OUTPUT_BLOCK_CHARS = 1000
-
-# The Snekbox commands' whitelists and blacklists.
-NO_SNEKBOX_CHANNELS = (Channels.python_general,)
-NO_SNEKBOX_CATEGORIES = ()
-SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
-
-REDO_EMOJI = "\U0001f501"  # :repeat:
-REDO_TIMEOUT = 30
-
-SupportedPythonVersions = Literal["3.13", "3.13t", "3.14"]
 
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
@@ -571,7 +565,7 @@ class Snekbox(Cog):
 
     @command(
         name="eval",
-        aliases=("e",),
+        aliases=("e", "exec"),
         usage="[python_version] <code, ...>",
         help=f"""
             Run Python code and get the results.
@@ -609,7 +603,7 @@ class Snekbox(Cog):
     ) -> None:
         """Run Python code and get the results."""
         code: list[str]
-        python_version = python_version or get_args(SupportedPythonVersions)[0]
+        python_version = python_version or DEFAULT_PYTHON_VERSION
         job = EvalJob.from_code("\n".join(code)).as_version(python_version)
         await self.run_job(ctx, job)
 
@@ -650,7 +644,7 @@ class Snekbox(Cog):
     ) -> None:
         """Profile Python Code to find execution time."""
         code: list[str]
-        python_version = python_version or get_args(SupportedPythonVersions)[0]
+        python_version = python_version or DEFAULT_PYTHON_VERSION
         args = self.prepare_timeit_input(code)
         job = EvalJob(args, version=python_version, name="timeit")
 
