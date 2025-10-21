@@ -218,13 +218,10 @@ class DiscordClient(Client):
 
         return channels, categories
 
-    def webhook_exists(self, webhook_id_: int) -> bool:
-        """A predicate that indicates whether a webhook exists already or not."""
-        try:
-            self.get(f"/webhooks/{webhook_id_}")
-            return True
-        except HTTPStatusError:
-            return False
+    def get_all_guild_webhooks(self) -> list[dict[str, Any]]:
+        """Lists all the webhooks for the guild."""
+        response = self.get(f"/guilds/{self.guild_id}/webhooks")
+        return response.json()
 
     def create_webhook(self, name: str, channel_id_: int) -> str:
         """Creates a new webhook for a particular channel."""
@@ -306,14 +303,24 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     env_file_path.write_text(config_str)
 
     config_str += "\n#Webhooks\n"
-
+    existing_webhooks = discord_client.get_all_guild_webhooks()
     for webhook_name, webhook_model in Webhooks:
-        webhook = discord_client.webhook_exists(webhook_model.id)
-        if not webhook:
-            webhook_channel_id = int(all_channels[webhook_name])
-            webhook_id = discord_client.create_webhook(webhook_name, webhook_channel_id)
+        formatted_webhook_name = webhook_name.replace("_", " ").title()
+        for existing_hook in existing_webhooks:
+            if (
+                # check the existing ID matches the configured one
+                existing_hook["id"] == str(webhook_model.id)
+                or (
+                    # check if the name and the channel ID match the configured ones
+                    existing_hook["name"] == formatted_webhook_name
+                    and existing_hook["channel_id"] == str(all_channels[webhook_name])
+                )
+            ):
+                webhook_id = existing_hook["id"]
+                break
         else:
-            webhook_id = webhook_model.id
+            webhook_channel_id = int(all_channels[webhook_name])
+            webhook_id = discord_client.create_webhook(formatted_webhook_name, webhook_channel_id)
         config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
         config_str += f"webhooks_{webhook_name}__channel={all_channels[webhook_name]}\n"
 
