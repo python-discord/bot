@@ -274,7 +274,7 @@ class CodeSnippets(Cog):
         for pattern, handler in self.pattern_handlers:
             for match in pattern.finditer(content):
                 # ensure that the matched URL meets url normalization rules.
-                # parsing with yarl resolves all parent urls such as `/../`,
+                # parsing an absolute url with yarl resolves all parent urls such as `/../`,
                 # we then check the regex again to make sure our groups stay the same
                 unsanitized = match.group(0)
                 normalized = str(yarl.URL(unsanitized))
