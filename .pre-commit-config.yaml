@@ -14,7 +14,7 @@ repos:
       name: uv-lock
       description: "Automatically run 'uv lock' on your project dependencies"
       entry: uv lock
-      language: python
+      language: system
       files: ^(uv\.lock|pyproject\.toml|uv\.toml)$
       pass_filenames: false
     - id: ruff
