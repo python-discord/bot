@@ -25,6 +25,7 @@ dependencies = [
     "sentry-sdk==2.22.0",
     "tenacity==9.0.0",
     "tldextract==5.1.3",
+    "yarl==1.22.0",
 ]
 name = "bot"
 version = "1.0.1"
