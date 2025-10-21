@@ -27,7 +27,7 @@ jobs:
           activate-environment: true
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --locked
 
       - name: Run pre-commit hooks
         run: SKIP=ruff pre-commit run --all-files
