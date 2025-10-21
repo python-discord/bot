@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import sys
@@ -6,11 +7,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 from httpx import Client, HTTPStatusError, Response
 
-from bot.constants import Webhooks, _Categories, _Channels, _Roles
-from bot.log import get_logger
+# Filter out the send typing monkeypatch logs from bot core when we import to get constants
+logging.getLogger("pydis_core").setLevel(logging.WARNING)
+
+from bot.constants import Webhooks, _Categories, _Channels, _Roles  # noqa: E402
+from bot.log import get_logger  # noqa: E402
 
 load_dotenv()
-log = get_logger("Config Bootstrapper")
+log = get_logger("botstrap")
+# Silence noisy httpcore logger
+get_logger("httpcore").setLevel("INFO")
 
 env_file_path = Path(".env.server")
 BOT_TOKEN = os.getenv("BOT_TOKEN", None)
@@ -51,10 +57,10 @@ class SilencedDict(dict):
         try:
             return super().__getitem__(item)
         except KeyError:
-            log.warning(f"Couldn't find key: {item} in dict: {self.name} ")
+            log.fatal("Couldn't find key: %s in dict: %s", item, self.name)
             log.warning(
-                "Please make sure to follow our contribution guideline "
-                "https://www.pythondiscord.com/pages/guides/pydis-guides/contributing/bot/ "
+                "Please follow our contribution guidelines "
+                "https://pydis.com/contributing-bot "
                 "to guarantee a successful run of botstrap "
             )
             sys.exit(-1)
@@ -85,18 +91,14 @@ class DiscordClient(Client):
         payload = response.json()
 
         if COMMUNITY_FEATURE not in payload["features"]:
-            log.warning("This server is currently not a community, upgrading.")
+            log.info("This server is currently not a community, upgrading.")
             payload["features"].append(COMMUNITY_FEATURE)
             payload["rules_channel_id"] = rules_channel_id_
             payload["public_updates_channel_id"] = announcements_channel_id_
             self.patch(f"/guilds/{self.guild_id}", json=payload)
             log.info(f"Server {self.guild_id} has been successfully updated to a community.")
 
-    def create_forum_channel(
-        self,
-        channel_name_: str,
-        category_id_: int | str | None = None
-    ) -> int:
+    def create_forum_channel(self, channel_name_: str, category_id_: int | str | None = None) -> int:
         """Creates a new forum channel."""
         payload = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
         if category_id_:
@@ -177,10 +179,9 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     all_roles = discord_client.get_all_roles()
 
     for role_name in _Roles.model_fields:
-
         role_id = all_roles.get(role_name, None)
         if not role_id:
-            log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
+            log.warning("Couldn't find the role %s in the guild, PyDis' default values will be used.", role_name)
             continue
 
         config_str += f"roles_{role_name}={role_id}\n"
@@ -212,9 +213,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     for channel_name in _Channels.model_fields:
         channel_id = all_channels.get(channel_name, None)
         if not channel_id:
-            log.warning(
-                f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used."
-            )
+            log.warning("Couldn't find the channel %s in the guild, PyDis' default values will be used.", channel_name)
             continue
 
         config_str += f"channels_{channel_name}={channel_id}\n"
@@ -226,7 +225,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
         category_id = all_categories.get(category_name, None)
         if not category_id:
             log.warning(
-                f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used."
+                "Couldn't find the category %s in the guild, PyDis' default values will be used.", category_name
             )
             continue
 
@@ -251,3 +250,5 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
 
     with env_file_path.open("wb") as file:
         file.write(config_str.encode("utf-8"))
+
+    log.info("Botstrap completed successfully. Configuration has been written to %s", env_file_path)
