@@ -114,6 +114,16 @@ class DiscordClient(Client):
 
         return False
 
+    def check_if_in_guild(self) -> bool:
+        """Check if the bot is a member of the guild."""
+        try:
+            _ = self.get(f"/guilds/{self.guild_id}")
+        except HTTPStatusError as e:
+            if e.response.status_code == 403 or e.response.status_code == 404:
+                return False
+            raise
+        return True
+
     def upgrade_server_to_community_if_necessary(
         self,
         rules_channel_id_: int | str,
@@ -209,6 +219,17 @@ class DiscordClient(Client):
 with DiscordClient(guild_id=GUILD_ID) as discord_client:
     if discord_client.upgrade_application_flags_if_necessary():
         log.info("Application flags upgraded successfully, and necessary intents are now enabled.")
+
+    if not discord_client.check_if_in_guild():
+        client_id = discord_client.app_info["id"]
+        log.error("The bot is not a member of the configured guild with ID %s.", GUILD_ID)
+        log.warning(
+            "Please invite with the following URL and rerun this script: "
+            "https://discord.com/oauth2/authorize?client_id=%s&guild_id=%s&scope=bot+applications.commands&permissions=8",
+            client_id,
+            GUILD_ID,
+        )
+        sys.exit(69)
 
     config_str = "#Roles\n"
 
