@@ -82,14 +82,11 @@ class AutoTextAttachmentUploader(commands.Cog):
             return
 
         # Check if the message contains any text-based attachments.
-        # Note that Discord does not always provide a content type
-        # its not good enough to check the content type is text/plain,
-        # we still need to check the charset
+        # we only require a charset here, as its setting is matched
         attachments: list[discord.Attachment] = []
         for attachment in message.attachments:
             if (
                 attachment.content_type
-                and attachment.content_type.startswith("text/plain")
                 and "charset" in attachment.content_type
             ):
                 attachments.append(attachment)
