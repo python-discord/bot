@@ -78,7 +78,7 @@ class AutoTextAttachmentUploader(commands.Cog):
     async def on_message(self, message: discord.Message) -> None:
         """Listens for messages containing attachments and offers to upload them to the pastebin."""
         # Check if the message contains an embedded file and is not sent by a bot.
-        if message.author.bot or not any("charset" in a.content_type for a in message.attachments):
+        if message.author.bot or not message.guild or not any("charset" in a.content_type for a in message.attachments):
             return
 
         log.trace(f"Offering to upload attachments for {message.author} in {message.channel}, message {message.id}")
