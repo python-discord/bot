@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from httpx import Client, HTTPStatusError, Response
@@ -10,7 +11,12 @@ from httpx import Client, HTTPStatusError, Response
 # Filter out the send typing monkeypatch logs from bot core when we import to get constants
 logging.getLogger("pydis_core").setLevel(logging.WARNING)
 
-from bot.constants import Webhooks, _Categories, _Channels, _Roles  # noqa: E402
+from bot.constants import (  # noqa: E402
+    Webhooks,
+    _Categories,  # pyright: ignore[reportPrivateUsage]
+    _Channels,  # pyright: ignore[reportPrivateUsage]
+    _Roles,  # pyright: ignore[reportPrivateUsage]
+)
 from bot.log import get_logger  # noqa: E402
 
 load_dotenv()
@@ -27,6 +33,7 @@ PYTHON_HELP_CHANNEL_NAME = "python_help"
 PYTHON_HELP_CATEGORY_NAME = "python_help_system"
 ANNOUNCEMENTS_CHANNEL_NAME = "announcements"
 RULES_CHANNEL_NAME = "rules"
+GUILD_CATEGORY_TYPE = 4
 GUILD_FORUM_TYPE = 15
 
 if not BOT_TOKEN:
@@ -46,7 +53,7 @@ if not GUILD_ID:
     raise ValueError(message)
 
 
-class SilencedDict(dict):
+class SilencedDict(dict[str, Any]):
     """A dictionary that silences KeyError exceptions upon subscription to non existent items."""
 
     def __init__(self, name: str):
@@ -98,9 +105,9 @@ class DiscordClient(Client):
             self.patch(f"/guilds/{self.guild_id}", json=payload)
             log.info(f"Server {self.guild_id} has been successfully updated to a community.")
 
-    def create_forum_channel(self, channel_name_: str, category_id_: int | str | None = None) -> int:
+    def create_forum_channel(self, channel_name_: str, category_id_: int | str | None = None) -> str:
         """Creates a new forum channel."""
-        payload = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
+        payload: dict[str, Any] = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
         if category_id_:
             payload["parent_id"] = category_id_
 
@@ -114,12 +121,12 @@ class DiscordClient(Client):
         response = self.get(f"/channels/{channel_id_}")
         return response.json()["type"] == GUILD_FORUM_TYPE
 
-    def delete_channel(self, channel_id_: id) -> None:
+    def delete_channel(self, channel_id_: str | int) -> None:
         """Delete a channel."""
         log.info(f"Channel python-help: {channel_id_} is not a forum channel and will be replaced with one.")
         self.delete(f"/channels/{channel_id_}")
 
-    def get_all_roles(self) -> dict:
+    def get_all_roles(self) -> dict[str, int]:
         """Fetches all the roles in a guild."""
         result = SilencedDict(name="Roles dictionary")
 
@@ -149,7 +156,7 @@ class DiscordClient(Client):
                 name = f"off_topic_{off_topic_count}"
                 off_topic_count += 1
 
-            if channel_type == 4:
+            if channel_type == GUILD_CATEGORY_TYPE:
                 categories[name] = channel["id"]
             else:
                 channels[name] = channel["id"]
@@ -159,7 +166,7 @@ class DiscordClient(Client):
     def webhook_exists(self, webhook_id_: int) -> bool:
         """A predicate that indicates whether a webhook exists already or not."""
         try:
-            self.get(f"webhooks/{webhook_id_}")
+            self.get(f"/webhooks/{webhook_id_}")
             return True
         except HTTPStatusError:
             return False
@@ -168,7 +175,7 @@ class DiscordClient(Client):
         """Creates a new webhook for a particular channel."""
         payload = {"name": name}
 
-        response = self.post(f"channels/{channel_id_}/webhooks", json=payload)
+        response = self.post(f"/channels/{channel_id_}/webhooks", json=payload)
         new_webhook = response.json()
         return new_webhook["id"]
 
@@ -195,16 +202,12 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
 
     discord_client.upgrade_server_to_community_if_necessary(rules_channel_id, announcements_channel_id)
 
-    create_help_channel = True
-
-    if PYTHON_HELP_CHANNEL_NAME in all_channels:
-        python_help_channel_id = all_channels[PYTHON_HELP_CHANNEL_NAME]
+    if python_help_channel_id := all_channels.get(PYTHON_HELP_CHANNEL_NAME):
         if not discord_client.is_forum_channel(python_help_channel_id):
             discord_client.delete_channel(python_help_channel_id)
-        else:
-            create_help_channel = False
+            python_help_channel_id = None
 
-    if create_help_channel:
+    if not python_help_channel_id:
         python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace("_", "-")
         python_help_category_id = all_categories[PYTHON_HELP_CATEGORY_NAME]
         python_help_channel_id = discord_client.create_forum_channel(python_help_channel_name, python_help_category_id)
