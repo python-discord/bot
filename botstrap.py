@@ -171,7 +171,11 @@ class DiscordClient(Client):
         if category_id_:
             payload["parent_id"] = category_id_
 
-        response = self.post(f"/guilds/{self.guild_id}/channels", json=payload)
+        response = self.post(
+            f"/guilds/{self.guild_id}/channels",
+            json=payload,
+            headers={"X-Audit-Log-Reason": "Creating forum channel as part of PyDis botstrap"},
+        )
         forum_channel_id = response.json()["id"]
         log.info(f"New forum channel: {channel_name_} has been successfully created.")
         return forum_channel_id
@@ -227,7 +231,11 @@ class DiscordClient(Client):
         """Creates a new webhook for a particular channel."""
         payload = {"name": name}
 
-        response = self.post(f"/channels/{channel_id_}/webhooks", json=payload)
+        response = self.post(
+            f"/channels/{channel_id_}/webhooks",
+            json=payload,
+            headers={"X-Audit-Log-Reason": "Creating webhook as part of PyDis botstrap"},
+        )
         new_webhook = response.json()
         return new_webhook["id"]
 
