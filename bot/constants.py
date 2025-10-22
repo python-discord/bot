@@ -264,7 +264,7 @@ class Webhook(BaseModel):
     channel: int
 
 
-class _Webhooks(EnvConfig, env_prefix="webhooks_"):
+class _Webhooks(EnvConfig, env_prefix="webhooks_", nested_model_default_partial_update=True):
 
     big_brother: Webhook = Webhook(id=569133704568373283, channel=Channels.big_brother)
     dev_log: Webhook = Webhook(id=680501655111729222, channel=Channels.dev_log)
