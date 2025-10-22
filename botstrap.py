@@ -322,7 +322,6 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
             webhook_channel_id = int(all_channels[webhook_name])
             webhook_id = discord_client.create_webhook(formatted_webhook_name, webhook_channel_id)
         config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
-        config_str += f"webhooks_{webhook_name}__channel={all_channels[webhook_name]}\n"
 
     config_str += "\n#Emojis\n"
     config_str += "emojis_trashcan=🗑️"
