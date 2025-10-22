@@ -1,16 +1,23 @@
+import logging
 import os
 import re
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from dotenv import load_dotenv
-from httpx import Client, HTTPStatusError, Response
+from httpx import Client, Response
 
-from bot.constants import Webhooks, _Categories, _Channels, _Roles
-from bot.log import get_logger
+# we want to filter out the patching send typing notifications from bot core when we import to get constants
+logging.getLogger("pydis_core").setLevel(logging.WARNING)
+
+from bot.constants import Webhooks, _Categories, _Channels, _Roles  # noqa: E402
+from bot.log import get_logger  # noqa: E402
 
 load_dotenv()
-log = get_logger("Config Bootstrapper")
+log = get_logger("botstrap")
+# silence noisy httpcore logger
+logging.getLogger("httpcore").setLevel("INFO")
 
 env_file_path = Path(".env.server")
 BOT_TOKEN = os.getenv("BOT_TOKEN", None)
@@ -21,7 +28,25 @@ PYTHON_HELP_CHANNEL_NAME = "python_help"
 PYTHON_HELP_CATEGORY_NAME = "python_help_system"
 ANNOUNCEMENTS_CHANNEL_NAME = "announcements"
 RULES_CHANNEL_NAME = "rules"
+GUILD_CATEGORY_TYPE = 4
 GUILD_FORUM_TYPE = 15
+
+
+EMOJIS: dict[str, str] = {
+    "defcon_shutdown": "⛔",
+    "defcon_unshutdown": "🛡️",
+    "defcon_update": "⚙️",
+    "failmail": "🧧",
+    "failed_file": "📁",
+    "incident_actioned": "✅",
+    "incident_unactioned": "❌",
+    "incident_investigating": "🔍",
+    "status_dnd": "🔴",
+    "status_idle": "🟡",
+    "status_offline": "⚪",
+    "status_online": "🟢",
+    "trashcan": "🗑️",
+}
 
 if not BOT_TOKEN:
     message = (
@@ -40,7 +65,7 @@ if not GUILD_ID:
     raise ValueError(message)
 
 
-class SilencedDict(dict):
+class SilencedDict(dict[str, Any]):
     """A dictionary that silences KeyError exceptions upon subscription to non existent items."""
 
     def __init__(self, name: str):
@@ -51,10 +76,10 @@ class SilencedDict(dict):
         try:
             return super().__getitem__(item)
         except KeyError:
-            log.warning(f"Couldn't find key: {item} in dict: {self.name} ")
+            log.fatal(f"Couldn't find key: {item} in dict: {self.name} ")
             log.warning(
-                "Please make sure to follow our contribution guideline "
-                "https://www.pythondiscord.com/pages/guides/pydis-guides/contributing/bot/ "
+                "Please follow our contribution guidelines "
+                "https://pydis.com/contributing-bot "
                 "to guarantee a successful run of botstrap "
             )
             sys.exit(-1)
@@ -65,15 +90,67 @@ class DiscordClient(Client):
 
     def __init__(self, guild_id: int | str):
         super().__init__(
-            base_url="https://discord.com/api/v10",
+            base_url="https://discord.com/api/v10/",
             headers={"Authorization": f"Bot {BOT_TOKEN}"},
             event_hooks={"response": [self._raise_for_status]},
         )
         self.guild_id = guild_id
+        self._app_info: dict[str, Any] | None = None
+        self._guild_info: dict[str, Any] | None = None
+        self._guild_channels: list[dict[str, Any]] | None = None
 
     @staticmethod
     def _raise_for_status(response: Response) -> None:
         response.raise_for_status()
+
+    @property
+    def guild_info(self) -> dict[str, Any]:
+        """Fetches the guild's information."""
+        if self._guild_info is None:
+            response = self.get(f"/guilds/{self.guild_id}")
+            self._guild_info = cast("dict[str, Any]", response.json())
+        return self._guild_info
+
+    @property
+    def guild_channels(self) -> list[dict[str, Any]]:
+        """Fetches the guild's channels."""
+        if self._guild_channels is None:
+            response = self.get(f"/guilds/{self.guild_id}/channels")
+            self._guild_channels = cast("list[dict[str, Any]]", response.json())
+        return self._guild_channels
+
+    @property
+    def app_info(self) -> dict[str, Any]:
+        """Fetches the application's information."""
+        if self._app_info is None:
+            response = self.get("/applications/@me")
+            self._app_info = cast("dict[str, Any]", response.json())
+        return self._app_info
+
+    def upgrade_application_flags_if_necessary(self) -> bool:
+        """
+        Set the app's flags to allow the intents that we need.
+
+        Returns a boolean defining whether changes were made.
+        """
+        # we're fetching first in the event that the user has already set some flags
+        app = self.app_info
+        current_flags = app.get("flags", 0)
+        new_flags = current_flags | 1 << 15 | 1 << 19
+        if new_flags != current_flags:
+            log.info("Upgrading application flags to enable required intents")
+            resp = self.patch("/applications/@me", json={"flags": new_flags})
+            self._app_info = cast("dict[str, Any]", resp.json())
+            return True
+        return False
+
+    def check_if_in_guild(self) -> bool:
+        """Check if the bot is a member of the guild."""
+        try:
+            _ = self.guild_info
+        except Exception:
+            return False
+        return True
 
     def upgrade_server_to_community_if_necessary(
         self,
@@ -81,48 +158,45 @@ class DiscordClient(Client):
         announcements_channel_id_: int | str,
     ) -> None:
         """Fetches server info & upgrades to COMMUNITY if necessary."""
-        response = self.get(f"/guilds/{self.guild_id}")
-        payload = response.json()
+        payload = self.guild_info
 
         if COMMUNITY_FEATURE not in payload["features"]:
-            log.warning("This server is currently not a community, upgrading.")
+            log.info("This server is currently not a community, upgrading.")
             payload["features"].append(COMMUNITY_FEATURE)
             payload["rules_channel_id"] = rules_channel_id_
             payload["public_updates_channel_id"] = announcements_channel_id_
-            self.patch(f"/guilds/{self.guild_id}", json=payload)
+            self._guild_info = self.patch(f"/guilds/{self.guild_id}", json=payload).json()
             log.info(f"Server {self.guild_id} has been successfully updated to a community.")
 
-    def create_forum_channel(
-        self,
-        channel_name_: str,
-        category_id_: int | str | None = None
-    ) -> int:
+    def create_forum_channel(self, channel_name_: str, category_id_: int | str | None = None) -> str:
         """Creates a new forum channel."""
         payload = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
         if category_id_:
             payload["parent_id"] = category_id_
 
-        response = self.post(f"/guilds/{self.guild_id}/channels", json=payload)
+        response = self.post(
+            f"/guilds/{self.guild_id}/channels",
+            json=payload,
+            headers={"X-Audit-Log-Reason": f"PyDis Botstrap: Creating {channel_name_} forum channel"},
+        )
         forum_channel_id = response.json()["id"]
         log.info(f"New forum channel: {channel_name_} has been successfully created.")
         return forum_channel_id
 
     def is_forum_channel(self, channel_id_: str) -> bool:
         """A boolean that indicates if a channel is of type GUILD_FORUM."""
-        response = self.get(f"/channels/{channel_id_}")
-        return response.json()["type"] == GUILD_FORUM_TYPE
+        return next(filter(lambda c: c["id"] == channel_id_, self.guild_channels)).get("type", None) == GUILD_FORUM_TYPE
 
-    def delete_channel(self, channel_id_: id) -> None:
+    def delete_channel(self, channel_id_: int | str) -> None:
         """Delete a channel."""
         log.info(f"Channel python-help: {channel_id_} is not a forum channel and will be replaced with one.")
         self.delete(f"/channels/{channel_id_}")
 
-    def get_all_roles(self) -> dict:
+    def get_all_roles(self) -> dict[str, int]:
         """Fetches all the roles in a guild."""
         result = SilencedDict(name="Roles dictionary")
 
-        response = self.get(f"guilds/{self.guild_id}/roles")
-        roles = response.json()
+        roles = self.guild_info["roles"]
 
         for role in roles:
             name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
@@ -137,8 +211,7 @@ class DiscordClient(Client):
         channels = SilencedDict(name="Channels dictionary")
         categories = SilencedDict(name="Categories dictionary")
 
-        response = self.get(f"guilds/{self.guild_id}/channels")
-        server_channels = response.json()
+        server_channels = self.guild_channels
 
         for channel in server_channels:
             channel_type = channel["type"]
@@ -147,37 +220,47 @@ class DiscordClient(Client):
                 name = f"off_topic_{off_topic_count}"
                 off_topic_count += 1
 
-            if channel_type == 4:
+            if channel_type == GUILD_CATEGORY_TYPE:
                 categories[name] = channel["id"]
             else:
                 channels[name] = channel["id"]
 
         return channels, categories
 
-    def webhook_exists(self, webhook_id_: int) -> bool:
-        """A predicate that indicates whether a webhook exists already or not."""
-        try:
-            self.get(f"webhooks/{webhook_id_}")
-            return True
-        except HTTPStatusError:
-            return False
+    def get_all_guild_webhooks(self) -> list[dict[str, Any]]:
+        """Lists all the webhooks for the guild."""
+        response = self.get(f"/guilds/{self.guild_id}/webhooks")
+        return response.json()
 
     def create_webhook(self, name: str, channel_id_: int) -> str:
         """Creates a new webhook for a particular channel."""
         payload = {"name": name}
 
-        response = self.post(f"channels/{channel_id_}/webhooks", json=payload)
+        response = self.post(
+            f"/channels/{channel_id_}/webhooks",
+            json=payload,
+            headers={"X-Audit-Log-Reason": f"PyDis Botstrap: Creating {name} webhook"},
+        )
         new_webhook = response.json()
         return new_webhook["id"]
 
 
 with DiscordClient(guild_id=GUILD_ID) as discord_client:
+    discord_client.upgrade_application_flags_if_necessary()
+
+    if not discord_client.check_if_in_guild():
+        client_id = discord_client.app_info.get("id")
+        log.error(f"The bot is not a member of the configured guild with ID {GUILD_ID}.")
+        log.warning(
+            f"Please invite with the following URL and rerun this script: https://discord.com/oauth2/authorize?client_id={client_id}&guild_id={GUILD_ID}&scope=bot+applications.commands&permissions=8"
+        )
+        sys.exit(42)
+
     config_str = "#Roles\n"
 
     all_roles = discord_client.get_all_roles()
 
     for role_name in _Roles.model_fields:
-
         role_id = all_roles.get(role_name, None)
         if not role_id:
             log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
@@ -212,9 +295,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     for channel_name in _Channels.model_fields:
         channel_id = all_channels.get(channel_name, None)
         if not channel_id:
-            log.warning(
-                f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used."
-            )
+            log.warning(f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used.")
             continue
 
         config_str += f"channels_{channel_name}={channel_id}\n"
@@ -225,29 +306,40 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     for category_name in _Categories.model_fields:
         category_id = all_categories.get(category_name, None)
         if not category_id:
-            log.warning(
-                f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used."
-            )
+            log.warning(f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used.")
             continue
 
         config_str += f"categories_{category_name}={category_id}\n"
 
-    env_file_path.write_text(config_str)
-
     config_str += "\n#Webhooks\n"
-
+    existing_webhooks = discord_client.get_all_guild_webhooks()
     for webhook_name, webhook_model in Webhooks:
-        webhook = discord_client.webhook_exists(webhook_model.id)
-        if not webhook:
-            webhook_channel_id = int(all_channels[webhook_name])
-            webhook_id = discord_client.create_webhook(webhook_name, webhook_channel_id)
+        formatted_webhook_name = webhook_name.replace("_", " ").title()
+        for existing_hook in existing_webhooks:
+            if (
+                # check the existing ID matches the configured one
+                existing_hook["id"] == str(webhook_model.id)
+                or (
+                    # check if the name and the channel ID match the configured ones
+                    existing_hook["name"] == formatted_webhook_name
+                    and existing_hook["channel_id"] == str(all_channels[webhook_name])
+                )
+            ):
+                webhook_id = existing_hook["id"]
+                break
         else:
-            webhook_id = webhook_model.id
+            webhook_channel_id = int(all_channels[webhook_name])
+            webhook_id = discord_client.create_webhook(formatted_webhook_name, webhook_channel_id)
         config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
-        config_str += f"webhooks_{webhook_name}__channel={all_channels[webhook_name]}\n"
 
     config_str += "\n#Emojis\n"
-    config_str += "emojis_trashcan=🗑️"
+
+    # we add some replacements for some of the emojis used by the bot
+    # this is a best-effort and doesn't replace every emote
+    for emoji_name, emoji_unicode in EMOJIS.items():
+        config_str += f"emojis_{emoji_name}={emoji_unicode}\n"
 
     with env_file_path.open("wb") as file:
         file.write(config_str.encode("utf-8"))
+
+    log.info("Botstrap completed successfully. Configuration has been written to %s", env_file_path)
