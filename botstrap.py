@@ -119,7 +119,6 @@ class DiscordClient(Client):
             self._guild_channels = cast("list[dict[str, Any]]", response.json())
         return self._guild_channels
 
-
     @property
     def app_info(self) -> dict[str, Any]:
         """Fetches the application's information."""
@@ -169,11 +168,7 @@ class DiscordClient(Client):
             self._guild_info = self.patch(f"/guilds/{self.guild_id}", json=payload).json()
             log.info(f"Server {self.guild_id} has been successfully updated to a community.")
 
-    def create_forum_channel(
-        self,
-        channel_name_: str,
-        category_id_: int | str | None = None
-    ) -> str:
+    def create_forum_channel(self, channel_name_: str, category_id_: int | str | None = None) -> str:
         """Creates a new forum channel."""
         payload = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
         if category_id_:
@@ -258,7 +253,6 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     all_roles = discord_client.get_all_roles()
 
     for role_name in _Roles.model_fields:
-
         role_id = all_roles.get(role_name, None)
         if not role_id:
             log.warning(f"Couldn't find the role {role_name} in the guild, PyDis' default values will be used.")
@@ -293,9 +287,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     for channel_name in _Channels.model_fields:
         channel_id = all_channels.get(channel_name, None)
         if not channel_id:
-            log.warning(
-                f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used."
-            )
+            log.warning(f"Couldn't find the channel {channel_name} in the guild, PyDis' default values will be used.")
             continue
 
         config_str += f"channels_{channel_name}={channel_id}\n"
@@ -306,9 +298,7 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
     for category_name in _Categories.model_fields:
         category_id = all_categories.get(category_name, None)
         if not category_id:
-            log.warning(
-                f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used."
-            )
+            log.warning(f"Couldn't find the category {category_name} in the guild, PyDis' default values will be used.")
             continue
 
         config_str += f"categories_{category_name}={category_id}\n"
