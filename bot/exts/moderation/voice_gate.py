@@ -30,7 +30,7 @@ FAILED_MESSAGE = (
 MESSAGE_FIELD_MAP = {
     "joined_at": f"been on the server for fewer than {GateConf.minimum_days_member} days",
     "voice_gate_blocked": "an active voice infraction",
-    "activity_blocks": "have not been active enough on the server yet",
+    "activity_blocks": "not been active enough on the server yet",
 }
 
 VOICE_PING = (
