@@ -10,10 +10,17 @@ repos:
         args: [--markdown-linebreak-ext=md]
   - repo: local
     hooks:
+    - id: uv-lock
+      name: uv-lock
+      description: "Automatically run 'uv lock' on your project dependencies"
+      entry: uv lock
+      language: system
+      files: ^(uv\.lock|pyproject\.toml|uv\.toml)$
+      pass_filenames: false
     - id: ruff
       name: ruff
       description: Run ruff linting
-      entry: uv run --frozen ruff check --force-exclude
+      entry: uv run --locked ruff check --force-exclude
       language: system
       'types_or': [python, pyi]
       require_serial: true
