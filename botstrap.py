@@ -1,9 +1,10 @@
+import base64
 import logging
 import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Final, cast
 
 from dotenv import load_dotenv
 from httpx import Client, HTTPStatusError, Response
@@ -15,6 +16,7 @@ from bot.constants import (  # noqa: E402
     Webhooks,
     _Categories,  # pyright: ignore[reportPrivateUsage]
     _Channels,  # pyright: ignore[reportPrivateUsage]
+    _Emojis,  # pyright: ignore[reportPrivateUsage]
     _Roles,  # pyright: ignore[reportPrivateUsage]
 )
 from bot.log import get_logger  # noqa: E402
@@ -35,6 +37,7 @@ ANNOUNCEMENTS_CHANNEL_NAME = "announcements"
 RULES_CHANNEL_NAME = "rules"
 GUILD_CATEGORY_TYPE = 4
 GUILD_FORUM_TYPE = 15
+EMOJI_REGEX = re.compile(r"<:(\w+):(\d+)>")
 
 if not BOT_TOKEN:
     message = (
@@ -75,6 +78,8 @@ class SilencedDict(dict[str, Any]):
 
 class DiscordClient(Client):
     """An HTTP client to communicate with Discord's APIs."""
+
+    CDN_BASE_URL: Final[str] = "https://cdn.discordapp.com"
 
     def __init__(self, guild_id: int | str):
         super().__init__(
@@ -239,6 +244,37 @@ class DiscordClient(Client):
         new_webhook = response.json()
         return new_webhook["id"]
 
+    def list_emojis(self) -> list[dict[str, Any]]:
+        """Lists all the emojis for the guild."""
+        response = self.get(f"/guilds/{self.guild_id}/emojis")
+        return response.json()
+
+    def get_emoji_contents(self, id_: str | int) -> bytes | None:
+        """Fetches the image data for an emoji by ID."""
+        # emojis are located at https://cdn.discordapp.com/emojis/{emoji_id}.{ext}
+        response = self.get(f"{self.CDN_BASE_URL}/emojis/{emoji_id!s}.webp")
+        return response.content
+
+    def clone_emoji(self, *, new_name: str, original_emoji_id: str | int) -> str:
+        """Creates a new emoji in the guild, cloned from another emoji by ID."""
+        emoji_data = self.get_emoji_contents(original_emoji_id)
+        if not emoji_data:
+            log.warning("Couldn't find emoji with ID %s.", original_emoji_id)
+            return ""
+
+        payload = {
+            "name": new_name,
+            "image": f"data:image/png;base64,{base64.b64encode(emoji_data).decode('utf-8')}",
+        }
+
+        response = self.post(
+            f"/guilds/{self.guild_id}/emojis",
+            json=payload,
+            headers={"X-Audit-Log-Reason": f"Creating {new_name} emoji as part of PyDis botstrap"},
+        )
+        new_emoji = response.json()
+        return new_emoji["id"]
+
 
 with DiscordClient(guild_id=GUILD_ID) as discord_client:
     if discord_client.upgrade_application_flags_if_necessary():
@@ -332,7 +368,24 @@ with DiscordClient(guild_id=GUILD_ID) as discord_client:
         config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
 
     config_str += "\n#Emojis\n"
-    config_str += "emojis_trashcan=🗑️"
+
+    existing_emojis = discord_client.list_emojis()
+    log.debug("Syncing emojis with bot configuration.")
+    for emoji_config_name, emoji_config in _Emojis.model_fields.items():
+        if not (match := EMOJI_REGEX.match(emoji_config.default)):
+            continue
+        emoji_name = match.group(1)
+        emoji_id = match.group(2)
+
+        for emoji in existing_emojis:
+            if emoji["name"] == emoji_name:
+                emoji_id = emoji["id"]
+                break
+        else:
+            log.info("Creating emoji %s", emoji_name)
+            emoji_id = discord_client.clone_emoji(new_name=emoji_name, original_emoji_id=emoji_id)
+
+        config_str += f"emojis_{emoji_config_name}=<:{emoji_name}:{emoji_id}>\n"
 
     with env_file_path.open("wb") as file:
         file.write(config_str.encode("utf-8"))
