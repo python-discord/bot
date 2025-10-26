@@ -235,7 +235,7 @@ class Filtering(Cog):
 
         text_contents = [
             await _extract_text_file_content(a)
-            for a in msg.attachments if "charset" in a.content_type
+            for a in msg.attachments if a.content_type and "charset" in a.content_type
         ]
 
         if text_contents:
