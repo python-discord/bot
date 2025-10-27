@@ -4,6 +4,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from types import TracebackType
 from typing import Any, Final, cast
 
 from dotenv import load_dotenv
@@ -26,7 +27,7 @@ log = get_logger("botstrap")
 # Silence noisy httpcore logger
 get_logger("httpcore").setLevel("INFO")
 
-env_file_path = Path(".env.server")
+ENV_FILE = Path(".env.server")
 BOT_TOKEN = os.getenv("BOT_TOKEN", None)
 GUILD_ID = os.getenv("GUILD_ID", None)
 
@@ -74,6 +75,10 @@ class SilencedDict(dict[str, Any]):
                 "to guarantee a successful run of botstrap "
             )
             sys.exit(-1)
+
+
+class BotstrapError(Exception):
+    """Raised when an error occurs during the botstrap process."""
 
 
 class DiscordClient(Client):
@@ -168,7 +173,7 @@ class DiscordClient(Client):
             payload["rules_channel_id"] = rules_channel_id_
             payload["public_updates_channel_id"] = announcements_channel_id_
             self._guild_info = self.patch(f"/guilds/{self.guild_id}", json=payload).json()
-            log.info(f"Server {self.guild_id} has been successfully updated to a community.")
+            log.info("Server %s has been successfully updated to a community.", self.guild_id)
 
     def create_forum_channel(self, channel_name_: str, category_id_: int | str | None = None) -> str:
         """Creates a new forum channel."""
@@ -182,7 +187,7 @@ class DiscordClient(Client):
             headers={"X-Audit-Log-Reason": "Creating forum channel as part of PyDis botstrap"},
         )
         forum_channel_id = response.json()["id"]
-        log.info(f"New forum channel: {channel_name_} has been successfully created.")
+        log.info("New forum channel: %s has been successfully created.", channel_name_)
         return forum_channel_id
 
     def is_forum_channel(self, channel_id: str) -> bool:
@@ -252,7 +257,7 @@ class DiscordClient(Client):
     def get_emoji_contents(self, id_: str | int) -> bytes | None:
         """Fetches the image data for an emoji by ID."""
         # emojis are located at https://cdn.discordapp.com/emojis/{emoji_id}.{ext}
-        response = self.get(f"{self.CDN_BASE_URL}/emojis/{emoji_id!s}.webp")
+        response = self.get(f"{self.CDN_BASE_URL}/emojis/{id_!s}.webp")
         return response.content
 
     def clone_emoji(self, *, new_name: str, original_emoji_id: str | int) -> str:
@@ -276,118 +281,189 @@ class DiscordClient(Client):
         return new_emoji["id"]
 
 
-with DiscordClient(guild_id=GUILD_ID) as discord_client:
-    if discord_client.upgrade_application_flags_if_necessary():
-        log.info("Application flags upgraded successfully, and necessary intents are now enabled.")
+class BotStrapper:
+    """Bootstrap the bot configuration for a given guild."""
 
-    if not discord_client.check_if_in_guild():
-        client_id = discord_client.app_info["id"]
-        log.error("The bot is not a member of the configured guild with ID %s.", GUILD_ID)
-        log.warning(
-            "Please invite with the following URL and rerun this script: "
-            "https://discord.com/oauth2/authorize?client_id=%s&guild_id=%s&scope=bot+applications.commands&permissions=8",
-            client_id,
-            GUILD_ID,
-        )
-        sys.exit(69)
+    def __init__(self, guild_id: int | str, env_file: Path):
+        self.client = DiscordClient(guild_id=guild_id)
+        self.env_file = env_file
 
-    config_str = "#Roles\n"
+    def __enter__(self):
+        return self
 
-    all_roles = discord_client.get_all_roles()
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None = None,
+        exc_value: BaseException | None = None,
+        traceback: TracebackType | None = None,
+    ) -> None:
+        self.client.__exit__(exc_type, exc_value, traceback)
 
-    for role_name in _Roles.model_fields:
-        role_id = all_roles.get(role_name, None)
-        if not role_id:
-            log.warning("Couldn't find the role %s in the guild, PyDis' default values will be used.", role_name)
-            continue
+    def upgrade_client(self) -> bool:
+        """Upgrade the application's flags if necessary."""
+        if self.client.upgrade_application_flags_if_necessary():
+            log.info("Application flags upgraded successfully, and necessary intents are now enabled.")
+            return True
+        return False
 
-        config_str += f"roles_{role_name}={role_id}\n"
-
-    all_channels, all_categories = discord_client.get_all_channels_and_categories()
-
-    config_str += "\n#Channels\n"
-
-    rules_channel_id = all_channels[RULES_CHANNEL_NAME]
-    announcements_channel_id = all_channels[ANNOUNCEMENTS_CHANNEL_NAME]
-
-    discord_client.upgrade_server_to_community_if_necessary(rules_channel_id, announcements_channel_id)
-
-    if python_help_channel_id := all_channels.get(PYTHON_HELP_CHANNEL_NAME):
-        if not discord_client.is_forum_channel(python_help_channel_id):
-            discord_client.delete_channel(python_help_channel_id)
-            python_help_channel_id = None
-
-    if not python_help_channel_id:
-        python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace("_", "-")
-        python_help_category_id = all_categories[PYTHON_HELP_CATEGORY_NAME]
-        python_help_channel_id = discord_client.create_forum_channel(python_help_channel_name, python_help_category_id)
-        all_channels[PYTHON_HELP_CHANNEL_NAME] = python_help_channel_id
-
-    for channel_name in _Channels.model_fields:
-        channel_id = all_channels.get(channel_name, None)
-        if not channel_id:
-            log.warning("Couldn't find the channel %s in the guild, PyDis' default values will be used.", channel_name)
-            continue
-
-        config_str += f"channels_{channel_name}={channel_id}\n"
-    config_str += f"channels_{PYTHON_HELP_CHANNEL_NAME}={python_help_channel_id}\n"
-
-    config_str += "\n#Categories\n"
-
-    for category_name in _Categories.model_fields:
-        category_id = all_categories.get(category_name, None)
-        if not category_id:
+    def check_guild_membership(self) -> None:
+        """Check the bot is in the required guild."""
+        if not self.client.check_if_in_guild():
+            client_id = self.client.app_info["id"]
+            log.error("The bot is not a member of the configured guild with ID %s.", GUILD_ID)
             log.warning(
-                "Couldn't find the category %s in the guild, PyDis' default values will be used.", category_name
+                "Please invite with the following URL and rerun this script: "
+                "https://discord.com/oauth2/authorize?client_id=%s&guild_id=%s&scope=bot+applications.commands&permissions=8",
+                client_id,
+                GUILD_ID,
             )
-            continue
+            raise BotstrapError("Bot is not a member of the configured guild.")
 
-        config_str += f"categories_{category_name}={category_id}\n"
+    def get_roles(self) -> dict[str, Any]:
+        """Get a config map of all of the roles in the guild."""
+        all_roles = self.client.get_all_roles()
 
-    env_file_path.write_text(config_str)
+        data: dict[str, int] = {}
 
-    config_str += "\n#Webhooks\n"
-    existing_webhooks = discord_client.get_all_guild_webhooks()
-    for webhook_name, webhook_model in Webhooks:
-        formatted_webhook_name = webhook_name.replace("_", " ").title()
-        for existing_hook in existing_webhooks:
-            if (
-                # check the existing ID matches the configured one
-                existing_hook["id"] == str(webhook_model.id)
-                or (
-                    # check if the name and the channel ID match the configured ones
-                    existing_hook["name"] == formatted_webhook_name
-                    and existing_hook["channel_id"] == str(all_channels[webhook_name])
+        for role_name in _Roles.model_fields:
+            role_id = all_roles.get(role_name, None)
+            if not role_id:
+                log.warning("Couldn't find the role %s in the guild, PyDis' default values will be used.", role_name)
+                continue
+
+            data[role_name] = role_id
+
+        return data
+
+    def get_channels(self) -> dict[str, Any]:
+        """Get a config map of all of the channels in the guild."""
+        all_channels, all_categories = self.client.get_all_channels_and_categories()
+
+        rules_channel_id = all_channels[RULES_CHANNEL_NAME]
+        announcements_channel_id = all_channels[ANNOUNCEMENTS_CHANNEL_NAME]
+
+        self.client.upgrade_server_to_community_if_necessary(rules_channel_id, announcements_channel_id)
+
+        if python_help_channel_id := all_channels.get(PYTHON_HELP_CHANNEL_NAME):
+            if not self.client.is_forum_channel(python_help_channel_id):
+                self.client.delete_channel(python_help_channel_id)
+                python_help_channel_id = None
+
+        if not python_help_channel_id:
+            python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace("_", "-")
+            python_help_category_id = all_categories[PYTHON_HELP_CATEGORY_NAME]
+            python_help_channel_id = self.client.create_forum_channel(python_help_channel_name, python_help_category_id)
+            all_channels[PYTHON_HELP_CHANNEL_NAME] = python_help_channel_id
+
+        data: dict[str, str] = {}
+        for channel_name in _Channels.model_fields:
+            channel_id = all_channels.get(channel_name, None)
+            if not channel_id:
+                log.warning(
+                    "Couldn't find the channel %s in the guild, PyDis' default values will be used.", channel_name
                 )
-            ):
-                webhook_id = existing_hook["id"]
-                break
-        else:
-            webhook_channel_id = int(all_channels[webhook_name])
-            webhook_id = discord_client.create_webhook(formatted_webhook_name, webhook_channel_id)
-        config_str += f"webhooks_{webhook_name}__id={webhook_id}\n"
+                continue
 
-    config_str += "\n#Emojis\n"
+            data[channel_name] = channel_id
 
-    existing_emojis = discord_client.list_emojis()
-    log.debug("Syncing emojis with bot configuration.")
-    for emoji_config_name, emoji_config in _Emojis.model_fields.items():
-        if not (match := EMOJI_REGEX.match(emoji_config.default)):
-            continue
-        emoji_name = match.group(1)
-        emoji_id = match.group(2)
+        return data
 
-        for emoji in existing_emojis:
-            if emoji["name"] == emoji_name:
-                emoji_id = emoji["id"]
-                break
-        else:
-            log.info("Creating emoji %s", emoji_name)
-            emoji_id = discord_client.clone_emoji(new_name=emoji_name, original_emoji_id=emoji_id)
+    def get_categories(self) -> dict[str, Any]:
+        """Get a config map of all of the categories in guild."""
+        _channels, all_categories = self.client.get_all_channels_and_categories()
 
-        config_str += f"emojis_{emoji_config_name}=<:{emoji_name}:{emoji_id}>\n"
+        data: dict[str, str] = {}
+        for category_name in _Categories.model_fields:
+            category_id = all_categories.get(category_name, None)
+            if not category_id:
+                log.warning(
+                    "Couldn't find the category %s in the guild, PyDis' default values will be used.", category_name
+                )
+                continue
 
-    with env_file_path.open("wb") as file:
-        file.write(config_str.encode("utf-8"))
+            data[category_name] = category_id
+        return data
 
-    log.info("Botstrap completed successfully. Configuration has been written to %s", env_file_path)
+    def sync_webhooks(self) -> dict[str, Any]:
+        """Get webhook config. Will create all webhooks that cannot be found."""
+        all_channels, _categories = self.client.get_all_channels_and_categories()
+
+        data: dict[str, Any] = {}
+
+        existing_webhooks = self.client.get_all_guild_webhooks()
+        for webhook_name, webhook_model in Webhooks:
+            formatted_webhook_name = webhook_name.replace("_", " ").title()
+            for existing_hook in existing_webhooks:
+                if (
+                    # check the existing ID matches the configured one
+                    existing_hook["id"] == str(webhook_model.id)
+                    or (
+                        # check if the name and the channel ID match the configured ones
+                        existing_hook["name"] == formatted_webhook_name
+                        and existing_hook["channel_id"] == str(all_channels[webhook_name])
+                    )
+                ):
+                    webhook_id = existing_hook["id"]
+                    break
+            else:
+                webhook_channel_id = int(all_channels[webhook_name])
+                webhook_id = self.client.create_webhook(formatted_webhook_name, webhook_channel_id)
+
+            data[webhook_name + "__id"] = webhook_id
+
+        return data
+
+    def sync_emojis(self) -> dict[str, Any]:
+        """Get emoji config. Will create all emojis that cannot be found."""
+        existing_emojis = self.client.list_emojis()
+        log.debug("Syncing emojis with bot configuration.")
+        data: dict[str, Any] = {}
+        for emoji_config_name, emoji_config in _Emojis.model_fields.items():
+            if not (match := EMOJI_REGEX.match(emoji_config.default)):
+                continue
+            emoji_name = match.group(1)
+            emoji_id = match.group(2)
+
+            for emoji in existing_emojis:
+                if emoji["name"] == emoji_name:
+                    emoji_id = emoji["id"]
+                    break
+            else:
+                log.info("Creating emoji %s", emoji_name)
+                emoji_id = self.client.clone_emoji(new_name=emoji_name, original_emoji_id=emoji_id)
+
+            data[emoji_config_name] = f"<:{emoji_name}:{emoji_id}>"
+
+        return data
+
+    def write_config_env(self, config: dict[str, dict[str, Any]], env_file: Path) -> None:
+        """Write the configuration to the specified env_file."""
+        # in order to support commented sections, we write the following
+        with self.env_file.open("wb") as file:
+            # format the dictionary into .env style
+            for category, category_values in config.items():
+                file.write(f"# {category.capitalize()}\n".encode())
+                for key, value in category_values.items():
+                    file.write(f"{category}_{key}={value}\n".encode())
+                file.write(b"\n")
+
+    def run(self) -> None:
+        """Runs the botstrap process."""
+        config: dict[str, dict[str, Any]] = {}
+        self.upgrade_client()
+        self.check_guild_membership()
+        config["categories"] = self.get_categories()
+        config["channels"] = self.get_channels()
+        config["roles"] = self.get_roles()
+
+        config["webhooks"] = self.sync_webhooks()
+        config["emojis"] = self.sync_emojis()
+
+        self.write_config_env(config, self.env_file)
+
+
+if __name__ == "__main__":
+    botstrap = BotStrapper(guild_id=GUILD_ID, env_file=ENV_FILE)
+    with botstrap:
+        botstrap.run()
+    log.info("Botstrap completed successfully. Configuration has been written to %s", ENV_FILE)
