@@ -10,7 +10,7 @@ from typing import Any, Final, cast
 import dotenv
 from httpx import Client, HTTPStatusError, Response
 
-log = logging.getLogger("botstrap")  # note this instance will not have the .trace level
+log = logging.getLogger("botstrap")  # Note this instance will not have the .trace level
 
 # TODO: Remove once better error handling for constants.py is in place.
 if (dotenv.dotenv_values().get("BOT_TOKEN") or os.getenv("BOT_TOKEN")) is None:
@@ -61,7 +61,7 @@ class SilencedDict(dict[str, Any]):
     """A dictionary that silences KeyError exceptions upon subscription to non existent items."""
 
     def __init__(self, name: str):
-        self.name = name
+        self.name: str = name
         super().__init__()
 
     def __getitem__(self, item: str):
@@ -92,7 +92,7 @@ class DiscordClient(Client):
             headers={"Authorization": f"Bot {bot_token}"},
             event_hooks={"response": [self._raise_for_status]},
         )
-        self.guild_id = guild_id
+        self.guild_id: int | str = guild_id
         self._app_info: dict[str, Any] | None = None
         self._guild_info: dict[str, Any] | None = None
         self._guild_channels: list[dict[str, Any]] | None = None
@@ -161,8 +161,8 @@ class DiscordClient(Client):
 
     def upgrade_server_to_community_if_necessary(
         self,
-        rules_channel_id_: int | str,
-        announcements_channel_id_: int | str,
+        rules_channel_id: int | str,
+        announcements_channel_id: int | str,
     ) -> bool:
         """Fetches server info & upgrades to COMMUNITY if necessary."""
         payload = self.guild_info
@@ -170,8 +170,8 @@ class DiscordClient(Client):
         if COMMUNITY_FEATURE not in payload["features"]:
             log.info("This server is currently not a community, upgrading.")
             payload["features"].append(COMMUNITY_FEATURE)
-            payload["rules_channel_id"] = rules_channel_id_
-            payload["public_updates_channel_id"] = announcements_channel_id_
+            payload["rules_channel_id"] = rules_channel_id
+            payload["public_updates_channel_id"] = announcements_channel_id
             self._guild_info = self.patch(f"/guilds/{self.guild_id}", json=payload).json()
             log.info("Server %s has been successfully updated to a community.", self.guild_id)
             return True
@@ -215,11 +215,11 @@ class DiscordClient(Client):
         response = self.get(f"/guilds/{self.guild_id}/webhooks")
         return response.json()
 
-    def create_webhook(self, name: str, channel_id_: int) -> str:
+    def create_webhook(self, name: str, channel_id: int | str) -> str:
         """Creates a new webhook for a particular channel."""
         payload = {"name": name}
         response = self.post(
-            f"/channels/{channel_id_}/webhooks",
+            f"/channels/{channel_id}/webhooks",
             json=payload,
             headers={"X-Audit-Log-Reason": "Creating webhook as part of PyDis botstrap"},
         )
@@ -272,9 +272,9 @@ class BotStrapper:
         env_file: Path,
         bot_token: str,
     ):
-        self.guild_id = guild_id
-        self.client = DiscordClient(guild_id=guild_id, bot_token=bot_token)
-        self.env_file = env_file
+        self.guild_id: int | str = guild_id
+        self.client: DiscordClient = DiscordClient(guild_id=guild_id, bot_token=bot_token)
+        self.env_file: Path = env_file
 
     def __enter__(self):
         return self
@@ -310,12 +310,13 @@ class BotStrapper:
     def upgrade_guild(self, announcements_channel_id: str, rules_channel_id: str) -> bool:
         """Upgrade the guild to a community if necessary."""
         return self.client.upgrade_server_to_community_if_necessary(
-            rules_channel_id_=rules_channel_id,
-            announcements_channel_id_=announcements_channel_id,
+            rules_channel_id=rules_channel_id,
+            announcements_channel_id=announcements_channel_id,
         )
 
     def get_roles(self) -> dict[str, Any]:
         """Get a config map of all of the roles in the guild."""
+        log.debug("Syncing roles with bot configuration.")
         all_roles = self.client.get_all_roles()
 
         data: dict[str, int] = {}
@@ -332,6 +333,7 @@ class BotStrapper:
 
     def get_channels(self) -> dict[str, Any]:
         """Get a config map of all of the channels in the guild."""
+        log.debug("Syncing channels with bot configuration.")
         all_channels, _categories = self.client.get_all_channels_and_categories()
 
         data: dict[str, str] = {}
@@ -349,6 +351,7 @@ class BotStrapper:
 
     def get_categories(self) -> dict[str, Any]:
         """Get a config map of all of the categories in guild."""
+        log.debug("Syncing categories with bot configuration.")
         _channels, all_categories = self.client.get_all_channels_and_categories()
 
         data: dict[str, str] = {}
@@ -365,27 +368,29 @@ class BotStrapper:
 
     def sync_webhooks(self) -> dict[str, Any]:
         """Get webhook config. Will create all webhooks that cannot be found."""
+        log.debug("Syncing webhooks with bot configuration.")
+
         all_channels, _categories = self.client.get_all_channels_and_categories()
 
         data: dict[str, Any] = {}
 
         existing_webhooks = self.client.get_all_guild_webhooks()
-        for webhook_name, webhook_model in Webhooks:
+        for webhook_name, configured_webhook in Webhooks.model_dump().items():
             formatted_webhook_name = webhook_name.replace("_", " ").title()
+            configured_webhook_id = str(configured_webhook["id"])
+
             for existing_hook in existing_webhooks:
-                if (
-                    # Check the existing ID matches the configured one
-                    existing_hook["id"] == str(webhook_model.id)
-                    or (
-                        # Check if the name and the channel ID match the configured ones
-                        existing_hook["name"] == formatted_webhook_name
-                        and existing_hook["channel_id"] == str(all_channels[webhook_name])
-                    )
+                existing_hook_id: str = existing_hook["id"]
+
+                if existing_hook_id == configured_webhook_id or (
+                    existing_hook["name"] == formatted_webhook_name
+                    # This requires the normalized channel name matches the webhook attribute
+                    and existing_hook["channel_id"] == str(all_channels[webhook_name])
                 ):
-                    webhook_id = existing_hook["id"]
+                    webhook_id = existing_hook_id
                     break
             else:
-                webhook_channel_id = int(all_channels[webhook_name])
+                webhook_channel_id = all_channels[webhook_name]
                 webhook_id = self.client.create_webhook(formatted_webhook_name, webhook_channel_id)
 
             data[webhook_name + "__id"] = webhook_id
@@ -396,12 +401,12 @@ class BotStrapper:
         """Get emoji config. Will create all emojis that cannot be found."""
         existing_emojis = self.client.list_emojis()
         log.debug("Syncing emojis with bot configuration.")
-        data: dict[str, Any] = {}
+        data: dict[str, str] = {}
         for emoji_config_name, emoji_config in _Emojis.model_fields.items():
-            if not (match := EMOJI_REGEX.match(emoji_config.default)):
+            if not (match := EMOJI_REGEX.fullmatch(emoji_config.default)):
                 continue
             emoji_name = match.group(1)
-            emoji_id = match.group(2)
+            emoji_id: str = match.group(2)
 
             for emoji in existing_emojis:
                 if emoji["name"] == emoji_name:
@@ -415,21 +420,32 @@ class BotStrapper:
 
         return data
 
-    def write_config_env(self, config: dict[str, dict[str, Any]]) -> None:
+    def write_config_env(self, config: dict[str, dict[str, Any]]) -> bool:
         """Write the configuration to the specified env_file."""
-        with self.env_file.open("wb") as file:
-            for category, category_values in config.items():
+        with self.env_file.open("r+") as file:
+            before = file.read()
+            file.seek(0)
+            for num, (category, category_values) in enumerate(config.items()):
                 # In order to support commented sections, we write the following
-                file.write(f"# {category.capitalize()}\n".encode())
+                file.write(f"# {category.capitalize()}\n")
                 # Format the dictionary into .env style
                 for key, value in category_values.items():
-                    file.write(f"{category}_{key}={value}\n".encode())
-                file.write(b"\n")
+                    file.write(f"{category}_{key}={value}\n")
+                if num < len(config) - 1:
+                    file.write("\n")
 
-    def run(self) -> None:
+            file.truncate()
+            file.seek(0)
+            after = file.read()
+
+        return before != after
+
+    def run(self) -> bool:
         """Runs the botstrap process."""
+        # Track if any changes were made and exit with an error code if so.
+        changes: bool = False
         config: dict[str, dict[str, object]] = {}
-        self.upgrade_client()
+        changes |= self.upgrade_client()
         self.check_guild_membership()
 
         channels = self.get_channels()
@@ -437,8 +453,11 @@ class BotStrapper:
         # Ensure the guild is upgraded to a community if necessary.
         # This isn't strictly necessary for bot functionality, but
         # it prevents weird transients since PyDis is a community server.
-        self.upgrade_guild(channels[ANNOUNCEMENTS_CHANNEL_NAME], channels[RULES_CHANNEL_NAME])
+        changes |= self.upgrade_guild(channels[ANNOUNCEMENTS_CHANNEL_NAME], channels[RULES_CHANNEL_NAME])
 
+        # Though sync_webhooks and sync_emojis DO make api calls that may modify server state,
+        # those changes will be reflected in the config written to the .env file.
+        # Therefore, we don't need to track if any emojis or webhooks are being changed within those settings.
         config = {
             "categories": self.get_categories(),
             "channels": channels,
@@ -447,11 +466,16 @@ class BotStrapper:
             "emojis": self.sync_emojis(),
         }
 
-        self.write_config_env(config, self.env_file)
+        changes |= self.write_config_env(config)
+        return changes
 
 
 if __name__ == "__main__":
     botstrap = BotStrapper(guild_id=GuildConstants.id, env_file=ENV_FILE, bot_token=BotConstants.token)
     with botstrap:
-        botstrap.run()
-    log.info("Botstrap completed successfully. Configuration has been written to %s", ENV_FILE)
+        changes_made = botstrap.run()
+    if changes_made:
+        log.info("Botstrap completed successfully. Updated configuration has been written to %s", ENV_FILE)
+    else:
+        log.info("Botstrap completed successfully. No changes were necessary.")
+    sys.exit(changes_made)
