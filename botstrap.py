@@ -43,12 +43,9 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 ENV_FILE = Path(".env.server")
 
 COMMUNITY_FEATURE = "COMMUNITY"
-PYTHON_HELP_CHANNEL_NAME = "python_help"
-PYTHON_HELP_CATEGORY_NAME = "python_help_system"
 ANNOUNCEMENTS_CHANNEL_NAME = "announcements"
 RULES_CHANNEL_NAME = "rules"
 GUILD_CATEGORY_TYPE = 4
-GUILD_FORUM_TYPE = 15
 EMOJI_REGEX = re.compile(r"<:(\w+):(\d+)>")
 
 if GuildConstants.id == type(GuildConstants).model_fields["id"].default:
@@ -166,7 +163,7 @@ class DiscordClient(Client):
         self,
         rules_channel_id_: int | str,
         announcements_channel_id_: int | str,
-    ) -> None:
+    ) -> bool:
         """Fetches server info & upgrades to COMMUNITY if necessary."""
         payload = self.guild_info
 
@@ -177,30 +174,8 @@ class DiscordClient(Client):
             payload["public_updates_channel_id"] = announcements_channel_id_
             self._guild_info = self.patch(f"/guilds/{self.guild_id}", json=payload).json()
             log.info("Server %s has been successfully updated to a community.", self.guild_id)
-
-    def create_forum_channel(self, channel_name_: str, category_id_: int | str | None = None) -> str:
-        """Creates a new forum channel."""
-        payload: dict[str, Any] = {"name": channel_name_, "type": GUILD_FORUM_TYPE}
-        if category_id_:
-            payload["parent_id"] = category_id_
-
-        response = self.post(
-            f"/guilds/{self.guild_id}/channels",
-            json=payload,
-            headers={"X-Audit-Log-Reason": "Creating forum channel as part of PyDis botstrap"},
-        )
-        forum_channel_id = response.json()["id"]
-        log.info("New forum channel: %s has been successfully created.", channel_name_)
-        return forum_channel_id
-
-    def is_forum_channel(self, channel_id: str) -> bool:
-        """A boolean that indicates if a channel is of type GUILD_FORUM."""
-        return self.get_channel(channel_id)["type"] == GUILD_FORUM_TYPE
-
-    def delete_channel(self, channel_id: str | int) -> None:
-        """Delete a channel."""
-        log.info("Channel python-help: %s is not a forum channel and will be replaced with one.", channel_id)
-        self.delete(f"/channels/{channel_id}")
+            return True
+        return False
 
     def get_all_roles(self) -> dict[str, int]:
         """Fetches all the roles in a guild."""
@@ -332,6 +307,13 @@ class BotStrapper:
             )
             raise BotstrapError("Bot is not a member of the configured guild.")
 
+    def upgrade_guild(self, announcements_channel_id: str, rules_channel_id: str) -> bool:
+        """Upgrade the guild to a community if necessary."""
+        return self.client.upgrade_server_to_community_if_necessary(
+            rules_channel_id_=rules_channel_id,
+            announcements_channel_id_=announcements_channel_id,
+        )
+
     def get_roles(self) -> dict[str, Any]:
         """Get a config map of all of the roles in the guild."""
         all_roles = self.client.get_all_roles()
@@ -350,23 +332,7 @@ class BotStrapper:
 
     def get_channels(self) -> dict[str, Any]:
         """Get a config map of all of the channels in the guild."""
-        all_channels, all_categories = self.client.get_all_channels_and_categories()
-
-        rules_channel_id = all_channels[RULES_CHANNEL_NAME]
-        announcements_channel_id = all_channels[ANNOUNCEMENTS_CHANNEL_NAME]
-
-        self.client.upgrade_server_to_community_if_necessary(rules_channel_id, announcements_channel_id)
-
-        if python_help_channel_id := all_channels.get(PYTHON_HELP_CHANNEL_NAME):
-            if not self.client.is_forum_channel(python_help_channel_id):
-                self.client.delete_channel(python_help_channel_id)
-                python_help_channel_id = None
-
-        if not python_help_channel_id:
-            python_help_channel_name = PYTHON_HELP_CHANNEL_NAME.replace("_", "-")
-            python_help_category_id = all_categories[PYTHON_HELP_CATEGORY_NAME]
-            python_help_channel_id = self.client.create_forum_channel(python_help_channel_name, python_help_category_id)
-            all_channels[PYTHON_HELP_CHANNEL_NAME] = python_help_channel_id
+        all_channels, _categories = self.client.get_all_channels_and_categories()
 
         data: dict[str, str] = {}
         for channel_name in _Channels.model_fields:
@@ -408,10 +374,10 @@ class BotStrapper:
             formatted_webhook_name = webhook_name.replace("_", " ").title()
             for existing_hook in existing_webhooks:
                 if (
-                    # check the existing ID matches the configured one
+                    # Check the existing ID matches the configured one
                     existing_hook["id"] == str(webhook_model.id)
                     or (
-                        # check if the name and the channel ID match the configured ones
+                        # Check if the name and the channel ID match the configured ones
                         existing_hook["name"] == formatted_webhook_name
                         and existing_hook["channel_id"] == str(all_channels[webhook_name])
                     )
@@ -449,25 +415,33 @@ class BotStrapper:
 
         return data
 
-    def write_config_env(self, config: dict[str, dict[str, Any]], env_file: Path) -> None:
+    def write_config_env(self, config: dict[str, dict[str, Any]]) -> None:
         """Write the configuration to the specified env_file."""
-        # in order to support commented sections, we write the following
         with self.env_file.open("wb") as file:
-            # format the dictionary into .env style
             for category, category_values in config.items():
+                # In order to support commented sections, we write the following
                 file.write(f"# {category.capitalize()}\n".encode())
+                # Format the dictionary into .env style
                 for key, value in category_values.items():
                     file.write(f"{category}_{key}={value}\n".encode())
                 file.write(b"\n")
 
     def run(self) -> None:
         """Runs the botstrap process."""
-        config: dict[str, dict[str, Any]] = {}
+        config: dict[str, dict[str, object]] = {}
         self.upgrade_client()
         self.check_guild_membership()
+
+        channels = self.get_channels()
+
+        # Ensure the guild is upgraded to a community if necessary.
+        # This isn't strictly necessary for bot functionality, but
+        # it prevents weird transients since PyDis is a community server.
+        self.upgrade_guild(channels[ANNOUNCEMENTS_CHANNEL_NAME], channels[RULES_CHANNEL_NAME])
+
         config = {
             "categories": self.get_categories(),
-            "channels": self.get_channels(),
+            "channels": channels,
             "roles": self.get_roles(),
             "webhooks": self.sync_webhooks(),
             "emojis": self.sync_emojis(),
