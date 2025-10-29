@@ -7,29 +7,40 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Final, cast
 
-from dotenv import load_dotenv
+import dotenv
 from httpx import Client, HTTPStatusError, Response
+
+log = logging.getLogger("botstrap")  # note this instance will not have the .trace level
+
+# TODO: Remove once better error handling for constants.py is in place.
+if (dotenv.dotenv_values().get("BOT_TOKEN") or os.getenv("BOT_TOKEN")) is None:
+    msg = (
+        "Couldn't find the `BOT_TOKEN` environment variable. "
+        "Make sure to add it to your `.env` file like this: `BOT_TOKEN=value_of_your_bot_token`"
+    )
+    log.fatal(msg)
+    sys.exit(1)
 
 # Filter out the send typing monkeypatch logs from bot core when we import to get constants
 logging.getLogger("pydis_core").setLevel(logging.WARNING)
 
+# As a side effect, this also configures our logging styles
 from bot.constants import (  # noqa: E402
+    Bot as BotConstants,
+    Guild as GuildConstants,
     Webhooks,
     _Categories,  # pyright: ignore[reportPrivateUsage]
     _Channels,  # pyright: ignore[reportPrivateUsage]
     _Emojis,  # pyright: ignore[reportPrivateUsage]
     _Roles,  # pyright: ignore[reportPrivateUsage]
 )
-from bot.log import get_logger  # noqa: E402
 
-load_dotenv()
-log = get_logger("botstrap")
-# Silence noisy httpcore logger
-get_logger("httpcore").setLevel("INFO")
+# Silence noisy loggers
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 
 ENV_FILE = Path(".env.server")
-BOT_TOKEN = os.getenv("BOT_TOKEN", None)
-GUILD_ID = os.getenv("GUILD_ID", None)
 
 COMMUNITY_FEATURE = "COMMUNITY"
 PYTHON_HELP_CHANNEL_NAME = "python_help"
@@ -40,21 +51,13 @@ GUILD_CATEGORY_TYPE = 4
 GUILD_FORUM_TYPE = 15
 EMOJI_REGEX = re.compile(r"<:(\w+):(\d+)>")
 
-if not BOT_TOKEN:
-    message = (
-        "Couldn't find the `BOT_TOKEN` environment variable. "
-        "Make sure to add it to your `.env` file like this: `BOT_TOKEN=value_of_your_bot_token`"
-    )
-    log.warning(message)
-    raise ValueError(message)
-
-if not GUILD_ID:
-    message = (
+if GuildConstants.id == type(GuildConstants).model_fields["id"].default:
+    msg = (
         "Couldn't find the `GUILD_ID` environment variable. "
         "Make sure to add it to your `.env` file like this: `GUILD_ID=value_of_your_discord_server_id`"
     )
-    log.warning(message)
-    raise ValueError(message)
+    log.error(msg)
+    sys.exit(1)
 
 
 class SilencedDict(dict[str, Any]):
@@ -86,10 +89,10 @@ class DiscordClient(Client):
 
     CDN_BASE_URL: Final[str] = "https://cdn.discordapp.com"
 
-    def __init__(self, guild_id: int | str):
+    def __init__(self, *, guild_id: int | str, bot_token: str):
         super().__init__(
             base_url="https://discord.com/api/v10",
-            headers={"Authorization": f"Bot {BOT_TOKEN}"},
+            headers={"Authorization": f"Bot {bot_token}"},
             event_hooks={"response": [self._raise_for_status]},
         )
         self.guild_id = guild_id
@@ -284,8 +287,15 @@ class DiscordClient(Client):
 class BotStrapper:
     """Bootstrap the bot configuration for a given guild."""
 
-    def __init__(self, guild_id: int | str, env_file: Path):
-        self.client = DiscordClient(guild_id=guild_id)
+    def __init__(
+        self,
+        *,
+        guild_id: int | str,
+        env_file: Path,
+        bot_token: str,
+    ):
+        self.guild_id = guild_id
+        self.client = DiscordClient(guild_id=guild_id, bot_token=bot_token)
         self.env_file = env_file
 
     def __enter__(self):
@@ -310,12 +320,12 @@ class BotStrapper:
         """Check the bot is in the required guild."""
         if not self.client.check_if_in_guild():
             client_id = self.client.app_info["id"]
-            log.error("The bot is not a member of the configured guild with ID %s.", GUILD_ID)
+            log.error("The bot is not a member of the configured guild with ID %s.", self.guild_id)
             log.warning(
                 "Please invite with the following URL and rerun this script: "
                 "https://discord.com/oauth2/authorize?client_id=%s&guild_id=%s&scope=bot+applications.commands&permissions=8",
                 client_id,
-                GUILD_ID,
+                self.guild_id,
             )
             raise BotstrapError("Bot is not a member of the configured guild.")
 
@@ -463,7 +473,7 @@ class BotStrapper:
 
 
 if __name__ == "__main__":
-    botstrap = BotStrapper(guild_id=GUILD_ID, env_file=ENV_FILE)
+    botstrap = BotStrapper(guild_id=GuildConstants.id, env_file=ENV_FILE, bot_token=BotConstants.token)
     with botstrap:
         botstrap.run()
     log.info("Botstrap completed successfully. Configuration has been written to %s", ENV_FILE)
