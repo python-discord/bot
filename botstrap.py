@@ -243,13 +243,13 @@ class DiscordClient(Client):
     def create_webhook(self, name: str, channel_id_: int) -> str:
         """Creates a new webhook for a particular channel."""
         payload = {"name": name}
-
         response = self.post(
             f"/channels/{channel_id_}/webhooks",
             json=payload,
             headers={"X-Audit-Log-Reason": "Creating webhook as part of PyDis botstrap"},
         )
         new_webhook = response.json()
+        log.info("Creating webhook: %s has been successfully created.", name)
         return new_webhook["id"]
 
     def list_emojis(self) -> list[dict[str, Any]]:
@@ -259,7 +259,7 @@ class DiscordClient(Client):
 
     def get_emoji_contents(self, id_: str | int) -> bytes | None:
         """Fetches the image data for an emoji by ID."""
-        # emojis are located at https://cdn.discordapp.com/emojis/{emoji_id}.{ext}
+        # Emojis are located at https://cdn.discordapp.com/emojis/{emoji_id}.{ext}
         response = self.get(f"{self.CDN_BASE_URL}/emojis/{id_!s}.webp")
         return response.content
 
@@ -270,16 +270,19 @@ class DiscordClient(Client):
             log.warning("Couldn't find emoji with ID %s.", original_emoji_id)
             return ""
 
+        image_data = base64.b64encode(emoji_data).decode("utf-8")
+
         payload = {
             "name": new_name,
-            "image": f"data:image/png;base64,{base64.b64encode(emoji_data).decode('utf-8')}",
+            "image": f"data:image/png;base64,{image_data}",
         }
 
         response = self.post(
             f"/guilds/{self.guild_id}/emojis",
             json=payload,
-            headers={"X-Audit-Log-Reason": f"Creating {new_name} emoji as part of PyDis botstrap"},
+            headers={"X-Audit-Log-Reason": "Creating emoji as part of PyDis botstrap"},
         )
+
         new_emoji = response.json()
         return new_emoji["id"]
 
@@ -462,12 +465,13 @@ class BotStrapper:
         config: dict[str, dict[str, Any]] = {}
         self.upgrade_client()
         self.check_guild_membership()
-        config["categories"] = self.get_categories()
-        config["channels"] = self.get_channels()
-        config["roles"] = self.get_roles()
-
-        config["webhooks"] = self.sync_webhooks()
-        config["emojis"] = self.sync_emojis()
+        config = {
+            "categories": self.get_categories(),
+            "channels": self.get_channels(),
+            "roles": self.get_roles(),
+            "webhooks": self.sync_webhooks(),
+            "emojis": self.sync_emojis(),
+        }
 
         self.write_config_env(config, self.env_file)
 
