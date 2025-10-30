@@ -271,7 +271,7 @@ dev = [
     { name = "pre-commit", specifier = "==4.3.0" },
     { name = "pytest", specifier = "==8.4.2" },
     { name = "pytest-cov", specifier = "==7.0.0" },
-    { name = "pytest-subtests", specifier = "==0.15.0" },
+    { name = "pytest-subtests", specifier = "==0.14.1" },
     { name = "pytest-xdist", specifier = "==3.8.0" },
     { name = "ruff", specifier = "==0.14.2" },
     { name = "taskipy", specifier = "==1.14.1" },
@@ -1049,15 +1049,15 @@ wheels = [
 
 [[package]]
 name = "pytest-subtests"
-version = "0.15.0"
+version = "0.14.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/d9/20097971a8d315e011e055d512fa120fd6be3bdb8f4b3aa3e3c6bf77bebc/pytest_subtests-0.15.0.tar.gz", hash = "sha256:cb495bde05551b784b8f0b8adfaa27edb4131469a27c339b80fd8d6ba33f887c", size = 18525, upload-time = "2025-10-20T16:26:18.358Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/4c/ba9eab21a2250c2d46c06c0e3cd316850fde9a90da0ac8d0202f074c6817/pytest_subtests-0.14.1.tar.gz", hash = "sha256:350c00adc36c3aff676a66135c81aed9e2182e15f6c3ec8721366918bbbf7580", size = 17632, upload-time = "2024-12-10T00:21:04.856Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/64/bba465299b37448b4c1b84c7a04178399ac22d47b3dc5db1874fe55a2bd3/pytest_subtests-0.15.0-py3-none-any.whl", hash = "sha256:da2d0ce348e1f8d831d5a40d81e3aeac439fec50bd5251cbb7791402696a9493", size = 9185, upload-time = "2025-10-20T16:26:17.239Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/b7/7ca948d35642ae72500efda6ba6fa61dcb6683feb596d19c4747c63c0789/pytest_subtests-0.14.1-py3-none-any.whl", hash = "sha256:e92a780d98b43118c28a16044ad9b841727bd7cb6a417073b38fd2d7ccdf052d", size = 8833, upload-time = "2024-12-10T00:20:58.873Z" },
 ]
 
 [[package]]
