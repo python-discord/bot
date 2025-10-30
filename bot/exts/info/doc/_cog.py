@@ -301,7 +301,7 @@ class DocCog(commands.Cog):
             embed.set_footer(text=footer_text)
             return embed
 
-    @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
+    @commands.hybrid_group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, symbol_name: str | None) -> None:
         """Look up documentation for Python symbols."""
         await self.get_command(ctx, symbol_name=symbol_name)
