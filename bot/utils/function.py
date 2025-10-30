@@ -34,7 +34,7 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
         arg_pos = name_or_pos
 
         try:
-            name, value = arg_values[arg_pos]
+            _name, value = arg_values[arg_pos]
             return value
         except IndexError:
             raise ValueError(f"Argument position {arg_pos} is out of bounds.")

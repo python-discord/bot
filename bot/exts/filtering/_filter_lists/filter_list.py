@@ -90,7 +90,7 @@ class AtomicList:
         self, ctx: FilterContext, defaults: Defaults, filters: Iterable[Filter]
     ) -> list[Filter]:
         """A helper function to evaluate the result of `filter_list_result`."""
-        passed_by_default, failed_by_default = defaults.validations.evaluate(ctx)
+        _passed_by_default, failed_by_default = defaults.validations.evaluate(ctx)
         default_answer = not bool(failed_by_default)
 
         relevant_filters = []
@@ -160,7 +160,7 @@ class AtomicList:
 T = typing.TypeVar("T", bound=Filter)
 
 
-class FilterList(dict[ListType, AtomicList], typing.Generic[T], FieldRequiring):
+class FilterList[T](dict[ListType, AtomicList], FieldRequiring):
     """Dispatches events to lists of _filters, and aggregates the responses into a single list of actions to take."""
 
     # Each subclass must define a name matching the filter_list name we're expecting to receive from the database.
@@ -268,7 +268,7 @@ class UniquesListBase(FilterList[UniqueFilter], ABC):
     Each unique filter subscribes to a subset of events to respond to.
     """
 
-    def __init__(self, filtering_cog: "Filtering"):
+    def __init__(self, filtering_cog: Filtering):
         super().__init__()
         self.filtering_cog = filtering_cog
         self.loaded_types: dict[str, type[UniqueFilter]] = {}

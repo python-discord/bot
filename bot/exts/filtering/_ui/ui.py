@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Coroutine
@@ -136,7 +134,7 @@ def populate_embed_from_dict(embed: Embed, data: dict) -> None:
         embed.add_field(name=setting, value=value, inline=len(value) < MAX_INLINE_SIZE)
 
 
-def parse_value(value: str, type_: type[T]) -> T:
+def parse_value[T](value: str, type_: type[T]) -> T:
     """Parse the value provided in the CLI and attempt to convert it to the provided type."""
     blank = value == '""'
     type_ = normalize_type(type_, prioritize_nonetype=blank)

@@ -1,17 +1,13 @@
-from __future__ import annotations
-
 import datetime
 import fnmatch
 import time
-from typing import TYPE_CHECKING
 
 from async_rediscache.types.base import RedisObject
 
 from bot.log import get_logger
 from bot.utils.lock import lock
 
-if TYPE_CHECKING:
-    from ._cog import DocItem
+from ._doc_item import DocItem
 
 WEEK_SECONDS = int(datetime.timedelta(weeks=1).total_seconds())
 

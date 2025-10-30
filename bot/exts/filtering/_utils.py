@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import importlib
 import importlib.util
 import inspect
@@ -34,7 +32,7 @@ T = TypeVar("T")
 Serializable = bool | int | float | str | list | dict | None
 
 
-def subclasses_in_package(package: str, prefix: str, parent: T) -> set[T]:
+def subclasses_in_package[T](package: str, prefix: str, parent: T) -> set[T]:
     """Return all the subclasses of class `parent`, found in the top-level of `package`, given by absolute path."""
     subclasses = set()
 
@@ -157,7 +155,7 @@ def normalize_type(type_: type, *, prioritize_nonetype: bool = True) -> type:
     return type_
 
 
-def starting_value(type_: type[T]) -> T:
+def starting_value[T](type_: type[T]) -> T:
     """Return a value of the given type."""
     type_ = normalize_type(type_)
     try:

@@ -1,3 +1,4 @@
+import inspect
 import typing as t
 from datetime import UTC, date, datetime
 
@@ -45,10 +46,11 @@ class RemoteObject:
 
     def __init__(self, dictionary: dict[str, t.Any]) -> None:
         """Initialize by grabbing annotated attributes from `dictionary`."""
-        missing_keys = self.__annotations__.keys() - dictionary.keys()
+        annotation_keys = inspect.get_annotations(self.__class__)
+        missing_keys = annotation_keys - dictionary.keys()
         if missing_keys:
             raise KeyError(f"Fetched object lacks expected keys: {missing_keys}")
-        for annotation in self.__annotations__:
+        for annotation in annotation_keys:
             setattr(self, annotation, dictionary[annotation])
 
 

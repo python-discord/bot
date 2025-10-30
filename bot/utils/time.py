@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import datetime
 import re
 from copy import copy

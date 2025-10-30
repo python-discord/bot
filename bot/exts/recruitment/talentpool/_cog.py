@@ -41,7 +41,7 @@ class NominationContextModal(discord.ui.Modal, title="New Nomination"):
         max_length=REASON_MAX_CHARS - 110
     )
 
-    def __init__(self, cog: "TalentPool", message: discord.Message, noms_channel: discord.TextChannel):
+    def __init__(self, cog: TalentPool, message: discord.Message, noms_channel: discord.TextChannel):
         self.message = message
         self.api = cog.api
         self.noms_channel = noms_channel
