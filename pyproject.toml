@@ -86,6 +86,9 @@ ignore = [
     "SIM102", "SIM108",
 ]
 
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"__future__.annotations".msg = "No longer required in Python 3.14+, see https://docs.python.org/3/reference/compound_stmts.html#annotations"
+
 [tool.ruff.lint.isort]
 order-by-type = false
 case-sensitive = true
