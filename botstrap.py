@@ -101,16 +101,14 @@ class DiscordClient(Client):
     def _raise_for_status(response: Response) -> None:
         response.raise_for_status()
 
-    @property
-    def guild_info(self) -> dict[str, Any]:
+    def get_guild_info(self) -> dict[str, Any]:
         """Fetches the guild's information."""
         if self._guild_info is None:
             response = self.get(f"/guilds/{self.guild_id}")
             self._guild_info = cast("dict[str, Any]", response.json())
         return self._guild_info
 
-    @property
-    def guild_channels(self) -> list[dict[str, Any]]:
+    def get_guild_channels(self) -> list[dict[str, Any]]:
         """Fetches the guild's channels."""
         if self._guild_channels is None:
             response = self.get(f"/guilds/{self.guild_id}/channels")
@@ -119,13 +117,12 @@ class DiscordClient(Client):
 
     def get_channel(self, id_: int | str) -> dict[str, Any]:
         """Fetches a channel by its ID."""
-        for channel in self.guild_channels:
+        for channel in self.get_guild_channels():
             if channel["id"] == str(id_):
                 return channel
         raise KeyError(f"Channel with ID {id_} not found.")
 
-    @property
-    def app_info(self) -> dict[str, Any]:
+    def get_app_info(self) -> dict[str, Any]:
         """Fetches the application's information."""
         if self._app_info is None:
             response = self.get("/applications/@me")
@@ -139,7 +136,7 @@ class DiscordClient(Client):
         Returns a boolean defining whether changes were made.
         """
         # Fetch first to modify, not overwrite
-        current_flags = self.app_info.get("flags", 0)
+        current_flags = self.get_app_info().get("flags", 0)
         new_flags = current_flags | 1 << 15 | 1 << 19
 
         if new_flags != current_flags:
@@ -152,7 +149,7 @@ class DiscordClient(Client):
     def check_if_in_guild(self) -> bool:
         """Check if the bot is a member of the guild."""
         try:
-            _ = self.guild_info
+            self.get_guild_info()
         except HTTPStatusError as e:
             if e.response.status_code == 403 or e.response.status_code == 404:
                 return False
@@ -165,7 +162,7 @@ class DiscordClient(Client):
         announcements_channel_id: int | str,
     ) -> bool:
         """Fetches server info & upgrades to COMMUNITY if necessary."""
-        payload = self.guild_info
+        payload = self.get_guild_info()
 
         if COMMUNITY_FEATURE not in payload["features"]:
             log.info("This server is currently not a community, upgrading.")
@@ -181,7 +178,7 @@ class DiscordClient(Client):
         """Fetches all the roles in a guild."""
         result = SilencedDict(name="Roles dictionary")
 
-        roles = self.guild_info["roles"]
+        roles = self.get_guild_info()["roles"]
 
         for role in roles:
             name = "_".join(part.lower() for part in role["name"].split(" ")).replace("-", "_")
@@ -196,7 +193,7 @@ class DiscordClient(Client):
         channels = SilencedDict(name="Channels dictionary")
         categories = SilencedDict(name="Categories dictionary")
 
-        for channel in self.guild_channels:
+        for channel in self.get_guild_channels():
             channel_type = channel["type"]
             name = "_".join(part.lower() for part in channel["name"].split(" ")).replace("-", "_")
             if re.match(off_topic_channel_name_regex, name):
@@ -297,7 +294,7 @@ class BotStrapper:
     def check_guild_membership(self) -> None:
         """Check the bot is in the required guild."""
         if not self.client.check_if_in_guild():
-            client_id = self.client.app_info["id"]
+            client_id = self.client.get_app_info()["id"]
             log.error("The bot is not a member of the configured guild with ID %s.", self.guild_id)
             log.warning(
                 "Please invite with the following URL and rerun this script: "
