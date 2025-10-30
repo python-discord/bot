@@ -422,6 +422,9 @@ class BotStrapper:
 
     def write_config_env(self, config: dict[str, dict[str, Any]]) -> bool:
         """Write the configuration to the specified env_file."""
+        if not self.env_file.exists():
+            self.env_file.touch()
+
         with self.env_file.open("r+") as file:
             before = file.read()
             file.seek(0)
