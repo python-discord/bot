@@ -43,7 +43,7 @@ dev = [
     "pytest-cov==7.0.0",
     "pytest-subtests==0.15.0",
     "pytest-xdist==3.8.0",
-    "ruff==0.9.9",
+    "ruff==0.14.2",
     "taskipy==1.14.1",
 ]
 
