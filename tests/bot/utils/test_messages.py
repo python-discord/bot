@@ -9,7 +9,8 @@ class TestMessages(unittest.TestCase):
     def test_sub_clyde(self):
         """Uppercase E's and lowercase e's are substituted with their cyrillic counterparts."""
         sub_e = "\u0435"
-        sub_E = "\u0415"  # noqa: N806: Uppercase E in variable name
+        # N806 fires for upper-case E in variable name.
+        sub_E = "\u0415"  # noqa: N806
 
         test_cases = (
             (None, None),

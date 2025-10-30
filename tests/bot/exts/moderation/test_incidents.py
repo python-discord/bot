@@ -112,7 +112,7 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
 
     async def test_make_embed_actioned(self):
         """Embed is coloured green and footer contains 'Actioned' when `outcome=Signal.ACTIONED`."""
-        embed, file = await incidents.make_embed(
+        embed, _file = await incidents.make_embed(
             incident=MockMessage(created_at=CURRENT_TIME),
             outcome=incidents.Signal.ACTIONED,
             actioned_by=MockMember()
@@ -123,7 +123,7 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
 
     async def test_make_embed_not_actioned(self):
         """Embed is coloured red and footer contains 'Rejected' when `outcome=Signal.NOT_ACTIONED`."""
-        embed, file = await incidents.make_embed(
+        embed, _file = await incidents.make_embed(
             incident=MockMessage(created_at=CURRENT_TIME),
             outcome=incidents.Signal.NOT_ACTIONED,
             actioned_by=MockMember()
@@ -139,7 +139,7 @@ class TestMakeEmbed(unittest.IsolatedAsyncioTestCase):
         reported_timestamp = discord_timestamp(CURRENT_TIME)
         relative_timestamp = discord_timestamp(CURRENT_TIME, TimestampFormats.RELATIVE)
 
-        embed, file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
+        embed, _file = await incidents.make_embed(incident, incidents.Signal.ACTIONED, MockMember())
 
         self.assertEqual(
             f"{incident.content}\n\n*Reported {reported_timestamp} ({relative_timestamp}).*",
@@ -808,7 +808,7 @@ class TestMessageLinkEmbeds(TestIncidents):
         tests = {
             "thisisasingleword"*10: "thisisasinglewordthisisasinglewordthisisasinglewor...",
 
-            "\n".join("Lets make a new line test".split()): "Lets\nmake\na...",
+            "\n".join(["Lets", "make", "a", "new", "line", "test"]): "Lets\nmake\na...",
 
             "Hello, World!" * 300: (
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!"

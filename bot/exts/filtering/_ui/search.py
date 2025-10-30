@@ -114,7 +114,7 @@ def template_settings(
     result = get_filter(filter_id, filter_lists)
     if not result:
         raise BadArgument(f"Could not find a filter with ID `{filter_id}`.")
-    filter_, filter_list, list_type = result
+    filter_, _filter_list, _list_type = result
 
     if filter_type and not isinstance(filter_, filter_type):
         raise BadArgument(f"The filter with ID `{filter_id}` is not of type {filter_type.name!r}.")
@@ -256,7 +256,7 @@ class SearchEditView(EditBaseView):
             return
 
         if "/" in setting_name:
-            filter_name, setting_name = setting_name.split("/", maxsplit=1)
+            _filter_name, setting_name = setting_name.split("/", maxsplit=1)
             dict_to_edit = self.filter_settings
         else:
             dict_to_edit = self.settings
