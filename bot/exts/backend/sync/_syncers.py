@@ -225,10 +225,10 @@ class UserSyncer(Syncer):
         # Using asyncio.gather would still consume too many resources on the site.
         log.trace("Syncing created users...")
         if diff.created:
-            for chunk in batched(diff.created, CHUNK_SIZE):
+            for chunk in batched(diff.created, CHUNK_SIZE, strict=False):
                 await bot.instance.api_client.post("bot/users", json=chunk)
 
         log.trace("Syncing updated users...")
         if diff.updated:
-            for chunk in batched(diff.updated, CHUNK_SIZE):
+            for chunk in batched(diff.updated, CHUNK_SIZE, strict=False):
                 await bot.instance.api_client.patch("bot/users/bulk_patch", json=chunk)

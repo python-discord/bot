@@ -17,4 +17,4 @@ if os.name == "nt":
 
 apply_monkey_patches()
 
-instance: "Bot" = None  # Global Bot instance.
+instance: Bot = None  # Global Bot instance.
