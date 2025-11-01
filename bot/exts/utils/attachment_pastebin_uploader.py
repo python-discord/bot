@@ -129,8 +129,8 @@ class AutoTextAttachmentUploader(commands.Cog):
         # The angle brackets around the remove link are required to stop Discord from visiting the URL to produce a
         # preview, thereby deleting the paste
         await message.author.send(
-                    f"[Click here](<{paste_response.removal}>) to delete the pasted attachment"
-                    f" contents copied from [your message](<{message.jump_url}>)"
+            f"[Click here](<{paste_response.removal}>) to delete the pasted attachment"
+            f" contents copied from [your message](<{message.jump_url}>)"
         )
 
         # Edit the bot message to contain the link to the paste.
