@@ -422,7 +422,7 @@ class BotStrapper:
         if not self.env_file.exists():
             self.env_file.touch()
 
-        with self.env_file.open("r+") as file:
+        with self.env_file.open("r+", encoding="utf-8") as file:
             before = file.read()
             file.seek(0)
             for num, (category, category_values) in enumerate(config.items()):
