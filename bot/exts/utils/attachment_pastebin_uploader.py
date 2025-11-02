@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 import discord
+from discord import Forbidden
 from discord.ext import commands
 from pydis_core.utils import paste_service
 
@@ -128,7 +129,10 @@ class AutoTextAttachmentUploader(commands.Cog):
         # Send the user a DM with the delete link for the paste.
         # The angle brackets around the remove link are required to stop Discord from visiting the URL to produce a
         # preview, thereby deleting the paste
-        await message.author.send(content=f"[Click here](<{paste_response.removal}>) to delete your recent paste.")
+        try:
+            await message.author.send(content=f"[Click here](<{paste_response.removal}>) to delete your recent paste.")
+        except Forbidden:
+            log.debug(f"User {message.author} has DMs disabled, skipping delete link DM.")
 
         # Edit the bot message to contain the link to the paste.
         await bot_reply.edit(content=f"[Click here]({paste_response.link}) to see this code in our pastebin.")
