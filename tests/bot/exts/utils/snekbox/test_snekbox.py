@@ -457,6 +457,39 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(actual, None)
         ctx.message.clear_reaction.assert_called_once_with(snekbox._cog.REDO_EMOJI)
 
+    @patch("bot.exts.utils.snekbox._cog.partial")
+    async def test_continue_job_preserves_timeit_name(self, partial_mock):
+        """Test that continue_job preserves the job name when re-running a timeit command."""
+        ctx = MockContext(
+            message=MockMessage(
+                id=4,
+                add_reaction=AsyncMock(),
+                clear_reactions=AsyncMock()
+            ),
+            author=MockMember(id=14)
+        )
+        response = MockMessage(id=42, delete=AsyncMock())
+        new_msg = MockMessage()
+        self.cog.jobs = {4: 42}
+        self.bot.wait_for.side_effect = ((None, new_msg), None)
+        expected_code = "print('test')"
+        self.cog.get_code = create_autospec(self.cog.get_code, spec_set=True, return_value=expected_code)
+
+        # Test with timeit job name
+        actual = await self.cog.continue_job(ctx, response, "timeit")
+        self.cog.get_code.assert_awaited_once_with(new_msg, ctx.command)
+        self.assertEqual(actual.name, "timeit", "Timeit job should preserve its name when re-run")
+
+        # Reset mocks for eval test
+        self.cog.get_code.reset_mock()
+        self.cog.jobs = {4: 42}
+        self.bot.wait_for.side_effect = ((None, new_msg), None)
+
+        # Test with eval job name
+        actual = await self.cog.continue_job(ctx, response, "eval")
+        self.cog.get_code.assert_awaited_once_with(new_msg, ctx.command)
+        self.assertEqual(actual.name, "eval", "Eval job should preserve its name when re-run")
+
     async def test_get_code(self):
         """Should return 1st arg (or None) if eval cmd in message, otherwise return full content."""
         prefix = constants.Bot.prefix

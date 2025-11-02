@@ -498,8 +498,14 @@ class Snekbox(Cog):
             codeblocks = await CodeblockConverter.convert(ctx, code)
 
             if job_name == "timeit":
-                return EvalJob(self.prepare_timeit_input(codeblocks))
-            return EvalJob.from_code("\n".join(codeblocks))
+                return EvalJob(self.prepare_timeit_input(codeblocks), name="timeit")
+
+            code_str = "\n".join(codeblocks)
+            return EvalJob(
+                args=["main.py"],
+                files=[FileAttachment("main.py", code_str.encode())],
+                name=job_name
+            )
 
         return None
 
