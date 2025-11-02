@@ -83,6 +83,7 @@ if not hasattr(sys, "_setup_finished"):
 {setup}
 """
 
+
 class FilteredFiles(NamedTuple):
     allowed: list[FileAttachment]
     blocked: list[FileAttachment]
@@ -244,10 +245,10 @@ class Snekbox(Cog):
         paste_link = None
 
         if "<@" in output:
-            output = output.replace("<@", "<@\u200B")  # Zero-width space
+            output = output.replace("<@", "<@\u200b")  # Zero-width space
 
         if "<!@" in output:
-            output = output.replace("<!@", "<!@\u200B")  # Zero-width space
+            output = output.replace("<!@", "<!@\u200b")  # Zero-width space
 
         if ESCAPE_REGEX.findall(output):
             paste_link = await self.upload_output(original_output)
@@ -263,7 +264,7 @@ class Snekbox(Cog):
         if len(lines) > max_lines:
             truncated = True
             if len(lines) == max_lines + 1:
-                lines = lines[:max_lines - 1]
+                lines = lines[: max_lines - 1]
             else:
                 lines = lines[:max_lines]
             output = "\n".join(lines)
@@ -301,11 +302,7 @@ class Snekbox(Cog):
             # otherwise, use budget
             else:
                 format_text, link_text = await self.format_output(
-                    file_text,
-                    budget_lines,
-                    budget_chars,
-                    line_nums=False,
-                    output_default="[Empty]"
+                    file_text, budget_lines, budget_chars, line_nums=False, output_default="[Empty]"
                 )
                 # With any link, use it (don't use budget)
                 if link_text:
@@ -319,7 +316,7 @@ class Snekbox(Cog):
 
     def format_blocked_extensions(self, blocked: list[FileAttachment]) -> str:
         # Sort by length and then lexicographically to fit as many as possible before truncating.
-        blocked_sorted = sorted(set(f.suffix for f in blocked),  key=lambda e: (len(e), e))
+        blocked_sorted = sorted(set(f.suffix for f in blocked), key=lambda e: (len(e), e))
 
         # Only no extension
         if len(blocked_sorted) == 1 and blocked_sorted[0] == "":
@@ -327,9 +324,7 @@ class Snekbox(Cog):
         # Both
         elif "" in blocked_sorted:
             blocked_str = self.join_blocked_extensions(ext for ext in blocked_sorted if ext)
-            blocked_msg = (
-                f"Files with no extension or disallowed extensions can't be uploaded: **{blocked_str}**"
-            )
+            blocked_msg = f"Files with no extension or disallowed extensions can't be uploaded: **{blocked_str}**"
         else:
             blocked_str = self.join_blocked_extensions(blocked_sorted)
             blocked_msg = f"Files with disallowed extensions can't be uploaded: **{blocked_str}**"
@@ -348,7 +343,6 @@ class Snekbox(Cog):
 
         return joined
 
-
     def _filter_files(self, ctx: Context, files: list[FileAttachment], blocked_exts: set[str]) -> FilteredFiles:
         """Filter to restrict files to allowed extensions. Return a named tuple of allowed and blocked files lists."""
         # Filter files into allowed and blocked
@@ -364,7 +358,7 @@ class Snekbox(Cog):
             blocked_str = ", ".join(f.suffix for f in blocked)
             log.info(
                 f"User '{ctx.author}' ({ctx.author.id}) uploaded blacklisted file(s) in eval: {blocked_str}",
-                extra={"attachment_list": [f.filename for f in files]}
+                extra={"attachment_list": [f.filename for f in files]},
             )
 
         return FilteredFiles(allowed, blocked)
@@ -436,11 +430,7 @@ class Snekbox(Cog):
                 # Don't fail if the command invoking message was deleted.
                 message = ctx.message.to_reference(fail_if_not_exists=False)
                 response = await ctx.send(
-                    msg,
-                    allowed_mentions=allowed_mentions,
-                    view=view,
-                    files=files,
-                    reference=message
+                    msg, allowed_mentions=allowed_mentions, view=view, files=files, reference=message
                 )
             else:
                 # The command was redirected so a reply wont work, send a normal message with a mention.
@@ -451,9 +441,7 @@ class Snekbox(Cog):
             log.info(f"{ctx.author}'s {job.name} job had a return code of {result.returncode}")
         return response
 
-    async def continue_job(
-        self, ctx: Context, response: Message, job_name: str
-    ) -> EvalJob | None:
+    async def continue_job(self, ctx: Context, response: Message, job_name: str) -> EvalJob | None:
         """
         Check if the job's session should continue.
 
@@ -466,16 +454,10 @@ class Snekbox(Cog):
         with contextlib.suppress(NotFound):
             try:
                 _, new_message = await self.bot.wait_for(
-                    "message_edit",
-                    check=_predicate_message_edit,
-                    timeout=REDO_TIMEOUT
+                    "message_edit", check=_predicate_message_edit, timeout=REDO_TIMEOUT
                 )
                 await ctx.message.add_reaction(REDO_EMOJI)
-                await self.bot.wait_for(
-                    "reaction_add",
-                    check=_predicate_emoji_reaction,
-                    timeout=10
-                )
+                await self.bot.wait_for("reaction_add", check=_predicate_emoji_reaction, timeout=10)
 
                 # Ensure the response that's about to be edited is still the most recent.
                 # This could have already been updated via a button press to switch to an alt Python version.
@@ -501,11 +483,7 @@ class Snekbox(Cog):
                 return EvalJob(self.prepare_timeit_input(codeblocks), name="timeit")
 
             code_str = "\n".join(codeblocks)
-            return EvalJob(
-                args=["main.py"],
-                files=[FileAttachment("main.py", code_str.encode())],
-                name=job_name
-            )
+            return EvalJob(args=["main.py"], files=[FileAttachment("main.py", code_str.encode())], name=job_name)
 
         return None
 
@@ -553,10 +531,7 @@ class Snekbox(Cog):
             try:
                 response = await self.send_job(ctx, job)
             except LockedResourceError:
-                await ctx.send(
-                    f"{ctx.author.mention} You've already got a job running - "
-                    "please wait for it to finish!"
-                )
+                await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
                 return
 
             # Store the bot's response message id per invocation, to ensure the `wait_for`s in `continue_job`
@@ -590,7 +565,7 @@ class Snekbox(Cog):
 
             We've done our best to make this sandboxed, but do let us know if you manage to find an
             issue with it!
-        """
+        """,
     )
     @guild_only()
     @redirect_output(
@@ -598,14 +573,10 @@ class Snekbox(Cog):
         bypass_roles=SNEKBOX_ROLES,
         categories=NO_SNEKBOX_CATEGORIES,
         channels=NO_SNEKBOX_CHANNELS,
-        ping_user=False
+        ping_user=False,
     )
     async def eval_command(
-        self,
-        ctx: Context,
-        python_version: SupportedPythonVersions | None,
-        *,
-        code: CodeblockConverter
+        self, ctx: Context, python_version: SupportedPythonVersions | None, *, code: CodeblockConverter
     ) -> None:
         """Run Python code and get the results."""
         code: list[str]
@@ -631,7 +602,7 @@ class Snekbox(Cog):
 
             We've done our best to make this sandboxed, but do let us know if you manage to find an
             issue with it!
-        """
+        """,
     )
     @guild_only()
     @redirect_output(
@@ -639,14 +610,10 @@ class Snekbox(Cog):
         bypass_roles=SNEKBOX_ROLES,
         categories=NO_SNEKBOX_CATEGORIES,
         channels=NO_SNEKBOX_CHANNELS,
-        ping_user=False
+        ping_user=False,
     )
     async def timeit_command(
-        self,
-        ctx: Context,
-        python_version: SupportedPythonVersions | None,
-        *,
-        code: CodeblockConverter
+        self, ctx: Context, python_version: SupportedPythonVersions | None, *, code: CodeblockConverter
     ) -> None:
         """Profile Python Code to find execution time."""
         code: list[str]

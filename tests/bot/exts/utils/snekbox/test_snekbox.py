@@ -27,7 +27,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     @staticmethod
     def code_args(code: str) -> tuple[EvalJob]:
         """Converts code to a tuple of arguments expected."""
-        return EvalJob.from_code(code),
+        return (EvalJob.from_code(code),)
 
     async def test_post_job(self):
         """Post the eval code to the URLs.snekbox_eval_api endpoint."""
@@ -52,9 +52,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             "executable_path": f"/snekbin/python/{py_version}/bin/python",
         }
         self.bot.http_session.post.assert_called_with(
-            constants.URLs.snekbox_eval_api,
-            json=expected,
-            raise_for_status=True
+            constants.URLs.snekbox_eval_api, json=expected, raise_for_status=True
         )
         resp.json.assert_awaited_once()
 
@@ -75,18 +73,25 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             ('```\nprint("Hello world!")```', 'print("Hello world!")', "multiline code block"),
             ('```py\nprint("Hello world!")```', 'print("Hello world!")', "multiline python code block"),
             ('text```print("Hello world!")```text', 'print("Hello world!")', "code block surrounded by text"),
-            ('```print("Hello world!")```\ntext\n```py\nprint("Hello world!")```',
-             'print("Hello world!")\nprint("Hello world!")', "two code blocks with text in-between"),
-            ('`print("Hello world!")`\ntext\n```print("How\'s it going?")```',
-             'print("How\'s it going?")', "code block preceded by inline code"),
-            ('`print("Hello world!")`\ntext\n`print("Hello world!")`',
-             'print("Hello world!")', "one inline code block of two")
+            (
+                '```print("Hello world!")```\ntext\n```py\nprint("Hello world!")```',
+                'print("Hello world!")\nprint("Hello world!")',
+                "two code blocks with text in-between",
+            ),
+            (
+                '`print("Hello world!")`\ntext\n```print("How\'s it going?")```',
+                'print("How\'s it going?")',
+                "code block preceded by inline code",
+            ),
+            (
+                '`print("Hello world!")`\ntext\n`print("Hello world!")`',
+                'print("Hello world!")',
+                "one inline code block of two",
+            ),
         )
         for case, expected, testname in cases:
             with self.subTest(msg=f"Extract code from {testname}."):
-                self.assertEqual(
-                    "\n".join(await snekbox.CodeblockConverter.convert(ctx, case)), expected
-                )
+                self.assertEqual("\n".join(await snekbox.CodeblockConverter.convert(ctx, case)), expected)
 
     def test_prepare_timeit_input(self):
         """Test the prepare_timeit_input codeblock detection."""
@@ -94,7 +99,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         cases = (
             (['print("Hello World")'], "", "single block of code"),
             (["x = 1", "print(x)"], "x = 1", "two blocks of code"),
-            (["x = 1", "print(x)", 'print("Some other code.")'], "x = 1", "three blocks of code")
+            (["x = 1", "print(x)", 'print("Some other code.")'], "x = 1", "three blocks of code"),
         )
 
         for case, setup_code, test_name in cases:
@@ -110,9 +115,9 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             (
                 "",
                 128 + snekbox._eval.SIGKILL,
-                (f"Your {self.default_version} eval job timed out or ran out of memory", "", "")
+                (f"Your {self.default_version} eval job timed out or ran out of memory", "", ""),
             ),
-            ("", 255, (f"Your {self.default_version} eval job has failed", "A fatal NsJail error occurred", ""))
+            ("", 255, (f"Your {self.default_version} eval job has failed", "A fatal NsJail error occurred", "")),
         )
         for stdout, returncode, expected in cases:
             exp_msg, exp_err, exp_files_err = expected
@@ -131,18 +136,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     def test_eval_result_files_error_message(self):
         """EvalResult.files_error_message, should return files error message."""
         cases = [
-            ([], ["abc"], (
-                "1 file upload (abc) failed because its file size exceeds 8 MiB."
-            )),
-            ([], ["file1.bin", "f2.bin"], (
-                "2 file uploads (file1.bin, f2.bin) failed because each file's size exceeds 8 MiB."
-            )),
-            (["a", "b"], ["c"], (
-                "1 file upload (c) failed as it exceeded the 2 file limit."
-            )),
-            (["a"], ["b", "c"], (
-                "2 file uploads (b, c) failed as they exceeded the 2 file limit."
-            )),
+            ([], ["abc"], ("1 file upload (abc) failed because its file size exceeds 8 MiB.")),
+            (
+                [],
+                ["file1.bin", "f2.bin"],
+                ("2 file uploads (file1.bin, f2.bin) failed because each file's size exceeds 8 MiB."),
+            ),
+            (["a", "b"], ["c"], ("1 file upload (c) failed as it exceeded the 2 file limit.")),
+            (["a"], ["b", "c"], ("2 file uploads (b, c) failed as they exceeded the 2 file limit.")),
         ]
         for files, failed_files, expected_msg in cases:
             with self.subTest(files=files, failed_files=failed_files, expected_msg=expected_msg):
@@ -174,7 +175,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
             result.get_status_message(EvalJob([], version="3.10")),
-            "Your 3.10 eval job has completed with return code 127"
+            "Your 3.10 eval job has completed with return code 127",
         )
         self.assertEqual(result.error_message, "")
         self.assertEqual(result.files_error_message, "")
@@ -185,16 +186,12 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         result = EvalResult(stdout="", returncode=127)
         self.assertEqual(
             result.get_status_message(EvalJob([])),
-            f"Your {self.default_version} eval job has completed with return code 127 (SIGTEST)"
+            f"Your {self.default_version} eval job has completed with return code 127 (SIGTEST)",
         )
 
     def test_eval_result_status_emoji(self):
         """Return emoji according to the eval result."""
-        cases = (
-            (" ", -1, ":warning:"),
-            ("Hello world!", 0, ":white_check_mark:"),
-            ("Invalid beard size", -1, ":x:")
-        )
+        cases = ((" ", -1, ":warning:"), ("Hello world!", 0, ":white_check_mark:"), ("Invalid beard size", -1, ":x:"))
         for stdout, returncode, expected in cases:
             with self.subTest(stdout=stdout, returncode=returncode, expected=expected):
                 result = EvalResult(stdout=stdout, returncode=returncode)
@@ -209,41 +206,36 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             "007 | n\n008 | g\n009 | b\n010 | e\n... (truncated - too many lines)"
         )
         too_long_too_many_lines = (
-            "\n".join(
-                f"{i:03d} | {line}" for i, line in enumerate(["verylongbeard" * 10] * 15, 1)
-            )[:1000] + "\n... (truncated - too long, too many lines)"
+            "\n".join(f"{i:03d} | {line}" for i, line in enumerate(["verylongbeard" * 10] * 15, 1))[:1000]
+            + "\n... (truncated - too long, too many lines)"
         )
 
         cases = (
             ("", ("[No output]", None), "No output"),
             ("My awesome output", ("My awesome output", None), "One line output"),
-            ("<@", ("<@\u200B", None), r"Convert <@ to <@\u200B"),
-            ("<!@", ("<!@\u200B", None), r"Convert <!@ to <!@\u200B"),
+            ("<@", ("<@\u200b", None), r"Convert <@ to <@\u200B"),
+            ("<!@", ("<!@\u200b", None), r"Convert <!@ to <!@\u200B"),
             (
-                "\u202E\u202E\u202E",
+                "\u202e\u202e\u202e",
                 ("Code block escape attempt detected; will not output result", "https://testificate.com/"),
-                "Detect RIGHT-TO-LEFT OVERRIDE"
+                "Detect RIGHT-TO-LEFT OVERRIDE",
             ),
             (
-                "\u200B\u200B\u200B",
+                "\u200b\u200b\u200b",
                 ("Code block escape attempt detected; will not output result", "https://testificate.com/"),
-                "Detect ZERO WIDTH SPACE"
+                "Detect ZERO WIDTH SPACE",
             ),
             ("long\nbeard", ("001 | long\n002 | beard", None), "Two line output"),
-            (
-                "v\ne\nr\ny\nl\no\nn\ng\nb\ne\na\nr\nd",
-                (too_many_lines, "https://testificate.com/"),
-                "12 lines output"
-            ),
+            ("v\ne\nr\ny\nl\no\nn\ng\nb\ne\na\nr\nd", (too_many_lines, "https://testificate.com/"), "12 lines output"),
             (
                 "verylongbeard" * 100,
                 ("verylongbeard" * 76 + "verylongbear\n... (truncated - too long)", "https://testificate.com/"),
-                "1300 characters output"
+                "1300 characters output",
             ),
             (
                 ("verylongbeard" * 10 + "\n") * 15,
                 (too_long_too_many_lines, "https://testificate.com/"),
-                "15 lines, 1965 characters output"
+                "15 lines, 1965 characters output",
             ),
         )
         for case, expected, testname in cases:
@@ -312,13 +304,13 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode")
-        await self.cog.send_job(ctx, job),
+        (await self.cog.send_job(ctx, job),)
 
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
             f":warning: Your {self.default_version} eval job has completed "
-            "with return code 0.\n\n```ansi\n[No output]\n```"
+            "with return code 0.\n\n```ansi\n[No output]\n```",
         )
         allowed_mentions = ctx.send.call_args.kwargs["allowed_mentions"]
         expected_allowed_mentions = AllowedMentions(everyone=False, roles=False, users=[ctx.author])
@@ -342,14 +334,14 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode").as_version(self.default_version)
-        await self.cog.send_job(ctx, job),
+        (await self.cog.send_job(ctx, job),)
 
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
             f":white_check_mark: Your {self.default_version} eval job "
             "has completed with return code 0."
-            "\n\n```ansi\nWay too long beard\n```\nFull output: lookatmybeard.com"
+            "\n\n```ansi\nWay too long beard\n```\nFull output: lookatmybeard.com",
         )
 
         self.cog.post_job.assert_called_once_with(job)
@@ -369,13 +361,12 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode").as_version(self.default_version)
-        await self.cog.send_job(ctx, job),
+        (await self.cog.send_job(ctx, job),)
 
         ctx.send.assert_called_once()
         self.assertEqual(
             ctx.send.call_args.args[0],
-            f":x: Your {self.default_version} eval job has completed with return code 127."
-            "\n\n```ansi\nERROR\n```"
+            f":x: Your {self.default_version} eval job has completed with return code 127.\n\n```ansi\nERROR\n```",
         )
 
         self.cog.post_job.assert_called_once_with(job)
@@ -390,7 +381,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             FileAttachment("test.disallowed2", b"test"),
             FileAttachment("test.disallowed", b"test"),
             FileAttachment("test.allowed", b"test"),
-            FileAttachment("test." + ("a" * 100), b"test")
+            FileAttachment("test." + ("a" * 100), b"test"),
         ]
         eval_result = EvalResult("", 0, files=files)
         self.cog.post_job = AsyncMock(return_value=eval_result)
@@ -402,7 +393,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         self.bot.get_cog.return_value = mocked_filter_cog
 
         job = EvalJob.from_code("MyAwesomeCode").as_version(self.default_version)
-        await self.cog.send_job(ctx, job),
+        (await self.cog.send_job(ctx, job),)
 
         ctx.send.assert_called_once()
         res = ctx.send.call_args.args[0]
@@ -418,12 +409,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_continue_job_does_continue(self, partial_mock):
         """Test that the continue_job function does continue if required conditions are met."""
         ctx = MockContext(
-            message=MockMessage(
-                id=4,
-                add_reaction=AsyncMock(),
-                clear_reactions=AsyncMock()
-            ),
-            author=MockMember(id=14)
+            message=MockMessage(id=4, add_reaction=AsyncMock(), clear_reactions=AsyncMock()), author=MockMember(id=14)
         )
         response = MockMessage(id=42, delete=AsyncMock())
         new_msg = MockMessage()
@@ -442,7 +428,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
                     check=partial_mock(snekbox._cog.predicate_message_edit, ctx),
                     timeout=snekbox._cog.REDO_TIMEOUT,
                 ),
-                call("reaction_add", check=partial_mock(snekbox._cog.predicate_emoji_reaction, ctx), timeout=10)
+                call("reaction_add", check=partial_mock(snekbox._cog.predicate_emoji_reaction, ctx), timeout=10),
             )
         )
         ctx.message.add_reaction.assert_called_once_with(snekbox._cog.REDO_EMOJI)
@@ -461,12 +447,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
     async def test_continue_job_preserves_timeit_name(self, partial_mock):
         """Test that continue_job preserves the job name when re-running a timeit command."""
         ctx = MockContext(
-            message=MockMessage(
-                id=4,
-                add_reaction=AsyncMock(),
-                clear_reactions=AsyncMock()
-            ),
-            author=MockMember(id=14)
+            message=MockMessage(id=4, add_reaction=AsyncMock(), clear_reactions=AsyncMock()), author=MockMember(id=14)
         )
         response = MockMessage(id=42, delete=AsyncMock())
         new_msg = MockMessage()
@@ -497,7 +478,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             (self.cog.eval_command, f"{prefix}{self.cog.eval_command.name} print(1)", "print(1)"),
             (self.cog.eval_command, f"{prefix}{self.cog.eval_command.name}", None),
             (MagicMock(spec=commands.Command), f"{prefix}tags get foo"),
-            (None, "print(123)")
+            (None, "print(123)"),
         )
 
         for command, content, *expected_code in subtests:
@@ -525,7 +506,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
         cases = (
             (msg0, msg0, False, "same ID, same content"),
             (msg0, msg1, False, "different ID, different content"),
-            (msg0, msg2, True, "same ID, different content")
+            (msg0, msg2, True, "same ID, different content"),
         )
         for ctx_msg, new_msg, expected, testname in cases:
             with self.subTest(msg=f"Messages with {testname} return {expected}"):
@@ -550,7 +531,7 @@ class SnekboxTests(unittest.IsolatedAsyncioTestCase):
             (invalid_reaction_id, valid_user, False, "invalid reaction ID"),
             (valid_reaction, invalid_user_id, False, "invalid user ID"),
             (invalid_reaction_str, valid_user, False, "invalid reaction __str__"),
-            (valid_reaction, valid_user, True, "matching attributes")
+            (valid_reaction, valid_user, True, "matching attributes"),
         )
         for reaction, user, expected, testname in cases:
             with self.subTest(msg=f"Test with {testname} and expected return {expected}"):
