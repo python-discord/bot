@@ -10,7 +10,7 @@ from aiohttp import ClientResponseError
 from discord.ext.commands import Cog
 
 from bot.bot import Bot
-from bot.constants import Channels
+from bot.constants import Channels, Keys
 from bot.log import get_logger
 from bot.utils.messages import wait_for_deletion
 
@@ -28,6 +28,8 @@ GITHUB_GIST_RE = re.compile(
 )
 
 GITHUB_HEADERS = {"Accept": "application/vnd.github.v3.raw"}
+if Keys.github:
+    GITHUB_HEADERS["Authorization"] = f"token {Keys.github}"
 
 GITLAB_RE = re.compile(
     r"https://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+)"
