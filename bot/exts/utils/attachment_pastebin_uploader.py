@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 
 import discord
-from discord import Forbidden
 from discord.ext import commands
 from pydis_core.utils import paste_service
 
@@ -131,7 +130,7 @@ class AutoTextAttachmentUploader(commands.Cog):
         # preview, thereby deleting the paste
         try:
             await message.author.send(content=f"[Click here](<{paste_response.removal}>) to delete your recent paste.")
-        except Forbidden:
+        except discord.Forbidden:
             log.debug(f"User {message.author} has DMs disabled, skipping delete link DM.")
 
         # Edit the bot message to contain the link to the paste.
