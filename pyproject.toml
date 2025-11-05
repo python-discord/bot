@@ -9,8 +9,6 @@ dependencies = [
     "aiohttp==3.13.2",
     "arrow==1.4.0",
     "beautifulsoup4==4.14.2",
-    "colorama==0.4.6; sys_platform == \"win32\"",
-    "coloredlogs==15.0.1",
     "deepdiff==8.6.1",
     "emoji==2.15.0",
     "feedparser==6.0.12",
