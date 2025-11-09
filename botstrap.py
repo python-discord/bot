@@ -48,6 +48,11 @@ RULES_CHANNEL_NAME = "rules"
 GUILD_CATEGORY_TYPE = 4
 EMOJI_REGEX = re.compile(r"<:(\w+):(\d+)>")
 
+MINIMUM_FLAGS: int = (
+    1 << 15  # guild_members_limited
+    | 1 << 19  # message_content_limited
+)
+
 if GuildConstants.id == type(GuildConstants).model_fields["id"].default:
     msg = (
         "Couldn't find the `GUILD_ID` environment variable. "
@@ -57,7 +62,7 @@ if GuildConstants.id == type(GuildConstants).model_fields["id"].default:
     sys.exit(1)
 
 
-class SilencedDict(dict[str, Any]):
+class SilencedDict[T](dict[str, T]):
     """A dictionary that silences KeyError exceptions upon subscription to non existent items."""
 
     def __init__(self, name: str):
@@ -93,9 +98,9 @@ class DiscordClient(Client):
             event_hooks={"response": [self._raise_for_status]},
         )
         self.guild_id: int | str = guild_id
-        self._app_info: dict[str, Any] | None = None
-        self._guild_info: dict[str, Any] | None = None
-        self._guild_channels: list[dict[str, Any]] | None = None
+        self._app_info: dict[str, object] | None = None
+        self._guild_info: dict[str, object] | None = None
+        self._guild_channels: list[dict[str, object]] | None = None
 
     @staticmethod
     def _raise_for_status(response: Response) -> None:
@@ -105,17 +110,17 @@ class DiscordClient(Client):
         """Fetches the guild's information."""
         if self._guild_info is None:
             response = self.get(f"/guilds/{self.guild_id}")
-            self._guild_info = cast("dict[str, Any]", response.json())
+            self._guild_info = cast("dict[str, object]", response.json())
         return self._guild_info
 
     def get_guild_channels(self) -> list[dict[str, Any]]:
         """Fetches the guild's channels."""
         if self._guild_channels is None:
             response = self.get(f"/guilds/{self.guild_id}/channels")
-            self._guild_channels = cast("list[dict[str, Any]]", response.json())
+            self._guild_channels = cast("list[dict[str, object]]", response.json())
         return self._guild_channels
 
-    def get_channel(self, id_: int | str) -> dict[str, Any]:
+    def get_channel(self, id_: int | str) -> dict[str, object]:
         """Fetches a channel by its ID."""
         for channel in self.get_guild_channels():
             if channel["id"] == str(id_):
@@ -126,7 +131,7 @@ class DiscordClient(Client):
         """Fetches the application's information."""
         if self._app_info is None:
             response = self.get("/applications/@me")
-            self._app_info = cast("dict[str, Any]", response.json())
+            self._app_info = cast("dict[str, object]", response.json())
         return self._app_info
 
     def upgrade_application_flags_if_necessary(self) -> bool:
@@ -137,11 +142,11 @@ class DiscordClient(Client):
         """
         # Fetch first to modify, not overwrite
         current_flags = self.get_app_info().get("flags", 0)
-        new_flags = current_flags | 1 << 15 | 1 << 19
+        new_flags = current_flags | MINIMUM_FLAGS
 
         if new_flags != current_flags:
             resp = self.patch("/applications/@me", json={"flags": new_flags})
-            self._app_info = cast("dict[str, Any]", resp.json())
+            self._app_info = cast("dict[str, object]", resp.json())
             return True
 
         return False
@@ -176,7 +181,7 @@ class DiscordClient(Client):
 
     def get_all_roles(self) -> dict[str, int]:
         """Fetches all the roles in a guild."""
-        result = SilencedDict(name="Roles dictionary")
+        result = SilencedDict[int](name="Roles dictionary")
 
         roles = self.get_guild_info()["roles"]
 
@@ -190,8 +195,8 @@ class DiscordClient(Client):
         """Fetches all the text channels & categories in a guild."""
         off_topic_channel_name_regex = r"ot\d{1}(_.*)+"
         off_topic_count = 0
-        channels = SilencedDict(name="Channels dictionary")
-        categories = SilencedDict(name="Categories dictionary")
+        channels = SilencedDict[str](name="Channels dictionary")
+        categories = SilencedDict[str](name="Categories dictionary")
 
         for channel in self.get_guild_channels():
             channel_type = channel["type"]
@@ -246,7 +251,7 @@ class DiscordClient(Client):
 
         payload = {
             "name": new_name,
-            "image": f"data:image/png;base64,{image_data}",
+            "image": f"data:image/webp;base64,{image_data}",
         }
 
         response = self.post(
@@ -346,7 +351,7 @@ class BotStrapper:
 
         return data
 
-    def get_categories(self) -> dict[str, Any]:
+    def get_categories(self) -> dict[str, str]:
         """Get a config map of all of the categories in guild."""
         log.debug("Syncing categories with bot configuration.")
         _channels, all_categories = self.client.get_all_channels_and_categories()
@@ -363,13 +368,13 @@ class BotStrapper:
             data[category_name] = category_id
         return data
 
-    def sync_webhooks(self) -> dict[str, Any]:
+    def sync_webhooks(self) -> dict[str, object]:
         """Get webhook config. Will create all webhooks that cannot be found."""
         log.debug("Syncing webhooks with bot configuration.")
 
         all_channels, _categories = self.client.get_all_channels_and_categories()
 
-        data: dict[str, Any] = {}
+        data: dict[str, object] = {}
 
         existing_webhooks = self.client.get_all_guild_webhooks()
         for webhook_name, configured_webhook in Webhooks.model_dump().items():
@@ -394,7 +399,7 @@ class BotStrapper:
 
         return data
 
-    def sync_emojis(self) -> dict[str, Any]:
+    def sync_emojis(self) -> dict[str, str]:
         """Get emoji config. Will create all emojis that cannot be found."""
         existing_emojis = self.client.list_emojis()
         log.debug("Syncing emojis with bot configuration.")
@@ -417,7 +422,7 @@ class BotStrapper:
 
         return data
 
-    def write_config_env(self, config: dict[str, dict[str, Any]]) -> bool:
+    def write_config_env(self, config: dict[str, dict[str, object]]) -> bool:
         """Write the configuration to the specified env_file."""
         if not self.env_file.exists():
             self.env_file.touch()
@@ -444,7 +449,7 @@ class BotStrapper:
         """Runs the botstrap process."""
         # Track if any changes were made and exit with an error code if so.
         changes: bool = False
-        config: dict[str, dict[str, object]] = {}
+        config: dict[str, dict[str, object | Any]] = {}
         changes |= self.upgrade_client()
         self.check_guild_membership()
 
@@ -474,8 +479,9 @@ if __name__ == "__main__":
     botstrap = BotStrapper(guild_id=GuildConstants.id, env_file=ENV_FILE, bot_token=BotConstants.token)
     with botstrap:
         changes_made = botstrap.run()
+
     if changes_made:
         log.info("Botstrap completed successfully. Updated configuration has been written to %s", ENV_FILE)
     else:
         log.info("Botstrap completed successfully. No changes were necessary.")
-    sys.exit(changes_made)
+    sys.exit(0)
