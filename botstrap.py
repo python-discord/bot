@@ -278,6 +278,8 @@ class BotStrapper:
         self.client: DiscordClient = DiscordClient(guild_id=guild_id, bot_token=bot_token)
         self.env_file: Path = env_file
 
+        self.client_id = self.client.get_app_info()["id"]
+
     def __enter__(self):
         return self
 
@@ -289,6 +291,34 @@ class BotStrapper:
     ) -> None:
         self.client.__exit__(exc_type, exc_value, traceback)
 
+    def _find_webhook_for_channel(
+        self,
+        *,
+        webhook_name: str,
+        webhook_id: int | str,
+        channel_id: int | str,
+        webhooks: list[dict[str, object]],
+    ) -> dict[str, object] | None:
+        """Find a usuable webhook by its name or ID from a list of existing webhooks."""
+        matches: list[dict[str, object]] = []
+        # This matches to a list to prefer webhooks created by this application first,
+        # which may be encountered AFTER reaching a webhook with the same name.
+        for webhook in webhooks:
+            if not webhook.get("token"):
+                continue  # Webhook is unusable without a token
+            if webhook["id"] == str(webhook_id):
+                return webhook  # Keep existing configuration
+            if webhook["channel_id"] != str(channel_id):
+                continue  # Exclude webhooks from other channels
+            if webhook["application_id"] == str(self.client_id):
+                matches.insert(0, webhook)  # Prefer webhooks created by this application
+            elif webhook["name"] == webhook_name:
+                if webhook in matches:
+                    return webhook  # owned, and the name is the name, Use this one
+                matches.append(webhook)  # Fallback to matching by name
+
+        return matches[0] if matches else None
+
     def upgrade_client(self) -> bool:
         """Upgrade the application's flags if necessary."""
         if self.client.upgrade_application_flags_if_necessary():
@@ -299,12 +329,11 @@ class BotStrapper:
     def check_guild_membership(self) -> None:
         """Check the bot is in the required guild."""
         if not self.client.check_if_in_guild():
-            client_id = self.client.get_app_info()["id"]
             log.error("The bot is not a member of the configured guild with ID %s.", self.guild_id)
             log.warning(
                 "Please invite with the following URL and rerun this script: "
                 "https://discord.com/oauth2/authorize?client_id=%s&guild_id=%s&scope=bot+applications.commands&permissions=8",
-                client_id,
+                self.client_id,
                 self.guild_id,
             )
             raise BotstrapError("Bot is not a member of the configured guild.")
@@ -379,21 +408,19 @@ class BotStrapper:
         existing_webhooks = self.client.get_all_guild_webhooks()
         for webhook_name, configured_webhook in Webhooks.model_dump().items():
             formatted_webhook_name = webhook_name.replace("_", " ").title()
-            configured_webhook_id = str(configured_webhook["id"])
+            webhook_channel_id = all_channels[webhook_name]
 
-            for existing_hook in existing_webhooks:
-                existing_hook_id: str = existing_hook["id"]
+            webhook = self._find_webhook_for_channel(
+                webhook_name= formatted_webhook_name,
+                webhook_id=configured_webhook["id"],
+                channel_id=webhook_channel_id,
+                webhooks=existing_webhooks,
+            )
 
-                if existing_hook_id == configured_webhook_id or (
-                    existing_hook["name"] == formatted_webhook_name
-                    # This requires the normalized channel name matches the webhook attribute
-                    and existing_hook["channel_id"] == str(all_channels[webhook_name])
-                ):
-                    webhook_id = existing_hook_id
-                    break
-            else:
-                webhook_channel_id = all_channels[webhook_name]
+            if not webhook:
                 webhook_id = self.client.create_webhook(formatted_webhook_name, webhook_channel_id)
+            else:
+                webhook_id = webhook["id"]
 
             data[webhook_name + "__id"] = webhook_id
 
