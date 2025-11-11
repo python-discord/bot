@@ -82,7 +82,7 @@ class ModifyReminderConfirmationView(discord.ui.View):
 class OptInReminderMentionView(discord.ui.View):
     """A button to opt-in to get notified of someone else's reminder."""
 
-    def __init__(self, cog: "Reminders", reminder: dict, expiration: Duration):
+    def __init__(self, cog: Reminders, reminder: dict, expiration: Duration):
         super().__init__()
 
         self.cog = cog

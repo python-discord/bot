@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Callable
 from typing import Any
 
@@ -293,7 +291,7 @@ class FilterEditView(EditBaseView):
         if setting_name:
             # Find the right dictionary to update.
             if "/" in setting_name:
-                filter_name, setting_name = setting_name.split("/", maxsplit=1)
+                _filter_name, setting_name = setting_name.split("/", maxsplit=1)
                 dict_to_edit = self.filter_settings_overrides
                 default_value = self.filter_type.extra_fields_type().model_dump()[setting_name]
             else:

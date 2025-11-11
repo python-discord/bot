@@ -1,7 +1,7 @@
-ARG python_version=3.13-slim
+ARG python_version=3.14-slim
 
 FROM python:$python_version AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
   UV_LINK_MODE=copy

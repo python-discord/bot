@@ -23,11 +23,12 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          resolution-strategy: "lowest"
           cache-dependency-glob: "uv.lock"
           activate-environment: true
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --locked
 
       - name: Run pre-commit hooks
         run: SKIP=ruff pre-commit run --all-files
@@ -59,7 +60,7 @@ jobs:
       - name: Upload a Build Artifact
         if: always() && steps.prepare-artifact.outcome == 'success'
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: pull-request-payload
           path: pull_request_payload.json

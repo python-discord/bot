@@ -40,7 +40,7 @@ class AntispamList(UniquesListBase):
 
     name = "antispam"
 
-    def __init__(self, filtering_cog: "Filtering"):
+    def __init__(self, filtering_cog: Filtering):
         super().__init__(filtering_cog)
         self.message_deletion_queue: dict[Member, DeletionContext] = dict()
 
