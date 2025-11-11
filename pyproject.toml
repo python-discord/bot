@@ -95,8 +95,8 @@ combine-as-imports = true
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ANN", "D"]
 
-[tool.pytest.ini_options]
+[tool.pytest]
 # We don't use nose style tests so disable them in pytest.
 # This stops pytest from running functions named `setup` in test files.
 # See https://github.com/python-discord/bot/pull/2229#issuecomment-1204436420
-addopts = "-p no:nose"
+addopts = ["-p", "no:nose"]
