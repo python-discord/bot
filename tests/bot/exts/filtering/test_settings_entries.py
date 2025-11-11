@@ -144,8 +144,8 @@ class FilterTests(unittest.TestCase):
             (False, MockTextChannel(), True)
         )
 
-        for apply_in_dms, channel, expected in cases:
-            with self.subTest(apply_in_dms=apply_in_dms, channel=channel):
+        for i, (apply_in_dms, channel, expected) in enumerate(cases):
+            with self.subTest(test_case=i, apply_in_dms=apply_in_dms):
                 filter_dms = FilterDM(filter_dm=apply_in_dms)
                 self.ctx.channel = channel
 
