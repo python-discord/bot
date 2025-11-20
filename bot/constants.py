@@ -143,7 +143,6 @@ class _Roles(EnvConfig, env_prefix="roles_"):
     archived_channels_access: int = 1074780483776417964
 
     contributors: int = 295488872404484098
-    partners: int = 323426753857191936
     python_community: int = 458226413825294336
     voice_verified: int = 764802720779337729
 
@@ -604,7 +603,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BOT_DIR, os.pardir))
 # Default role combinations
 MODERATION_ROLES = Guild.moderation_roles
 STAFF_ROLES = Guild.staff_roles
-STAFF_PARTNERS_COMMUNITY_ROLES = STAFF_ROLES + (Roles.partners, Roles.python_community)
+STAFF_AND_COMMUNITY_ROLES = STAFF_ROLES + (Roles.python_community,)
 
 # Channel combinations
 MODERATION_CHANNELS = Guild.moderation_channels

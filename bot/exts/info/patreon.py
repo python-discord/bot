@@ -7,7 +7,7 @@ from pydis_core.utils.channel import get_or_fetch_channel
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Channels, Guild, Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import Channels, Guild, Roles, STAFF_AND_COMMUNITY_ROLES
 from bot.decorators import in_whitelist
 from bot.log import get_logger
 
@@ -110,7 +110,7 @@ class Patreon(commands.Cog):
         await ctx.send(embed=embed)
 
     @patreon_info.command("supporters", aliases=("patrons",))
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_AND_COMMUNITY_ROLES)
     async def patreon_supporters(self, ctx: commands.Context) -> None:
         """Sends the current list of patreon supporters, sorted by tier level."""
         await self.send_current_supporters(ctx.channel)

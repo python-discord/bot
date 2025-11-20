@@ -16,7 +16,7 @@ from bot.constants import (
     Guild,
     MODERATION_ROLES,
     Roles,
-    STAFF_PARTNERS_COMMUNITY_ROLES,
+    STAFF_AND_COMMUNITY_ROLES,
     VideoPermission,
 )
 from bot.converters import Expiry
@@ -199,17 +199,17 @@ class Stream(commands.Cog):
     @commands.command(aliases=("lstream",))
     @commands.has_any_role(*MODERATION_ROLES)
     async def liststream(self, ctx: commands.Context) -> None:
-        """Lists all users who aren't staff, partners or members of the python community and have stream permissions."""
-        non_staff_partners_community_members_with_stream = [
+        """Lists all users who aren't staff or members of the python community and have stream permissions."""
+        non_staff_or_community_members_with_stream = [
             member
             for member in ctx.guild.get_role(Roles.video).members
-            if not any(role.id in STAFF_PARTNERS_COMMUNITY_ROLES for role in member.roles)
+            if not any(role.id in STAFF_AND_COMMUNITY_ROLES for role in member.roles)
         ]
 
         # List of tuples (UtcPosixTimestamp, str)
         # So that the list can be sorted on the UtcPosixTimestamp before the message is passed to the paginator.
         streamer_info = []
-        for member in non_staff_partners_community_members_with_stream:
+        for member in non_staff_or_community_members_with_stream:
             if revoke_time := await self.task_cache.get(member.id):
                 # Member only has temporary streaming perms
                 revoke_delta = Arrow.utcfromtimestamp(revoke_time).humanize()

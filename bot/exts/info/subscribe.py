@@ -184,7 +184,7 @@ class Subscribe(commands.Cog):
     @commands.command(name="subscribe", aliases=("unsubscribe",))
     @redirect_output(
         destination_channel=constants.Channels.bot_commands,
-        bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES,
+        bypass_roles=constants.STAFF_AND_COMMUNITY_ROLES,
     )
     async def subscribe_command(self, ctx: commands.Context, *_) -> None:  # We don't actually care about the args
         """Display the member's current state for each role, and allow them to add/remove the roles."""

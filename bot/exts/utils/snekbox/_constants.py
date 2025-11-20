@@ -14,7 +14,7 @@ MAX_OUTPUT_BLOCK_CHARS = 1000
 # The Snekbox commands' whitelists and blacklists.
 NO_SNEKBOX_CHANNELS = (Channels.python_general,)
 NO_SNEKBOX_CATEGORIES = ()
-SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community, Roles.partners)
+SNEKBOX_ROLES = (Roles.helpers, Roles.moderators, Roles.admins, Roles.owners, Roles.python_community)
 
 REDO_EMOJI = "\U0001f501"  # :repeat:
 REDO_TIMEOUT = 30

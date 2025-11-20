@@ -9,7 +9,7 @@ from discord.ext.commands import Bot, Context
 from pydis_core.site_api import ResponseCodeError
 
 import bot
-from bot.constants import Categories, Channels, Colours, Icons, MODERATION_ROLES, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import Categories, Channels, Colours, Icons, MODERATION_ROLES, STAFF_AND_COMMUNITY_ROLES
 from bot.converters import DurationOrExpiry, MemberOrUser
 from bot.errors import InvalidInfractedUserError
 from bot.exts.moderation.infraction._views import BanConfirmationView
@@ -332,11 +332,11 @@ async def confirm_elevated_user_ban(ctx: Context, user: MemberOrUser) -> bool:
     """
     If user has an elevated role, require confirmation before banning.
 
-    A member with the staff, partner, or community roles are considered elevated.
+    A member with the staff or community roles are considered elevated.
 
     Returns a boolean indicating whether the infraction should proceed.
     """
-    if not isinstance(user, Member) or not any(role.id in STAFF_PARTNERS_COMMUNITY_ROLES for role in user.roles):
+    if not isinstance(user, Member) or not any(role.id in STAFF_AND_COMMUNITY_ROLES for role in user.roles):
         return True
 
     confirmation_view = BanConfirmationView(
