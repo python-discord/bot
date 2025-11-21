@@ -555,7 +555,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     @unittest.mock.patch("bot.exts.info.information.Information.create_user_embed")
     async def test_staff_members_can_bypass_channel_restriction(self, create_embed, constants):
         """Staff members should be able to bypass the bot-commands channel restriction."""
-        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
+        constants.STAFF_AND_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=200))
 
         await self.cog.user_info(self.cog, ctx)
@@ -567,7 +567,7 @@ class UserCommandTests(unittest.IsolatedAsyncioTestCase):
     async def test_moderators_can_target_another_member(self, create_embed, constants):
         """A moderator should be able to use `!user` targeting another user."""
         constants.MODERATION_ROLES = [self.moderator_role.id]
-        constants.STAFF_PARTNERS_COMMUNITY_ROLES = [self.moderator_role.id]
+        constants.STAFF_AND_COMMUNITY_ROLES = [self.moderator_role.id]
         ctx = helpers.MockContext(author=self.moderator, channel=helpers.MockTextChannel(id=50))
 
         await self.cog.user_info(self.cog, ctx, self.target)

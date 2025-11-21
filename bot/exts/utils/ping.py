@@ -4,7 +4,7 @@ from discord import Embed
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES, URLs
+from bot.constants import Channels, STAFF_AND_COMMUNITY_ROLES, URLs
 from bot.decorators import in_whitelist
 
 DESCRIPTIONS = (
@@ -22,7 +22,7 @@ class Latency(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @in_whitelist(channels=(Channels.bot_commands,), roles=STAFF_AND_COMMUNITY_ROLES)
     async def ping(self, ctx: commands.Context) -> None:
         """
         Gets different measures of latency within the bot.

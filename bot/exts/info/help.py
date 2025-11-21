@@ -9,7 +9,7 @@ from rapidfuzz import fuzz, process
 from rapidfuzz.utils import default_process
 
 from bot import constants
-from bot.constants import Channels, STAFF_PARTNERS_COMMUNITY_ROLES
+from bot.constants import Channels, STAFF_AND_COMMUNITY_ROLES
 from bot.decorators import redirect_output
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -176,7 +176,7 @@ class CustomHelpCommand(HelpCommand):
     def __init__(self):
         super().__init__(command_attrs={"help": "Shows help for bot commands"})
 
-    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_PARTNERS_COMMUNITY_ROLES)
+    @redirect_output(destination_channel=Channels.bot_commands, bypass_roles=STAFF_AND_COMMUNITY_ROLES)
     async def command_callback(self, ctx: Context, *, command: str | None = None) -> None:
         """Attempts to match the provided query with a valid command or cog."""
         # the only reason we need to tamper with this is because d.py does not support "categories",

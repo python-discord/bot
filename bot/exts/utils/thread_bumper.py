@@ -151,9 +151,9 @@ class ThreadBumper(commands.Cog):
             await self.unarchive_threads_not_manually_archived([after])
 
     async def cog_check(self, ctx: commands.Context) -> bool:
-        """Only allow staff & partner roles to invoke the commands in this cog."""
+        """Only allow staff & community roles to invoke the commands in this cog."""
         return await commands.has_any_role(
-            *constants.STAFF_PARTNERS_COMMUNITY_ROLES
+            *constants.STAFF_AND_COMMUNITY_ROLES
         ).predicate(ctx)
 
 
