@@ -318,7 +318,7 @@ class DocCog(commands.Cog):
                 await ctx.send(embed=inventory_embed)
 
         else:
-            symbol = symbol_name.strip("`")
+            symbol = symbol_name.replace("`", "").split()[0]
             async with ctx.typing():
                 doc_embed = await self.create_symbol_embed(symbol)
 
