@@ -219,8 +219,8 @@ class InfractionScheduler:
         # Default values for the confirmation message and mod log.
         confirm_msg = ":ok_hand: applied"
 
-        # Specifying an expiry for a note or warning makes no sense.
-        if infr_type in ("note", "warning"):
+        # Specifying an expiry for a kick, note, or warning makes no sense.
+        if infr_type in ("kick", "note", "warning"):
             expiry_msg = ""
         else:
             expiry_msg = f" until {expiry}" if expiry else " permanently"
