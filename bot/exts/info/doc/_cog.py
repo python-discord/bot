@@ -26,6 +26,11 @@ from ._inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventor
 
 log = get_logger(__name__)
 
+# groups to ignore from parsing
+IGNORE_GROUPS = (
+    "std:doc",
+)
+
 # symbols with a group contained here will get the group prefixed on duplicates
 FORCE_PREFIX_GROUPS = (
     "term",
@@ -80,6 +85,8 @@ class DocCog(commands.Cog):
 
         for group, items in inventory.items():
             for symbol_name, relative_doc_url in items:
+                if group in IGNORE_GROUPS:
+                    continue
 
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
