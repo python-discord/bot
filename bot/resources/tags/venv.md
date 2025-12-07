@@ -6,7 +6,7 @@ embed:
 
 Virtual environments are isolated Python environments, which make it easier to keep your system clean and manage dependencies. By default, when activated, only libraries and scripts installed in the virtual environment are accessible, preventing cross-project dependency conflicts, and allowing easy isolation of requirements.
 
-To create a new virtual environment, you can use the standard library `venv` module: `python3 -m venv .venv` (replace `python3` with `python` or `py` on Windows)
+To create a new virtual environment, you can use the standard library `venv` module: `python3 -m venv .venv` (replace `python3` with `py` on Windows)
 
 Then, to activate the new virtual environment:
 
