@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 from typing import ClassVar
 from urllib.parse import urlparse
 
@@ -59,4 +60,5 @@ class DomainFilter(Filter):
         match = URL_RE.fullmatch(content)
         if not match or not match.group(1):
             raise BadArgument(f"`{content}` is not a URL.")
-        return match.group(1), description
+        unquoted_content = urllib.parse.unquote(match.group(1))
+        return unquoted_content, description
