@@ -37,11 +37,11 @@ class DomainFilter(Filter):
 
     async def triggered_on(self, ctx: FilterContext) -> bool:
         """Searches for a domain within a given context."""
-        domain = tldextract.extract(self.content).registered_domain.lower()
+        domain = tldextract.extract(self.content).top_domain_under_public_suffix.lower()
 
         for found_url in ctx.content:
             extract = tldextract.extract(found_url)
-            if self.content.lower() in found_url and extract.registered_domain == domain:
+            if self.content.lower() in found_url and extract.top_domain_under_public_suffix == domain:
                 if self.extra_fields.only_subdomains:
                     if not extract.subdomain and not urlparse(f"https://{found_url}").path:
                         return False
