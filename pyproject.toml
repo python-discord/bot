@@ -19,7 +19,7 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "python-frontmatter==1.1.0",
     "rapidfuzz==3.14.1",
-    "regex==2025.10.23",
+    "regex==2026.2.19",
     "sentry-sdk==2.43.0",
     "tenacity==9.1.2",
     "tldextract==5.3.0",
