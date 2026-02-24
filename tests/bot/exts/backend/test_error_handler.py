@@ -135,8 +135,9 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
             }
         )
 
-        for case in test_cases:
-            with self.subTest(args=case["args"], expect_mock_call=case["expect_mock_call"]):
+        for i, case in enumerate(test_cases):
+            mock_type = "send" if case["expect_mock_call"] == "send" else "mock_function"
+            with self.subTest(test_case=i, expect_mock_call=mock_type):
                 self.ctx.send.reset_mock()
                 self.assertIsNone(await self.cog.on_command_error(*case["args"]))
                 if case["expect_mock_call"] == "send":
@@ -161,8 +162,8 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
             }
         )
 
-        for case in cases:
-            with self.subTest(**case):
+        for i, case in enumerate(cases):
+            with self.subTest(test_case=i):
                 self.assertIsNone(await self.cog.on_command_error(self.ctx, case["error"]))
                 case["mock_function_to_call"].assert_awaited_once_with(self.ctx, case["error"].original)
 
@@ -173,8 +174,8 @@ class ErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
             errors.ExtensionError(name="foo"),
         )
 
-        for err in errs:
-            with self.subTest(error=err):
+        for i, err in enumerate(errs):
+            with self.subTest(test_case=i):
                 self.cog.handle_unexpected_error.reset_mock()
                 self.assertIsNone(await self.cog.on_command_error(self.ctx, err))
                 self.cog.handle_unexpected_error.assert_awaited_once_with(self.ctx, err)
@@ -251,8 +252,8 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
             (MockTextChannel(), True)
         )
 
-        for channel, kick in test_cases:
-            with self.subTest(kick=kick, channel=channel):
+        for i, (channel, kick) in enumerate(test_cases):
+            with self.subTest(test_case=i, kick=kick):
                 self.ctx.reset_mock()
                 self.ctx.invoked_with = "shh"
 
@@ -291,8 +292,8 @@ class TrySilenceTests(unittest.IsolatedAsyncioTestCase):
             ("unshh", MockTextChannel())
         )
 
-        for invoke, channel in test_cases:
-            with self.subTest(message=invoke, channel=channel):
+        for i, (invoke, channel) in enumerate(test_cases):
+            with self.subTest(test_case=i, message=invoke, has_channel=channel is not None):
                 self.bot.get_command.side_effect = (self.silence.silence, self.silence.unsilence)
                 self.ctx.reset_mock()
 
@@ -386,33 +387,39 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         """Should handle each error probably."""
         test_cases = (
             {
+                "error_type": "MissingRequiredArgument",
                 "error": errors.MissingRequiredArgument(MagicMock()),
                 "call_prepared": True
             },
             {
+                "error_type": "TooManyArguments",
                 "error": errors.TooManyArguments(),
                 "call_prepared": True
             },
             {
+                "error_type": "BadArgument",
                 "error": errors.BadArgument(),
                 "call_prepared": True
             },
             {
+                "error_type": "BadUnionArgument",
                 "error": errors.BadUnionArgument(MagicMock(), MagicMock(), MagicMock()),
                 "call_prepared": True
             },
             {
+                "error_type": "ArgumentParsingError",
                 "error": errors.ArgumentParsingError(),
                 "call_prepared": False
             },
             {
+                "error_type": "UserInputError",
                 "error": errors.UserInputError(),
                 "call_prepared": True
             }
         )
 
         for case in test_cases:
-            with self.subTest(error=case["error"], call_prepared=case["call_prepared"]):
+            with self.subTest(error_type=case["error_type"], call_prepared=case["call_prepared"]):
                 self.ctx.reset_mock()
                 self.cog.send_error_with_help = AsyncMock()
                 self.assertIsNone(await self.cog.handle_user_input_error(self.ctx, case["error"]))
@@ -426,33 +433,39 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         """Should await `ctx.send` when error is check failure."""
         test_cases = (
             {
+                "error_type": "BotMissingPermissions",
                 "error": errors.BotMissingPermissions(MagicMock()),
                 "call_ctx_send": True
             },
             {
+                "error_type": "BotMissingRole",
                 "error": errors.BotMissingRole(MagicMock()),
                 "call_ctx_send": True
             },
             {
+                "error_type": "BotMissingAnyRole",
                 "error": errors.BotMissingAnyRole(MagicMock()),
                 "call_ctx_send": True
             },
             {
+                "error_type": "NoPrivateMessage",
                 "error": errors.NoPrivateMessage(),
                 "call_ctx_send": True
             },
             {
+                "error_type": "InWhitelistCheckFailure",
                 "error": InWhitelistCheckFailure(1234),
                 "call_ctx_send": True
             },
             {
+                "error_type": "ResponseCodeError",
                 "error": ResponseCodeError(MagicMock()),
                 "call_ctx_send": False
             }
         )
 
         for case in test_cases:
-            with self.subTest(error=case["error"], call_ctx_send=case["call_ctx_send"]):
+            with self.subTest(error_type=case["error_type"], call_ctx_send=case["call_ctx_send"]):
                 self.ctx.reset_mock()
                 await self.cog.handle_check_failure(self.ctx, case["error"])
                 if case["call_ctx_send"]:
@@ -465,25 +478,29 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
         """Should `ctx.send` on HTTP error codes, and log at correct level."""
         test_cases = (
             {
+                "status": 400,
                 "error": ResponseCodeError(AsyncMock(status=400)),
                 "log_level": "error"
             },
             {
+                "status": 404,
                 "error": ResponseCodeError(AsyncMock(status=404)),
                 "log_level": "debug"
             },
             {
+                "status": 550,
                 "error": ResponseCodeError(AsyncMock(status=550)),
                 "log_level": "warning"
             },
             {
+                "status": 1000,
                 "error": ResponseCodeError(AsyncMock(status=1000)),
                 "log_level": "warning"
             }
         )
 
         for case in test_cases:
-            with self.subTest(error=case["error"], log_level=case["log_level"]):
+            with self.subTest(status=case["status"], log_level=case["log_level"]):
                 self.ctx.reset_mock()
                 log_mock.reset_mock()
                 await self.cog.handle_api_error(self.ctx, case["error"])
@@ -500,7 +517,7 @@ class IndividualErrorHandlerTests(unittest.IsolatedAsyncioTestCase):
     async def test_handle_unexpected_error(self, log_mock, new_scope_mock):
         """Should `ctx.send` this error, error log this and sent to Sentry."""
         for case in (None, MockGuild()):
-            with self.subTest(guild=case):
+            with self.subTest(has_guild=case is not None):
                 self.ctx.reset_mock()
                 log_mock.reset_mock()
                 new_scope_mock.reset_mock()
