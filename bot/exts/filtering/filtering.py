@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import io
 import json
@@ -110,7 +111,32 @@ class Filtering(Cog):
         await self.bot.wait_until_guild_available()
 
         log.trace("Loading filtering information from the database.")
-        raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
+        for attempt in range(1, FILTER_LOAD_MAX_ATTEMPTS + 1):
+            try:
+                raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
+                break
+            except Exception as error:
+                is_retryable = self._retryable_filter_load_error(error)
+                is_last_attempt = attempt == FILTER_LOAD_MAX_ATTEMPTS
+
+                if not is_retryable:
+                    raise
+
+                if is_last_attempt:
+                    log.exception("Failed to load filtering data after %d attempts.", FILTER_LOAD_MAX_ATTEMPTS)
+                    await self._alert_mods_filter_load_failure(error, attempt)
+                    raise
+
+                backoff_seconds = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
+                log.warning(
+                    "Failed to load filtering data (attempt %d/%d). Retrying in %d second(s): %s",
+                    attempt,
+                    FILTER_LOAD_MAX_ATTEMPTS,
+                    backoff_seconds,
+                    error
+                )
+                await asyncio.sleep(backoff_seconds)
+
         example_list = None
         for raw_filter_list in raw_filter_lists:
             loaded_list = self._load_raw_filter_list(raw_filter_list)
