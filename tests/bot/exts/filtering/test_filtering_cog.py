@@ -26,3 +26,18 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
         self.start_patcher = patch.object(self.cog.weekly_auto_infraction_report_task, "start")
         self.mock_weekly_task_start = self.start_patcher.start()
         self.addCleanup(self.start_patcher.stop)
+
+    async def test_cog_load_when_filter_list_fetch_fails(self):
+        """`cog_load` should currently raise if loading filter lists from the API fails."""
+        self.bot.api_client.get.side_effect = RuntimeError("Simulated site/API outage during cog_load")
+
+        with self.assertRaises(RuntimeError):
+            await self.cog.cog_load()
+
+        self.bot.wait_until_guild_available.assert_awaited_once()
+        self.bot.api_client.get.assert_awaited_once_with("bot/filter/filter_lists")
+
+        # Startup should stop before later steps.
+        self.cog._fetch_or_generate_filtering_webhook.assert_not_awaited()
+        self.cog.schedule_offending_messages_deletion.assert_not_awaited()
+        self.mock_weekly_task_start.assert_not_called()
