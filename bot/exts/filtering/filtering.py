@@ -64,6 +64,8 @@ CACHE_SIZE = 1000
 HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
+FILTER_LOAD_MAX_ATTEMPTS = 3
+INITIAL_BACKOFF_SECONDS = 1
 
 
 async def _extract_text_file_content(att: discord.Attachment) -> str:
@@ -121,6 +123,33 @@ class Filtering(Cog):
         self.collect_loaded_types(example_list)
         await self.schedule_offending_messages_deletion()
         self.weekly_auto_infraction_report_task.start()
+
+    @staticmethod
+    def _retryable_filter_load_error(error: Exception) -> bool:
+        """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
+        if isinstance(error, ResponseCodeError):
+            return error.status == 429 or error.status >= 500
+
+        return isinstance(error, (TimeoutError, OSError))
+
+    async def _alert_mods_filter_load_failure(self, error: Exception, attempts: int) -> None:
+        """Send an alert to mod-alerts when startup fails after all retry attempts."""
+        mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
+        if mod_alerts_channel is None:
+            log.error("Failed to send filtering startup failure alert: #mod-alerts channel is unavailable.")
+            return
+
+        error_details = f"{error.__class__.__name__}: {error}"
+        if isinstance(error, ResponseCodeError):
+            error_details = f"HTTP {error.status} - {error_details}"
+
+        try:
+            await mod_alerts_channel.send(
+                ":warning: Filtering failed to load filter lists during startup "
+                f"after {attempts} attempt(s). Error: `{error_details}`"
+            )
+        except discord.HTTPException:
+            log.exception("Failed to send filtering startup failure alert to #mod-alerts.")
 
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
         """
