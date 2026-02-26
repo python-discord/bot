@@ -33,6 +33,7 @@ from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -240,11 +241,11 @@ class Reminders(Cog):
                 log.warning(f"Attempt {attempt} - Failed to fetch reminders from the API: {e}")
                 if attempt == MAX_RETRY_ATTEMPTS:
                     log.error("Max retry attempts reached. Failed to load reminders.")
+                    await self._alert_mods_if_loading_failed(e)
                     raise
             await asyncio.sleep(delay)
             delay *= 2 # exponential backoff
         now = datetime.now(UTC)
-
         for reminder in response:
             is_valid, *_ = self.ensure_valid_reminder(reminder)
             if not is_valid:
@@ -257,6 +258,25 @@ class Reminders(Cog):
                 await self.send_reminder(reminder, remind_at)
             else:
                 self.schedule_reminder(reminder)
+
+    async def _alert_mods_if_loading_failed(self, error: Exception) -> None:
+            message = textwrap.dedent(
+                f"""
+                An error occurred while loading the Reminders Cog, and it failed to initialize properly.
+
+                Error details:
+                {error}
+                """
+            )
+
+            await send_log_message(
+                self.bot,
+                title="Error: Failed to initialize the Reminders Cog",
+                text=message,
+                ping_everyone=True,
+                icon_url=Icons.token_removed,
+                colour=discord.Color.red()
+            )
 
     def ensure_valid_reminder(self, reminder: dict) -> tuple[bool, discord.TextChannel]:
         """Ensure reminder channel can be fetched otherwise delete the reminder."""
