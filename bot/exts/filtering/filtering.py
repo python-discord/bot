@@ -154,7 +154,7 @@ class Filtering(Cog):
     def _retryable_filter_load_error(error: Exception) -> bool:
         """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
         if isinstance(error, ResponseCodeError):
-            return error.status == 429 or error.status >= 500
+            return error.status in (408, 429) or error.status >= 500
 
         return isinstance(error, (TimeoutError, OSError))
 
