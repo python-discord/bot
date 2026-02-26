@@ -230,6 +230,7 @@ class Reminders(Cog):
     async def cog_load(self) -> None:
         """Get all current reminders from the API and reschedule them."""
         await self.bot.wait_until_guild_available()
+        # retry fetching reminders with exponential backoff
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
                 # response either throws, or is a list of reminders (possibly empty)
