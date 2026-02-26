@@ -46,9 +46,11 @@ class RemindersCogLoadTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_reminders_cog_load_fails_after_max_retries(self):
         """ Tests if the Reminders cog fails to load after max retries. """
-        self.bot.api_client.get.side_effect = Exception("fail")
-        with patch("bot.exts.utils.reminders.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await self.cog.cog_load()
+        self.bot.api_client.get.side_effect = RuntimeError("fail")
+        with patch("bot.exts.utils.reminders.asyncio.sleep", new_callable=AsyncMock) as mock_sleep, \
+             self.assertRaises(RuntimeError):
+            await self.cog.cog_load()
+
         # Should have retried MAX_RETRY_ATTEMPTS - 1 times before failing
         self.assertEqual(mock_sleep.await_count, MAX_RETRY_ATTEMPTS - 1)
         self.bot.api_client.get.assert_called()
