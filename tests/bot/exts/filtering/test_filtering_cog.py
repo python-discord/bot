@@ -29,38 +29,53 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
         self.mock_weekly_task_start = self.start_patcher.start()
         self.addCleanup(self.start_patcher.stop)
 
-    async def test_cog_load_when_filter_list_fetch_fails(self):
-        """`cog_load` should currently raise if loading filter lists from the API fails."""
-        self.bot.api_client.get.side_effect = OSError("Simulated site/API outage during cog_load")
-        mock_alerts_channel = MagicMock()
-        mock_alerts_channel.send = AsyncMock()
-        self.bot.get_channel.return_value = mock_alerts_channel
+    async def test_cog_load_retries_then_succeeds(self):
+        """`cog_load` should retry temporary failures and complete startup after a successful fetch."""
+        self.bot.api_client.get.side_effect = [
+            OSError("temporary outage"),
+            TimeoutError("temporary timeout"),
+            [],
+        ]
+        self.cog._alert_mods_filter_load_failure = AsyncMock()
 
-        with self.assertRaises(OSError):
+        with patch("bot.exts.filtering.filtering.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             await self.cog.cog_load()
 
         self.bot.wait_until_guild_available.assert_awaited_once()
         self.assertEqual(self.bot.api_client.get.await_count, 3)
         self.bot.api_client.get.assert_awaited_with("bot/filter/filter_lists")
+        self.assertEqual(mock_sleep.await_count, 2)
+        self.cog._alert_mods_filter_load_failure.assert_not_awaited()
+        self.cog._fetch_or_generate_filtering_webhook.assert_awaited_once()
+        self.cog.collect_loaded_types.assert_called_once_with(None)
+        self.cog.schedule_offending_messages_deletion.assert_awaited_once()
+        self.mock_weekly_task_start.assert_called_once()
+
+    async def test_retries_three_times_fails_and_alerts(self):
+        """`cog_load` should alert and re-raise when all retry attempts fail."""
+        self.bot.api_client.get.side_effect = OSError("Simulated site/API outage during cog_load")
+        self.cog._alert_mods_filter_load_failure = AsyncMock()
+
+        with (
+            patch("bot.exts.filtering.filtering.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+            self.assertRaises(OSError),
+        ):
+            await self.cog.cog_load()
+
+        self.bot.wait_until_guild_available.assert_awaited_once()
+        self.assertEqual(self.bot.api_client.get.await_count, 3)
+        self.bot.api_client.get.assert_awaited_with("bot/filter/filter_lists")
+        self.assertEqual(mock_sleep.await_count, 2)
+        self.cog._alert_mods_filter_load_failure.assert_awaited_once()
+
+        error, attempts = self.cog._alert_mods_filter_load_failure.await_args.args
+        self.assertIsInstance(error, OSError)
+        self.assertEqual(attempts, 3)
 
         # Startup should stop before later steps.
         self.cog._fetch_or_generate_filtering_webhook.assert_not_awaited()
         self.cog.schedule_offending_messages_deletion.assert_not_awaited()
         self.mock_weekly_task_start.assert_not_called()
-
-    async def test_cog_load_completes_when_filter_list_fetch_succeeds(self):
-        """`cog_load` should continue startup when the API returns filter lists successfully."""
-        self.bot.api_client.get.return_value = []
-
-        await self.cog.cog_load()
-
-        self.bot.wait_until_guild_available.assert_awaited_once()
-        self.assertEqual(self.bot.api_client.get.await_count, 1)
-        self.bot.api_client.get.assert_awaited_with("bot/filter/filter_lists")
-        self.cog._fetch_or_generate_filtering_webhook.assert_awaited_once()
-        self.cog.collect_loaded_types.assert_called_once_with(None)
-        self.cog.schedule_offending_messages_deletion.assert_awaited_once()
-        self.mock_weekly_task_start.assert_called_once()
 
     def test_retryable_filter_load_error(self):
         """`_retryable_filter_load_error` should classify temporary failures as retryable."""
