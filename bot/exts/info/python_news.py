@@ -51,8 +51,30 @@ class PythonNews(Cog):
     @staticmethod
     def _retryable_site_load_error(error: Exception) -> bool:
         if isinstance(error, ResponseCodeError):
-            return error.status == 429 or error.status >= 500
+            return error.status in (408, 429) or error.status >= 500
         return isinstance(error, (TimeoutError, OSError))
+
+    async def _alert_mods_python_news_load_failure(
+        self, error: Exception, attempts: int
+    ) -> None:
+        """Alert moderators if PythonNews fails to load after all retries."""
+        channel = self.bot.get_channel(constants.Channels.mod_alerts)
+
+        if channel is None:
+            log.error("Could not find mod_alerts channel to send PythonNews failure alert.")
+            return
+
+        status_info = ""
+        if isinstance(error, ResponseCodeError):
+            status_info = f" (status {error.status})"
+
+        await channel.send(
+            ":warning: **PythonNews failed to load.**\n"
+            f"Attempts: {attempts}\n"
+            f"Error: `{error.__class__.__name__}{status_info}`\n\n"
+            "Python news posting will not be active until the bot is restarted "
+            "or the extension is reloaded."
+        )
 
     async def cog_load(self) -> None:
         """Load all existing seen items from db and create any missing mailing lists."""
@@ -84,6 +106,7 @@ class PythonNews(Cog):
                         "Failed to load PythonNews mailing lists after %d attempt(s).",
                         MAX_ATTEMPTS,
                     )
+                    await self._alert_mods_python_news_load_failure(error, attempt)
                     raise
 
                 backoff_seconds = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
