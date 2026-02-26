@@ -80,6 +80,7 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
     def test_retryable_filter_load_error(self):
         """`_retryable_filter_load_error` should classify temporary failures as retryable."""
         test_cases = (
+            (ResponseCodeError(MagicMock(status=408)), True),
             (ResponseCodeError(MagicMock(status=429)), True),
             (ResponseCodeError(MagicMock(status=500)), True),
             (ResponseCodeError(MagicMock(status=503)), True),
