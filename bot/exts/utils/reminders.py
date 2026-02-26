@@ -24,6 +24,7 @@ from bot.constants import (
     POSITIVE_REPLIES,
     Roles,
     STAFF_AND_COMMUNITY_ROLES,
+    URLs,
 )
 from bot.converters import Duration, UnambiguousUser
 from bot.errors import LockedResourceError
@@ -47,7 +48,8 @@ REMINDER_MENTION_BUTTON_TIMEOUT = 5*60
 MAXIMUM_REMINDER_MENTION_OPT_INS = 80
 
 # setup constants when loading
-MAX_RETRY_ATTEMPTS = 3
+MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
+BACKOFF_INITIAL_DELAY = 5 # seconds
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
 
@@ -227,7 +229,6 @@ class Reminders(Cog):
 
     async def cog_load(self) -> None:
         """Get all current reminders from the API and reschedule them."""
-        delay = 5 # seconds
         await self.bot.wait_until_guild_available()
         for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
             try:
@@ -243,8 +244,7 @@ class Reminders(Cog):
                     log.error("Max retry attempts reached. Failed to load reminders.")
                     await self._alert_mods_if_loading_failed(e)
                     raise
-            await asyncio.sleep(delay)
-            delay *= 2 # exponential backoff
+            await asyncio.sleep(BACKOFF_INITIAL_DELAY * (2 ** (attempt - 1)))  # Exponential backoff
         now = datetime.now(UTC)
         for reminder in response:
             is_valid, *_ = self.ensure_valid_reminder(reminder)
