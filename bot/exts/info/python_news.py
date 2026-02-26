@@ -15,6 +15,9 @@ from bot.bot import Bot
 from bot.log import get_logger
 from bot.utils.webhooks import send_webhook
 
+PYTHON_NEWS_LOAD_MAX_ATTEMPTS = 3
+PYTHON_NEWS_INITIAL_BACKOFF_SECONDS = 1
+
 PEPS_RSS_URL = "https://peps.python.org/peps.rss"
 
 RECENT_THREADS_TEMPLATE = "https://mail.python.org/archives/list/{name}@python.org/recent-threads"
@@ -43,6 +46,12 @@ class PythonNews(Cog):
         self.webhook_names = {}
         self.webhook: discord.Webhook | None = None
         self.seen_items: dict[str, set[str]] = {}
+
+    @staticmethod
+    def _retryable_site_load_error(error: Exception) -> bool:
+        if isinstance(error, ResponseCodeError):
+            return error.status == 429 or error.status >= 500
+        return isinstance(error, (TimeoutError, OSError))
 
     async def cog_load(self) -> None:
         """Load all existing seen items from db and create any missing mailing lists."""
