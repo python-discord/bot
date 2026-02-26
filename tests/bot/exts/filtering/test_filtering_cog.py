@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from pydis_core.site_api import ResponseCodeError
+
 from bot.exts.filtering.filtering import Filtering
 
 
@@ -30,12 +32,16 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
     async def test_cog_load_when_filter_list_fetch_fails(self):
         """`cog_load` should currently raise if loading filter lists from the API fails."""
         self.bot.api_client.get.side_effect = OSError("Simulated site/API outage during cog_load")
+        mock_alerts_channel = MagicMock()
+        mock_alerts_channel.send = AsyncMock()
+        self.bot.get_channel.return_value = mock_alerts_channel
 
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(OSError):
             await self.cog.cog_load()
 
         self.bot.wait_until_guild_available.assert_awaited_once()
-        self.bot.api_client.get.assert_awaited_once_with("bot/filter/filter_lists")
+        self.assertEqual(self.bot.api_client.get.await_count, 3)
+        self.bot.api_client.get.assert_awaited_with("bot/filter/filter_lists")
 
         # Startup should stop before later steps.
         self.cog._fetch_or_generate_filtering_webhook.assert_not_awaited()
@@ -49,8 +55,27 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
         await self.cog.cog_load()
 
         self.bot.wait_until_guild_available.assert_awaited_once()
-        self.bot.api_client.get.assert_awaited_once_with("bot/filter/filter_lists")
+        self.assertEqual(self.bot.api_client.get.await_count, 1)
+        self.bot.api_client.get.assert_awaited_with("bot/filter/filter_lists")
         self.cog._fetch_or_generate_filtering_webhook.assert_awaited_once()
         self.cog.collect_loaded_types.assert_called_once_with(None)
         self.cog.schedule_offending_messages_deletion.assert_awaited_once()
         self.mock_weekly_task_start.assert_called_once()
+
+    def test_retryable_filter_load_error(self):
+        """`_retryable_filter_load_error` should classify temporary failures as retryable."""
+        test_cases = (
+            (ResponseCodeError(MagicMock(status=429)), True),
+            (ResponseCodeError(MagicMock(status=500)), True),
+            (ResponseCodeError(MagicMock(status=503)), True),
+            (ResponseCodeError(MagicMock(status=400)), False),
+            (ResponseCodeError(MagicMock(status=404)), False),
+            (TimeoutError("timeout"), True),
+            (OSError("os error"), True),
+            (AttributeError("attr"), False),
+            (ValueError("value"), False),
+        )
+
+        for error, expected_retryable in test_cases:
+            with self.subTest(error=error):
+                self.assertEqual(self.cog._retryable_filter_load_error(error), expected_retryable)
