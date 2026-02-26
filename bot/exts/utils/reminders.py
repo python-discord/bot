@@ -240,6 +240,10 @@ class Reminders(Cog):
                 )
                 break
             except Exception as e:
+                if not self._check_error_is_retriable(e):
+                    log.error(f"Failed to load reminders due to non-retryable error: {e}")
+                    await self._alert_mods_if_loading_failed(e)
+                    raise
                 log.warning(f"Attempt {attempt} - Failed to fetch reminders from the API: {e}")
                 if attempt == MAX_RETRY_ATTEMPTS:
                     log.error("Max retry attempts reached. Failed to load reminders.")
@@ -278,6 +282,13 @@ class Reminders(Cog):
                 icon_url=Icons.token_removed,
                 colour=discord.Color.red()
             )
+
+    def _check_error_is_retriable(self, error: Exception) -> bool:
+        """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
+        if isinstance(error, ResponseCodeError):
+            return error.status in (408, 429) or error.status >= 500
+
+        return isinstance(error, (TimeoutError, OSError))
 
     def ensure_valid_reminder(self, reminder: dict) -> tuple[bool, discord.TextChannel]:
         """Ensure reminder channel can be fetched otherwise delete the reminder."""

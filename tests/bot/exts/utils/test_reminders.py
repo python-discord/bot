@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from pydis_core.site_api import ResponseCodeError
+
 from bot.constants import URLs
 from bot.exts.utils.reminders import Reminders
 from tests.helpers import MockBot
@@ -35,7 +37,7 @@ class RemindersCogLoadTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_reminders_cog_load_retries_after_initial_exception(self):
         """ Tests if the Reminders cog loads after retrying on initial exception. """
-        self.bot.api_client.get.side_effect = [Exception("fail 1"), Exception("fail 2"), []]
+        self.bot.api_client.get.side_effect = [OSError("fail1"), OSError("fail2"), []]
         try:
             with patch("bot.exts.utils.reminders.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
                 await self.cog.cog_load()
@@ -46,9 +48,10 @@ class RemindersCogLoadTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_reminders_cog_load_fails_after_max_retries(self):
         """ Tests if the Reminders cog fails to load after max retries. """
-        self.bot.api_client.get.side_effect = RuntimeError("fail")
+        self.bot.api_client.get.side_effect = ResponseCodeError(response=MagicMock(status=500),
+                                                                response_text="Internal Server Error")
         with patch("bot.exts.utils.reminders.asyncio.sleep", new_callable=AsyncMock) as mock_sleep, \
-             self.assertRaises(RuntimeError):
+             self.assertRaises(ResponseCodeError):
             await self.cog.cog_load()
 
         # Should have retried MAX_RETRY_ATTEMPTS - 1 times before failing
