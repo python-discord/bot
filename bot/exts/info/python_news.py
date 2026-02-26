@@ -1,3 +1,4 @@
+import asyncio
 import re
 import typing as t
 from datetime import UTC, datetime, timedelta
@@ -15,8 +16,8 @@ from bot.bot import Bot
 from bot.log import get_logger
 from bot.utils.webhooks import send_webhook
 
-PYTHON_NEWS_LOAD_MAX_ATTEMPTS = 3
-PYTHON_NEWS_INITIAL_BACKOFF_SECONDS = 1
+MAX_ATTEMPTS = constants.URLs.connect_max_retries
+INITIAL_BACKOFF_SECONDS = 1
 
 PEPS_RSS_URL = "https://peps.python.org/peps.rss"
 
@@ -55,19 +56,45 @@ class PythonNews(Cog):
 
     async def cog_load(self) -> None:
         """Load all existing seen items from db and create any missing mailing lists."""
-        with sentry_sdk.start_span(description="Fetch mailing lists from site"):
-            response = await self.bot.api_client.get("bot/mailing-lists")
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                with sentry_sdk.start_span(description="Fetch mailing lists from site"):
+                    response = await self.bot.api_client.get("bot/mailing-lists")
 
-        for mailing_list in response:
-            self.seen_items[mailing_list["name"]] = set(mailing_list["seen_items"])
+                # Rebuild state on each successful fetch (avoid partial state across retries)
+                self.seen_items = {}
+                for mailing_list in response:
+                    self.seen_items[mailing_list["name"]] = set(mailing_list["seen_items"])
 
-        with sentry_sdk.start_span(description="Update site with new mailing lists"):
-            for mailing_list in ("pep", *constants.PythonNews.mail_lists):
-                if mailing_list not in self.seen_items:
-                    await self.bot.api_client.post("bot/mailing-lists", json={"name": mailing_list})
-                    self.seen_items[mailing_list] = set()
+                with sentry_sdk.start_span(description="Update site with new mailing lists"):
+                    for mailing_list in ("pep", *constants.PythonNews.mail_lists):
+                        if mailing_list not in self.seen_items:
+                            await self.bot.api_client.post("bot/mailing-lists", json={"name": mailing_list})
+                            self.seen_items[mailing_list] = set()
 
-        self.fetch_new_media.start()
+                self.fetch_new_media.start()
+                return
+
+            except Exception as error:
+                if not self._retryable_site_load_error(error):
+                    raise
+
+                if attempt == MAX_ATTEMPTS:
+                    log.exception(
+                        "Failed to load PythonNews mailing lists after %d attempt(s).",
+                        MAX_ATTEMPTS,
+                    )
+                    raise
+
+                backoff_seconds = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
+                log.warning(
+                    "Failed to load PythonNews mailing lists (attempt %d/%d). Retrying in %d second(s). Error: %s",
+                    attempt,
+                    MAX_ATTEMPTS,
+                    backoff_seconds,
+                    error,
+                )
+                await asyncio.sleep(backoff_seconds)
 
     async def cog_unload(self) -> None:
         """Stop news posting tasks on cog unload."""
