@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import contextvars
 from sys import exception
 
 import aiohttp
@@ -12,6 +13,10 @@ from bot import constants, exts
 from bot.log import get_logger
 
 log = get_logger("bot")
+
+_current_extension: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "current_extension", default=None
+)
 
 
 class StartupError(Exception):
@@ -26,8 +31,14 @@ class Bot(BotBase):
     """A subclass of `pydis_core.BotBase` that implements bot-specific functions."""
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
+
+        # Track extension load failures and tasks so we can report them after all attempts have completed
+        self.extension_load_failures: dict[str, BaseException] = {}
+        self._extension_load_tasks: dict[str, asyncio.Task] = {}
+
+
+
 
     async def load_extension(self, name: str, *args, **kwargs) -> None:
         """Extend D.py's load_extension function to also record sentry performance stats."""
