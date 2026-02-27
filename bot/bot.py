@@ -15,13 +15,13 @@ from sentry_sdk import new_scope, start_transaction
 
 from bot import constants, exts
 from bot.log import get_logger
+from bot.utils.startup_reporting import StartupFailureReporter
 
 log = get_logger("bot")
 
 _current_extension: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "current_extension", default=None
 )
-
 
 class StartupError(Exception):
     """Exception class for startup errors."""
@@ -40,69 +40,7 @@ class Bot(BotBase):
         # Track extension load failures and tasks so we can report them after all attempts have completed
         self.extension_load_failures: dict[str, BaseException] = {}
         self._extension_load_tasks: dict[str, asyncio.Task] = {}
-
-
-    async def add_cog(self, cog: commands.Cog) -> None:
-        """
-        Add a cog to the bot with exception handling.
-
-        Override of `BotBase.add_cog` to capture and log any exceptions raised during cog loading,
-        including the extension name if available.
-        """
-        extension = _current_extension.get()
-
-        try:
-            await super().add_cog(cog)
-            log.info(f"Cog successfully loaded: {cog.qualified_name}")
-
-        except BaseException as e:
-            key = extension or f"(unknown)::{cog.qualified_name}"
-            self.extension_load_failures[key] = e
-
-            log.exception(
-                "FAILED during add_cog (extension=%s, cog=%s)",
-                extension,
-                cog.qualified_name,
-            )
-            # Propagate error
-            raise
-
-    async def _load_extensions(self, module: types.ModuleType) -> None:
-
-        log.info("Waiting for guild %d to be available before loading extensions.", self.guild_id)
-        await self.wait_until_guild_available()
-
-        self.all_extensions = walk_extensions(module)
-
-        async def _load_one(extension: str) -> None:
-            token = _current_extension.set(extension)
-
-            try:
-                log.info(f"Loading extension: {extension}")
-                await self.load_extension(extension)
-                log.info(f"Loaded extension: {extension}")
-
-            except BaseException as e:
-                self.extension_load_failures[extension] = e
-                log.exception("FAILED to load extension: %s", extension)
-                raise
-
-            finally:
-                _current_extension.reset(token)
-
-        for extension in self.all_extensions:
-            task = scheduling.create_task(_load_one(extension))
-            self._extension_load_tasks[extension] = task
-
-        # Wait for all load tasks to complete so we can report any failures together
-        await asyncio.gather(*self._extension_load_tasks.values(), return_exceptions=True)
-
-        if self.extension_load_failures:
-            log.warning(
-                "Extension/cog load failures (%d): %s",
-                len(self.extension_load_failures),
-                ", ".join(sorted(self.extension_load_failures.keys())),
-            )
+        self._startup_failure_reporter = StartupFailureReporter()
 
     async def load_extension(self, name: str, *args, **kwargs) -> None:
         """Extend D.py's load_extension function to also record sentry performance stats."""
@@ -152,3 +90,58 @@ class Bot(BotBase):
             scope.set_extra("kwargs", kwargs)
 
             log.exception(f"Unhandled exception in {event}.")
+
+    async def add_cog(self, cog: commands.Cog) -> None:
+        """
+        Add a cog to the bot with exception handling.
+
+        Override of `BotBase.add_cog` to capture and log any exceptions raised during cog loading,
+        including the extension name if available.
+        """
+        extension = _current_extension.get()
+
+        try:
+            await super().add_cog(cog)
+            log.info(f"Cog successfully loaded: {cog.qualified_name}")
+
+        except BaseException as e:
+            key = extension or f"(unknown)::{cog.qualified_name}"
+            self.extension_load_failures[key] = e
+
+            log.exception(
+                f"Failed during add_cog (extension={extension}, cog={cog.qualified_name})"
+            )
+            # Propagate error
+            raise
+
+    async def _load_extensions(self, module: types.ModuleType) -> None:
+        """Load extensions for the bot."""
+        await self.wait_until_guild_available()
+
+        self.all_extensions = walk_extensions(module)
+
+        async def _load_one(extension: str) -> None:
+            token = _current_extension.set(extension)
+
+            try:
+                await self.load_extension(extension)
+                log.info(f"Extension successfully loaded: {extension}")
+
+            except BaseException as e:
+                self.extension_load_failures[extension] = e
+                log.exception(f"Failed to load extension: {extension}")
+                raise
+
+            finally:
+                _current_extension.reset(token)
+
+        for extension in self.all_extensions:
+            task = scheduling.create_task(_load_one(extension))
+            self._extension_load_tasks[extension] = task
+
+        # Wait for all load tasks to complete so we can report any failures together
+        await asyncio.gather(*self._extension_load_tasks.values(), return_exceptions=True)
+
+        # Send a Discord message to moderators if any extensions failed to load
+        if self.extension_load_failures :
+            await self._startup_failure_reporter.notify(self, self.extension_load_failures)
