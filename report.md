@@ -84,16 +84,24 @@ Scope (functionality and code affected).
 - Associated unit tests covering cog initialization.
 - Extension loading failure handling in `bot.py`
 ## Requirements for the new feature or requirements affected by functionality being refactored
-- Update `cog_load()` function for cogs that rely on external sites to handle HTTP errors and exceptions
-- The following cogs were identified as pertaining to the problem:
-   - `bot/ext/filtering/filtering.py`
-   - `bot/ext/utils/reminders.py`
-   - `bot/ext/info/python_news.py`
-   - `bot/ext/moderation/infraction/superstarify.py`
-- Add retry logic to repeat the loading for a specified number of times with exponential backoff
-- Add logs and alerts of the errors:
-   - Sentry logging
-   - Sending a message to `mod-log` Discord channel to alert moderators
+### FR-1) Resilient Cog Initialization
+Cogs that depend on external HTTP services shall handle connection errors and HTTP failures during `cog_load()` without failing silently.
+If the external service is unavailable, the cog must not terminate initialization without reporting the failure.
+Identified cogs pertaining to this problem are:
+- `bot/ext/filtering/filtering.py`
+- `bot/ext/utils/reminders.py`
+- `bot/ext/info/python_news.py`
+- `bot/ext/moderation/infraction/superstarify.py`
+
+### FR-2) Retry Mechanism for External HTTP calls
+If a cog fails to initialize due to a retriable HTTP error or network-related exception, the system shall automatically retry the initialization a finite number of times before giving up.
+The retry attempts shall use exponential backoff to avoid rapid repeated failures.
+
+### FR-3) Error logging and monitoring
+All initialization failures shall be logged through the existing logging infrastructure and reported to Sentry.
+
+### FR-4) Moderator alert upon failure
+If a cog fails to initialize after exhausting all retry attempts, the system shall alert the moderators of the server by sending a message to the `mod-log` Discorrd channel indicating the affected cog and failure description.
 
 Optional (point 3): trace tests to requirements.
 
