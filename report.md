@@ -11,9 +11,30 @@ It is built with an extensible cog-based architecture, integrating numerous func
 
 ## Onboarding experience
 
-Did you choose a new project or continue on the previous one?
+### Did you choose a new project or continue on the previous one?
 
-If you changed the project, how did your experience differ from before?
+We chose a new project, mainly as it was difficult to find an existing issue which would meet all the requirements set by the assignment.
+
+### If you changed the project, how did your experience differ from before?
+
+The project is much more complex than the one we chose for assignment 3, which became evident in the ammount of time needed with setting up the project environnment, and understanding the codebase.
+
+### Setting up the project
+
+The project setup was documented extremely well in the project's [Contributing guide](https://www.pythondiscord.com/pages/guides/pydis-guides/contributing/bot/).\
+Installing the dependencies was straightforward using the `uv` package manager.
+Most of the time was likely spent downloading and setting up Docker, particularly for those with no prior experience using it.
+
+In addition to installing dependencies, the project required setting up both the test server and the actual bot and interconnecting them.
+This process was also very well documented, and the project even provided a base template for the Discord server, resulting in a very quick setup.
+
+The project documentation also explained how to run the tests, providing a README file containing all the necessary commands.
+It included an introduction to writing new tests, along with a brief overview of how mocking is used, which provided some initial insight.
+
+However, the documentation did not include an introduction to the actual codebase.
+We spent a significant amount of time trying to understand how the project is structured and how different classes interact with one another.
+Because the project is tightly integrated with Discord servers, this made it even more challenging, as some functions are triggered exclusively by the Discord API.
+We believe that adding concrete examples or a high-level architectural diagram would be highly beneficial for newcomers.
 
 ## Effort spent
 
