@@ -62,14 +62,27 @@ you took care of and where you spent your time, if that time exceeds
 
 ## Overview of issue(s) and work done.
 
-Title:
+Title: Handling of site connection issues during outage. (#2918)
 
-URL:
+URL: [https://github.com/python-discord/bot/issues/2918](https://github.com/python-discord/bot/issues/2918)
 
-Summary in one or two sentences
+Since some cogs depend on external services (external sites), their initialization fails if those services are unavailable during startup, rendering their functionality inaccessible.
+This failure occurs silently, without any indication to moderators.
 
 Scope (functionality and code affected).
 
+**Functionality affected**
+- Startup behavior of cogs depending on external HTTP services.
+- Error handling, error propagation.
+- Retry logic with back-off.
+- Logging and allerting of moderators.
+
+**Code affected**
+- `cog_load()` implementations in affected cogs.
+- Sentry reporting during individual retries and final error.
+- Discord message API interaction to alert moderators.
+- Associated unit tests covering cog initialization.
+- Extension loading failure handling in `bot.py`
 ## Requirements for the new feature or requirements affected by functionality being refactored
 
 Optional (point 3): trace tests to requirements.
