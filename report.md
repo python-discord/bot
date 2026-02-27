@@ -84,6 +84,16 @@ Scope (functionality and code affected).
 - Associated unit tests covering cog initialization.
 - Extension loading failure handling in `bot.py`
 ## Requirements for the new feature or requirements affected by functionality being refactored
+- Update `cog_load()` function for cogs that rely on external sites to handle HTTP errors and exceptions
+- The following cogs were identified as pertaining to the problem:
+   - `bot/ext/filtering/filtering.py`
+   - `bot/ext/utils/reminders.py`
+   - `bot/ext/info/python_news.py`
+   - `bot/ext/moderation/infraction/superstarify.py`
+- Add retry logic to repeat the loading for a specified number of times with exponential backoff
+- Add logs and alerts of the errors:
+   - Sentry logging
+   - Sending a message to `mod-log` Discord channel to alert moderators
 
 Optional (point 3): trace tests to requirements.
 
