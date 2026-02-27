@@ -10,6 +10,7 @@ from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import URLs
 from bot.converters import Duration, DurationOrExpiry
 from bot.decorators import ensure_future_timestamp
 from bot.exts.moderation.infraction import _utils
@@ -18,6 +19,7 @@ from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user
 
+MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
 log = get_logger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
 SUPERSTARIFY_DEFAULT_DURATION = "1h"
@@ -238,7 +240,14 @@ class Superstarify(InfractionScheduler, Cog):
         """Only allow moderators to invoke the commands in this cog."""
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
-
+    async def _fetch_with_retries(self,
+        retries: int = MAX_RETRY_ATTEMPTS,
+        params: dict[str, str] | None = None) -> list[dict]:
+        return None
+    async def _alert_mods_if_loading_failed(self, error: Exception) -> None:
+        pass
+    async def _check_error_is_retriable(self, error: Exception) -> bool:
+        return False
 async def setup(bot: Bot) -> None:
     """Load the Superstarify cog."""
     await bot.add_cog(Superstarify(bot))
