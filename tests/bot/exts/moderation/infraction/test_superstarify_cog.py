@@ -80,3 +80,33 @@ class TestSuperstarify(unittest.IsolatedAsyncioTestCase):
         self.bot.api_client.get.assert_awaited_once()
 
         self.cog._alert_mods_if_loading_failed.assert_awaited_once()
+
+    @patch("asyncio.sleep", new_callable=AsyncMock)
+    async def test_member_update_recovers_from_api_failure(self, _):
+        before = MagicMock(display_name="Old", id=123)
+        after = MagicMock(display_name="New", id=123)
+        after.edit = AsyncMock()
+
+        self.bot.api_client.get.side_effect = [
+            OSError(),
+            [{"id": 42}],
+        ]
+
+        self.cog.get_nick = MagicMock(return_value="Taylor Swift")
+
+        with patch(
+            "bot.exts.moderation.infraction._utils.notify_infraction",
+            new=AsyncMock(return_value=True),
+        ):
+            await self.cog.on_member_update(before, after)
+
+        after.edit.assert_awaited_once()
+
+    @patch("asyncio.sleep", new_callable=AsyncMock)
+    async def test_alert_triggered_after_total_failure(self, _):
+        self.bot.api_client.get.side_effect = OSError("down")
+
+        with self.assertRaises(OSError):
+            await self.cog._fetch_with_retries(retries=3)
+
+        self.cog._alert_mods_if_loading_failed.assert_awaited_once()
