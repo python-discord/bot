@@ -1,16 +1,19 @@
+import asyncio
 import json
 import random
 import textwrap
 from pathlib import Path
 
+import discord
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
 from discord.utils import escape_markdown
+from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import URLs
+from bot.constants import Icons, URLs
 from bot.converters import Duration, DurationOrExpiry
 from bot.decorators import ensure_future_timestamp
 from bot.exts.moderation.infraction import _utils
@@ -18,8 +21,10 @@ from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user
+from bot.utils.modlog import send_log_message
 
 MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
+BACKOFF_INITIAL_DELAY = 5 # seconds
 log = get_logger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
 SUPERSTARIFY_DEFAULT_DURATION = "1h"
@@ -45,9 +50,7 @@ class Superstarify(InfractionScheduler, Cog):
             f"{after.display_name}. Checking if the user is in superstar-prison..."
         )
 
-        active_superstarifies = await self.bot.api_client.get(
-            "bot/infractions",
-            params={
+        active_superstarifies = await self._fetch_with_retries(params={
                 "active": "true",
                 "type": "superstar",
                 "user__id": str(before.id)
@@ -86,9 +89,7 @@ class Superstarify(InfractionScheduler, Cog):
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """Reapply active superstar infractions for returning members."""
-        active_superstarifies = await self.bot.api_client.get(
-            "bot/infractions",
-            params={
+        active_superstarifies = await self._fetch_with_retries(params={
                 "active": "true",
                 "type": "superstar",
                 "user__id": member.id
@@ -243,11 +244,43 @@ class Superstarify(InfractionScheduler, Cog):
     async def _fetch_with_retries(self,
         retries: int = MAX_RETRY_ATTEMPTS,
         params: dict[str, str] | None = None) -> list[dict]:
+        """Fetch infractions from the API with retries and exponential backoff."""
+        for attempt in range(retries):
+            try:
+                return await self.bot.api_client.get("bot/infractions", params=params)
+            except Exception as e:
+                if attempt == retries - 1 or not self._check_error_is_retriable(e):
+                    await self._alert_mods_if_loading_failed(e)
+                    raise
+                await asyncio.sleep(BACKOFF_INITIAL_DELAY * (2 ** (attempt - 1)))
         return None
+
     async def _alert_mods_if_loading_failed(self, error: Exception) -> None:
-        pass
+        """Alert moderators that loading the superstarify cog failed after retries."""
+        message = textwrap.dedent(
+            f"""
+            An error occurred while loading the Superstarify Cog, and it failed to initialize properly.
+
+            Error details:
+            {error}
+            """
+        )
+
+        await send_log_message(
+            self.bot,
+            title="Error: Failed to initialize the Superstarify Cog",
+            text=message,
+            ping_everyone=True,
+            icon_url=Icons.token_removed,
+            colour=discord.Color.red()
+        )
     async def _check_error_is_retriable(self, error: Exception) -> bool:
-        return False
+        """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
+        if isinstance(error, ResponseCodeError):
+            return error.status in (408, 429) or error.status >= 500
+
+        return isinstance(error, (TimeoutError, OSError))
+
 async def setup(bot: Bot) -> None:
     """Load the Superstarify cog."""
     await bot.add_cog(Superstarify(bot))
