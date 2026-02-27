@@ -1,16 +1,13 @@
 # Report for assignment 4
 
-This is a template for your report. You are free to modify it as needed.
-It is not required to use markdown for your report either, but the report
-has to be delivered in a standard, cross-platform format.
-
 ## Project
 
-Name:
+Name: Python Utility Bot
 
-URL:
+URL: [https://github.com/python-discord/bot](https://github.com/python-discord/bot)
 
-One or two sentences describing it
+A discord bot designed specifically for use with the [Python discord](https://www.pythondiscord.com/) server.
+It is built with an extensible cog-based architecture, integrating numerous functionalities, such as moderation, community management, reminders, and many more.
 
 ## Onboarding experience
 
