@@ -120,8 +120,17 @@ The changes were considered for acceptance. All relevant automated checks passed
 
 ## Test results
 
-Overall results with link to a copy or excerpt of the logs (before/after
-refactoring).
+Before refactoring, cogs depending on unavailable external services could fail during initialization without notifying moderators. Relevant tests for the new retry/alert behavior were not present.
+
+After refactoring, the implemented tests passed when run locally with:
+
+```bash
+uv run task test
+```
+
+### Output Logs:
+- Before Implementation: [Before Output Log](https://github.com/rippyboii/python-bot/issues/21#issuecomment-3977441009)
+- After Impementation: [After Output Log](https://github.com/rippyboii/python-bot/issues/21#issuecomment-3977445773)
 
 ## UML class diagram and its description
 
