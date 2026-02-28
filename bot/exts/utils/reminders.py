@@ -1,3 +1,4 @@
+import asyncio
 import random
 import textwrap
 import typing as t
@@ -23,6 +24,7 @@ from bot.constants import (
     POSITIVE_REPLIES,
     Roles,
     STAFF_AND_COMMUNITY_ROLES,
+    URLs,
 )
 from bot.converters import Duration, UnambiguousUser
 from bot.errors import LockedResourceError
@@ -32,6 +34,7 @@ from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
 from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
+from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
@@ -44,6 +47,9 @@ REMINDER_MENTION_BUTTON_TIMEOUT = 5*60
 # the 2000-character message limit.
 MAXIMUM_REMINDER_MENTION_OPT_INS = 80
 
+# setup constants when loading
+MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
+BACKOFF_INITIAL_DELAY = 5 # seconds
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
 
@@ -224,13 +230,27 @@ class Reminders(Cog):
     async def cog_load(self) -> None:
         """Get all current reminders from the API and reschedule them."""
         await self.bot.wait_until_guild_available()
-        response = await self.bot.api_client.get(
-            "bot/reminders",
-            params={"active": "true"}
-        )
-
+        # retry fetching reminders with exponential backoff
+        for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
+            try:
+                # response either throws, or is a list of reminders (possibly empty)
+                response = await self.bot.api_client.get(
+                    "bot/reminders",
+                    params={"active": "true"}
+                )
+                break
+            except Exception as e:
+                if not self._check_error_is_retriable(e):
+                    log.error(f"Failed to load reminders due to non-retryable error: {e}")
+                    await self._alert_mods_if_loading_failed(e)
+                    raise
+                log.warning(f"Attempt {attempt} - Failed to fetch reminders from the API: {e}")
+                if attempt == MAX_RETRY_ATTEMPTS:
+                    log.error("Max retry attempts reached. Failed to load reminders.")
+                    await self._alert_mods_if_loading_failed(e)
+                    raise
+            await asyncio.sleep(BACKOFF_INITIAL_DELAY * (2 ** (attempt - 1)))  # Exponential backoff
         now = datetime.now(UTC)
-
         for reminder in response:
             is_valid, *_ = self.ensure_valid_reminder(reminder)
             if not is_valid:
@@ -243,6 +263,32 @@ class Reminders(Cog):
                 await self.send_reminder(reminder, remind_at)
             else:
                 self.schedule_reminder(reminder)
+
+    async def _alert_mods_if_loading_failed(self, error: Exception) -> None:
+            message = textwrap.dedent(
+                f"""
+                An error occurred while loading the Reminders Cog, and it failed to initialize properly.
+
+                Error details:
+                {error}
+                """
+            )
+
+            await send_log_message(
+                self.bot,
+                title="Error: Failed to initialize the Reminders Cog",
+                text=message,
+                ping_everyone=True,
+                icon_url=Icons.token_removed,
+                colour=discord.Color.red()
+            )
+
+    def _check_error_is_retriable(self, error: Exception) -> bool:
+        """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
+        if isinstance(error, ResponseCodeError):
+            return error.status in (408, 429) or error.status >= 500
+
+        return isinstance(error, (TimeoutError, OSError))
 
     def ensure_valid_reminder(self, reminder: dict) -> tuple[bool, discord.TextChannel]:
         """Ensure reminder channel can be fetched otherwise delete the reminder."""
