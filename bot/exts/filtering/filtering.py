@@ -124,7 +124,6 @@ class Filtering(Cog):
 
                 if is_last_attempt:
                     log.exception("Failed to load filtering data after %d attempts.", FILTER_LOAD_MAX_ATTEMPTS)
-                    await self._alert_mods_filter_load_failure(error, attempt)
                     raise
 
                 backoff_seconds = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))

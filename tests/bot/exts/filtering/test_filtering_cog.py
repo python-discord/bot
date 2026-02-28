@@ -51,26 +51,29 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
         self.cog.schedule_offending_messages_deletion.assert_awaited_once()
         self.mock_weekly_task_start.assert_called_once()
 
-    async def test_retries_three_times_fails_and_alerts(self):
-        """`cog_load` should alert and re-raise when all retry attempts fail."""
-        self.bot.api_client.get.side_effect = OSError("Simulated site/API outage during cog_load")
-        self.cog._alert_mods_filter_load_failure = AsyncMock()
+    async def test_retries_three_times_fails_and_reraises(self):
+        """`cog_load` should retry and re-raise when all retry attempts fail."""
+        self.bot.api_client.get.side_effect = OSError(
+            "Simulated site/API outage during cog_load"
+        )
 
-        with (
-            patch("bot.exts.filtering.filtering.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
-            self.assertRaises(OSError),
-        ):
+        with patch(
+            "bot.exts.filtering.filtering.asyncio.sleep",
+            new_callable=AsyncMock,
+        ) as mock_sleep, self.assertRaises(OSError) as ctx:
             await self.cog.cog_load()
 
+        self.assertIs(ctx.exception, self.bot.api_client.get.side_effect)
+
+        # Waited for guild availability
         self.bot.wait_until_guild_available.assert_awaited_once()
+
+        # 3 attempts
         self.assertEqual(self.bot.api_client.get.await_count, 3)
         self.bot.api_client.get.assert_awaited_with("bot/filter/filter_lists")
-        self.assertEqual(mock_sleep.await_count, 2)
-        self.cog._alert_mods_filter_load_failure.assert_awaited_once()
 
-        error, attempts = self.cog._alert_mods_filter_load_failure.await_args.args
-        self.assertIsInstance(error, OSError)
-        self.assertEqual(attempts, 3)
+        # Backoff between attempts (attempts - 1)
+        self.assertEqual(mock_sleep.await_count, 2)
 
         # Startup should stop before later steps.
         self.cog._fetch_or_generate_filtering_webhook.assert_not_awaited()
