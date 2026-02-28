@@ -42,7 +42,7 @@ Estimated effort per team member, in hours:
 
 | Team member | Plenary discussions / Group meetings | Reading documentation | Configuration and setup | Analyzing code / output | Writing documentation | Writing code | Running code / tests | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Apeel | 8 | 3 | 3 | 6 |  | 4 | 1 |  |
+| Apeel | 8 | 3 | 3 | 6 | 3 | 4 | 1 | ~28 |
 | Josef |  |  |  |  |  |  |  |  |
 | Alexander |  |  |  |  |  |  |  |  |
 | Carl |  |  |  |  |  |  |  |  |
@@ -140,12 +140,28 @@ Optional (point 1): Architectural overview.
 
 Optional (point 2): relation to design pattern(s).
 
+
 ## Overall experience
 
-What are your main take-aways from this project? What did you learn?
+### What are your main take-aways from this project? What did you learn?
 
-How did you grow as a team, using the Essence standard to evaluate yourself?
+Working on a mature open-source system differs greatly from working on a smaller course project, which is the primary lesson we learned from this project. Even though the setup and contribution guides are well written and provided, understanding the architecture and the interactions between indivdual components and classes takes a significant amount of time.
 
-Optional (point 6): How would you put your work in context with best software engineering practice?
+Technically, we gained more knowledge about cog-based bot architectures, asynchronous Python systems, and how dependencies on outside services can impact startup behavior. One important lesson was that initialization failures shouldn't go unnoticed. Making the system more reliable and user-friendly requires retrying with exponential backoff, clearly documenting errors, and alerting moderators.
 
-Optional (point 7): Is there something special you want to mention here?
+
+### How did you grow as a team, using the Essence standard to evaluate yourself?
+
+
+
+### How would you put your work in context with best software engineering practice?
+
+Our work can be placed in the context of best software engineering practice. The issue we had taken was not only about adding functionality, but about making failure handling more compact in a production-like system that depends on external services. By improving retry behavior, logging, and moderator alerting, we worked toward better observability and fault tolerance, which are important principles in modern software engineering.
+
+Another important aspect of our team was the communication. Throughout the work, we kept the orignal maintainers informed in the issue channel about our understanding of the problem and the our plan of action. This helped to ensure that our approach matched the project expectations and reduced the risk of introducing unintended behavior or potential vulnerabilities. We also communicated directly with the original developers and maintainers of the bot in their official Discord server, which gave us useful clarification and feedback.
+
+Lastly, we provided testing to support the work. We documented known limitations in the test environment, tried to keep the change set restricted to the issue being addressed, and, when feasible, used automated checks to confirm the outcome.
+
+### Is there something special you want to mention here?
+
+It's important to note that while the project's setup documentation was excellent, the codebase's architectural overview was lacking. Understanding how the various components, services, and Discord-specific flows work together was more challenging for new contributors than installing or managing the project. We think that future contributors' onboarding experience would be greatly enhanced by including a higher-level architecture overview.
