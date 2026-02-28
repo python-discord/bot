@@ -107,13 +107,16 @@ Optional (point 3): trace tests to requirements.
 
 ### Patch
 
-(copy your changes or the add git command to show them)
+The patch can be compared with the `documentation` branch. `documentation` branch only contains report and no changes in the code-base.
 
-git diff ...
+```bash
+git diff main documentation
+```
 
-Optional (point 4): the patch is clean.
+The patch is clean, as it only contains changes related to handling site connection issues during cog initialization, moderator alerting, and the associated tests/documentation.
 
-Optional (point 5): considered for acceptance (passes all automated checks).
+The changes were considered for acceptance. All relevant automated checks passed except `Status Embed`. This workflow could not be passed in our local setup because it depends on a hard-coded Discord server channel ID from the official environment, and our test bots do not have permission to send messages to that channel.
+
 
 ## Test results
 
