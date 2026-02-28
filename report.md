@@ -49,6 +49,13 @@ Estimated effort per team member, in hours:
 | Fabian |  |  |  |  |  |  |  |  |
 | Total |  |  |  |  |  |  |  |  |
 
+### Dependencies and setup tasks:
+
+| Dependency / tool / setup task | Team member(s) | Time spent | Notes |
+| --- | --- | --- | --- |
+| Docker | All | 1 | Everyone had locally setup the docker to run the project |
+| `uv` and Python environment setup | All | 1  | The given documentation had easy guidelines to setup |
+| Discord test server / bot configuration | All | 1 | We all have our own test server and individual bots |
 
 
 ## Overview of issue(s) and work done.
