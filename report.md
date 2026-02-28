@@ -17,7 +17,7 @@ We chose a new project, mainly as it was difficult to find an existing issue whi
 
 ### If you changed the project, how did your experience differ from before?
 
-The project is much more complex than the one we chose for assignment 3, which became evident in the ammount of time needed with setting up the project environnment, and understanding the codebase.
+The project is much more complex than the one we chose for assignment 3, which became evident in the amount of time needed with setting up the project environnment, and understanding the codebase.
 
 ### Setting up the project
 
@@ -33,7 +33,7 @@ It included an introduction to writing new tests, along with a brief overview of
 
 However, the documentation did not include an introduction to the actual codebase.
 We spent a significant amount of time trying to understand how the project is structured and how different classes interact with one another.
-Because the project is tightly integrated with Discord servers, this made it even more challenging, as some functions are triggered exclusively by the Discord API.
+Because the project is tightly integrated with Discord servers, this made it even more challenging, as some functions are triggered exclusively by the Discord API. For example: It was not possible for us to pass `Status Embed` workflow during continuous integration, as the discord channel id was hard-coded directly in the workflow.
 We believe that adding concrete examples or a high-level architectural diagram would be highly beneficial for newcomers.
 
 ## Effort spent
