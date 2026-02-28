@@ -38,27 +38,18 @@ We believe that adding concrete examples or a high-level architectural diagram w
 
 ## Effort spent
 
-For each team member, how much time was spent in
+Estimated effort per team member, in hours:
 
-1. plenary discussions/meetings;
+| Team member | Plenary discussions / Group meetings | Reading documentation | Configuration and setup | Analyzing code / output | Writing documentation | Writing code | Running code / tests | Total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Apeel | 8 | 3 | 3 | 6 |  | 4 | 1 |  |
+| Josef |  |  |  |  |  |  |  |  |
+| Alexander |  |  |  |  |  |  |  |  |
+| Carl |  |  |  |  |  |  |  |  |
+| Fabian |  |  |  |  |  |  |  |  |
+| Total |  |  |  |  |  |  |  |  |
 
-2. discussions within parts of the group;
 
-3. reading documentation;
-
-4. configuration and setup;
-
-5. analyzing code/output;
-
-6. writing documentation;
-
-7. writing code;
-
-8. running code?
-
-For setting up tools and libraries (step 4), enumerate all dependencies
-you took care of and where you spent your time, if that time exceeds
-30 minutes.
 
 ## Overview of issue(s) and work done.
 
