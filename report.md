@@ -46,7 +46,7 @@ Estimated effort per team member, in hours:
 | Josef |  |  |  |  |  |  |  |  |
 | Alexander |  |  |  |  |  |  |  |  |
 | Carl |  |  |  |  |  |  |  |  |
-| Fabian |  |  |  |  |  |  |  |  |
+| Fabian | 8 | 3 | 4 | 5 | 3 | 3 | 1 | ~27 |
 | Total |  |  |  |  |  |  |  |  |
 
 ### Dependencies and setup tasks:
