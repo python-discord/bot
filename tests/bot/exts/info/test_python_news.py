@@ -40,20 +40,17 @@ class PythonNewsCogLoadTests(unittest.IsolatedAsyncioTestCase):
         ]
 
         # Ensure no missing mailing lists need creating in this test.
-        with patch("bot.exts.info.python_news.constants.PythonNews.mail_lists", new=()):
-            self.cog._alert_mods_python_news_load_failure = AsyncMock()
-
-            with patch("bot.exts.info.python_news.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await self.cog.cog_load()
+        with (
+            patch("bot.exts.info.python_news.constants.PythonNews.mail_lists", new=()),
+            patch("bot.exts.info.python_news.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
+            await self.cog.cog_load()
 
         self.assertEqual(self.bot.api_client.get.await_count, 3)
         self.bot.api_client.get.assert_awaited_with("bot/mailing-lists")
 
         # Sleep should have been awaited for the two failed attempts.
         self.assertEqual(mock_sleep.await_count, 2)
-
-        # No final alert on success.
-        self.cog._alert_mods_python_news_load_failure.assert_not_awaited()
 
         # Task should start after successful load.
         self.mock_fetch_new_media_start.assert_called_once()
@@ -65,10 +62,9 @@ class PythonNewsCogLoadTests(unittest.IsolatedAsyncioTestCase):
         # No posts should happen because no missing lists.
         self.bot.api_client.post.assert_not_awaited()
 
-    async def test_retries_max_times_fails_and_alerts(self):
-        """`cog_load` should alert and re-raise when all retry attempts fail."""
+    async def test_retries_max_times_fails_and_reraises(self):
+        """`cog_load` should re-raise when all retry attempts fail."""
         self.bot.api_client.get.side_effect = OSError("Simulated site/API outage during cog_load")
-        self.cog._alert_mods_python_news_load_failure = AsyncMock()
 
         with (
             patch("bot.exts.info.python_news.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
@@ -84,13 +80,6 @@ class PythonNewsCogLoadTests(unittest.IsolatedAsyncioTestCase):
 
         # Sleeps happen between attempts, so MAX_ATTEMPTS - 1 times.
         self.assertEqual(mock_sleep.await_count, python_news_module.MAX_ATTEMPTS - 1)
-
-        # Alert should be sent once at the end.
-        self.cog._alert_mods_python_news_load_failure.assert_awaited_once()
-
-        error, attempts = self.cog._alert_mods_python_news_load_failure.await_args.args
-        self.assertIsInstance(error, OSError)
-        self.assertEqual(attempts, python_news_module.MAX_ATTEMPTS)
 
         # Task should never start if load fails.
         self.mock_fetch_new_media_start.assert_not_called()
@@ -118,7 +107,6 @@ class PythonNewsCogLoadTests(unittest.IsolatedAsyncioTestCase):
         """`cog_load` should not retry when the error is non-retryable."""
         # 404 should be considered non-retryable by your predicate.
         self.bot.api_client.get.side_effect = ResponseCodeError(MagicMock(status=404))
-        self.cog._alert_mods_python_news_load_failure = AsyncMock()
 
         with (
             patch("bot.exts.info.python_news.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
@@ -128,5 +116,4 @@ class PythonNewsCogLoadTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.bot.api_client.get.await_count, 1)
         self.assertEqual(mock_sleep.await_count, 0)
-        self.cog._alert_mods_python_news_load_failure.assert_not_awaited()
         self.mock_fetch_new_media_start.assert_not_called()
