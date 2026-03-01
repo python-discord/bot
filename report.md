@@ -214,7 +214,10 @@ Technically, we gained more knowledge about cog-based bot architectures, asynchr
 
 
 ### How did you grow as a team, using the Essence standard to evaluate yourself?
-
+We believe we are still in the Collaborating state, however much closer to the Performing state than before.
+Throughout the course, we have gradually improved our communication and responsiveness, which has resulted in more active code reviews, frequent discussions about current obstacles and problems, and more structured meeting plans.
+The coordination also improved, as we experienced smoother task distribution and better fulfillment of commitments.
+However, other courses and external responsibilities still affect our consistency, and the work is therefore fulfilled with varying levels of consistency.
 
 
 ### How would you put your work in context with best software engineering practice?
