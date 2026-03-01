@@ -43,11 +43,11 @@ Estimated effort per team member, in hours:
 | Team member | Plenary discussions / Group meetings | Reading documentation | Configuration and setup | Analyzing code / output | Writing documentation | Writing code | Running code / tests | Total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Apeel | 8 | 3 | 3 | 6 | 3 | 4 | 1 | ~28 |
-| Josef |  |  |  |  |  |  |  |  |
+| Josef | 8 | 2 | 1 | 6 | 4 | 3| 2 | ~26 |
 | Alexander | 8 | 2 | 1 | 5 | 2 | 5 | 2 | ~25 |
 | Carl | 8 | 2 | 3 | 5 | 2 | 4 | 1 | ~25 |
 | Fabian | 8 | 3 | 4 | 5 | 3 | 3 | 1 | ~27 |
-| Total |  |  |  |  |  |  |  |  |
+| Total | 8 | 12 | 12 | 27 | 14 | 19 | 7 | 99 |
 
 ### Dependencies and setup tasks:
 
