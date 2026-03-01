@@ -95,13 +95,30 @@ Identified cogs pertaining to this problem are:
 If a cog fails to initialize due to a retriable HTTP error or network-related exception, the system shall automatically retry the initialization a finite number of times before giving up.
 The retry attempts shall use exponential backoff to avoid rapid repeated failures.
 
+**Tested by:**
+- `tests/bot/exts/filtering/test_filtering_cog.py::`
+   - `test_cog_load_retries_then_succeeds`
+   - `test_retries_three_times_fails_and_alerts`
+- `tests/bot/exts/utils/test_reminders.py::`
+   - `test_reminders_cog_load_retries_after_initial_exception`
+   - `test_reminders_cog_load_fails_after_max_retries`
+- `tests/bot/exts/info/test_python_news.py::`
+   - `test_cog_load_retries_then_succeeds`
+   - `test_retries_max_times_fails_and_reraises`
+- `tests/bot/exts/moderation/infraction/test_superstarify_cog.py::`
+   - `test_fetch_retries_then_succeeds`
+   - `test_fetch_fails_after_max_retries`
+
 ### FR-3) Error logging and monitoring
 All initialization failures shall be logged through the existing logging infrastructure and reported to Sentry.
+
+**Tested by simulating Exception and observing the Sentry output.**
 
 ### FR-4) Moderator alert upon failure
 If a cog fails to initialize after exhausting all retry attempts, the system shall alert the moderators of the server by sending a message to the `mod-log` Discorrd channel indicating the affected cog and failure description.
 
-Optional (point 3): trace tests to requirements.
+**Tested by:**
+- `tests/bot/exts/test_extensions.py`
 
 ## Code changes
 
