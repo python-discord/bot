@@ -44,7 +44,7 @@ Estimated effort per team member, in hours:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Apeel | 8 | 3 | 3 | 6 | 3 | 4 | 1 | ~28 |
 | Josef |  |  |  |  |  |  |  |  |
-| Alexander |  |  |  |  |  |  |  |  |
+| Alexander | 8 | 2 | 1 | 5 | 2 | 5 | 2 | ~25 |
 | Carl |  |  |  |  |  |  |  |  |
 | Fabian | 8 | 3 | 4 | 5 | 3 | 3 | 1 | ~27 |
 | Total |  |  |  |  |  |  |  |  |
