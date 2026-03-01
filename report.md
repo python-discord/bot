@@ -153,6 +153,28 @@ Adding retry logic for critical extensions introduces a resilience pattern into 
 
 Overall, the update strengthens the architectural maturity of the system. It centralizes lifecycle control, improves separation of responsibilities between the core and extensions, and introduces structured error handling and resilience patterns, all while remaining consistent with the existing asynchronous event-driven and modular design principles.
 
+## Benefits, drawbacks, and limitations (SEMAT kernel)
+The primary opportunity addressed by this issue concerns operational reliability.
+Previously, cogs that depended on external services would fail silently if those services were unavailable during startup.
+Since moderators were not alerted to such failures, functionality could become inaccessible to users without explanation.
+The identified opportunity was therefore to improve the robustness of cog initialization and introduce explicit alerting mechanisms so that moderators could take corrective action.
+With the implemented changes, this opportunity has moved from identified to addressed, as the Software System has been updated to handle such failures explicitly.
+
+We identified unhandled exceptions in the affected cogs, introduced structured error handling, and implemented a retry-with-exponential-backoff pattern, significantly improving fault tolerance and resilience during startup.
+Moderator alerting is handled centrally: a single consolidated message is sent containing all cogs or extensions that failed to load.
+This ensures consistent error reporting while avoiding excessive notification noise.
+However, the retry mechanism increases the complexity of the startup logic and prolongs initialization time, as the bot completes startup only after all retry attempts have concluded.
+This introduces a clear tradeoff between startup latency and system reliability.
+
+From a Requirements perspective, we transformed the previously implicit requirement *cogs should load* into a set of explicit non-functional requirements.
+In particular: *cogs should tolerate temporary external service outages*, *failures during cog loading must be observable*, and *startup must not fail silently*.
+Additionally, *all startup failures must be reported to moderators*.
+These refinements align strongly with reliability and observability as non-functional requirements and make system expectations clearer and verifiable.
+
+The primary stakeholders include moderators/maintainers and server users. With the implemented changes, moderators receive explicit failure notifications, enabling further action to resolve the issues.
+Observability is further enhanced through Sentry logging, which records retry attempts and associated error details.
+Consequently, users experience fewer unexplained missing features, improving transparency and overall service reliability.
+
 ## Overall experience
 
 ### What are your main take-aways from this project? What did you learn?
