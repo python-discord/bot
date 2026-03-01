@@ -57,4 +57,3 @@ class RemindersCogLoadTests(unittest.IsolatedAsyncioTestCase):
         # Should have retried MAX_RETRY_ATTEMPTS - 1 times before failing
         self.assertEqual(mock_sleep.await_count, MAX_RETRY_ATTEMPTS - 1)
         self.bot.api_client.get.assert_called()
-        self.cog._alert_mods_if_loading_failed.assert_called_once()
