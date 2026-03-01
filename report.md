@@ -141,6 +141,18 @@ Optional (point 1): Architectural overview.
 Optional (point 2): relation to design pattern(s).
 
 
+## Design patterns
+
+The bot follows an *asynchronous event-driven* architecture built on top of asyncio, where the event loop acts as a *Reactor* and the cogs function as *Observers* reacting to events dispatched by Discord. Our update extends this architectural model into the startup phase by making the main bot explicitly await the loading of extensions and cogs. Instead of treating initialization as loosely coordinated asynchronous tasks, startup is now handled as a controlled and deterministic async workflow.
+
+By centrally awaiting extension loading and registering failures, we effectively introduced a structured lifecycle orchestration mechanism. This resembles the *Template Method pattern*; the bot defines the high-level startup algorithm, while individual extensions provide their specific setup behavior. The core now governs execution order, error propagation, and completion, strengthening architectural cohesion and making startup behavior explicit rather than implicit.
+
+The introduction of a centralized failure registry and moderator notification system addresses a reliability concern. Previously, most extension failures were handled locally and silently. Now, error notification is abstracted into one central mechanism which ensures consistent handling and visibility. This can be seen as a *refactoring towards separation of concerns* and consolidation of duplicated logic, improving observability and maintainability without altering the *modular extension design*.
+
+Adding retry logic for critical extensions introduces a resilience pattern into the architecture. Instead of failing permanently, important components now implement retry behavior, aligning with *fault-tolerant design principles*. This change elevates the system from a *fail-fast* startup model to a selectively resilient one, while preserving the modular cog-based structure.
+
+Overall, the update strengthens the architectural maturity of the system. It centralizes lifecycle control, improves separation of responsibilities between the core and extensions, and introduces structured error handling and resilience patterns, all while remaining consistent with the existing asynchronous event-driven and modular design principles.
+
 ## Overall experience
 
 ### What are your main take-aways from this project? What did you learn?
