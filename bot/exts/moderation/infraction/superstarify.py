@@ -4,7 +4,6 @@ import random
 import textwrap
 from pathlib import Path
 
-import discord
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
 from discord.utils import escape_markdown
@@ -13,7 +12,7 @@ from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
 from bot.bot import Bot
-from bot.constants import Icons, URLs
+from bot.constants import URLs
 from bot.converters import Duration, DurationOrExpiry
 from bot.decorators import ensure_future_timestamp
 from bot.exts.moderation.infraction import _utils
@@ -21,7 +20,6 @@ from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user
-from bot.utils.modlog import send_log_message
 
 MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
 BACKOFF_INITIAL_DELAY = 5 # seconds
@@ -250,30 +248,10 @@ class Superstarify(InfractionScheduler, Cog):
                 return await self.bot.api_client.get("bot/infractions", params=params)
             except Exception as e:
                 if attempt == retries - 1 or not self._check_error_is_retriable(e):
-                    await self._alert_mods_if_loading_failed(e)
                     raise
                 await asyncio.sleep(BACKOFF_INITIAL_DELAY * (2 ** (attempt - 1)))
         return None
 
-    async def _alert_mods_if_loading_failed(self, error: Exception) -> None:
-        """Alert moderators that loading the superstarify cog failed after retries."""
-        message = textwrap.dedent(
-            f"""
-            An error occurred while loading the Superstarify Cog, and it failed to initialize properly.
-
-            Error details:
-            {error}
-            """
-        )
-
-        await send_log_message(
-            self.bot,
-            title="Error: Failed to initialize the Superstarify Cog",
-            text=message,
-            ping_everyone=True,
-            icon_url=Icons.token_removed,
-            colour=discord.Color.red()
-        )
     async def _check_error_is_retriable(self, error: Exception) -> bool:
         """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
         if isinstance(error, ResponseCodeError):
