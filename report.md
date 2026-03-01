@@ -9,6 +9,18 @@ URL: [https://github.com/python-discord/bot](https://github.com/python-discord/b
 A discord bot designed specifically for use with the [Python discord](https://www.pythondiscord.com/) server.
 It is built with an extensible cog-based architecture, integrating numerous functionalities, such as moderation, community management, reminders, and many more.
 
+## Architecture and Purpose
+The project consists of a Discord bot that provides a wide range of features to support the Python Discord community, such as moderation, filtering, community management, reminders, and much more. The bot is designed to be modular and extensible, with a focus on maintainability.
+
+At its core, the bot operates on an asynchronous event-driven architecture, utilizing Python's `asyncio` library to handle concurrent operations efficiently. The bot's functionality is organized into "cogs", which are modular components that can be loaded, unloaded, and reloaded independently. This design allows for easy maintenance and scalability, as new features can be added without affecting existing functionality. The bot interacts with the Discord API to respond to user commands, manage server events, and integrate with external services. It also incorporates error handling and logging mechanisms using Sentry to ensure reliability and facilitate debugging.
+
+However, there is no simple way for Discord moderators to be notified if a cog fails to load during startup, which can lead to functionality being unavailable without any indication of the underlying issue. This is particularly problematic for cogs that depend on external services, as they may silently fail to initialize if those services are unavailable, and moderators would not be aware of the failure unless they have direct access to the Sentry logs.
+
+This issue is mainly related to a few functions in the main `bot.py` file, which is responsible for loading extensions and cogs during startup, as well as the setup functions in each extension. Figure 1 illustrates the flow of the bot's startup process, highlighting where cog initialization occurs and which exceptions are captured and reported. The diagram also indicates the points at which moderator alerting is integrated in our implementation.
+
+![flowchart.png](figures/flowchart.png)
+
+
 ## Onboarding experience
 
 ### Did you choose a new project or continue on the previous one?
