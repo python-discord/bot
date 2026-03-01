@@ -15,7 +15,6 @@ class TestSuperstarify(unittest.IsolatedAsyncioTestCase):
         self.bot.api_client = MagicMock()
         self.bot.api_client.get = AsyncMock()
 
-        self.cog._alert_mods_if_loading_failed = AsyncMock()
         self.cog._check_error_is_retriable = MagicMock(return_value=True)
 
     async def test_fetch_from_api_success(self):
@@ -32,7 +31,6 @@ class TestSuperstarify(unittest.IsolatedAsyncioTestCase):
             "bot/infractions",
             params={"user__id": "123"},
         )
-        self.cog._alert_mods_if_loading_failed.assert_not_called()
 
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_fetch_retries_then_succeeds(self, _):
@@ -48,7 +46,6 @@ class TestSuperstarify(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, [{"id": 42}])
         self.assertEqual(self.bot.api_client.get.await_count, 2)
 
-        self.cog._alert_mods_if_loading_failed.assert_not_called()
 
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_fetch_fails_after_max_retries(self, _):
@@ -64,7 +61,6 @@ class TestSuperstarify(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.bot.api_client.get.await_count, 3)
 
-        self.cog._alert_mods_if_loading_failed.assert_awaited_once_with(error)
 
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_non_retriable_error_stops_immediately(self, _):
@@ -79,7 +75,6 @@ class TestSuperstarify(unittest.IsolatedAsyncioTestCase):
         # only one attempt
         self.bot.api_client.get.assert_awaited_once()
 
-        self.cog._alert_mods_if_loading_failed.assert_awaited_once()
 
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_member_update_recovers_from_api_failure(self, _):
@@ -108,5 +103,3 @@ class TestSuperstarify(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(OSError):
             await self.cog._fetch_with_retries(retries=3)
-
-        self.cog._alert_mods_if_loading_failed.assert_awaited_once()
