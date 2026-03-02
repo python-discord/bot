@@ -241,14 +241,18 @@ class Superstarify(InfractionScheduler, Cog):
         retries: int = URLs.connect_max_retries,
         params: dict[str, str] | None = None) -> list[dict]:
         """Fetch infractions from the API with retries and exponential backoff."""
-        for attempt in range(retries):
+        if retries < 1:
+            raise ValueError("retries must be at least 1")
+
+        for attempt in range(1, retries + 1):
             try:
                 return await self.bot.api_client.get("bot/infractions", params=params)
             except Exception as e:
-                if attempt == retries - 1 or not is_retryable_api_error(e):
+                if attempt == retries or not is_retryable_api_error(e):
                     raise
                 await asyncio.sleep(URLs.connect_initial_backoff * (2 ** (attempt - 1)))
         return None
+
 
 async def setup(bot: Bot) -> None:
     """Load the Superstarify cog."""
