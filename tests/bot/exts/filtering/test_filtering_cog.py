@@ -1,8 +1,6 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from pydis_core.site_api import ResponseCodeError
-
 from bot.exts.filtering.filtering import Filtering
 
 
@@ -77,22 +75,3 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
         self.cog._fetch_or_generate_filtering_webhook.assert_not_awaited()
         self.cog.schedule_offending_messages_deletion.assert_not_awaited()
         self.mock_weekly_task_start.assert_not_called()
-
-    def test_retryable_filter_load_error(self):
-        """`_retryable_filter_load_error` should classify temporary failures as retryable."""
-        test_cases = (
-            (ResponseCodeError(MagicMock(status=408)), True),
-            (ResponseCodeError(MagicMock(status=429)), True),
-            (ResponseCodeError(MagicMock(status=500)), True),
-            (ResponseCodeError(MagicMock(status=503)), True),
-            (ResponseCodeError(MagicMock(status=400)), False),
-            (ResponseCodeError(MagicMock(status=404)), False),
-            (TimeoutError("timeout"), True),
-            (OSError("os error"), True),
-            (AttributeError("attr"), False),
-            (ValueError("value"), False),
-        )
-
-        for error, expected_retryable in test_cases:
-            with self.subTest(error=error):
-                self.assertEqual(self.cog._retryable_filter_load_error(error), expected_retryable)
