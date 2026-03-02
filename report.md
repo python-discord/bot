@@ -1,33 +1,36 @@
 # Report for assignment 4
 
 ## Table of Contents
-- [Project](#project)
-- [Onboarding experience](#onboarding-experience)
-  - [Did you choose a new project or continue on the previous one?](#did-you-choose-a-new-project-or-continue-on-the-previous-one)
-  - [If you changed the project, how did your experience differ from before?](#if-you-changed-the-project-how-did-your-experience-differ-from-before)
-  - [Setting up the project](#setting-up-the-project)
-- [Team Members](#team-members)
-- [Effort spent](#effort-spent)
-  - [Dependencies and setup tasks](#dependencies-and-setup-tasks)
-- [Overview of issue(s) and work done](#overview-of-issues-and-work-done)
-- [Requirements for the new feature or requirements affected by functionality being refactored](#requirements-for-the-new-feature-or-requirements-affected-by-functionality-being-refactored)
-  - [FR-1) Resilient Cog Initialization](#fr-1-resilient-cog-initialization)
-  - [FR-2) Retry Mechanism for External HTTP calls](#fr-2-retry-mechanism-for-external-http-calls)
-  - [FR-3) Error logging and monitoring](#fr-3-error-logging-and-monitoring)
-  - [FR-4) Moderator alert upon failure](#fr-4-moderator-alert-upon-failure)
-- [Code changes](#code-changes)
-  - [Patch](#patch)
-- [Test results](#test-results)
-  - [Output Logs](#output-logs)
-- [UML class diagram and its description](#uml-class-diagram-and-its-description)
-  - [Key changes/classes affected](#key-changesclasses-affected)
-- [Design patterns](#design-patterns)
-- [Benefits, drawbacks, and limitations (SEMAT kernel)](#benefits-drawbacks-and-limitations-semat-kernel)
-- [Overall experience](#overall-experience)
-  - [What are your main take-aways from this project? What did you learn?](#what-are-your-main-take-aways-from-this-project-what-did-you-learn)
-  - [How did you grow as a team, using the Essence standard to evaluate yourself?](#how-did-you-grow-as-a-team-using-the-essence-standard-to-evaluate-yourself)
-  - [How would you put your work in context with best software engineering practice?](#how-would-you-put-your-work-in-context-with-best-software-engineering-practice)
-  - [Is there something special you want to mention here?](#is-there-something-special-you-want-to-mention-here)
+- [Report for assignment 4](#report-for-assignment-4)
+  - [Table of Contents](#table-of-contents)
+  - [Project](#project)
+  - [Architecture and Purpose](#architecture-and-purpose)
+  - [Onboarding experience](#onboarding-experience)
+    - [Did you choose a new project or continue on the previous one?](#did-you-choose-a-new-project-or-continue-on-the-previous-one)
+    - [If you changed the project, how did your experience differ from before?](#if-you-changed-the-project-how-did-your-experience-differ-from-before)
+    - [Setting up the project](#setting-up-the-project)
+  - [Team Members](#team-members)
+  - [Effort spent](#effort-spent)
+    - [Dependencies and setup tasks:](#dependencies-and-setup-tasks)
+  - [Overview of issue(s) and work done.](#overview-of-issues-and-work-done)
+  - [Requirements for the new feature or requirements affected by functionality being refactored](#requirements-for-the-new-feature-or-requirements-affected-by-functionality-being-refactored)
+    - [FR-1) Resilient Cog Initialization](#fr-1-resilient-cog-initialization)
+    - [FR-2) Retry Mechanism for External HTTP calls](#fr-2-retry-mechanism-for-external-http-calls)
+    - [FR-3) Error logging and monitoring](#fr-3-error-logging-and-monitoring)
+    - [FR-4) Moderator alert upon failure](#fr-4-moderator-alert-upon-failure)
+  - [Code changes](#code-changes)
+    - [Patch](#patch)
+  - [Test results](#test-results)
+    - [Output Logs:](#output-logs)
+  - [UML class diagram and its description](#uml-class-diagram-and-its-description)
+    - [Key changes/classes affected](#key-changesclasses-affected)
+  - [Design patterns](#design-patterns)
+  - [Benefits, drawbacks, and limitations (SEMAT kernel)](#benefits-drawbacks-and-limitations-semat-kernel)
+  - [Overall experience](#overall-experience)
+    - [What are your main take-aways from this project? What did you learn?](#what-are-your-main-take-aways-from-this-project-what-did-you-learn)
+    - [How did you grow as a team, using the Essence standard to evaluate yourself?](#how-did-you-grow-as-a-team-using-the-essence-standard-to-evaluate-yourself)
+    - [How would you put your work in context with best software engineering practice?](#how-would-you-put-your-work-in-context-with-best-software-engineering-practice)
+    - [Is there something special you want to mention here?](#is-there-something-special-you-want-to-mention-here)
 
 ## Project
 
@@ -146,6 +149,11 @@ Identified cogs pertaining to this problem are:
 If a cog fails to initialize due to a retriable HTTP error or network-related exception, the system shall automatically retry the initialization a finite number of times before giving up.
 The retry attempts shall use exponential backoff to avoid rapid repeated failures.
 
+Should a cog failed to load at first due to external site error, the cog shall firstly wait for a predefined time, and then try to load again.
+If the loading is finished successfully, the setup is completed.
+If the error remains, the cog shall wait for a time INITIAL_TIME^(2*(i)), where i is the number of retries, and then try again.
+This is repeated a total number of MAX_RETRIES, after which the setup has to finish, either successfully if the last try did not result in an error, or by throwing an Exception.
+
 **Tested by:**
 - `tests/bot/exts/filtering/test_filtering_cog.py::`
    - `test_cog_load_retries_then_succeeds`
@@ -163,13 +171,31 @@ The retry attempts shall use exponential backoff to avoid rapid repeated failure
 ### FR-3) Error logging and monitoring
 All initialization failures shall be logged through the existing logging infrastructure and reported to Sentry.
 
-**Tested by simulating Exception and observing the Sentry output.**
+If a cog fails to load during setup (f.e. it throws an Exception), the error shall be observed and notified in the Sentry logging output.
+The logging shall be comprised of warnings after each retry, specyfing the affected cog and the number of retris.
+Should all retry attempts fail, a description of the error nature and a name of the failed cog shall be logged in the form of an Error.
+
+**Tested by:**
+- simulating Exception in the affected cogs (adding temporary `raise Exception` in the `cog_load()` function)
+- calling `await cog_load()`
+- observing the Sentry output
+   - After each failure, a warning is logged informing the maintainers about a temporary failure and the number of retries
+   - After the final retry, the full error description is logged warning the maintainers about the cog load failure.
 
 ### FR-4) Moderator alert upon failure
-If a cog fails to initialize after exhausting all retry attempts, the system shall alert the moderators of the server by sending a message to the `mod-log` Discorrd channel indicating the affected cog and failure description.
+The system shall keep a list of all extensions and cogs that fail to load.
+A cog is added to this list if and only if it exhausts all retry attempts.
+Once all the cogs and extensions are loaded, the system shall send a singular message on the `mod-log` Discord channel.
+The message shall contain the information about all cogs which failed on startup, as well as a short description of the error nature.
+All moderators shall be pinged by the message in order to make sure they are alerted.
 
 **Tested by:**
 - `tests/bot/exts/test_extensions.py`
+- simulating Exception in the affected cogs (adding temporary `raise Exception` in the `cog_load()` function)
+- calling `await cog_load()`
+- observing the `mod-log` channel:
+   - Once the setup finishes, a single message is send to the channel
+   - The message pings all the moderators, and specifies which cogs failed to load and why.
 
 ## Code changes
 
