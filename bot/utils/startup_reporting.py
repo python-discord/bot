@@ -1,4 +1,3 @@
-import textwrap
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -55,7 +54,4 @@ class StartupFailureReporter:
             exception = failures[failure_key]
             lines.append(f"- **{failure_key}** - `{type(exception).__name__}: {exception}`")
 
-        return textwrap.dedent(f"""
-        Failed items:
-        {chr(10).join(lines)}
-        """).strip()
+        return "\n".join(lines)
