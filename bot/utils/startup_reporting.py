@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import discord
@@ -12,7 +11,6 @@ log = get_logger(__name__)
 if TYPE_CHECKING:
     from bot.bot import Bot
 
-@dataclass(frozen=True)
 class StartupFailureReporter:
     """Formats and sends one aggregated startup failure alert to moderators."""
 
