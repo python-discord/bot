@@ -1,5 +1,33 @@
 # Report for assignment 4
 
+## Table of Contents
+- [Project](#project)
+- [Onboarding experience](#onboarding-experience)
+  - [Did you choose a new project or continue on the previous one?](#did-you-choose-a-new-project-or-continue-on-the-previous-one)
+  - [If you changed the project, how did your experience differ from before?](#if-you-changed-the-project-how-did-your-experience-differ-from-before)
+  - [Setting up the project](#setting-up-the-project)
+- [Effort spent](#effort-spent)
+  - [Dependencies and setup tasks](#dependencies-and-setup-tasks)
+- [Overview of issue(s) and work done](#overview-of-issues-and-work-done)
+- [Requirements for the new feature or requirements affected by functionality being refactored](#requirements-for-the-new-feature-or-requirements-affected-by-functionality-being-refactored)
+  - [FR-1) Resilient Cog Initialization](#fr-1-resilient-cog-initialization)
+  - [FR-2) Retry Mechanism for External HTTP calls](#fr-2-retry-mechanism-for-external-http-calls)
+  - [FR-3) Error logging and monitoring](#fr-3-error-logging-and-monitoring)
+  - [FR-4) Moderator alert upon failure](#fr-4-moderator-alert-upon-failure)
+- [Code changes](#code-changes)
+  - [Patch](#patch)
+- [Test results](#test-results)
+  - [Output Logs](#output-logs)
+- [UML class diagram and its description](#uml-class-diagram-and-its-description)
+  - [Key changes/classes affected](#key-changesclasses-affected)
+- [Design patterns](#design-patterns)
+- [Benefits, drawbacks, and limitations (SEMAT kernel)](#benefits-drawbacks-and-limitations-semat-kernel)
+- [Overall experience](#overall-experience)
+  - [What are your main take-aways from this project? What did you learn?](#what-are-your-main-take-aways-from-this-project-what-did-you-learn)
+  - [How did you grow as a team, using the Essence standard to evaluate yourself?](#how-did-you-grow-as-a-team-using-the-essence-standard-to-evaluate-yourself)
+  - [How would you put your work in context with best software engineering practice?](#how-would-you-put-your-work-in-context-with-best-software-engineering-practice)
+  - [Is there something special you want to mention here?](#is-there-something-special-you-want-to-mention-here)
+
 ## Project
 
 Name: Python Utility Bot
