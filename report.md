@@ -18,7 +18,7 @@ However, there is no simple way for Discord moderators to be notified if a cog f
 
 This issue is mainly related to a few functions in the main `bot.py` file, which is responsible for loading extensions and cogs during startup, as well as the setup functions in each extension. Figure 1 illustrates the flow of the bot's startup process, highlighting where cog initialization occurs and which exceptions are captured and reported. The diagram also indicates the points at which moderator alerting is integrated in our implementation.
 
-![flowchart.png](figures/flowchart.png)
+![flowchart.svg](figures/flowchart.svg)
 
 
 ## Onboarding experience
