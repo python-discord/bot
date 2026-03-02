@@ -193,7 +193,7 @@ uv run task test
 
 The UML class diagram shows the classes modified/added to resolve the given issue as well as how the classes are related to each other. In the UML there are notes adjacent to classes describing how they were augmented to resolve the issue.
 
-![Pybot_UML.png](figures/Pybot_UML.png)
+![Pybot_UML.svg](figures/Pybot_UML.svg)
 
 ### Key changes/classes affected
 
