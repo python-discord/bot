@@ -7,8 +7,6 @@ from bot.constants import URLs
 from bot.exts.utils.reminders import Reminders
 from tests.helpers import MockBot
 
-MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
-
 
 class RemindersCogLoadTests(unittest.IsolatedAsyncioTestCase):
     """ Tests startup behaviour of the Reminders cog. """
@@ -55,5 +53,5 @@ class RemindersCogLoadTests(unittest.IsolatedAsyncioTestCase):
             await self.cog.cog_load()
 
         # Should have retried MAX_RETRY_ATTEMPTS - 1 times before failing
-        self.assertEqual(mock_sleep.await_count, MAX_RETRY_ATTEMPTS - 1)
+        self.assertEqual(mock_sleep.await_count, URLs.connect_max_retries - 1)
         self.bot.api_client.get.assert_called()

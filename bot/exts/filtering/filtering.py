@@ -25,7 +25,7 @@ import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot import constants
 from bot.bot import Bot
-from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
+from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles, URLs
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
@@ -65,8 +65,6 @@ CACHE_SIZE = 1000
 HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
-FILTER_LOAD_MAX_ATTEMPTS = constants.URLs.connect_max_retries
-INITIAL_BACKOFF_SECONDS = 1
 
 
 async def _extract_text_file_content(att: discord.Attachment) -> str:
@@ -111,26 +109,26 @@ class Filtering(Cog):
         await self.bot.wait_until_guild_available()
 
         log.trace("Loading filtering information from the database.")
-        for attempt in range(1, FILTER_LOAD_MAX_ATTEMPTS + 1):
+        for attempt in range(1, URLs.connect_max_retries + 1):
             try:
                 raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
                 break
             except Exception as error:
                 is_retryable = self._retryable_filter_load_error(error)
-                is_last_attempt = attempt == FILTER_LOAD_MAX_ATTEMPTS
+                is_last_attempt = attempt == URLs.connect_max_retries
 
                 if not is_retryable:
                     raise
 
                 if is_last_attempt:
-                    log.exception("Failed to load filtering data after %d attempts.", FILTER_LOAD_MAX_ATTEMPTS)
+                    log.exception("Failed to load filtering data after %d attempts.", URLs.connect_max_retries)
                     raise
 
-                backoff_seconds = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
+                backoff_seconds = URLs.connect_initial_backoff * (2 ** (attempt - 1))
                 log.warning(
                     "Failed to load filtering data (attempt %d/%d). Retrying in %d second(s): %s",
                     attempt,
-                    FILTER_LOAD_MAX_ATTEMPTS,
+                    URLs.connect_max_retries,
                     backoff_seconds,
                     error
                 )
