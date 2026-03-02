@@ -7,7 +7,6 @@ from pathlib import Path
 from discord import Embed, Member
 from discord.ext.commands import Cog, Context, command, has_any_role
 from discord.utils import escape_markdown
-from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.members import get_or_fetch_member
 
 from bot import constants
@@ -20,6 +19,7 @@ from bot.exts.moderation.infraction._scheduler import InfractionScheduler
 from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user
+from bot.utils.retry import is_retryable_api_error
 
 log = get_logger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
@@ -245,17 +245,10 @@ class Superstarify(InfractionScheduler, Cog):
             try:
                 return await self.bot.api_client.get("bot/infractions", params=params)
             except Exception as e:
-                if attempt == retries - 1 or not self._check_error_is_retriable(e):
+                if attempt == retries - 1 or not is_retryable_api_error(e):
                     raise
                 await asyncio.sleep(URLs.connect_initial_backoff * (2 ** (attempt - 1)))
         return None
-
-    async def _check_error_is_retriable(self, error: Exception) -> bool:
-        """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
-        if isinstance(error, ResponseCodeError):
-            return error.status in (408, 429) or error.status >= 500
-
-        return isinstance(error, (TimeoutError, OSError))
 
 async def setup(bot: Bot) -> None:
     """Load the Superstarify cog."""
