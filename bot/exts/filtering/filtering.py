@@ -157,25 +157,6 @@ class Filtering(Cog):
 
         return isinstance(error, (TimeoutError, OSError))
 
-    async def _alert_mods_filter_load_failure(self, error: Exception, attempts: int) -> None:
-        """Send an alert to mod-alerts when startup fails after all retry attempts."""
-        mod_alerts_channel = self.bot.get_channel(Channels.mod_alerts)
-        if mod_alerts_channel is None:
-            log.error("Failed to send filtering startup failure alert: #mod-alerts channel is unavailable.")
-            return
-
-        error_details = f"{error.__class__.__name__}: {error}"
-        if isinstance(error, ResponseCodeError):
-            error_details = f"HTTP {error.status} - {error_details}"
-
-        try:
-            await mod_alerts_channel.send(
-                ":warning: Filtering failed to load filter lists during startup "
-                f"after {attempts} attempt(s). Error: `{error_details}`"
-            )
-        except discord.HTTPException:
-            log.exception("Failed to send filtering startup failure alert to #mod-alerts.")
-
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
         """
         Subscribe a filter list to the given events.
