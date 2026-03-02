@@ -6,6 +6,7 @@
   - [Did you choose a new project or continue on the previous one?](#did-you-choose-a-new-project-or-continue-on-the-previous-one)
   - [If you changed the project, how did your experience differ from before?](#if-you-changed-the-project-how-did-your-experience-differ-from-before)
   - [Setting up the project](#setting-up-the-project)
+- [Team Members](#team-members)
 - [Effort spent](#effort-spent)
   - [Dependencies and setup tasks](#dependencies-and-setup-tasks)
 - [Overview of issue(s) and work done](#overview-of-issues-and-work-done)
@@ -75,6 +76,16 @@ However, the documentation did not include an introduction to the actual codebas
 We spent a significant amount of time trying to understand how the project is structured and how different classes interact with one another.
 Because the project is tightly integrated with Discord servers, this made it even more challenging, as some functions are triggered exclusively by the Discord API. For example: It was not possible for us to pass `Status Embed` workflow during continuous integration, as the discord channel id was hard-coded directly in the workflow.
 We believe that adding concrete examples or a high-level architectural diagram would be highly beneficial for newcomers.
+
+## Team Members
+
+| Name | GitHub |
+| --- | --- |
+| Apeel | [rippyboii](https://github.com/rippyboii) |
+| Josef | [kahoujo1](https://github.com/kahoujo1) |
+| Alexander | [a-runebou](https://github.com/a-runebou) |
+| Carl | [carlisaksson](https://github.com/carlisaksson) |
+| Fabian | [crancker96](https://github.com/crancker96) |
 
 ## Effort spent
 
