@@ -6,16 +6,16 @@ from discord.ui import Button
 from pydis_core.utils import interactions
 
 
-class BanConfirmationView(interactions.ViewWithUserAndRoleCheck):
+class InfractionConfirmationView(interactions.ViewWithUserAndRoleCheck):
     """A confirmation view to be sent before issuing potentially suspect infractions."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.confirmed = False
 
-    @discord.ui.button(label="Ban", style=ButtonStyle.red)
+    @discord.ui.button(label="Infract", style=ButtonStyle.red)
     async def confirm(self, interaction: Interaction, button: Button) -> None:
-        """Callback coroutine that is called when the "Ban" button is pressed."""
+        """Callback coroutine that is called when the "Infract" button is pressed."""
         self.confirmed = True
         await interaction.response.defer()
         self.stop()
