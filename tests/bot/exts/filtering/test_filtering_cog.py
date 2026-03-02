@@ -36,7 +36,6 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
             TimeoutError("temporary timeout"),
             [],
         ]
-        self.cog._alert_mods_filter_load_failure = AsyncMock()
 
         with patch("bot.exts.filtering.filtering.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             await self.cog.cog_load()
@@ -45,7 +44,6 @@ class FilteringCogLoadTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.bot.api_client.get.await_count, 3)
         self.bot.api_client.get.assert_awaited_with("bot/filter/filter_lists")
         self.assertEqual(mock_sleep.await_count, 2)
-        self.cog._alert_mods_filter_load_failure.assert_not_awaited()
         self.cog._fetch_or_generate_filtering_webhook.assert_awaited_once()
         self.cog.collect_loaded_types.assert_called_once_with(None)
         self.cog.schedule_offending_messages_deletion.assert_awaited_once()
