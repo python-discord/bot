@@ -168,6 +168,12 @@ This is repeated a total number of MAX_RETRIES, after which the setup has to fin
    - `test_fetch_retries_then_succeeds`
    - `test_fetch_fails_after_max_retries`
 
+The tests are structured in the following way:
+- The API calls are mocked, allowing for successful and unsuccessful HTTP calls.
+- each tests calls `await cog_load()` to start the setup
+- If the first call is successful, the cog shall load without throwing an Exception
+- If the first call fails, but the second one is successful, the cog shall load without throwing an Exception. Moreover, the `sleep` function shall be called once.
+- If all the calls fail, the function shall return an Exception. The `sleep` function shall be called a total of `MAX_TRIES-1` times.
 ### FR-3) Error logging and monitoring
 All initialization failures shall be logged through the existing logging infrastructure and reported to Sentry.
 
