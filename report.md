@@ -37,6 +37,18 @@ URL: [https://github.com/python-discord/bot](https://github.com/python-discord/b
 A discord bot designed specifically for use with the [Python discord](https://www.pythondiscord.com/) server.
 It is built with an extensible cog-based architecture, integrating numerous functionalities, such as moderation, community management, reminders, and many more.
 
+## Architecture and Purpose
+The project consists of a Discord bot that provides a wide range of features to support the Python Discord community, such as moderation, filtering, community management, reminders, and much more. The bot is designed to be modular and extensible, with a focus on maintainability.
+
+At its core, the bot operates on an asynchronous event-driven architecture, utilizing Python's `asyncio` library to handle concurrent operations efficiently. The bot's functionality is organized into "cogs", which are modular components that can be loaded, unloaded, and reloaded independently. This design allows for easy maintenance and scalability, as new features can be added without affecting existing functionality. The bot interacts with the Discord API to respond to user commands, manage server events, and integrate with external services. It also incorporates error handling and logging mechanisms using Sentry to ensure reliability and facilitate debugging.
+
+However, there is no simple way for Discord moderators to be notified if a cog fails to load during startup, which can lead to functionality being unavailable without any indication of the underlying issue. This is particularly problematic for cogs that depend on external services, as they may silently fail to initialize if those services are unavailable, and moderators would not be aware of the failure unless they have direct access to the Sentry logs.
+
+This issue is mainly related to a few functions in the main `bot.py` file, which is responsible for loading extensions and cogs during startup, as well as the setup functions in each extension. Figure 1 illustrates the flow of the bot's startup process, highlighting where cog initialization occurs and which exceptions are captured and reported. The diagram also indicates the points at which moderator alerting is integrated in our implementation.
+
+![flowchart.png](figures/flowchart.png)
+
+
 ## Onboarding experience
 
 ### Did you choose a new project or continue on the previous one?
@@ -123,13 +135,30 @@ Identified cogs pertaining to this problem are:
 If a cog fails to initialize due to a retriable HTTP error or network-related exception, the system shall automatically retry the initialization a finite number of times before giving up.
 The retry attempts shall use exponential backoff to avoid rapid repeated failures.
 
+**Tested by:**
+- `tests/bot/exts/filtering/test_filtering_cog.py::`
+   - `test_cog_load_retries_then_succeeds`
+   - `test_retries_three_times_fails_and_alerts`
+- `tests/bot/exts/utils/test_reminders.py::`
+   - `test_reminders_cog_load_retries_after_initial_exception`
+   - `test_reminders_cog_load_fails_after_max_retries`
+- `tests/bot/exts/info/test_python_news.py::`
+   - `test_cog_load_retries_then_succeeds`
+   - `test_retries_max_times_fails_and_reraises`
+- `tests/bot/exts/moderation/infraction/test_superstarify_cog.py::`
+   - `test_fetch_retries_then_succeeds`
+   - `test_fetch_fails_after_max_retries`
+
 ### FR-3) Error logging and monitoring
 All initialization failures shall be logged through the existing logging infrastructure and reported to Sentry.
+
+**Tested by simulating Exception and observing the Sentry output.**
 
 ### FR-4) Moderator alert upon failure
 If a cog fails to initialize after exhausting all retry attempts, the system shall alert the moderators of the server by sending a message to the `mod-log` Discorrd channel indicating the affected cog and failure description.
 
-Optional (point 3): trace tests to requirements.
+**Tested by:**
+- `tests/bot/exts/test_extensions.py`
 
 ## Code changes
 
@@ -161,6 +190,10 @@ uv run task test
 - After Impementation: [After Output Log](https://github.com/rippyboii/python-bot/issues/21#issuecomment-3977445773)
 
 ## UML class diagram and its description
+
+The UML class diagram shows the classes modified/added to resolve the given issue as well as how the classes are related to each other. In the UML there are notes adjacent to classes describing how they were augmented to resolve the issue.
+
+![Pybot_UML.png](figures/Pybot_UML.png)
 
 ### Key changes/classes affected
 
@@ -213,7 +246,10 @@ Technically, we gained more knowledge about cog-based bot architectures, asynchr
 
 
 ### How did you grow as a team, using the Essence standard to evaluate yourself?
-
+We believe we are still in the Collaborating state, however much closer to the Performing state than before.
+Throughout the course, we have gradually improved our communication and responsiveness, which has resulted in more active code reviews, frequent discussions about current obstacles and problems, and more structured meeting plans.
+The coordination also improved, as we experienced smoother task distribution and better fulfillment of commitments.
+However, other courses and external responsibilities still affect our consistency, and the work is therefore fulfilled with varying levels of consistency.
 
 
 ### How would you put your work in context with best software engineering practice?
