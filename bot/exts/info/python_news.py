@@ -13,11 +13,9 @@ from pydis_core.site_api import ResponseCodeError
 
 from bot import constants
 from bot.bot import Bot
+from bot.constants import URLs
 from bot.log import get_logger
 from bot.utils.webhooks import send_webhook
-
-MAX_ATTEMPTS = constants.URLs.connect_max_retries
-INITIAL_BACKOFF_SECONDS = 1
 
 PEPS_RSS_URL = "https://peps.python.org/peps.rss"
 
@@ -56,7 +54,7 @@ class PythonNews(Cog):
 
     async def cog_load(self) -> None:
         """Load all existing seen items from db and create any missing mailing lists."""
-        for attempt in range(1, MAX_ATTEMPTS + 1):
+        for attempt in range(1, URLs.connect_max_retries + 1):
             try:
                 with sentry_sdk.start_span(description="Fetch mailing lists from site"):
                     response = await self.bot.api_client.get("bot/mailing-lists")
@@ -79,18 +77,18 @@ class PythonNews(Cog):
                 if not self._retryable_site_load_error(error):
                     raise
 
-                if attempt == MAX_ATTEMPTS:
+                if attempt == URLs.connect_max_retries:
                     log.exception(
                         "Failed to load PythonNews mailing lists after %d attempt(s).",
-                        MAX_ATTEMPTS,
+                        URLs.connect_max_retries,
                     )
                     raise
 
-                backoff_seconds = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
+                backoff_seconds = URLs.connect_initial_backoff * (2 ** (attempt - 1))
                 log.warning(
                     "Failed to load PythonNews mailing lists (attempt %d/%d). Retrying in %d second(s). Error: %s",
                     attempt,
-                    MAX_ATTEMPTS,
+                    URLs.connect_max_retries,
                     backoff_seconds,
                     error,
                 )
