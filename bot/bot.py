@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import contextvars
 import types
 from sys import exception
 
@@ -18,10 +17,6 @@ from bot.log import get_logger
 from bot.utils.startup_reporting import StartupFailureReporter
 
 log = get_logger("bot")
-
-_current_extension: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "current_extension", default=None
-)
 
 class StartupError(Exception):
     """Exception class for startup errors."""
@@ -98,7 +93,7 @@ class Bot(BotBase):
         Override of `BotBase.add_cog` to capture and log any exceptions raised during cog loading,
         including the extension name if available.
         """
-        extension = _current_extension.get()
+        extension = cog.__module__
 
         try:
             await super().add_cog(cog)
@@ -121,8 +116,6 @@ class Bot(BotBase):
         self.all_extensions = walk_extensions(module)
 
         async def _load_one(extension: str) -> None:
-            token = _current_extension.set(extension)
-
             try:
                 await self.load_extension(extension)
                 log.info(f"Extension successfully loaded: {extension}")
@@ -131,9 +124,6 @@ class Bot(BotBase):
                 self.extension_load_failures[extension] = e
                 log.exception(f"Failed to load extension: {extension}")
                 raise
-
-            finally:
-                _current_extension.reset(token)
 
         for extension in self.all_extensions:
             task = scheduling.create_task(_load_one(extension))
