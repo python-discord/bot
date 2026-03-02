@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from pydis_core.site_api import ResponseCodeError
 
+from bot.constants import URLs
 from bot.exts.info.python_news import PythonNews
 
 
@@ -73,13 +74,12 @@ class PythonNewsCogLoadTests(unittest.IsolatedAsyncioTestCase):
             await self.cog.cog_load()
 
         # Should try exactly MAX_ATTEMPTS times.
-        from bot.exts.info import python_news as python_news_module
 
-        self.assertEqual(self.bot.api_client.get.await_count, python_news_module.MAX_ATTEMPTS)
+        self.assertEqual(self.bot.api_client.get.await_count, URLs.connect_max_retries)
         self.bot.api_client.get.assert_awaited_with("bot/mailing-lists")
 
         # Sleeps happen between attempts, so MAX_ATTEMPTS - 1 times.
-        self.assertEqual(mock_sleep.await_count, python_news_module.MAX_ATTEMPTS - 1)
+        self.assertEqual(mock_sleep.await_count, URLs.connect_max_retries - 1)
 
         # Task should never start if load fails.
         self.mock_fetch_new_media_start.assert_not_called()
