@@ -427,6 +427,9 @@ class Infractions(InfractionScheduler, commands.Cog):
             await ctx.send(":x: I can't kick users above or equal to me in the role hierarchy.")
             return
 
+        if not await _utils.confirm_elevated_user_infraction(ctx, user):
+            return
+
         infraction = await _utils.post_infraction(ctx, user, "kick", reason, active=False, **kwargs)
         if infraction is None:
             return
@@ -459,7 +462,7 @@ class Infractions(InfractionScheduler, commands.Cog):
             await ctx.send(":x: I can't ban users above or equal to me in the role hierarchy.")
             return None
 
-        if not await _utils.confirm_elevated_user_ban(ctx, user):
+        if not await _utils.confirm_elevated_user_infraction(ctx, user):
             return None
 
         # In the case of a permanent ban, we don't need get_active_infractions to tell us if one is active
