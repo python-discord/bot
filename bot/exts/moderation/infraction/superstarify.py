@@ -21,8 +21,6 @@ from bot.log import get_logger
 from bot.utils import time
 from bot.utils.messages import format_user
 
-MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
-BACKOFF_INITIAL_DELAY = 5 # seconds
 log = get_logger(__name__)
 NICKNAME_POLICY_URL = "https://pythondiscord.com/pages/rules/#nickname-policy"
 SUPERSTARIFY_DEFAULT_DURATION = "1h"
@@ -240,7 +238,7 @@ class Superstarify(InfractionScheduler, Cog):
         return await has_any_role(*constants.MODERATION_ROLES).predicate(ctx)
 
     async def _fetch_with_retries(self,
-        retries: int = MAX_RETRY_ATTEMPTS,
+        retries: int = URLs.connect_max_retries,
         params: dict[str, str] | None = None) -> list[dict]:
         """Fetch infractions from the API with retries and exponential backoff."""
         for attempt in range(retries):
@@ -249,7 +247,7 @@ class Superstarify(InfractionScheduler, Cog):
             except Exception as e:
                 if attempt == retries - 1 or not self._check_error_is_retriable(e):
                     raise
-                await asyncio.sleep(BACKOFF_INITIAL_DELAY * (2 ** (attempt - 1)))
+                await asyncio.sleep(URLs.connect_initial_backoff * (2 ** (attempt - 1)))
         return None
 
     async def _check_error_is_retriable(self, error: Exception) -> bool:
