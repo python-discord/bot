@@ -15,6 +15,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.log import get_logger
+from bot.utils.retry import is_retryable_api_error
 from bot.utils.webhooks import send_webhook
 
 PEPS_RSS_URL = "https://peps.python.org/peps.rss"
@@ -46,12 +47,6 @@ class PythonNews(Cog):
         self.webhook: discord.Webhook | None = None
         self.seen_items: dict[str, set[str]] = {}
 
-    @staticmethod
-    def _retryable_site_load_error(error: Exception) -> bool:
-        if isinstance(error, ResponseCodeError):
-            return error.status in (408, 429) or error.status >= 500
-        return isinstance(error, (TimeoutError, OSError))
-
     async def cog_load(self) -> None:
         """Load all existing seen items from db and create any missing mailing lists."""
         for attempt in range(1, URLs.connect_max_retries + 1):
@@ -74,7 +69,7 @@ class PythonNews(Cog):
                 return
 
             except Exception as error:
-                if not self._retryable_site_load_error(error):
+                if not is_retryable_api_error(error):
                     raise
 
                 if attempt == URLs.connect_max_retries:

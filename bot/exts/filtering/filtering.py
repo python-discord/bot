@@ -56,6 +56,7 @@ from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
+from bot.utils.retry import is_retryable_api_error
 
 log = get_logger(__name__)
 
@@ -114,7 +115,7 @@ class Filtering(Cog):
                 raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
                 break
             except Exception as error:
-                is_retryable = self._retryable_filter_load_error(error)
+                is_retryable = is_retryable_api_error(error)
                 is_last_attempt = attempt == URLs.connect_max_retries
 
                 if not is_retryable:
@@ -146,14 +147,6 @@ class Filtering(Cog):
         self.collect_loaded_types(example_list)
         await self.schedule_offending_messages_deletion()
         self.weekly_auto_infraction_report_task.start()
-
-    @staticmethod
-    def _retryable_filter_load_error(error: Exception) -> bool:
-        """Return whether loading filter lists failed due to some temporary error, thus retrying could help."""
-        if isinstance(error, ResponseCodeError):
-            return error.status in (408, 429) or error.status >= 500
-
-        return isinstance(error, (TimeoutError, OSError))
 
     def subscribe(self, filter_list: FilterList, *events: Event) -> None:
         """

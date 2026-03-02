@@ -84,25 +84,6 @@ class PythonNewsCogLoadTests(unittest.IsolatedAsyncioTestCase):
         # Task should never start if load fails.
         self.mock_fetch_new_media_start.assert_not_called()
 
-    def test_retryable_python_news_load_error(self):
-        """`_retryable_site_load_error` should classify temporary failures as retryable."""
-        test_cases = (
-            (ResponseCodeError(MagicMock(status=408)), True),
-            (ResponseCodeError(MagicMock(status=429)), True),
-            (ResponseCodeError(MagicMock(status=500)), True),
-            (ResponseCodeError(MagicMock(status=503)), True),
-            (ResponseCodeError(MagicMock(status=400)), False),
-            (ResponseCodeError(MagicMock(status=404)), False),
-            (TimeoutError("timeout"), True),
-            (OSError("os error"), True),
-            (AttributeError("attr"), False),
-            (ValueError("value"), False),
-        )
-
-        for error, expected_retryable in test_cases:
-            with self.subTest(error=error):
-                self.assertEqual(self.cog._retryable_site_load_error(error), expected_retryable)
-
     async def test_cog_load_does_not_retry_non_retryable_error(self):
         """`cog_load` should not retry when the error is non-retryable."""
         # 404 should be considered non-retryable by your predicate.
