@@ -46,9 +46,6 @@ REMINDER_MENTION_BUTTON_TIMEOUT = 5*60
 # the 2000-character message limit.
 MAXIMUM_REMINDER_MENTION_OPT_INS = 80
 
-# setup constants when loading
-MAX_RETRY_ATTEMPTS = URLs.connect_max_retries
-BACKOFF_INITIAL_DELAY = 5 # seconds
 Mentionable = discord.Member | discord.Role
 ReminderMention = UnambiguousUser | discord.Role
 
@@ -230,7 +227,7 @@ class Reminders(Cog):
         """Get all current reminders from the API and reschedule them."""
         await self.bot.wait_until_guild_available()
         # retry fetching reminders with exponential backoff
-        for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
+        for attempt in range(1, URLs.connect_max_retries + 1):
             try:
                 # response either throws, or is a list of reminders (possibly empty)
                 response = await self.bot.api_client.get(
@@ -243,10 +240,10 @@ class Reminders(Cog):
                     log.error(f"Failed to load reminders due to non-retryable error: {e}")
                     raise
                 log.warning(f"Attempt {attempt} - Failed to fetch reminders from the API: {e}")
-                if attempt == MAX_RETRY_ATTEMPTS:
+                if attempt == URLs.connect_max_retries:
                     log.error("Max retry attempts reached. Failed to load reminders.")
                     raise
-            await asyncio.sleep(BACKOFF_INITIAL_DELAY * (2 ** (attempt - 1)))  # Exponential backoff
+            await asyncio.sleep(URLs.connect_initial_backoff * (2 ** (attempt - 1)))  # Exponential backoff
         now = datetime.now(UTC)
         for reminder in response:
             is_valid, *_ = self.ensure_valid_reminder(reminder)
