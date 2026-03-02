@@ -42,18 +42,18 @@ class StartupFailureReporter:
                 ping_everyone=True,
                 channel_id=channel_id
             )
-        except Exception as e:
-            log.exception(f"Failed to send startup failure report: {e}")
+        except Exception as exception:
+            log.exception(f"Failed to send startup failure report: {exception}")
 
     def render(self, failures: Mapping[str, BaseException]) -> str:
         """Render a human-readable message from the given failures."""
-        keys = sorted(failures.keys())
+        failure_keys = sorted(failures.keys())
 
         lines = []
         lines.append("The following extension(s) failed to load:")
-        for k in keys:
-            e = failures[k]
-            lines.append(f"- **{k}** - `{type(e).__name__}: {e}`")
+        for failure_key in failure_keys:
+            exception = failures[failure_key]
+            lines.append(f"- **{failure_key}** - `{type(exception).__name__}: {exception}`")
 
         return textwrap.dedent(f"""
         Failed items:
