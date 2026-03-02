@@ -462,6 +462,9 @@ class _URLs(_BaseURLs):
     connect_max_retries: int = 3
     connect_cooldown: int = 5
 
+    # Back-off in cog_load
+    connect_initial_backoff: int = 1
+
     site_logs_view: str = "https://pythondiscord.com/staff/bot/logs"
 
 
