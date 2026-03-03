@@ -140,10 +140,10 @@ Scope (functionality and code affected).
 Cogs that depend on external HTTP services shall handle connection errors and HTTP failures during `cog_load()` without failing silently.
 If the external service is unavailable, the cog must not terminate initialization without reporting the failure.
 Identified cogs pertaining to this problem are:
-- `bot/ext/filtering/filtering.py`
-- `bot/ext/utils/reminders.py`
-- `bot/ext/info/python_news.py`
-- `bot/ext/moderation/infraction/superstarify.py`
+- `bot/exts/filtering/filtering.py`
+- `bot/exts/utils/reminders.py`
+- `bot/exts/info/python_news.py`
+- `bot/exts/moderation/infraction/superstarify.py`
 
 ### FR-2) Retry Mechanism for External HTTP calls
 If a cog fails to initialize due to a retriable HTTP error or network-related exception, the system shall automatically retry the initialization a finite number of times before giving up.
@@ -157,7 +157,7 @@ This is repeated a total number of MAX_RETRIES, after which the setup has to fin
 **Tested by:**
 - `tests/bot/exts/filtering/test_filtering_cog.py::`
    - `test_cog_load_retries_then_succeeds`
-   - `test_retries_three_times_fails_and_alerts`
+   - `test_retries_three_times_fails_and_reraises`
 - `tests/bot/exts/utils/test_reminders.py::`
    - `test_reminders_cog_load_retries_after_initial_exception`
    - `test_reminders_cog_load_fails_after_max_retries`
