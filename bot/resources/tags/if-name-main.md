@@ -1,28 +1,20 @@
 ---
 embed:
-    title: "`if __name__ == '__main__'`"
+    title: "`if __name__ == "__main__"`"
 ---
-This is a statement that is only true if the module (your source code) it appears in is being run directly, as opposed to being imported into another module.  When you run your module, the `__name__` special variable is automatically set to the string `'__main__'`. Conversely, when you import that same module into a different one, and run that, `__name__` is instead set to the filename of your module minus the `.py` extension.
 
-**Example**
+This is a convention for code that should run if the file is the main file of your program:
+
 ```py
-# foo.py
+def main():
+    ...
 
-print('spam')
-
-if __name__ == '__main__':
-    print('eggs')
+if __name__ == "__main__":
+    main()
 ```
-If you run the above module `foo.py` directly, both `'spam'`and `'eggs'` will be printed. Now consider this next example:
-```py
-# bar.py
 
-import foo
-```
-If you run this module named `bar.py`, it will execute the code in `foo.py`. First it will print `'spam'`, and then the `if` statement will fail, because `__name__` will now be the string `'foo'`.
+If the file is run directly, then the `main()` function will be run.
+If the file is imported, it will not run.
 
-**Why would I do this?**
-
-- Your module is a library, but also has a special case where it can be run directly
-- Your module is a library and you want to safeguard it against people running it directly (like what `pip` does)
-- Your module is the main program, but has unit tests and the testing framework works by importing your module, and you want to avoid having your main code run during the test
+For more about why you would do this and how it works, see
+[`if __name__ == "__main__"`](https://pythondiscord.com/pages/guides/pydis-guides/if-name-main/).
