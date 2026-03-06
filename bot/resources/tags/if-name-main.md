@@ -1,6 +1,7 @@
 ---
+aliases: ["main"]
 embed:
-    title: "`if __name__ == "__main__"`"
+    title: '`if __name__ == "__main__"`'
 ---
 
 This is a convention for code that should run if the file is the main file of your program:
