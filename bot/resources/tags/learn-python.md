@@ -1,6 +1,11 @@
-* [Automate the Boring Stuff](<https://automatetheboringstuff.com/#toc>) is a really good book for complete beginners and it's free to read online.
-* If you prefer to watch video tutorials [Corey Schafer's playlist](<https://www.youtube.com/playlist?list=PL-osiE80TeTskrapNbzXhwoFUiLCjGgY7>) is also really good.
-* We also recommend Harvard’s free online course [CS50P: Introduction to Programming with Python](<https://cs50.harvard.edu/python/>).
-* [Python Programming MOOC 2026](<https://programming-26.mooc.fi/>) is an alternative online course with lots of integrated practice problems you can do directly in the browser.
+---
+embed:
+    title: "Go-to beginners resources"
+---
+Here are the top free resources we recommend for people who are new to programming:
+* The [Automate the Boring Stuff](<https://automatetheboringstuff.com/#toc>) book (free to read online, also available as a physical book)
+* [Corey Schafer's YouTube playlist](<https://www.youtube.com/playlist?list=PL-osiE80TeTskrapNbzXhwoFUiLCjGgY7>)
+* Harvard’s [CS50P course](<https://cs50.harvard.edu/python/>) — video lectures with exercises
+* The [Python Programming MOOC 2026](<https://programming-26.mooc.fi/>) course — text lessons with exercises
 
 For a full, curated list of educational resources we recommend, please see our [resources page](<https://www.pythondiscord.com/resources/>)
