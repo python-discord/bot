@@ -1,6 +1,6 @@
 ---
 embed:
-    title: "Go-to beginners resources"
+    title: "Go-to beginner resources"
 ---
 Here are the top free resources we recommend for people who are new to programming:
 * The [Automate the Boring Stuff](<https://automatetheboringstuff.com/#toc>) book (free to read online, also available as a physical book)
