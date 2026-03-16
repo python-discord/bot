@@ -14,4 +14,4 @@ if __name__ == "__main__":
 ```
 If the file is run directly, then the `main()` function will be run. If the file is imported, it will not run.
 
-For more about why you would do this and how it works, see [`if __name__ == "__main__"`](https://pythondiscord.com/pages/guides/pydis-guides/if-name-main/).
+For more about why you would do this and how it works, see [`if __name__ == "__main__"`](https://pythondiscord.com/pages/guides/python-guides/if-name-main/).
