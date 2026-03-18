@@ -1,6 +1,6 @@
 ---
 aliases: ["learn", "start", "beginner", "slorb"]
-embed: 
+embed:
     title: Go-to beginner resources
 ---
 Here are the top free resources we recommend for people who are new to programming:
