@@ -1,4 +1,5 @@
 ---
+aliases: ["pb"]
 embed:
     title: "Pasting large amounts of code"
 ---
