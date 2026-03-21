@@ -407,7 +407,7 @@ CleanMessages = _CleanMessages()
 class _Stats(EnvConfig, env_prefix="stats_"):
 
     presence_update_timeout: int = 30
-    statsd_host: str = "graphite.default.svc.cluster.local"
+    statsd_host: str = "statsd-exporter.monitoring.svc.cluster.local"
 
 
 Stats = _Stats()
