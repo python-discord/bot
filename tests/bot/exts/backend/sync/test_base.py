@@ -39,8 +39,8 @@ class SyncerSyncTests(unittest.IsolatedAsyncioTestCase):
             (helpers.MockMessage(), ResponseCodeError(mock.MagicMock()), True),
         )
 
-        for message, side_effect, should_edit in subtests:
-            with self.subTest(message=message, side_effect=side_effect, should_edit=should_edit):
+        for i, (message, side_effect, should_edit) in enumerate(subtests):
+            with self.subTest(test_case=i, has_message=message is not None, should_edit=should_edit):
                 TestSyncer._sync.side_effect = side_effect
                 ctx = helpers.MockContext()
                 ctx.send.return_value = message
@@ -58,8 +58,8 @@ class SyncerSyncTests(unittest.IsolatedAsyncioTestCase):
             (helpers.MockContext(), helpers.MockMessage()),
         )
 
-        for ctx, message in subtests:
-            with self.subTest(ctx=ctx, message=message):
+        for i, (ctx, _message) in enumerate(subtests):
+            with self.subTest(test_case=i, has_ctx=ctx is not None):
                 await TestSyncer.sync(self.guild, ctx)
 
                 if ctx is not None:
