@@ -6,7 +6,7 @@ license = {text = "MIT"}
 requires-python = "==3.14.*"
 dependencies = [
     "pydis-core[all]==11.8.0",
-    "aiohttp==3.13.2",
+    "aiohttp==3.13.3",
     "arrow==1.4.0",
     "beautifulsoup4==4.14.2",
     "deepdiff==8.6.1",
