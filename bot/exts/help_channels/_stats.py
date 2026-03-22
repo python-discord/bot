@@ -14,7 +14,7 @@ log = get_logger(__name__)
 class ClosingReason(Enum):
     """All possible closing reasons for help channels."""
 
-    COMMAND = "command"
+    COMMAND = "manual.command"
     INACTIVE = "auto.inactive"
     NATIVE = "auto.native"
     DELETED = "auto.deleted"
