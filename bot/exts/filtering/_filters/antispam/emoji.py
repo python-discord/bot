@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
 
-DISCORD_EMOJI_RE = re.compile(r"<:\w+:\d+>|:\w+:")
+DISCORD_EMOJI_RE = re.compile(r"<a?:\w+:\d+>|:\w+:")
 CODE_BLOCK_RE = re.compile(r"```.*?```", flags=re.DOTALL)
 
 
