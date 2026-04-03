@@ -66,7 +66,7 @@ jobs:
           repository: python-discord/infra
           path: infra
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
 
       - name: Authenticate with Kubernetes
         uses: azure/k8s-set-context@v4
