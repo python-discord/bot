@@ -19,9 +19,18 @@ class StartupFailureReporter:
         if not failures:
             return
 
+        failure_keys = sorted(failures.keys())
+        failures_summary = ", ".join(failure_keys)
+
         if bot.get_channel(channel_id) is None:
             # Can't send a message if the channel doesn't exist, so log instead
-            log.warning("Failed to send startup failure report: mod_log channel not found.")
+            log.error(
+                "Failed to send startup failure report: mod_log channel %d not found. "
+                "Startup failures (%d): %s",
+                channel_id,
+                len(failure_keys),
+                failures_summary,
+            )
             return
 
         try:
@@ -39,8 +48,13 @@ class StartupFailureReporter:
                 ping_everyone=True,
                 channel_id=channel_id
             )
-        except Exception as exception:
-            log.exception(f"Failed to send startup failure report: {exception}")
+        except Exception:
+            log.exception(
+                "Failed to send startup failure report to channel %d. Startup failures (%d): %s",
+                channel_id,
+                len(failure_keys),
+                failures_summary,
+            )
 
     def render(self, failures: Mapping[str, BaseException]) -> str:
         """Render a human-readable message from the given failures."""
