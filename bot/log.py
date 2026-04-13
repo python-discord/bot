@@ -1,4 +1,5 @@
 import logging
+import sys
 from logging import handlers
 from pathlib import Path
 
@@ -23,6 +24,10 @@ def setup() -> None:
         file_handler = handlers.RotatingFileHandler(log_file, maxBytes=5242880, backupCount=7, encoding="utf8")
         file_handler.setFormatter(core_logging.log_format)
         root_log.addHandler(file_handler)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(core_logging.log_format)
+    root_log.addHandler(stream_handler)
 
     root_log.setLevel(logging.DEBUG if constants.DEBUG_MODE else logging.INFO)
 
