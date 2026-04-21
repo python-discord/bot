@@ -141,6 +141,7 @@ class _Roles(EnvConfig, env_prefix="roles_"):
     pyweek_announcements: int = 897568414044938310
     revival_of_code: int = 988801794668908655
     archived_channels_access: int = 1074780483776417964
+    aspiring_contributors: int = 1496224728686268657
 
     contributors: int = 295488872404484098
     python_community: int = 458226413825294336
