@@ -589,6 +589,9 @@ class ModLog(Cog, name="ModLog"):
             return
 
         channel = self.bot.get_channel(event.channel_id)
+        if channel is None:
+            log.trace(f"Channel {event.channel_id} not found, skipping uncached message delete log.")
+            return
 
         if channel.category:
             response = (
