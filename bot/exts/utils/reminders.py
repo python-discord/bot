@@ -479,7 +479,7 @@ class Reminders(Cog):
 
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
-            if len(active_reminders) > MAXIMUM_REMINDERS:
+            if len(active_reminders) >= MAXIMUM_REMINDERS:
                 await send_denial(ctx, "You have too many active reminders!")
                 return
 
