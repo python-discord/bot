@@ -383,11 +383,15 @@ class Reminders(Cog):
             mentionable.mention async for mentionable in self.get_mentionables(reminder["mentions"])
         ])
 
-        jump_url = reminder.get("jump_url")
-        embed.description += f"\n[Jump back to when you created the reminder]({jump_url})"
-        partial_message = channel.get_partial_message(int(jump_url.split("/")[-1]))
+        jump_url = reminder.get("jump_url") or ""
+        if jump_url:
+            embed.description += f"\n[Jump back to when you created the reminder]({jump_url})"
+        partial_message = channel.get_partial_message(int(jump_url.split("/")[-1])) if jump_url else None
         try:
-            await partial_message.reply(content=f"{additional_mentions}", embed=embed)
+            if partial_message:
+                await partial_message.reply(content=f"{additional_mentions}", embed=embed)
+            else:
+                await channel.send(content=f"<@{reminder['author']}> {additional_mentions}", embed=embed)
         except discord.HTTPException as e:
             log.info(
                 f"There was an error when trying to reply to a reminder invocation message, {e}, "
@@ -475,7 +479,7 @@ class Reminders(Cog):
 
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
-            if len(active_reminders) > MAXIMUM_REMINDERS:
+            if len(active_reminders) >= MAXIMUM_REMINDERS:
                 await send_denial(ctx, "You have too many active reminders!")
                 return
 
