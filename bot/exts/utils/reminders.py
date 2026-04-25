@@ -678,7 +678,7 @@ class Reminders(Cog):
             title = random.choice(POSITIVE_REPLIES)
             deletion_message = f"Successfully deleted the following reminder(s): {', '.join(deleted_ids)}"
 
-            if len(deleted_ids) != len(ids):
+            if len(deleted_ids) != len(set(ids)):
                 deletion_message += (
                     "\n\nThe other reminder(s) could not be deleted as they're either locked, "
                     "belong to someone else, or don't exist."
