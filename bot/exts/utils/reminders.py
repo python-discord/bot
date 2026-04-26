@@ -413,7 +413,8 @@ class Reminders(Cog):
         # If the replied message has no content, we couldn't get the content, or no content was provided
         # (e.g. only attachments/embeds)
         if content is None or content == "":
-            content = "*See referenced message.*"
+            await ctx.send("The referenced message has no content, please provide content directly.")
+            return None
 
         return content
 
@@ -614,6 +615,8 @@ class Reminders(Cog):
         """
         if not content:
             content = await self.try_get_content_from_reply(ctx)
+            if content is None:
+                return
 
         await self.edit_reminder(ctx, id_, {"content": content})
 
