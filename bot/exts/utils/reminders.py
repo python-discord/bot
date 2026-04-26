@@ -493,6 +493,8 @@ class Reminders(Cog):
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
             content = await self.try_get_content_from_reply(ctx)
+            if content is None:
+                return
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
