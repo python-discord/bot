@@ -153,8 +153,8 @@ class DiscordMocksTests(unittest.TestCase):
             (helpers.MockMessage(), "mention_everyone"),
         )
 
-        for mock, valid_attribute in mocks:
-            with self.subTest(mock=mock):
+        for i, (mock, valid_attribute) in enumerate(mocks):
+            with self.subTest(test_case=i, attribute=valid_attribute):
                 try:
                     getattr(mock, valid_attribute)
                 except AttributeError:
@@ -183,8 +183,8 @@ class DiscordMocksTests(unittest.TestCase):
             helpers.MockMessage(),
         )
 
-        for mock in mocks:
-            with self.subTest(mock=mock), self.assertRaises(AttributeError):
+        for i, mock in enumerate(mocks):
+            with self.subTest(test_case=i), self.assertRaises(AttributeError):
                 mock.the_cake_is_a_lie  # noqa: B018
 
     def test_mocks_use_mention_when_provided_as_kwarg(self):
@@ -195,8 +195,8 @@ class DiscordMocksTests(unittest.TestCase):
             (helpers.MockTextChannel, "channel mention"),
         )
 
-        for mock_type, mention in test_cases:
-            with self.subTest(mock_type=mock_type, mention=mention):
+        for i, (mock_type, mention) in enumerate(test_cases):
+            with self.subTest(test_case=i, mention=mention):
                 mock = mock_type(mention=mention)
                 self.assertEqual(mock.mention, mention)
 
@@ -276,15 +276,15 @@ class MockObjectTests(unittest.TestCase):
 
     def test_mock_class_with_hashable_mixin_uses_id_for_hashing(self):
         """Test if the MagicMock subclasses that implement the HashableMixin use id for hash."""
-        for mock in self.hashable_mocks:
-            with self.subTest(mock_class=mock):
+        for i, _mock in enumerate(self.hashable_mocks):
+            with self.subTest(test_case=i):
                 instance = helpers.MockRole(id=100)
                 self.assertEqual(hash(instance), instance.id)
 
     def test_mock_class_with_hashable_mixin_uses_id_for_equality(self):
         """Test if MagicMocks that implement the HashableMixin use id for equality comparisons."""
-        for mock_class in self.hashable_mocks:
-            with self.subTest(mock_class=mock_class):
+        for i, mock_class in enumerate(self.hashable_mocks):
+            with self.subTest(test_case=i):
                 instance_one = mock_class()
                 instance_two = mock_class()
                 instance_three = mock_class()
@@ -298,8 +298,8 @@ class MockObjectTests(unittest.TestCase):
 
     def test_mock_class_with_hashable_mixin_uses_id_for_nonequality(self):
         """Test if MagicMocks that implement HashableMixin use id for nonequality comparisons."""
-        for mock_class in self.hashable_mocks:
-            with self.subTest(mock_class=mock_class):
+        for i, mock_class in enumerate(self.hashable_mocks):
+            with self.subTest(test_case=i):
                 instance_one = mock_class()
                 instance_two = mock_class()
                 instance_three = mock_class()
@@ -336,8 +336,8 @@ class MockObjectTests(unittest.TestCase):
             (helpers.MockReaction, "me"),
         )
 
-        for mock_type, valid_attribute in test_values:
-            with self.subTest(mock_type=mock_type, attribute=valid_attribute):
+        for i, (mock_type, valid_attribute) in enumerate(test_values):
+            with self.subTest(test_case=i, attribute=valid_attribute):
                 mock = mock_type()
                 self.assertTrue(isinstance(mock, mock_type))
                 attribute = getattr(mock, valid_attribute)
