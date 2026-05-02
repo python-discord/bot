@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import io
 import json
@@ -24,7 +25,7 @@ import bot
 import bot.exts.filtering._ui.filter as filters_ui
 from bot import constants
 from bot.bot import Bot
-from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
+from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles, URLs
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
@@ -55,6 +56,7 @@ from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
+from bot.utils.retry import is_retryable_api_error
 
 log = get_logger(__name__)
 
@@ -108,7 +110,31 @@ class Filtering(Cog):
         await self.bot.wait_until_guild_available()
 
         log.trace("Loading filtering information from the database.")
-        raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
+        for attempt in range(1, URLs.connect_max_retries + 1):
+            try:
+                raw_filter_lists = await self.bot.api_client.get("bot/filter/filter_lists")
+                break
+            except Exception as error:
+                is_retryable = is_retryable_api_error(error)
+                is_last_attempt = attempt == URLs.connect_max_retries
+
+                if not is_retryable:
+                    raise
+
+                if is_last_attempt:
+                    log.exception("Failed to load filtering data after %d attempts.", URLs.connect_max_retries)
+                    raise
+
+                backoff_seconds = URLs.connect_initial_backoff * (2 ** (attempt - 1))
+                log.warning(
+                    "Failed to load filtering data (attempt %d/%d). Retrying in %d second(s): %s",
+                    attempt,
+                    URLs.connect_max_retries,
+                    backoff_seconds,
+                    error
+                )
+                await asyncio.sleep(backoff_seconds)
+
         example_list = None
         for raw_filter_list in raw_filter_lists:
             loaded_list = self._load_raw_filter_list(raw_filter_list)
