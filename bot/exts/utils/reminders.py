@@ -413,7 +413,8 @@ class Reminders(Cog):
         # If the replied message has no content, we couldn't get the content, or no content was provided
         # (e.g. only attachments/embeds)
         if content is None or content == "":
-            content = "*See referenced message.*"
+            await ctx.send("The referenced message has no content, please provide content directly.")
+            return None
 
         return content
 
@@ -492,6 +493,8 @@ class Reminders(Cog):
         # If `content` isn't provided then we try to get message content of a replied message
         if not content:
             content = await self.try_get_content_from_reply(ctx)
+            if content is None:
+                return
 
         # Now we can attempt to actually set the reminder.
         reminder = await self.bot.api_client.post(
@@ -600,6 +603,10 @@ class Reminders(Cog):
 
         For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
         """
+        if expiration < datetime.now(UTC):
+            await send_denial(ctx, "Your reminder duration must be in the future!")
+            return
+
         formatted_time = time.discord_timestamp(expiration, time.TimestampFormats.DAY_TIME)
         message = f"It will arrive on {formatted_time}."
 
@@ -614,6 +621,8 @@ class Reminders(Cog):
         """
         if not content:
             content = await self.try_get_content_from_reply(ctx)
+            if content is None:
+                return
 
         await self.edit_reminder(ctx, id_, {"content": content})
 
@@ -678,7 +687,7 @@ class Reminders(Cog):
             title = random.choice(POSITIVE_REPLIES)
             deletion_message = f"Successfully deleted the following reminder(s): {', '.join(deleted_ids)}"
 
-            if len(deleted_ids) != len(ids):
+            if len(deleted_ids) != len(set(ids)):
                 deletion_message += (
                     "\n\nThe other reminder(s) could not be deleted as they're either locked, "
                     "belong to someone else, or don't exist."
