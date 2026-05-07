@@ -10,6 +10,7 @@ from discord import Interaction
 from discord.ext.commands import Cog, Context, Greedy, group
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
+from pydis_core.utils.channel import get_or_fetch_channel
 from pydis_core.utils.members import get_or_fetch_member
 from pydis_core.utils.scheduling import Scheduler
 
@@ -232,7 +233,7 @@ class Reminders(Cog):
         now = datetime.now(UTC)
 
         for reminder in response:
-            is_valid, *_ = self.ensure_valid_reminder(reminder)
+            is_valid, *_ = await self.ensure_valid_reminder(reminder)
             if not is_valid:
                 continue
 
@@ -244,19 +245,28 @@ class Reminders(Cog):
             else:
                 self.schedule_reminder(reminder)
 
-    def ensure_valid_reminder(self, reminder: dict) -> tuple[bool, discord.TextChannel]:
-        """Ensure reminder channel can be fetched otherwise delete the reminder."""
-        channel = self.bot.get_channel(reminder["channel_id"])
-        is_valid = True
+    async def ensure_valid_reminder(self, reminder: dict) -> tuple[bool, discord.TextChannel | None]:
+        """Ensure reminder channel can be fetched otherwise notify the user and delete the reminder."""
+        try:
+            channel = await get_or_fetch_channel(self.bot, reminder["channel_id"])
+        except discord.HTTPException:
+            channel = None
+
         if not channel:
-            is_valid = False
             log.info(
                 f"Reminder {reminder['id']} invalid: "
-                f"Channel {reminder['channel_id']}={channel}."
+                f"Channel {reminder['channel_id']} could not be fetched."
             )
+            user = self.bot.get_user(reminder["author"])
+            if user:
+                await user.send(
+                    f"Your reminder could not be delivered because the channel it was set in "
+                    f"is no longer accessible.\n**Reminder content:** {reminder['content']}"
+                )
             scheduling.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
+            return False, None
 
-        return is_valid, channel
+        return True, channel
 
     @staticmethod
     async def _send_confirmation(
@@ -357,7 +367,7 @@ class Reminders(Cog):
     @lock_arg(LOCK_NAMESPACE, "reminder", itemgetter("id"), raise_error=True)
     async def send_reminder(self, reminder: dict, expected_time: time.Timestamp | None = None) -> None:
         """Send the reminder."""
-        is_valid, channel = self.ensure_valid_reminder(reminder)
+        is_valid, channel = await self.ensure_valid_reminder(reminder)
         if not is_valid:
             # No need to cancel the task too; it'll simply be done once this coroutine returns.
             return
@@ -475,7 +485,7 @@ class Reminders(Cog):
 
             # Let's limit this, so we don't get 10 000
             # reminders from kip or something like that :P
-            if len(active_reminders) > MAXIMUM_REMINDERS:
+            if len(active_reminders) >= MAXIMUM_REMINDERS:
                 await send_denial(ctx, "You have too many active reminders!")
                 return
 
@@ -659,7 +669,7 @@ class Reminders(Cog):
     @remind_group.command("delete", aliases=("remove", "cancel"))
     async def delete_reminder(self, ctx: Context, ids: Greedy[int]) -> None:
         """Delete up to (and including) 5 of your active reminders."""
-        if len(ids) > 5:
+        if len(ids) >= 5:
             await send_denial(ctx, "You can only delete a maximum of 5 reminders at once.")
             return
 
