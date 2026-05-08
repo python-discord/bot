@@ -103,6 +103,12 @@ class ErrorHandler(Cog):
             # All errors from attempting to execute these commands should be handled by the error handler.
             # We wrap non CommandErrors in CommandInvokeError to mirror the behaviour of normal commands.
             try:
+                if ctx.invoked_with == "cban":
+                    await ctx.send(
+                        "The `cban` alias was removed because of ambiguity (see #3458). "
+                        "Did you mean `cleanban` or `compban`?"
+                    )
+                    return
                 if await self.try_silence(ctx):
                     return
                 if await self.try_run_fixed_codeblock(ctx):
