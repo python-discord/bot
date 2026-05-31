@@ -1,7 +1,6 @@
 """This module generates and formats instructional messages about fixing Markdown code blocks."""
 
-
-from bot.exts.info.codeblock import _parsing
+from bot.exts.info.codeblock import _auto_formatting, _parsing
 from bot.log import get_logger
 
 log = get_logger(__name__)
@@ -69,6 +68,7 @@ def _get_no_ticks_message(content: str) -> str | None:
     if _parsing.is_python_code(content):
         example_blocks = _get_example("py")
         return example_blocks
+
     log.trace("Aborting missing code block instructions: content is not Python code.")
     return None
 
@@ -142,6 +142,11 @@ def get_instructions(content: str) -> str | None:
     if blocks is None:
         log.trace("At least one valid code block found; no instructions to return.")
         return None
+
+    log.trace("Try to automatically format code blocks.")
+    formatted_code = _auto_formatting.attempt_formatting(content, blocks)
+    if formatted_code is not None:
+        return formatted_code
 
     if not blocks:
         log.trace("No code blocks were found in message.")
