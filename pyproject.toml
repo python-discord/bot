@@ -24,7 +24,6 @@ dependencies = [
     "tenacity==9.1.2",
     "tldextract==5.3.0",
     "yarl==1.22.0",
-    "ruff==0.14.2",
     "black==26.5.1",
 ]
 name = "bot"
