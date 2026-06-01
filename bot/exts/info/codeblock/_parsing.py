@@ -88,7 +88,7 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
         groups = match.groupdict("")
         language = groups["lang"].strip()  # Strip the whitespace cause it's included in the group.
 
-        if groups["tick"] == BACKTICK and len(groups["ticks"]) == 3 and language:
+        if groups["tick"] == BACKTICK and len(groups["ticks"]) == 3 and language and ("\n" in groups["lang"]):
             log.trace("Message has a valid code block with a language; returning None.")
             return None
         if has_lines(groups["code"], constants.CodeBlock.minimum_lines):
