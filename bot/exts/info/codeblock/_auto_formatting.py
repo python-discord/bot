@@ -1,5 +1,8 @@
+import itertools
+
 import black
 
+from bot import constants
 from bot.exts.info.codeblock import _parsing
 from bot.log import get_logger
 
@@ -35,9 +38,17 @@ def _attempt_formatting_whole_content(content: str) -> str | None:
     return None
 
 
+def _merge_non_code_blocks_with_code_blocks(non_code_blocks: list[str], formatted_code_blocks: list[str]) -> str:
+    return "".join(
+        f"{non_code_block}{formatted_code_block and _code_as_markdown(formatted_code_block)}"
+        for non_code_block, formatted_code_block
+        in itertools.zip_longest(non_code_blocks, formatted_code_blocks, fillvalue="")
+    )
+
+
 def try_fix_markdown(content: str) -> str | None:
     """
-    Converts the user's content to a properly formatted Markdown message.
+    Converts the user's content to a properly formatted Markdown message if it finds a non-formatted code block.
 
     Returns None if it encounters any problems.
     """
@@ -55,10 +66,14 @@ def try_fix_markdown(content: str) -> str | None:
         log.trace("Multiple code blocks detected but formatting failed for at least one code block.")
         return None
 
-    if len(formatted_code_blocks) == 1:
-        return f"Your code correctly formatted:\n{_code_as_markdown(formatted_code_blocks[0])}"
+    non_code_blocks = _parsing.find_non_code_blocks(content)
+    if len(formatted_code_blocks) + 1 != len(non_code_blocks):
+        log.trace("Code blocks detected, but there are inconsistencies in what code blocks are detected.")
+        return None
 
-    return "Your codes correctly formatted:\n" + "\n".join(
-        f"Codeblock {i}:\n{_code_as_markdown(formatted_code_block)}"
-        for i, formatted_code_block in enumerate(formatted_code_blocks, start=1)
-    )
+    fixed_markdown = _merge_non_code_blocks_with_code_blocks(non_code_blocks, formatted_code_blocks)
+    if len(fixed_markdown) > constants.CodeBlock.maximum_auto_formatted_characters:
+        log.trace("Automatically formatted message would be too large to post")
+        return None
+
+    return fixed_markdown
