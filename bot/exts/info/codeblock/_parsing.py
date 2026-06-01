@@ -37,7 +37,7 @@ _RE_CODE_BLOCK = re.compile(
         (?P<tick>[{''.join(_TICKS)}]) # Put all ticks into a character class within a group.
         \2*                           # Match previous group up to N more times to ensure the same char.
     )
-    (?P<lang>[A-Za-z0-9\+\-\.]+\n?)?   # Optionally match a language specifier followed by a newline.
+    (?P<lang>[A-Za-z0-9+\-.]+\s)?     # Optionally match a language specifier followed by a whitespace.
     (?P<code>.+?)                     # Match the actual code within the block.
     \1                                # Match the same N ticks used at the start of the block.
     """,
@@ -86,7 +86,7 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     for match in _RE_CODE_BLOCK.finditer(message):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")
-        language = groups["lang"].strip()  # Strip the newline cause it's included in the group.
+        language = groups["lang"].strip()  # Strip the whitespace cause it's included in the group.
 
         if groups["tick"] == BACKTICK and len(groups["ticks"]) == 3 and language:
             log.trace("Message has a valid code block with a language; returning None.")
@@ -98,6 +98,27 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
             log.trace("Skipped a code block shorter than 4 lines.")
 
     return code_blocks
+
+
+def find_non_code_blocks(message: str) -> list[str]:
+    """
+    Find and return all pieces of the `message` that are not Markdown code blocks.
+
+    This can be used to extract the text surrounding code blocks.
+    Analogue to the `find_code_blocks` function, code blocks with 3 or fewer lines are not counted as code blocks.
+    """
+    log.trace("Finding all non-code blocks in a message.")
+    non_code_blocks = re.sub(_RE_CODE_BLOCK, "\x00", message).split("\x00")
+
+    for i, match in enumerate(re.finditer(_RE_CODE_BLOCK, message)):
+        groups = match.groupdict("")
+
+        if not has_lines(groups["code"], constants.CodeBlock.minimum_lines):
+            # not a proper code block; merge back into non_code_blocks
+            log.debug(f"Skipping non-code block {i}.")
+            non_code_blocks[i:i + 2] = [non_code_blocks[i] + match.group(0) + non_code_blocks[i + 1]]
+
+    return non_code_blocks
 
 
 def _is_python_code(content: str) -> bool:
@@ -181,7 +202,7 @@ def parse_bad_language(content: str) -> BadLanguage | None:
     )
 
 
-def _get_leading_spaces(content: str) -> int:
+def _get_leading_spaces(content: str) -> int | None:
     """Return the number of spaces at the start of the first line in `content`."""
     leading_spaces = 0
     for char in content:
