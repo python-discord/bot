@@ -119,6 +119,32 @@ class CodeBlockCog(Cog, name="Code Block"):
         # Increase amount of codeblock correction in stats
         self.bot.stats.incr("codeblock_corrections")
 
+    async def send_proper_markdown_message_and_delete_original(self, message: discord.Message,
+                                                               proper_markdown: str) -> None:
+        """
+        Send an embed with `proper_formatting`, replacing the user-given message containing non-formatted code blocks.
+
+        This embed will delete the original user's message immediately.
+
+        The purpose of this function is for when automatically fixing the formatting of a message is easier than
+        spamming the chat with instructions on how to fix the code.
+
+        Addresses: https://github.com/python-discord/bot/issues/2328
+        """
+        log.info(f"Sending proper Markdown formatted message, thereby replacing message {message.id}.")
+
+        await message.channel.send(
+            f"Hey {message.author.mention}!\n"
+            "We detected improperly formatted code blocks in your message and managed to automatically fix them.\n"
+            "Type `!code` to learn how to properly format code.\n\n"
+            "Your message was:\n"
+            + proper_markdown
+        )
+        await message.delete()
+
+        # Increase amount of codeblock replacements in stats
+        self.bot.stats.incr("codeblock_replacements")
+
     def should_parse(self, message: discord.Message) -> bool:
         """
         Return True if `message` should be parsed.
@@ -152,9 +178,8 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         auto_formatted_message = _auto_formatting.try_fix_markdown(msg.content)
         if auto_formatted_message:
-            await self.send_instructions(msg, auto_formatted_message)
+            await self.send_proper_markdown_message_and_delete_original(msg, auto_formatted_message)
             return
-
 
         instructions = get_instructions(msg.content)
         if instructions:
