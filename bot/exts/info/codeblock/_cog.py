@@ -10,6 +10,7 @@ from bot.bot import Bot
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter
 from bot.exts.filtering._filters.unique.webhook import WEBHOOK_URL_RE
 from bot.exts.help_channels._channel import is_help_forum_post
+from bot.exts.info.codeblock import _auto_formatting
 from bot.exts.info.codeblock._instructions import get_instructions
 from bot.log import get_logger
 from bot.utils import has_lines
@@ -148,6 +149,12 @@ class CodeBlockCog(Cog, name="Code Block"):
         if self.is_on_cooldown(msg.channel) and not constants.DEBUG_MODE:
             log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
             return
+
+        auto_formatted_message = _auto_formatting.try_fix_markdown(msg.content)
+        if auto_formatted_message:
+            await self.send_instructions(msg, auto_formatted_message)
+            return
+
 
         instructions = get_instructions(msg.content)
         if instructions:
