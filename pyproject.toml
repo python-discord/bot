@@ -12,7 +12,7 @@ dependencies = [
     "deepdiff==9.0.0",
     "emoji==2.15.0",
     "feedparser==6.0.12",
-    "lxml==6.0.2",
+    "lxml==6.1.0",
     "markdownify==1.2.0",
     "pydantic==2.12.3",
     "pydantic-settings==2.11.0",

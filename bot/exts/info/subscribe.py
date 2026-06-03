@@ -29,6 +29,7 @@ ASSIGNABLE_ROLES = (
     AssignableRole(constants.Roles.lovefest),
     AssignableRole(constants.Roles.advent_of_code),
     AssignableRole(constants.Roles.revival_of_code),
+    AssignableRole(constants.Roles.aspiring_contributors),
 )
 
 ITEMS_PER_ROW = 3

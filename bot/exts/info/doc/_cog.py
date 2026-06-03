@@ -13,7 +13,7 @@ from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils.scheduling import Scheduler
 
 from bot.bot import Bot
-from bot.constants import MODERATION_ROLES, RedirectOutput
+from bot.constants import MODERATION_ROLES, RedirectOutput, Roles
 from bot.converters import Inventory, PackageName, ValidURL
 from bot.log import get_logger
 from bot.pagination import LinePaginator
@@ -349,7 +349,7 @@ class DocCog(commands.Cog):
         return inventory_url.removesuffix("/").rsplit("/", maxsplit=1)[0] + "/"
 
     @docs_group.command(name="setdoc", aliases=("s",))
-    @commands.has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES, Roles.core_developers)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def set_command(
         self,
@@ -397,7 +397,7 @@ class DocCog(commands.Cog):
         await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
 
     @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
-    @commands.has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES, Roles.core_developers)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
         """
@@ -414,7 +414,7 @@ class DocCog(commands.Cog):
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.")
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
-    @commands.has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES, Roles.core_developers)
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and show the difference."""
@@ -436,7 +436,7 @@ class DocCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
-    @commands.has_any_role(*MODERATION_ROLES)
+    @commands.has_any_role(*MODERATION_ROLES, Roles.core_developers)
     async def clear_cache_command(
         self,
         ctx: commands.Context,

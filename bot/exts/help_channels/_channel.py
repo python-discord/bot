@@ -195,7 +195,7 @@ async def maybe_archive_idle_post(post_id: int, scheduler: scheduling.Scheduler)
         # Fetch the post again, to ensure we have the latest info
         post = await get_or_fetch_channel(bot.instance, post_id)
     except discord.HTTPException:
-        log.trace(f"Not closing missing post #{post} ({post.id}).")
+        log.trace(f"Not closing missing post #{post_id}.")
         return
 
     if post.archived or post.locked:
