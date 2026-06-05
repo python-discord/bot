@@ -182,7 +182,7 @@ def parse_bad_language(content: str) -> BadLanguage | None:
     )
 
 
-def _get_leading_spaces(content: str) -> int:
+def _get_leading_spaces(content: str) -> int | None:
     """Return the number of spaces at the start of the first line in `content`."""
     leading_spaces = 0
     for char in content:
@@ -190,6 +190,7 @@ def _get_leading_spaces(content: str) -> int:
             leading_spaces += 1
         else:
             return leading_spaces
+
     return None
 
 
