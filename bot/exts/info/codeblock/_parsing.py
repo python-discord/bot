@@ -91,6 +91,7 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
         if groups["tick"] == BACKTICK and len(groups["ticks"]) == 3 and language and ("\n" in groups["lang"]):
             log.trace("Message has a valid code block with a language; returning None.")
             return None
+
         if has_lines(groups["code"], constants.CodeBlock.minimum_lines):
             code_block = CodeBlock(groups["code"], language, groups["tick"])
             code_blocks.append(code_block)
