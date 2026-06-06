@@ -6,27 +6,27 @@ from bot.exts.info.codeblock import _parsing as parsing
 class FindFaultyCodeblocksTest(unittest.TestCase):
     def test_should_recognize_missing_language(self):
         message = """```
-x = 4
-y = 2
-print("abc")
-```"""
+        x = 4
+        y = 2
+        print("abc")
+        ```"""
         faulty_code_blocks = parsing.find_faulty_code_blocks(message)
         self.assertIsNotNone(faulty_code_blocks)
         self.assertEqual(len(faulty_code_blocks), 1)
 
     def test_should_recognize_contained_codeblock(self):
         message = """'
-wouldn't it be easier to do:
-```py
-say_hi = lambda:
-    print('hello')
-    print('world')
-say_hi()
+        wouldn't it be easier to do:
+        ```py
+        say_hi = lambda:
+            print('hello')
+            print('world')
+        say_hi()
 
-'
-```
+        '
+        ```
 
-'"""
+        '"""
         faulty_code_blocks = parsing.find_faulty_code_blocks(message)
         self.assertIsNone(faulty_code_blocks)
 
