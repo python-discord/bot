@@ -36,7 +36,7 @@ _RE_IPYTHON_REPL = re.compile(r"^((In|Out) \[\d+\]: |\s*\.{3,}: ?)")
 _RE_CODE_BLOCK = re.compile(
     fr"""
     (?:^|                             # the ticks need to start at the front of a line to be recognized
-    \s)                               # or need to have a preceeding whitespace (to avoid detection of words like I'll).
+    \s)                               # or need to have a preceding whitespace (to avoid detection of words like I'll).
     (?P<ticks>
         (?P<tick>[{''.join(_TICKS)}]) # Put all ticks into a character class within a group.
         \2*                           # Match previous group up to N more times to ensure the same char.
