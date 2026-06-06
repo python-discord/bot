@@ -38,7 +38,7 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
     valid_ticks = f"\\{_parsing.BACKTICK}" * 3
     instructions = (
         "You are using the wrong character instead of backticks. "
-        f"Use {valid_ticks}, not `{code_block.tick * 3}`."
+        f"Use {valid_ticks}, not `{code_block.ticks}`."
     )
 
     log.trace("Check if the bad ticks code block also has issues with the language specifier.")
@@ -138,7 +138,7 @@ def get_instructions(content: str) -> str | None:
     """
     log.trace("Getting formatting instructions.")
 
-    blocks = _parsing.find_code_blocks(content)
+    blocks = _parsing.find_faulty_code_blocks(content)
     if blocks is None:
         log.trace("At least one valid code block found; no instructions to return.")
         return None
