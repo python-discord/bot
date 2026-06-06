@@ -26,7 +26,7 @@ from bot.utils.modlog import send_log_message
 
 log = get_logger(__name__)
 
-AUTOMATED_TIDY_UP_HOURS = 8
+AUTOMATED_TIDY_UP_HOURS = 1
 
 # Error when trying to delete a message in an archived thread.
 ARCHIVED_THREAD_ERROR = 50083
