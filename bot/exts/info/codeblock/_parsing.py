@@ -47,7 +47,8 @@ _RE_CODE_BLOCK = re.compile(
     """,
     re.DOTALL | re.VERBOSE
 )
-_RE_CODE_BLOCK_REGEX = regex.compile(_RE_CODE_BLOCK.pattern, regex.DOTALL | regex.VERBOSE)
+# copy of _RE_CODE_BLOCK. Done like this for highlighting reasons (regex.compile doesn't properly highlight)
+_REGEX_CODE_BLOCK = regex.compile(_RE_CODE_BLOCK.pattern, regex.DOTALL | regex.VERBOSE)
 
 _RE_LANGUAGE = re.compile(
     fr"""
@@ -66,6 +67,7 @@ class CodeBlock(NamedTuple):
     language: str
     ticks: str
     tick: str
+    is_python: bool
 
 
 class BadLanguage(NamedTuple):
@@ -89,7 +91,7 @@ def find_faulty_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     log.trace("Finding all code blocks in a message.")
 
     code_blocks = []
-    for match in _RE_CODE_BLOCK_REGEX.finditer(message, overlapped=True):
+    for match in _REGEX_CODE_BLOCK.finditer(message, overlapped=True):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")
         language = groups["lang"].strip()  # Strip the whitespace cause it's included in the group.
@@ -102,11 +104,12 @@ def find_faulty_code_blocks(message: str) -> Sequence[CodeBlock] | None:
             log.trace("Skipped a code block shorter than 4 lines.")
             continue
 
+        is_python = is_python_code(groups["code"])
         if (groups["tick"] == BACKTICK
-                or (language in PY_LANG_CODES and is_python_code(groups["code"]))
+                or (language in PY_LANG_CODES and is_python)
                 or len(groups["ticks"]) >= 2):
             log.trace("Message has an invalid code block.")
-            code_block = CodeBlock(groups["code"], language, groups["ticks"], groups["tick"])
+            code_block = CodeBlock(groups["code"], language, groups["ticks"], groups["tick"], is_python)
             code_blocks.append(code_block)
         else:
             log.trace("Skipped invalid code block due to uncertainty if it is supposed to be a code block.")
