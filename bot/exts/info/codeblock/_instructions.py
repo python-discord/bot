@@ -38,13 +38,13 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
     valid_ticks = f"\\{_parsing.BACKTICK}" * 3
     instructions = (
         "You are using the wrong character instead of backticks. "
-        f"Use {valid_ticks}, not `{code_block.tick * 3}`."
+        f"Use {valid_ticks}, not `{code_block.ticks}`."
     )
 
     log.trace("Check if the bad ticks code block also has issues with the language specifier.")
     addition_msg = _get_bad_lang_message(code_block.content)
     if not addition_msg and not code_block.language:
-        addition_msg = _get_no_lang_message(code_block.content)
+        addition_msg = _get_no_lang_message(code_block)
 
     # Combine the back ticks message with the language specifier message. The latter will
     # already have an example code block.
@@ -112,7 +112,7 @@ def _get_bad_lang_message(content: str) -> str | None:
     return None
 
 
-def _get_no_lang_message(content: str) -> str | None:
+def _get_no_lang_message(code_block: _parsing.CodeBlock) -> str | None:
     """
     Return instructions on specifying a language for a code block.
 
@@ -120,7 +120,7 @@ def _get_no_lang_message(content: str) -> str | None:
     """
     log.trace("Creating instructions for a missing language.")
 
-    if _parsing.is_python_code(content):
+    if code_block.is_python:
         example_blocks = _get_example("py")
 
         # Note that _get_bad_ticks_message expects the first line to have two newlines.
@@ -138,7 +138,7 @@ def get_instructions(content: str) -> str | None:
     """
     log.trace("Getting formatting instructions.")
 
-    blocks = _parsing.find_code_blocks(content)
+    blocks = _parsing.find_faulty_code_blocks(content)
     if blocks is None:
         log.trace("At least one valid code block found; no instructions to return.")
         return None
@@ -160,6 +160,6 @@ def get_instructions(content: str) -> str | None:
             # Check for a bad language first to avoid parsing content into an AST.
             instructions = _get_bad_lang_message(block.content)
             if not instructions:
-                instructions = _get_no_lang_message(block.content)
+                instructions = _get_no_lang_message(block)
 
     return instructions

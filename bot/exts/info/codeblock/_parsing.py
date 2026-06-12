@@ -6,6 +6,8 @@ import textwrap
 from collections.abc import Sequence
 from typing import NamedTuple
 
+import regex
+
 from bot import constants
 from bot.log import get_logger
 from bot.utils import has_lines
@@ -33,6 +35,8 @@ _RE_IPYTHON_REPL = re.compile(r"^((In|Out) \[\d+\]: |\s*\.{3,}: ?)")
 
 _RE_CODE_BLOCK = re.compile(
     fr"""
+    (?:^|                             # the ticks need to start at the front of a line to be recognized
+    \s)                               # or need to have a preceding whitespace (to avoid detection of words like I'll).
     (?P<ticks>
         (?P<tick>[{''.join(_TICKS)}]) # Put all ticks into a character class within a group.
         \2*                           # Match previous group up to N more times to ensure the same char.
@@ -43,6 +47,8 @@ _RE_CODE_BLOCK = re.compile(
     """,
     re.DOTALL | re.VERBOSE
 )
+# copy of _RE_CODE_BLOCK. Done like this for highlighting reasons (regex.compile doesn't properly highlight)
+_REGEX_CODE_BLOCK = regex.compile(_RE_CODE_BLOCK.pattern, regex.DOTALL | regex.VERBOSE)
 
 _RE_LANGUAGE = re.compile(
     fr"""
@@ -59,7 +65,9 @@ class CodeBlock(NamedTuple):
 
     content: str
     language: str
+    ticks: str
     tick: str
+    is_python: bool
 
 
 class BadLanguage(NamedTuple):
@@ -70,9 +78,9 @@ class BadLanguage(NamedTuple):
     has_terminal_newline: bool
 
 
-def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
+def find_faulty_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     """
-    Find and return all Markdown code blocks in the `message`.
+    Find and return all faulty Markdown code blocks in the `message`.
 
     Code blocks with 3 or fewer lines are excluded.
 
@@ -83,7 +91,7 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     log.trace("Finding all code blocks in a message.")
 
     code_blocks = []
-    for match in _RE_CODE_BLOCK.finditer(message):
+    for match in _REGEX_CODE_BLOCK.finditer(message, overlapped=True):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")
         language = groups["lang"].strip()  # Strip the whitespace cause it's included in the group.
@@ -92,11 +100,19 @@ def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
             log.trace("Message has a valid code block with a language; returning None.")
             return None
 
-        if has_lines(groups["code"], constants.CodeBlock.minimum_lines):
-            code_block = CodeBlock(groups["code"], language, groups["tick"])
+        if not has_lines(groups["code"], constants.CodeBlock.minimum_lines):
+            log.trace("Skipped a code block shorter than 4 lines.")
+            continue
+
+        is_python = is_python_code(groups["code"])
+        if (groups["tick"] == BACKTICK
+                or (language in PY_LANG_CODES and is_python)
+                or len(groups["ticks"]) >= 2):
+            log.trace("Message has an invalid code block.")
+            code_block = CodeBlock(groups["code"], language, groups["ticks"], groups["tick"], is_python)
             code_blocks.append(code_block)
         else:
-            log.trace("Skipped a code block shorter than 4 lines.")
+            log.trace("Skipped invalid code block due to uncertainty if it is supposed to be a code block.")
 
     return code_blocks
 
