@@ -1,35 +1,51 @@
-import asyncio
-import io
+import os
 
-import discord
-import imagehash
-from PIL import Image, UnidentifiedImageError
+import aiohttp
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
+from bot.log import get_logger
+
+log = get_logger(__name__)
 
 _THRESHOLD = 4
 _KNOWN_IMAGE_HASHES = [
-    imagehash.hex_to_hash(s) for s in [
-        # A camera-taken image of a tweet attributed to @MrBeast about the purported launch of a crypto casino;
-        # there is a URL in the image that varies by instance
-        "c0d08f2f2f60f0cf",
-        # An image saying "Activate Code for Bonus!"
-        "973c4178e79492cd",
-        # An image saying "Withdrawal Success!"
-        "817c7e9391e46c1b",
-    ]
+    # A camera-taken image of a tweet attributed to @MrBeast about the purported launch of a crypto casino;
+    # there is a URL in the image that varies by instance
+    219481626328303491,
+    # An image saying "Activate Code for Bonus!"
+    6997610946676476306,
+    # An image saying "Withdrawal Success!"
+    -9135984495352994088,
 ]
 
 
-async def _image_is_match(image: Image.Image) -> bool:
-    """Return whether the one image matches any of those known to be posted by compromised accounts."""
-    incoming_image_hash = await asyncio.to_thread(imagehash.phash, image)
-    has_match = any(
-        incoming_image_hash - known_image_hash < _THRESHOLD
-        for known_image_hash in _KNOWN_IMAGE_HASHES
+def _hamming_distance(a: int, b: int) -> int:
+    return bin(a ^ b).count("1")
+
+
+def _is_similar(hash_a: int, hash_b: int, max_distance: int = 3) -> bool:
+    return _hamming_distance(hash_a, hash_b) <= max_distance
+
+
+def _is_match(image_hash: int) -> bool:
+    return any(
+        _is_similar(image_hash, candidate_hash, max_distance=_THRESHOLD)
+        for candidate_hash in _KNOWN_IMAGE_HASHES
     )
-    return has_match
+
+async def _get_hash(image_url: str) -> int:
+    async with (
+        aiohttp.ClientSession() as session,
+        session.post(
+            url=os.getenv("RHODIUM_HOST_URL"),
+            headers={"Authorization": f"Bearer {os.getenv('RHODIUM_AUTH_TOKEN')}"},
+            data=image_url,
+        ) as response,
+    ):
+        response.raise_for_status()
+        response_data = await response.json()
+        return response_data["i64"]
 
 
 class ImageFilter(UniqueFilter):
@@ -40,6 +56,7 @@ class ImageFilter(UniqueFilter):
 
     async def triggered_on(self, ctx: FilterContext) -> bool:
         """Return whether the message has an attached image that is known to be posted by compromised accounts."""
+        log.trace("Entering image filter")
         for attachment in ctx.attachments:
             if (
                 attachment.content_type is None
@@ -48,17 +65,8 @@ class ImageFilter(UniqueFilter):
             ):
                 continue
 
-            try:
-                image_bytes = io.BytesIO(await attachment.read())
-            except (discord.Forbidden, discord.DiscordServerError, discord.NotFound):
-                continue
-
-            try:
-                image = await asyncio.to_thread(Image.open, image_bytes)
-            except UnidentifiedImageError:
-                continue
-
-            if await _image_is_match(image):
+            image_hash = await _get_hash(attachment.url)
+            if _is_match(image_hash):
                 return True
 
         return False

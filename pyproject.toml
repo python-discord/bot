@@ -24,8 +24,6 @@ dependencies = [
     "tenacity==9.1.2",
     "tldextract==5.3.0",
     "yarl==1.22.0",
-    "imagehash>=4.3.2",
-    "pillow>=12.2.0",
 ]
 name = "bot"
 version = "1.0.1"
