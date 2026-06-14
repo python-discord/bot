@@ -1,8 +1,9 @@
 import asyncio
 import io
 
+import discord
 import imagehash
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
@@ -36,8 +37,16 @@ class ImageFilter(UniqueFilter):
             ):
                 continue
 
-            image_bytes = io.BytesIO(await attachment.read())
-            image = await asyncio.to_thread(Image.open, image_bytes)
+            try:
+                image_bytes = io.BytesIO(await attachment.read())
+            except (discord.Forbidden, discord.DiscordServerError, discord.NotFound):
+                continue
+
+            try:
+                image = await asyncio.to_thread(Image.open, image_bytes)
+            except UnidentifiedImageError:
+                continue
+
             if await _image_is_match(image):
                 return True
 
