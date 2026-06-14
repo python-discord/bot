@@ -9,7 +9,17 @@ from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
 
 _THRESHOLD = 4
-_KNOWN_IMAGE_HASHES = [imagehash.hex_to_hash(s) for s in ["c0d08f2f2f60f0cf", "817c7e9391e46c1b", "973c4178e79492cd"]]
+_KNOWN_IMAGE_HASHES = [
+    imagehash.hex_to_hash(s) for s in [
+        # A camera-taken image of a tweet attributed to @MrBeast about the purported launch of a crypto casino;
+        # there is a URL in the image that varies by instance
+        "c0d08f2f2f60f0cf",
+        # An image saying "Activate Code for Bonus!"
+        "973c4178e79492cd",
+        # An image saying "Withdrawal Success!"
+        "817c7e9391e46c1b",
+    ]
+]
 
 
 async def _image_is_match(image: Image.Image) -> bool:
