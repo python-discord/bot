@@ -30,7 +30,10 @@ class ImageFilter(UniqueFilter):
     async def triggered_on(self, ctx: FilterContext) -> bool:
         """Return whether the message has an attached image that is known to be posted by compromised accounts."""
         for attachment in ctx.attachments:
-            if not attachment.content_type.startswith("image"):
+            if (
+                attachment.content_type is None
+                or not attachment.content_type.startswith("image")
+            ):
                 continue
 
             image_bytes = io.BytesIO(await attachment.read())
