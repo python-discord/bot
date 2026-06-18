@@ -1,7 +1,7 @@
 import os
 
-import aiohttp
-
+import bot
+from bot import constants
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
 from bot.log import get_logger
@@ -9,6 +9,8 @@ from bot.log import get_logger
 log = get_logger(__name__)
 
 _THRESHOLD = 4
+# Maximum number of seconds to wait for Rhodium API
+_TIMEOUT = 0.5
 _KNOWN_IMAGE_HASHES = [
     # A camera-taken image of a tweet attributed to @MrBeast about the purported launch of a crypto casino;
     # there is a URL in the image that varies by instance
@@ -34,15 +36,14 @@ def _is_match(image_hash: int) -> bool:
         for candidate_hash in _KNOWN_IMAGE_HASHES
     )
 
+
 async def _get_hash(image_url: str) -> int:
-    async with (
-        aiohttp.ClientSession() as session,
-        session.post(
-            url=os.getenv("RHODIUM_HOST_URL"),
-            headers={"Authorization": f"Bearer {os.getenv('RHODIUM_AUTH_TOKEN')}"},
-            data=image_url,
-        ) as response,
-    ):
+    async with bot.instance.http_session.post(
+        url=constants.URLs.rhodium_api,
+        headers={"Authorization": f"Bearer {os.getenv('RHODIUM_AUTH_TOKEN')}"},
+        data=image_url,
+        timeout=_TIMEOUT,
+    ) as response:
         response.raise_for_status()
         response_data = await response.json()
         return response_data["i64"]

@@ -465,6 +465,8 @@ class _URLs(_BaseURLs):
 
     site_logs_view: str = "https://pythondiscord.com/staff/bot/logs"
 
+    rhodium_api: str = "https://rhodium.python-discord.workers.dev/"
+
 
 URLs = _URLs()
 
