@@ -1,5 +1,7 @@
 import os
 
+import aiohttp
+
 import bot
 from bot import constants
 from bot.exts.filtering._filter_context import Event, FilterContext
@@ -59,7 +61,15 @@ class ImageFilter(UniqueFilter):
             ):
                 continue
 
-            image_hash = await _get_hash(attachment.url)
+            try:
+                image_hash = await _get_hash(attachment.url)
+            except aiohttp.ClientError:
+                log.exception("Error getting image hash")
+                return False
+            except aiohttp.TimeoutError:
+                log.error("Timed out getting image hash")
+                return False
+
             if _is_match(image_hash):
                 return True
 
