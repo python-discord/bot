@@ -61,7 +61,7 @@ class ImageFilter(UniqueFilter):
             if (
                 attachment.content_type is None
                 or not attachment.content_type.startswith("image")
-                or attachment.size > 3e7  # 30 mb
+                or attachment.size > 5e6  # 5mb
             ):
                 continue
 
