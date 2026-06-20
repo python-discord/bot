@@ -22,6 +22,12 @@ _KNOWN_IMAGE_HASHES = [
     6997610946676476306,
     # An image saying "Withdrawal Success!"
     -9135984495352994088,
+    # A collage of four images, the first being a purported tweet from Elon Musk about the opening a crypto casino,
+    # and the rest of similar character to the previous two
+    231962884035511073,
+    # Text centered on a background of a field and sky, the text saying "I've helped 15+ people earn ...
+    # in stock market and crypto trading"
+    360569449461317633,
 ]
 
 
