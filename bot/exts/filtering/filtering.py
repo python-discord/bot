@@ -26,7 +26,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
-from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContext, FilterInput, FilterOutput
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
@@ -39,7 +39,7 @@ from bot.exts.filtering._ui.filter import (
     populate_embed_from_dict,
 )
 from bot.exts.filtering._ui.filter_list import FilterListAddView, FilterListEditView, settings_converter
-from bot.exts.filtering._ui.search import SearchEditView, search_criteria_converter
+from bot.exts.filtering._ui.search import FilterResources, SearchEditView, search_criteria_converter
 from bot.exts.filtering._ui.ui import (
     AlertView,
     ArgumentCompletionView,
@@ -55,6 +55,7 @@ from bot.pagination import LinePaginator
 from bot.utils.channel import is_mod_channel
 from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
+from dataclasses import dataclass, field
 
 log = get_logger(__name__)
 
@@ -75,6 +76,13 @@ async def _extract_text_file_content(att: discord.Attachment) -> str:
     return f"{att.filename}: {first_n_lines}"
 
 
+@dataclass
+class LoadedFilterData:
+    settings: dict = field(default_factory=dict)
+    filters: dict = field(default_factory=dict)
+    filter_settings: dict = field(default_factory=dict)
+
+
 class Filtering(Cog):
     """Filtering and alerting for content posted on the server."""
 
@@ -93,9 +101,7 @@ class Filtering(Cog):
         self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.webhook: discord.Webhook | None = None
 
-        self.loaded_settings = {}
-        self.loaded_filters = {}
-        self.loaded_filter_settings = {}
+        self.loaded_data = LoadedFilterData()
 
         self.message_cache = MessageCache(CACHE_SIZE, newest_first=True)
 
@@ -159,7 +165,7 @@ class Filtering(Cog):
         """
         # Get the filter types used by each filter list.
         for filter_list in self.filter_lists.values():
-            self.loaded_filters.update({filter_type.name: filter_type for filter_type in filter_list.filter_types})
+            self.loaded_data.filters.update({filter_type.name: filter_type for filter_type in filter_list.filter_types})
 
         # Get the setting types used by each filter list.
         if self.filter_lists:
@@ -174,24 +180,24 @@ class Filtering(Cog):
                 if isinstance(setting_entry.description, str):
                     # If it's a string, then the settings entry matches a single field in the DB,
                     # and its name is the setting type's name attribute.
-                    self.loaded_settings[setting_entry.name] = (
+                    self.loaded_data.settings[setting_entry.name] = (
                         setting_entry.description, setting_entry, type_hints[setting_entry.name]
                     )
                 else:
                     # Otherwise, the setting entry works with compound settings.
-                    self.loaded_settings.update({
+                    self.loaded_data.settings.update({
                         subsetting: (description, setting_entry, type_hints[subsetting])
                         for subsetting, description in setting_entry.description.items()
                     })
 
         # Get the settings per filter as well.
-        for filter_name, filter_type in self.loaded_filters.items():
+        for filter_name, filter_type in self.loaded_data.filters.items():
             extra_fields_type = filter_type.extra_fields_type
             if not extra_fields_type:
                 continue
             type_hints = get_type_hints(extra_fields_type)
             # A class var with a `_description` suffix is expected per field name.
-            self.loaded_filter_settings[filter_name] = {
+            self.loaded_data.filter_settings[filter_name] = {
                 field_name: (
                     getattr(extra_fields_type, f"{field_name}_description", ""),
                     extra_fields_type,
@@ -285,13 +291,13 @@ class Filtering(Cog):
     @Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
         """Checks for bad words in usernames when users join, switch or leave a voice channel."""
-        ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
+        ctx = FilterContext(FilterInput(Event.NICKNAME, member, None, member.display_name, None), FilterOutput())
         await self._check_bad_display_name(ctx)
 
     @Cog.listener()
     async def on_thread_create(self, thread: Thread) -> None:
         """Check for bad words in new thread names."""
-        ctx = FilterContext(Event.THREAD_NAME, thread.owner, thread, thread.name, None)
+        ctx = FilterContext(FilterInput(Event.THREAD_NAME, thread.owner, thread, thread.name, None), FilterOutput())
         await self._check_bad_name(ctx)
 
     async def filter_snekbox_output(
@@ -329,7 +335,7 @@ class Filtering(Cog):
             await ctx.send_help(ctx.command)
 
     @blocklist.command(name="list", aliases=("get",))
-    async def bl_list(self, ctx: Context, list_name: str | None = None) -> None:
+    async def bl_list(self, ctx: Context, list_name: str | None=None) -> None:
         """List the contents of a specified blacklist."""
         result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
         if not result:
@@ -345,7 +351,7 @@ class Filtering(Cog):
         list_name: str | None,
         content: str,
         *,
-        description_and_settings: str | None = None
+        description_and_settings: str | None=None
     ) -> None:
         """
         Add a blocked filter to the specified filter list.
@@ -372,7 +378,7 @@ class Filtering(Cog):
             await ctx.send_help(ctx.command)
 
     @allowlist.command(name="list", aliases=("get",))
-    async def al_list(self, ctx: Context, list_name: str | None = None) -> None:
+    async def al_list(self, ctx: Context, list_name: str | None=None) -> None:
         """List the contents of a specified whitelist."""
         result = await self._resolve_list_type_and_name(ctx, ListType.ALLOW, list_name, exclude="list_type")
         if not result:
@@ -388,7 +394,7 @@ class Filtering(Cog):
         list_name: str | None,
         content: str,
         *,
-        description_and_settings: str | None = None
+        description_and_settings: str | None=None
     ) -> None:
         """
         Add an allowed filter to the specified filter list.
@@ -409,7 +415,7 @@ class Filtering(Cog):
     # region: filter commands
 
     @commands.group(aliases=("filters", "f"), invoke_without_command=True)
-    async def filter(self, ctx: Context, id_: int | None = None) -> None:
+    async def filter(self, ctx: Context, id_: int | None=None) -> None:
         """
         Group for managing filters.
 
@@ -447,8 +453,8 @@ class Filtering(Cog):
     async def f_list(
         self,
         ctx: Context,
-        list_type: ListTypeConverter | None = None,
-        list_name: str | None = None,
+        list_type: ListTypeConverter | None=None,
+        list_name: str | None=None,
     ) -> None:
         """List the contents of a specified list of filters."""
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -462,14 +468,14 @@ class Filtering(Cog):
     async def f_describe(self, ctx: Context, filter_name: str | None) -> None:
         """Show a description of the specified filter, or a list of possible values if no name is specified."""
         if not filter_name:
-            filter_names = [f"» {f}" for f in self.loaded_filters]
+            filter_names = [f"» {f}" for f in self.loaded_data.filters]
             embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of filter names")
             await LinePaginator.paginate(filter_names, ctx, embed, max_lines=10, empty=False)
         else:
-            filter_type = self.loaded_filters.get(filter_name)
+            filter_type = self.loaded_data.filters.get(filter_name)
             if not filter_type:
-                filter_type = self.loaded_filters.get(filter_name[:-1])  # A plural form or a typo.
+                filter_type = self.loaded_data.filters.get(filter_name[:-1])  # A plural form or a typo.
                 if not filter_type:
                     await ctx.send(f":x: There's no filter type named {filter_name!r}.")
                     return
@@ -487,7 +493,7 @@ class Filtering(Cog):
         list_name: str | None,
         content: str,
         *,
-        description_and_settings: str | None = None
+        description_and_settings: str | None=None
     ) -> None:
         """
         Add a filter to the specified filter list.
@@ -516,7 +522,7 @@ class Filtering(Cog):
         noui: Literal["noui"] | None,
         filter_id: int,
         *,
-        description_and_settings: str | None = None
+        description_and_settings: str | None=None
     ) -> None:
         """
         Edit a filter specified by its ID.
@@ -542,8 +548,8 @@ class Filtering(Cog):
         description, new_settings, new_filter_settings = description_and_settings_converter(
             filter_list,
             list_type, filter_type,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded_data.settings,
+            self.loaded_data.filter_settings,
             description_and_settings
         )
 
@@ -574,16 +580,17 @@ class Filtering(Cog):
             f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
         ))
 
+        filter_target = filters_ui.FilterTarget(filter_list, list_type, filter_type)
+        filter_content = filters_ui.FilterContent(content, description)
+        type_per_setting_name = filters_ui.build_type_per_setting_name(
+            filter_type, self.loaded_data.settings, self.loaded_data.filter_settings
+        )
         view = filters_ui.FilterEditView(
-            filter_list,
-            list_type,
-            filter_type,
-            content,
-            description,
+            filter_target,
+            filter_content,
             settings,
             filter_settings,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            type_per_setting_name,
             ctx.author,
             embed,
             patch_func
@@ -593,6 +600,7 @@ class Filtering(Cog):
     @filter.command(name="delete", aliases=("d", "remove"))
     async def f_delete(self, ctx: Context, filter_id: int) -> None:
         """Delete the filter specified by its ID."""
+
         async def delete_list() -> None:
             """The actual removal routine."""
             await bot.instance.api_client.delete(f"bot/filter/filters/{filter_id}")
@@ -614,8 +622,8 @@ class Filtering(Cog):
     async def setting(self, ctx: Context, setting_name: str | None) -> None:
         """Show a description of the specified setting, or a list of possible settings if no name is specified."""
         if not setting_name:
-            settings_list = [f"» {setting_name}" for setting_name in self.loaded_settings]
-            for filter_name, filter_settings in self.loaded_filter_settings.items():
+            settings_list = [f"» {setting_name}" for setting_name in self.loaded_data.settings]
+            for filter_name, filter_settings in self.loaded_data.filter_settings.items():
                 settings_list.extend(f"» {filter_name}/{setting}" for setting in filter_settings)
             embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of setting names")
@@ -623,15 +631,15 @@ class Filtering(Cog):
 
         else:
             # The setting is either in a SettingsEntry subclass, or a pydantic model.
-            setting_data = self.loaded_settings.get(setting_name)
+            setting_data = self.loaded_data.settings.get(setting_name)
             description = None
             if setting_data:
                 description = setting_data[0]
             elif "/" in setting_name:  # It's a filter specific setting.
                 filter_name, filter_setting_name = setting_name.split("/", maxsplit=1)
-                if filter_name in self.loaded_filter_settings:
-                    if filter_setting_name in self.loaded_filter_settings[filter_name]:
-                        description = self.loaded_filter_settings[filter_name][filter_setting_name][0]
+                if filter_name in self.loaded_data.filter_settings:
+                    if filter_setting_name in self.loaded_data.filter_settings[filter_name]:
+                        description = self.loaded_data.filter_settings[filter_name][filter_setting_name][0]
             if description is None:
                 await ctx.send(f":x: There's no setting type named {setting_name!r}.")
                 return
@@ -656,10 +664,10 @@ class Filtering(Cog):
             raise BadArgument("Please provide input.")
         if message:
             user = None if no_user else message.author
-            filter_ctx = FilterContext(Event.MESSAGE, user, message.channel, message.content, message, message.embeds)
+            filter_ctx = FilterContext(FilterInput(Event.MESSAGE, user, message.channel, message.content, message, message.embeds), FilterOutput())
         else:
             python_general = ctx.guild.get_channel(Channels.python_general)
-            filter_ctx = FilterContext(Event.MESSAGE, None, python_general, string, None)
+            filter_ctx = FilterContext(FilterInput(Event.MESSAGE, None, python_general, string, None), FilterOutput())
 
         _, _, triggers = await self._resolve_action(filter_ctx)
         lines = []
@@ -679,7 +687,7 @@ class Filtering(Cog):
         noui: Literal["noui"] | None,
         filter_type_name: str | None,
         *,
-        settings: str = ""
+        settings: str=""
     ) -> None:
         """
         Find filters with the provided settings. The format is identical to that of the add and edit commands.
@@ -690,9 +698,9 @@ class Filtering(Cog):
         filter_type = None
         if filter_type_name:
             filter_type_name = filter_type_name.lower()
-            filter_type = self.loaded_filters.get(filter_type_name)
+            filter_type = self.loaded_data.filters.get(filter_type_name)
             if not filter_type:
-                self.loaded_filters.get(filter_type_name[:-1])  # In case the user tried to specify the plural form.
+                self.loaded_data.filters.get(filter_type_name[:-1])  # In case the user tried to specify the plural form.
         # If settings were provided with no filter_type, discord.py will capture the first word as the filter type.
         if filter_type is None and filter_type_name is not None:
             if settings:
@@ -703,9 +711,9 @@ class Filtering(Cog):
 
         settings, filter_settings, filter_type = search_criteria_converter(
             self.filter_lists,
-            self.loaded_filters,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded_data.filters,
+            self.loaded_data.settings,
+            self.loaded_data.filter_settings,
             filter_type,
             settings
         )
@@ -715,14 +723,17 @@ class Filtering(Cog):
             return
 
         embed = Embed(colour=Colour.blue())
+        filter_resources = FilterResources(
+            filter_lists=self.filter_lists,
+            filters=self.loaded_data.filters,
+            settings=self.loaded_data.settings,
+            filter_settings=self.loaded_data.filter_settings,
+        )
         view = SearchEditView(
             filter_type,
             settings,
             filter_settings,
-            self.filter_lists,
-            self.loaded_filters,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            filter_resources,
             ctx.author,
             embed,
             self._search_filters
@@ -731,7 +742,7 @@ class Filtering(Cog):
 
     @filter.command(root_aliases=("compfilter", "compf"))
     async def compadd(
-        self, ctx: Context, list_name: str | None, content: str, *, description: str | None = "Phishing"
+        self, ctx: Context, list_name: str | None, content: str, *, description: str | None="Phishing"
     ) -> None:
         """Add a filter to detect a compromised account. Will apply the equivalent of a compban if triggered."""
         result = await self._resolve_list_type_and_name(ctx, ListType.DENY, list_name, exclude="list_type")
@@ -762,7 +773,7 @@ class Filtering(Cog):
 
     @filterlist.command(name="describe", aliases=("explain", "manual", "id"))
     async def fl_describe(
-        self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
+        self, ctx: Context, list_type: ListTypeConverter | None=None, list_name: str | None=None
     ) -> None:
         """Show a description of the specified filter list, or a list of possible values if no values are provided."""
         if not list_type and not list_name:
@@ -812,13 +823,13 @@ class Filtering(Cog):
 
         embed = Embed(colour=Colour.blue())
         embed.set_author(name=f"New Filter List - {list_description.title()}")
-        settings = {name: starting_value(value[2]) for name, value in self.loaded_settings.items()}
+        settings = {name: starting_value(value[2]) for name, value in self.loaded_data.settings.items()}
 
         view = FilterListAddView(
             list_name,
             list_type,
             settings,
-            self.loaded_settings,
+            self.loaded_data.settings,
             ctx.author,
             embed,
             self._post_filter_list
@@ -831,8 +842,8 @@ class Filtering(Cog):
         self,
         ctx: Context,
         noui: Literal["noui"] | None,
-        list_type: ListTypeConverter | None = None,
-        list_name: str | None = None,
+        list_type: ListTypeConverter | None=None,
+        list_name: str | None=None,
         *,
         settings: str | None
     ) -> None:
@@ -848,7 +859,7 @@ class Filtering(Cog):
         if result is None:
             return
         list_type, filter_list = result
-        settings = settings_converter(self.loaded_settings, settings)
+        settings = settings_converter(self.loaded_data.settings, settings)
         if noui:
             try:
                 await self._patch_filter_list(ctx.message, filter_list, list_type, settings)
@@ -864,7 +875,7 @@ class Filtering(Cog):
             filter_list,
             list_type,
             settings,
-            self.loaded_settings,
+            self.loaded_data.settings,
             ctx.author,
             embed,
             self._patch_filter_list
@@ -874,9 +885,10 @@ class Filtering(Cog):
     @filterlist.command(name="delete", aliases=("remove",))
     @has_any_role(Roles.admins)
     async def fl_delete(
-        self, ctx: Context, list_type: ListTypeConverter | None = None, list_name: str | None = None
+        self, ctx: Context, list_type: ListTypeConverter | None=None, list_name: str | None=None
     ) -> None:
         """Remove the filter list and all of its filters from the database."""
+
         async def delete_list() -> None:
             """The actual removal routine."""
             list_data = await bot.instance.api_client.get(f"bot/filter/filter_lists/{list_id}")
@@ -1044,7 +1056,7 @@ class Filtering(Cog):
         return new_ctx
 
     async def _resolve_list_type_and_name(
-        self, ctx: Context, list_type: ListType | None = None, list_name: str | None = None, *, exclude: str = ""
+        self, ctx: Context, list_type: ListType | None=None, list_name: str | None=None, *, exclude: str=""
     ) -> tuple[ListType, FilterList] | None:
         """Prompt the user to complete the list type or list name if one of them is missing."""
         if list_name is None:
@@ -1111,7 +1123,7 @@ class Filtering(Cog):
         list_type: ListType,
         filter_list: FilterList,
         content: str,
-        description_and_settings: str | None = None
+        description_and_settings: str | None=None
     ) -> None:
         """Add a filter to the database."""
         # Validations.
@@ -1127,8 +1139,8 @@ class Filtering(Cog):
             filter_list,
             list_type,
             filter_type,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded_data.settings,
+            self.loaded_data.filter_settings,
             description_and_settings
         )
 
@@ -1155,16 +1167,17 @@ class Filtering(Cog):
             f"run `{constants.Bot.prefix}filterlist describe {list_type.name} {filter_list.name}`."
         ))
 
+        filter_target = filters_ui.FilterTarget(filter_list, list_type, filter_type)
+        filter_content = filters_ui.FilterContent(content, description)
+        type_per_setting_name = filters_ui.build_type_per_setting_name(
+            filter_type, self.loaded_data.settings, self.loaded_data.filter_settings
+        )
         view = filters_ui.FilterEditView(
-            filter_list,
-            list_type,
-            filter_type,
-            content,
-            description,
+            filter_target,
+            filter_content,
             settings,
             filter_settings,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            type_per_setting_name,
             ctx.author,
             embed,
             self._post_new_filter
@@ -1189,7 +1202,7 @@ class Filtering(Cog):
 
     @staticmethod
     async def _maybe_alert_auto_infraction(
-        filter_list: FilterList, list_type: ListType, filter_: Filter, old_filter: Filter | None = None
+        filter_list: FilterList, list_type: ListType, filter_: Filter, old_filter: Filter | None=None
     ) -> None:
         """If the filter is new and applies an auto-infraction, or was edited to apply a different one, log it."""
         infraction_type = filter_.overrides[0].get("infraction_type")
@@ -1439,7 +1452,7 @@ class Filtering(Cog):
 
     async def send_weekly_auto_infraction_report(
         self,
-        channel: discord.TextChannel | discord.Thread | None = None,
+        channel: discord.TextChannel | discord.Thread | None=None,
     ) -> None:
         """
         Send a list of auto-infractions added in the last 7 days to the specified channel.
@@ -1474,7 +1487,7 @@ class Filtering(Cog):
         # Nicely format the output so each filter list type is grouped
         lines = [f"**Auto-infraction filters added since {seven_days_ago.format('YYYY-MM-DD')}**"]
         for list_label, filters in found_filters.items():
-            lines.append("\n".join([f"**{list_label.title()}**"]+[f"{filter_} ({infr})" for filter_, infr in filters]))
+            lines.append("\n".join([f"**{list_label.title()}**"] + [f"{filter_} ({infr})" for filter_, infr in filters]))
 
         if len(lines) == 1:
             lines.append("Nothing to show")

@@ -13,7 +13,7 @@ from discord import Member
 from pydis_core.utils import scheduling
 from pydis_core.utils.logging import get_logger
 
-from bot.exts.filtering._filter_context import FilterContext
+from bot.exts.filtering._filter_context import FilterContext, FilterInput, FilterOutput
 from bot.exts.filtering._filter_lists.filter_list import ListType, SubscribingAtomicList, UniquesListBase
 from bot.exts.filtering._filters.antispam import antispam_filter_types
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
@@ -158,7 +158,7 @@ class DeletionContext:
             return
 
         ctx, *other_contexts = self.contexts
-        new_ctx = FilterContext(ctx.event, ctx.author, ctx.channel, ctx.content, ctx.message)
+        new_ctx = FilterContext(FilterInput(ctx.event, ctx.author, ctx.channel, ctx.content, ctx.message), FilterOutput())
         all_descriptions_counts = Counter(reduce(
             add, (other_ctx.action_descriptions for other_ctx in other_contexts), ctx.action_descriptions
         ))

@@ -38,6 +38,37 @@ class MessageHistory:
     message_count: int = 0
 
 
+@dataclass
+class WatchChannelConfig:
+    """Configuration for a watch channel."""
+
+    bot: Bot
+    destination: int
+    webhook_id: int
+    api_endpoint: str
+    api_default_params: dict
+    logger: CustomLogger
+    disable_header: bool = False
+
+
+@dataclass
+class MessageQueueState:
+    """State for the message consumption queue."""
+
+    consume_task: asyncio.Task | None = None
+    message_queue: defaultdict | None = None
+    consumption_queue: dict | None = None
+    message_history: MessageHistory | None = None
+
+    def __post_init__(self) -> None:
+        if self.message_queue is None:
+            self.message_queue = defaultdict(lambda: defaultdict(deque))
+        if self.consumption_queue is None:
+            self.consumption_queue = {}
+        if self.message_history is None:
+            self.message_history = MessageHistory()
+
+
 class WatchChannel(metaclass=CogABCMeta):
     """ABC with functionality for relaying users' messages to a certain channel."""
 
@@ -53,33 +84,38 @@ class WatchChannel(metaclass=CogABCMeta):
         *,
         disable_header: bool = False
     ) -> None:
-        self.bot = bot
-
-        self.destination = destination  # E.g., Channels.big_brother
-        self.webhook_id = webhook_id  # E.g.,  Webhooks.big_brother
-        self.api_endpoint = api_endpoint  # E.g., 'bot/infractions'
-        self.api_default_params = api_default_params  # E.g., {'active': 'true', 'type': 'watch'}
-        self.log = logger  # Logger of the child cog for a correct name in the logs
-
-        self._consume_task = None
+        self.config = WatchChannelConfig(
+            bot=bot,
+            destination=destination,
+            webhook_id=webhook_id,
+            api_endpoint=api_endpoint,
+            api_default_params=api_default_params,
+            logger=logger,
+            disable_header=disable_header,
+        )
+        self.queue_state = MessageQueueState()
         self.watched_users = {}
-        self.message_queue = defaultdict(lambda: defaultdict(deque))
-        self.consumption_queue = {}
-        self.retries = 5
-        self.retry_delay = 10
         self.channel = None
         self.webhook = None
-        self.message_history = MessageHistory()
-        self.disable_header = disable_header
+
+    @property
+    def bot(self) -> Bot:
+        """Return the bot instance from config."""
+        return self.config.bot
+
+    @property
+    def log(self) -> CustomLogger:
+        """Return the logger from config."""
+        return self.config.logger
 
     @property
     def consuming_messages(self) -> bool:
         """Checks if a consumption task is currently running."""
-        if self._consume_task is None:
+        if self.queue_state.consume_task is None:
             return False
 
-        if self._consume_task.done():
-            exc = self._consume_task.exception()
+        if self.queue_state.consume_task.done():
+            exc = self.queue_state.consume_task.exception()
             if exc:
                 self.log.exception(
                     "The message queue consume task has failed with:",
@@ -94,14 +130,14 @@ class WatchChannel(metaclass=CogABCMeta):
         await self.bot.wait_until_guild_available()
 
         try:
-            self.channel = await get_or_fetch_channel(self.bot, self.destination)
+            self.channel = await get_or_fetch_channel(self.bot, self.config.destination)
         except HTTPException:
-            self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
+            self.log.exception(f"Failed to retrieve the text channel with id `{self.config.destination}`")
 
         try:
-            self.webhook = await self.bot.fetch_webhook(self.webhook_id)
+            self.webhook = await self.bot.fetch_webhook(self.config.webhook_id)
         except discord.HTTPException:
-            self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
+            self.log.exception(f"Failed to fetch webhook with id `{self.config.webhook_id}`")
 
         if self.channel is None or self.webhook is None:
             self.log.error("Failed to start the watch channel; unloading the cog.")
@@ -149,7 +185,7 @@ class WatchChannel(metaclass=CogABCMeta):
         This function returns `True` if the update succeeded.
         """
         try:
-            data = await self.bot.api_client.get(self.api_endpoint, params=self.api_default_params)
+            data = await self.bot.api_client.get(self.config.api_endpoint, params=self.config.api_default_params)
         except ResponseCodeError as err:
             self.log.exception("Failed to fetch the watched users from the API", exc_info=err)
             return False
@@ -167,10 +203,10 @@ class WatchChannel(metaclass=CogABCMeta):
         """Queues up messages sent by watched users."""
         if msg.author.id in self.watched_users:
             if not self.consuming_messages:
-                self._consume_task = scheduling.create_task(self.consume_messages())
+                self.queue_state.consume_task = scheduling.create_task(self.consume_messages())
 
             self.log.trace(f"Received message: {msg.content} ({len(msg.attachments)} attachments)")
-            self.message_queue[msg.author.id][msg.channel.id].append(msg)
+            self.queue_state.message_queue[msg.author.id][msg.channel.id].append(msg)
 
     async def consume_messages(self, delay_consumption: bool = True) -> None:
         """Consumes the message queues to log watched users' messages."""
@@ -181,11 +217,11 @@ class WatchChannel(metaclass=CogABCMeta):
         self.log.trace("Started consuming the message queue")
 
         # If the previous consumption Task failed, first consume the existing comsumption_queue
-        if not self.consumption_queue:
-            self.consumption_queue = self.message_queue.copy()
-            self.message_queue.clear()
+        if not self.queue_state.consumption_queue:
+            self.queue_state.consumption_queue = self.queue_state.message_queue.copy()
+            self.queue_state.message_queue.clear()
 
-        for user_id, channel_queues in self.consumption_queue.items():
+        for user_id, channel_queues in self.queue_state.consumption_queue.items():
             for channel_queue in channel_queues.values():
                 while channel_queue:
                     msg = channel_queue.popleft()
@@ -196,11 +232,11 @@ class WatchChannel(metaclass=CogABCMeta):
                     else:
                         self.log.trace(f"Not consuming message {msg.id} as user {user_id} is no longer watched.")
 
-        self.consumption_queue.clear()
+        self.queue_state.consumption_queue.clear()
 
-        if self.message_queue:
+        if self.queue_state.message_queue:
             self.log.trace("Channel queue not empty: Continuing consuming queues")
-            self._consume_task = scheduling.create_task(self.consume_messages(delay_consumption=False))
+            self.queue_state.consume_task = scheduling.create_task(self.consume_messages(delay_consumption=False))
         else:
             self.log.trace("Done consuming messages.")
 
@@ -226,11 +262,11 @@ class WatchChannel(metaclass=CogABCMeta):
         limit = BigBrotherConfig.header_message_limit
 
         if (
-            msg.author.id != self.message_history.last_author
-            or msg.channel.id != self.message_history.last_channel
-            or self.message_history.message_count >= limit
+            msg.author.id != self.queue_state.message_history.last_author
+            or msg.channel.id != self.queue_state.message_history.last_channel
+            or self.queue_state.message_history.message_count >= limit
         ):
-            self.message_history = MessageHistory(last_author=msg.author.id, last_channel=msg.channel.id)
+            self.queue_state.message_history = MessageHistory(last_author=msg.author.id, last_channel=msg.channel.id)
 
             await self.send_header(msg, watch_info)
 
@@ -269,11 +305,11 @@ class WatchChannel(metaclass=CogABCMeta):
                     exc_info=exc
                 )
 
-        self.message_history.message_count += 1
+        self.queue_state.message_history.message_count += 1
 
     async def send_header(self, msg: Message, watch_info: dict) -> None:
         """Sends a header embed with information about the relayed messages to the watch channel."""
-        if self.disable_header:
+        if self.config.disable_header:
             return
 
         guild = self.bot.get_guild(GuildConfig.id)
@@ -372,7 +408,7 @@ class WatchChannel(metaclass=CogABCMeta):
     async def cog_unload(self) -> None:
         """Takes care of unloading the cog and canceling the consumption task."""
         self.log.trace("Unloading the cog")
-        if self._consume_task and not self._consume_task.done():
+        if self.queue_state.consume_task and not self.queue_state.consume_task.done():
             def done_callback(task: asyncio.Task) -> None:
                 """Send exception when consuming task have been cancelled."""
                 try:
@@ -382,5 +418,5 @@ class WatchChannel(metaclass=CogABCMeta):
                         f"The consume task of {type(self).__name__} was canceled. Messages may be lost."
                     )
 
-            self._consume_task.add_done_callback(done_callback)
-            self._consume_task.cancel()
+            self.queue_state.consume_task.add_done_callback(done_callback)
+            self.queue_state.consume_task.cancel()

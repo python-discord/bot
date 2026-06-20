@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import arrow
 
-from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContext, FilterInput, FilterOutput
 from bot.exts.filtering._filters.unique import discord_token
 from bot.exts.filtering._filters.unique.discord_token import DiscordTokenFilter, Token
 from tests.helpers import MockBot, MockMember, MockMessage, MockTextChannel, autospec
@@ -32,7 +32,7 @@ class DiscordTokenFilterTests(unittest.IsolatedAsyncioTestCase):
 
         member = MockMember(id=123)
         channel = MockTextChannel(id=345)
-        self.ctx = FilterContext(Event.MESSAGE, member, channel, "", self.msg)
+        self.ctx = FilterContext(FilterInput(Event.MESSAGE, member, channel, "", self.msg), FilterOutput())
 
     def test_extract_user_id_valid(self):
         """Should consider user IDs valid if they decode into an integer ID."""

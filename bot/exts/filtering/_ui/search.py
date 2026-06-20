@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import discord
@@ -18,6 +19,15 @@ from bot.exts.filtering._ui.ui import (
     parse_value,
     populate_embed_from_dict,
 )
+
+
+@dataclass
+class FilterResources:
+    """Container for filter system resources passed to search views."""
+    filter_lists: dict[str, FilterList]
+    filters: dict[str, type[Filter]]
+    settings: dict[str, tuple[str, SettingsEntry, type]]
+    filter_settings: dict[str, dict[str, tuple[str, SettingsEntry, type]]]
 
 
 def search_criteria_converter(
@@ -144,10 +154,7 @@ class SearchEditView(EditBaseView):
         filter_type: type[Filter] | None,
         settings: dict[str, Any],
         filter_settings: dict[str, Any],
-        loaded_filter_lists: dict[str, FilterList],
-        loaded_filters: dict[str, type[Filter]],
-        loaded_settings: dict[str, tuple[str, SettingsEntry, type]],
-        loaded_filter_settings: dict[str, dict[str, tuple[str, SettingsEntry, type]]],
+        filter_resources: FilterResources,
         author: discord.User | discord.Member,
         embed: discord.Embed,
         confirm_callback: Callable
@@ -156,10 +163,7 @@ class SearchEditView(EditBaseView):
         self.filter_type = filter_type
         self.settings = settings
         self.filter_settings = filter_settings
-        self.loaded_filter_lists = loaded_filter_lists
-        self.loaded_filters = loaded_filters
-        self.loaded_settings = loaded_settings
-        self.loaded_filter_settings = loaded_filter_settings
+        self.filter_resources = filter_resources
         self.embed = embed
         self.confirm_callback = confirm_callback
 
@@ -171,11 +175,11 @@ class SearchEditView(EditBaseView):
         settings_repr_dict = build_search_repr_dict(settings, filter_settings, filter_type)
         populate_embed_from_dict(embed, settings_repr_dict)
 
-        self.type_per_setting_name = {setting: info[2] for setting, info in loaded_settings.items()}
+        self.type_per_setting_name = {setting: info[2] for setting, info in filter_resources.settings.items()}
         if filter_type:
             self.type_per_setting_name.update({
                 f"{filter_type.name}/{name}": type_
-                for name, (_, _, type_) in loaded_filter_settings.get(filter_type.name, {}).items()
+                for name, (_, _, type_) in filter_resources.filter_settings.get(filter_type.name, {}).items()
             })
 
         add_select = CustomCallbackSelect(
@@ -290,7 +294,7 @@ class SearchEditView(EditBaseView):
         """Set any unset criteria with settings values from the given filter."""
         try:
             settings, filter_settings, self.filter_type = template_settings(
-                template_id, self.loaded_filter_lists, self.filter_type
+                template_id, self.filter_resources.filter_lists, self.filter_type
             )
         except BadArgument as e:  # The interaction object is necessary to send an ephemeral message.
             await interaction.response.send_message(f":x: {e}", ephemeral=True)
@@ -306,8 +310,8 @@ class SearchEditView(EditBaseView):
 
     async def apply_filter_type(self, type_name: str, embed_message: discord.Message, interaction: Interaction) -> None:
         """Set a new filter type and reset any criteria for settings of the old filter type."""
-        if type_name.lower() not in self.loaded_filters:
-            if type_name.lower()[:-1] not in self.loaded_filters:  # In case the user entered the plural form.
+        if type_name.lower() not in self.filter_resources.filters:
+            if type_name.lower()[:-1] not in self.filter_resources.filters:  # In case the user entered the plural form.
                 await interaction.response.send_message(f":x: No such filter type {type_name!r}.", ephemeral=True)
                 return
             type_name = type_name[:-1]
@@ -316,7 +320,7 @@ class SearchEditView(EditBaseView):
 
         if self.filter_type and type_name == self.filter_type.name:
             return
-        self.filter_type = self.loaded_filters[type_name]
+        self.filter_type = self.filter_resources.filters[type_name]
         self.filter_settings = {}
         self.embed.clear_fields()
         await embed_message.edit(embed=self.embed, view=self.copy())
@@ -328,10 +332,7 @@ class SearchEditView(EditBaseView):
             self.filter_type,
             self.settings,
             self.filter_settings,
-            self.loaded_filter_lists,
-            self.loaded_filters,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.filter_resources,
             self.author,
             self.embed,
             self.confirm_callback

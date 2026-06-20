@@ -7,6 +7,16 @@ from pydantic import ValidationError
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._settings import Defaults, create_settings
 from bot.exts.filtering._utils import FieldRequiring
+from dataclasses import dataclass
+
+import arrow
+
+
+@dataclass
+class FilterTimestamps:
+    """Timestamps for when a filter was created and last updated."""
+    created_at: arrow.Arrow
+    updated_at: arrow.Arrow
 
 
 class Filter(FieldRequiring):
@@ -23,12 +33,14 @@ class Filter(FieldRequiring):
     # If a subclass uses extra fields, it should assign the pydantic model type to this variable.
     extra_fields_type = None
 
-    def __init__(self, filter_data: dict, defaults: Defaults | None = None):
+    def __init__(self, filter_data: dict, defaults: Defaults | None=None):
         self.id = filter_data["id"]
         self.content = filter_data["content"]
         self.description = filter_data["description"]
-        self.created_at = arrow.get(filter_data["created_at"])
-        self.updated_at = arrow.get(filter_data["updated_at"])
+        self.timestamps = FilterTimestamps(
+            created_at=arrow.get(filter_data["created_at"]),
+            updated_at=arrow.get(filter_data["updated_at"])
+        )
         self.actions, self.validations = create_settings(filter_data["settings"], defaults=defaults)
         if self.extra_fields_type:
             self.extra_fields = self.extra_fields_type.model_validate(filter_data["additional_settings"])
@@ -75,6 +87,15 @@ class Filter(FieldRequiring):
         A BadArgument should be raised if the content can't be used.
         """
         return content, description
+    
+    
+    @property
+    def created_at(self) -> arrow.Arrow:
+        return self.timestamps.created_at
+
+    @property
+    def updated_at(self) -> arrow.Arrow:
+        return self.timestamps.updated_at
 
     def __str__(self) -> str:
         """A string representation of the filter."""

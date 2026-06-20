@@ -2,7 +2,7 @@ import unittest
 
 import arrow
 
-from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContext, FilterInput, FilterOutput
 from bot.exts.filtering._filters.token import TokenFilter
 from tests.helpers import MockMember, MockMessage, MockTextChannel
 
@@ -14,7 +14,7 @@ class TokenFilterTests(unittest.IsolatedAsyncioTestCase):
         member = MockMember(id=123)
         channel = MockTextChannel(id=345)
         message = MockMessage(author=member, channel=channel)
-        self.ctx = FilterContext(Event.MESSAGE, member, channel, "", message)
+        self.ctx = FilterContext(FilterInput(Event.MESSAGE, member, channel, "", message), FilterOutput())
 
     async def test_token_filter_triggers(self):
         """The filter should evaluate to True only if its token is found in the context content."""
