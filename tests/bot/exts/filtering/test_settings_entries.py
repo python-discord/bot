@@ -1,6 +1,6 @@
 import unittest
 
-from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContent, FilterContext, FilterSource
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import (
     Infraction,
     InfractionAndNotification,
@@ -19,7 +19,7 @@ class FilterTests(unittest.TestCase):
         member = MockMember(id=123)
         channel = MockTextChannel(id=345)
         message = MockMessage(author=member, channel=channel)
-        self.ctx = FilterContext(Event.MESSAGE, member, channel, "", message)
+        self.ctx = FilterContext(FilterSource(Event.MESSAGE, member, channel, message), FilterContent(""))
 
     def test_role_bypass_is_off_for_user_without_roles(self):
         """The role bypass should trigger when a user has no roles."""

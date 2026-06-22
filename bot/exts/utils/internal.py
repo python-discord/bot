@@ -21,14 +21,20 @@ from bot.utils import find_nth_occurrence
 log = get_logger(__name__)
 
 
+class _EvalState:
+    """Encapsula o estado do REPL eval para reduzir atributos de Internal."""
+    def __init__(self):
+        self.env = {}
+        self.ln = 0
+        self.stdout = StringIO()
+
+
 class Internal(Cog):
     """Administrator and Core Developer commands."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.env = {}
-        self.ln = 0
-        self.stdout = StringIO()
+        self.eval_state = _EvalState()
 
         self.socket_since = arrow.utcnow()
         self.socket_event_total = 0
@@ -55,9 +61,9 @@ class Internal(Cog):
         res = ""
         for i, line in enumerate(lines):
             if i == 0:
-                start = f"In [{self.ln}]: "
+                start = f"In [{self.eval_state.ln}]: "
             else:
-                start = "...: ".rjust(len(str(self.ln)) + 7)
+                start = "...: ".rjust(len(str(self.eval_state.ln)) + 7)
 
             if i == len(lines) - 2:
                 if line.startswith("return"):
@@ -73,10 +79,10 @@ class Internal(Cog):
 
         res = self._format_input_display(inp)
 
-        self.stdout.seek(0)
-        text = self.stdout.read()
-        self.stdout.close()
-        self.stdout = StringIO()
+        self.eval_state.stdout.seek(0)
+        text = self.eval_state.stdout.read()
+        self.eval_state.stdout.close()
+        self.eval_state.stdout = StringIO()
 
         if text:
             res += (text + "\n")
@@ -88,7 +94,7 @@ class Internal(Cog):
         if out is None:
             return (res, None)
 
-        res += f"Out[{self.ln}]: "
+        res += f"Out[{self.eval_state.ln}]: "
 
         if isinstance(out, discord.Embed):
             res += "<Embed>"
@@ -116,11 +122,11 @@ class Internal(Cog):
 
     async def _eval(self, ctx: Context, code: str) -> discord.Message | None:
         """Eval the input code string & send an embed to the invoking context."""
-        self.ln += 1
+        self.eval_state.ln += 1
 
         if code.startswith("exit"):
-            self.ln = 0
-            self.env = {}
+            self.eval_state.ln = 0
+            self.eval_state.env = {}
             return await ctx.send("```Reset history!```")
 
         env = {
@@ -136,25 +142,25 @@ class Internal(Cog):
             "contextlib": contextlib
         }
 
-        self.env.update(env)
+        self.eval_state.env.update(env)
 
         # Ignore this code, it works
         code_ = """
 async def func():  # (None,) -> Any
     try:
-        with contextlib.redirect_stdout(self.stdout):
+        with contextlib.redirect_stdout(self.eval_state.stdout):
 {}
         if '_' in locals():
             if inspect.isawaitable(_):
                 _ = await _
             return _
     finally:
-        self.env.update(locals())
+        self.eval_state.env.update(locals())
 """.format(textwrap.indent(code, "            "))
 
         try:
-            exec(code_, self.env)  # noqa: S102
-            func = self.env["func"]
+            exec(code_, self.eval_state.env)  # noqa: S102
+            func = self.eval_state.env["func"]
             res = await func()
 
         except Exception:

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import arrow
 
 from bot.constants import Channels
-from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContent, FilterContext, FilterSource
 from bot.exts.filtering._filter_lists import extension
 from bot.exts.filtering._filter_lists.extension import ExtensionsList
 from bot.exts.filtering._filter_lists.filter_list import ListType
@@ -39,7 +39,7 @@ class ExtensionsListTests(unittest.IsolatedAsyncioTestCase):
         self.message = MockMessage()
         member = MockMember(id=123)
         channel = MockTextChannel(id=345)
-        self.ctx = FilterContext(Event.MESSAGE, member, channel, "", self.message)
+        self.ctx = FilterContext(FilterSource(Event.MESSAGE, member, channel, self.message), FilterContent(""))
 
     @patch("bot.instance", BOT)
     async def test_message_with_allowed_attachment(self):

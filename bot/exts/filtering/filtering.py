@@ -26,9 +26,10 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import BaseURLs, Channels, Guild, MODERATION_ROLES, Roles
 from bot.exts.backend.branding._repository import HEADERS, PARAMS
-from bot.exts.filtering._filter_context import Event, FilterContext
+from bot.exts.filtering._filter_context import Event, FilterContent, FilterContext, FilterSource
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
+from bot.exts.filtering._loaded_types import LoadedTypes
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
@@ -93,9 +94,7 @@ class Filtering(Cog):
         self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.webhook: discord.Webhook | None = None
 
-        self.loaded_settings = {}
-        self.loaded_filters = {}
-        self.loaded_filter_settings = {}
+        self.loaded = LoadedTypes(filters={}, settings={}, filter_settings={})
 
         self.message_cache = MessageCache(CACHE_SIZE, newest_first=True)
 
@@ -159,7 +158,7 @@ class Filtering(Cog):
         """
         # Get the filter types used by each filter list.
         for filter_list in self.filter_lists.values():
-            self.loaded_filters.update({filter_type.name: filter_type for filter_type in filter_list.filter_types})
+            self.loaded.filters.update({filter_type.name: filter_type for filter_type in filter_list.filter_types})
 
         # Get the setting types used by each filter list.
         if self.filter_lists:
@@ -174,24 +173,24 @@ class Filtering(Cog):
                 if isinstance(setting_entry.description, str):
                     # If it's a string, then the settings entry matches a single field in the DB,
                     # and its name is the setting type's name attribute.
-                    self.loaded_settings[setting_entry.name] = (
+                    self.loaded.settings[setting_entry.name] = (
                         setting_entry.description, setting_entry, type_hints[setting_entry.name]
                     )
                 else:
                     # Otherwise, the setting entry works with compound settings.
-                    self.loaded_settings.update({
+                    self.loaded.settings.update({
                         subsetting: (description, setting_entry, type_hints[subsetting])
                         for subsetting, description in setting_entry.description.items()
                     })
 
         # Get the settings per filter as well.
-        for filter_name, filter_type in self.loaded_filters.items():
+        for filter_name, filter_type in self.loaded.filters.items():
             extra_fields_type = filter_type.extra_fields_type
             if not extra_fields_type:
                 continue
             type_hints = get_type_hints(extra_fields_type)
             # A class var with a `_description` suffix is expected per field name.
-            self.loaded_filter_settings[filter_name] = {
+            self.loaded.filter_settings[filter_name] = {
                 field_name: (
                     getattr(extra_fields_type, f"{field_name}_description", ""),
                     extra_fields_type,
@@ -285,13 +284,13 @@ class Filtering(Cog):
     @Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, *_) -> None:
         """Checks for bad words in usernames when users join, switch or leave a voice channel."""
-        ctx = FilterContext(Event.NICKNAME, member, None, member.display_name, None)
+        ctx = FilterContext(FilterSource(Event.NICKNAME, member, None, None), FilterContent(member.display_name))
         await self._check_bad_display_name(ctx)
 
     @Cog.listener()
     async def on_thread_create(self, thread: Thread) -> None:
         """Check for bad words in new thread names."""
-        ctx = FilterContext(Event.THREAD_NAME, thread.owner, thread, thread.name, None)
+        ctx = FilterContext(FilterSource(Event.THREAD_NAME, thread.owner, thread, None), FilterContent(thread.name))
         await self._check_bad_name(ctx)
 
     async def filter_snekbox_output(
@@ -462,14 +461,14 @@ class Filtering(Cog):
     async def f_describe(self, ctx: Context, filter_name: str | None) -> None:
         """Show a description of the specified filter, or a list of possible values if no name is specified."""
         if not filter_name:
-            filter_names = [f"» {f}" for f in self.loaded_filters]
+            filter_names = [f"» {f}" for f in self.loaded.filters]
             embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of filter names")
             await LinePaginator.paginate(filter_names, ctx, embed, max_lines=10, empty=False)
         else:
-            filter_type = self.loaded_filters.get(filter_name)
+            filter_type = self.loaded.filters.get(filter_name)
             if not filter_type:
-                filter_type = self.loaded_filters.get(filter_name[:-1])  # A plural form or a typo.
+                filter_type = self.loaded.filters.get(filter_name[:-1])  # A plural form or a typo.
                 if not filter_type:
                     await ctx.send(f":x: There's no filter type named {filter_name!r}.")
                     return
@@ -542,8 +541,7 @@ class Filtering(Cog):
         description, new_settings, new_filter_settings = description_and_settings_converter(
             filter_list,
             list_type, filter_type,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             description_and_settings
         )
 
@@ -582,8 +580,7 @@ class Filtering(Cog):
             description,
             settings,
             filter_settings,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             ctx.author,
             embed,
             patch_func
@@ -614,8 +611,8 @@ class Filtering(Cog):
     async def setting(self, ctx: Context, setting_name: str | None) -> None:
         """Show a description of the specified setting, or a list of possible settings if no name is specified."""
         if not setting_name:
-            settings_list = [f"» {setting_name}" for setting_name in self.loaded_settings]
-            for filter_name, filter_settings in self.loaded_filter_settings.items():
+            settings_list = [f"» {setting_name}" for setting_name in self.loaded.settings]
+            for filter_name, filter_settings in self.loaded.filter_settings.items():
                 settings_list.extend(f"» {filter_name}/{setting}" for setting in filter_settings)
             embed = Embed(colour=Colour.blue())
             embed.set_author(name="List of setting names")
@@ -623,15 +620,15 @@ class Filtering(Cog):
 
         else:
             # The setting is either in a SettingsEntry subclass, or a pydantic model.
-            setting_data = self.loaded_settings.get(setting_name)
+            setting_data = self.loaded.settings.get(setting_name)
             description = None
             if setting_data:
                 description = setting_data[0]
             elif "/" in setting_name:  # It's a filter specific setting.
                 filter_name, filter_setting_name = setting_name.split("/", maxsplit=1)
-                if filter_name in self.loaded_filter_settings:
-                    if filter_setting_name in self.loaded_filter_settings[filter_name]:
-                        description = self.loaded_filter_settings[filter_name][filter_setting_name][0]
+                if filter_name in self.loaded.filter_settings:
+                    if filter_setting_name in self.loaded.filter_settings[filter_name]:
+                        description = self.loaded.filter_settings[filter_name][filter_setting_name][0]
             if description is None:
                 await ctx.send(f":x: There's no setting type named {setting_name!r}.")
                 return
@@ -656,10 +653,10 @@ class Filtering(Cog):
             raise BadArgument("Please provide input.")
         if message:
             user = None if no_user else message.author
-            filter_ctx = FilterContext(Event.MESSAGE, user, message.channel, message.content, message, message.embeds)
+            filter_ctx = FilterContext(FilterSource(Event.MESSAGE, user, message.channel, message), FilterContent(message.content, message.embeds))
         else:
             python_general = ctx.guild.get_channel(Channels.python_general)
-            filter_ctx = FilterContext(Event.MESSAGE, None, python_general, string, None)
+            filter_ctx = FilterContext(FilterSource(Event.MESSAGE, None, python_general, None), FilterContent(string))
 
         _, _, triggers = await self._resolve_action(filter_ctx)
         lines = []
@@ -690,9 +687,9 @@ class Filtering(Cog):
         filter_type = None
         if filter_type_name:
             filter_type_name = filter_type_name.lower()
-            filter_type = self.loaded_filters.get(filter_type_name)
+            filter_type = self.loaded.filters.get(filter_type_name)
             if not filter_type:
-                self.loaded_filters.get(filter_type_name[:-1])  # In case the user tried to specify the plural form.
+                self.loaded.filters.get(filter_type_name[:-1])  # In case the user tried to specify the plural form.
         # If settings were provided with no filter_type, discord.py will capture the first word as the filter type.
         if filter_type is None and filter_type_name is not None:
             if settings:
@@ -703,9 +700,7 @@ class Filtering(Cog):
 
         settings, filter_settings, filter_type = search_criteria_converter(
             self.filter_lists,
-            self.loaded_filters,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             filter_type,
             settings
         )
@@ -720,9 +715,7 @@ class Filtering(Cog):
             settings,
             filter_settings,
             self.filter_lists,
-            self.loaded_filters,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             ctx.author,
             embed,
             self._search_filters
@@ -812,13 +805,13 @@ class Filtering(Cog):
 
         embed = Embed(colour=Colour.blue())
         embed.set_author(name=f"New Filter List - {list_description.title()}")
-        settings = {name: starting_value(value[2]) for name, value in self.loaded_settings.items()}
+        settings = {name: starting_value(value[2]) for name, value in self.loaded.settings.items()}
 
         view = FilterListAddView(
             list_name,
             list_type,
             settings,
-            self.loaded_settings,
+            self.loaded,
             ctx.author,
             embed,
             self._post_filter_list
@@ -848,7 +841,7 @@ class Filtering(Cog):
         if result is None:
             return
         list_type, filter_list = result
-        settings = settings_converter(self.loaded_settings, settings)
+        settings = settings_converter(self.loaded, settings)
         if noui:
             try:
                 await self._patch_filter_list(ctx.message, filter_list, list_type, settings)
@@ -864,7 +857,7 @@ class Filtering(Cog):
             filter_list,
             list_type,
             settings,
-            self.loaded_settings,
+            self.loaded,
             ctx.author,
             embed,
             self._patch_filter_list
@@ -1127,8 +1120,7 @@ class Filtering(Cog):
             filter_list,
             list_type,
             filter_type,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             description_and_settings
         )
 
@@ -1163,8 +1155,7 @@ class Filtering(Cog):
             description,
             settings,
             filter_settings,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             ctx.author,
             embed,
             self._post_new_filter
@@ -1462,7 +1453,7 @@ class Filtering(Cog):
             for sublist in filter_list.values():
                 default_infraction_type = sublist.default("infraction_type")
                 for filter_ in sublist.filters.values():
-                    if max(filter_.created_at, filter_.updated_at) < seven_days_ago:
+                    if filter_.last_updated < seven_days_ago:
                         continue
                     infraction_type = filter_.overrides[0].get("infraction_type")
                     if (

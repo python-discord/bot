@@ -7,7 +7,7 @@ from discord.ext.commands import BadArgument
 
 from bot.exts.filtering._filter_lists import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter
-from bot.exts.filtering._settings_types.settings_entry import SettingsEntry
+from bot.exts.filtering._loaded_types import LoadedTypes
 from bot.exts.filtering._ui.filter import filter_overrides_for_ui
 from bot.exts.filtering._ui.ui import (
     COMPONENT_TIMEOUT,
@@ -25,14 +25,12 @@ def _validate_and_process_setting(
     raw_value: str,
     settings: dict[str, Any],
     filter_settings: dict[str, Any],
-    loaded_settings: dict,
-    loaded_filters: dict,
-    loaded_filter_settings: dict,
+    loaded: LoadedTypes,
     filter_type: type[Filter] | None,
 ) -> type[Filter] | None:
     """Validate and parse a single setting, mutating settings and filter_settings in place."""
-    if setting in loaded_settings:
-        type_ = loaded_settings[setting][2]
+    if setting in loaded.settings:
+        type_ = loaded.settings[setting][2]
         try:
             settings[setting] = parse_value(raw_value, type_)
         except (TypeError, ValueError) as e:
@@ -42,8 +40,8 @@ def _validate_and_process_setting(
     else:
         filter_name, filter_setting_name = setting.split("/", maxsplit=1)
         if not filter_type:
-            if filter_name in loaded_filters:
-                filter_type = loaded_filters[filter_name]
+            if filter_name in loaded.filters:
+                filter_type = loaded.filters[filter_name]
             else:
                 raise BadArgument(f"There's no filter type named {filter_name!r}.")
         if filter_name.lower() != filter_type.name.lower():
@@ -51,9 +49,9 @@ def _validate_and_process_setting(
                 f"A setting for a {filter_name!r} filter was provided, "
                 f"but the filter name is {filter_type.name!r}"
             )
-        if filter_setting_name not in loaded_filter_settings[filter_type.name]:
+        if filter_setting_name not in loaded.filter_settings[filter_type.name]:
             raise BadArgument(f"{setting!r} is not a recognized setting.")
-        type_ = loaded_filter_settings[filter_type.name][filter_setting_name][2]
+        type_ = loaded.filter_settings[filter_type.name][filter_setting_name][2]
         try:
             filter_settings[filter_setting_name] = parse_value(settings.pop(setting), type_)
         except (TypeError, ValueError) as e:
@@ -63,9 +61,7 @@ def _validate_and_process_setting(
 
 def search_criteria_converter(
     filter_lists: dict,
-    loaded_filters: dict,
-    loaded_settings: dict,
-    loaded_filter_settings: dict,
+    loaded: LoadedTypes,
     filter_type: type[Filter] | None,
     input_data: str
 ) -> tuple[dict[str, Any], dict[str, Any], type[Filter]]:
@@ -90,7 +86,7 @@ def search_criteria_converter(
     for setting, _ in list(settings.items()):
         filter_type = _validate_and_process_setting(
             setting, settings[setting], settings, filter_settings,
-            loaded_settings, loaded_filters, loaded_filter_settings, filter_type,
+            loaded, filter_type,
         )
 
     if template is not None:
@@ -161,9 +157,7 @@ class SearchEditView(EditBaseView):
         settings: dict[str, Any],
         filter_settings: dict[str, Any],
         loaded_filter_lists: dict[str, FilterList],
-        loaded_filters: dict[str, type[Filter]],
-        loaded_settings: dict[str, tuple[str, SettingsEntry, type]],
-        loaded_filter_settings: dict[str, dict[str, tuple[str, SettingsEntry, type]]],
+        loaded: LoadedTypes,
         author: discord.User | discord.Member,
         embed: discord.Embed,
         confirm_callback: Callable
@@ -173,9 +167,7 @@ class SearchEditView(EditBaseView):
         self.settings = settings
         self.filter_settings = filter_settings
         self.loaded_filter_lists = loaded_filter_lists
-        self.loaded_filters = loaded_filters
-        self.loaded_settings = loaded_settings
-        self.loaded_filter_settings = loaded_filter_settings
+        self.loaded = loaded
         self.embed = embed
         self.confirm_callback = confirm_callback
 
@@ -187,11 +179,11 @@ class SearchEditView(EditBaseView):
         settings_repr_dict = build_search_repr_dict(settings, filter_settings, filter_type)
         populate_embed_from_dict(embed, settings_repr_dict)
 
-        self.type_per_setting_name = {setting: info[2] for setting, info in loaded_settings.items()}
+        self.type_per_setting_name = {setting: info[2] for setting, info in loaded.settings.items()}
         if filter_type:
             self.type_per_setting_name.update({
                 f"{filter_type.name}/{name}": type_
-                for name, (_, _, type_) in loaded_filter_settings.get(filter_type.name, {}).items()
+                for name, (_, _, type_) in loaded.filter_settings.get(filter_type.name, {}).items()
             })
 
         add_select = CustomCallbackSelect(
@@ -322,8 +314,8 @@ class SearchEditView(EditBaseView):
 
     async def apply_filter_type(self, type_name: str, embed_message: discord.Message, interaction: Interaction) -> None:
         """Set a new filter type and reset any criteria for settings of the old filter type."""
-        if type_name.lower() not in self.loaded_filters:
-            if type_name.lower()[:-1] not in self.loaded_filters:  # In case the user entered the plural form.
+        if type_name.lower() not in self.loaded.filters:
+            if type_name.lower()[:-1] not in self.loaded.filters:  # In case the user entered the plural form.
                 await interaction.response.send_message(f":x: No such filter type {type_name!r}.", ephemeral=True)
                 return
             type_name = type_name[:-1]
@@ -332,7 +324,7 @@ class SearchEditView(EditBaseView):
 
         if self.filter_type and type_name == self.filter_type.name:
             return
-        self.filter_type = self.loaded_filters[type_name]
+        self.filter_type = self.loaded.filters[type_name]
         self.filter_settings = {}
         self.embed.clear_fields()
         await embed_message.edit(embed=self.embed, view=self.copy())
@@ -345,9 +337,7 @@ class SearchEditView(EditBaseView):
             self.settings,
             self.filter_settings,
             self.loaded_filter_lists,
-            self.loaded_filters,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             self.author,
             self.embed,
             self.confirm_callback

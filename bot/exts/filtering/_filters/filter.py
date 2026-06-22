@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 import arrow
@@ -7,6 +8,13 @@ from pydantic import ValidationError
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._settings import Defaults, create_settings
 from bot.exts.filtering._utils import FieldRequiring
+
+
+@dataclass
+class FilterTimestamps:
+    """Timestamps for when a filter was created and last updated."""
+    created_at: arrow.Arrow
+    updated_at: arrow.Arrow
 
 
 class Filter(FieldRequiring):
@@ -27,8 +35,10 @@ class Filter(FieldRequiring):
         self.id = filter_data["id"]
         self.content = filter_data["content"]
         self.description = filter_data["description"]
-        self.created_at = arrow.get(filter_data["created_at"])
-        self.updated_at = arrow.get(filter_data["updated_at"])
+        self.timestamps = FilterTimestamps(
+            created_at=arrow.get(filter_data["created_at"]),
+            updated_at=arrow.get(filter_data["updated_at"]),
+        )
         self.actions, self.validations = create_settings(filter_data["settings"], defaults=defaults)
         if self.extra_fields_type:
             self.extra_fields = self.extra_fields_type.model_validate(filter_data["additional_settings"])
@@ -49,6 +59,11 @@ class Filter(FieldRequiring):
             filter_settings = self.extra_fields.model_dump(exclude_unset=True)
 
         return settings, filter_settings
+
+    @property
+    def last_updated(self) -> arrow.Arrow:
+        """The most recent time this filter was created or updated."""
+        return max(self.timestamps.created_at, self.timestamps.updated_at)
 
     @abstractmethod
     async def triggered_on(self, ctx: FilterContext) -> bool:

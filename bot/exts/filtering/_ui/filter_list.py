@@ -7,6 +7,7 @@ from discord.ext.commands import BadArgument
 from pydis_core.site_api import ResponseCodeError
 
 from bot.exts.filtering._filter_lists import FilterList, ListType
+from bot.exts.filtering._loaded_types import LoadedTypes
 from bot.exts.filtering._ui.ui import (
     CustomCallbackSelect,
     EditBaseView,
@@ -19,7 +20,7 @@ from bot.exts.filtering._ui.ui import (
 from bot.exts.filtering._utils import repr_equals, to_serializable
 
 
-def settings_converter(loaded_settings: dict, input_data: str) -> dict[str, Any]:
+def settings_converter(loaded: LoadedTypes, input_data: str) -> dict[str, Any]:
     """Parse a string representing settings, and validate the setting names."""
     if not input_data:
         return {}
@@ -34,10 +35,10 @@ def settings_converter(loaded_settings: dict, input_data: str) -> dict[str, Any]
         raise BadArgument("The settings provided are not in the correct format.")
 
     for setting in settings:
-        if setting not in loaded_settings:
+        if setting not in loaded.settings:
             raise BadArgument(f"{setting!r} is not a recognized setting.")
 
-        type_ = loaded_settings[setting][2]
+        type_ = loaded.settings[setting][2]
         try:
             parsed_value = parse_value(settings.pop(setting), type_)
             settings[setting] = parsed_value
@@ -74,7 +75,7 @@ class FilterListAddView(EditBaseView):
         list_name: str,
         list_type: ListType,
         settings: dict,
-        loaded_settings: dict,
+        loaded: LoadedTypes,
         author: User,
         embed: Embed,
         confirm_callback: Callable
@@ -83,14 +84,14 @@ class FilterListAddView(EditBaseView):
         self.list_name = list_name
         self.list_type = list_type
         self.settings = settings
-        self.loaded_settings = loaded_settings
+        self.loaded = loaded
         self.embed = embed
         self.confirm_callback = confirm_callback
 
         self.settings_repr_dict = {name: to_serializable(value) for name, value in settings.items()}
         populate_embed_from_dict(embed, self.settings_repr_dict)
 
-        self.type_per_setting_name = {setting: info[2] for setting, info in loaded_settings.items()}
+        self.type_per_setting_name = {setting: info[2] for setting, info in loaded.settings.items()}
 
         edit_select = CustomCallbackSelect(
             self._prompt_new_value,
@@ -160,7 +161,7 @@ class FilterListAddView(EditBaseView):
             self.list_name,
             self.list_type,
             self.settings,
-            self.loaded_settings,
+            self.loaded,
             self.author,
             self.embed,
             self.confirm_callback
@@ -175,7 +176,7 @@ class FilterListEditView(EditBaseView):
         filter_list: FilterList,
         list_type: ListType,
         new_settings: dict,
-        loaded_settings: dict,
+        loaded: LoadedTypes,
         author: User,
         embed: Embed,
         confirm_callback: Callable
@@ -184,14 +185,14 @@ class FilterListEditView(EditBaseView):
         self.filter_list = filter_list
         self.list_type = list_type
         self.settings = new_settings
-        self.loaded_settings = loaded_settings
+        self.loaded = loaded
         self.embed = embed
         self.confirm_callback = confirm_callback
 
         self.settings_repr_dict = build_filterlist_repr_dict(filter_list, list_type, new_settings)
         populate_embed_from_dict(embed, self.settings_repr_dict)
 
-        self.type_per_setting_name = {setting: info[2] for setting, info in loaded_settings.items()}
+        self.type_per_setting_name = {setting: info[2] for setting, info in loaded.settings.items()}
 
         edit_select = CustomCallbackSelect(
             self._prompt_new_value,
@@ -268,7 +269,7 @@ class FilterListEditView(EditBaseView):
             self.filter_list,
             self.list_type,
             self.settings,
-            self.loaded_settings,
+            self.loaded,
             self.author,
             self.embed,
             self.confirm_callback

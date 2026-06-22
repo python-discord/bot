@@ -10,6 +10,7 @@ from pydis_core.site_api import ResponseCodeError
 
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
 from bot.exts.filtering._filters.filter import Filter
+from bot.exts.filtering._loaded_types import LoadedTypes
 from bot.exts.filtering._ui.ui import (
     COMPONENT_TIMEOUT,
     CustomCallbackSelect,
@@ -124,8 +125,7 @@ class FilterEditView(EditBaseView):
         description: str | None,
         settings_overrides: dict,
         filter_settings_overrides: dict,
-        loaded_settings: dict,
-        loaded_filter_settings: dict,
+        loaded: LoadedTypes,
         author: User,
         embed: Embed,
         confirm_callback: Callable
@@ -138,8 +138,7 @@ class FilterEditView(EditBaseView):
         self.description = description
         self.settings_overrides = settings_overrides
         self.filter_settings_overrides = filter_settings_overrides
-        self.loaded_settings = loaded_settings
-        self.loaded_filter_settings = loaded_filter_settings
+        self.loaded = loaded
         self.embed = embed
         self.confirm_callback = confirm_callback
 
@@ -148,10 +147,10 @@ class FilterEditView(EditBaseView):
         )
         populate_embed_from_dict(embed, all_settings_repr_dict)
 
-        self.type_per_setting_name = {setting: info[2] for setting, info in loaded_settings.items()}
+        self.type_per_setting_name = {setting: info[2] for setting, info in loaded.settings.items()}
         self.type_per_setting_name.update({
             f"{filter_type.name}/{name}": type_
-            for name, (_, _, type_) in loaded_filter_settings.get(filter_type.name, {}).items()
+            for name, (_, _, type_) in loaded.filter_settings.get(filter_type.name, {}).items()
         })
 
         add_select = CustomCallbackSelect(
@@ -381,8 +380,7 @@ class FilterEditView(EditBaseView):
             self.description,
             self.settings_overrides,
             self.filter_settings_overrides,
-            self.loaded_settings,
-            self.loaded_filter_settings,
+            self.loaded,
             self.author,
             self.embed,
             self.confirm_callback
@@ -395,10 +393,10 @@ def _parse_filter_list_setting(
     settings: dict,
     filter_list: FilterList,
     list_type: ListType,
-    loaded_settings: dict,
+    loaded: LoadedTypes,
 ) -> None:
     """Parse and validate a filter list setting, updating `settings` in place."""
-    type_ = loaded_settings[setting][2]
+    type_ = loaded.settings[setting][2]
     try:
         parsed_value = parse_value(value, type_)
         if not repr_equals(parsed_value, filter_list[list_type].default(setting)):
@@ -412,7 +410,7 @@ def _parse_filter_setting(
     value: str,
     filter_settings: dict,
     filter_type: type[Filter],
-    loaded_filter_settings: dict,
+    loaded: LoadedTypes,
 ) -> None:
     """Parse and validate a filter-specific setting, updating `filter_settings` in place."""
     filter_name, filter_setting_name = setting.split("/", maxsplit=1)
@@ -420,9 +418,9 @@ def _parse_filter_setting(
         raise BadArgument(
             f"A setting for a {filter_name!r} filter was provided, but the filter name is {filter_type.name!r}"
         )
-    if filter_setting_name not in loaded_filter_settings[filter_type.name]:
+    if filter_setting_name not in loaded.filter_settings[filter_type.name]:
         raise BadArgument(f"{setting!r} is not a recognized setting.")
-    type_ = loaded_filter_settings[filter_type.name][filter_setting_name][2]
+    type_ = loaded.filter_settings[filter_type.name][filter_setting_name][2]
     try:
         parsed_value = parse_value(value, type_)
         if not repr_equals(parsed_value, getattr(filter_type.extra_fields_type(), filter_setting_name)):
@@ -436,19 +434,18 @@ def _parse_settings(
     filter_list: FilterList,
     list_type: ListType,
     filter_type: type[Filter],
-    loaded_settings: dict,
-    loaded_filter_settings: dict,
+    loaded: LoadedTypes,
 ) -> tuple[dict, dict]:
     """Parse and validate all settings, returning (list_settings, filter_settings)."""
     settings = {}
     filter_settings = {}
     for setting, value in raw_settings.items():
-        if setting in loaded_settings:
-            _parse_filter_list_setting(setting, value, settings, filter_list, list_type, loaded_settings)
+        if setting in loaded.settings:
+            _parse_filter_list_setting(setting, value, settings, filter_list, list_type, loaded)
         elif "/" not in setting:
             raise BadArgument(f"{setting!r} is not a recognized setting.")
         else:
-            _parse_filter_setting(setting, value, filter_settings, filter_type, loaded_filter_settings)
+            _parse_filter_setting(setting, value, filter_settings, filter_type, loaded)
     return settings, filter_settings
 
 
@@ -472,8 +469,7 @@ def description_and_settings_converter(
     filter_list: FilterList,
     list_type: ListType,
     filter_type: type[Filter],
-    loaded_settings: dict,
-    loaded_filter_settings: dict,
+    loaded: LoadedTypes,
     input_data: str
 ) -> tuple[str, dict[str, Any], dict[str, Any]]:
     """Parse a string representing a possible description and setting overrides, and validate the setting names."""
@@ -492,7 +488,7 @@ def description_and_settings_converter(
     template = raw_settings.pop("--template", None)
 
     settings, filter_settings = _parse_settings(
-        raw_settings, filter_list, list_type, filter_type, loaded_settings, loaded_filter_settings
+        raw_settings, filter_list, list_type, filter_type, loaded
     )
 
     if template is not None:
