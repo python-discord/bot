@@ -51,14 +51,13 @@ class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Bot):
-        # Contains URLs to documentation home pages.
-        # Used to calculate inventory diffs on refreshes and to display all currently stored inventories.
-        self.base_urls = {}
         self.bot = bot
-        self.doc_symbols: dict[str, DocItem] = {}  # Maps symbol names to objects containing their metadata.
-        self.item_fetcher = _batch_parser.BatchParser()
-        # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
-        self.renamed_symbols = defaultdict(list)
+        self._inventory = SimpleNamespace(
+            base_urls={},
+            doc_symbols={},
+            renamed_symbols=defaultdict(list),
+            item_fetcher=_batch_parser.BatchParser(),
+        )
 
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
 
@@ -83,7 +82,7 @@ class DocCog(commands.Cog):
                 absolute paths that link to specific symbols
             * `package` is the content of a intersphinx inventory.
         """
-        self.base_urls[package_name] = base_url
+        self._inventory.base_urls[package_name] = base_url
 
         for group, items in inventory.items():
             for symbol_name, relative_doc_url in items:
@@ -107,8 +106,8 @@ class DocCog(commands.Cog):
                     sys.intern(relative_url_path),
                     symbol_id,
                 )
-                self.doc_symbols[symbol_name] = doc_item
-                self.item_fetcher.add_item(doc_item)
+                self._inventory.doc_symbols[symbol_name] = doc_item
+                self._inventory.item_fetcher.add_item(doc_item)
 
         log.trace(f"Fetched inventory for {package_name}.")
 
@@ -157,23 +156,23 @@ class DocCog(commands.Cog):
 
         If the existing symbol was renamed or there was no conflict, the returned name is equivalent to `symbol_name`.
         """
-        if (item := self.doc_symbols.get(symbol_name)) is None:
+        if (item := self._inventory.doc_symbols.get(symbol_name)) is None:
             return symbol_name  # There's no conflict so it's fine to simply use the given symbol name.
 
         def rename(prefix: str, *, rename_extant: bool = False) -> str:
             new_name = f"{prefix}.{symbol_name}"
-            if new_name in self.doc_symbols:
+            if new_name in self._inventory.doc_symbols:
                 # If there's still a conflict, qualify the name further.
                 if rename_extant:
                     new_name = f"{item.package}.{item.group}.{symbol_name}"
                 else:
                     new_name = f"{package_name}.{group_name}.{symbol_name}"
 
-            self.renamed_symbols[symbol_name].append(new_name)
+            self._inventory.renamed_symbols[symbol_name].append(new_name)
 
             if rename_extant:
                 # Instead of renaming the current symbol, rename the symbol with which it conflicts.
-                self.doc_symbols[new_name] = self.doc_symbols[symbol_name]
+                self._inventory.doc_symbols[new_name] = self._inventory.doc_symbols[symbol_name]
                 return symbol_name
             return new_name
 
@@ -203,10 +202,10 @@ class DocCog(commands.Cog):
         log.debug("Refreshing documentation inventory...")
         self.inventory_scheduler.cancel_all()
 
-        self.base_urls.clear()
-        self.doc_symbols.clear()
-        self.renamed_symbols.clear()
-        await self.item_fetcher.clear()
+        self._inventory.base_urls.clear()
+        self._inventory.doc_symbols.clear()
+        self._inventory.renamed_symbols.clear()
+        await self._inventory.item_fetcher.clear()
 
         coros = [
             self.update_or_reschedule_inventory(
@@ -224,10 +223,10 @@ class DocCog(commands.Cog):
         If the doc item is not found directly from the passed in name and the name contains a space,
         the first word of the name will be attempted to be used to get the item.
         """
-        doc_item = self.doc_symbols.get(symbol_name)
+        doc_item = self._inventory.doc_symbols.get(symbol_name)
         if doc_item is None and " " in symbol_name:
             symbol_name = symbol_name.split(maxsplit=1)[0]
-            doc_item = self.doc_symbols.get(symbol_name)
+            doc_item = self._inventory.doc_symbols.get(symbol_name)
 
         return symbol_name, doc_item
 
@@ -243,7 +242,7 @@ class DocCog(commands.Cog):
         if markdown is None:
             log.debug(f"Redis cache miss with {doc_item}.")
             try:
-                markdown = await self.item_fetcher.get_markdown(doc_item)
+                markdown = await self._inventory.item_fetcher.get_markdown(doc_item)
 
             except aiohttp.ClientError as e:
                 log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
@@ -280,8 +279,8 @@ class DocCog(commands.Cog):
 
             # Show all symbols with the same name that were renamed in the footer,
             # with a max of 200 chars.
-            if symbol_name in self.renamed_symbols:
-                renamed_symbols = ", ".join(self.renamed_symbols[symbol_name])
+            if symbol_name in self._inventory.renamed_symbols:
+                renamed_symbols = ", ".join(self._inventory.renamed_symbols[symbol_name])
                 footer_text = textwrap.shorten("Similar names: " + renamed_symbols, 200, placeholder=" ...")
             else:
                 footer_text = ""
@@ -314,12 +313,12 @@ class DocCog(commands.Cog):
         """
         if not symbol_name:
             inventory_embed = discord.Embed(
-                title=f"All inventories (`{len(self.base_urls)}` total)",
+                title=f"All inventories (`{len(self._inventory.base_urls)}` total)",
                 colour=discord.Colour.blue()
             )
 
-            lines = sorted(f"- [`{name}`]({url})" for name, url in self.base_urls.items())
-            if self.base_urls:
+            lines = sorted(f"- [`{name}`]({url})" for name, url in self._inventory.base_urls.items())
+            if self._inventory.base_urls:
                 await LinePaginator.paginate(lines, ctx, inventory_embed, max_size=400, empty=False)
 
             else:
@@ -420,10 +419,10 @@ class DocCog(commands.Cog):
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def refresh_command(self, ctx: commands.Context) -> None:
         """Refresh inventories and show the difference."""
-        old_inventories = set(self.base_urls)
+        old_inventories = set(self._inventory.base_urls)
         async with ctx.typing():
             await self.refresh_inventories()
-        new_inventories = set(self.base_urls)
+        new_inventories = set(self._inventory.base_urls)
 
         if added := ", ".join(new_inventories - old_inventories):
             added = "+ " + added
@@ -446,7 +445,7 @@ class DocCog(commands.Cog):
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
-            await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
+            await self._inventory.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
             await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
         else:
             await ctx.send("No keys matching the package found.")
@@ -454,4 +453,4 @@ class DocCog(commands.Cog):
     async def cog_unload(self) -> None:
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
-        await self.item_fetcher.clear()
+        await self._inventory.item_fetcher.clear()

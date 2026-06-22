@@ -88,8 +88,8 @@ class FilterListAddView(EditBaseView):
         self.embed = embed
         self.confirm_callback = confirm_callback
 
-        self.settings_repr_dict = {name: to_serializable(value) for name, value in settings.items()}
-        populate_embed_from_dict(embed, self.settings_repr_dict)
+        settings_repr_dict = {name: to_serializable(value) for name, value in settings.items()}
+        populate_embed_from_dict(embed, settings_repr_dict)
 
         self.type_per_setting_name = {setting: info[2] for setting, info in loaded.settings.items()}
 
@@ -189,8 +189,8 @@ class FilterListEditView(EditBaseView):
         self.embed = embed
         self.confirm_callback = confirm_callback
 
-        self.settings_repr_dict = build_filterlist_repr_dict(filter_list, list_type, new_settings)
-        populate_embed_from_dict(embed, self.settings_repr_dict)
+        settings_repr_dict = build_filterlist_repr_dict(filter_list, list_type, new_settings)
+        populate_embed_from_dict(embed, settings_repr_dict)
 
         self.type_per_setting_name = {setting: info[2] for setting, info in loaded.settings.items()}
 
@@ -221,11 +221,11 @@ class FilterListEditView(EditBaseView):
         self.stop()
 
     def current_value(self, setting_name: str) -> Any:
-        """Get the current value stored for the setting or MISSING if none found."""
         if setting_name in self.settings:
             return self.settings[setting_name]
-        if setting_name in self.settings_repr_dict:
-            return self.settings_repr_dict[setting_name]
+        settings_repr_dict = build_filterlist_repr_dict(self.filter_list, self.list_type, self.settings)
+        if setting_name in settings_repr_dict:
+            return settings_repr_dict[setting_name]
         return MISSING
 
     async def update_embed(

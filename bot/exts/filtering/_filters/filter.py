@@ -31,7 +31,7 @@ class Filter(FieldRequiring):
     # If a subclass uses extra fields, it should assign the pydantic model type to this variable.
     extra_fields_type = None
 
-    def __init__(self, filter_data: dict, defaults: Defaults | None = None):
+    def __init__(self, filter_data: dict, defaults: Defaults | None=None):
         self.id = filter_data["id"]
         self.content = filter_data["content"]
         self.description = filter_data["description"]
@@ -90,6 +90,15 @@ class Filter(FieldRequiring):
         A BadArgument should be raised if the content can't be used.
         """
         return content, description
+    
+    
+    @property
+    def created_at(self) -> arrow.Arrow:
+        return self.timestamps.created_at
+
+    @property
+    def updated_at(self) -> arrow.Arrow:
+        return self.timestamps.updated_at
 
     def __str__(self) -> str:
         """A string representation of the filter."""

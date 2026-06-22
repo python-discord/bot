@@ -5,6 +5,7 @@ import re
 import textwrap
 import traceback
 from collections import Counter
+from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any
 
@@ -36,9 +37,7 @@ class Internal(Cog):
         self.bot = bot
         self.eval_state = _EvalState()
 
-        self.socket_since = arrow.utcnow()
-        self.socket_event_total = 0
-        self.socket_events = Counter()
+        self.socket_stats = SocketStats(since=arrow.utcnow())
 
         if DEBUG_MODE:
             self.eval.add_check(is_owner().predicate)
@@ -46,8 +45,8 @@ class Internal(Cog):
     @Cog.listener()
     async def on_socket_event_type(self, event_type: str) -> None:
         """When a websocket event is received, increase our counters."""
-        self.socket_event_total += 1
-        self.socket_events[event_type] += 1
+        self.socket_stats.event_total += 1
+        self.socket_stats.events[event_type] += 1
 
     def _format_input_display(self, inp: str) -> str:
         """Format the input code display (the ``In [X]:`` / ``...:`` lines)."""
@@ -229,9 +228,9 @@ async def func():  # (None,) -> Any
     @has_any_role(Roles.admins, Roles.owners, Roles.core_developers)
     async def socketstats(self, ctx: Context) -> None:
         """Fetch information on the socket events received from Discord."""
-        running_s = (arrow.utcnow() - self.socket_since).total_seconds()
+        running_s = (arrow.utcnow() - self.socket_stats.since).total_seconds()
 
-        per_s = self.socket_event_total / running_s
+        per_s = self.socket_stats.event_total / running_s
 
         stats_embed = discord.Embed(
             title="WebSocket statistics",
@@ -239,7 +238,7 @@ async def func():  # (None,) -> Any
             color=discord.Color.og_blurple()
         )
 
-        for event_type, count in self.socket_events.most_common(25):
+        for event_type, count in self.socket_stats.events.most_common(25):
             stats_embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 
         await ctx.send(embed=stats_embed)

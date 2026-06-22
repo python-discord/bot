@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import discord
@@ -298,7 +299,7 @@ class SearchEditView(EditBaseView):
         """Set any unset criteria with settings values from the given filter."""
         try:
             settings, filter_settings, self.filter_type = template_settings(
-                template_id, self.loaded_filter_lists, self.filter_type
+                template_id, self.filter_resources.filter_lists, self.filter_type
             )
         except BadArgument as e:  # The interaction object is necessary to send an ephemeral message.
             await interaction.response.send_message(f":x: {e}", ephemeral=True)

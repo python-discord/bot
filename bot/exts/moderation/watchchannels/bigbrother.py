@@ -106,7 +106,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             msg = f":white_check_mark: Messages sent by {user.mention} will now be relayed to Big Brother."
 
             history = await self.bot.api_client.get(
-                self.api_endpoint,
+                self.config.api_endpoint,
                 params={
                     "user__id": str(user.id),
                     "active": "false",
@@ -133,10 +133,10 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         `ctx`.
         """
         active_watches = await self.bot.api_client.get(
-            self.api_endpoint,
+            self.config.api_endpoint,
             params=ChainMap(
                 {"user__id": str(user.id)},
-                self.api_default_params,
+                self.config.api_default_params,
             )
         )
         if active_watches:
@@ -144,7 +144,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             [infraction] = active_watches
 
             await self.bot.api_client.patch(
-                f"{self.api_endpoint}/{infraction['id']}",
+                f"{self.config.api_endpoint}/{infraction['id']}",
                 json={"active": False}
             )
 
