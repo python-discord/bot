@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="39" failures="0" skipped="0" tests="39" time="0.497" timestamp="2026-06-22T11:50:56.243745-03:00" hostname="Savio_Carvalho"><testcase classname="" name="tests.bot.exts.backend.sync.test_base" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\backend\sync\test_base.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.backend.sync.test_cog" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\backend\sync\test_cog.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.backend.sync.test_roles" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\backend\sync\test_roles.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.backend.sync.test_users" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\backend\sync\test_users.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.backend.test_error_handler" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\backend\test_error_handler.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.backend.test_logging" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\backend\test_logging.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.backend.test_security" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\backend\test_security.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.filtering.test_discord_token_filter" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\filtering\test_discord_token_filter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.filtering.test_extension_filter" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\filtering\test_extension_filter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.filtering.test_settings" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\filtering\test_settings.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.filtering.test_settings_entries" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\filtering\test_settings_entries.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.filtering.test_token_filter" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\filtering\test_token_filter.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.info.codeblock.test_parsing" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\info\codeblock\test_parsing.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.info.doc.test_parsing" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\info\doc\test_parsing.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.info.test_help" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\info\test_help.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.info.test_information" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\info\test_information.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.moderation.infraction.test_infractions" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\moderation\infraction\test_infractions.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.moderation.infraction.test_utils" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\moderation\infraction\test_utils.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.moderation.test_clean" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\moderation\test_clean.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.moderation.test_incidents" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\moderation\test_incidents.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.moderation.test_modlog" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\moderation\test_modlog.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.moderation.test_silence" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\moderation\test_silence.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.moderation.test_slowmode" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\moderation\test_slowmode.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.recruitment.talentpool.test_review" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\recruitment\talentpool\test_review.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\bot\exts\recruitment\talentpool\test_review.py:5: in &lt;module&gt;
+    from bot.exts.recruitment.talentpool import _review
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.test_cogs" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\test_cogs.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.utils.snekbox.test_io" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\utils\snekbox\test_io.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.utils.snekbox.test_snekbox" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\utils\snekbox\test_snekbox.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.exts.utils.test_utils" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\exts\utils\test_utils.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.resources.test_resources" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\resources\test_resources.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.test_constants" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\test_constants.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.test_converters" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\test_converters.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.test_decorators" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\test_decorators.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.utils.test_checks" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\utils\test_checks.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.utils.test_helpers" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\utils\test_helpers.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.utils.test_message_cache" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\utils\test_message_cache.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.utils.test_messages" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\utils\test_messages.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.bot.utils.test_time" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\bot\utils\test_time.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.test_base" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\test_base.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase><testcase classname="" name="tests.test_helpers" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\Users\savio\Documents\Projetos\Python\bot-dg\tests\test_helpers.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\__init__.py:3: in &lt;module&gt;
+    from bot.log import get_logger
+bot\__init__.py:5: in &lt;module&gt;
+    from pydis_core.utils import apply_monkey_patches
+E   ModuleNotFoundError: No module named 'pydis_core'</error></testcase></testsuite></testsuites>

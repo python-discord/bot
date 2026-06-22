@@ -127,15 +127,17 @@ TEST-**.xml
 *.env*
 
 # # Métricas
-/metrics-before-radon
-/metrics-before-pylint
-/metrics-after-pylint
-/metrics-before-codecarbon
-/metrics-before-pytest
+# /metrics-before-radon
+# /metrics-before-pylint
+# /metrics-after-pylint
+# /metrics-before-codecarbon
+# /metrics-after-codecarbon
+# /metrics-before-pytest
 
-extract_metrics_before_radon.py
-extract_metrics_before_pylint.py
-extract_metrics_after_pylint.py
-extract_score_before_pylint.py
-extract_metrics_before_codecarbon.py
-extract_metrics_before_pytest.py
+# extract_metrics_before_radon.py
+# extract_metrics_before_pylint.py
+# extract_metrics_after_pylint.py
+# extract_score_before_pylint.py
+# extract_metrics_before_codecarbon.py
+# extract_metrics_after_codecarbon.py
+# extract_metrics_before_pytest.py
