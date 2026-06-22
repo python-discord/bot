@@ -262,12 +262,9 @@ class Information(Cog):
             embed = await self.create_user_embed(ctx, user, passed_as_message)
             await ctx.send(embed=embed)
 
-    async def create_user_embed(self, ctx: Context, user: MemberOrUser, passed_as_message: bool) -> Embed:
-        """Creates an embed containing information on the `user`."""
-        on_server = bool(await get_or_fetch_member(ctx.guild, user.id))
-
-        created = time.format_relative(user.created_at)
-
+    @staticmethod
+    def _build_embed_name(user: MemberOrUser, on_server: bool, passed_as_message: bool) -> str:
+        """Build the display name for the user embed title."""
         name = str(user)
         if on_server and user.nick:
             name = f"{user.nick} ({name})"
@@ -281,28 +278,46 @@ class Information(Cog):
         elif user.bot:
             name += f" {constants.Emojis.bot}"
 
-        badges = []
+        return name
 
+    @staticmethod
+    def _build_user_badges(user: MemberOrUser) -> list:
+        """Collect the user's public flag badges."""
+        badges = []
         for badge, is_set in user.public_flags:
             if is_set and (emoji := getattr(constants.Emojis, f"badge_{badge}", None)):
                 badges.append(emoji)
+        return badges
 
+    @staticmethod
+    def _build_membership_info(channel, user: MemberOrUser, on_server: bool) -> str:
+        """Build the membership information string for the embed."""
         if on_server:
             if user.joined_at:
                 joined = time.format_relative(user.joined_at)
             else:
                 joined = "Unable to get join date"
 
-            # The 0 is for excluding the default @everyone role,
-            # and the -1 is for reversing the order of the roles to highest to lowest in hierarchy.
             roles = ", ".join(role.mention for role in user.roles[:0:-1])
             membership = {"Joined": joined, "Verified": not user.pending, "Roles": roles or None}
-            if not is_mod_channel(ctx.channel):
+            if not is_mod_channel(channel):
                 membership.pop("Verified")
 
             membership = textwrap.dedent("\n".join([f"{key}: {value}" for key, value in membership.items()]))
         else:
             membership = "The user is not a member of the server"
+
+        return membership
+
+    async def create_user_embed(self, ctx: Context, user: MemberOrUser, passed_as_message: bool) -> Embed:
+        """Creates an embed containing information on the `user`."""
+        on_server = bool(await get_or_fetch_member(ctx.guild, user.id))
+
+        created = time.format_relative(user.created_at)
+
+        name = self._build_embed_name(user, on_server, passed_as_message)
+        badges = self._build_user_badges(user)
+        membership = self._build_membership_info(ctx.channel, user, on_server)
 
         fields = [
             (

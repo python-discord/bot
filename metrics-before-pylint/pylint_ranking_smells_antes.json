@@ -1,0 +1,78 @@
+[
+  {
+    "simbolo": "too-many-arguments",
+    "ocorrencias": 30
+  },
+  {
+    "simbolo": "too-many-locals",
+    "ocorrencias": 27
+  },
+  {
+    "simbolo": "too-few-public-methods",
+    "ocorrencias": 24
+  },
+  {
+    "simbolo": "too-many-positional-arguments",
+    "ocorrencias": 21
+  },
+  {
+    "simbolo": "duplicate-code",
+    "ocorrencias": 21
+  },
+  {
+    "simbolo": "too-many-branches",
+    "ocorrencias": 15
+  },
+  {
+    "simbolo": "too-many-instance-attributes",
+    "ocorrencias": 10
+  },
+  {
+    "simbolo": "use-dict-literal",
+    "ocorrencias": 7
+  },
+  {
+    "simbolo": "no-else-return",
+    "ocorrencias": 6
+  },
+  {
+    "simbolo": "too-many-statements",
+    "ocorrencias": 6
+  },
+  {
+    "simbolo": "too-many-public-methods",
+    "ocorrencias": 5
+  },
+  {
+    "simbolo": "cyclic-import",
+    "ocorrencias": 5
+  },
+  {
+    "simbolo": "no-else-raise",
+    "ocorrencias": 3
+  },
+  {
+    "simbolo": "unnecessary-comprehension",
+    "ocorrencias": 3
+  },
+  {
+    "simbolo": "too-many-return-statements",
+    "ocorrencias": 2
+  },
+  {
+    "simbolo": "consider-using-in",
+    "ocorrencias": 1
+  },
+  {
+    "simbolo": "consider-using-sys-exit",
+    "ocorrencias": 1
+  },
+  {
+    "simbolo": "use-list-literal",
+    "ocorrencias": 1
+  },
+  {
+    "simbolo": "inconsistent-return-statements",
+    "ocorrencias": 1
+  }
+]

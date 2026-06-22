@@ -20,6 +20,47 @@ from bot.exts.filtering._ui.ui import (
 )
 
 
+def _validate_and_process_setting(
+    setting: str,
+    raw_value: str,
+    settings: dict[str, Any],
+    filter_settings: dict[str, Any],
+    loaded_settings: dict,
+    loaded_filters: dict,
+    loaded_filter_settings: dict,
+    filter_type: type[Filter] | None,
+) -> type[Filter] | None:
+    """Validate and parse a single setting, mutating settings and filter_settings in place."""
+    if setting in loaded_settings:
+        type_ = loaded_settings[setting][2]
+        try:
+            settings[setting] = parse_value(raw_value, type_)
+        except (TypeError, ValueError) as e:
+            raise BadArgument(e)
+    elif "/" not in setting:
+        raise BadArgument(f"{setting!r} is not a recognized setting.")
+    else:
+        filter_name, filter_setting_name = setting.split("/", maxsplit=1)
+        if not filter_type:
+            if filter_name in loaded_filters:
+                filter_type = loaded_filters[filter_name]
+            else:
+                raise BadArgument(f"There's no filter type named {filter_name!r}.")
+        if filter_name.lower() != filter_type.name.lower():
+            raise BadArgument(
+                f"A setting for a {filter_name!r} filter was provided, "
+                f"but the filter name is {filter_type.name!r}"
+            )
+        if filter_setting_name not in loaded_filter_settings[filter_type.name]:
+            raise BadArgument(f"{setting!r} is not a recognized setting.")
+        type_ = loaded_filter_settings[filter_type.name][filter_setting_name][2]
+        try:
+            filter_settings[filter_setting_name] = parse_value(settings.pop(setting), type_)
+        except (TypeError, ValueError) as e:
+            raise BadArgument(e)
+    return filter_type
+
+
 def search_criteria_converter(
     filter_lists: dict,
     loaded_filters: dict,
@@ -47,42 +88,17 @@ def search_criteria_converter(
 
     filter_settings = {}
     for setting, _ in list(settings.items()):
-        if setting in loaded_settings:  # It's a filter list setting
-            type_ = loaded_settings[setting][2]
-            try:
-                settings[setting] = parse_value(settings[setting], type_)
-            except (TypeError, ValueError) as e:
-                raise BadArgument(e)
-        elif "/" not in setting:
-            raise BadArgument(f"{setting!r} is not a recognized setting.")
-        else:  # It's a filter setting
-            filter_name, filter_setting_name = setting.split("/", maxsplit=1)
-            if not filter_type:
-                if filter_name in loaded_filters:
-                    filter_type = loaded_filters[filter_name]
-                else:
-                    raise BadArgument(f"There's no filter type named {filter_name!r}.")
-            if filter_name.lower() != filter_type.name.lower():
-                raise BadArgument(
-                    f"A setting for a {filter_name!r} filter was provided, "
-                    f"but the filter name is {filter_type.name!r}"
-                )
-            if filter_setting_name not in loaded_filter_settings[filter_type.name]:
-                raise BadArgument(f"{setting!r} is not a recognized setting.")
-            type_ = loaded_filter_settings[filter_type.name][filter_setting_name][2]
-            try:
-                filter_settings[filter_setting_name] = parse_value(settings.pop(setting), type_)
-            except (TypeError, ValueError) as e:
-                raise BadArgument(e)
+        filter_type = _validate_and_process_setting(
+            setting, settings[setting], settings, filter_settings,
+            loaded_settings, loaded_filters, loaded_filter_settings, filter_type,
+        )
 
-    # Pull templates settings and apply them.
     if template is not None:
         try:
             t_settings, t_filter_settings, filter_type = template_settings(template, filter_lists, filter_type)
         except ValueError as e:
             raise BadArgument(str(e))
         else:
-            # The specified settings go on top of the template
             settings = t_settings | settings
             filter_settings = t_filter_settings | filter_settings
 

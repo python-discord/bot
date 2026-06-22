@@ -382,6 +382,42 @@ class Clean(Cog):
 
     # endregion
 
+    @staticmethod
+    def _normalize_limits(
+        first_limit: CleanLimit | None,
+        second_limit: CleanLimit | None,
+    ) -> tuple[CleanLimit | None, CleanLimit | None]:
+        """Convert Message limits to datetime and ensure chronological order."""
+        if isinstance(first_limit, Message):
+            first_limit = first_limit.created_at
+        if isinstance(second_limit, Message):
+            second_limit = second_limit.created_at
+        if first_limit and second_limit:
+            first_limit, second_limit = sorted([first_limit, second_limit])
+        return first_limit, second_limit
+
+    async def _send_clean_result(
+        self,
+        ctx: Context,
+        deleted_messages: list[Message],
+        log_url: str | None,
+    ) -> None:
+        """Send a success message about the clean operation to the user or mods."""
+        if not log_url:
+            return
+        success_message = (
+            f"{Emojis.ok_hand} Deleted {len(deleted_messages)} messages. "
+            f"A log of the deleted messages can be found here {log_url}."
+        )
+        if is_mod_channel(ctx.channel):
+            try:
+                await ctx.reply(success_message)
+            except errors.HTTPException:
+                await ctx.send(success_message)
+        else:
+            if mods := self.bot.get_channel(Channels.mods):
+                await mods.send(f"{ctx.author.mention} {success_message}")
+
     async def _clean_messages(
         self,
         ctx: Context,
@@ -406,12 +442,7 @@ class Clean(Cog):
 
         deletion_channels = self._channels_set(channels, ctx, first_limit, second_limit)
 
-        if isinstance(first_limit, Message):
-            first_limit = first_limit.created_at
-        if isinstance(second_limit, Message):
-            second_limit = second_limit.created_at
-        if first_limit and second_limit:
-            first_limit, second_limit = sorted([first_limit, second_limit])
+        first_limit, second_limit = self._normalize_limits(first_limit, second_limit)
 
         # Needs to be called after standardizing the input.
         predicate = self._build_predicate(first_limit, second_limit, bots_only, users, regex)
@@ -447,18 +478,7 @@ class Clean(Cog):
             channels = deletion_channels
         log_url = await self._modlog_cleaned_messages(deleted_messages, channels, ctx)
 
-        success_message = (
-            f"{Emojis.ok_hand} Deleted {len(deleted_messages)} messages. "
-            f"A log of the deleted messages can be found here {log_url}."
-        )
-        if log_url and is_mod_channel(ctx.channel):
-            try:
-                await ctx.reply(success_message)
-            except errors.HTTPException:
-                await ctx.send(success_message)
-        elif log_url:
-            if mods := self.bot.get_channel(Channels.mods):
-                await mods.send(f"{ctx.author.mention} {success_message}")
+        await self._send_clean_result(ctx, deleted_messages, log_url)
         return log_url
 
     # region: Commands

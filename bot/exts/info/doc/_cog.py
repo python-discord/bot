@@ -62,9 +62,11 @@ class DocCog(commands.Cog):
 
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
 
-        self.refresh_event = asyncio.Event()
-        self.refresh_event.set()
-        self.symbol_get_event = SharedEvent()
+        self.inventory_sync = SimpleNamespace(
+            refresh_event=asyncio.Event(),
+            symbol_get_event=SharedEvent(),
+        )
+        self.inventory_sync.refresh_event.set()
 
     async def cog_load(self) -> None:
         """Refresh documentation inventory on cog initialization."""
@@ -196,8 +198,8 @@ class DocCog(commands.Cog):
 
     async def refresh_inventories(self) -> None:
         """Refresh internal documentation inventories."""
-        self.refresh_event.clear()
-        await self.symbol_get_event.wait()
+        self.inventory_sync.refresh_event.clear()
+        await self.inventory_sync.symbol_get_event.wait()
         log.debug("Refreshing documentation inventory...")
         self.inventory_scheduler.cancel_all()
 
@@ -213,7 +215,7 @@ class DocCog(commands.Cog):
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
-        self.refresh_event.set()
+        self.inventory_sync.refresh_event.set()
 
     def get_symbol_item(self, symbol_name: str) -> tuple[str, DocItem | None]:
         """
@@ -264,11 +266,11 @@ class DocCog(commands.Cog):
         First check the DocRedisCache before querying the cog's `BatchParser`.
         """
         log.trace(f"Building embed for symbol `{symbol_name}`")
-        if not self.refresh_event.is_set():
+        if not self.inventory_sync.refresh_event.is_set():
             log.debug("Waiting for inventories to be refreshed before processing item.")
-            await self.refresh_event.wait()
+            await self.inventory_sync.refresh_event.wait()
         # Ensure a refresh can't run in case of a context switch until the with block is exited
-        with self.symbol_get_event:
+        with self.inventory_sync.symbol_get_event:
             symbol_name, doc_item = self.get_symbol_item(symbol_name)
             if doc_item is None:
                 log.debug("Symbol does not exist.")

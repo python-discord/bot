@@ -96,24 +96,7 @@ class ErrorHandler(Cog):
         )
 
         if isinstance(e, errors.CommandNotFound) and not getattr(ctx, "invoked_from_error_handler", False):
-            # We might not invoke a command from the error handler, but it's easier and safer to ensure
-            # this is always set rather than trying to get it exact, and shouldn't cause any issues.
-            ctx.invoked_from_error_handler = True
-
-            # All errors from attempting to execute these commands should be handled by the error handler.
-            # We wrap non CommandErrors in CommandInvokeError to mirror the behaviour of normal commands.
-            try:
-                if await self.try_silence(ctx):
-                    return
-                if await self.try_run_fixed_codeblock(ctx):
-                    return
-                await self.try_get_tag(ctx)
-            except Exception as err:
-                log.info("Re-handling error raised by command in error handler")
-                if isinstance(err, errors.CommandError):
-                    await self.on_command_error(ctx, err)
-                else:
-                    await self.on_command_error(ctx, errors.CommandInvokeError(err))
+            await self._handle_command_not_found(ctx, e)
         elif isinstance(e, errors.UserInputError):
             log.debug(debug_message)
             await self.handle_user_input_error(ctx, e)
@@ -124,29 +107,54 @@ class ErrorHandler(Cog):
             log.debug(debug_message)
             await ctx.send(e)
         elif isinstance(e, errors.CommandInvokeError):
-            if isinstance(e.original, ResponseCodeError):
-                await self.handle_api_error(ctx, e.original)
-            elif isinstance(e.original, LockedResourceError):
-                await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
-            elif isinstance(e.original, InvalidInfractedUserError):
-                await ctx.send(f"Cannot infract that user. {e.original.reason}")
-            elif isinstance(e.original, Forbidden):
-                try:
-                    await handle_forbidden_from_block(e.original, ctx.message)
-                except Forbidden:
-                    await self.handle_unexpected_error(ctx, e.original)
-            else:
-                await self.handle_unexpected_error(ctx, e.original)
+            await self._handle_command_invoke_error(ctx, e)
         elif isinstance(e, errors.ConversionError):
-            if isinstance(e.original, ResponseCodeError):
-                await self.handle_api_error(ctx, e.original)
-            else:
-                await self.handle_unexpected_error(ctx, e.original)
+            await self._handle_conversion_error(ctx, e)
         elif isinstance(e, errors.DisabledCommand):
             log.debug(debug_message)
         else:
             # ExtensionError
             await self.handle_unexpected_error(ctx, e)
+
+    async def _handle_command_not_found(self, ctx: Context, e: errors.CommandError) -> None:
+        """Handle CommandNotFound errors by attempting silence, codeblock, or tag commands."""
+        ctx.invoked_from_error_handler = True
+
+        try:
+            if await self.try_silence(ctx):
+                return
+            if await self.try_run_fixed_codeblock(ctx):
+                return
+            await self.try_get_tag(ctx)
+        except Exception as err:
+            log.info("Re-handling error raised by command in error handler")
+            if isinstance(err, errors.CommandError):
+                await self.on_command_error(ctx, err)
+            else:
+                await self.on_command_error(ctx, errors.CommandInvokeError(err))
+
+    async def _handle_command_invoke_error(self, ctx: Context, e: errors.CommandInvokeError) -> None:
+        """Handle CommandInvokeError by dispatching on the underlying exception type."""
+        if isinstance(e.original, ResponseCodeError):
+            await self.handle_api_error(ctx, e.original)
+        elif isinstance(e.original, LockedResourceError):
+            await ctx.send(f"{e.original} Please wait for it to finish and try again later.")
+        elif isinstance(e.original, InvalidInfractedUserError):
+            await ctx.send(f"Cannot infract that user. {e.original.reason}")
+        elif isinstance(e.original, Forbidden):
+            try:
+                await handle_forbidden_from_block(e.original, ctx.message)
+            except Forbidden:
+                await self.handle_unexpected_error(ctx, e.original)
+        else:
+            await self.handle_unexpected_error(ctx, e.original)
+
+    async def _handle_conversion_error(self, ctx: Context, e: errors.ConversionError) -> None:
+        """Handle ConversionError by dispatching on the underlying exception type."""
+        if isinstance(e.original, ResponseCodeError):
+            await self.handle_api_error(ctx, e.original)
+        else:
+            await self.handle_unexpected_error(ctx, e.original)
 
     async def try_silence(self, ctx: Context) -> bool:
         """

@@ -112,39 +112,11 @@ class ModLog(Cog, name="ModLog"):
             return
 
         diff = DeepDiff(before, after)
-        changes = []
-        done = []
 
         diff_values = diff.get("values_changed", {})
         diff_values.update(diff.get("type_changes", {}))
 
-        for key, value in diff_values.items():
-            if not key:  # Not sure why, but it happens
-                continue
-
-            key = key[5:]  # Remove "root." prefix
-
-            if "[" in key:
-                key = key.split("[", 1)[0]
-
-            if "." in key:
-                key = key.split(".", 1)[0]
-
-            if key in done or key in CHANNEL_CHANGES_SUPPRESSED:
-                continue
-
-            if key in CHANNEL_CHANGES_UNSUPPORTED:
-                changes.append(f"**{key.title()}** updated")
-            else:
-                new = value["new_value"]
-                old = value["old_value"]
-
-                # Discord does not treat consecutive backticks ("``") as an empty inline code block, so the markdown
-                # formatting is broken when `new` and/or `old` are empty values. "None" is used for these cases so
-                # formatting is preserved.
-                changes.append(f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`")
-
-            done.append(key)
+        changes = self._process_channel_changes(diff_values)
 
         if not changes:
             return
@@ -166,6 +138,39 @@ class ModLog(Cog, name="ModLog"):
             "Channel updated",
             message
         )
+
+    @staticmethod
+    def _process_channel_changes(diff_values: dict) -> list[str]:
+        """Process channel diff values into a list of change descriptions."""
+        changes = []
+        done = []
+
+        for key, value in diff_values.items():
+            if not key:
+                continue
+
+            key = key[5:]
+
+            if "[" in key:
+                key = key.split("[", 1)[0]
+
+            if "." in key:
+                key = key.split(".", 1)[0]
+
+            if key in done or key in CHANNEL_CHANGES_SUPPRESSED:
+                continue
+
+            if key in CHANNEL_CHANGES_UNSUPPORTED:
+                changes.append(f"**{key.title()}** updated")
+            else:
+                new = value["new_value"]
+                old = value["old_value"]
+
+                changes.append(f"**{key.title()}:** `{old or 'None'}` **→** `{new or 'None'}`")
+
+            done.append(key)
+
+        return changes
 
     @Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:

@@ -207,6 +207,14 @@ def humanize_delta(
     if max_units <= 0:
         raise ValueError("max_units must be positive.")
 
+    return _build_humanized_string(delta, precision, max_units)
+
+
+def _build_humanized_string(
+    delta: relativedelta,
+    precision: _Precision,
+    max_units: int,
+) -> str:
     units = (
         ("years", delta.years),
         ("months", delta.months),
@@ -216,7 +224,6 @@ def humanize_delta(
         ("seconds", delta.seconds),
     )
 
-    # Add the time units that are >0, but stop at precision or max_units.
     time_strings = []
     unit_count = 0
     for unit, value in units:
@@ -227,12 +234,10 @@ def humanize_delta(
         if unit == precision or unit_count >= max_units:
             break
 
-    # Add the 'and' between the last two units, if necessary.
     if len(time_strings) > 1:
         time_strings[-1] = f"{time_strings[-2]} and {time_strings[-1]}"
         del time_strings[-2]
 
-    # If nothing has been found, just make the value 0 precision, e.g. `0 days`.
     if not time_strings:
         humanized = _stringify_time_unit(0, precision)
     else:

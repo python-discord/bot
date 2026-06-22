@@ -24,6 +24,7 @@ dependencies = [
     "tenacity==9.1.2",
     "tldextract==5.3.0",
     "yarl==1.22.0",
+    "codecarbon>=3.2.8",
 ]
 name = "bot"
 version = "1.0.1"

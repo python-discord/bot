@@ -59,29 +59,59 @@ class InviteList(FilterList[InviteFilter]):
     ) -> tuple[ActionSettings | None, list[str], dict[ListType, list[Filter]]]:
         """Dispatch the given event to the list's filters, and return actions to take and messages to relay to mods."""
         text = clean_input(ctx.content, keep_newlines=True)
-
-        matches = list(DISCORD_INVITE.finditer(text))
-        invite_codes = {m.group("invite") for m in matches}
+        matches, invite_codes, refined_invites = self._process_invite_codes(text)
         if not invite_codes:
             return None, [], {}
-        all_triggers = {}
 
+        _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
+        check_if_allowed = not failed
+
+        invites_for_inspection, unknown_invites = await self._fetch_and_categorize_invites(
+            refined_invites, check_if_allowed
+        )
+
+        new_ctx = ctx.replace(content={invite.guild.id for invite in invites_for_inspection.values()})
+        triggered = await self[ListType.DENY].filter_list_result(new_ctx)
+
+        blocked_invites, invites_for_inspection = self._apply_deny_filters(invites_for_inspection, triggered)
+
+        all_triggers = await self._check_allow_list(
+            ctx, invites_for_inspection, unknown_invites, check_if_allowed
+        )
+
+        if not triggered and not unknown_invites:
+            return None, [], all_triggers
+
+        actions = self._determine_actions(unknown_invites, triggered, all_triggers)
+
+        blocked_invites |= unknown_invites
+        ctx.matches += {match[0] for match in matches if refined_invites.get(match.group("invite")) in blocked_invites}
+        ctx.alert_embeds += (self._guild_embed(invite) for invite in blocked_invites.values() if invite)
+        if unknown_invites:
+            ctx.potential_phish[self] = set(unknown_invites)
+
+        messages = self._build_messages(triggered, unknown_invites)
+        return actions, messages, all_triggers
+
+    @staticmethod
+    def _process_invite_codes(text: str) -> tuple[list[re.Match], set[str], dict[str, str]]:
+        """Extract invite codes from the text and refine obfuscated codes."""
+        matches = list(DISCORD_INVITE.finditer(text))
+        invite_codes = {m.group("invite") for m in matches}
         refined_invites = {}
         for invite_code in invite_codes:
-            # Attempt to overcome an obfuscated invite.
-            # If the result is incorrect, it won't make the whitelist more permissive or the blacklist stricter.
             refined_invite_code = invite_code
             if match := REFINED_INVITE_CODE.search(invite_code):
                 refined_invite_code = match.group("invite")
             refined_invites[invite_code] = refined_invite_code
+        return matches, invite_codes, refined_invites
 
-        _, failed = self[ListType.ALLOW].defaults.validations.evaluate(ctx)
-        # If the allowed list doesn't operate in the context, unknown invites are allowed.
-        check_if_allowed = not failed
-
-        # Sort the invites into two categories:
-        invites_for_inspection = dict()  # Found guild invites requiring further inspection.
-        unknown_invites = dict()  # Either don't resolve or group DMs.
+    async def _fetch_and_categorize_invites(
+        self, refined_invites: dict[str, str], check_if_allowed: bool
+    ) -> tuple[dict[str, Invite], dict[str, Invite | None]]:
+        """Fetch invites from the Discord API and categorize them into guild invites or unknown/group DMs."""
+        invites_for_inspection = {}
+        unknown_invites = {}
         for invite_code in refined_invites.values():
             try:
                 invite = await bot.instance.fetch_invite(invite_code)
@@ -91,63 +121,72 @@ class InviteList(FilterList[InviteFilter]):
             else:
                 if invite.guild:
                     invites_for_inspection[invite_code] = invite
-                elif check_if_allowed:  # Group DM
+                elif check_if_allowed:
                     unknown_invites[invite_code] = invite
+        return invites_for_inspection, unknown_invites
 
-        # Find any blocked invites
-        new_ctx = ctx.replace(content={invite.guild.id for invite in invites_for_inspection.values()})
-        triggered = await self[ListType.DENY].filter_list_result(new_ctx)
-        blocked_guilds = {filter_.content for filter_ in triggered}
-        blocked_invites = {
-            code: invite for code, invite in invites_for_inspection.items() if invite.guild.id in blocked_guilds
-        }
-
-        # Remove the ones which are already confirmed as blocked, or otherwise ones which are partnered or verified.
-        invites_for_inspection = {
-            code: invite for code, invite in invites_for_inspection.items()
-            if invite.guild.id not in blocked_guilds
-            and "PARTNERED" not in invite.guild.features and "VERIFIED" not in invite.guild.features
-        }
-
-        # Remove any remaining invites which are allowed
+    async def _check_allow_list(
+        self, ctx: FilterContext, invites_for_inspection: dict[str, Invite],
+        unknown_invites: dict[str, Invite | None], check_if_allowed: bool
+    ) -> dict[ListType, list[Filter]]:
+        """Check remaining invites against the allow list and update unknown invites."""
+        if not check_if_allowed:
+            return {}
         guilds_for_inspection = {invite.guild.id for invite in invites_for_inspection.values()}
-
-        if check_if_allowed:  # Whether unknown invites need to be checked.
-            new_ctx = ctx.replace(content=guilds_for_inspection)
-            all_triggers[ListType.ALLOW] = [
+        new_ctx = ctx.replace(content=guilds_for_inspection)
+        all_triggers = {
+            ListType.ALLOW: [
                 filter_ for filter_ in self[ListType.ALLOW].filters.values()
                 if await filter_.triggered_on(new_ctx)
             ]
-            allowed = {filter_.content for filter_ in all_triggers[ListType.ALLOW]}
-            unknown_invites.update({
-                code: invite for code, invite in invites_for_inspection.items() if invite.guild.id not in allowed
-            })
+        }
+        allowed = {filter_.content for filter_ in all_triggers[ListType.ALLOW]}
+        unknown_invites.update({
+            code: invite for code, invite in invites_for_inspection.items() if invite.guild.id not in allowed
+        })
+        return all_triggers
 
-        if not triggered and not unknown_invites:
-            return None, [], all_triggers
+    @staticmethod
+    def _apply_deny_filters(
+        invites_for_inspection: dict[str, Invite], triggered: list[Filter]
+    ) -> tuple[dict[str, Invite], dict[str, Invite]]:
+        """Separate blocked invites and filter out partnered/verified guilds from inspection."""
+        blocked_guilds = {filter_.content for filter_ in triggered}
+        blocked_invites = {
+            code: invite for code, invite in invites_for_inspection.items()
+            if invite.guild.id in blocked_guilds
+        }
+        filtered_invites = {
+            code: invite for code, invite in invites_for_inspection.items()
+            if invite.guild.id not in blocked_guilds
+            and "PARTNERED" not in invite.guild.features
+            and "VERIFIED" not in invite.guild.features
+        }
+        return blocked_invites, filtered_invites
 
+    def _determine_actions(
+        self, unknown_invites: dict, triggered: list[Filter],
+        all_triggers: dict[ListType, list[Filter]]
+    ) -> ActionSettings | None:
+        """Determine the actions to take based on triggered filters and unknown invites."""
         actions = None
-        if unknown_invites:  # There are invites which weren't allowed but aren't explicitly blocked.
+        if unknown_invites:
             actions = self[ListType.ALLOW].defaults.actions
-        # Blocked invites come second so that their actions have preference.
         if triggered:
             if actions:
                 actions = actions.union(self[ListType.DENY].merge_actions(triggered))
             else:
                 actions = self[ListType.DENY].merge_actions(triggered)
             all_triggers[ListType.DENY] = triggered
+        return actions
 
-        blocked_invites |= unknown_invites
-        ctx.matches += {match[0] for match in matches if refined_invites.get(match.group("invite")) in blocked_invites}
-        ctx.alert_embeds += (self._guild_embed(invite) for invite in blocked_invites.values() if invite)
-        if unknown_invites:
-            ctx.potential_phish[self] = set(unknown_invites)
-
+    def _build_messages(self, triggered: list[Filter], unknown_invites: dict) -> list[str]:
+        """Build alert messages for triggered filters and unknown invites."""
         messages = self[ListType.DENY].format_messages(triggered)
         messages += [
             f"`{code} - {invite.guild.id}`" if invite else f"`{code}`" for code, invite in unknown_invites.items()
         ]
-        return actions, messages, all_triggers
+        return messages
 
     @staticmethod
     def _guild_embed(invite: Invite) -> Embed:

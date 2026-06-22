@@ -1,3 +1,4 @@
+import datetime
 import gettext
 import re
 import textwrap
@@ -179,39 +180,14 @@ class ModManagement(commands.Cog):
 
         infraction_id = infraction["id"]
 
-        request_data = {}
-        confirm_messages = []
-        log_text = ""
-
-        if duration is not None and not infraction["active"]:
-            if (infr_type := infraction["type"]) in ("note", "warning"):
-                await ctx.send(f":x: Cannot edit the expiration of a {infr_type}.")
-            else:
-                await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
+        if not await self._validate_infraction_edit_inputs(ctx, infraction, duration):
             return
 
-        if isinstance(duration, str):
-            request_data["expires_at"] = None
-            confirm_messages.append("marked as permanent")
-        elif duration is not None:
-            origin, expiry = unpack_duration(duration)
-            # Update `last_applied` if expiry changes.
-            request_data["last_applied"] = origin.isoformat()
-            request_data["expires_at"] = expiry.isoformat()
-            formatted_expiry = time.format_with_duration(expiry, origin)
-            confirm_messages.append(f"set to expire on {formatted_expiry}")
-        else:
-            confirm_messages.append("expiry unchanged")
+        request_data = {}
+        confirm_messages: list[str] = []
 
-        if reason:
-            request_data["reason"] = reason
-            confirm_messages.append("set a new reason")
-            log_text += f"""
-                Previous reason: {infraction['reason']}
-                New reason: {reason}
-            """.rstrip()
-        else:
-            confirm_messages.append("reason unchanged")
+        expiry = self._prepare_duration_update(request_data, confirm_messages, duration)
+        log_text = self._prepare_reason_update(request_data, confirm_messages, reason, infraction)
 
         # Update the infraction
         new_infraction = await self.bot.api_client.patch(
@@ -223,16 +199,90 @@ class ModManagement(commands.Cog):
         user_id = new_infraction["user"]
         user = await get_or_fetch_member(ctx.guild, user_id)
 
-        # Re-schedule infraction if the expiration has been updated
-        if "expires_at" in request_data:
-            # A scheduled task should only exist if the old infraction wasn't permanent
-            if infraction["expires_at"]:
-                self.infractions_cog.scheduler.cancel(infraction_id)
+        log_text += await self._reschedule_infraction_expiry(
+            infraction, new_infraction, request_data, user, ctx, reason, expiry,
+        )
 
-            # If the infraction was not marked as permanent, schedule a new expiration task
+        changes = " & ".join(confirm_messages)
+        await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
+
+        await self._send_infraction_edit_log(
+            ctx, new_infraction, user, user_id, infraction_id, log_text,
+        )
+
+    async def _validate_infraction_edit_inputs(
+        self,
+        ctx: Context,
+        infraction: Infraction,
+        duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
+    ) -> bool:
+        """Validate that the infraction can be edited, return False to abort the edit."""
+        if duration is not None and not infraction["active"]:
+            if infraction["type"] in ("note", "warning"):
+                await ctx.send(f":x: Cannot edit the expiration of a {infraction['type']}.")
+            else:
+                await ctx.send(":x: Cannot edit the expiration of an expired infraction.")
+            return False
+        return True
+
+    @staticmethod
+    def _prepare_duration_update(
+        request_data: dict,
+        confirm_messages: list[str],
+        duration: DurationOrExpiry | t.Literal["p", "permanent"] | None,
+    ) -> datetime.datetime | None:
+        """Prepare duration update data. Returns expiry if set, else None."""
+        expiry = None
+        if isinstance(duration, str):
+            request_data["expires_at"] = None
+            confirm_messages.append("marked as permanent")
+        elif duration is not None:
+            origin, expiry = unpack_duration(duration)
+            request_data["last_applied"] = origin.isoformat()
+            request_data["expires_at"] = expiry.isoformat()
+            confirm_messages.append(f"set to expire on {time.format_with_duration(expiry, origin)}")
+        else:
+            confirm_messages.append("expiry unchanged")
+        return expiry
+
+    @staticmethod
+    def _prepare_reason_update(
+        request_data: dict,
+        confirm_messages: list[str],
+        reason: str | None,
+        infraction: Infraction,
+    ) -> str:
+        """Prepare reason update data. Returns log text."""
+        log_text = ""
+        if reason:
+            request_data["reason"] = reason
+            confirm_messages.append("set a new reason")
+            log_text += f"""
+                Previous reason: {infraction['reason']}
+                New reason: {reason}
+            """.rstrip()
+        else:
+            confirm_messages.append("reason unchanged")
+        return log_text
+
+    async def _reschedule_infraction_expiry(
+        self,
+        infraction: dict,
+        new_infraction: dict,
+        request_data: dict,
+        user: discord.Member | None,
+        ctx: Context,
+        reason: str | None,
+        expiry: datetime.datetime | None,
+    ) -> str:
+        """Cancel old scheduled task and schedule new expiration if needed."""
+        log_text = ""
+        if "expires_at" in request_data:
+            if infraction["expires_at"]:
+                self.infractions_cog.scheduler.cancel(infraction["id"])
+
             if request_data["expires_at"]:
                 self.infractions_cog.schedule_expiration(new_infraction)
-                # Timeouts are handled by Discord itself, so we need to edit the expiry in Discord as well
                 if user and infraction["type"] == "timeout":
                     capped, duration = _utils.cap_timeout_duration(expiry)
                     if capped:
@@ -243,10 +293,18 @@ class ModManagement(commands.Cog):
                 Previous expiry: {time.until_expiration(infraction['expires_at'])}
                 New expiry: {time.until_expiration(new_infraction['expires_at'])}
             """.rstrip()
+        return log_text
 
-        changes = " & ".join(confirm_messages)
-        await ctx.send(f":ok_hand: Updated infraction #{infraction_id}: {changes}")
-
+    async def _send_infraction_edit_log(
+        self,
+        ctx: Context,
+        new_infraction: dict,
+        user: discord.Member | None,
+        user_id: int,
+        infraction_id: int,
+        log_text: str,
+    ) -> None:
+        """Send a log message for the edited infraction."""
         if user:
             user_text = messages.format_user(user)
             thumbnail = user.display_avatar.url

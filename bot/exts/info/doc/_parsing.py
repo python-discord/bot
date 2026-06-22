@@ -134,6 +134,49 @@ def _truncate_signatures(signatures: Collection[str]) -> list[str] | Collection[
     return formatted_signatures
 
 
+def _truncate_without_boundary(result: str, truncate_index: int) -> str:
+    """
+    Truncate `result` at a natural boundary when no Markdown element boundary is suitable.
+
+    Removes incomplete codeblocks and finds the last occurrence of a preferred substring.
+    """
+    force_truncated = result[:truncate_index]
+    if force_truncated.count("```") % 2:
+        force_truncated = force_truncated[:force_truncated.rfind("```")]
+    for string_ in ("\n\n", "\n", ". ", ", ", ",", " "):
+        cutoff = force_truncated.rfind(string_)
+        if cutoff != -1:
+            return force_truncated[:cutoff].strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
+    return force_truncated.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
+
+
+def _truncate_markdown_result(result: str, markdown_element_ends: list[int], max_lines: int) -> str:
+    """
+    Truncate the rendered Markdown `result` to fit within `max_lines` newlines and embed limits.
+
+    Uses `markdown_element_ends` to truncate at element boundaries when possible,
+    falling back to natural language boundaries otherwise.
+    """
+    if not markdown_element_ends:
+        return ""
+
+    newline_truncate_index = find_nth_occurrence(result, "\n", max_lines)
+    if newline_truncate_index is not None and newline_truncate_index < _MAX_DESCRIPTION_LENGTH - 3:
+        truncate_index = newline_truncate_index
+    else:
+        truncate_index = _MAX_DESCRIPTION_LENGTH - 3
+
+    if truncate_index >= markdown_element_ends[-1]:
+        return result.strip(string.whitespace)
+
+    possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
+    if not possible_truncation_indices:
+        return _truncate_without_boundary(result, truncate_index)
+
+    markdown_truncate_index = possible_truncation_indices[-1]
+    return result[:markdown_truncate_index].strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
+
+
 def _get_truncated_description(
     elements: Iterable[Tag | NavigableString],
     markdown_converter: DocMarkdownConverter,
@@ -147,7 +190,7 @@ def _get_truncated_description(
     with the real string length limited to `_MAX_DESCRIPTION_LENGTH` to accommodate discord length limits.
     """
     result = ""
-    markdown_element_ends = []  # Stores indices into `result` which point to the end boundary of each Markdown element.
+    markdown_element_ends = []
     rendered_length = 0
 
     tag_end_index = 0
@@ -170,46 +213,7 @@ def _get_truncated_description(
         else:
             break
 
-    if not markdown_element_ends:
-        return ""
-
-    # Determine the "hard" truncation index. Account for the ellipsis placeholder for the max length.
-    newline_truncate_index = find_nth_occurrence(result, "\n", max_lines)
-    if newline_truncate_index is not None and newline_truncate_index < _MAX_DESCRIPTION_LENGTH - 3:
-        # Truncate based on maximum lines if there are more than the maximum number of lines.
-        truncate_index = newline_truncate_index
-    else:
-        # There are less than the maximum number of lines; truncate based on the max char length.
-        truncate_index = _MAX_DESCRIPTION_LENGTH - 3
-
-    # Nothing needs to be truncated if the last element ends before the truncation index.
-    if truncate_index >= markdown_element_ends[-1]:
-        return result.strip(string.whitespace)
-
-    # Determine the actual truncation index.
-    possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
-    if not possible_truncation_indices:
-        # In case there is no Markdown element ending before the truncation index, try to find a good cutoff point.
-        force_truncated = result[:truncate_index]
-        # If there is an incomplete codeblock, cut it out.
-        if force_truncated.count("```") % 2:
-            force_truncated = force_truncated[:force_truncated.rfind("```")]
-        # Search for substrings to truncate at, with decreasing desirability.
-        for string_ in ("\n\n", "\n", ". ", ", ", ",", " "):
-            cutoff = force_truncated.rfind(string_)
-
-            if cutoff != -1:
-                truncated_result = force_truncated[:cutoff]
-                break
-        else:
-            truncated_result = force_truncated
-
-    else:
-        # Truncate at the last Markdown element that comes before the truncation index.
-        markdown_truncate_index = possible_truncation_indices[-1]
-        truncated_result = result[:markdown_truncate_index]
-
-    return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
+    return _truncate_markdown_result(result, markdown_element_ends, max_lines)
 
 
 def _create_markdown(signatures: list[str] | None, description: Iterable[Tag], url: str) -> str:

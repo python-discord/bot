@@ -43,52 +43,35 @@ class Internal(Cog):
         self.socket_event_total += 1
         self.socket_events[event_type] += 1
 
-    def _format(self, inp: str, out: Any) -> tuple[str, discord.Embed | None]:
-        """Format the eval output into a string & attempt to format it into an Embed."""
-        self._ = out
-
-        res = ""
-
-        # Erase temp input we made
+    def _format_input_display(self, inp: str) -> str:
+        """Format the input code display (the ``In [X]:`` / ``...:`` lines)."""
         if inp.startswith("_ = "):
             inp = inp[4:]
 
-        # Get all non-empty lines
         lines = [line for line in inp.split("\n") if line.strip()]
         if len(lines) != 1:
             lines += [""]
 
-        # Create the input dialog
+        res = ""
         for i, line in enumerate(lines):
             if i == 0:
-                # Start dialog
                 start = f"In [{self.ln}]: "
-
             else:
-                # Indent the 3 dots correctly;
-                # Normally, it's something like
-                # In [X]:
-                #    ...:
-                #
-                # But if it's
-                # In [XX]:
-                #    ...:
-                #
-                # You can see it doesn't look right.
-                # This code simply indents the dots
-                # far enough to align them.
-                # we first `str()` the line number
-                # then we get the length
-                # and use `str.rjust()`
-                # to indent it.
                 start = "...: ".rjust(len(str(self.ln)) + 7)
 
             if i == len(lines) - 2:
                 if line.startswith("return"):
                     line = line[6:].strip()
 
-            # Combine everything
             res += (start + line + "\n")
+
+        return res
+
+    def _format(self, inp: str, out: Any) -> tuple[str, discord.Embed | None]:
+        """Format the eval output into a string & attempt to format it into an Embed."""
+        self._ = out
+
+        res = self._format_input_display(inp)
 
         self.stdout.seek(0)
         text = self.stdout.read()
@@ -98,44 +81,38 @@ class Internal(Cog):
         if text:
             res += (text + "\n")
 
+        return self._format_output_display(out, res)
+
+    def _format_output_display(self, out: Any, res: str) -> tuple[str, discord.Embed | None]:
+        """Format the eval output value into a string and optional Embed."""
         if out is None:
-            # No output, return the input statement
             return (res, None)
 
         res += f"Out[{self.ln}]: "
 
         if isinstance(out, discord.Embed):
-            # We made an embed? Send that as embed
             res += "<Embed>"
-            res = (res, out)
+            return (res, out)
 
+        if isinstance(out, str) and out.startswith("Traceback (most recent call last):\n"):
+            out = "\n" + "\n".join(out.split("\n")[1:])
+
+        if isinstance(out, str):
+            pretty = out
         else:
-            if (isinstance(out, str) and out.startswith("Traceback (most recent call last):\n")):
-                # Leave out the traceback message
-                out = "\n" + "\n".join(out.split("\n")[1:])
+            pretty = pprint.pformat(out, compact=True, width=60)
 
-            if isinstance(out, str):
-                pretty = out
-            else:
-                pretty = pprint.pformat(out, compact=True, width=60)
+        if pretty != str(out):
+            res += "\n"
 
-            if pretty != str(out):
-                # We're using the pretty version, start on the next line
-                res += "\n"
+        if pretty.count("\n") > 20:
+            li = pretty.split("\n")
+            pretty = ("\n".join(li[:3])
+                      + "\n ...\n"
+                      + "\n".join(li[-3:]))
 
-            if pretty.count("\n") > 20:
-                # Text too long, shorten
-                li = pretty.split("\n")
-
-                pretty = ("\n".join(li[:3])  # First 3 lines
-                          + "\n ...\n"  # Ellipsis to indicate removed lines
-                          + "\n".join(li[-3:]))  # last 3 lines
-
-            # Add the output
-            res += pretty
-            res = (res, None)
-
-        return res  # Return (text, embed)
+        res += pretty
+        return (res, None)
 
     async def _eval(self, ctx: Context, code: str) -> discord.Message | None:
         """Eval the input code string & send an embed to the invoking context."""

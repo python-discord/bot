@@ -180,6 +180,146 @@ class InfractionScheduler:
         else:
             log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
 
+    async def _attempt_dm(
+        self,
+        infraction: _utils.Infraction,
+        user: MemberOrUser,
+        user_reason: str | None,
+    ) -> tuple[str, str]:
+        """Try to DM the user about the infraction, returning (dm_result, dm_log_text)."""
+        if await _utils.notify_infraction(infraction, user, user_reason):
+            return ":incoming_envelope: ", "\nDM: Sent"
+        return f"{constants.Emojis.failmail} ", "\nDM: **Failed**"
+
+    @staticmethod
+    def _format_infraction_data(infraction: _utils.Infraction) -> tuple:
+        """Extract and format basic infraction data."""
+        return (
+            infraction["type"],
+            _utils.INFRACTION_ICONS[infraction["type"]][0],
+            infraction["reason"],
+            infraction["id"],
+            infraction["jump_url"],
+            time.format_with_duration(infraction["expires_at"], infraction["last_applied"]),
+        )
+
+    async def _build_end_message(
+        self,
+        ctx: Context,
+        user: MemberOrUser,
+        id_: int,
+        reason: str | None,
+        infraction: _utils.Infraction,
+    ) -> str:
+        """Build the end message for the confirmation, based on channel type or actor."""
+        if is_mod_channel(ctx.channel):
+            log.trace(f"Fetching total infraction count for {user}.")
+            infractions = await self.bot.api_client.get(
+                "bot/infractions",
+                params={"user__id": str(user.id)},
+            )
+            total = len(infractions)
+            return f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
+
+        if infraction["actor"] == self.bot.user.id and reason:
+            log.trace(f"Infraction #{id_} actor is bot; including the reason in the confirmation message.")
+            return (
+                f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})."
+                f"\n\nThe <@&{Roles.moderators}> have been alerted for review"
+            )
+
+        return ""
+
+    async def _execute_action(
+        self,
+        ctx: Context,
+        action: Callable[[], Awaitable[None]],
+        infraction: _utils.Infraction,
+        user: MemberOrUser,
+        infr_type: str,
+        id_: int,
+        expiry: str | None,
+        confirm_msg: str,
+        expiry_msg: str,
+        log_title: str,
+    ) -> tuple:
+        """Execute the infraction action and return updated state."""
+        log.trace(f"Running the infraction #{id_} application action.")
+        try:
+            await action()
+            if expiry:
+                self.schedule_expiration(infraction)
+            return confirm_msg, expiry_msg, None, log_title, False
+        except discord.HTTPException as e:
+            confirm_msg = ":x: failed to apply"
+            expiry_msg = ""
+            log_content = ctx.author.mention
+            log_title = "failed to apply"
+            log_msg = f"Failed to apply {' '.join(infr_type.split('_'))} infraction #{id_} to {user}"
+            if isinstance(e, discord.Forbidden):
+                log.warning(f"{log_msg}: bot lacks permissions.")
+            elif e.code == 10007 or e.status == 404:
+                log.info(f"Can't apply {infraction['type']} to user {infraction['user']} because user left from guild.")
+            else:
+                log.exception(log_msg)
+            return confirm_msg, expiry_msg, log_content, log_title, True
+
+    async def _handle_failure_cleanup(
+        self,
+        id_: int,
+        infr_type: str,
+        confirm_msg: str,
+        log_title: str,
+    ) -> tuple[str, str]:
+        """Delete the infraction from the database when the application failed."""
+        log.trace(f"Trying to delete infraction {id_} from database because applying infraction failed.")
+        try:
+            await self.bot.api_client.delete(f"bot/infractions/{id_}")
+        except ResponseCodeError as e:
+            confirm_msg += " and failed to delete"
+            log_title += " and failed to delete"
+            log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
+        return confirm_msg, log_title
+
+    async def _schedule_tidy_up(
+        self,
+        ctx: Context,
+        sent_msg: discord.Message,
+        infraction: _utils.Infraction,
+        id_: int,
+    ) -> None:
+        """Schedule deletion of the confirmation message and persist to Redis."""
+        if infraction["actor"] == self.bot.user.id and not is_mod_channel(ctx.channel):
+            expire_message_time = datetime.now(UTC) + timedelta(hours=AUTOMATED_TIDY_UP_HOURS)
+            log.trace(f"Scheduling message tidy for infraction #{id_} in {AUTOMATED_TIDY_UP_HOURS} hours.")
+            self.tidy_up_scheduler.schedule_at(
+                expire_message_time,
+                sent_msg.id,
+                self._delete_infraction_message(ctx.channel.id, sent_msg.id),
+            )
+            await self.messages_to_tidy.set(
+                f"{ctx.channel.id}:{sent_msg.id}",
+                expire_message_time.isoformat(),
+            )
+
+    @staticmethod
+    def _build_expiry_messages(infr_type: str, expiry: str | None) -> tuple[str, str]:
+        """Build the expiry message and log text based on infraction type."""
+        if infr_type in ("kick", "note", "warning"):
+            expiry_msg = ""
+        else:
+            expiry_msg = f" until {expiry}" if expiry else " permanently"
+
+        expiry_log_text = f"\nExpires: {expiry}" if expiry else ""
+        return expiry_msg, expiry_log_text
+
+    @staticmethod
+    def _format_jump_url(jump_url: str | None) -> str:
+        """Format the jump URL for the mod-log embed."""
+        if jump_url is None:
+            return "(Infraction issued in a ModMail channel.)"
+        return f"[Click here.]({jump_url})"
+
     async def apply_infraction(
         self,
         ctx: Context,
@@ -201,159 +341,52 @@ class InfractionScheduler:
 
         Returns whether or not the infraction succeeded.
         """
-        infr_type = infraction["type"]
-        icon = _utils.INFRACTION_ICONS[infr_type][0]
-        reason = infraction["reason"]
-        id_ = infraction["id"]
-        jump_url = infraction["jump_url"]
-        expiry = time.format_with_duration(
-            infraction["expires_at"],
-            infraction["last_applied"]
-        )
+        infr_type, icon, reason, id_, jump_url, expiry = self._format_infraction_data(infraction)
 
         if user_reason is None:
             user_reason = reason
 
         log.trace(f"Applying {infr_type} infraction #{id_} to {user}.")
 
-        # Default values for the confirmation message and mod log.
-        confirm_msg = ":ok_hand: applied"
+        expiry_msg, expiry_log_text = self._build_expiry_messages(infr_type, expiry)
+        dm_result = dm_log_text = ""
+        confirm_msg, log_title, log_content, failed = ":ok_hand: applied", "applied", None, False
 
-        # Specifying an expiry for a kick, note, or warning makes no sense.
-        if infr_type in ("kick", "note", "warning"):
-            expiry_msg = ""
-        else:
-            expiry_msg = f" until {expiry}" if expiry else " permanently"
-
-        dm_result = ""
-        dm_log_text = ""
-        expiry_log_text = f"\nExpires: {expiry}" if expiry else ""
-        log_title = "applied"
-        log_content = None
-        failed = False
-
-        # DM the user about the infraction if it's not a shadow/hidden infraction.
-        # This needs to happen before we apply the infraction, as the bot cannot
-        # send DMs to user that it doesn't share a guild with. If we were to
-        # apply kick/ban infractions first, this would mean that we'd make it
-        # impossible for us to deliver a DM. See python-discord/bot#982.
         if not infraction["hidden"] and infr_type in {"ban", "kick"}:
-            if await _utils.notify_infraction(infraction, user, user_reason):
-                dm_result = ":incoming_envelope: "
-                dm_log_text = "\nDM: Sent"
-            else:
-                dm_result = f"{constants.Emojis.failmail} "
-                dm_log_text = "\nDM: **Failed**"
+            dm_result, dm_log_text = await self._attempt_dm(infraction, user, user_reason)
 
-        end_msg = ""
-        if is_mod_channel(ctx.channel):
-            log.trace(f"Fetching total infraction count for {user}.")
-
-            infractions = await self.bot.api_client.get(
-                "bot/infractions",
-                params={"user__id": str(user.id)}
-            )
-            total = len(infractions)
-            end_msg = f" (#{id_} ; {total} infraction{ngettext('', 's', total)} total)"
-        elif infraction["actor"] == self.bot.user.id:
-            log.trace(
-                f"Infraction #{id_} actor is bot; including the reason in the confirmation message."
-            )
-            if reason:
-                end_msg = (
-                    f" (reason: {textwrap.shorten(reason, width=1500, placeholder='...')})."
-                    f"\n\nThe <@&{Roles.moderators}> have been alerted for review"
-                )
-
+        end_msg = await self._build_end_message(ctx, user, id_, reason, infraction)
         purge = infraction.get("purge", "")
 
-        # Execute the necessary actions to apply the infraction on Discord.
         if action:
-            log.trace(f"Running the infraction #{id_} application action.")
-            try:
-                await action()
-                if expiry:
-                    # Schedule the expiration of the infraction.
-                    self.schedule_expiration(infraction)
-            except discord.HTTPException as e:
-                # Accordingly display that applying the infraction failed.
-                # Don't use ctx.message.author; antispam only patches ctx.author.
-                confirm_msg = ":x: failed to apply"
-                expiry_msg = ""
-                log_content = ctx.author.mention
-                log_title = "failed to apply"
-
-                log_msg = f"Failed to apply {' '.join(infr_type.split('_'))} infraction #{id_} to {user}"
-                if isinstance(e, discord.Forbidden):
-                    log.warning(f"{log_msg}: bot lacks permissions.")
-                elif e.code == 10007 or e.status == 404:
-                    log.info(
-                        f"Can't apply {infraction['type']} to user {infraction['user']} because user left from guild."
-                    )
-                else:
-                    log.exception(log_msg)
-                failed = True
-
+            confirm_msg, expiry_msg, log_content, log_title, failed = await self._execute_action(
+                ctx, action, infraction, user, infr_type, id_, expiry,
+                confirm_msg, expiry_msg, log_title,
+            )
 
         if not failed:
             infr_message = f" **{purge}{' '.join(infr_type.split('_'))}** to {user.mention}{expiry_msg}{end_msg}"
-
-            # If we need to DM and haven't already tried to
             if not infraction["hidden"] and infr_type not in {"ban", "kick"}:
-                if await _utils.notify_infraction(infraction, user, user_reason):
-                    dm_result = ":incoming_envelope: "
-                    dm_log_text = "\nDM: Sent"
-                else:
-                    dm_result = f"{constants.Emojis.failmail} "
-                    dm_log_text = "\nDM: **Failed**"
-                    if infr_type == "warning" and not ctx.channel.permissions_for(user).view_channel:
-                        failed = True
-                        log_title = "failed to apply"
-                        additional_info += "\n*Failed to show the warning to the user*"
-                        confirm_msg = (f":x: Failed to apply **warning** to {user.mention} "
-                                       "because DMing the user was unsuccessful")
+                dm_result, dm_log_text = await self._attempt_dm(infraction, user, user_reason)
+                if dm_log_text == "\nDM: **Failed**" and infr_type == "warning" and not ctx.channel.permissions_for(user).view_channel:
+                    failed = True
+                    log_title = "failed to apply"
+                    additional_info += "\n*Failed to show the warning to the user*"
+                    confirm_msg = (f":x: Failed to apply **warning** to {user.mention} "
+                                   "because DMing the user was unsuccessful")
 
         if failed:
-            log.trace(f"Trying to delete infraction {id_} from database because applying infraction failed.")
-            try:
-                await self.bot.api_client.delete(f"bot/infractions/{id_}")
-            except ResponseCodeError as e:
-                confirm_msg += " and failed to delete"
-                log_title += " and failed to delete"
-                log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
+            confirm_msg, log_title = await self._handle_failure_cleanup(id_, infr_type, confirm_msg, log_title)
             infr_message = ""
 
-        # Send a confirmation message to the invoking context.
         log.trace(f"Sending infraction #{id_} confirmation message.")
         mentions = discord.AllowedMentions(users=[user], roles=False)
         sent_msg = await ctx.send(f"{dm_result}{confirm_msg}{infr_message}.", allowed_mentions=mentions)
 
-        # Only tidy up bot issued infractions in non-mod channels.
-        if infraction["actor"] == self.bot.user.id and not is_mod_channel(ctx.channel):
-            expire_message_time = datetime.now(UTC) + timedelta(hours=AUTOMATED_TIDY_UP_HOURS)
+        await self._schedule_tidy_up(ctx, sent_msg, infraction, id_)
 
-            log.trace(f"Scheduling message tidy for infraction #{id_} in {AUTOMATED_TIDY_UP_HOURS} hours.")
+        jump_url = self._format_jump_url(jump_url)
 
-            # Schedule the message to be deleted after a certain period of time.
-            self.tidy_up_scheduler.schedule_at(
-                expire_message_time,
-                sent_msg.id,
-                self._delete_infraction_message(ctx.channel.id, sent_msg.id)
-            )
-
-            # Persist to Redis to handle for bot restarts.
-            await self.messages_to_tidy.set(
-                f"{ctx.channel.id}:{sent_msg.id}",
-                expire_message_time.isoformat(),
-            )
-
-        if jump_url is None:
-            jump_url = "(Infraction issued in a ModMail channel.)"
-        else:
-            jump_url = f"[Click here.]({jump_url})"
-
-        # Send a log message to the mod log.
-        # Don't use ctx.message.author for the actor; antispam only patches ctx.author.
         log.trace(f"Sending apply mod log for infraction #{id_}.")
         await send_log_message(
             self.bot,
@@ -466,6 +499,108 @@ class InfractionScheduler:
             content=log_content,
         )
 
+    async def _execute_pardon_action(
+        self,
+        infraction: _utils.Infraction,
+        notify: bool,
+        log_text: dict[str, str],
+        id_: int,
+        type_: str,
+        log_content: str | None,
+        mod_role: discord.Role,
+    ) -> tuple[dict[str, str], str | None]:
+        """Execute the pardon action and handle Discord API errors."""
+        try:
+            log.trace("Awaiting the pardon action coroutine.")
+            returned_log = await self._pardon_action(infraction, notify)
+
+            if returned_log is not None:
+                log_text = {**log_text, **returned_log}
+            else:
+                raise ValueError(
+                    f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
+                )
+        except discord.Forbidden:
+            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
+            log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
+            log_content = mod_role.mention
+        except discord.HTTPException as e:
+            if e.code == 10007 or e.status == 404:
+                log.info(
+                    f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
+                )
+                log_text["Failure"] = "User left the guild."
+                log_content = mod_role.mention
+            else:
+                log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
+                log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
+                log_content = mod_role.mention
+
+        return log_text, log_content
+
+    async def _check_watch_status(
+        self,
+        user_id: int,
+        log_text: dict[str, str],
+    ) -> dict[str, str]:
+        """Check if the user is currently being watched by Big Brother."""
+        try:
+            log.trace(f"Determining if user {user_id} is currently being watched by Big Brother.")
+
+            active_watch = await self.bot.api_client.get(
+                "bot/infractions",
+                params={
+                    "active": "true",
+                    "type": "watch",
+                    "user__id": user_id
+                }
+            )
+
+            log_text["Watching"] = "Yes" if active_watch else "No"
+        except ResponseCodeError:
+            log.exception(f"Failed to fetch watch status for user {user_id}")
+            log_text["Watching"] = "Unknown - failed to fetch watch status."
+
+        return log_text
+
+    async def _deactivate_in_database(
+        self,
+        id_: int,
+        pardon_reason: str | None,
+        infraction: _utils.Infraction,
+        log_text: dict[str, str],
+        log_content: str | None,
+        mod_role: discord.Role,
+    ) -> tuple[dict[str, str], str | None]:
+        """Mark the infraction as inactive in the database."""
+        try:
+            log.trace(f"Marking infraction #{id_} as inactive in the database.")
+
+            data = {"active": False}
+
+            if pardon_reason is not None:
+                data["reason"] = ""
+                if (punish_reason := infraction["reason"]) is not None:
+                    data["reason"] = punish_reason + " | "
+
+                data["reason"] += f"Pardoned: {pardon_reason}"
+
+            await self.bot.api_client.patch(
+                f"bot/infractions/{id_}",
+                json=data
+            )
+        except ResponseCodeError as e:
+            log.exception(f"Failed to deactivate infraction #{id_} ({infraction['type']})")
+            log_line = f"API request failed with code {e.status}."
+            log_content = mod_role.mention
+
+            if "Failure" in log_text:
+                log_text["Failure"] += f" {log_line}"
+            else:
+                log_text["Failure"] = log_line
+
+        return log_text, log_content
+
     async def deactivate_infraction(
         self,
         infraction: _utils.Infraction,
@@ -506,78 +641,9 @@ class InfractionScheduler:
             "Created": time.format_with_duration(infraction["inserted_at"], infraction["expires_at"]),
         }
 
-        try:
-            log.trace("Awaiting the pardon action coroutine.")
-            returned_log = await self._pardon_action(infraction, notify)
-
-            if returned_log is not None:
-                log_text = {**log_text, **returned_log}  # Merge the logs together
-            else:
-                raise ValueError(
-                    f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
-                )
-        except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
-            log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
-            log_content = mod_role.mention
-        except discord.HTTPException as e:
-            if e.code == 10007 or e.status == 404:
-                log.info(
-                    f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
-                )
-                log_text["Failure"] = "User left the guild."
-                log_content = mod_role.mention
-            else:
-                log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-                log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
-                log_content = mod_role.mention
-
-        # Check if the user is currently being watched by Big Brother.
-        try:
-            log.trace(f"Determining if user {user_id} is currently being watched by Big Brother.")
-
-            active_watch = await self.bot.api_client.get(
-                "bot/infractions",
-                params={
-                    "active": "true",
-                    "type": "watch",
-                    "user__id": user_id
-                }
-            )
-
-            log_text["Watching"] = "Yes" if active_watch else "No"
-        except ResponseCodeError:
-            log.exception(f"Failed to fetch watch status for user {user_id}")
-            log_text["Watching"] = "Unknown - failed to fetch watch status."
-
-        try:
-            # Mark infraction as inactive in the database.
-            log.trace(f"Marking infraction #{id_} as inactive in the database.")
-
-            data = {"active": False}
-
-            if pardon_reason is not None:
-                data["reason"] = ""
-                # Append pardon reason to infraction in database.
-                if (punish_reason := infraction["reason"]) is not None:
-                    data["reason"] = punish_reason + " | "
-
-                data["reason"] += f"Pardoned: {pardon_reason}"
-
-            await self.bot.api_client.patch(
-                f"bot/infractions/{id_}",
-                json=data
-            )
-        except ResponseCodeError as e:
-            log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
-            log_line = f"API request failed with code {e.status}."
-            log_content = mod_role.mention
-
-            # Append to an existing failure message if possible
-            if "Failure" in log_text:
-                log_text["Failure"] += f" {log_line}"
-            else:
-                log_text["Failure"] = log_line
+        log_text, log_content = await self._execute_pardon_action(infraction, notify, log_text, id_, type_, log_content, mod_role)
+        log_text = await self._check_watch_status(user_id, log_text)
+        log_text, log_content = await self._deactivate_in_database(id_, pardon_reason, infraction, log_text, log_content, mod_role)
 
         # Cancel the expiration task.
         if infraction["expires_at"] is not None:
@@ -590,7 +656,6 @@ class InfractionScheduler:
             user = self.bot.get_user(user_id)
             avatar = user.display_avatar.url if user else None
 
-            # Move reason to end so when reason is too long, this is not gonna cut out required items.
             log_text["Reason"] = log_text.pop("Reason")
 
             log.trace(f"Sending deactivation mod log for infraction #{id_}.")

@@ -245,6 +245,63 @@ class FilterEditView(EditBaseView):
                 return self.filter_settings_overrides[setting_name]
         return MISSING
 
+    async def _update_content_and_description(
+        self,
+        interaction_or_msg: discord.Interaction | discord.Message,
+        content: str | None,
+        description: str | type[FilterEditView._REMOVE] | None,
+    ) -> bool:
+        """Update the content and description state and embed. Returns False if an error was sent."""
+        if content is not None:
+            filter_type = self.filter_list.get_filter_type(content)
+            if not filter_type:
+                if isinstance(interaction_or_msg, discord.Message):
+                    send_method = interaction_or_msg.channel.send
+                else:
+                    send_method = interaction_or_msg.response.send_message
+                await send_method(f":x: Could not find a filter type appropriate for `{content}`.")
+                return False
+            self.content = content
+            self.filter_type = filter_type
+        else:
+            content = self.content
+
+        if description is self._REMOVE:
+            self.description = None
+        elif description is not None:
+            self.description = description
+        else:
+            description = self.description
+
+        self.embed.description = f"`{content}`" if content else "*No content*"
+        if description and description is not self._REMOVE:
+            self.embed.description += f" - {description}"
+        if len(self.embed.description) > MAX_EMBED_DESCRIPTION:
+            self.embed.description = self.embed.description[:MAX_EMBED_DESCRIPTION - 5] + "[...]"
+        return True
+
+    def _update_setting_override(
+        self,
+        setting_name: str,
+        setting_value: str | type[FilterEditView._REMOVE] | None,
+    ) -> None:
+        """Update or remove the setting override in the appropriate dictionary."""
+        if "/" in setting_name:
+            _filter_name, setting_name = setting_name.split("/", maxsplit=1)
+            dict_to_edit = self.filter_settings_overrides
+            default_value = self.filter_type.extra_fields_type().model_dump()[setting_name]
+        else:
+            dict_to_edit = self.settings_overrides
+            default_value = self.filter_list[self.list_type].default(setting_name)
+
+        if setting_value is not self._REMOVE:
+            if not repr_equals(setting_value, default_value):
+                dict_to_edit[setting_name] = setting_value
+            elif setting_name in dict_to_edit:
+                dict_to_edit.pop(setting_name)
+        elif setting_name in dict_to_edit:
+            dict_to_edit.pop(setting_name)
+
     async def update_embed(
         self,
         interaction_or_msg: discord.Interaction | discord.Message,
@@ -261,54 +318,12 @@ class FilterEditView(EditBaseView):
         If `interaction_or_msg` is a Message, the invoking Interaction must be deferred before calling this function.
         """
         if content is not None or description is not None:
-            if content is not None:
-                filter_type = self.filter_list.get_filter_type(content)
-                if not filter_type:
-                    if isinstance(interaction_or_msg, discord.Message):
-                        send_method = interaction_or_msg.channel.send
-                    else:
-                        send_method = interaction_or_msg.response.send_message
-                    await send_method(f":x: Could not find a filter type appropriate for `{content}`.")
-                    return
-                self.content = content
-                self.filter_type = filter_type
-            else:
-                content = self.content  # If there's no content or description, use the existing values.
-            if description is self._REMOVE:
-                self.description = None
-            elif description is not None:
-                self.description = description
-            else:
-                description = self.description
-
-            # Update the embed with the new content and/or description.
-            self.embed.description = f"`{content}`" if content else "*No content*"
-            if description and description is not self._REMOVE:
-                self.embed.description += f" - {description}"
-            if len(self.embed.description) > MAX_EMBED_DESCRIPTION:
-                self.embed.description = self.embed.description[:MAX_EMBED_DESCRIPTION - 5] + "[...]"
+            if not await self._update_content_and_description(interaction_or_msg, content, description):
+                return
 
         if setting_name:
-            # Find the right dictionary to update.
-            if "/" in setting_name:
-                _filter_name, setting_name = setting_name.split("/", maxsplit=1)
-                dict_to_edit = self.filter_settings_overrides
-                default_value = self.filter_type.extra_fields_type().model_dump()[setting_name]
-            else:
-                dict_to_edit = self.settings_overrides
-                default_value = self.filter_list[self.list_type].default(setting_name)
-            # Update the setting override value or remove it
-            if setting_value is not self._REMOVE:
-                if not repr_equals(setting_value, default_value):
-                    dict_to_edit[setting_name] = setting_value
-                # If there's already an override, remove it, since the new value is the same as the default.
-                elif setting_name in dict_to_edit:
-                    dict_to_edit.pop(setting_name)
-            elif setting_name in dict_to_edit:
-                dict_to_edit.pop(setting_name)
+            self._update_setting_override(setting_name, setting_value)
 
-        # This is inefficient, but otherwise the selects go insane if the user attempts to edit the same setting
-        # multiple times, even when replacing the select with a new one.
         self.embed.clear_fields()
         new_view = self.copy()
 
@@ -317,7 +332,7 @@ class FilterEditView(EditBaseView):
                 await interaction_or_msg.response.edit_message(embed=self.embed, view=new_view)
             else:
                 await interaction_or_msg.edit(embed=self.embed, view=new_view)
-        except discord.errors.HTTPException:  # Various unexpected errors.
+        except discord.errors.HTTPException:
             pass
         else:
             self.stop()
@@ -374,6 +389,85 @@ class FilterEditView(EditBaseView):
         )
 
 
+def _parse_filter_list_setting(
+    setting: str,
+    value: str,
+    settings: dict,
+    filter_list: FilterList,
+    list_type: ListType,
+    loaded_settings: dict,
+) -> None:
+    """Parse and validate a filter list setting, updating `settings` in place."""
+    type_ = loaded_settings[setting][2]
+    try:
+        parsed_value = parse_value(value, type_)
+        if not repr_equals(parsed_value, filter_list[list_type].default(setting)):
+            settings[setting] = parsed_value
+    except (TypeError, ValueError) as e:
+        raise BadArgument(e)
+
+
+def _parse_filter_setting(
+    setting: str,
+    value: str,
+    filter_settings: dict,
+    filter_type: type[Filter],
+    loaded_filter_settings: dict,
+) -> None:
+    """Parse and validate a filter-specific setting, updating `filter_settings` in place."""
+    filter_name, filter_setting_name = setting.split("/", maxsplit=1)
+    if filter_name.lower() != filter_type.name.lower():
+        raise BadArgument(
+            f"A setting for a {filter_name!r} filter was provided, but the filter name is {filter_type.name!r}"
+        )
+    if filter_setting_name not in loaded_filter_settings[filter_type.name]:
+        raise BadArgument(f"{setting!r} is not a recognized setting.")
+    type_ = loaded_filter_settings[filter_type.name][filter_setting_name][2]
+    try:
+        parsed_value = parse_value(value, type_)
+        if not repr_equals(parsed_value, getattr(filter_type.extra_fields_type(), filter_setting_name)):
+            filter_settings[filter_setting_name] = parsed_value
+    except (TypeError, ValueError) as e:
+        raise BadArgument(e)
+
+
+def _parse_settings(
+    raw_settings: dict,
+    filter_list: FilterList,
+    list_type: ListType,
+    filter_type: type[Filter],
+    loaded_settings: dict,
+    loaded_filter_settings: dict,
+) -> tuple[dict, dict]:
+    """Parse and validate all settings, returning (list_settings, filter_settings)."""
+    settings = {}
+    filter_settings = {}
+    for setting, value in raw_settings.items():
+        if setting in loaded_settings:
+            _parse_filter_list_setting(setting, value, settings, filter_list, list_type, loaded_settings)
+        elif "/" not in setting:
+            raise BadArgument(f"{setting!r} is not a recognized setting.")
+        else:
+            _parse_filter_setting(setting, value, filter_settings, filter_type, loaded_filter_settings)
+    return settings, filter_settings
+
+
+def _apply_template(
+    template: str,
+    settings: dict,
+    filter_settings: dict,
+    filter_list: FilterList,
+    list_type: ListType,
+    filter_type: type[Filter],
+) -> tuple[dict, dict]:
+    """Apply template settings and merge with existing overrides."""
+    try:
+        t_settings, t_filter_settings = template_settings(template, filter_list, list_type, filter_type)
+    except ValueError as e:
+        raise BadArgument(str(e))
+    return t_settings | settings, t_filter_settings | filter_settings
+
+
 def description_and_settings_converter(
     filter_list: FilterList,
     list_type: ListType,
@@ -394,49 +488,15 @@ def description_and_settings_converter(
     if not SINGLE_SETTING_PATTERN.match(parsed[0]):
         description, *parsed = parsed
 
-    settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
-    template = None
-    if "--template" in settings:
-        template = settings.pop("--template")
+    raw_settings = {setting: value for setting, value in [part.split("=", maxsplit=1) for part in parsed]}  # noqa: C416
+    template = raw_settings.pop("--template", None)
 
-    filter_settings = {}
-    for setting, _ in list(settings.items()):
-        if setting in loaded_settings:  # It's a filter list setting
-            type_ = loaded_settings[setting][2]
-            try:
-                parsed_value = parse_value(settings.pop(setting), type_)
-                if not repr_equals(parsed_value, filter_list[list_type].default(setting)):
-                    settings[setting] = parsed_value
-            except (TypeError, ValueError) as e:
-                raise BadArgument(e)
-        elif "/" not in setting:
-            raise BadArgument(f"{setting!r} is not a recognized setting.")
-        else:  # It's a filter setting
-            filter_name, filter_setting_name = setting.split("/", maxsplit=1)
-            if filter_name.lower() != filter_type.name.lower():
-                raise BadArgument(
-                    f"A setting for a {filter_name!r} filter was provided, but the filter name is {filter_type.name!r}"
-                )
-            if filter_setting_name not in loaded_filter_settings[filter_type.name]:
-                raise BadArgument(f"{setting!r} is not a recognized setting.")
-            type_ = loaded_filter_settings[filter_type.name][filter_setting_name][2]
-            try:
-                parsed_value = parse_value(settings.pop(setting), type_)
-                if not repr_equals(parsed_value, getattr(filter_type.extra_fields_type(), filter_setting_name)):
-                    filter_settings[filter_setting_name] = parsed_value
-            except (TypeError, ValueError) as e:
-                raise BadArgument(e)
+    settings, filter_settings = _parse_settings(
+        raw_settings, filter_list, list_type, filter_type, loaded_settings, loaded_filter_settings
+    )
 
-    # Pull templates settings and apply them.
     if template is not None:
-        try:
-            t_settings, t_filter_settings = template_settings(template, filter_list, list_type, filter_type)
-        except ValueError as e:
-            raise BadArgument(str(e))
-        else:
-            # The specified settings go on top of the template
-            settings = t_settings | settings
-            filter_settings = t_filter_settings | filter_settings
+        settings, filter_settings = _apply_template(template, settings, filter_settings, filter_list, list_type, filter_type)
 
     return description, settings, filter_settings
 

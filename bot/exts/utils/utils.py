@@ -110,68 +110,107 @@ class Utils(Cog):
 
         zen_lines = ZEN_OF_PYTHON.splitlines()
 
-        # Prioritize checking for an index or slice
+        if await self._handle_zen_slice_or_index(ctx, search_value, zen_lines, embed):
+            return
+
+        if await self._handle_zen_exact_word(ctx, search_value, zen_lines, embed):
+            return
+
+        await self._handle_zen_fuzzy_search(ctx, search_value, zen_lines, embed)
+
+    async def _handle_zen_slice_or_index(
+        self,
+        ctx: Context,
+        search_value: str,
+        zen_lines: list[str],
+        embed: Embed,
+    ) -> bool:
+        """Handle index/slice syntax for the Zen of Python command."""
         match = re.match(
             r"(?P<index>-?\d++(?!:))|(?P<start>(?:-\d+)|\d*):(?:(?P<end>(?:-\d+)|\d*)(?::(?P<step>(?:-\d+)|\d*))?)?",
             search_value.split(" ")[0],
         )
-        if match:
-            if match.group("index"):
-                index = int(match.group("index"))
-                if not (-19 <= index <= 18):
-                    raise BadArgument("Please provide an index between -19 and 18.")
-                embed.title += f" (line {index % 19}):"
-                embed.description = zen_lines[index]
-                await ctx.send(embed=embed)
-                return
+        if not match:
+            return False
 
-            start_index = int(match.group("start")) if match.group("start") else None
-            end_index = int(match.group("end")) if match.group("end") else None
-            step_size = int(match.group("step")) if match.group("step") else 1
+        if match.group("index"):
+            index = int(match.group("index"))
+            if not (-19 <= index <= 18):
+                raise BadArgument("Please provide an index between -19 and 18.")
+            embed.title += f" (line {index % 19}):"
+            embed.description = zen_lines[index]
+            await ctx.send(embed=embed)
+            return True
 
-            if step_size == 0:
-                raise BadArgument("Step size must not be 0.")
+        start_index = int(match.group("start")) if match.group("start") else None
+        end_index = int(match.group("end")) if match.group("end") else None
+        step_size = int(match.group("step")) if match.group("step") else 1
 
-            lines = zen_lines[start_index:end_index:step_size]
-            if not lines:
-                raise BadArgument("Slice returned 0 lines.")
+        if step_size == 0:
+            raise BadArgument("Step size must not be 0.")
 
-            if len(lines) == 1:
-                embed.title += f" (line {zen_lines.index(lines[0])}):"
-                embed.description = lines[0]
-                await ctx.send(embed=embed)
-            elif lines == zen_lines:
-                embed.title += ", by Tim Peters"
-                await ctx.send(embed=embed)
-            elif len(lines) == 19:
-                embed.title += f" (step size {step_size}):"
-                embed.description = "\n".join(lines)
-                await ctx.send(embed=embed)
+        lines = zen_lines[start_index:end_index:step_size]
+        if not lines:
+            raise BadArgument("Slice returned 0 lines.")
+
+        await self._send_zen_slice_result(ctx, zen_lines, embed, lines, step_size)
+        return True
+
+    async def _send_zen_slice_result(
+        self,
+        ctx: Context,
+        zen_lines: list[str],
+        embed: Embed,
+        lines: list[str],
+        step_size: int,
+    ) -> None:
+        """Send the embed for a slice result."""
+        if len(lines) == 1:
+            embed.title += f" (line {zen_lines.index(lines[0])}):"
+            embed.description = lines[0]
+        elif lines == zen_lines:
+            embed.title += ", by Tim Peters"
+        elif len(lines) == 19:
+            embed.title += f" (step size {step_size}):"
+            embed.description = "\n".join(lines)
+        else:
+            if step_size != 1:
+                step_message = f", step size {step_size}"
             else:
-                if step_size != 1:
-                    step_message = f", step size {step_size}"
-                else:
-                    step_message = ""
-                first_position = zen_lines.index(lines[0])
-                second_position = zen_lines.index(lines[-1])
-                if first_position > second_position:
-                    (first_position, second_position) = (second_position, first_position)
-                embed.title += f" (lines {first_position}-{second_position}{step_message}):"
-                embed.description = "\n".join(lines)
-                await ctx.send(embed=embed)
-            return
+                step_message = ""
+            first_position = zen_lines.index(lines[0])
+            second_position = zen_lines.index(lines[-1])
+            if first_position > second_position:
+                first_position, second_position = second_position, first_position
+            embed.title += f" (lines {first_position}-{second_position}{step_message}):"
+            embed.description = "\n".join(lines)
+        await ctx.send(embed=embed)
 
-        # Try to handle first exact word due difflib.SequenceMatched may use some other similar word instead
-        # exact word.
+    async def _handle_zen_exact_word(
+        self,
+        ctx: Context,
+        search_value: str,
+        zen_lines: list[str],
+        embed: Embed,
+    ) -> bool:
+        """Try to find an exact word match in the Zen of Python lines."""
         for i, line in enumerate(zen_lines):
             for word in line.split():
                 if word.lower() == search_value.lower():
                     embed.title += f" (line {i}):"
                     embed.description = line
                     await ctx.send(embed=embed)
-                    return
+                    return True
+        return False
 
-        # handle if it's a search string and not exact word
+    async def _handle_zen_fuzzy_search(
+        self,
+        ctx: Context,
+        search_value: str,
+        zen_lines: list[str],
+        embed: Embed,
+    ) -> None:
+        """Find the best fuzzy match for the search value in the Zen of Python."""
         matcher = difflib.SequenceMatcher(None, search_value.lower())
 
         best_match = ""
@@ -181,9 +220,6 @@ class Utils(Cog):
         for index, line in enumerate(zen_lines):
             matcher.set_seq2(line.lower())
 
-            # the match ratio needs to be adjusted because, naturally,
-            # longer lines will have worse ratios than shorter lines when
-            # fuzzy searching for keywords. this seems to work okay.
             adjusted_ratio = (len(line) - 5) ** 0.5 * matcher.ratio()
 
             if adjusted_ratio > best_ratio:
