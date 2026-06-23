@@ -595,6 +595,7 @@ class _Keys(EnvConfig, env_prefix="api_keys_"):
 
     github: str = ""
     site_api: str = ""
+    rhodium: str = ""
 
 
 Keys = _Keys()
