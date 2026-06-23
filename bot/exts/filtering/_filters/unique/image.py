@@ -1,9 +1,8 @@
-import os
 
 import aiohttp
 
-import bot
-from bot import constants
+from bot import instance
+from bot.constants import Keys, URLs
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filters.filter import UniqueFilter
 from bot.log import get_logger
@@ -13,7 +12,8 @@ log = get_logger(__name__)
 # Maximum perceptual hash difference for positive predictions
 _THRESHOLD = 4
 # Maximum number of seconds to wait for Rhodium API
-_TIMEOUT = 0.5
+_TIMEOUT = 5
+
 _KNOWN_IMAGE_HASHES = [
     # A camera-taken image of a tweet attributed to @MrBeast about the purported launch of a crypto casino;
     # there is a URL in the image that varies by instance
@@ -37,15 +37,22 @@ def _is_match(image_hash: int) -> bool:
         for candidate_hash in _KNOWN_IMAGE_HASHES
     )
 
+class RhodiumAPIError(Exception):
+    """Exception raised when the Rhodium API returns an error."""
+
 
 async def _get_hash(image_url: str) -> int:
-    async with bot.instance.http_session.post(
-        url=constants.URLs.rhodium_api,
-        headers={"Authorization": f"Bearer {os.getenv('RHODIUM_AUTH_TOKEN')}"},
-        data=image_url,
+    async with instance.http_session.post(
+        url=URLs.rhodium_api,
+        headers={"Authorization": f"Bearer {Keys.rhodium}"},
+        json={"url": image_url},
         timeout=_TIMEOUT,
     ) as response:
-        response.raise_for_status()
+        if response.status != 200:
+            contents = await response.text()
+
+            raise RhodiumAPIError(f"Rhodium API returned status code {response.status}: {contents}")
+
         response_data = await response.json()
         return response_data["i64"]
 
@@ -70,9 +77,12 @@ class ImageFilter(UniqueFilter):
             try:
                 image_hash = await _get_hash(attachment.url)
             except aiohttp.ClientError:
-                log.exception("Error getting image hash")
+                log.exception("Unhandled aiohttp exception while getting image hash")
                 return False
-            except aiohttp.TimeoutError:
+            except RhodiumAPIError as e:
+                log.error("Rhodium API error: %s", e)
+                return False
+            except TimeoutError:
                 log.error("Timed out getting image hash")
                 return False
 
