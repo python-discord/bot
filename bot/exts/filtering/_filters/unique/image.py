@@ -80,10 +80,10 @@ class ImageFilter(UniqueFilter):
                 log.exception("Unhandled aiohttp exception while getting image hash")
                 return False
             except RhodiumAPIError as e:
-                log.error("Rhodium API error: %s", e)
+                log.exception("Rhodium API error: %s", e)
                 return False
             except TimeoutError:
-                log.error("Timed out getting image hash")
+                log.exception("Timed out getting image hash")
                 return False
 
             if _is_match(image_hash):
