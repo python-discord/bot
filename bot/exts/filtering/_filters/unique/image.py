@@ -39,11 +39,7 @@ _KNOWN_IMAGE_HASHES = [
 
     # A collage of four images, the first being a purported tweet from Elon Musk about the opening a crypto casino,
     # and the rest of similar character to the previous two
-    231962884035511073,
-
-    # Text centered on a background of a field and sky, the text saying "I've helped 15+ people earn ...
-    # in stock market and crypto trading"
-    360569449461317633,
+    231962884035511073
 ]
 
 
