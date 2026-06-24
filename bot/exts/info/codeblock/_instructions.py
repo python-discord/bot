@@ -1,17 +1,13 @@
 """This module generates and formats instructional messages about fixing Markdown code blocks."""
 
-
 from bot.exts.info.codeblock import _parsing
 from bot.log import get_logger
 
 log = get_logger(__name__)
 
-_EXAMPLE_PY = "{lang}\nprint('Hello, world!')"  # Make sure to escape any Markdown symbols here.
-_EXAMPLE_CODE_BLOCKS = (
-    "\\`\\`\\`{content}\n\\`\\`\\`\n\n"
-    "**This will result in the following:**\n"
-    "```{content}```"
-)
+# Make sure to escape any Markdown symbols here.
+_EXAMPLE_PY = "{lang}\nprint('Hello, world!')"
+_EXAMPLE_CODE_BLOCKS = "\\`\\`\\`{content}\n\\`\\`\\`\n\n**This will result in the following:**\n```{content}```"
 
 
 def _get_example(language: str) -> str:
@@ -37,8 +33,7 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
 
     valid_ticks = f"\\{_parsing.BACKTICK}" * 3
     instructions = (
-        "You are using the wrong character instead of backticks. "
-        f"Use {valid_ticks}, not `{code_block.ticks}`."
+        f"You are using the wrong character instead of backticks. Use {valid_ticks}, not `{code_block.ticks}`."
     )
 
     log.trace("Check if the bad ticks code block also has issues with the language specifier.")
@@ -148,7 +143,23 @@ def get_instructions(content: str) -> str | None:
         instructions = _get_no_ticks_message(content)
     else:
         log.trace("Searching results for a code block with invalid ticks.")
-        block = next((block for block in blocks if block.tick != _parsing.BACKTICK), None)
+        bad_ticks = [block for block in blocks if block.tick != _parsing.BACKTICK]
+        block = None
+        if bad_ticks:
+            block = next(
+                (
+                    bad_tick
+                    for bad_tick in bad_ticks
+                    if any(
+                        block
+                        for block in blocks
+                        if block != bad_tick
+                        and bad_tick.content != block.content
+                        and bad_tick.content not in block.content
+                    )
+                ),
+                None,
+            )
 
         if block:
             log.trace("A code block exists but has invalid ticks.")
