@@ -18,13 +18,29 @@ _KNOWN_IMAGE_HASHES = [
     # A camera-taken image of a tweet attributed to @MrBeast about the purported launch of a crypto casino;
     # there is a URL in the image that varies by instance
     219481626328303491,
+    # A variant of the previous image where the Twitter/X sidebar is visible
+    3558126897613383424,
+    # Another variant with different cropping
+    -8968981178804062199,
+    # A variant with side bars on the left and right
+    -2026249180596484892,
+    # A variant attributed to Cristiano Ronaldo instead of Mr. Beast
+    7197045843299794950,
+    # Andrew Tate
+    -6841797813482679662,
+
     # An image saying "Activate Code for Bonus!"
     6997610946676476306,
+    # A variant of the previous image with different cropping
+    -6531607042796463452,
+
     # An image saying "Withdrawal Success!"
     -9135984495352994088,
+
     # A collage of four images, the first being a purported tweet from Elon Musk about the opening a crypto casino,
     # and the rest of similar character to the previous two
     231962884035511073,
+
     # Text centered on a background of a field and sky, the text saying "I've helped 15+ people earn ...
     # in stock market and crypto trading"
     360569449461317633,
