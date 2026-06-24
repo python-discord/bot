@@ -1,5 +1,6 @@
 """This module generates and formats instructional messages about fixing Markdown code blocks."""
 
+
 from bot.exts.info.codeblock import _parsing
 from bot.log import get_logger
 
@@ -7,7 +8,11 @@ log = get_logger(__name__)
 
 # Make sure to escape any Markdown symbols here.
 _EXAMPLE_PY = "{lang}\nprint('Hello, world!')"
-_EXAMPLE_CODE_BLOCKS = "\\`\\`\\`{content}\n\\`\\`\\`\n\n**This will result in the following:**\n```{content}```"
+_EXAMPLE_CODE_BLOCKS = (
+    "\\`\\`\\`{content}\n\\`\\`\\`\n\n
+    **This will result in the following:**\n
+    ```{content}```"
+)
 
 
 def _get_example(language: str) -> str:
@@ -33,7 +38,8 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
 
     valid_ticks = f"\\{_parsing.BACKTICK}" * 3
     instructions = (
-        f"You are using the wrong character instead of backticks. Use {valid_ticks}, not `{code_block.ticks}`."
+        f"You are using the wrong character instead of backticks. "
+        f"Use {valid_ticks}, not `{code_block.ticks}`."
     )
 
     log.trace("Check if the bad ticks code block also has issues with the language specifier.")
