@@ -5,8 +5,7 @@ from bot.log import get_logger
 
 log = get_logger(__name__)
 
-# Make sure to escape any Markdown symbols here.
-_EXAMPLE_PY = "{lang}\nprint('Hello, world!')"
+_EXAMPLE_PY = "{lang}\nprint('Hello, world!')"  # Make sure to escape any Markdown symbols here.
 _EXAMPLE_CODE_BLOCKS = (
     "\\`\\`\\`{content}\n\\`\\`\\`\n\n"
     "**This will result in the following:**\n"
@@ -37,7 +36,7 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
 
     valid_ticks = f"\\{_parsing.BACKTICK}" * 3
     instructions = (
-        "You are using the wrong character instead of backticks."
+        "You are using the wrong character instead of backticks. "
         f"Use {valid_ticks}, not `{code_block.ticks}`."
     )
 
