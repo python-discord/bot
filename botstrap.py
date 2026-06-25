@@ -167,17 +167,22 @@ class DiscordClient(Client):
         announcements_channel_id: int | str,
     ) -> bool:
         """Fetches server info & upgrades to COMMUNITY if necessary."""
-        payload = self.get_guild_info()
+        guild_info = self.get_guild_info()
 
-        if COMMUNITY_FEATURE not in payload["features"]:
-            log.info("This server is currently not a community, upgrading.")
-            payload["features"].append(COMMUNITY_FEATURE)
-            payload["rules_channel_id"] = rules_channel_id
-            payload["public_updates_channel_id"] = announcements_channel_id
-            self._guild_info = self.patch(f"/guilds/{self.guild_id}", json=payload).json()
-            log.info("Server %s has been successfully updated to a community.", self.guild_id)
-            return True
-        return False
+        if COMMUNITY_FEATURE in guild_info["features"]:
+            return False
+
+        log.info("This server is currently not a community, upgrading.")
+
+        payload = {
+            "features": guild_info["features"] + [COMMUNITY_FEATURE],
+            "rules_channel_id": rules_channel_id,
+            "public_updates_channel_id": announcements_channel_id,
+        }
+        self._guild_info = self.patch(f"/guilds/{self.guild_id}", json=payload).json()
+
+        log.info("Server %s has been successfully updated to a community.", self.guild_id)
+        return True
 
     def get_all_roles(self) -> dict[str, int]:
         """Fetches all the roles in a guild."""
