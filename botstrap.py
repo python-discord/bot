@@ -82,10 +82,6 @@ class SilencedDict[T](dict[str, T]):
             sys.exit(-1)
 
 
-class BotstrapError(Exception):
-    """Raised when an error occurs during the botstrap process."""
-
-
 class DiscordClient(Client):
     """An HTTP client to communicate with Discord's APIs."""
 
@@ -335,20 +331,32 @@ class BotStrapper:
         """Check the bot is in the required guild."""
         if not self.client.check_if_in_guild():
             log.error("The bot is not a member of the configured guild with ID %s.", self.guild_id)
-            log.warning(
+            log.info(
                 "Please invite with the following URL and rerun this script: "
                 "https://discord.com/oauth2/authorize?client_id=%s&guild_id=%s&scope=bot+applications.commands&permissions=8",
                 self.client_id,
                 self.guild_id,
             )
-            raise BotstrapError("Bot is not a member of the configured guild.")
+            sys.exit(1)
 
     def upgrade_guild(self, announcements_channel_id: str, rules_channel_id: str) -> bool:
         """Upgrade the guild to a community if necessary."""
-        return self.client.upgrade_server_to_community_if_necessary(
-            rules_channel_id=rules_channel_id,
-            announcements_channel_id=announcements_channel_id,
-        )
+        try:
+            return self.client.upgrade_server_to_community_if_necessary(
+                rules_channel_id=rules_channel_id,
+                announcements_channel_id=announcements_channel_id,
+            )
+        except HTTPStatusError as e:
+            if e.response.status_code == 403:
+                log.error("Unable to upgrade to community guild as he bot does not have Administrator permissions")
+                log.info(
+                    "Please re-invite with the following URL and rerun this script: "
+                    "https://discord.com/oauth2/authorize?client_id=%s&guild_id=%s&scope=bot+applications.commands&permissions=8",
+                    self.client_id,
+                    self.guild_id,
+                )
+                sys.exit(1)
+            raise
 
     def get_roles(self) -> dict[str, Any]:
         """Get a config map of all of the roles in the guild."""
