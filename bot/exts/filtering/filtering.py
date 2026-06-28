@@ -47,7 +47,7 @@ from bot.exts.filtering._ui.ui import (
     build_mod_alert,
     format_response_error,
 )
-from bot.exts.filtering._utils import past_tense, repr_equals, starting_value, to_serializable
+from bot.exts.filtering._utils import past_tense, repr_equals, resolve_mention, starting_value, to_serializable
 from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_BAN_REASON
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
@@ -64,6 +64,21 @@ CACHE_SIZE = 1000
 HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
+
+
+def _clean_ban_mentions(mentions: set[str]) -> set[str]:
+    """Remove broad pings and moderators role pings from ban alerts."""
+    blocked_mentions = {f"<@&{Roles.moderators}>", "@here", "@everyone"}
+    cleaned_mentions = set()
+
+    for mention in mentions:
+        if mention.casefold() == "moderators":
+            continue
+        if resolve_mention(mention) in blocked_mentions:
+            continue
+        cleaned_mentions.add(mention)
+
+    return cleaned_mentions
 
 
 async def _extract_text_file_content(att: discord.Attachment) -> str:
@@ -981,7 +996,9 @@ class Filtering(Cog):
             # If the action is a ban, mods don't want to be pinged.
             if infr_action := result_actions.get("infraction_and_notification"):
                 if infr_action.infraction_type == Infraction.BAN:
-                    result_actions.pop("mentions", None)
+                    if mentions := result_actions.get("mentions"):
+                        mentions.guild_pings = _clean_ban_mentions(mentions.guild_pings)
+                        mentions.dm_pings = _clean_ban_mentions(mentions.dm_pings)
         return result_actions, messages, triggers
 
     async def _send_alert(self, ctx: FilterContext, triggered_filters: dict[FilterList, Iterable[str]]) -> None:
