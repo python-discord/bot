@@ -10,6 +10,7 @@ from io import BytesIO
 from operator import attrgetter
 from typing import Literal, get_type_hints
 
+import aiohttp
 import arrow
 import discord
 from async_rediscache import RedisCache
@@ -30,6 +31,7 @@ from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
+from bot.exts.filtering._image_hash import RhodiumAPIError, get_image_hash, signed_i64_to_hex
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
@@ -64,6 +66,7 @@ CACHE_SIZE = 1000
 HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
+MAX_IMAGE_HASH_SIZE = 5_000_000
 
 
 def _clean_ban_mentions(mentions: set[str]) -> set[str]:
@@ -654,6 +657,40 @@ class Filtering(Cog):
             embed.set_author(name=f"Description of the {setting_name} setting")
             await ctx.send(embed=embed)
 
+    @filter.command(name="imagehash", aliases=("hash",))
+    async def f_imagehash(self, ctx: Context) -> None:
+        """Hash an attached image and return its normalized hexadecimal perceptual hash."""
+        attachment = self._first_attached_image(ctx.message)
+        if attachment is None:
+            await ctx.reply(":x: Attach an image (or reply to a message with an image attachment).")
+            return
+
+        if attachment.size > MAX_IMAGE_HASH_SIZE:
+            await ctx.reply(":x: The image must be 5 MB or smaller.")
+            return
+
+        try:
+            image_hash = await get_image_hash(attachment.url)
+        except aiohttp.ClientError:
+            log.exception("Unhandled aiohttp exception while getting image hash")
+            await ctx.reply(":x: Failed to reach the image hashing service.")
+            return
+        except RhodiumAPIError as e:
+            log.exception("Rhodium API error: %s", e)
+            await ctx.reply(":x: The image hashing service returned an error.")
+            return
+        except TimeoutError:
+            log.exception("Timed out getting image hash")
+            await ctx.reply(":x: Timed out while hashing the image.")
+            return
+
+        image_hash_hex = signed_i64_to_hex(image_hash)
+        await ctx.reply(
+            "Image hash:\n"
+            f"- hex: `{image_hash_hex}`\n"
+            f"- signed i64: `{image_hash}`"
+        )
+
     @filter.command(name="match")
     async def f_match(
         self, ctx: Context, no_user: bool | None, message: Message | None, *, string: str | None
@@ -1119,6 +1156,23 @@ class Filtering(Cog):
             for list_type, sublist in filter_list.items():
                 if id_ in sublist.filters:
                     return sublist.filters[id_], filter_list, list_type
+        return None
+
+    @staticmethod
+    def _first_attached_image(message: Message) -> discord.Attachment | None:
+        """Return the first image attachment from the invoking or replied-to message."""
+        attachments = list(message.attachments)
+
+        if (
+            not attachments
+            and message.reference
+            and isinstance(message.reference.resolved, Message)
+        ):
+            attachments = list(message.reference.resolved.attachments)
+
+        for attachment in attachments:
+            if attachment.content_type and attachment.content_type.startswith("image"):
+                return attachment
         return None
 
     async def _add_filter(
