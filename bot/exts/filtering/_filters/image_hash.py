@@ -4,9 +4,8 @@ from discord.ext.commands import BadArgument
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
+from bot.exts.filtering._image_hash import HASH_DISTANCE_THRESHOLD
 
-# Maximum perceptual hash difference for positive predictions.
-_THRESHOLD = 4
 _HEX_RE = re.compile(r"^(?:0x)?([0-9a-fA-F]{1,16})$")
 
 
@@ -20,7 +19,7 @@ class ImageHashFilter(Filter):
         candidate_hash = int(self.content, 16)
 
         for image_hash in ctx.content:
-            if int.bit_count(image_hash ^ candidate_hash) <= _THRESHOLD:
+            if int.bit_count(image_hash ^ candidate_hash) <= HASH_DISTANCE_THRESHOLD:
                 ctx.matches.append(f"{image_hash:016x}")
                 return True
         return False

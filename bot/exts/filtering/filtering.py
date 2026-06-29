@@ -31,7 +31,12 @@ from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
-from bot.exts.filtering._image_hash import RhodiumAPIError, get_image_hash, signed_i64_to_hex
+from bot.exts.filtering._image_hash import (
+    HASH_DISTANCE_THRESHOLD,
+    RhodiumAPIError,
+    get_image_hash,
+    signed_i64_to_hex,
+)
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
@@ -685,11 +690,32 @@ class Filtering(Cog):
             return
 
         image_hash_hex = signed_i64_to_hex(image_hash)
-        await ctx.reply(
-            "Image hash:\n"
-            f"- hex: `{image_hash_hex}`\n"
-            f"- signed i64: `{image_hash}`"
+        uploaded_hash = int(image_hash_hex, 16)
+        closest = self._closest_image_hash_filter(uploaded_hash)
+
+        if closest is None:
+            embed = Embed(colour=Colour.orange(), title="Rhodium Hash")
+            embed.add_field(name="hex", value=f"`{image_hash_hex}`", inline=False)
+            embed.add_field(name="closest known", value="❔ no denied `image_hash` filters found", inline=False)
+            await ctx.reply(embed=embed)
+            return
+
+        closest_filter, distance = closest
+        captured = distance <= HASH_DISTANCE_THRESHOLD
+        status_emoji = "✅" if captured else "🆕"
+        colour = Colour.green() if captured else Colour.orange()
+        embed = Embed(colour=colour, title="Rhodium Hash")
+        embed.add_field(name="hex", value=f"`{image_hash_hex}`", inline=False)
+        embed.add_field(
+            name="closest known",
+            value=(
+                f"{status_emoji} `#{closest_filter.id}` (`{closest_filter.content}`)"
+                f" - {closest_filter.description or '*No description*'}"
+                f" (distance `{distance}`)"
+            ),
+            inline=False,
         )
+        await ctx.reply(embed=embed)
 
     @filter.command(name="match")
     async def f_match(
@@ -1174,6 +1200,25 @@ class Filtering(Cog):
             if attachment.content_type and attachment.content_type.startswith("image"):
                 return attachment
         return None
+
+    def _closest_image_hash_filter(self, uploaded_hash: int) -> tuple[Filter, int] | None:
+        """Return the closest denied image_hash filter and its hamming distance."""
+        image_hash_list = self.filter_lists.get("image_hash")
+        if not image_hash_list or ListType.DENY not in image_hash_list:
+            return None
+
+        closest: tuple[Filter, int] | None = None
+        for filter_ in image_hash_list[ListType.DENY].filters.values():
+            try:
+                candidate_hash = int(filter_.content, 16)
+            except ValueError:
+                continue
+
+            distance = int.bit_count(uploaded_hash ^ candidate_hash)
+            if closest is None or distance < closest[1]:
+                closest = (filter_, distance)
+
+        return closest
 
     async def _add_filter(
         self,

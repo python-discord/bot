@@ -4,6 +4,8 @@ from bot.constants import Keys, URLs
 
 # Maximum number of seconds to wait for Rhodium API.
 _TIMEOUT = 5
+# Maximum perceptual hash difference for a positive prediction.
+HASH_DISTANCE_THRESHOLD = 4
 
 
 class RhodiumAPIError(Exception):
