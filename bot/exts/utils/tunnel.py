@@ -26,9 +26,6 @@ class Tunnel(commands.Cog):
             if channel is None:
                 continue
 
-            if not isinstance(channel, discord.TextChannel):
-                raise AssertionError
-
             last_message = channel.last_message
             if last_message is None:
                 continue
