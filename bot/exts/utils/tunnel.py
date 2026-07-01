@@ -55,8 +55,8 @@ class Tunnel(commands.Cog):
         if source_channel.id == destination_channel.id:
             raise BadArgument("Source and destination channels cannot be the same")
 
-        source_message_template = "➡️ Conversation tunneled to {location}"
-        destination_message_template = "↩️ Conversation tunneled from {location}"
+        source_message_template = f"➡️ Conversation continued at {{location}} (by <@{ctx.author.id}>)"
+        destination_message_template = f"↩️ Conversation continued from {{location}} (by <@{ctx.author.id}>)"
 
         source_message = await source_channel.send(
             content=source_message_template.format(location=destination_channel.jump_url)
