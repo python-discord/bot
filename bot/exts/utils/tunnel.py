@@ -26,7 +26,11 @@ class Tunnel(commands.Cog):
             if channel is None:
                 continue
 
-            last_message = channel.last_message
+            last_message_id = channel.last_message_id
+            if last_message_id is None:
+                continue
+
+            last_message = await channel.fetch_message(last_message_id)
             if last_message is None:
                 continue
 
