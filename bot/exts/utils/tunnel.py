@@ -17,8 +17,12 @@ class Tunnel(commands.Cog):
         self.bot = bot
         self.channel_id_to_timestamp: dict[int, float] = dict.fromkeys(CHANNEL_IDS, 0)
 
+    async def cog_load(self) -> None:
+        """Initialize channel timestamps."""
+        await self.bot.wait_until_guild_available()
+
         for channel_id in CHANNEL_IDS:
-            channel = bot.get_channel(channel_id)
+            channel = self.bot.get_channel(channel_id)
             if channel is None:
                 continue
 
