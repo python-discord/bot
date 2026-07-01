@@ -42,15 +42,9 @@ class Tunnel(commands.Cog):
         source_channel: discord.TextChannel | None,
     ) -> None:
         """Creates a tunnel."""
-        if ctx.guild is None:
-            raise AssertionError
-
         if destination_channel is None:
             least_active_channel_id = self.get_least_active_channel_id(ctx.channel.id)
             least_active_channel = await ctx.guild.fetch_channel(least_active_channel_id)
-            if not isinstance(least_active_channel, discord.TextChannel):
-                raise AssertionError
-
             destination_channel = least_active_channel
 
         if source_channel is None:
@@ -61,9 +55,6 @@ class Tunnel(commands.Cog):
                 )
 
             source_channel = ctx.channel
-
-        if not isinstance(ctx.author, discord.Member):
-            raise AssertionError
 
         if not source_channel.permissions_for(ctx.author).send_messages:
             raise BadArgument(f"You don't have permission to send messages in {source_channel.jump_url}")
