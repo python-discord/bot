@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from discord.ext.commands import BadArgument
+from discord.ext.commands import BadArgument, guild_only
 
 from bot.bot import Bot
 from bot.constants import Channels
@@ -33,6 +33,7 @@ class Tunnel(commands.Cog):
             self.channel_id_to_timestamp[channel_id] = last_message.created_at.timestamp()
 
     @commands.command()
+    @guild_only()
     async def tunnel(
         self,
         ctx: commands.Context,
