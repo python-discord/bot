@@ -1,5 +1,3 @@
-from operator import itemgetter
-
 import discord
 from discord.ext import commands
 from discord.ext.commands import BadArgument
@@ -87,7 +85,7 @@ class Tunnel(commands.Cog):
         """Gets least active off-topic channel."""
         return min(
             (channel for channel in self.channel_id_to_timestamp if channel != current_channel_id),
-            key=self.channel_id_to_timestamp.get
+            key=lambda c: self.channel_id_to_timestamp[c]
         )
 
 
