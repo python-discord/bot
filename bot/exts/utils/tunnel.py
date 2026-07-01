@@ -22,7 +22,7 @@ class Tunnel(commands.Cog):
         await self.bot.wait_until_guild_available()
 
         for channel_id in CHANNEL_IDS:
-            channel = self.bot.get_channel(channel_id)
+            channel = await self.bot.fetch_channel(channel_id)
             if channel is None:
                 continue
 
