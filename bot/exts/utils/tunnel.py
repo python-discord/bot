@@ -38,7 +38,6 @@ class Tunnel(commands.Cog):
         self,
         ctx: commands.Context,
         destination_channel: discord.TextChannel | None,
-        source_channel: discord.TextChannel | None,
     ) -> None:
         """Creates a tunnel."""
         if destination_channel is None:
@@ -46,14 +45,7 @@ class Tunnel(commands.Cog):
             least_active_channel = await ctx.guild.fetch_channel(least_active_channel_id)
             destination_channel = least_active_channel
 
-        if source_channel is None:
-            if not isinstance(ctx.channel, discord.TextChannel):
-                raise BadArgument(
-                    f"The current channel of type '{ctx.channel.type}' is not a valid source channel "
-                    "and no explicit source channel was provided"
-                )
-
-            source_channel = ctx.channel
+        source_channel = ctx.channel
 
         if not source_channel.permissions_for(ctx.author).send_messages:
             raise BadArgument(f"You don't have permission to send messages in {source_channel.jump_url}")
