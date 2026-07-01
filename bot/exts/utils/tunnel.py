@@ -85,15 +85,10 @@ class Tunnel(commands.Cog):
 
     def get_least_active_channel_id(self, current_channel_id: int) -> int:
         """Gets least active off-topic channel."""
-        channel_id, _ = min(
-            [
-                (channel_id, timestamp)
-                for channel_id, timestamp in self.channel_id_to_timestamp.items()
-                if channel_id != current_channel_id
-            ],
-            key=itemgetter(1),
+        return min(
+            (channel for channel in self.channel_id_to_timestamp if channel != current_channel_id),
+            key=self.channel_id_to_timestamp.get
         )
-        return channel_id
 
 
 async def setup(bot: Bot) -> None:
