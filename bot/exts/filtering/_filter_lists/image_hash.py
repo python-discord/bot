@@ -70,13 +70,23 @@ class ImageHashesList(FilterList[ImageHashFilter]):
         if not image_hashes:
             return None, [], {}
 
-        triggers = await self[ListType.DENY].filter_list_result(ctx.replace(content=image_hashes))
+        trigger_ctx = ctx.replace(content=image_hashes)
+        triggers = await self[ListType.DENY].filter_list_result(trigger_ctx)
         if not triggers:
             return None, [], {ListType.DENY: triggers}
 
         actions = self[ListType.DENY].merge_actions(triggers)
-        messages = [
-            f"{filter_.id} (`{filter_.content}`) - {filter_.description or '*No description*'}"
-            for filter_ in triggers
-        ]
+        messages = []
+        for filter_ in triggers:
+            distance = self._closest_distance(filter_, image_hashes)
+            messages.append(
+                f"{filter_.id} (`{filter_.content}` distance `{distance}`)"
+                f" - {filter_.description or '*No description*'}"
+            )
         return actions, messages, {ListType.DENY: triggers}
+
+    @staticmethod
+    def _closest_distance(filter_: Filter, image_hashes: list[int]) -> int:
+        """Return the closest Hamming distance between a filter hash and any uploaded image hash."""
+        candidate_hash = int(filter_.content, 16)
+        return min(int.bit_count(image_hash ^ candidate_hash) for image_hash in image_hashes)
