@@ -1,5 +1,6 @@
 import re
 import typing
+import urllib.parse
 
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists.filter_list import FilterList, ListType
@@ -51,7 +52,7 @@ class DomainsList(FilterList[DomainFilter]):
             return None, [], {}
 
         text = clean_input(text)
-        urls = {match.group(1).lower().rstrip("/") for match in URL_RE.finditer(text)}
+        urls = {urllib.parse.unquote(match.group(1)).lower().rstrip("/") for match in URL_RE.finditer(text)}
         new_ctx = ctx.replace(content=urls)
 
         triggers = await self[ListType.DENY].filter_list_result(new_ctx)
