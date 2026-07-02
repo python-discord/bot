@@ -296,6 +296,8 @@ class _CodeBlock(EnvConfig, env_prefix="code_block_"):
     cooldown_seconds: int = 300
     minimum_lines: int = 4
 
+    maximum_auto_formatted_characters: int = 1500
+
 
 CodeBlock = _CodeBlock()
 

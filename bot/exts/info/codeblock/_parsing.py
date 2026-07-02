@@ -117,6 +117,27 @@ def find_faulty_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     return code_blocks
 
 
+def find_non_code_blocks(message: str) -> list[str]:
+    """
+    Find and return all pieces of the `message` that are not Markdown code blocks.
+
+    This can be used to extract the text surrounding code blocks.
+    Analogue to the `find_code_blocks` function, code blocks with 3 or fewer lines are not counted as code blocks.
+    """
+    log.trace("Finding all non-code blocks in a message.")
+    non_code_blocks = re.sub(_RE_CODE_BLOCK, "\x00", message).split("\x00")
+
+    for i, match in enumerate(re.finditer(_RE_CODE_BLOCK, message)):
+        groups = match.groupdict("")
+
+        if not has_lines(groups["code"], constants.CodeBlock.minimum_lines):
+            # not a proper code block; merge back into non_code_blocks
+            log.debug(f"Skipping non-code block {i}.")
+            non_code_blocks[i:i + 2] = [non_code_blocks[i] + match.group(0) + non_code_blocks[i + 1]]
+
+    return non_code_blocks
+
+
 def _is_python_code(content: str) -> bool:
     """Return True if `content` is valid Python consisting of more than just expressions."""
     log.trace("Checking if content is Python code.")
