@@ -65,8 +65,8 @@ class SyncCogTests(SyncCogTestCase):
     @unittest.mock.patch("bot.exts.backend.sync._cog.create_task", new_callable=unittest.mock.MagicMock)
     async def test_sync_cog_sync_on_load(self, mock_create_task: unittest.mock.MagicMock):
         """Sync function should be synced on cog load only if guild is found."""
-        for guild in (helpers.MockGuild(), None):
-            with self.subTest(guild=guild):
+        for i, guild in enumerate((helpers.MockGuild(), None)):
+            with self.subTest(test_case=i, has_guild=guild is not None):
                 mock_create_task.reset_mock()
                 self.bot.reset_mock()
                 self.RoleSyncer.reset_mock()
@@ -126,8 +126,8 @@ class SyncCogTests(SyncCogTestCase):
 
     async def test_sync_cog_patch_user(self):
         """A PATCH request should be sent and 404 errors ignored."""
-        for side_effect in (None, self.response_error(404)):
-            with self.subTest(side_effect=side_effect):
+        for i, side_effect in enumerate((None, self.response_error(404))):
+            with self.subTest(test_case=i, has_error=side_effect is not None):
                 await self.patch_user_helper(side_effect)
 
     async def test_sync_cog_patch_user_non_404(self):
@@ -207,7 +207,7 @@ class SyncCogListenerTests(SyncCogTestCase):
 
         for should_put, attributes in subtests:
             for attribute in attributes:
-                with self.subTest(should_put=should_put, changed_attribute=attribute):
+                with self.subTest(should_put=should_put, attribute=attribute):
                     self.bot.api_client.put.reset_mock()
 
                     after_role_data = role_data.copy()
@@ -372,8 +372,8 @@ class SyncCogListenerTests(SyncCogTestCase):
 
     async def test_sync_cog_on_member_join(self):
         """Should PUT user's data or POST it if the user doesn't exist."""
-        for side_effect in (None, self.response_error(404)):
-            with self.subTest(side_effect=side_effect):
+        for i, side_effect in enumerate((None, self.response_error(404))):
+            with self.subTest(test_case=i, has_error=side_effect is not None):
                 self.bot.api_client.post.reset_mock()
                 data = await self.on_member_join_helper(side_effect)
 
@@ -422,6 +422,6 @@ class SyncCogCommandTests(SyncCogTestCase, CommandTestCase):
             self.cog.sync_users_command,
         )
 
-        for cmd in cmds:
-            with self.subTest(cmd=cmd):
+        for i, cmd in enumerate(cmds):
+            with self.subTest(test_case=i):
                 await self.assertHasPermissionsCheck(cmd, {"administrator": True})
