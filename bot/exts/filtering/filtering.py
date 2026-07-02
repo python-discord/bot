@@ -10,6 +10,7 @@ from io import BytesIO
 from operator import attrgetter
 from typing import Literal, get_type_hints
 
+import aiohttp
 import arrow
 import discord
 from async_rediscache import RedisCache
@@ -30,6 +31,12 @@ from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList, ListType, ListTypeConverter, filter_list_types
 from bot.exts.filtering._filter_lists.filter_list import AtomicList
 from bot.exts.filtering._filters.filter import Filter, UniqueFilter
+from bot.exts.filtering._image_hash import (
+    HASH_DISTANCE_THRESHOLD,
+    RhodiumAPIError,
+    get_image_hash,
+    signed_i64_to_hex,
+)
 from bot.exts.filtering._settings import ActionSettings
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import Infraction
 from bot.exts.filtering._ui.filter import (
@@ -64,6 +71,7 @@ CACHE_SIZE = 1000
 HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
+MAX_IMAGE_HASH_SIZE = 5_000_000
 
 
 def _clean_ban_mentions(mentions: set[str]) -> set[str]:
@@ -654,6 +662,61 @@ class Filtering(Cog):
             embed.set_author(name=f"Description of the {setting_name} setting")
             await ctx.send(embed=embed)
 
+    @filter.command(name="imagehash", aliases=("hash",))
+    async def f_imagehash(self, ctx: Context) -> None:
+        """Hash an attached image and return its normalized hexadecimal perceptual hash."""
+        attachment = self._first_attached_image(ctx.message)
+        if attachment is None:
+            await ctx.reply(":x: Attach an image (or reply to a message with an image attachment).")
+            return
+
+        if attachment.size > MAX_IMAGE_HASH_SIZE:
+            await ctx.reply(":x: The image must be 5 MB or smaller.")
+            return
+
+        try:
+            image_hash = await get_image_hash(attachment.url)
+        except aiohttp.ClientError:
+            log.exception("Unhandled aiohttp exception while getting image hash")
+            await ctx.reply(":x: Failed to reach the image hashing service.")
+            return
+        except RhodiumAPIError as e:
+            log.exception("Rhodium API error: %s", e)
+            await ctx.reply(":x: The image hashing service returned an error.")
+            return
+        except TimeoutError:
+            log.exception("Timed out getting image hash")
+            await ctx.reply(":x: Timed out while hashing the image.")
+            return
+
+        image_hash_hex = signed_i64_to_hex(image_hash)
+        uploaded_hash = int(image_hash_hex, 16)
+        closest = self._closest_image_hash_filter(uploaded_hash)
+
+        if closest is None:
+            embed = Embed(colour=Colour.orange(), title="Rhodium Hash")
+            embed.add_field(name="hex", value=f"`{image_hash_hex}`", inline=False)
+            embed.add_field(name="closest known", value="❔ no denied `image_hash` filters found", inline=False)
+            await ctx.reply(embed=embed)
+            return
+
+        closest_filter, distance = closest
+        captured = distance <= HASH_DISTANCE_THRESHOLD
+        status_emoji = "✅" if captured else "🆕"
+        colour = Colour.green() if captured else Colour.orange()
+        embed = Embed(colour=colour, title="Rhodium Hash")
+        embed.add_field(name="hex", value=f"`{image_hash_hex}`", inline=False)
+        embed.add_field(
+            name="closest known",
+            value=(
+                f"{status_emoji} `#{closest_filter.id}` (`{closest_filter.content}`)"
+                f" - {closest_filter.description or '*No description*'}"
+                f" (distance `{distance}`)"
+            ),
+            inline=False,
+        )
+        await ctx.reply(embed=embed)
+
     @filter.command(name="match")
     async def f_match(
         self, ctx: Context, no_user: bool | None, message: Message | None, *, string: str | None
@@ -1120,6 +1183,42 @@ class Filtering(Cog):
                 if id_ in sublist.filters:
                     return sublist.filters[id_], filter_list, list_type
         return None
+
+    @staticmethod
+    def _first_attached_image(message: Message) -> discord.Attachment | None:
+        """Return the first image attachment from the invoking or replied-to message."""
+        attachments = list(message.attachments)
+
+        if (
+            not attachments
+            and message.reference
+            and isinstance(message.reference.resolved, Message)
+        ):
+            attachments = list(message.reference.resolved.attachments)
+
+        for attachment in attachments:
+            if attachment.content_type and attachment.content_type.startswith("image"):
+                return attachment
+        return None
+
+    def _closest_image_hash_filter(self, uploaded_hash: int) -> tuple[Filter, int] | None:
+        """Return the closest denied image_hash filter and its hamming distance."""
+        image_hash_list = self.filter_lists.get("image_hash")
+        if not image_hash_list or ListType.DENY not in image_hash_list:
+            return None
+
+        closest: tuple[Filter, int] | None = None
+        for filter_ in image_hash_list[ListType.DENY].filters.values():
+            try:
+                candidate_hash = int(filter_.content, 16)
+            except ValueError:
+                continue
+
+            distance = int.bit_count(uploaded_hash ^ candidate_hash)
+            if closest is None or distance < closest[1]:
+                closest = (filter_, distance)
+
+        return closest
 
     async def _add_filter(
         self,
