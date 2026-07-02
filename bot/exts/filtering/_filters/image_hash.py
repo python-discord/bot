@@ -4,7 +4,7 @@ from discord.ext.commands import BadArgument
 
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._filters.filter import Filter
-from bot.exts.filtering._image_hash import HASH_DISTANCE_THRESHOLD
+from bot.exts.filtering._image_hash import HASH_DISTANCE_THRESHOLD, signed_i64_to_u64
 
 _HEX_RE = re.compile(r"^(?:0x)?([0-9a-fA-F]{1,16})$")
 
@@ -19,8 +19,11 @@ class ImageHashFilter(Filter):
         candidate_hash = int(self.content, 16)
 
         for image_hash in ctx.content:
-            if int.bit_count(image_hash ^ candidate_hash) <= HASH_DISTANCE_THRESHOLD:
-                ctx.matches.append(f"{image_hash:016x}")
+            normalized_image_hash = signed_i64_to_u64(image_hash)
+            distance = int.bit_count(normalized_image_hash ^ candidate_hash)
+            if distance <= HASH_DISTANCE_THRESHOLD:
+                ctx.matches.append(f"{normalized_image_hash:016x}")
+                ctx.filter_info[self] = str(distance)
                 return True
         return False
 

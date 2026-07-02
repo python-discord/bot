@@ -25,16 +25,14 @@ async def get_image_hash(image_url: str) -> int:
             raise RhodiumAPIError(f"Rhodium API returned status code {response.status}: {contents}")
 
         response_data = await response.json()
-        hash_hex = response_data.get("hex")
-        if not hash_hex:
-            raise RhodiumAPIError("Rhodium API response did not include a hex hash.")
-
-        unsigned = int(str(hash_hex).removeprefix("0x"), 16)
-        if unsigned >= (1 << 63):
-            return unsigned - (1 << 64)
-        return unsigned
+        return response_data["i64"]
 
 
 def signed_i64_to_hex(value: int) -> str:
     """Convert a signed 64-bit integer to a normalized lowercase 16-char hexadecimal string."""
     return f"{value & ((1 << 64) - 1):016x}"
+
+
+def signed_i64_to_u64(value: int) -> int:
+    """Convert a signed 64-bit integer into its unsigned 64-bit representation."""
+    return value & ((1 << 64) - 1)

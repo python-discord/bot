@@ -16,7 +16,6 @@ if typing.TYPE_CHECKING:
 log = get_logger(__name__)
 
 _MAX_IMAGE_SIZE = 5_000_000
-_U64_MASK = (1 << 64) - 1
 
 
 class ImageHashesList(FilterList[ImageHashFilter]):
@@ -65,7 +64,7 @@ class ImageHashesList(FilterList[ImageHashFilter]):
                 log.exception("Timed out getting image hash")
                 continue
 
-            image_hashes.append(image_hash & _U64_MASK)
+            image_hashes.append(image_hash)
 
         if not image_hashes:
             return None, [], {}
@@ -78,15 +77,9 @@ class ImageHashesList(FilterList[ImageHashFilter]):
         actions = self[ListType.DENY].merge_actions(triggers)
         messages = []
         for filter_ in triggers:
-            distance = self._closest_distance(filter_, image_hashes)
+            distance = ctx.filter_info.get(filter_, "?")
             messages.append(
                 f"{filter_.id} (`{filter_.content}` distance `{distance}`)"
                 f" - {filter_.description or '*No description*'}"
             )
         return actions, messages, {ListType.DENY: triggers}
-
-    @staticmethod
-    def _closest_distance(filter_: Filter, image_hashes: list[int]) -> int:
-        """Return the closest Hamming distance between a filter hash and any uploaded image hash."""
-        candidate_hash = int(filter_.content, 16)
-        return min(int.bit_count(image_hash ^ candidate_hash) for image_hash in image_hashes)
