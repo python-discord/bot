@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import patch
 
+from bot.constants import Roles
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._settings_types.actions.infraction_and_notification import (
     Infraction,
@@ -9,6 +11,7 @@ from bot.exts.filtering._settings_types.actions.infraction_and_notification impo
 from bot.exts.filtering._settings_types.validations.bypass_roles import RoleBypass
 from bot.exts.filtering._settings_types.validations.channel_scope import ChannelScope
 from bot.exts.filtering._settings_types.validations.filter_dm import FilterDM
+from bot.exts.filtering.filtering import _clean_ban_mentions
 from tests.helpers import MockCategoryChannel, MockDMChannel, MockMember, MockMessage, MockRole, MockTextChannel
 
 
@@ -218,3 +221,20 @@ class FilterTests(unittest.TestCase):
                 "infraction_channel": 0
             }
         )
+
+    @patch("bot.exts.filtering.filtering.resolve_mention")
+    def test_clean_ban_mentions_removes_moderator_and_broad_mentions(self, resolve_mention_mock):
+        """Ban-alert mention cleanup should remove moderator, here, and everyone pings."""
+        resolve_mention_mock.side_effect = lambda mention: {
+            "here": "@here",
+            "everyone": "@everyone",
+            "Moderators": f"<@&{Roles.moderators}>",
+            str(Roles.moderators): f"<@&{Roles.moderators}>",
+            "other-role": "<@&123>",
+        }.get(mention, mention)
+
+        mentions = {"here", "everyone", "Moderators", str(Roles.moderators), "other-role", "12345"}
+
+        cleaned = _clean_ban_mentions(mentions)
+
+        self.assertSetEqual(cleaned, {"other-role", "12345"})
