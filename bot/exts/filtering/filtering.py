@@ -2,6 +2,7 @@ import datetime
 import io
 import json
 import re
+import time
 import unicodedata
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
@@ -72,6 +73,7 @@ HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 MAX_IMAGE_HASH_SIZE = 5_000_000
+ACTION_DEDUPE_WINDOW_SECONDS = 3
 
 
 def _clean_ban_mentions(mentions: set[str]) -> set[str]:
@@ -113,6 +115,7 @@ class Filtering(Cog):
         self.bot = bot
         self.filter_lists: dict[str, FilterList] = {}
         self._subscriptions = defaultdict[Event, list[FilterList]](list)
+        self._recent_actions: dict[tuple, float] = {}
         self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.webhook: discord.Webhook | None = None
 
@@ -267,8 +270,7 @@ class Filtering(Cog):
 
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
         self.message_cache.update(msg, metadata=triggers)
-        if result_actions:
-            await result_actions.action(ctx)
+        await self._run_actions(ctx, result_actions)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
 
@@ -298,8 +300,7 @@ class Filtering(Cog):
         self.message_cache.update(after)
         ctx = FilterContext.from_message(Event.MESSAGE_EDIT, after, before, self.message_cache)
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
-        if result_actions:
-            await result_actions.action(ctx)
+        await self._run_actions(ctx, result_actions)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
         await self._maybe_schedule_msg_delete(ctx, result_actions)
@@ -334,8 +335,7 @@ class Filtering(Cog):
         ctx = FilterContext.from_message(Event.SNEKBOX, msg).replace(content=content, attachments=files)
 
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
-        if result_actions:
-            await result_actions.action(ctx)
+        await self._run_actions(ctx, result_actions)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
 
@@ -1076,6 +1076,35 @@ class Filtering(Cog):
             username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10], view=AlertView(ctx)
         )
 
+    async def _run_actions(self, ctx: FilterContext, actions: ActionSettings | None) -> None:
+        """Execute actions unless this exact action payload was run very recently for the same context source."""
+        if actions and self._should_run_actions(ctx, actions):
+            await actions.action(ctx)
+
+    def _should_run_actions(self, ctx: FilterContext, actions: ActionSettings) -> bool:
+        """Return whether actions should run, suppressing identical actions for the same source within a time window."""
+        now = time.monotonic()
+        recent = self._recent_actions
+        # Evict stale cache keys from the front.
+        while recent:
+            oldest_key = next(iter(recent))
+            if now - recent[oldest_key] < ACTION_DEDUPE_WINDOW_SECONDS:
+                break
+            del recent[oldest_key]
+
+        key = (
+            ctx.event.name,
+            getattr(ctx.author, "id", None),
+            getattr(ctx.channel, "id", None),
+            json.dumps(to_serializable(actions), sort_keys=True, default=str),
+            # So that each callable in additional_actions also forms the cache key
+            tuple(sorted(getattr(a, "__qualname__", repr(a)) for a in ctx.additional_actions)),
+        )
+        if key in recent:
+            return False
+        recent[key] = now
+        return True
+
     def _increment_stats(self, triggered_filters: dict[AtomicList, list[Filter]]) -> None:
         """Increment the stats for every filter triggered."""
         for filters in triggered_filters.values():
@@ -1116,8 +1145,7 @@ class Filtering(Cog):
         new_ctx = ctx.replace(content=" ".join(names_to_check))
         result_actions, list_messages, triggers = await self._resolve_action(new_ctx)
         new_ctx = new_ctx.replace(content=ctx.content)  # Alert with the original content.
-        if result_actions:
-            await result_actions.action(new_ctx)
+        await self._run_actions(new_ctx, result_actions)
         if new_ctx.send_alert:
             await self._send_alert(new_ctx, list_messages)
         self._increment_stats(triggers)
