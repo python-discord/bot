@@ -136,8 +136,9 @@ class Clean(Cog):
                 channels = {
                     channel for channel in itertools.chain(ctx.guild.channels, ctx.guild.threads)
                     if isinstance(channel, TextChannel | Thread)
-                    # Assume that non-public channels are not needed to optimize for speed.
+                    # Ignore non-public channels or ones that can't be written in to optimize for speed.
                     and channel.permissions_for(ctx.guild.default_role).view_channel
+                    and channel.permissions_for(ctx.guild.default_role).send_messages
                 }
             else:
                 channels = set(channels)
