@@ -8,6 +8,7 @@ from datetime import datetime
 from itertools import takewhile
 from typing import Literal, TYPE_CHECKING
 
+import arrow
 from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, command, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
@@ -221,9 +222,17 @@ class Clean(Cog):
                 # Invocation message has already been deleted
                 log.info("Tried to delete invocation message, but it was already deleted.")
 
-    def _use_cache(self, limit: datetime) -> bool:
-        """Tell whether all messages to be cleaned can be found in the cache."""
-        return self.bot.cached_messages[0].created_at <= limit
+    def _earliest_cache_datetime(self) -> datetime:
+        """Return the datetime of the earliest message cached, or now if the cache is empty."""
+        return self.bot.cached_messages[0].created_at if self.bot.cached_messages else arrow.utcnow().datetime
+
+    def _use_cache(self, most_recent_limit: datetime | None) -> bool:
+        """Return whether there are messages to clean that can be found in the cache."""
+        return most_recent_limit is None or self._earliest_cache_datetime() <= most_recent_limit
+
+    def _use_api(self, oldest_limit: datetime) -> bool:
+        """Return whether there might be messages to clean that won't be found in the cache."""
+        return self._earliest_cache_datetime() >= oldest_limit
 
     def _get_messages_from_cache(
         self,
@@ -430,12 +439,18 @@ class Clean(Cog):
             # Delete the invocation first
             executor.submit(self._delete_invocation(ctx))
 
-        if self._use_cache(first_limit):
+        deleted_messages = []
+
+        if self._use_cache(second_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in the cache.")
             message_mappings, message_ids = self._get_messages_from_cache(
                 channels=deletion_channels, to_delete=predicate, lower_limit=first_limit
             )
-        else:
+            self.mod_log.ignore(Event.message_delete, *message_ids)
+            deleted_messages = await self._delete_found(message_mappings, executor)
+            second_limit = self._earliest_cache_datetime()
+
+        if self._use_api(first_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in channel histories.")
             message_mappings, message_ids = await self._get_messages_from_channels(
                 channels=deletion_channels,
@@ -443,14 +458,14 @@ class Clean(Cog):
                 after=first_limit,  # Remember first is the earlier datetime (the "older" time).
                 before=second_limit
             )
+            self.mod_log.ignore(Event.message_delete, *message_ids)
+            api_deleted_messages = await self._delete_found(message_mappings, executor)
+            deleted_messages.extend(api_deleted_messages)
 
         if not self.cleaning:
             # Means that the cleaning was canceled
             return None
 
-        # Now let's delete the actual messages with purge.
-        self.mod_log.ignore(Event.message_delete, *message_ids)
-        deleted_messages = await self._delete_found(message_mappings, executor)
         self.cleaning = False
         log.trace("Cleaning completed, wrapping up")
 
