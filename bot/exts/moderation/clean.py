@@ -281,16 +281,17 @@ class Clean(Cog):
         two_weeks_old_snowflake = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
         return message.id < two_weeks_old_snowflake
 
-    async def _delete_messages_individually(self, messages: list[Message]) -> list[Message]:
-        """Delete each message in the list unless cleaning is cancelled. Return the deleted messages."""
+    async def _delete_messages_individually(self, channel_messages: dict[TextChannel, list[Message]]) -> list[Message]:
+        """Delete each message unless cleaning is cancelled. Return the deleted messages."""
         deleted = []
-        for message in messages:
-            # Ensure that deletion was not canceled
-            if not self.cleaning:
-                return deleted
-            with contextlib.suppress(NotFound):  # Message doesn't exist or was already deleted
-                await message.delete()
-                deleted.append(message)
+        for messages in channel_messages.values():
+            for message in messages:
+                # Ensure that deletion was not canceled
+                if not self.cleaning:
+                    return deleted
+                with contextlib.suppress(NotFound):  # Message doesn't exist or was already deleted
+                    await message.delete()
+                    deleted.append(message)
         return deleted
 
     async def _delete_found(self, message_mappings: dict[TextChannel, list[Message]]) -> list[Message]:
@@ -302,18 +303,18 @@ class Clean(Cog):
         If cleaning was cancelled in the middle, return messages already deleted.
         """
         deleted = []
+        old_messages = {}
         for channel, messages in message_mappings.items():
             to_delete = []
 
-            delete_old = False
-            for current_index, message in enumerate(messages):  # noqa: B007
+            for current_index, message in enumerate(messages):
                 if not self.cleaning:
                     # Means that the cleaning was canceled
                     return deleted
 
                 if self.is_older_than_14d(message):
                     # Further messages are too old to be deleted in bulk
-                    delete_old = True
+                    old_messages[channel] = messages[current_index:]
                     break
 
                 to_delete.append(message)
@@ -332,11 +333,11 @@ class Clean(Cog):
                     await channel.delete_messages(to_delete)
                 deleted.extend(to_delete)
 
+        if old_messages:
             if not self.cleaning:
                 return deleted
-            if delete_old:
-                old_deleted = await self._delete_messages_individually(messages[current_index:])
-                deleted.extend(old_deleted)
+            old_deleted = await self._delete_messages_individually(old_messages)
+            deleted.extend(old_deleted)
 
         return deleted
 
