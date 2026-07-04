@@ -4,7 +4,6 @@ import re
 import time
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from contextlib import suppress
 from datetime import datetime
 from itertools import takewhile
 from typing import Literal, TYPE_CHECKING
@@ -19,6 +18,7 @@ from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons
 from bot.converters import Age, ISODateTime
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
+from bot.utils.async_utils import AsyncExecutor
 from bot.utils.channel import is_mod_channel
 from bot.utils.messages import upload_log
 from bot.utils.modlog import send_log_message
@@ -32,6 +32,9 @@ MESSAGE_DELETE_DELAY = 5
 Predicate = Callable[[Message], bool]
 # Type alias for message lookup ranges.
 CleanLimit = Message | Age | ISODateTime
+
+# How many ongoing API requests a clean operation can have at the same time.
+CONCURRENT_REQUESTS_POOL = 10
 
 
 class CleanChannels(Converter):
@@ -89,11 +92,11 @@ class Clean(Cog):
 
     @staticmethod
     def _validate_input(
-            channels: CleanChannels | None,
-            bots_only: bool,
-            users: list[User] | None,
-            first_limit: CleanLimit | None,
-            second_limit: CleanLimit | None,
+        channels: CleanChannels | None,
+        bots_only: bool,
+        users: list[User] | None,
+        first_limit: CleanLimit | None,
+        second_limit: CleanLimit | None,
     ) -> None:
         """Raise errors if an argument value or a combination of values is invalid."""
         if first_limit is None:
@@ -295,7 +298,9 @@ class Clean(Cog):
                     deleted.append(message)
         return deleted
 
-    async def _delete_found(self, message_mappings: dict[TextChannel, list[Message]]) -> list[Message]:
+    async def _delete_found(
+        self, message_mappings: dict[TextChannel, list[Message]], executor:AsyncExecutor
+    ) -> list[Message]:
         """
         Delete the detected messages.
 
@@ -322,17 +327,18 @@ class Clean(Cog):
 
                 if len(to_delete) == 100:
                     # Only up to 100 messages can be deleted in a bulk
-                    await channel.delete_messages(to_delete)
+                    executor.submit(channel.delete_messages(to_delete))
                     deleted.extend(to_delete)
-                    to_delete.clear()
+                    to_delete = []
 
             if not self.cleaning:
                 return deleted
             if len(to_delete) > 0:
                 # Deleting any leftover messages if there are any
-                with suppress(NotFound):
-                    await channel.delete_messages(to_delete)
+                executor.submit(channel.delete_messages(to_delete))
                 deleted.extend(to_delete)
+
+        await executor.gather(return_exceptions=True)
 
         if old_messages:
             if not self.cleaning:
@@ -418,9 +424,11 @@ class Clean(Cog):
         # Needs to be called after standardizing the input.
         predicate = self._build_predicate(first_limit, second_limit, bots_only, users, regex)
 
+        executor = AsyncExecutor(limit=CONCURRENT_REQUESTS_POOL)
+
         if attempt_delete_invocation:
             # Delete the invocation first
-            await self._delete_invocation(ctx)
+            executor.submit(self._delete_invocation(ctx))
 
         if self._use_cache(first_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in the cache.")
@@ -442,8 +450,9 @@ class Clean(Cog):
 
         # Now let's delete the actual messages with purge.
         self.mod_log.ignore(Event.message_delete, *message_ids)
-        deleted_messages = await self._delete_found(message_mappings)
+        deleted_messages = await self._delete_found(message_mappings, executor)
         self.cleaning = False
+        log.trace("Cleaning completed, wrapping up")
 
         if not channels:
             channels = deletion_channels

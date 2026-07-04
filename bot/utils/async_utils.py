@@ -49,6 +49,32 @@ class SharedEvent:
         await self._event.wait()
 
 
+class AsyncExecutor:
+    """Execute coroutines with a pool limit for concurrent execution."""
+
+    def __init__(self, *, limit: int):
+        self._semaphore = asyncio.Semaphore(limit)
+        self._running_tasks = set()
+
+    def submit[T](self, coro: Awaitable[T]) -> asyncio.Task[T]:
+        """Wraps the coroutine with _semaphore logic, schedules it on the event loop, and ensures cleanup."""
+        task = asyncio.create_task(self.execute(coro))
+        self._running_tasks.add(task)
+        task.add_done_callback(self._running_tasks.discard)
+        return task
+
+    async def execute[T](self, coro: Awaitable[T]) -> T:
+        """Executes the coroutine once there is an available slot in the _semaphore."""
+        async with self._semaphore:
+            return await coro
+
+    async def gather(self, return_exceptions: bool = False) -> list[Any]:
+        """Waits for all submitted coroutines to finish execution."""
+        if self._running_tasks:
+            return await asyncio.gather(*self._running_tasks, return_exceptions=return_exceptions)
+        return []
+
+
 def lock(
     namespace: Hashable,
     resource_id: ResourceId,
