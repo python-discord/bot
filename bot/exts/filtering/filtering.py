@@ -1092,17 +1092,19 @@ class Filtering(Cog):
                 break
             del recent[oldest_key]
 
-        key = (
-            ctx.event.name,
+        # base_key ignores additional_actions so a events for the same user are caught
+        # even when antispam skips adding the deletion handler the second time.
+        base_key = (
             getattr(ctx.author, "id", None),
-            getattr(ctx.channel, "id", None),
             json.dumps(to_serializable(actions), sort_keys=True, default=str),
-            # So that each callable in additional_actions also forms the cache key
+        )
+        full_key = base_key + (
             tuple(sorted(getattr(a, "__qualname__", repr(a)) for a in ctx.additional_actions)),
         )
-        if key in recent:
+        if base_key in recent or full_key in recent:
             return False
-        recent[key] = now
+        recent[base_key] = now
+        recent[full_key] = now
         return True
 
     def _increment_stats(self, triggered_filters: dict[AtomicList, list[Filter]]) -> None:
