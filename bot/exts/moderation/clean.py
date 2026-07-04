@@ -3,7 +3,6 @@ import contextlib
 import itertools
 import re
 import time
-from collections import defaultdict
 from collections.abc import Callable, Collection
 from datetime import datetime
 from itertools import takewhile
@@ -39,6 +38,8 @@ CleanLimit = Message | Age | ISODateTime
 CONCURRENT_REQUESTS_POOL = 10
 
 BULK_DELETE_LIMIT = 100
+
+PRIORITY_CHANNELS = [Channels.python_general]
 
 
 class CleanChannels(Converter):
@@ -125,31 +126,37 @@ class Clean(Cog):
         await ctx.send(content, delete_after=delete_after)
 
     @staticmethod
-    def _channels_set(
-            channels: CleanChannels, ctx: Context, first_limit: CleanLimit, second_limit: CleanLimit
-    ) -> set[TextChannel]:
-        """Standardize the input `channels` argument to a usable set of text channels."""
+    def _get_channels(
+        channels: CleanChannels, ctx: Context, first_limit: CleanLimit, second_limit: CleanLimit
+    ) -> list[TextChannel]:
+        """Standardize the input `channels` argument to a usable list of text channels, arranged by priority."""
+        def channel_rank(channel: TextChannel) -> int:
+            if channel == ctx.channel:  # Clean the invocation channel first if it's listed.
+                return -1
+            try:
+                return PRIORITY_CHANNELS.index(channel.id)
+            except ValueError:
+                return len(PRIORITY_CHANNELS)
+
         # Default to using the invoking context's channel or the channel of the message limit(s).
         if not channels:
             # Input was validated - if first_limit is a message, second_limit won't point at a different channel.
             if isinstance(first_limit, Message):
-                channels = {first_limit.channel}
+                channels = [first_limit.channel]
             elif isinstance(second_limit, Message):
-                channels = {second_limit.channel}
+                channels = [second_limit.channel]
             else:
-                channels = {ctx.channel}
-        else:
-            if channels == "*":
-                channels = {
-                    channel for channel in itertools.chain(ctx.guild.channels, ctx.guild.threads)
-                    if isinstance(channel, TextChannel | Thread)
-                    # Ignore non-public channels or ones that can't be written in to optimize for speed.
-                    and channel.permissions_for(ctx.guild.default_role).view_channel
-                    and channel.permissions_for(ctx.guild.default_role).send_messages
-                }
-            else:
-                channels = set(channels)
+                channels = [ctx.channel]
+        elif channels == "*":
+            channels = [
+                channel for channel in itertools.chain(ctx.guild.channels, ctx.guild.threads)
+                if isinstance(channel, TextChannel | Thread)
+                # Ignore non-public channels or ones that can't be written in to optimize for speed.
+                and channel.permissions_for(ctx.guild.default_role).view_channel
+                and channel.permissions_for(ctx.guild.default_role).send_messages
+            ]
 
+        channels.sort(key=channel_rank)
         return channels
 
     @staticmethod
@@ -239,18 +246,19 @@ class Clean(Cog):
 
     def _get_messages_from_cache(
         self,
-        channels: set[TextChannel],
+        channels: list[TextChannel],
         to_delete: Predicate,
         lower_limit: datetime
-    ) -> defaultdict[TextChannel, list]:
+    ) -> dict[TextChannel, list[Message]]:
         """Helper function for getting messages from the cache."""
-        message_mappings = defaultdict(list)
+        message_mappings = {channel: [] for channel in channels}
+        channels_set = set(channels)
         for message in takewhile(lambda m: m.created_at > lower_limit, reversed(self.bot.cached_messages)):
             if not self.cleaning:
                 # Cleaning was canceled
                 return message_mappings
 
-            if message.channel in channels and to_delete(message):
+            if message.channel in channels_set and to_delete(message):
                 message_mappings[message.channel].append(message)
 
         return message_mappings
@@ -344,7 +352,7 @@ class Clean(Cog):
         If cleaning was cancelled in the middle, return messages already deleted.
         """
         deleted = []
-        old_messages = {channel: [] for channel in messages_per_channel}
+        old_messages = {}
 
         for channel, messages in messages_per_channel.items():
             to_delete = []
@@ -442,7 +450,7 @@ class Clean(Cog):
             return None
         self.cleaning = True
 
-        deletion_channels = self._channels_set(channels, ctx, first_limit, second_limit)
+        deletion_channels = self._get_channels(channels, ctx, first_limit, second_limit)
 
         if isinstance(first_limit, Message):
             first_limit = first_limit.created_at
@@ -468,7 +476,9 @@ class Clean(Cog):
             messages_per_channel = self._get_messages_from_cache(
                 channels=deletion_channels, to_delete=predicate, lower_limit=first_limit
             )
-            deleted_messages, old_messages = await self._delete_bulk(messages_per_channel, executor)
+            deleted_messages, cache_old_messages = await self._delete_bulk(messages_per_channel, executor)
+            for channel, messages in cache_old_messages.items():
+                old_messages[channel].extend(messages)
             second_limit = self._earliest_cache_datetime()
 
         if self._use_api(first_limit):
