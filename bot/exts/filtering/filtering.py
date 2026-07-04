@@ -1102,7 +1102,9 @@ class Filtering(Cog):
             tuple(sorted(getattr(a, "__qualname__", repr(a)) for a in ctx.additional_actions)),
         )
         if base_key in recent or full_key in recent:
+            log.info(f"Cache hit, not running actions {ctx.author} (event={ctx.event.name}): {actions}")
             return False
+        log.info(f"Cache miss, running actions on {ctx.author} (event={ctx.event.name}): {actions}")
         recent[base_key] = now
         recent[full_key] = now
         return True
