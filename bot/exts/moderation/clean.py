@@ -307,14 +307,16 @@ class Clean(Cog):
                     deleted.append(message)
         return deleted
 
-    async def _delete_found(
+    async def _delete_bulk(
         self, message_mappings: dict[TextChannel, list[Message]], executor:AsyncExecutor
-    ) -> list[Message]:
+    ) -> tuple[list[Message], dict[TextChannel, list[Message]]]:
         """
         Delete the detected messages.
 
         Deletion is made in bulk per channel for messages less than 14d old.
-        The function returns the deleted messages.
+
+        The function returns the deleted messages. Additionally, messages older than 14d are returned to
+        be deleted separately.
         If cleaning was cancelled in the middle, return messages already deleted.
         """
         deleted = []
@@ -325,7 +327,7 @@ class Clean(Cog):
             for current_index, message in enumerate(messages):
                 if not self.cleaning:
                     # Means that the cleaning was canceled
-                    return deleted
+                    return deleted, {}
 
                 if self.is_older_than_14d(message):
                     # Further messages are too old to be deleted in bulk
@@ -341,7 +343,7 @@ class Clean(Cog):
                     to_delete = []
 
             if not self.cleaning:
-                return deleted
+                return deleted, {}
             if len(to_delete) > 0:
                 # Deleting any leftover messages if there are any
                 executor.submit(channel.delete_messages(to_delete))
@@ -349,13 +351,7 @@ class Clean(Cog):
 
         await executor.gather(return_exceptions=True)
 
-        if old_messages:
-            if not self.cleaning:
-                return deleted
-            old_deleted = await self._delete_messages_individually(old_messages)
-            deleted.extend(old_deleted)
-
-        return deleted
+        return deleted, old_messages
 
     async def _modlog_cleaned_messages(
         self,
@@ -440,6 +436,7 @@ class Clean(Cog):
             executor.submit(self._delete_invocation(ctx))
 
         deleted_messages = []
+        old_messages = {channel: [] for channel in deletion_channels}
 
         if self._use_cache(second_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in the cache.")
@@ -447,7 +444,7 @@ class Clean(Cog):
                 channels=deletion_channels, to_delete=predicate, lower_limit=first_limit
             )
             self.mod_log.ignore(Event.message_delete, *message_ids)
-            deleted_messages = await self._delete_found(message_mappings, executor)
+            deleted_messages, old_messages = await self._delete_bulk(message_mappings, executor)
             second_limit = self._earliest_cache_datetime()
 
         if self._use_api(first_limit):
@@ -459,12 +456,17 @@ class Clean(Cog):
                 before=second_limit
             )
             self.mod_log.ignore(Event.message_delete, *message_ids)
-            api_deleted_messages = await self._delete_found(message_mappings, executor)
+            api_deleted_messages, api_old_messages = await self._delete_bulk(message_mappings, executor)
             deleted_messages.extend(api_deleted_messages)
+            for channel, messages in api_old_messages.items():
+                old_messages[channel].extend(messages)
 
         if not self.cleaning:
             # Means that the cleaning was canceled
             return None
+        if old_messages:
+            old_deleted = await self._delete_messages_individually(old_messages)
+            deleted_messages.extend(old_deleted)
 
         self.cleaning = False
         log.trace("Cleaning completed, wrapping up")
