@@ -60,7 +60,6 @@ class AsyncExecutor:
         """Wraps the coroutine with _semaphore logic, schedules it on the event loop, and ensures cleanup."""
         task = asyncio.create_task(self.execute(coro))
         self._running_tasks.add(task)
-        task.add_done_callback(self._running_tasks.discard)
         return task
 
     async def execute[T](self, coro: Awaitable[T]) -> T:
@@ -71,7 +70,10 @@ class AsyncExecutor:
     async def gather(self, return_exceptions: bool = False) -> list[Any]:
         """Waits for all submitted coroutines to finish execution."""
         if self._running_tasks:
-            return await asyncio.gather(*self._running_tasks, return_exceptions=return_exceptions)
+            result = await asyncio.gather(*self._running_tasks, return_exceptions=return_exceptions)
+            self._running_tasks.clear()
+            return result
+
         return []
 
 
