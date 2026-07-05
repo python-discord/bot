@@ -57,24 +57,27 @@ class AsyncExecutor:
         self._running_tasks = set()
 
     def submit[T](self, coro: Awaitable[T]) -> asyncio.Task[T]:
-        """Wraps the coroutine with _semaphore logic, schedules it on the event loop, and ensures cleanup."""
+        """Schedule the coroutine on the event loop, and ensure cleanup."""
         task = asyncio.create_task(self.execute(coro))
         self._running_tasks.add(task)
         return task
 
     async def execute[T](self, coro: Awaitable[T]) -> T:
-        """Executes the coroutine once there is an available slot in the _semaphore."""
+        """Execute the coroutine once there is an available slot in the pool."""
         async with self._semaphore:
             return await coro
 
     async def gather(self, return_exceptions: bool = False) -> list[Any]:
-        """Waits for all submitted coroutines to finish execution."""
-        if self._running_tasks:
-            result = await asyncio.gather(*self._running_tasks, return_exceptions=return_exceptions)
-            self._running_tasks.clear()
-            return result
+        """Wait for all submitted coroutines to finish execution."""
+        result = await asyncio.gather(*self._running_tasks, return_exceptions=return_exceptions)
+        self._running_tasks.clear()
+        return result
 
-        return []
+    def cancel_all(self) -> None:
+        """Cancel all running tasks."""
+        for task in self._running_tasks:
+            task.cancel()
+        self._running_tasks.clear()
 
 
 def lock(

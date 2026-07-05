@@ -490,10 +490,13 @@ class Clean(Cog):
             for channel, messages in api_old_messages.items():
                 old_messages[channel].extend(messages)
 
+        if not self.cleaning:
+            # Means that the cleaning was canceled
+            executor.cancel_all()
+            return None
         await executor.gather(return_exceptions=True)  # Ignore NotFound errors etc.
 
         if not self.cleaning:
-            # Means that the cleaning was canceled
             return None
         if old_messages:
             old_deleted = await self._delete_messages_individually(old_messages)
@@ -720,6 +723,10 @@ class Clean(Cog):
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Safely end the cleaning operation on unexpected errors."""
+        self.cleaning = False
+
+    def cog_unload(self) -> None:
+        """Stop any ongoing clean."""
         self.cleaning = False
 
 
