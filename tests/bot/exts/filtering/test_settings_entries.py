@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from bot.constants import Roles
 from bot.exts.filtering._filter_context import Event, FilterContext
@@ -238,3 +238,66 @@ class FilterTests(unittest.TestCase):
         cleaned = _clean_ban_mentions(mentions)
 
         self.assertSetEqual(cleaned, {"other-role", "12345"})
+
+
+class InfractionActionTests(unittest.IsolatedAsyncioTestCase):
+    """Tests for infraction action behavior in filtering."""
+
+    @patch("bot.exts.filtering._settings_types.actions.infraction_and_notification.infraction_utils.get_active_infraction")
+    @patch("bot.exts.filtering._settings_types.actions.infraction_and_notification.bot_module.instance")
+    async def test_ban_action_marks_already_banned_when_active_ban_exists(self, bot_instance, get_active_infraction):
+        """A pre-existing active ban should be reported as already banned without invoking the ban command."""
+        member = MockMember(id=123)
+        channel = MockTextChannel(id=345)
+        alerts_channel = MockTextChannel(id=999)
+        message = MockMessage(author=member, channel=channel)
+        ctx = FilterContext(Event.MESSAGE, member, channel, "", message)
+
+        ban_command = AsyncMock()
+        bot_instance.get_command.return_value = ban_command
+        bot_instance.get_channel.return_value = alerts_channel
+        get_active_infraction.return_value = {"id": 42, "type": "ban"}
+
+        action = InfractionAndNotification(
+            infraction_type="BAN",
+            infraction_reason="reason",
+            infraction_duration=InfractionDuration(0),
+            dm_content="",
+            dm_embed="",
+            infraction_channel=0,
+        )
+
+        await action.action(ctx)
+
+        self.assertEqual(ctx.action_descriptions, ["already banned"])
+        ban_command.assert_not_awaited()
+        get_active_infraction.assert_awaited_once()
+
+    @patch("bot.exts.filtering._settings_types.actions.infraction_and_notification.infraction_utils.get_active_infraction")
+    @patch("bot.exts.filtering._settings_types.actions.infraction_and_notification.bot_module.instance")
+    async def test_ban_action_marks_banned_when_no_active_ban(self, bot_instance, get_active_infraction):
+        """A successful ban path should preserve the existing banned action description."""
+        member = MockMember(id=123)
+        channel = MockTextChannel(id=345)
+        alerts_channel = MockTextChannel(id=999)
+        message = MockMessage(author=member, channel=channel)
+        ctx = FilterContext(Event.MESSAGE, member, channel, "", message)
+
+        ban_command = AsyncMock()
+        bot_instance.get_command.return_value = ban_command
+        bot_instance.get_channel.return_value = alerts_channel
+        get_active_infraction.return_value = None
+
+        action = InfractionAndNotification(
+            infraction_type="BAN",
+            infraction_reason="reason",
+            infraction_duration=InfractionDuration(0),
+            dm_content="",
+            dm_embed="",
+            infraction_channel=0,
+        )
+
+        await action.action(ctx)
+
+        self.assertEqual(ctx.action_descriptions, ["banned"])
+        ban_command.assert_awaited_once()
