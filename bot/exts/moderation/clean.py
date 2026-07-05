@@ -161,8 +161,8 @@ class Clean(Cog):
 
     @staticmethod
     def _build_predicate(
-        first_limit: datetime,
-        second_limit: datetime | None = None,
+        oldest_limit: datetime,
+        newest_limit: datetime | None = None,
         bots_only: bool = False,
         users: list[User] | None = None,
         regex: re.Pattern | None = None,
@@ -198,15 +198,15 @@ class Clean(Cog):
 
         def predicate_range(message: Message) -> bool:
             """Check if the message age is between the two limits."""
-            return first_limit < message.created_at < second_limit
+            return oldest_limit < message.created_at < newest_limit
 
         def predicate_after(message: Message) -> bool:
             """Check if the message is younger than the first limit."""
-            return message.created_at > first_limit
+            return message.created_at > oldest_limit
 
         predicates = []
         # Set up the correct predicate
-        if second_limit:
+        if newest_limit:
             predicates.append(predicate_range)  # Delete messages in the specified age range
         else:
             predicates.append(predicate_after)  # Delete messages older than the specified age
@@ -232,28 +232,28 @@ class Clean(Cog):
                 # Invocation message has already been deleted
                 log.info("Tried to delete invocation message, but it was already deleted.")
 
-    def _earliest_cache_datetime(self) -> datetime:
-        """Return the datetime of the earliest message cached, or now if the cache is empty."""
+    def _oldest_cache_datetime(self) -> datetime:
+        """Return the datetime of the oldest message cached, or now if the cache is empty."""
         return self.bot.cached_messages[0].created_at if self.bot.cached_messages else arrow.utcnow().datetime
 
     def _use_cache(self, most_recent_limit: datetime | None) -> bool:
         """Return whether there are messages to clean that can be found in the cache."""
-        return most_recent_limit is None or self._earliest_cache_datetime() <= most_recent_limit
+        return most_recent_limit is None or self._oldest_cache_datetime() <= most_recent_limit
 
     def _use_api(self, oldest_limit: datetime) -> bool:
         """Return whether there might be messages to clean that won't be found in the cache."""
-        return self._earliest_cache_datetime() >= oldest_limit
+        return self._oldest_cache_datetime() >= oldest_limit
 
     def _get_messages_from_cache(
         self,
         channels: list[TextChannel],
         to_delete: Predicate,
-        lower_limit: datetime
+        oldest_limit: datetime
     ) -> dict[TextChannel, list[Message]]:
         """Helper function for getting messages from the cache."""
         message_mappings = {channel: [] for channel in channels}
         channels_set = set(channels)
-        for message in takewhile(lambda m: m.created_at > lower_limit, reversed(self.bot.cached_messages)):
+        for message in takewhile(lambda m: m.created_at > oldest_limit, reversed(self.bot.cached_messages)):
             if not self.cleaning:
                 # Cleaning was canceled
                 return message_mappings
@@ -272,17 +272,12 @@ class Clean(Cog):
         after: datetime,
         before: datetime | None = None
     ) -> tuple[list[Message], dict[TextChannel, list[Message]]]:
-        """
-        Collect and delete the messages for deletion by iterating over the histories of the appropriate channels.
-
-        The clean cog enforces an upper limit on message age through `_validate_input`.
-        """
+        """Collect and delete the messages for deletion by iterating over the histories of the appropriate channels."""
         deleted = []
         old_messages = {channel: [] for channel in channels}
 
         for channel in channels:
             messages_to_delete = []
-            message_ids = []
             async for message in channel.history(limit=CleanMessages.message_limit, before=before, after=after):
 
                 if not self.cleaning:
@@ -295,17 +290,15 @@ class Clean(Cog):
                         continue
 
                     messages_to_delete.append(message)
-                    message_ids.append(message.id)
 
-                    if len(message_ids) == BULK_DELETE_LIMIT:
-                        self.mod_log.ignore(Event.message_delete, *message_ids)
+                    if len(messages_to_delete) == BULK_DELETE_LIMIT:
+                        self.mod_log.ignore(Event.message_delete, *(m.id for m in messages_to_delete))
                         executor.submit(channel.delete_messages(messages_to_delete))
                         deleted.extend(messages_to_delete)
                         messages_to_delete = []
-                        message_ids = []
 
-            if message_ids:  # Remaining messages not deleted.
-                self.mod_log.ignore(Event.message_delete, *message_ids)
+            if messages_to_delete:  # Remaining messages not deleted.
+                self.mod_log.ignore(Event.message_delete, *(m.id for m in messages_to_delete))
                 executor.submit(channel.delete_messages(messages_to_delete))
                 deleted.extend(messages_to_delete)
 
@@ -346,6 +339,7 @@ class Clean(Cog):
         Delete the detected messages.
 
         Deletion is made in bulk per channel for messages less than 14d old.
+        Assumes the provided messages are sorted by timestamp (newest first).
 
         The function returns the deleted messages. Additionally, messages older than 14d are returned to
         be deleted separately.
@@ -458,9 +452,11 @@ class Clean(Cog):
             second_limit = second_limit.created_at
         if first_limit and second_limit:
             first_limit, second_limit = sorted([first_limit, second_limit])
+        oldest_limit = first_limit
+        newest_limit = second_limit
 
         # Needs to be called after standardizing the input.
-        predicate = self._build_predicate(first_limit, second_limit, bots_only, users, regex)
+        predicate = self._build_predicate(oldest_limit, newest_limit, bots_only, users, regex)
 
         executor = AsyncExecutor(limit=CONCURRENT_REQUESTS_POOL)
 
@@ -471,27 +467,27 @@ class Clean(Cog):
         deleted_messages = []
         old_messages = {channel: [] for channel in deletion_channels}
 
-        if self._use_cache(second_limit):
+        if self._use_cache(newest_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in the cache.")
             messages_per_channel = self._get_messages_from_cache(
-                channels=deletion_channels, to_delete=predicate, lower_limit=first_limit
+                channels=deletion_channels, to_delete=predicate, oldest_limit=oldest_limit
             )
             deleted_messages, cache_old_messages = await self._delete_bulk(messages_per_channel, executor)
             for channel, messages in cache_old_messages.items():
                 old_messages[channel].extend(messages)
-            second_limit = self._earliest_cache_datetime()
+            newest_limit = self._oldest_cache_datetime()
 
-        if self._use_api(first_limit):
+        if self._use_api(oldest_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in channel histories.")
             api_deleted_messages, api_old_messages = await self._get_messages_from_channels_and_delete(
-                executor, channels=deletion_channels, to_delete=predicate, after=first_limit, before=second_limit
+                executor, channels=deletion_channels, to_delete=predicate, after=oldest_limit, before=newest_limit
             )
             deleted_messages.extend(api_deleted_messages)
             for channel, messages in api_old_messages.items():
                 old_messages[channel].extend(messages)
 
         if not self.cleaning:
-            # Means that the cleaning was canceled
+            log.trace("Cleaning was cancelled, cancelling tasks.")
             executor.cancel_all()
             return None
         await executor.gather(return_exceptions=True)  # Ignore NotFound errors etc.
@@ -499,6 +495,7 @@ class Clean(Cog):
         if not self.cleaning:
             return None
         if old_messages:
+            log.trace("Some of the found messages are older than 14d, and will deleted individually.")
             old_deleted = await self._delete_messages_individually(old_messages)
             deleted_messages.extend(old_deleted)
 
