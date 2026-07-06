@@ -80,7 +80,7 @@ class HelpForum(commands.Cog):
         """
         # Don't use a discord.py check because the check needs to fail silently.
         if await self.close_check(ctx):
-            log.info(f"Close command invoked by {ctx.author} in #{ctx.channel}.")
+            log.info("Close command invoked by %s in #%s.", ctx.author, ctx.channel)
             await _channel.help_post_closed(ctx.channel, self.scheduler)
 
     @help_forum_group.command(name="title", root_aliases=("title",))
@@ -154,6 +154,6 @@ class HelpForum(commands.Cog):
             if thread.archived:
                 continue
 
-            log.debug(f"Notifying help thread {thread.id} that owner {member.id} is no longer in the server.")
+            log.debug("Notifying help thread %s that owner %s is no longer in the server.", thread.id, member.id)
             with contextlib.suppress(discord.NotFound):
                 await thread.send(":warning: The owner of this post is no longer in the server.")

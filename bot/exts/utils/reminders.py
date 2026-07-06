@@ -251,9 +251,9 @@ class Reminders(Cog):
         if not channel:
             is_valid = False
             log.info(
-                f"Reminder {reminder['id']} invalid: "
-                f"Channel {reminder['channel_id']}={channel}."
-            )
+                "Reminder %s invalid: "
+                "Channel %s=%s.",
+            reminder["id"], reminder["channel_id"], channel)
             scheduling.create_task(self.bot.api_client.delete(f"bot/reminders/{reminder['id']}"))
 
         return is_valid, channel
@@ -390,12 +390,12 @@ class Reminders(Cog):
             await partial_message.reply(content=f"{additional_mentions}", embed=embed)
         except discord.HTTPException as e:
             log.info(
-                f"There was an error when trying to reply to a reminder invocation message, {e}, "
-                "fall back to using jump_url"
-            )
+                "There was an error when trying to reply to a reminder invocation message, %s, "
+                "fall back to using jump_url",
+            e)
             await channel.send(content=f"<@{reminder['author']}> {additional_mentions}", embed=embed)
 
-        log.debug(f"Deleting reminder #{reminder['id']} (the user has been reminded).")
+        log.debug("Deleting reminder #%s (the user has been reminded).", reminder["id"])
         await self.bot.api_client.delete(f"bot/reminders/{reminder['id']}")
 
     @staticmethod
@@ -715,11 +715,11 @@ class Reminders(Cog):
         owner_id = api_response["author"]
 
         if owner_id == ctx.author.id:
-            log.debug(f"{ctx.author} is the reminder's author and passes the check.")
+            log.debug("%s is the reminder's author and passes the check.", ctx.author)
             return True
 
         if await has_any_role_check(ctx, Roles.admins):
-            log.debug(f"{ctx.author} is an admin, asking for confirmation to modify someone else's.")
+            log.debug("%s is an admin, asking for confirmation to modify someone else's.", ctx.author)
 
             if ctx.command == self.delete_reminder:
                 modify_action = "delete"
@@ -737,13 +737,13 @@ class Reminders(Cog):
                 await confirmation_message.edit(view=None)
 
             if confirmation_view.result:
-                log.debug(f"{ctx.author} has confirmed reminder modification.")
+                log.debug("%s has confirmed reminder modification.", ctx.author)
             else:
                 await ctx.send("🚫 Operation canceled.")
-                log.debug(f"{ctx.author} has cancelled reminder modification.")
+                log.debug("%s has cancelled reminder modification.", ctx.author)
             return confirmation_view.result
 
-        log.debug(f"{ctx.author} is not the reminder's author and thus does not pass the check.")
+        log.debug("%s is not the reminder's author and thus does not pass the check.", ctx.author)
         if send_on_denial:
             await send_denial(ctx, "You can't modify reminders of other users!")
         return False

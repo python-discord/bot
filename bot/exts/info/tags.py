@@ -213,7 +213,7 @@ class Tags(Cog):
 
         if tag is not None:
             if tag.on_cooldown_in(channel):
-                log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
+                log.debug("Tag %r is on cooldown.", str(tag_identifier))
                 return COOLDOWN.obj
             tag.set_cooldown_for(channel)
 

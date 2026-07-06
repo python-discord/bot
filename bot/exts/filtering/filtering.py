@@ -619,7 +619,7 @@ class Filtering(Cog):
         async def delete_list() -> None:
             """The actual removal routine."""
             await bot.instance.api_client.delete(f"bot/filter/filters/{filter_id}")
-            log.info(f"Successfully deleted filter with ID {filter_id}.")
+            log.info("Successfully deleted filter with ID %s.", filter_id)
             filter_list[list_type].filters.pop(filter_id)
             await ctx.reply(f"✅ Deleted filter: {filter_}")
 
@@ -967,7 +967,7 @@ class Filtering(Cog):
                 self.unsubscribe(filter_list)
 
             await bot.instance.api_client.delete(f"bot/filter/filter_lists/{list_id}")
-            log.info(f"Successfully deleted the {filter_list[list_type].label} filterlist.")
+            log.info("Successfully deleted the %s filterlist.", filter_list[list_type].label)
             await message.edit(content=f"✅ The {list_description} list has been deleted.")
 
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -999,8 +999,8 @@ class Filtering(Cog):
             if list_name not in filter_list_types:
                 if list_name not in self.already_warned:
                     log.warning(
-                        f"A filter list named {list_name} was loaded from the database, but no matching class."
-                    )
+                        "A filter list named %s was loaded from the database, but no matching class.",
+                    list_name)
                     self.already_warned.add(list_name)
                 return None
             self.filter_lists[list_name] = filter_list_types[list_name](self)
@@ -1022,7 +1022,7 @@ class Filtering(Cog):
                 log.debug("Successfully fetched filtering webhook icon, reading payload.")
                 webhook_icon = await response.read()
             else:
-                log.warning(f"Failed to fetch filtering webhook icon due to status: {response.status}")
+                log.warning("Failed to fetch filtering webhook icon due to status: %s", response.status)
 
         # Generate a new webhook.
         try:
@@ -1030,7 +1030,7 @@ class Filtering(Cog):
             log.trace(f"Generated new filters webhook with ID {webhook.id},")
             return webhook
         except HTTPException as e:
-            log.error(f"Failed to create filters webhook: {e}")
+            log.error("Failed to create filters webhook: %s", e)
             return None
 
     async def _resolve_action(
@@ -1352,7 +1352,7 @@ class Filtering(Cog):
         }
         response = await bot.instance.api_client.post("bot/filter/filters", json=to_serializable(payload))
         new_filter = filter_list.add_filter(list_type, response)
-        log.info(f"Added new filter: {new_filter}.")
+        log.info("Added new filter: %s.", new_filter)
         if new_filter:
             await self._maybe_alert_auto_infraction(filter_list, list_type, new_filter)
             extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
@@ -1404,7 +1404,7 @@ class Filtering(Cog):
         )
         # Return type can be None, but if it's being edited then it's not supposed to be.
         edited_filter = filter_list.add_filter(list_type, response)
-        log.info(f"Successfully patched filter {edited_filter}.")
+        log.info("Successfully patched filter %s.", edited_filter)
         await self._maybe_alert_auto_infraction(filter_list, list_type, edited_filter, filter_)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
@@ -1414,7 +1414,7 @@ class Filtering(Cog):
         payload = {"name": list_name, "list_type": list_type.value, **to_serializable(settings)}
         filterlist_name = f"{past_tense(list_type.name.lower())} {list_name}"
         response = await bot.instance.api_client.post("bot/filter/filter_lists", json=payload)
-        log.info(f"Successfully posted the new {filterlist_name} filterlist.")
+        log.info("Successfully posted the new %s filterlist.", filterlist_name)
         self._load_raw_filter_list(response)
         await msg.reply(f"✅ Added a new filter list: {filterlist_name}")
 
@@ -1425,7 +1425,7 @@ class Filtering(Cog):
         response = await bot.instance.api_client.patch(
             f"bot/filter/filter_lists/{list_id}", json=to_serializable(settings)
         )
-        log.info(f"Successfully patched the {filter_list[list_type].label} filterlist, reloading...")
+        log.info("Successfully patched the %s filterlist, reloading...", filter_list[list_type].label)
         filter_list.pop(list_type, None)
         filter_list.add_list(response)
         await msg.reply(f"✅ Edited filter list: {filter_list[list_type].label}")
@@ -1504,14 +1504,14 @@ class Filtering(Cog):
                 await msg_obj.delete()
         except discord.NotFound:
             log.info(
-                f"Tried to delete message {msg['id']}, but the message can't be found "
-                f"(it has been probably already deleted)."
-            )
+                "Tried to delete message %s, but the message can't be found "
+                "(it has been probably already deleted).",
+            msg["id"])
         except HTTPException as e:
-            log.warning(f"Failed to delete message {msg['id']}: status {e.status}")
+            log.warning("Failed to delete message %s: status %s", msg["id"], e.status)
 
         await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
-        log.info(f"Deleted the offensive message with id {msg['id']}.")
+        log.info("Deleted the offensive message with id %s.", msg["id"])
 
     def _schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
@@ -1535,9 +1535,9 @@ class Filtering(Cog):
             await self.bot.api_client.post("bot/offensive-messages", json=data)
         except ResponseCodeError as e:
             if e.status == 400 and "already exists" in e.response_json.get("id", [""])[0]:
-                log.debug(f"Offensive message {msg.id} already exists.")
+                log.debug("Offensive message %s already exists.", msg.id)
             else:
-                log.error(f"Offensive message {msg.id} failed to post: {e}")
+                log.error("Offensive message %s failed to post: %s", msg.id, e)
         else:
             self._schedule_msg_delete(data)
             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
@@ -1569,7 +1569,7 @@ class Filtering(Cog):
             channel = self.bot.get_channel(Channels.mod_meta)
         elif not is_mod_channel(channel):
             # Silently fail if output is going to be a non-mod channel.
-            log.info(f"Auto-infraction report: the channel {channel} is not a mod channel.")
+            log.info("Auto-infraction report: the channel %s is not a mod channel.", channel)
             return
 
         found_filters = defaultdict(list)

@@ -122,7 +122,7 @@ class Extensions(commands.Cog):
             extensions = "\n".join(sorted(extensions))
             lines.append(f"**{category}**\n{extensions}\n")
 
-        log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
+        log.debug("%s requested a list of all cogs. Returning a paginated list.", ctx.author)
         await LinePaginator.paginate(lines, ctx, embed, scale_to_size=700, empty=False)
 
     def group_extension_statuses(self) -> t.Mapping[str, str]:
@@ -180,7 +180,7 @@ class Extensions(commands.Cog):
             failures = "\n".join(f"{ext}\n    {err}" for ext, err in failures.items())
             msg += f"\nFailures:```\n{failures}```"
 
-        log.debug(f"Batch {verb}ed extensions.")
+        log.debug("Batch %sed extensions.", verb)
 
         await loading_message.edit(content=msg)
         self.action_in_progress = False
@@ -203,7 +203,7 @@ class Extensions(commands.Cog):
             if hasattr(e, "original"):
                 e = e.original
 
-            log.exception(f"Extension '{ext}' failed to {verb}.")
+            log.exception("Extension '%s' failed to %s.", ext, verb)
 
             error_msg = f"{e.__class__.__name__}: {e}"
             msg = f":x: Failed to {verb} extension `{ext}`:\n```\n{error_msg}```"

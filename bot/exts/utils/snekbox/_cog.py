@@ -361,8 +361,11 @@ class Snekbox(Cog):
         if blocked:
             blocked_str = ", ".join(f.suffix for f in blocked)
             log.info(
-                f"User '{ctx.author}' ({ctx.author.id}) uploaded blacklisted file(s) in eval: {blocked_str}",
-                extra={"attachment_list": [f.filename for f in files]}
+                "User '%s' (%s) uploaded blacklisted file(s) in eval: %s",
+                ctx.author,
+                ctx.author.id,
+                blocked_str,
+                extra={"attachment_list": [f.filename for f in files]},
             )
 
         return FilteredFiles(allowed, blocked)
@@ -446,7 +449,7 @@ class Snekbox(Cog):
                 response = await ctx.send(msg, allowed_mentions=allowed_mentions, view=view, files=files)
             view.message = response
 
-            log.info(f"{ctx.author}'s {job.name} job had a return code of {result.returncode}")
+            log.info("%s's %s job had a return code of %s", ctx.author, job.name, result.returncode)
         return response
 
     async def continue_job(
@@ -539,7 +542,7 @@ class Snekbox(Cog):
         else:
             self.bot.stats.incr("snekbox_usages.channels.topical")
 
-        log.info(f"Received code from {ctx.author} for evaluation:\n{job}")
+        log.info("Received code from %s for evaluation:\n%s", ctx.author, job)
 
         while True:
             try:
@@ -559,7 +562,7 @@ class Snekbox(Cog):
             job = await self.continue_job(ctx, response, job.name)
             if not job:
                 break
-            log.info(f"Re-evaluating code from message {ctx.message.id}:\n{job}")
+            log.info("Re-evaluating code from message %s:\n%s", ctx.message.id, job)
 
     @command(
         name="eval",

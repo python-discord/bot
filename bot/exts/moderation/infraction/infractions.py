@@ -503,7 +503,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         if infraction.get("expires_at") is not None:
             log.trace(f"Ban isn't permanent; user {user} won't be unwatched by Big Brother.")
         elif not bb_cog:
-            log.error(f"Big Brother cog not loaded; perma-banned user {user} won't be unwatched.")
+            log.error("Big Brother cog not loaded; perma-banned user %s won't be unwatched.", user)
         else:
             log.trace(f"Big Brother cog loaded; attempting to unwatch perma-banned user {user}.")
             bb_reason = "User has been permanently banned from the server. Automatically removed."
@@ -570,7 +570,7 @@ class Infractions(InfractionScheduler, commands.Cog):
 
             log_text["Member"] = format_user(user)
         else:
-            log.info(f"Failed to remove timeout from user {user_id}: user not found")
+            log.info("Failed to remove timeout from user %s: user not found", user_id)
             log_text["Failure"] = "User was not found in the guild."
 
         return log_text
@@ -585,7 +585,7 @@ class Infractions(InfractionScheduler, commands.Cog):
         try:
             await guild.unban(user, reason=reason)
         except discord.NotFound:
-            log.info(f"Failed to unban user {user_id}: no active ban found on Discord")
+            log.info("Failed to unban user %s: no active ban found on Discord", user_id)
             log_text["Note"] = "No active ban found on Discord."
 
         return log_text

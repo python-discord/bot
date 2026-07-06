@@ -52,7 +52,7 @@ class Syncer(abc.ABC):
 
         If `ctx` is given, send a message with the results.
         """
-        log.info(f"Starting {cls.name} syncer.")
+        log.info("Starting %s syncer.", cls.name)
 
         if ctx:
             message = await ctx.send(f"📊 Synchronising {cls.name}s.")
@@ -63,7 +63,7 @@ class Syncer(abc.ABC):
         try:
             await cls._sync(diff)
         except ResponseCodeError as e:
-            log.exception(f"{cls.name} syncer failed!")
+            log.exception("%s syncer failed!", cls.name)
 
             # Don't show response text because it's probably some really long HTML.
             results = f"status {e.status}\n```{e.response_json or 'See log output for details'}```"
@@ -73,7 +73,7 @@ class Syncer(abc.ABC):
             results = (f"{name} `{len(val)}`" for name, val in diff_dict.items() if val is not None)
             results = ", ".join(results)
 
-            log.info(f"{cls.name} syncer finished: {results}.")
+            log.info("%s syncer finished: %s.", cls.name, results)
             content = f":ok_hand: Synchronisation of {cls.name}s complete: {results}"
 
         if message:

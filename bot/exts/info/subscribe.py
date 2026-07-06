@@ -207,7 +207,7 @@ class Subscribe(commands.Cog):
 
         async for message in roles_channel.history(limit=30):
             if message.content == self.SELF_ASSIGNABLE_ROLES_MESSAGE:
-                log.debug(f"Found self assignable roles view message: {message.id}")
+                log.debug("Found self assignable roles view message: %s", message.id)
                 return message, None
 
         log.debug("Self assignable roles view message hasn't been found, creating a new one.")

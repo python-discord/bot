@@ -188,7 +188,7 @@ class DiscordTokenFilter(UniqueFilter):
             decoded_bytes = base64.urlsafe_b64decode(b64_content)
             timestamp = int.from_bytes(decoded_bytes, byteorder="big")
         except ValueError as e:
-            log.debug(f"Failed to decode token timestamp '{b64_content}': {e}")
+            log.debug("Failed to decode token timestamp '%s': %s", b64_content, e)
             return False
 
         # Seems like newer tokens don't need the epoch added, but add anyway since an upper bound
@@ -196,7 +196,7 @@ class DiscordTokenFilter(UniqueFilter):
         if timestamp + TOKEN_EPOCH >= DISCORD_EPOCH:
             return True
 
-        log.debug(f"Invalid token timestamp '{b64_content}': smaller than Discord epoch")
+        log.debug("Invalid token timestamp '%s': smaller than Discord epoch", b64_content)
         return False
 
     @staticmethod
@@ -210,8 +210,10 @@ class DiscordTokenFilter(UniqueFilter):
         unique = len(set(b64_content.lower()))
         if unique <= 3:
             log.debug(
-                f"Considering the HMAC {b64_content} a dummy because it has {unique}"
-                " case-insensitively unique characters"
+                "Considering the HMAC %s a dummy because it has %s"
+                " case-insensitively unique characters",
+                b64_content,
+                unique,
             )
             return False
         return True

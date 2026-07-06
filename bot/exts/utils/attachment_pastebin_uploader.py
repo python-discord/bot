@@ -141,7 +141,7 @@ class AutoTextAttachmentUploader(commands.Cog):
                 f" contents copied from [your message](<{message.jump_url}>)"
             )
         except discord.Forbidden:
-            log.debug(f"User {message.author} has DMs disabled, skipping delete link DM.")
+            log.debug("User %s has DMs disabled, skipping delete link DM.", message.author)
 
         # Edit the bot message to contain the link to the paste.
         await bot_reply.edit(content=f"[Click here]({paste_response.link}) to see this code in our pastebin.")

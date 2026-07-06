@@ -103,7 +103,7 @@ class Defcon(Cog):
                 self.scheduler.schedule_at(self.expiry, 0, self._remove_threshold())
 
             self._update_notifier()
-            log.info(f"DEFCON synchronized: {time.humanize_delta(self.threshold) if self.threshold else '-'}")
+            log.info("DEFCON synchronized: %s", time.humanize_delta(self.threshold) if self.threshold else "-")
 
         await self._update_channel_topic()
 
@@ -114,7 +114,7 @@ class Defcon(Cog):
             now = arrow.utcnow()
 
             if now - member.created_at < time.relativedelta_to_timedelta(self.threshold):
-                log.info(f"Rejecting user {member}: Account is too new")
+                log.info("Rejecting user %s: Account is too new", member)
 
                 message_sent = False
 
@@ -122,10 +122,10 @@ class Defcon(Cog):
                     await member.send(REJECTION_MESSAGE.format(user=member.mention))
                     message_sent = True
                 except Forbidden:
-                    log.debug(f"Cannot send DEFCON rejection DM to {member}: DMs disabled")
+                    log.debug("Cannot send DEFCON rejection DM to %s: DMs disabled", member)
                 except Exception:
                     # Broadly catch exceptions because DM isn't critical, but it's imperative to kick them.
-                    log.exception(f"Error sending DEFCON rejection message to {member}")
+                    log.exception("Error sending DEFCON rejection message to %s", member)
 
                 await member.kick(reason="DEFCON active, user is too new")
                 self.bot.stats.incr("defcon.leaves")

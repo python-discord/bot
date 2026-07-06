@@ -67,7 +67,7 @@ class NominationContextModal(discord.ui.Modal, title="New Nomination"):
                         f":x: {self.target.mention} can't be found in the database tables.",
                         ephemeral=True
                     )
-                    log.warning(f"Could not find {self.target.author} in the site database tables, sync may be broken")
+                    log.warning("Could not find %s in the site database tables, sync may be broken", self.target.author)
                     return
 
             raise e
@@ -388,7 +388,7 @@ class TalentPool(Cog, name="Talentpool"):
         nomination = await self.api.get_active_nomination(nominee_id)
 
         if nomination and nomination.thread_id:
-            log.debug(f"Found thread ID for {nominee_id} nomination, relaying new context.")
+            log.debug("Found thread ID for %s nomination, relaying new context.", nominee_id)
             thread = await get_or_fetch_channel(self.bot, nomination.thread_id)
 
             await thread.send(update)
@@ -517,8 +517,10 @@ class TalentPool(Cog, name="Talentpool"):
             scope.set_extra("interaction_data", interaction.data)
 
             log.error(
-                f"Error executing application command '{interaction.command.name}' invoked by {interaction.user}",
-                exc_info=error
+                "Error executing application command '%s' invoked by %s",
+                interaction.command.name,
+                interaction.user,
+                exc_info=error,
             )
 
     async def _nominate_user(self, ctx: Context, user: MemberOrUser, reason: str) -> None:
@@ -858,7 +860,7 @@ class TalentPool(Cog, name="Talentpool"):
         emoji = str(payload.emoji)
 
         if emoji in {Emojis.incident_actioned, Emojis.incident_unactioned}:
-            log.info(f"Archiving nomination {message.id}")
+            log.info("Archiving nomination %s", message.id)
             await self.reviewer.archive_vote(message, emoji == Emojis.incident_actioned)
 
     async def end_nomination(self, user_id: int, reason: str) -> bool:
@@ -866,10 +868,10 @@ class TalentPool(Cog, name="Talentpool"):
         active_nominations = await self.api.get_nominations(user_id, active=True)
 
         if not active_nominations:
-            log.debug(f"No active nomination exists for {user_id=}")
+            log.debug("No active nomination exists for user_id=%r", user_id)
             return False
 
-        log.info(f"Ending nomination: {user_id=} {reason=}")
+        log.info("Ending nomination: user_id=%r reason=%r", user_id, reason)
 
         nomination = active_nominations[0]
         await self.api.edit_nomination(nomination.id, end_reason=reason, active=False)

@@ -179,7 +179,7 @@ class EvalResult:
             try:
                 res.files.append(FileAttachment.from_dict(file))
             except ValueError as e:
-                log.info(f"Failed to parse file from snekbox response: {e}")
+                log.info("Failed to parse file from snekbox response: %s", e)
                 res.failed_files.append(file["path"])
 
         return res

@@ -46,8 +46,8 @@ class PythonEnhancementProposals(Cog):
         async with self.bot.http_session.get(PEP_API_URL) as resp:
             if resp.status != 200:
                 log.warning(
-                    f"Fetching PEP data from PEP API failed with code {resp.status}"
-                )
+                    "Fetching PEP data from PEP API failed with code %s",
+                resp.status)
                 return
             listing = await resp.json()
 

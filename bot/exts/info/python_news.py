@@ -107,7 +107,7 @@ class PythonNews(Cog):
                 # %Z doesn't actually set the tzinfo of the datetime object, manually set this to UTC
                 pep_creation = datetime.strptime(new["published"], "%a, %d %b %Y %X %Z").replace(tzinfo=UTC)
             except ValueError:
-                log.warning(f"Wrong datetime format passed in PEP new: {new['published']}")
+                log.warning("Wrong datetime format passed in PEP new: %s", new["published"])
                 continue
             pep_nr = new["title"].split(":")[0].split()[1]
             if (
@@ -169,7 +169,7 @@ class PythonNews(Cog):
                 try:
                     new_date = datetime.strptime(email_information["date"], "%Y-%m-%dT%X%z")
                 except ValueError:
-                    log.warning(f"Invalid datetime from Thread email: {email_information['date']}")
+                    log.warning("Invalid datetime from Thread email: %s", email_information["date"])
                     continue
 
                 thread_id = thread_information["thread_id"]

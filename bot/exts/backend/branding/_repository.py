@@ -136,7 +136,7 @@ class BrandingRepository:
         Passing custom `types` allows getting only files or directories. By default, both are included.
         """
         full_url = f"{BRANDING_URL}/{path}"
-        log.debug(f"Fetching directory from branding repository: '{full_url}'.")
+        log.debug("Fetching directory from branding repository: '%s'.", full_url)
 
         async with self.bot.http_session.get(full_url, params=PARAMS, headers=HEADERS) as response:
             _raise_for_status(response)
@@ -151,7 +151,7 @@ class BrandingRepository:
 
         Raise an exception if the request does not succeed.
         """
-        log.debug(f"Fetching file from branding repository: '{download_url}'.")
+        log.debug("Fetching file from branding repository: '%s'.", download_url)
 
         async with self.bot.http_session.get(download_url, params=PARAMS, headers=HEADERS) as response:
             _raise_for_status(response)
@@ -245,7 +245,7 @@ class BrandingRepository:
         Events are validated in the branding repo. The bot assumes that events are valid.
         """
         utc_now = datetime.now(tz=UTC)
-        log.debug(f"Finding active event for: {utc_now}.")
+        log.debug("Finding active event for: %s.", utc_now)
 
         # Construct an object in the arbitrary year for the purpose of comparison.
         lookup_now = date(year=ARBITRARY_YEAR, month=utc_now.month, day=utc_now.day)

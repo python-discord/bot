@@ -56,7 +56,7 @@ class OffTopicNames(Cog):
                 "bot/off-topic-channel-names", params={"random_items": 3}
             )
         except ResponseCodeError as e:
-            log.error(f"Failed to get new off-topic channel names: code {e.response.status}")
+            log.error("Failed to get new off-topic channel names: code %s", e.response.status)
             raise
 
         channel_0, channel_1, channel_2 = (self.bot.get_channel(channel_id) for channel_id in CHANNELS)
@@ -75,8 +75,10 @@ class OffTopicNames(Cog):
             return
 
         log.debug(
-            "Updated off-topic channel names to"
-            f" {channel_0_name}, {channel_1_name} and {channel_2_name}"
+            "Updated off-topic channel names to %s, %s and %s",
+            channel_0_name,
+            channel_1_name,
+            channel_2_name,
         )
 
     async def toggle_ot_name_activity(self, ctx: Context, name: str, active: bool) -> None:
@@ -121,8 +123,8 @@ class OffTopicNames(Cog):
         if close_match:
             match = close_match[0]
             log.info(
-                f"{ctx.author} tried to add channel name '{name}' but it was too similar to '{match}'"
-            )
+                "%s tried to add channel name '%s' but it was too similar to '%s'",
+            ctx.author, name, match)
             await ctx.send(
                 f":x: The channel name `{name}` is too similar to `{match}`, and thus was not added. "
                 f"Use `{BotConfig.prefix}otn forceadd` to override this check."
@@ -140,7 +142,7 @@ class OffTopicNames(Cog):
         """Adds an off-topic channel name to the site storage."""
         await self.bot.api_client.post("bot/off-topic-channel-names", params={"name": name})
 
-        log.info(f"{ctx.author} added the off-topic channel name '{name}'")
+        log.info("%s added the off-topic channel name '%s'", ctx.author, name)
         await ctx.send(f":ok_hand: Added `{name}` to the names list.")
 
     @otname_group.command(name="delete", aliases=("remove", "rm", "del", "d"))
@@ -149,7 +151,7 @@ class OffTopicNames(Cog):
         """Removes a off-topic name from the rotation."""
         await self.bot.api_client.delete(f"bot/off-topic-channel-names/{name}")
 
-        log.info(f"{ctx.author} deleted the off-topic channel name '{name}'")
+        log.info("%s deleted the off-topic channel name '%s'", ctx.author, name)
         await ctx.send(f":ok_hand: Removed `{name}` from the names list.")
 
     @otname_group.command(name="activate", aliases=("whitelist",))
@@ -205,9 +207,9 @@ class OffTopicNames(Cog):
                 name=OTN_FORMATTER.format(number=old_channel_name[OT_NUMBER_INDEX], name=new_channel_name)
             )
             log.info(
-                f"{ctx.author} Off-topic channel re-named from `{old_ot_name}` "
-                f"to `{new_channel_name}`."
-            )
+                "%s Off-topic channel re-named from `%s` "
+                "to `%s`.",
+            ctx.author, old_ot_name, new_channel_name)
 
             await ctx.message.reply(
                 f":ok_hand: Off-topic channel re-named from `{old_ot_name}` "

@@ -62,11 +62,11 @@ async def download_file(attachment: discord.Attachment) -> discord.File | None:
     If the download fails, the reason is logged and None will be returned.
     404 and 403 errors are only logged at debug level.
     """
-    log.debug(f"Attempting to download attachment: {attachment.filename}")
+    log.debug("Attempting to download attachment: %s", attachment.filename)
     try:
         return await attachment.to_file()
     except (discord.NotFound, discord.Forbidden) as exc:
-        log.debug(f"Failed to download attachment: {exc}")
+        log.debug("Failed to download attachment: %s", exc)
     except Exception:
         log.exception("Failed to download attachment")
 
@@ -220,14 +220,14 @@ async def make_message_link_embed(ctx: Context, message_link: str) -> discord.Em
                 description=f"Message {message_link} not found."
             )
     except discord.DiscordException as e:
-        log.exception(f"Failed to make message link embed for '{message_link}', raised exception: {e}")
+        log.exception("Failed to make message link embed for '%s', raised exception: %s", message_link, e)
     else:
         channel = message.channel
         if not channel.permissions_for(channel.guild.get_role(Roles.helpers)).view_channel:
             log.info(
-                f"Helpers don't have read permissions in #{channel.name},"
-                f" not sending message link embed for {message_link}"
-            )
+                "Helpers don't have read permissions in #%s,"
+                " not sending message link embed for %s",
+            channel.name, message_link)
             return None
 
         embed = discord.Embed(
@@ -331,7 +331,7 @@ class Incidents(Cog):
         try:
             self.incidents_webhook = await self.bot.fetch_webhook(Webhooks.incidents.id)
         except discord.HTTPException:
-            log.error(f"Failed to fetch incidents webhook with id `{Webhooks.incidents.id}`.")
+            log.error("Failed to fetch incidents webhook with id `%s`.", Webhooks.incidents.id)
 
     async def crawl_incidents(self) -> None:
         """
@@ -348,7 +348,7 @@ class Incidents(Cog):
         await self.bot.wait_until_guild_available()
         incidents: discord.TextChannel = self.bot.get_channel(Channels.incidents)
 
-        log.debug(f"Crawling messages in #incidents: {CRAWL_LIMIT=}, {CRAWL_SLEEP=}")
+        log.debug("Crawling messages in #incidents: CRAWL_LIMIT=%r, CRAWL_SLEEP=%r", CRAWL_LIMIT, CRAWL_SLEEP)
         async for message in incidents.history(limit=CRAWL_LIMIT):
 
             if not is_incident(message):
@@ -385,7 +385,7 @@ class Incidents(Cog):
         not all information was relayed, return False. This signals that the original
         message is not safe to be deleted, as we will lose some information.
         """
-        log.info(f"Archiving incident: {incident.id} (outcome: {outcome}, actioned by: {actioned_by})")
+        log.info("Archiving incident: %s (outcome: %s, actioned by: %s)", incident.id, outcome, actioned_by)
         embed, attachment_file = await make_embed(incident, outcome, actioned_by)
 
         try:
@@ -397,7 +397,7 @@ class Incidents(Cog):
                 file=attachment_file,
             )
         except Exception:
-            log.exception(f"Failed to archive incident {incident.id} to #incidents-archive")
+            log.exception("Failed to archive incident %s to #incidents-archive", incident.id)
             return False
         else:
             log.trace("Message archived successfully!")
@@ -438,7 +438,7 @@ class Incidents(Cog):
         """
         members_roles: set[int] = {role.id for role in member.roles}
         if not members_roles & ALLOWED_ROLES:  # Intersection is truthy on at least 1 common element
-            log.debug(f"Removing invalid reaction: user {member} is not permitted to send signals")
+            log.debug("Removing invalid reaction: user %s is not permitted to send signals", member)
             try:
                 await incident.remove_reaction(reaction, member)
             except discord.NotFound:
@@ -448,7 +448,7 @@ class Incidents(Cog):
         try:
             signal = Signal(reaction)
         except ValueError:
-            log.debug(f"Removing invalid reaction: emoji {reaction} is not a valid signal")
+            log.debug("Removing invalid reaction: emoji %s is not a valid signal", reaction)
             try:
                 await incident.remove_reaction(reaction, member)
             except discord.NotFound:
@@ -479,7 +479,7 @@ class Incidents(Cog):
         try:
             await confirmation_task
         except TimeoutError:
-            log.info(f"Did not receive incident deletion confirmation within {timeout} seconds!")
+            log.info("Did not receive incident deletion confirmation within %s seconds!", timeout)
         else:
             log.trace("Deletion was confirmed")
 
@@ -514,7 +514,7 @@ class Incidents(Cog):
         except discord.NotFound:
             log.trace("Message doesn't exist, it was likely already relayed")
         except Exception:
-            log.exception(f"Failed to fetch message {message_id}!")
+            log.exception("Failed to fetch message %s!", message_id)
         else:
             log.trace("Message fetched successfully!")
             return message
@@ -647,8 +647,8 @@ class Incidents(Cog):
             )
         except discord.DiscordException:
             log.exception(
-                f"Failed to send message link embed {message.id} to #incidents."
-            )
+                "Failed to send message link embed %s to #incidents.",
+            message.id)
         else:
             await self.message_link_embeds_cache.set(message.id, webhook_msg.id)
             log.trace("Message link embeds sent successfully to #incidents!")

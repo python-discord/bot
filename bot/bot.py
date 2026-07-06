@@ -40,7 +40,7 @@ class Bot(BotBase):
         attempts = 0
         while True:
             try:
-                log.info(f"Attempting site connection: {attempts + 1}/{constants.URLs.connect_max_retries}")
+                log.info("Attempting site connection: %s/%s", attempts + 1, constants.URLs.connect_max_retries)
                 await self.api_client.get("healthcheck")
                 break
 
@@ -55,7 +55,7 @@ class Bot(BotBase):
         await super().setup_hook()
         await self.load_extensions(exts)
 
-    async def on_error(self, event: str, *args, **kwargs) -> None:
+    async def on_error(self, event: str, /, *args, **kwargs) -> None:
         """Log errors raised in event listeners rather than printing them to stderr."""
         e_val = exception()
 
@@ -76,4 +76,4 @@ class Bot(BotBase):
             scope.set_extra("args", args)
             scope.set_extra("kwargs", kwargs)
 
-            log.exception(f"Unhandled exception in {event}.")
+            log.exception("Unhandled exception in %s.", event)

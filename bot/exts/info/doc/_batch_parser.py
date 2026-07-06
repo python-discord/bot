@@ -115,7 +115,7 @@ class BatchParser:
                 )
 
             self._queue.extendleft(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
-            log.debug(f"Added items from {doc_item.url} to the parse queue.")
+            log.debug("Added items from %s to the parse queue.", doc_item.url)
 
             if self._parse_task is None:
                 self._parse_task = scheduling.create_task(self._parse_queue(), name="Queue parse")
@@ -153,7 +153,7 @@ class BatchParser:
                             self.stale_inventory_notifier.send_warning(item), name="Stale inventory warning"
                         )
                 except Exception:
-                    log.exception(f"Unexpected error when handling {item}")
+                    log.exception("Unexpected error when handling %s", item)
                 future.set_result(markdown)
                 del self._item_futures[item]
                 await asyncio.sleep(0.1)

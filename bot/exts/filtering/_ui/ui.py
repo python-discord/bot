@@ -108,7 +108,7 @@ async def build_mod_alert(ctx: FilterContext, triggered_filters: dict[FilterList
     actions = "\n**Actions Taken:** " + (", ".join(ctx.action_descriptions) if ctx.action_descriptions else "-")
 
     mod_alert_message = "\n".join(part for part in (triggered_by, triggered_in, filters, matches, actions) if part)
-    log.debug(f"{ctx.event.name} Filter:\n{mod_alert_message}")
+    log.debug("%s Filter:\n%s", ctx.event.name, mod_alert_message)
 
     if ctx.message:
         mod_alert_message += f"\n**[Original Content]({ctx.message.jump_url})**:\n"

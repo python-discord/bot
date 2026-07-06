@@ -29,7 +29,7 @@ class ConfigVerifier(Cog):
         ]
 
         if invalid_channels:
-            log.warning(f"Configured channels do not exist in server: {invalid_channels}.")
+            log.warning("Configured channels do not exist in server: %s.", invalid_channels)
 
 
 async def setup(bot: Bot) -> None:

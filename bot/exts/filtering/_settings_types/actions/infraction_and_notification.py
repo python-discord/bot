@@ -94,7 +94,7 @@ class Infraction(Enum):
         command = bot_module.instance.get_command(command_name)
         if not command:
             await alerts_channel.send(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
-            log.warning(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
+            log.warning(":warning: Could not apply %s to %s: command not found.", command_name, user.mention)
             return None
 
         if isinstance(user, discord.User):  # For example because a message was sent in a DM.
@@ -103,8 +103,10 @@ class Infraction(Enum):
                 user = member
             else:
                 log.warning(
-                    f"The user {user} were set to receive an automatic {command_name}, "
-                    "but they were not found in the guild."
+                    "The user %s were set to receive an automatic %s, "
+                    "but they were not found in the guild.",
+                    user,
+                    command_name,
                 )
                 return None
 
@@ -200,14 +202,14 @@ class InfractionAndNotification(ActionEntry):
             if self.infraction_channel:
                 channel = bot_module.instance.get_channel(self.infraction_channel)
                 if not channel:
-                    log.info(f"Could not find a channel with ID {self.infraction_channel}, infracting in mod-alerts.")
+                    log.info("Could not find a channel with ID %s, infracting in mod-alerts.", self.infraction_channel)
                     channel = alerts_channel
             elif not ctx.channel:
                 channel = alerts_channel
             else:
                 channel = ctx.channel
             if not channel:  # If somehow it's set to `alerts_channel` and it can't be found.
-                log.error(f"Unable to apply infraction as the context channel {channel} can't be found.")
+                log.error("Unable to apply infraction as the context channel %s can't be found.", channel)
                 return
 
             infraction_action = await self.infraction_type.invoke(

@@ -104,11 +104,11 @@ def lock(
             #   2. `asyncio.Lock.acquire()` does not internally await anything if the lock is free
             #   3. awaits only yield execution to the event loop at actual I/O boundaries
             if wait or not lock_.locked():
-                log.debug(f"{name}: acquiring lock for resource {namespace!r}:{id_!r}...")
+                log.debug("%s: acquiring lock for resource %r:%r...", name, namespace, id_)
                 async with lock_:
                     return await func(*args, **kwargs)
             else:
-                log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
+                log.info("%s: aborted because resource %r:%r is locked", name, namespace, id_)
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
                 return None

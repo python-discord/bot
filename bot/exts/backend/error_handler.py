@@ -370,7 +370,7 @@ class ErrorHandler(Cog):
     async def handle_api_error(ctx: Context, e: ResponseCodeError) -> None:
         """Send an error message in `ctx` for ResponseCodeError and log it."""
         if e.status == 404:
-            log.debug(f"API responded with 404 for command {ctx.command}")
+            log.debug("API responded with 404 for command %s", ctx.command)
             await ctx.send("There does not seem to be anything matching your query.")
             ctx.bot.stats.incr("errors.api_error_404")
         elif e.status == 400:
@@ -382,11 +382,11 @@ class ErrorHandler(Cog):
             await ctx.send("According to the API, your request is malformed.")
             ctx.bot.stats.incr("errors.api_error_400")
         elif 500 <= e.status < 600:
-            log.warning(f"API responded with {e.status} for command {ctx.command}")
+            log.warning("API responded with %s for command %s", e.status, ctx.command)
             await ctx.send("Sorry, there seems to be an internal issue with the API.")
             ctx.bot.stats.incr("errors.api_internal_server_error")
         else:
-            log.warning(f"Unexpected API response for command {ctx.command}: {e.status}")
+            log.warning("Unexpected API response for command %s: %s", ctx.command, e.status)
             await ctx.send(f"Got an unexpected status code from the API (`{e.status}`).")
             ctx.bot.stats.incr(f"errors.api_error_{e.status}")
 
@@ -418,7 +418,7 @@ class ErrorHandler(Cog):
                     f"https://discordapp.com/channels/{ctx.guild.id}/{ctx.channel.id}/{ctx.message.id}"
                 )
 
-            log.error(f"Error executing command invoked by {ctx.message.author}: {ctx.message.content}", exc_info=e)
+            log.error("Error executing command invoked by %s: %s", ctx.message.author, ctx.message.content, exc_info=e)
 
 
 async def setup(bot: Bot) -> None:

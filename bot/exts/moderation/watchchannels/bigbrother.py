@@ -153,7 +153,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
             self._remove_user(user.id)
 
             if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
-                log.debug(f"Perma-banned user {user} was unwatched.")
+                log.debug("Perma-banned user %s was unwatched.", user)
                 return
             log.trace("User is not banned.  Sending message to channel")
             message = f":white_check_mark: Messages sent by {user.mention} will no longer be relayed."
@@ -161,7 +161,7 @@ class BigBrother(WatchChannel, Cog, name="Big Brother"):
         else:
             log.trace("No active watches found for user.")
             if not send_message:  # Prevents a message being sent to the channel if part of a permanent ban
-                log.debug(f"{user} was not on the watch list; no removal necessary.")
+                log.debug("%s was not on the watch list; no removal necessary.", user)
                 return
             log.trace("User is not perma banned. Send the error message.")
             message = ":x: The specified user is currently not being watched."

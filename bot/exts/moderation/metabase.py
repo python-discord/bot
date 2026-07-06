@@ -46,7 +46,7 @@ class Metabase(Cog):
 
         if error.original.status == 403:
             # User doesn't have access to the given question
-            log.warning(f"Failed to auth with Metabase for {error.original.url}.")
+            log.warning("Failed to auth with Metabase for %s.", error.original.url)
             await ctx.send(f":x: {ctx.author.mention} Failed to auth with Metabase for that question.")
         elif error.original.status == 404:
             await ctx.send(f":x: {ctx.author.mention} That question could not be found.")

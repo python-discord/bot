@@ -160,12 +160,12 @@ async def send_attachments(
             elif link_large:
                 large.append(attachment)
             else:
-                log.info(f"{failure_msg} because it's too large.")
+                log.info("%s because it's too large.", failure_msg)
         except discord.HTTPException as e:
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
-                log.warning(f"{failure_msg} with status {e.status}.", exc_info=e)
+                log.warning("%s with status %s.", failure_msg, e.status, exc_info=e)
 
     if link_large and large:
         desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)

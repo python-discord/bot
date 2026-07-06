@@ -50,7 +50,7 @@ class AntispamList(UniquesListBase):
             return antispam_filter_types[content]
         except KeyError:
             if content not in self._already_warned:
-                log.warning(f"An antispam filter named {content} was supplied, but no matching implementation found.")
+                log.warning("An antispam filter named %s was supplied, but no matching implementation found.", content)
                 self._already_warned.add(content)
             return None
 
@@ -124,7 +124,7 @@ class AntispamList(UniquesListBase):
                 await asyncio.sleep(ALERT_DELAY)
 
                 if member not in self.message_deletion_queue:
-                    log.error(f"Started processing deletion queue for context `{member}`, but it was not found!")
+                    log.error("Started processing deletion queue for context `%s`, but it was not found!", member)
                     return
 
                 deletion_context = self.message_deletion_queue.pop(member)
