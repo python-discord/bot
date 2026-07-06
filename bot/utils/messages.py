@@ -286,7 +286,7 @@ async def upload_log(
 
     return f"{URLs.site_logs_view}/{response['id']}"
 
-async def get_reference_message(ctx: Context) -> discord.Message | None:
+async def get_reference_message(ctx: Context) -> Message | None:
     """Return a message reference if the reference exists and it does not refer to the author of the message."""
     if ctx.message.reference is None:
         return None
@@ -300,13 +300,12 @@ async def get_reference_message(ctx: Context) -> discord.Message | None:
         return None
     return referenced_message
 
-async def send_or_reply(ctx: Context, embed: Embed) -> None:
+async def send_or_reply(ctx: Context, embed: Embed) -> Message:
     """
     Sends the bot message as a reply if the callers message has a reference.
 
     If the callers message does not have a reference, the bot messsage is sent without reply
     """
     if message_reference := await get_reference_message(ctx):
-        await message_reference.reply(embed=embed)
-    else:
-        await ctx.send(embed=embed)
+        return await message_reference.reply(embed=embed)
+    return await ctx.send(embed=embed)
