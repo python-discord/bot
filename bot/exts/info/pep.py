@@ -6,6 +6,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.log import get_logger
+from bot.utils.messages import get_reference_message
 
 log = get_logger(__name__)
 
@@ -93,7 +94,10 @@ class PythonEnhancementProposals(Cog):
                 colour=Colour.red(),
             )
 
-        await ctx.send(embed=embed)
+        if message_reference := await get_reference_message(ctx):
+            await message_reference.reply(embed=embed)
+        else:
+            await ctx.send(embed=embed)
 
 
 async def setup(bot: Bot) -> None:
