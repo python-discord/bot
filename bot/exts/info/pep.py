@@ -6,7 +6,7 @@ from discord.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.log import get_logger
-from bot.utils.messages import get_reference_message
+from bot.utils.messages import send_or_reply
 
 log = get_logger(__name__)
 
@@ -94,11 +94,7 @@ class PythonEnhancementProposals(Cog):
                 colour=Colour.red(),
             )
 
-        if message_reference := await get_reference_message(ctx):
-            await message_reference.reply(embed=embed)
-        else:
-            await ctx.send(embed=embed)
-
+            await send_or_reply(ctx, embed)
 
 async def setup(bot: Bot) -> None:
     """Load the PEP cog."""

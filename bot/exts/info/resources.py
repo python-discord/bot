@@ -5,7 +5,7 @@ from discord import Embed
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.utils.messages import get_reference_message
+from bot.utils.messages import send_or_reply
 
 REGEX_CONSECUTIVE_NON_LETTERS = r"[^A-Za-z0-9]+"
 RESOURCE_URL = "https://www.pythondiscord.com/resources/"
@@ -62,10 +62,7 @@ class Resources(commands.Cog):
                         f"of hand-selected learning resources that we "
                         f"regularly recommend to both beginners and experts."
         )
-        if message_reference := await get_reference_message(ctx):
-            await message_reference.reply(embed=embed)
-        else:
-            await ctx.send(embed=embed)
+        await send_or_reply(ctx, embed)
 
 
 async def setup(bot: Bot) -> None:

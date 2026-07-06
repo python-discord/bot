@@ -9,7 +9,7 @@ from discord.utils import escape_markdown
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.exts.info.tags import TagIdentifier
-from bot.utils.messages import get_reference_message
+from bot.utils.messages import send_or_reply
 
 SourceObject = commands.HelpCommand | commands.Command | commands.Cog | TagIdentifier | commands.ExtensionNotLoaded
 
@@ -42,19 +42,13 @@ class BotSource(commands.Cog):
             embed.add_field(name="Repository", value=f"[Go to GitHub]({URLs.github_bot_repo})")
             embed.set_thumbnail(url="https://avatars1.githubusercontent.com/u/9919")
 
-            if message_reference := await get_reference_message(ctx):
-                await message_reference.reply(embed=embed)
-            else:
-                await ctx.send(embed=embed)
+            await send_or_reply(ctx, embed)
             return
 
         obj, source_type = await self.get_source_object(ctx, source_item)
         embed = await self.build_embed(obj, source_type)
 
-        if message_reference := await get_reference_message(ctx):
-            await message_reference.reply(embed=embed)
-        else:
-            await ctx.send(embed=embed)
+        await send_or_reply(ctx, embed)
 
     @staticmethod
     async def get_source_object(ctx: commands.Context, argument: str) -> tuple[SourceObject, SourceType]:
