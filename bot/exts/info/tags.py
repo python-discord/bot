@@ -323,10 +323,11 @@ class Tags(Cog):
                     await message_reference.reply(embed=embed),
                     (ctx.author.id,)
                 )
-            await wait_for_deletion(
-                await ctx.send(embed=embed),
-                (ctx.author.id,)
-            )
+            else:
+                await wait_for_deletion(
+                    await ctx.send(embed=embed),
+                    (ctx.author.id,)
+                )
         # A valid tag was found and was either sent, or is on cooldown
         return True
 
