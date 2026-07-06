@@ -13,7 +13,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.messages import wait_for_deletion
+from bot.utils.messages import get_reference_message, wait_for_deletion
 
 log = get_logger(__name__)
 
@@ -278,20 +278,6 @@ class Tags(Cog):
             if identifier.group == group and tag.accessible_by(member)
         )
 
-    async def get_reference_message(self, ctx: Context) -> discord.Message | None:
-        """Return a message reference if the reference exists and it does not refer to the author of the message."""
-        if ctx.message.reference is None:
-            return None
-        try:
-            referenced_message = await ctx.fetch_message(ctx.message.reference.message_id)
-        except (discord.Forbidden, discord.NotFound):
-            referenced_message = None
-        if referenced_message is None:
-            return None
-        if referenced_message.author == ctx.author:
-            return None
-        return referenced_message
-
     async def get_command_ctx(
         self,
         ctx: Context,
@@ -318,7 +304,7 @@ class Tags(Cog):
 
         if embed is not COOLDOWN.obj:
 
-            if message_reference := await self.get_reference_message(ctx):
+            if message_reference := await get_reference_message(ctx):
                 await wait_for_deletion(
                     await message_reference.reply(embed=embed),
                     (ctx.author.id,)
