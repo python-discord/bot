@@ -318,6 +318,11 @@ class Tags(Cog):
 
         if embed is not COOLDOWN.obj:
 
+            if message_reference := await self.get_reference_message(ctx):
+                await wait_for_deletion(
+                    await message_reference.reply(embed=embed),
+                    (ctx.author.id,)
+                )
             await wait_for_deletion(
                 await ctx.send(embed=embed),
                 (ctx.author.id,)
