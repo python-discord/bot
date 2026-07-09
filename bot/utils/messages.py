@@ -7,7 +7,7 @@ from io import BytesIO
 from itertools import zip_longest
 
 import discord
-from discord import Embed, Message
+from discord import DeletedReferencedMessage, Embed, Message
 from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
@@ -291,14 +291,15 @@ async def get_reference_message(ctx: Context) -> Message | None:
     if ctx.message.reference is None:
         return None
     try:
-        referenced_message = await ctx.fetch_message(ctx.message.reference.message_id)
+        referenced_message = ctx.message.reference.resolved
     except (discord.Forbidden, discord.NotFound):
-        referenced_message = None
-    if referenced_message is None:
         return None
-    if referenced_message.author == ctx.author:
-        return None
-    return referenced_message
+    else:
+        if referenced_message is None or isinstance(referenced_message, DeletedReferencedMessage):
+            return None
+        if referenced_message.author == ctx.author:
+            return None
+        return referenced_message
 
 async def send_or_reply(ctx: Context, embed: Embed) -> Message:
     """
