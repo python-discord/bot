@@ -310,7 +310,8 @@ async def send_or_reply(ctx: Context, embed: Embed) -> Message:
     """
     Sends the bot message as a reply if the callers message has a reference.
 
-    If the callers message does not have a reference, the bot messsage is sent without reply
+    If the callers message does not have a reference or the reference is deleted,
+    the bot messsage is sent without replying.
     """
     if message_reference := await get_reference_message(ctx):
         reference = message_reference.to_reference(fail_if_not_exists=False)
