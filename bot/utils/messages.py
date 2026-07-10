@@ -288,10 +288,15 @@ async def upload_log(
 
 async def get_reference_message(ctx: Context) -> Message | None:
     """Return a message reference if the reference exists and it does not refer to the author of the message."""
-    if ctx.message.reference is None:
+    if (ctx.message.reference is None
+        or ctx.message.reference.message_id is None):
         return None
     try:
-        referenced_message = ctx.message.reference.resolved
+        referenced_message = (
+        ctx.message.reference.resolved
+        or ctx.message.reference.cached_message
+        or await ctx.fetch_message(ctx.message.reference.message_id)
+        )
     except (discord.Forbidden, discord.NotFound):
         return None
     else:
