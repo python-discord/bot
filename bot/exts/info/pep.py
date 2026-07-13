@@ -94,7 +94,7 @@ class PythonEnhancementProposals(Cog):
                 colour=Colour.red(),
             )
 
-            await send_or_reply(ctx, embed)
+        await send_or_reply(ctx, embed)
 
 async def setup(bot: Bot) -> None:
     """Load the PEP cog."""
