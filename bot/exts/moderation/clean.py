@@ -1,14 +1,14 @@
+import asyncio
 import contextlib
 import itertools
 import re
 import time
-from collections import defaultdict
-from collections.abc import Callable, Iterable
-from contextlib import suppress
+from collections.abc import Callable, Collection
 from datetime import datetime
 from itertools import takewhile
 from typing import Literal, TYPE_CHECKING
 
+import arrow
 from discord import Colour, Message, NotFound, TextChannel, Thread, User, errors
 from discord.ext.commands import Cog, Context, Converter, Greedy, command, group, has_any_role
 from discord.ext.commands.converter import TextChannelConverter
@@ -19,6 +19,7 @@ from bot.constants import Channels, CleanMessages, Colours, Emojis, Event, Icons
 from bot.converters import Age, ISODateTime
 from bot.exts.moderation.modlog import ModLog
 from bot.log import get_logger
+from bot.utils.async_utils import AsyncExecutor
 from bot.utils.channel import is_mod_channel
 from bot.utils.messages import upload_log
 from bot.utils.modlog import send_log_message
@@ -32,6 +33,13 @@ MESSAGE_DELETE_DELAY = 5
 Predicate = Callable[[Message], bool]
 # Type alias for message lookup ranges.
 CleanLimit = Message | Age | ISODateTime
+
+# How many ongoing API requests a clean operation can have at the same time.
+CONCURRENT_REQUESTS_POOL = 10
+
+BULK_DELETE_LIMIT = 100
+
+PRIORITY_CHANNELS = [Channels.python_general]
 
 
 class CleanChannels(Converter):
@@ -89,11 +97,11 @@ class Clean(Cog):
 
     @staticmethod
     def _validate_input(
-            channels: CleanChannels | None,
-            bots_only: bool,
-            users: list[User] | None,
-            first_limit: CleanLimit | None,
-            second_limit: CleanLimit | None,
+        channels: CleanChannels | None,
+        bots_only: bool,
+        users: list[User] | None,
+        first_limit: CleanLimit | None,
+        second_limit: CleanLimit | None,
     ) -> None:
         """Raise errors if an argument value or a combination of values is invalid."""
         if first_limit is None:
@@ -118,36 +126,43 @@ class Clean(Cog):
         await ctx.send(content, delete_after=delete_after)
 
     @staticmethod
-    def _channels_set(
-            channels: CleanChannels, ctx: Context, first_limit: CleanLimit, second_limit: CleanLimit
-    ) -> set[TextChannel]:
-        """Standardize the input `channels` argument to a usable set of text channels."""
+    def _get_channels(
+        channels: CleanChannels, ctx: Context, first_limit: CleanLimit, second_limit: CleanLimit
+    ) -> list[TextChannel]:
+        """Standardize the input `channels` argument to a usable list of text channels, arranged by priority."""
+        def channel_rank(channel: TextChannel) -> int:
+            if channel == ctx.channel:  # Clean the invocation channel first if it's listed.
+                return -1
+            try:
+                return PRIORITY_CHANNELS.index(channel.id)
+            except ValueError:
+                return len(PRIORITY_CHANNELS)
+
         # Default to using the invoking context's channel or the channel of the message limit(s).
         if not channels:
             # Input was validated - if first_limit is a message, second_limit won't point at a different channel.
             if isinstance(first_limit, Message):
-                channels = {first_limit.channel}
+                channels = [first_limit.channel]
             elif isinstance(second_limit, Message):
-                channels = {second_limit.channel}
+                channels = [second_limit.channel]
             else:
-                channels = {ctx.channel}
-        else:
-            if channels == "*":
-                channels = {
-                    channel for channel in itertools.chain(ctx.guild.channels, ctx.guild.threads)
-                    if isinstance(channel, TextChannel | Thread)
-                    # Assume that non-public channels are not needed to optimize for speed.
-                    and channel.permissions_for(ctx.guild.default_role).view_channel
-                }
-            else:
-                channels = set(channels)
+                channels = [ctx.channel]
+        elif channels == "*":
+            channels = [
+                channel for channel in itertools.chain(ctx.guild.channels, ctx.guild.threads)
+                if isinstance(channel, TextChannel | Thread)
+                # Ignore non-public channels or ones that can't be written in to optimize for speed.
+                and channel.permissions_for(ctx.guild.default_role).view_channel
+                and channel.permissions_for(ctx.guild.default_role).send_messages
+            ]
 
+        channels.sort(key=channel_rank)
         return channels
 
     @staticmethod
     def _build_predicate(
-        first_limit: datetime,
-        second_limit: datetime | None = None,
+        oldest_limit: datetime,
+        newest_limit: datetime | None = None,
         bots_only: bool = False,
         users: list[User] | None = None,
         regex: re.Pattern | None = None,
@@ -183,15 +198,15 @@ class Clean(Cog):
 
         def predicate_range(message: Message) -> bool:
             """Check if the message age is between the two limits."""
-            return first_limit < message.created_at < second_limit
+            return oldest_limit < message.created_at < newest_limit
 
         def predicate_after(message: Message) -> bool:
             """Check if the message is younger than the first limit."""
-            return message.created_at > first_limit
+            return message.created_at > oldest_limit
 
         predicates = []
         # Set up the correct predicate
-        if second_limit:
+        if newest_limit:
             predicates.append(predicate_range)  # Delete messages in the specified age range
         else:
             predicates.append(predicate_after)  # Delete messages older than the specified age
@@ -217,57 +232,77 @@ class Clean(Cog):
                 # Invocation message has already been deleted
                 log.info("Tried to delete invocation message, but it was already deleted.")
 
-    def _use_cache(self, limit: datetime) -> bool:
-        """Tell whether all messages to be cleaned can be found in the cache."""
-        return self.bot.cached_messages[0].created_at <= limit
+    def _oldest_cache_datetime(self) -> datetime:
+        """Return the datetime of the oldest message cached, or now if the cache is empty."""
+        return self.bot.cached_messages[0].created_at if self.bot.cached_messages else arrow.utcnow().datetime
+
+    def _use_cache(self, most_recent_limit: datetime | None) -> bool:
+        """Return whether there are messages to clean that can be found in the cache."""
+        return most_recent_limit is None or self._oldest_cache_datetime() <= most_recent_limit
+
+    def _use_api(self, oldest_limit: datetime) -> bool:
+        """Return whether there might be messages to clean that won't be found in the cache."""
+        return self._oldest_cache_datetime() >= oldest_limit
 
     def _get_messages_from_cache(
         self,
-        channels: set[TextChannel],
+        channels: list[TextChannel],
         to_delete: Predicate,
-        lower_limit: datetime
-    ) -> tuple[defaultdict[TextChannel, list], list[int]]:
+        oldest_limit: datetime
+    ) -> dict[TextChannel, list[Message]]:
         """Helper function for getting messages from the cache."""
-        message_mappings = defaultdict(list)
-        message_ids = []
-        for message in takewhile(lambda m: m.created_at > lower_limit, reversed(self.bot.cached_messages)):
+        message_mappings = {channel: [] for channel in channels}
+        channels_set = set(channels)
+        for message in takewhile(lambda m: m.created_at > oldest_limit, reversed(self.bot.cached_messages)):
             if not self.cleaning:
                 # Cleaning was canceled
-                return message_mappings, message_ids
+                return message_mappings
 
-            if message.channel in channels and to_delete(message):
+            if message.channel in channels_set and to_delete(message):
                 message_mappings[message.channel].append(message)
-                message_ids.append(message.id)
 
-        return message_mappings, message_ids
+        return message_mappings
 
-    async def _get_messages_from_channels(
+    async def _get_messages_from_channels_and_delete(
         self,
-        channels: Iterable[TextChannel],
+        executor: AsyncExecutor,
+        *,
+        channels: Collection[TextChannel],
         to_delete: Predicate,
         after: datetime,
         before: datetime | None = None
-    ) -> tuple[defaultdict[TextChannel, list], list]:
-        """
-        Collect the messages for deletion by iterating over the histories of the appropriate channels.
-
-        The clean cog enforces an upper limit on message age through `_validate_input`.
-        """
-        message_mappings = defaultdict(list)
-        message_ids = []
+    ) -> tuple[list[Message], dict[TextChannel, list[Message]]]:
+        """Collect and delete the messages for deletion by iterating over the histories of the appropriate channels."""
+        deleted = []
+        old_messages = {channel: [] for channel in channels}
 
         for channel in channels:
+            messages_to_delete = []
             async for message in channel.history(limit=CleanMessages.message_limit, before=before, after=after):
 
                 if not self.cleaning:
-                    # Cleaning was canceled, return empty containers.
-                    return defaultdict(list), []
+                    # Cleaning was canceled, return any messages already sent for deletion.
+                    return deleted, {}
 
                 if to_delete(message):
-                    message_mappings[message.channel].append(message)
-                    message_ids.append(message.id)
+                    if self.is_older_than_14d(message):
+                        old_messages[channel].append(message)
+                        continue
 
-        return message_mappings, message_ids
+                    messages_to_delete.append(message)
+
+                    if len(messages_to_delete) == BULK_DELETE_LIMIT:
+                        self.mod_log.ignore(Event.message_delete, *(m.id for m in messages_to_delete))
+                        executor.submit(channel.delete_messages(messages_to_delete))
+                        deleted.extend(messages_to_delete)
+                        messages_to_delete = []
+
+            if messages_to_delete:  # Remaining messages not deleted.
+                self.mod_log.ignore(Event.message_delete, *(m.id for m in messages_to_delete))
+                executor.submit(channel.delete_messages(messages_to_delete))
+                deleted.extend(messages_to_delete)
+
+        return deleted, old_messages
 
     @staticmethod
     def is_older_than_14d(message: Message) -> bool:
@@ -281,64 +316,69 @@ class Clean(Cog):
         two_weeks_old_snowflake = int((time.time() - 14 * 24 * 60 * 60) * 1000.0 - 1420070400000) << 22
         return message.id < two_weeks_old_snowflake
 
-    async def _delete_messages_individually(self, messages: list[Message]) -> list[Message]:
-        """Delete each message in the list unless cleaning is cancelled. Return the deleted messages."""
+    async def _delete_messages_individually(self, channel_messages: dict[TextChannel, list[Message]]) -> list[Message]:
+        """Delete each message unless cleaning is cancelled. Return the deleted messages."""
+        message_ids = [m.id for messages in channel_messages.values() for m in messages]
+        self.mod_log.ignore(Event.message_delete, *message_ids)
+
         deleted = []
-        for message in messages:
-            # Ensure that deletion was not canceled
-            if not self.cleaning:
-                return deleted
-            with contextlib.suppress(NotFound):  # Message doesn't exist or was already deleted
-                await message.delete()
-                deleted.append(message)
+        for messages in channel_messages.values():
+            for message in messages:
+                # Ensure that deletion was not canceled
+                if not self.cleaning:
+                    return deleted
+                with contextlib.suppress(NotFound):  # Message doesn't exist or was already deleted
+                    await message.delete()
+                    deleted.append(message)
         return deleted
 
-    async def _delete_found(self, message_mappings: dict[TextChannel, list[Message]]) -> list[Message]:
+    async def _delete_bulk(
+        self, messages_per_channel: dict[TextChannel, list[Message]], executor: AsyncExecutor
+    ) -> tuple[list[Message], dict[TextChannel, list[Message]]]:
         """
         Delete the detected messages.
 
         Deletion is made in bulk per channel for messages less than 14d old.
-        The function returns the deleted messages.
+        Assumes the provided messages are sorted by timestamp (newest first).
+
+        The function returns the deleted messages. Additionally, messages older than 14d are returned to
+        be deleted separately.
         If cleaning was cancelled in the middle, return messages already deleted.
         """
         deleted = []
-        for channel, messages in message_mappings.items():
+        old_messages = {}
+
+        for channel, messages in messages_per_channel.items():
             to_delete = []
 
-            delete_old = False
-            for current_index, message in enumerate(messages):  # noqa: B007
+            for current_index, message in enumerate(messages):
+                await asyncio.sleep(0)  # Avoid hogging the event loop, and allow the clean to be cancelled.
                 if not self.cleaning:
                     # Means that the cleaning was canceled
-                    return deleted
+                    return deleted, {}
 
                 if self.is_older_than_14d(message):
                     # Further messages are too old to be deleted in bulk
-                    delete_old = True
+                    old_messages[channel] = messages[current_index:]
                     break
 
                 to_delete.append(message)
 
-                if len(to_delete) == 100:
-                    # Only up to 100 messages can be deleted in a bulk
-                    await channel.delete_messages(to_delete)
+                if len(to_delete) == BULK_DELETE_LIMIT:
+                    self.mod_log.ignore(Event.message_delete, *(message.id for message in to_delete))
+                    executor.submit(channel.delete_messages(to_delete))
                     deleted.extend(to_delete)
-                    to_delete.clear()
+                    to_delete = []
 
             if not self.cleaning:
-                return deleted
+                return deleted, {}
             if len(to_delete) > 0:
                 # Deleting any leftover messages if there are any
-                with suppress(NotFound):
-                    await channel.delete_messages(to_delete)
+                self.mod_log.ignore(Event.message_delete, *(message.id for message in to_delete))
+                executor.submit(channel.delete_messages(to_delete))
                 deleted.extend(to_delete)
 
-            if not self.cleaning:
-                return deleted
-            if delete_old:
-                old_deleted = await self._delete_messages_individually(messages[current_index:])
-                deleted.extend(old_deleted)
-
-        return deleted
+        return deleted, old_messages
 
     async def _modlog_cleaned_messages(
         self,
@@ -404,7 +444,7 @@ class Clean(Cog):
             return None
         self.cleaning = True
 
-        deletion_channels = self._channels_set(channels, ctx, first_limit, second_limit)
+        deletion_channels = self._get_channels(channels, ctx, first_limit, second_limit)
 
         if isinstance(first_limit, Message):
             first_limit = first_limit.created_at
@@ -412,36 +452,55 @@ class Clean(Cog):
             second_limit = second_limit.created_at
         if first_limit and second_limit:
             first_limit, second_limit = sorted([first_limit, second_limit])
+        oldest_limit = first_limit
+        newest_limit = second_limit
 
         # Needs to be called after standardizing the input.
-        predicate = self._build_predicate(first_limit, second_limit, bots_only, users, regex)
+        predicate = self._build_predicate(oldest_limit, newest_limit, bots_only, users, regex)
+
+        executor = AsyncExecutor(limit=CONCURRENT_REQUESTS_POOL)
 
         if attempt_delete_invocation:
             # Delete the invocation first
-            await self._delete_invocation(ctx)
+            executor.submit(self._delete_invocation(ctx))
 
-        if self._use_cache(first_limit):
+        deleted_messages = []
+        old_messages = {channel: [] for channel in deletion_channels}
+
+        if self._use_cache(newest_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in the cache.")
-            message_mappings, message_ids = self._get_messages_from_cache(
-                channels=deletion_channels, to_delete=predicate, lower_limit=first_limit
+            messages_per_channel = self._get_messages_from_cache(
+                channels=deletion_channels, to_delete=predicate, oldest_limit=oldest_limit
             )
-        else:
+            deleted_messages, cache_old_messages = await self._delete_bulk(messages_per_channel, executor)
+            for channel, messages in cache_old_messages.items():
+                old_messages[channel].extend(messages)
+            newest_limit = self._oldest_cache_datetime()
+
+        if self._use_api(oldest_limit):
             log.trace(f"Messages for cleaning by {ctx.author.id} will be searched in channel histories.")
-            message_mappings, message_ids = await self._get_messages_from_channels(
-                channels=deletion_channels,
-                to_delete=predicate,
-                after=first_limit,  # Remember first is the earlier datetime (the "older" time).
-                before=second_limit
+            api_deleted_messages, api_old_messages = await self._get_messages_from_channels_and_delete(
+                executor, channels=deletion_channels, to_delete=predicate, after=oldest_limit, before=newest_limit
             )
+            deleted_messages.extend(api_deleted_messages)
+            for channel, messages in api_old_messages.items():
+                old_messages[channel].extend(messages)
 
         if not self.cleaning:
-            # Means that the cleaning was canceled
+            log.trace("Cleaning was cancelled, cancelling tasks.")
+            executor.cancel_all()
             return None
+        await executor.gather(return_exceptions=True)  # Ignore NotFound errors etc.
 
-        # Now let's delete the actual messages with purge.
-        self.mod_log.ignore(Event.message_delete, *message_ids)
-        deleted_messages = await self._delete_found(message_mappings)
+        if not self.cleaning:
+            return None
+        if old_messages:
+            log.trace("Some of the found messages are older than 14d, and will deleted individually.")
+            old_deleted = await self._delete_messages_individually(old_messages)
+            deleted_messages.extend(old_deleted)
+
         self.cleaning = False
+        log.trace("Cleaning completed, wrapping up")
 
         if not channels:
             channels = deletion_channels
@@ -661,6 +720,10 @@ class Clean(Cog):
 
     async def cog_command_error(self, ctx: Context, error: Exception) -> None:
         """Safely end the cleaning operation on unexpected errors."""
+        self.cleaning = False
+
+    def cog_unload(self) -> None:
+        """Stop any ongoing clean."""
         self.cleaning = False
 
 

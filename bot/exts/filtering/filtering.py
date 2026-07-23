@@ -59,8 +59,8 @@ from bot.exts.moderation.infraction.infractions import COMP_BAN_DURATION, COMP_B
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
 from bot.pagination import LinePaginator
+from bot.utils.async_utils import lock_arg
 from bot.utils.channel import is_mod_channel
-from bot.utils.lock import lock_arg
 from bot.utils.message_cache import MessageCache
 
 log = get_logger(__name__)
