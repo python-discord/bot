@@ -14,7 +14,6 @@ log = get_logger(__name__)
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 PEP_API_URL = "https://peps.python.org/api/peps.json"
 
-
 class PEPInfo(TypedDict):
     """
     Useful subset of the PEP API response.
@@ -47,7 +46,9 @@ class PythonEnhancementProposals(Cog):
         log.trace("Started refreshing PEP data.")
         async with self.bot.http_session.get(PEP_API_URL) as resp:
             if resp.status != 200:
-                log.warning("Fetching PEP data from PEP API failed with code %s", resp.status)
+                log.warning(
+                    "Fetching PEP data from PEP API failed with code %s",
+                resp.status)
                 return
             listing = await resp.json()
 
@@ -73,8 +74,11 @@ class PythonEnhancementProposals(Cog):
         return embed
 
     async def get_pep_embed(self, pep_number: int) -> Embed:
-        if self.last_refreshed_peps is None or (
-            (self.last_refreshed_peps + timedelta(hours=1)) <= datetime.now(tz=UTC) and len(str(pep_number)) < 5
+        if (
+            self.last_refreshed_peps is None or (
+                (self.last_refreshed_peps + timedelta(hours=1)) <= datetime.now(tz=UTC)
+                and len(str(pep_number)) < 5
+            )
         ):
             await self.refresh_pep_data()
 
