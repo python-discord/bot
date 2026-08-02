@@ -26,12 +26,9 @@ class Tunnel(commands.Cog):
             if last_message_id is None:
                 continue
 
-            last_message = await channel.fetch_message(last_message_id)
-            if last_message is None:
-                continue
+            self.channel_id_to_timestamp[channel_id] = discord.utils.snowflake_time(last_message_id).timestamp()
 
-            self.channel_id_to_timestamp[channel_id] = last_message.created_at.timestamp()
-
+    @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command()
     @guild_only()
     async def tunnel(
