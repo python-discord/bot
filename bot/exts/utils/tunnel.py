@@ -31,13 +31,14 @@ class Tunnel(commands.Cog):
     async def tunnel(
         self,
         ctx: commands.Context,
-        destination_channel: discord.TextChannel | None,
+        destination_channel_raw: str | None,
     ) -> None:
         """Creates a tunnel."""
-        if destination_channel is None:
-            least_active_channel_id = self.get_least_active_channel_id(ctx.channel.id)
-            least_active_channel = await ctx.guild.fetch_channel(least_active_channel_id)
+        if destination_channel_raw is None:
+            least_active_channel = self.get_least_active_channel(ctx.channel)
             destination_channel = least_active_channel
+        else:
+            destination_channel = await commands.TextChannelConverter().convert(ctx, destination_channel_raw)
 
         source_channel = ctx.channel
 
