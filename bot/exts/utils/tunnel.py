@@ -47,7 +47,7 @@ class Tunnel(commands.Cog):
         if not destination_channel.permissions_for(ctx.author).send_messages:
             raise BadArgument(f"You don't have permission to send messages in {destination_channel.jump_url}")
 
-        if source_channel.id == destination_channel.id:
+        if source_channel == destination_channel:
             raise BadArgument("Source and destination channels cannot be the same")
 
         source_message_template = f"➡️ Conversation continued at {{location}} (by <@{ctx.author.id}>)"
