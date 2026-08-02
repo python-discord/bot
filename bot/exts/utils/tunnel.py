@@ -5,7 +5,7 @@ from discord.ext.commands import BadArgument, guild_only
 from bot.bot import Bot
 from bot.constants import Channels
 
-CHANNEL_IDS = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
+CHANNEL_IDS: tuple[int, ...] = (Channels.off_topic_0, Channels.off_topic_1, Channels.off_topic_2)
 
 
 class Tunnel(commands.Cog):
@@ -13,20 +13,17 @@ class Tunnel(commands.Cog):
 
     def __init__(self, bot: Bot) -> None:
         self.bot = bot
-        self.channel_id_to_timestamp: dict[int, float] = dict.fromkeys(CHANNEL_IDS, 0)
+        self.channels: list[discord.TextChannel] = []
 
     async def cog_load(self) -> None:
         """Initialize channel timestamps."""
+        self.channels = []
         for channel_id in CHANNEL_IDS:
             channel = await self.bot.fetch_channel(channel_id)
             if channel is None:
                 continue
 
-            last_message_id = channel.last_message_id
-            if last_message_id is None:
-                continue
-
-            self.channel_id_to_timestamp[channel_id] = discord.utils.snowflake_time(last_message_id).timestamp()
+            self.channels.append(channel)
 
     @commands.cooldown(1, 10, commands.BucketType.member)
     @commands.command()
@@ -63,19 +60,11 @@ class Tunnel(commands.Cog):
         )
         await source_message.edit(content=source_message_template.format(location=destination_message.jump_url))
 
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
-        """Determines least active off-topic channel to default to."""
-        if message.channel.id not in CHANNEL_IDS:
-            return
-
-        self.channel_id_to_timestamp[message.channel.id] = message.created_at.timestamp()
-
-    def get_least_active_channel_id(self, current_channel_id: int) -> int:
+    def get_least_active_channel(self, current_channel: discord.TextChannel) -> discord.TextChannel:
         """Gets least active off-topic channel."""
         return min(
-            (channel for channel in self.channel_id_to_timestamp if channel != current_channel_id),
-            key=lambda c: self.channel_id_to_timestamp[c],
+            (c for c in self.channels if c != current_channel),
+            key=lambda c: discord.utils.snowflake_time(c.last_message_id),
         )
 
 
