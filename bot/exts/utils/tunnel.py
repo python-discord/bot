@@ -75,7 +75,7 @@ class Tunnel(commands.Cog):
         """Gets least active off-topic channel."""
         return min(
             (channel for channel in self.channel_id_to_timestamp if channel != current_channel_id),
-            key=lambda c: self.channel_id_to_timestamp[c]
+            key=lambda c: self.channel_id_to_timestamp[c],
         )
 
 
