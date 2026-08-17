@@ -6,8 +6,6 @@ import textwrap
 from collections.abc import Sequence
 from typing import NamedTuple
 
-import regex
-
 from bot import constants
 from bot.log import get_logger
 from bot.utils import has_lines
@@ -47,8 +45,6 @@ _RE_CODE_BLOCK = re.compile(
     """,
     re.DOTALL | re.VERBOSE
 )
-# copy of _RE_CODE_BLOCK. Done like this for highlighting reasons (regex.compile doesn't properly highlight)
-_REGEX_CODE_BLOCK = regex.compile(_RE_CODE_BLOCK.pattern, regex.DOTALL | regex.VERBOSE)
 
 _RE_LANGUAGE = re.compile(
     fr"""
@@ -91,7 +87,7 @@ def find_faulty_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     log.trace("Finding all code blocks in a message.")
 
     code_blocks = []
-    for match in _REGEX_CODE_BLOCK.finditer(message, overlapped=True):
+    for match in _RE_CODE_BLOCK.finditer(message):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")
         language = groups["lang"].strip()  # Strip the whitespace cause it's included in the group.
