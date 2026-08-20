@@ -57,7 +57,7 @@ class Resources(commands.Cog):
             url = f"{url}?topics={quote(to_kebabcase(resource_topic.splitlines()[0]))}"
 
         embed = Embed(
-            title=f"Resources for: {resource_topic}" if resource_topic else "Resources",
+            title=f"Resources for: {resource_topic.title()}" if resource_topic else "Resources",
             description=f"The [Resources page]({url}) on our website contains a list "
                         f"of hand-selected learning resources that we "
                         f"regularly recommend to both beginners and experts."
