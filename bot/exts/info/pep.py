@@ -106,7 +106,7 @@ class PythonEnhancementProposals(Cog):
 
     @app_commands.command(name="pep")
     @app_commands.guild_only()
-    @app_commands.describe(pep_number="The pep number or the autocompleted pep")
+    @app_commands.describe(pep_number="PEP number or title")
     async def pep_slash_command(self, interaction: Interaction, pep_number: int) -> None:
         """Fetches information about a PEP and sends it to the channel."""
         embed = await self.get_pep_embed(pep_number)
