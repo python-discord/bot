@@ -55,7 +55,7 @@ class PythonEnhancementProposals(Cog):
         for pep_num_str, pep_info in listing.items():
             pep_num = int(pep_num_str)
             self.peps[pep_num] = pep_info
-            self.pep_autocomplete_choices[pep_num] = pep_info["title"]
+            self.pep_autocomplete_choices[pep_num] = f"{pep_num} - {pep_info["title"]}"
 
         log.info("Successfully refreshed PEP data.")
 
@@ -117,9 +117,16 @@ class PythonEnhancementProposals(Cog):
         """Returns a list of PEPs that matches `query`."""
         await self.refresh_pep_data_if_needed()
 
-        # list[('pep_title', similarity, pep_number)]
+        if len(query) < 5 and query.isdigit():
+            pep_num = int(query)
+            pep_title = self.pep_autocomplete_choices.get(pep_num)
+            if pep_title is not None:
+                return [app_commands.Choice(name=pep_title, value=pep_num)]
+            return []
+
+        # list[('pep_num - pep_title', similarity, pep_number)]
         result = process.extract(query=query, choices=self.pep_autocomplete_choices, limit=10)
-        return [app_commands.Choice(name=f"{pep[2]} - {pep[0]}", value=pep[2]) for pep in result]
+        return [app_commands.Choice(name=pep[0], value=pep[2]) for pep in result]
 
 
 async def setup(bot: Bot) -> None:
