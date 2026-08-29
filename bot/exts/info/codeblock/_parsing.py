@@ -245,3 +245,16 @@ def _fix_indentation(content: str) -> str:
     content = first_line + "".join(line[first_indent:] for line in lines[1:])
 
     return content
+
+
+def _get_block_with_invalid_ticks(blocks: Sequence[CodeBlock]) -> CodeBlock | None:
+    """
+    Find a block with invalid ticks and return it.
+
+    Return `None` if there are no blocks with invalid ticks.
+    """
+    for block in blocks:
+        if block.tick != BACKTICK:
+            return block
+
+    return None

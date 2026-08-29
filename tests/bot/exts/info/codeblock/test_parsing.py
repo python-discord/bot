@@ -1,4 +1,5 @@
 import unittest
+from textwrap import dedent
 
 from bot.exts.info.codeblock import _parsing as parsing
 
@@ -92,6 +93,36 @@ class FindFaultyCodeblocksTest(unittest.TestCase):
         self.assertIsNotNone(faulty_code_blocks)
         self.assertEqual(len(faulty_code_blocks), 0)
 
+    def test_should_not_recognize_multiline_single_quote_python_text(self) -> None:
+        message = dedent("""
+        ```py
+        \'\'\'A script that iterates and prints the numbers\'\'\'
+        numbs = [1, 2, 3]
+
+        for numb in numbs:
+            print(numb)
+        ```
+        """).strip()
+
+        faulty_code_blocks = parsing.find_faulty_code_blocks(message)
+
+        self.assertIsNone(faulty_code_blocks)
+
+    def test_should_not_recognize_multiline_double_quote_python_text(self) -> None:
+        message = dedent('''
+        ```py
+        """A script that iterates and prints the numbers"""
+        numbs = [1, 2, 3]
+
+        for numb in numbs:
+            print(numb)
+        ```
+        ''').strip()
+
+        faulty_code_blocks = parsing.find_faulty_code_blocks(message)
+
+        self.assertIsNone(faulty_code_blocks)
+
     def test_should_recognize_single_backtick_no_language(self):
         message = """`
         x = 4
@@ -151,3 +182,49 @@ class FindFaultyCodeblocksTest(unittest.TestCase):
         faulty_code_blocks = parsing.find_faulty_code_blocks(message)
         self.assertIsNotNone(faulty_code_blocks)
         self.assertEqual(len(faulty_code_blocks), 1)
+
+
+class FindCodeblockWithInvalidTicksTest(unittest.TestCase):
+    def test_should_return_codeblock_with_single_quotes(self) -> None:
+        first_block_content = dedent('''
+        """A script that iterates and prints the numbers"""
+        numbs = [1, 2, 3]
+
+        for numb in numbs:
+            print(numb)
+        ''').strip()
+        first_block_language = "py"
+        first_block_tick = parsing.BACKTICK
+        first_block_ticks = first_block_tick * 3
+
+        second_block_content = dedent('''
+        """A script that iterates and prints the letters"""
+        letters = ["a", "b", "c"]
+
+        for letter in letters:
+            print(letter)
+        ''').strip()
+        second_block_language = "py"
+        second_block_tick = "'"
+        second_block_ticks = second_block_tick * 3
+
+        first_block = parsing.CodeBlock(
+            first_block_content,
+            first_block_language,
+            first_block_ticks,
+            first_block_tick,
+            True,
+        )
+        second_block = parsing.CodeBlock(
+            second_block_content,
+            second_block_language,
+            second_block_ticks,
+            second_block_tick,
+            True,
+        )
+        blocks = (first_block, second_block)
+        expected_block = second_block
+
+        block_with_invalid_ticks = parsing._get_block_with_invalid_ticks(blocks)
+
+        self.assertEqual(block_with_invalid_ticks, expected_block)
