@@ -125,7 +125,7 @@ class PythonEnhancementProposals(Cog):
             return []
 
         # list[('pep_num - pep_title', similarity, pep_number)]
-        result = process.extract(query=query, choices=self.pep_autocomplete_choices, limit=10)
+        result = process.extract(query=query, choices=self.pep_autocomplete_choices, limit=10, processor=str.casefold)
         return [app_commands.Choice(name=pep[0], value=pep[2]) for pep in result]
 
 
