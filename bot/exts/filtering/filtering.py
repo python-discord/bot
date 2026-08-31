@@ -261,6 +261,10 @@ class Filtering(Cog):
             for a in msg.attachments if a.content_type and "charset" in a.content_type
         ]
 
+        text_contents.extend(
+            [snapshot.content for snapshot in msg.message_snapshots]
+        )
+
         if text_contents:
             attachment_content = "\n\n".join(text_contents)
             ctx = ctx.replace(content=f"{ctx.content}\n\n{attachment_content}")
