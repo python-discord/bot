@@ -199,7 +199,9 @@ async def maybe_archive_idle_post(post_id: int, scheduler: scheduling.Scheduler)
         return
 
     if post.archived or post.locked:
-        log.trace(f"Not closing already closed post #{post} ({post.id}).")
+        # Could have been closed by us already, or manually archived/locked by the owner.
+        # help_post_archived tells the two apart via the audit log.
+        await help_post_archived(post, scheduler)
         return
 
     log.trace(f"Handling open post #{post} ({post.id}).")
