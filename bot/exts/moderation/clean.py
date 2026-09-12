@@ -495,7 +495,7 @@ class Clean(Cog):
         if not self.cleaning:
             return None
         if old_messages:
-            log.trace("Some of the found messages are older than 14d, and will deleted individually.")
+            log.trace("Some of the found messages are older than 14d, and will be deleted individually.")
             old_deleted = await self._delete_messages_individually(old_messages)
             deleted_messages.extend(old_deleted)
 
