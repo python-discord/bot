@@ -17,7 +17,7 @@ from bot.constants import MODERATION_ROLES, RedirectOutput, Roles
 from bot.converters import Inventory, PackageName, ValidURL
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.lock import SharedEvent, lock
+from bot.utils.async_utils import SharedEvent, lock
 from bot.utils.messages import send_denial, wait_for_deletion
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache

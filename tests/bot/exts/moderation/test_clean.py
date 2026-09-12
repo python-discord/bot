@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import arrow
+
 from bot.exts.moderation.clean import Clean
 from tests.helpers import MockBot, MockContext, MockGuild, MockMember, MockMessage, MockRole, MockTextChannel
 
@@ -20,7 +22,8 @@ class CleanTests(unittest.IsolatedAsyncioTestCase):
         self.cog._modlog_cleaned_messages = AsyncMock(return_value=self.log_url)
 
         self.cog._use_cache = MagicMock(return_value=True)
-        self.cog._delete_found = AsyncMock(return_value=[42, 84])
+        self.cog._use_api = MagicMock(return_value=False)
+        self.cog._delete_bulk = AsyncMock(return_value=([42, 84], {}))
 
     @patch("bot.exts.moderation.clean.is_mod_channel")
     async def test_clean_deletes_invocation_in_non_mod_channel(self, mod_channel_check):
@@ -51,7 +54,7 @@ class CleanTests(unittest.IsolatedAsyncioTestCase):
             await self.cog._clean_messages(
                 self.ctx,
                 None,
-                first_limit=MockMessage(),
+                first_limit=arrow.utcnow().datetime,
                 attempt_delete_invocation=False,
             ),
             self.log_url,
