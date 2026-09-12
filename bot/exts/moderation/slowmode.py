@@ -90,9 +90,9 @@ class Slowmode(Cog):
         # Ensure the delay is within discord's limits
         if slowmode_delay > SLOWMODE_MAX_DELAY:
             log.info(
-                f"{ctx.author} tried to set the slowmode delay of #{channel} to {humanized_delay}, "
-                "which is not between 0 and 6 hours."
-            )
+                "%s tried to set the slowmode delay of #%s to %s, "
+                "which is not between 0 and 6 hours.",
+            ctx.author, channel, humanized_delay)
 
             await ctx.send(
                 f"{Emojis.cross_mark} The slowmode delay must be between 0 and 6 hours."
@@ -113,9 +113,9 @@ class Slowmode(Cog):
 
             self.scheduler.schedule_at(expiry, channel.id, self._revert_slowmode(channel.id))
             log.info(
-                f"{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}"
-                f" which will revert to {humanized_original_delay} in {time.humanize_delta(expiry)}."
-            )
+                "%s set the slowmode delay for #%s to %s"
+                " which will revert to %s in %s.",
+            ctx.author, channel, humanized_delay, humanized_original_delay, time.humanize_delta(expiry))
             await channel.edit(slowmode_delay=slowmode_delay)
             await ctx.send(
                 f"{Emojis.check_mark} The slowmode delay for {channel.mention}"
@@ -126,13 +126,13 @@ class Slowmode(Cog):
                 await self.slowmode_cache.delete(channel.id)
                 self.scheduler.cancel(channel.id)
 
-            log.info(f"{ctx.author} set the slowmode delay for #{channel} to {humanized_delay}.")
+            log.info("%s set the slowmode delay for #%s to %s.", ctx.author, channel, humanized_delay)
             await channel.edit(slowmode_delay=slowmode_delay)
             await ctx.send(
                 f"{Emojis.check_mark} The slowmode delay for {channel.mention} is now {humanized_delay}."
             )
         if channel.id in COMMONLY_SLOWMODED_CHANNELS:
-            log.info(f"Recording slowmode change in stats for {channel.name}.")
+            log.info("Recording slowmode change in stats for %s.", channel.name)
             self.bot.stats.gauge(f"slowmode.{COMMONLY_SLOWMODED_CHANNELS[channel.id]}", slowmode_delay)
 
     async def _reschedule(self) -> None:
@@ -141,7 +141,7 @@ class Slowmode(Cog):
             expiration = cached_data.split(", ")[1]
             expiration_datetime = datetime.fromisoformat(expiration)
             channel = self.bot.get_channel(channel_id)
-            log.info(f"Rescheduling slowmode expiration for #{channel} ({channel_id}).")
+            log.info("Rescheduling slowmode expiration for #%s (%s).", channel, channel_id)
             self.scheduler.schedule_at(expiration_datetime, channel_id, self._revert_slowmode(channel_id))
 
     async def _fetch_sm_cache(self, channel_id: int) -> tuple[int | None, str, str]:
@@ -166,8 +166,8 @@ class Slowmode(Cog):
         channel = await get_or_fetch_channel(self.bot, channel_id)
         mod_channel = await get_or_fetch_channel(self.bot, Channels.mods)
         log.info(
-            f"Slowmode in #{channel.name} ({channel.id}) has expired and has reverted to {humanized_original_delay}."
-        )
+            "Slowmode in #%s (%s) has expired and has reverted to %s.",
+        channel.name, channel.id, humanized_original_delay)
         await channel.edit(slowmode_delay=original_delay)
         await mod_channel.send(
             f"{Emojis.check_mark} A previously applied slowmode in {channel.jump_url} ({channel.id})"

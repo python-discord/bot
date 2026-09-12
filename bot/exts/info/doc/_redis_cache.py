@@ -41,26 +41,26 @@ class DocRedisCache(RedisObject):
         if set_expire is None:
             # An expire is only set if the key didn't exist before.
             ttl = await self.redis_session.client.ttl(redis_key)
-            log.debug(f"Checked TTL for `{redis_key}`.")
+            log.debug("Checked TTL for `%s`.", redis_key)
 
             if ttl == -1:
-                log.warning(f"Key `{redis_key}` had no expire set.")
+                log.warning("Key `%s` had no expire set.", redis_key)
             if ttl < 0:  # not set or didn't exist
                 needs_expire = True
             else:
-                log.debug(f"Key `{redis_key}` has a {ttl} TTL.")
+                log.debug("Key `%s` has a %s TTL.", redis_key, ttl)
                 self._set_expires[redis_key] = time.monotonic() + ttl - .1  # we need this to expire before redis
 
         elif time.monotonic() > set_expire:
             # If we got here the key expired in redis and we can be sure it doesn't exist.
             needs_expire = True
-            log.debug(f"Key `{redis_key}` expired in internal key cache.")
+            log.debug("Key `%s` expired in internal key cache.", redis_key)
 
         await self.redis_session.client.hset(redis_key, item.symbol_id, value)
         if needs_expire:
             self._set_expires[redis_key] = time.monotonic() + WEEK_SECONDS
             await self.redis_session.client.expire(redis_key, WEEK_SECONDS)
-            log.info(f"Set {redis_key} to expire in a week.")
+            log.info("Set %s to expire in a week.", redis_key)
 
     async def get(self, item: DocItem) -> str | None:
         """Return the Markdown content of the symbol `item` if it exists."""
@@ -75,7 +75,7 @@ class DocRedisCache(RedisObject):
         ]
         if package_keys:
             await self.redis_session.client.delete(*package_keys)
-            log.info(f"Deleted keys from redis: {package_keys}.")
+            log.info("Deleted keys from redis: %s.", package_keys)
             self._set_expires = {
                 key: expire for key, expire in self._set_expires.items() if not fnmatch.fnmatchcase(key, pattern)
             }

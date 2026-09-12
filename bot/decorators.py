@@ -238,9 +238,9 @@ def respect_role_hierarchy(member_arg: function.Argument) -> t.Callable:
 
             if target.top_role >= actor.top_role:
                 log.info(
-                    f"{actor} ({actor.id}) attempted to {cmd} "
-                    f"{target} ({target.id}), who has an equal or higher top role."
-                )
+                    "%s (%s) attempted to %s "
+                    "%s (%s), who has an equal or higher top role.",
+                actor, actor.id, cmd, target, target.id)
                 await ctx.send(
                     f":x: {actor.mention}, you may not {cmd} "
                     "someone with an equal or higher top role."
@@ -266,7 +266,7 @@ def mock_in_debug(return_value: t.Any) -> t.Callable:
         async def wrapped(*args, **kwargs) -> t.Any:
             """Short-circuit and log if in debug mode."""
             if DEBUG_MODE:
-                log.debug(f"Function {func.__name__} called with args: {args}, kwargs: {kwargs}")
+                log.debug("Function %s called with args: %s, kwargs: %s", func.__name__, args, kwargs)
                 return return_value
             return await func(*args, **kwargs)
         return wrapped

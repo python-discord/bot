@@ -2,7 +2,6 @@ import datetime
 import io
 import json
 import re
-import time
 import unicodedata
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
@@ -73,7 +72,6 @@ HOURS_BETWEEN_NICKNAME_ALERTS = 1
 OFFENSIVE_MSG_DELETE_TIME = datetime.timedelta(days=7)
 WEEKLY_REPORT_ISO_DAY = 3  # 1=Monday, 7=Sunday
 MAX_IMAGE_HASH_SIZE = 5_000_000
-ACTION_DEDUPE_WINDOW_SECONDS = 3
 
 
 def _clean_ban_mentions(mentions: set[str]) -> set[str]:
@@ -115,7 +113,6 @@ class Filtering(Cog):
         self.bot = bot
         self.filter_lists: dict[str, FilterList] = {}
         self._subscriptions = defaultdict[Event, list[FilterList]](list)
-        self._recent_actions: dict[tuple, float] = {}
         self.delete_scheduler = scheduling.Scheduler(self.__class__.__name__)
         self.webhook: discord.Webhook | None = None
 
@@ -264,13 +261,18 @@ class Filtering(Cog):
             for a in msg.attachments if a.content_type and "charset" in a.content_type
         ]
 
+        text_contents.extend(
+            [snapshot.content for snapshot in msg.message_snapshots]
+        )
+
         if text_contents:
             attachment_content = "\n\n".join(text_contents)
             ctx = ctx.replace(content=f"{ctx.content}\n\n{attachment_content}")
 
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
         self.message_cache.update(msg, metadata=triggers)
-        await self._run_actions(ctx, result_actions)
+        if result_actions:
+            await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
 
@@ -300,7 +302,8 @@ class Filtering(Cog):
         self.message_cache.update(after)
         ctx = FilterContext.from_message(Event.MESSAGE_EDIT, after, before, self.message_cache)
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
-        await self._run_actions(ctx, result_actions)
+        if result_actions:
+            await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
         await self._maybe_schedule_msg_delete(ctx, result_actions)
@@ -335,7 +338,8 @@ class Filtering(Cog):
         ctx = FilterContext.from_message(Event.SNEKBOX, msg).replace(content=content, attachments=files)
 
         result_actions, list_messages, triggers = await self._resolve_action(ctx)
-        await self._run_actions(ctx, result_actions)
+        if result_actions:
+            await result_actions.action(ctx)
         if ctx.send_alert:
             await self._send_alert(ctx, list_messages)
 
@@ -619,7 +623,7 @@ class Filtering(Cog):
         async def delete_list() -> None:
             """The actual removal routine."""
             await bot.instance.api_client.delete(f"bot/filter/filters/{filter_id}")
-            log.info(f"Successfully deleted filter with ID {filter_id}.")
+            log.info("Successfully deleted filter with ID %s.", filter_id)
             filter_list[list_type].filters.pop(filter_id)
             await ctx.reply(f"✅ Deleted filter: {filter_}")
 
@@ -967,7 +971,7 @@ class Filtering(Cog):
                 self.unsubscribe(filter_list)
 
             await bot.instance.api_client.delete(f"bot/filter/filter_lists/{list_id}")
-            log.info(f"Successfully deleted the {filter_list[list_type].label} filterlist.")
+            log.info("Successfully deleted the %s filterlist.", filter_list[list_type].label)
             await message.edit(content=f"✅ The {list_description} list has been deleted.")
 
         result = await self._resolve_list_type_and_name(ctx, list_type, list_name)
@@ -999,8 +1003,8 @@ class Filtering(Cog):
             if list_name not in filter_list_types:
                 if list_name not in self.already_warned:
                     log.warning(
-                        f"A filter list named {list_name} was loaded from the database, but no matching class."
-                    )
+                        "A filter list named %s was loaded from the database, but no matching class.",
+                    list_name)
                     self.already_warned.add(list_name)
                 return None
             self.filter_lists[list_name] = filter_list_types[list_name](self)
@@ -1022,7 +1026,7 @@ class Filtering(Cog):
                 log.debug("Successfully fetched filtering webhook icon, reading payload.")
                 webhook_icon = await response.read()
             else:
-                log.warning(f"Failed to fetch filtering webhook icon due to status: {response.status}")
+                log.warning("Failed to fetch filtering webhook icon due to status: %s", response.status)
 
         # Generate a new webhook.
         try:
@@ -1030,7 +1034,7 @@ class Filtering(Cog):
             log.trace(f"Generated new filters webhook with ID {webhook.id},")
             return webhook
         except HTTPException as e:
-            log.error(f"Failed to create filters webhook: {e}")
+            log.error("Failed to create filters webhook: %s", e)
             return None
 
     async def _resolve_action(
@@ -1076,39 +1080,6 @@ class Filtering(Cog):
             username=name, content=ctx.alert_content, embeds=[embed, *ctx.alert_embeds][:10], view=AlertView(ctx)
         )
 
-    async def _run_actions(self, ctx: FilterContext, actions: ActionSettings | None) -> None:
-        """Execute actions unless this exact action payload was run very recently for the same context source."""
-        if actions and self._should_run_actions(ctx, actions):
-            await actions.action(ctx)
-
-    def _should_run_actions(self, ctx: FilterContext, actions: ActionSettings) -> bool:
-        """Return whether actions should run, suppressing identical actions for the same source within a time window."""
-        now = time.monotonic()
-        recent = self._recent_actions
-        # Evict stale cache keys from the front.
-        while recent:
-            oldest_key = next(iter(recent))
-            if now - recent[oldest_key] < ACTION_DEDUPE_WINDOW_SECONDS:
-                break
-            del recent[oldest_key]
-
-        # base_key ignores additional_actions so a events for the same user are caught
-        # even when antispam skips adding the deletion handler the second time.
-        base_key = (
-            getattr(ctx.author, "id", None),
-            json.dumps(to_serializable(actions), sort_keys=True, default=str),
-        )
-        full_key = base_key + (
-            tuple(sorted(getattr(a, "__qualname__", repr(a)) for a in ctx.additional_actions)),
-        )
-        if base_key in recent or full_key in recent:
-            log.info(f"Cache hit, not running actions {ctx.author} (event={ctx.event.name}): {actions}")
-            return False
-        log.info(f"Cache miss, running actions on {ctx.author} (event={ctx.event.name}): {actions}")
-        recent[base_key] = now
-        recent[full_key] = now
-        return True
-
     def _increment_stats(self, triggered_filters: dict[AtomicList, list[Filter]]) -> None:
         """Increment the stats for every filter triggered."""
         for filters in triggered_filters.values():
@@ -1149,7 +1120,8 @@ class Filtering(Cog):
         new_ctx = ctx.replace(content=" ".join(names_to_check))
         result_actions, list_messages, triggers = await self._resolve_action(new_ctx)
         new_ctx = new_ctx.replace(content=ctx.content)  # Alert with the original content.
-        await self._run_actions(new_ctx, result_actions)
+        if result_actions:
+            await result_actions.action(new_ctx)
         if new_ctx.send_alert:
             await self._send_alert(new_ctx, list_messages)
         self._increment_stats(triggers)
@@ -1384,7 +1356,7 @@ class Filtering(Cog):
         }
         response = await bot.instance.api_client.post("bot/filter/filters", json=to_serializable(payload))
         new_filter = filter_list.add_filter(list_type, response)
-        log.info(f"Added new filter: {new_filter}.")
+        log.info("Added new filter: %s.", new_filter)
         if new_filter:
             await self._maybe_alert_auto_infraction(filter_list, list_type, new_filter)
             extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, new_filter)
@@ -1436,7 +1408,7 @@ class Filtering(Cog):
         )
         # Return type can be None, but if it's being edited then it's not supposed to be.
         edited_filter = filter_list.add_filter(list_type, response)
-        log.info(f"Successfully patched filter {edited_filter}.")
+        log.info("Successfully patched filter %s.", edited_filter)
         await self._maybe_alert_auto_infraction(filter_list, list_type, edited_filter, filter_)
         extra_msg = Filtering._identical_filters_message(content, filter_list, list_type, edited_filter)
         await msg.reply(f"✅ Edited filter: {edited_filter}" + extra_msg)
@@ -1446,7 +1418,7 @@ class Filtering(Cog):
         payload = {"name": list_name, "list_type": list_type.value, **to_serializable(settings)}
         filterlist_name = f"{past_tense(list_type.name.lower())} {list_name}"
         response = await bot.instance.api_client.post("bot/filter/filter_lists", json=payload)
-        log.info(f"Successfully posted the new {filterlist_name} filterlist.")
+        log.info("Successfully posted the new %s filterlist.", filterlist_name)
         self._load_raw_filter_list(response)
         await msg.reply(f"✅ Added a new filter list: {filterlist_name}")
 
@@ -1457,7 +1429,7 @@ class Filtering(Cog):
         response = await bot.instance.api_client.patch(
             f"bot/filter/filter_lists/{list_id}", json=to_serializable(settings)
         )
-        log.info(f"Successfully patched the {filter_list[list_type].label} filterlist, reloading...")
+        log.info("Successfully patched the %s filterlist, reloading...", filter_list[list_type].label)
         filter_list.pop(list_type, None)
         filter_list.add_list(response)
         await msg.reply(f"✅ Edited filter list: {filter_list[list_type].label}")
@@ -1536,14 +1508,14 @@ class Filtering(Cog):
                 await msg_obj.delete()
         except discord.NotFound:
             log.info(
-                f"Tried to delete message {msg['id']}, but the message can't be found "
-                f"(it has been probably already deleted)."
-            )
+                "Tried to delete message %s, but the message can't be found "
+                "(it has been probably already deleted).",
+            msg["id"])
         except HTTPException as e:
-            log.warning(f"Failed to delete message {msg['id']}: status {e.status}")
+            log.warning("Failed to delete message %s: status %s", msg["id"], e.status)
 
         await self.bot.api_client.delete(f'bot/offensive-messages/{msg["id"]}')
-        log.info(f"Deleted the offensive message with id {msg['id']}.")
+        log.info("Deleted the offensive message with id %s.", msg["id"])
 
     def _schedule_msg_delete(self, msg: dict) -> None:
         """Delete an offensive message once its deletion date is reached."""
@@ -1567,9 +1539,9 @@ class Filtering(Cog):
             await self.bot.api_client.post("bot/offensive-messages", json=data)
         except ResponseCodeError as e:
             if e.status == 400 and "already exists" in e.response_json.get("id", [""])[0]:
-                log.debug(f"Offensive message {msg.id} already exists.")
+                log.debug("Offensive message %s already exists.", msg.id)
             else:
-                log.error(f"Offensive message {msg.id} failed to post: {e}")
+                log.error("Offensive message %s failed to post: %s", msg.id, e)
         else:
             self._schedule_msg_delete(data)
             log.trace(f"Offensive message {msg.id} will be deleted on {delete_date}")
@@ -1601,7 +1573,7 @@ class Filtering(Cog):
             channel = self.bot.get_channel(Channels.mod_meta)
         elif not is_mod_channel(channel):
             # Silently fail if output is going to be a non-mod channel.
-            log.info(f"Auto-infraction report: the channel {channel} is not a mod channel.")
+            log.info("Auto-infraction report: the channel %s is not a mod channel.", channel)
             return
 
         found_filters = defaultdict(list)

@@ -70,9 +70,9 @@ class Superstarify(InfractionScheduler, Cog):
         )
 
         log.info(
-            f"{after.display_name} ({after.id}) tried to escape superstar prison. "
-            f"Changing the nick back to {before.display_name}."
-        )
+            "%s (%s) tried to escape superstar prison. "
+            "Changing the nick back to %s.",
+        after.display_name, after.id, before.display_name)
         await after.edit(
             nick=forced_nick,
             reason=f"Superstarified member tried to escape the prison: {infr_id}"
@@ -152,7 +152,7 @@ class Superstarify(InfractionScheduler, Cog):
 
         # Apply the infraction
         async def action() -> None:
-            log.debug(f"Changing nickname of {member} to {forced_nick}.")
+            log.debug("Changing nickname of %s to %s.", member, forced_nick)
             self.mod_log.ignore(constants.Event.member_update, member.id)
             await member.edit(nick=forced_nick, reason=reason)
 
@@ -206,8 +206,8 @@ class Superstarify(InfractionScheduler, Cog):
         # Don't bother sending a notification if the user left the guild.
         if not user:
             log.debug(
-                "User left the guild and therefore won't be notified about superstar "
-                f"{infraction['id']} pardon."
+                "User left the guild and therefore won't be notified about superstar %s pardon.",
+                infraction["id"],
             )
             return {}
 

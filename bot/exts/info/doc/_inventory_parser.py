@@ -124,21 +124,21 @@ async def fetch_inventory(url: str) -> InventoryDict | None:
             inventory = await _fetch_inventory(url)
         except aiohttp.ClientConnectorError:
             log.warning(
-                f"Failed to connect to inventory url at {url}; "
-                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
-            )
+                "Failed to connect to inventory url at %s; "
+                "trying again (%s/%s).",
+            url, attempt, FAILED_REQUEST_ATTEMPTS)
         except aiohttp.ClientError:
             log.error(
-                f"Failed to get inventory from {url}; "
-                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
-            )
+                "Failed to get inventory from %s; "
+                "trying again (%s/%s).",
+            url, attempt, FAILED_REQUEST_ATTEMPTS)
         except InvalidHeaderError:
             raise
         except Exception:
             log.exception(
-                f"An unexpected error has occurred during fetching of {url}; "
-                f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
-            )
+                "An unexpected error has occurred during fetching of %s; "
+                "trying again (%s/%s).",
+            url, attempt, FAILED_REQUEST_ATTEMPTS)
         else:
             return inventory
 

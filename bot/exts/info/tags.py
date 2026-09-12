@@ -13,7 +13,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.log import get_logger
 from bot.pagination import LinePaginator
-from bot.utils.messages import wait_for_deletion
+from bot.utils.messages import send_or_reply, wait_for_deletion
 
 log = get_logger(__name__)
 
@@ -213,7 +213,7 @@ class Tags(Cog):
 
         if tag is not None:
             if tag.on_cooldown_in(channel):
-                log.debug(f"Tag {str(tag_identifier)!r} is on cooldown.")
+                log.debug("Tag %r is on cooldown.", str(tag_identifier))
                 return COOLDOWN.obj
             tag.set_cooldown_for(channel)
 
@@ -305,7 +305,7 @@ class Tags(Cog):
         if embed is not COOLDOWN.obj:
 
             await wait_for_deletion(
-                await ctx.send(embed=embed),
+                await send_or_reply(ctx, embed),
                 (ctx.author.id,)
             )
         # A valid tag was found and was either sent, or is on cooldown

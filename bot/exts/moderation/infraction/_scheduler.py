@@ -121,16 +121,16 @@ class InfractionScheduler:
             await partial_message.delete()
             log.trace(f"Deleted infraction message {message_id} in channel {channel_id}.")
         except discord.NotFound:
-            log.info(f"Channel or message {message_id} not found in channel {channel_id}.")
+            log.info("Channel or message %s not found in channel %s.", message_id, channel_id)
         except discord.Forbidden:
-            log.info(f"Bot lacks permissions to delete message {message_id} in channel {channel_id}.")
+            log.info("Bot lacks permissions to delete message %s in channel %s.", message_id, channel_id)
         except discord.HTTPException as e:
             if e.code == ARCHIVED_THREAD_ERROR:
                 log.info(
-                    f"Cannot delete message {message_id} in channel {channel_id} because the thread is archived."
-                )
+                    "Cannot delete message %s in channel %s because the thread is archived.",
+                message_id, channel_id)
             else:
-                log.exception(f"Issue during scheduled deletion of message {message_id} in channel {channel_id}.")
+                log.exception("Issue during scheduled deletion of message %s in channel %s.", message_id, channel_id)
                 return  # Keep the task in Redis on HTTP errors
 
         await self.messages_to_tidy.delete(f"{channel_id}:{message_id}")
@@ -170,15 +170,15 @@ class InfractionScheduler:
             # When user joined and then right after this left again before action completed, this can't apply roles
             if e.code == 10007 or e.status == 404:
                 log.info(
-                    f"Can't reapply {infraction['type']} to user {infraction['user']} because user left the guild."
-                )
+                    "Can't reapply %s to user %s because user left the guild.",
+                infraction["type"], infraction["user"])
             else:
                 log.exception(
-                    f"Got unexpected HTTPException (HTTP {e.status}, Discord code {e.code})"
-                    f"when running {infraction['type']} action for {infraction['user']}."
-                )
+                    "Got unexpected HTTPException (HTTP %s, Discord code %s)"
+                    "when running %s action for %s.",
+                e.status, e.code, infraction["type"], infraction["user"])
         else:
-            log.info(f"Re-applied {infraction['type']} to user {infraction['user']} upon rejoining.")
+            log.info("Re-applied %s to user %s upon rejoining.", infraction["type"], infraction["user"])
 
     async def apply_infraction(
         self,
@@ -285,11 +285,11 @@ class InfractionScheduler:
 
                 log_msg = f"Failed to apply {' '.join(infr_type.split('_'))} infraction #{id_} to {user}"
                 if isinstance(e, discord.Forbidden):
-                    log.warning(f"{log_msg}: bot lacks permissions.")
+                    log.warning("%s: bot lacks permissions.", log_msg)
                 elif e.code == 10007 or e.status == 404:
                     log.info(
-                        f"Can't apply {infraction['type']} to user {infraction['user']} because user left from guild."
-                    )
+                        "Can't apply %s to user %s because user left from guild.",
+                    infraction["type"], infraction["user"])
                 else:
                     log.exception(log_msg)
                 failed = True
@@ -320,7 +320,7 @@ class InfractionScheduler:
             except ResponseCodeError as e:
                 confirm_msg += " and failed to delete"
                 log_title += " and failed to delete"
-                log.error(f"Deletion of {infr_type} infraction #{id_} failed with error code {e.status}.")
+                log.error("Deletion of %s infraction #%s failed with error code %s.", infr_type, id_, e.status)
             infr_message = ""
 
         # Send a confirmation message to the invoking context.
@@ -372,7 +372,14 @@ class InfractionScheduler:
             footer=f"ID: {id_}"
         )
 
-        log.info(f"{'Failed to apply' if failed else 'Applied'} {purge}{infr_type} infraction #{id_} to {user}.")
+        log.info(
+            "%s %s%s infraction #%s to %s.",
+            "Failed to apply" if failed else "Applied",
+            purge,
+            infr_type,
+            id_,
+            user,
+        )
         return not failed
 
     async def pardon_infraction(
@@ -410,7 +417,7 @@ class InfractionScheduler:
         )
 
         if not response:
-            log.debug(f"No active {infr_type} infraction found for {user}.")
+            log.debug("No active %s infraction found for %s.", infr_type, user)
             await ctx.send(f":x: There's no active {infr_type} infraction for user {user.mention}.")
             return
 
@@ -436,12 +443,12 @@ class InfractionScheduler:
             log_title = "pardon failed"
             log_content = ctx.author.mention
 
-            log.warning(f"Failed to pardon {infr_type} infraction #{id_} for {user}.")
+            log.warning("Failed to pardon %s infraction #%s for %s.", infr_type, id_, user)
         else:
             confirm_msg = ":ok_hand: pardoned"
             log_title = "pardoned"
 
-            log.info(f"Pardoned {infr_type} infraction #{id_} for {user}.")
+            log.info("Pardoned %s infraction #%s for %s.", infr_type, id_, user)
 
         # Send a confirmation message to the invoking context.
         if send_msg:
@@ -496,7 +503,7 @@ class InfractionScheduler:
         type_ = infraction["type"]
         id_ = infraction["id"]
 
-        log.info(f"Marking infraction #{id_} as inactive (expired).")
+        log.info("Marking infraction #%s as inactive (expired).", id_)
 
         log_content = None
         log_text = {
@@ -517,18 +524,18 @@ class InfractionScheduler:
                     f"Attempted to deactivate an unsupported infraction #{id_} ({type_})!"
                 )
         except discord.Forbidden:
-            log.warning(f"Failed to deactivate infraction #{id_} ({type_}): bot lacks permissions.")
+            log.warning("Failed to deactivate infraction #%s (%s): bot lacks permissions.", id_, type_)
             log_text["Failure"] = "The bot lacks permissions to do this (role hierarchy?)"
             log_content = mod_role.mention
         except discord.HTTPException as e:
             if e.code == 10007 or e.status == 404:
                 log.info(
-                    f"Can't pardon {infraction['type']} for user {infraction['user']} because user left the guild."
-                )
+                    "Can't pardon %s for user %s because user left the guild.",
+                infraction["type"], infraction["user"])
                 log_text["Failure"] = "User left the guild."
                 log_content = mod_role.mention
             else:
-                log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
+                log.exception("Failed to deactivate infraction #%s (%s)", id_, type_)
                 log_text["Failure"] = f"HTTPException with status {e.status} and code {e.code}."
                 log_content = mod_role.mention
 
@@ -547,7 +554,7 @@ class InfractionScheduler:
 
             log_text["Watching"] = "Yes" if active_watch else "No"
         except ResponseCodeError:
-            log.exception(f"Failed to fetch watch status for user {user_id}")
+            log.exception("Failed to fetch watch status for user %s", user_id)
             log_text["Watching"] = "Unknown - failed to fetch watch status."
 
         try:
@@ -569,7 +576,7 @@ class InfractionScheduler:
                 json=data
             )
         except ResponseCodeError as e:
-            log.exception(f"Failed to deactivate infraction #{id_} ({type_})")
+            log.exception("Failed to deactivate infraction #%s (%s)", id_, type_)
             log_line = f"API request failed with code {e.status}."
             log_content = mod_role.mention
 

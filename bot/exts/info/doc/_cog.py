@@ -126,7 +126,7 @@ class DocCog(commands.Cog):
             package = await fetch_inventory(inventory_url)
         except InvalidHeaderError as e:
             # Do not reschedule if the header is invalid, as the request went through but the contents are invalid.
-            log.warning(f"Invalid inventory header at {inventory_url}. Reason: {e}")
+            log.warning("Invalid inventory header at %s. Reason: %s", inventory_url, e)
             return
 
         if not package:
@@ -135,7 +135,7 @@ class DocCog(commands.Cog):
                 delay = FETCH_RESCHEDULE_DELAY.repeated
             else:
                 delay = FETCH_RESCHEDULE_DELAY.first
-            log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
+            log.info("Failed to fetch inventory; attempting again in %s minutes.", delay)
             self.inventory_scheduler.schedule_later(
                 delay*60,
                 api_package_name,
@@ -239,16 +239,16 @@ class DocCog(commands.Cog):
         markdown = await doc_cache.get(doc_item)
 
         if markdown is None:
-            log.debug(f"Redis cache miss with {doc_item}.")
+            log.debug("Redis cache miss with %s.", doc_item)
             try:
                 markdown = await self.item_fetcher.get_markdown(doc_item)
 
             except aiohttp.ClientError as e:
-                log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
+                log.warning("A network error has occurred when requesting parsing of %s.", doc_item, exc_info=e)
                 return "Unable to parse the requested symbol due to a network error."
 
             except Exception:
-                log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
+                log.exception("An unexpected error has occurred when requesting parsing of %s.", doc_item)
                 return "Unable to parse the requested symbol due to an error."
 
             if markdown is None:
@@ -381,14 +381,16 @@ class DocCog(commands.Cog):
             await self.bot.api_client.post("bot/documentation-links", json=body)
         except ResponseCodeError as err:
             if err.status == 400 and "already exists" in err.response_json.get("package", [""])[0]:
-                log.info(f"Ignoring HTTP 400 as package {package_name} has already been added.")
+                log.info("Ignoring HTTP 400 as package %s has already been added.", package_name)
                 await ctx.send(f"Package {package_name} has already been added.")
                 return
             raise
 
         log.info(
-            f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
-            + "\n".join(f"{key}: {value}" for key, value in body.items())
+            "User @%s (%s) added a new documentation package:\n%s",
+            ctx.author,
+            ctx.author.id,
+            "\n".join(f"{key}: {value}" for key, value in body.items()),
         )
 
         if not base_url:

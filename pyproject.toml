@@ -71,7 +71,7 @@ output-format = "concise"
 unsafe-fixes = true
 
 [tool.ruff.lint]
-select = ["ANN", "B", "C4", "D", "DTZ", "E", "F", "I", "ISC", "INT", "N", "PGH", "PIE", "Q", "RET", "RSE", "RUF", "S", "SIM", "T20", "TID", "UP", "W"]
+select = ["ANN", "B", "C4", "D", "DTZ", "E", "F", "G", "I", "ISC", "INT", "LOG", "N", "PGH", "PIE", "Q", "RET", "RSE", "RUF", "S", "SIM", "T20", "TID", "UP", "W"]
 ignore = [
     "ANN002", "ANN003", "ANN204", "ANN206", "ANN401",
     "B904",

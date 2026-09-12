@@ -7,7 +7,7 @@ from io import BytesIO
 from itertools import zip_longest
 
 import discord
-from discord import Message
+from discord import DeletedReferencedMessage, Embed, Message
 from discord.ext.commands import Context
 from pydis_core.site_api import ResponseCodeError
 from pydis_core.utils import scheduling
@@ -160,12 +160,12 @@ async def send_attachments(
             elif link_large:
                 large.append(attachment)
             else:
-                log.info(f"{failure_msg} because it's too large.")
+                log.info("%s because it's too large.", failure_msg)
         except discord.HTTPException as e:
             if link_large and e.status == 413:
                 large.append(attachment)
             else:
-                log.warning(f"{failure_msg} with status {e.status}.", exc_info=e)
+                log.warning("%s with status %s.", failure_msg, e.status, exc_info=e)
 
     if link_large and large:
         desc = "\n".join(f"[{attachment.filename}]({attachment.url})" for attachment in large)
@@ -285,3 +285,35 @@ async def upload_log(
         raise
 
     return f"{URLs.site_logs_view}/{response['id']}"
+
+async def get_reference_message(ctx: Context) -> Message | None:
+    """Return a message reference if the reference exists and it does not refer to the author of the message."""
+    if (ctx.message.reference is None
+        or ctx.message.reference.message_id is None):
+        return None
+    try:
+        referenced_message = (
+        ctx.message.reference.resolved
+        or ctx.message.reference.cached_message
+        or await ctx.fetch_message(ctx.message.reference.message_id)
+        )
+    except (discord.Forbidden, discord.NotFound):
+        return None
+    else:
+        if referenced_message is None or isinstance(referenced_message, DeletedReferencedMessage):
+            return None
+        if referenced_message.author == ctx.author:
+            return None
+        return referenced_message
+
+async def send_or_reply(ctx: Context, embed: Embed) -> Message:
+    """
+    Sends the bot message as a reply if the callers message has a reference.
+
+    If the callers message does not have a reference or the reference is deleted,
+    the bot messsage is sent without replying.
+    """
+    if message_reference := await get_reference_message(ctx):
+        reference = message_reference.to_reference(fail_if_not_exists=False)
+        return await ctx.send(embed=embed, reference=reference)
+    return await ctx.send(embed=embed)

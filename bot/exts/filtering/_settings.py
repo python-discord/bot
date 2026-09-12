@@ -39,7 +39,8 @@ def create_settings(
             validation_data[entry_name] = entry_data
         elif entry_name not in _already_warned:
             log.warning(
-                f"A setting named {entry_name} was loaded from the database, but no matching class."
+                "A setting named %s was loaded from the database, but no matching class.",
+                entry_name,
             )
             _already_warned.add(entry_name)
     if defaults is None:
@@ -80,9 +81,9 @@ class Settings(FieldRequiring, dict[str, T]):
             except KeyError:
                 if entry_name not in self._already_warned:
                     log.warning(
-                        f"A setting named {entry_name} was loaded from the database, "
-                        f"but no matching {self.entry_type.__name__} class."
-                    )
+                        "A setting named %s was loaded from the database, "
+                        "but no matching %s class.",
+                    entry_name, self.entry_type.__name__)
                     self._already_warned.add(entry_name)
             else:
                 try:

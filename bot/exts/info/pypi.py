@@ -13,7 +13,7 @@ from bot.bot import Bot
 from bot.constants import Colours, NEGATIVE_REPLIES, RedirectOutput
 from bot.log import get_logger
 from bot.utils import time
-from bot.utils.messages import wait_for_deletion
+from bot.utils.messages import send_or_reply, wait_for_deletion
 
 URL = "https://pypi.org/pypi/{package}/json"
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
@@ -87,7 +87,7 @@ class PyPI(Cog):
                     log.trace(f"Error when fetching PyPI package: {response.status}.")
 
         if error:
-            error_message = await ctx.send(embed=embed)
+            error_message = await send_or_reply(ctx, embed)
             await wait_for_deletion(error_message, (ctx.author.id,), timeout=INVALID_INPUT_DELETE_DELAY)
 
             # Make sure that we won't cause a ghost-ping by deleting the message
@@ -97,7 +97,7 @@ class PyPI(Cog):
                     await error_message.delete()
 
         else:
-            await ctx.send(embed=embed)
+            await send_or_reply(ctx, embed)
 
 
 async def setup(bot: Bot) -> None:

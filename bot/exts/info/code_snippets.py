@@ -295,9 +295,9 @@ class CodeSnippets(Cog):
                     error_message = error.message
                     log.log(
                         logging.DEBUG if error.status == 404 else logging.ERROR,
-                        f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
-                        f"{error_message} for GET {error.request_info.real_url.human_repr()}"
-                    )
+                        "Failed to fetch code snippet from %r: %s "
+                        "%s for GET %s",
+                    match[0], error.status, error_message, error.request_info.real_url.human_repr())
                     continue
 
                 if isinstance(result, list):

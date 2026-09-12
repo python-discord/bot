@@ -15,6 +15,7 @@ from bot.constants import Channels
 from bot.exts.filtering._filter_context import FilterContext
 from bot.exts.filtering._settings_types.settings_entry import ActionEntry
 from bot.exts.filtering._utils import CustomIOField, FakeContext
+from bot.exts.moderation.infraction import _utils as infraction_utils
 from bot.utils.time import humanize_delta, parse_duration_string, relativedelta_to_timedelta
 
 log = get_logger(__name__)
@@ -87,14 +88,14 @@ class Infraction(Enum):
         alerts_channel: discord.TextChannel,
         duration: InfractionDuration,
         reason: str
-    ) -> None:
+    ) -> str | None:
         """Invokes the command matching the infraction name."""
         command_name = self.name.lower()
         command = bot_module.instance.get_command(command_name)
         if not command:
             await alerts_channel.send(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
-            log.warning(f":warning: Could not apply {command_name} to {user.mention}: command not found.")
-            return
+            log.warning(":warning: Could not apply %s to %s: command not found.", command_name, user.mention)
+            return None
 
         if isinstance(user, discord.User):  # For example because a message was sent in a DM.
             member = await get_or_fetch_member(channel.guild, user.id)
@@ -102,17 +103,25 @@ class Infraction(Enum):
                 user = member
             else:
                 log.warning(
-                    f"The user {user} were set to receive an automatic {command_name}, "
-                    "but they were not found in the guild."
+                    "The user %s were set to receive an automatic %s, "
+                    "but they were not found in the guild.",
+                    user,
+                    command_name,
                 )
-                return
+                return None
 
         ctx = FakeContext(message, channel, command)
+        if self is Infraction.BAN:
+            active_infraction = await infraction_utils.get_active_infraction(ctx, user, "ban", send_msg=False)
+            if active_infraction:
+                return "already banned"
+
         if self.name in ("KICK", "WARNING", "WATCH", "NOTE"):
             await command(ctx, user, reason=reason or None)
         else:
             duration = arrow.utcnow().datetime + duration.value if duration.value else None
             await command(ctx, user, duration, reason=reason or None)
+        return passive_form[self.name]
 
 
 class InfractionAndNotification(ActionEntry):
@@ -193,20 +202,21 @@ class InfractionAndNotification(ActionEntry):
             if self.infraction_channel:
                 channel = bot_module.instance.get_channel(self.infraction_channel)
                 if not channel:
-                    log.info(f"Could not find a channel with ID {self.infraction_channel}, infracting in mod-alerts.")
+                    log.info("Could not find a channel with ID %s, infracting in mod-alerts.", self.infraction_channel)
                     channel = alerts_channel
             elif not ctx.channel:
                 channel = alerts_channel
             else:
                 channel = ctx.channel
             if not channel:  # If somehow it's set to `alerts_channel` and it can't be found.
-                log.error(f"Unable to apply infraction as the context channel {channel} can't be found.")
+                log.error("Unable to apply infraction as the context channel %s can't be found.", channel)
                 return
 
-            await self.infraction_type.invoke(
+            infraction_action = await self.infraction_type.invoke(
                 ctx.author, ctx.message, channel, alerts_channel, self.infraction_duration, self.infraction_reason
             )
-            ctx.action_descriptions.append(passive_form[self.infraction_type.name])
+            if infraction_action:
+                ctx.action_descriptions.append(infraction_action)
 
     def union(self, other: Self) -> Self:
         """

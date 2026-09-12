@@ -96,12 +96,12 @@ class WatchChannel(metaclass=CogABCMeta):
         try:
             self.channel = await get_or_fetch_channel(self.bot, self.destination)
         except HTTPException:
-            self.log.exception(f"Failed to retrieve the text channel with id `{self.destination}`")
+            self.log.exception("Failed to retrieve the text channel with id `%s`", self.destination)
 
         try:
             self.webhook = await self.bot.fetch_webhook(self.webhook_id)
         except discord.HTTPException:
-            self.log.exception(f"Failed to fetch webhook with id `{self.webhook_id}`")
+            self.log.exception("Failed to fetch webhook with id `%s`", self.webhook_id)
 
         if self.channel is None or self.webhook is None:
             self.log.error("Failed to start the watch channel; unloading the cog.")
@@ -379,8 +379,8 @@ class WatchChannel(metaclass=CogABCMeta):
                     task.result()
                 except asyncio.CancelledError:
                     self.log.info(
-                        f"The consume task of {type(self).__name__} was canceled. Messages may be lost."
-                    )
+                        "The consume task of %s was canceled. Messages may be lost.",
+                    type(self).__name__)
 
             self._consume_task.add_done_callback(done_callback)
             self._consume_task.cancel()

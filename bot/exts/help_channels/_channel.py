@@ -111,7 +111,7 @@ async def help_post_opened(
     bot.instance.stats.incr("help.claimed")
 
     if not isinstance(opened_post.owner, discord.Member):
-        log.debug(f"{opened_post.owner_id} isn't a member. Closing post.")
+        log.debug("%s isn't a member. Closing post.", opened_post.owner_id)
         await _close_help_post(opened_post, _stats.ClosingReason.CLEANUP, scheduler)
         return
 
@@ -210,8 +210,8 @@ async def maybe_archive_idle_post(post_id: int, scheduler: scheduling.Scheduler)
         # Closing time is in the past.
         # Add 1 second due to POSIX timestamps being lower resolution than datetime objects.
         log.info(
-            f"#{post} ({post.id}) is idle past {closing_time} and will be archived. Reason: {closing_reason.value}"
-        )
+            "#%s (%s) is idle past %s and will be archived. Reason: %s",
+        post, post.id, closing_time, closing_reason.value)
         await _close_help_post(post, closing_reason, scheduler)
         return
 
@@ -219,6 +219,6 @@ async def maybe_archive_idle_post(post_id: int, scheduler: scheduling.Scheduler)
         # Cancel any existing close task
         scheduler.cancel(post.id)
     delay = (closing_time - arrow.utcnow()).seconds
-    log.info(f"#{post} ({post.id}) is still active; scheduling it to be archived after {delay} seconds.")
+    log.info("#%s (%s) is still active; scheduling it to be archived after %s seconds.", post, post.id, delay)
 
     scheduler.schedule_later(delay, post.id, maybe_archive_idle_post(post.id, scheduler))

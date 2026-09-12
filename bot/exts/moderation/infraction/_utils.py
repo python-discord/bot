@@ -90,10 +90,10 @@ async def post_user(ctx: Context, user: MemberOrUser) -> dict | None:
 
     try:
         response = await ctx.bot.api_client.post("bot/users", json=payload)
-        log.info(f"User {user.id} added to the DB.")
+        log.info("User %s added to the DB.", user.id)
         return response
     except ResponseCodeError as e:
-        log.error(f"Failed to add user {user.id} to the DB. {e}")
+        log.error("Failed to add user %s to the DB. %s", user.id, e)
         await ctx.send(f":x: The attempt to add the user to the DB failed: status {e.status}")
 
 
@@ -152,7 +152,7 @@ async def post_infraction(
                 if not should_post_user or await post_user(ctx, user) is None:
                     return None
             else:
-                log.exception(f"Unexpected error while adding an infraction for {user}:")
+                log.exception("Unexpected error while adding an infraction for %s:", user)
                 await ctx.send(f":x: There was an error adding the infraction: status {e.status}.")
                 return None
     return None
@@ -271,7 +271,7 @@ async def notify_infraction(
             f"bot/infractions/{infr_id}",
             json={"dm_sent": True}
         )
-        log.debug(f"Update infraction #{infr_id} dm_sent field to true.")
+        log.debug("Update infraction #%s dm_sent field to true.", infr_id)
 
     return dm_sent
 
@@ -306,9 +306,9 @@ async def send_private_embed(user: MemberOrUser, embed: discord.Embed) -> bool:
         return True
     except (discord.HTTPException, discord.Forbidden, discord.NotFound):
         log.debug(
-            f"Infraction-related information could not be sent to user {user} ({user.id}). "
-            "The user either could not be retrieved or probably disabled their DMs."
-        )
+            "Infraction-related information could not be sent to user %s (%s). "
+            "The user either could not be retrieved or probably disabled their DMs.",
+        user, user.id)
         return False
 
 

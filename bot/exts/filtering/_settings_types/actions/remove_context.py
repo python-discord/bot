@@ -96,13 +96,13 @@ class RemoveContext(ActionEntry):
         """Apply a superstar infraction to remove the user's nickname."""
         alerts_channel = bot.instance.get_channel(Channels.mod_alerts)
         if not alerts_channel:
-            log.error(f"Unable to apply superstar as the context channel {alerts_channel} can't be found.")
+            log.error("Unable to apply superstar as the context channel %s can't be found.", alerts_channel)
             return
         command = bot.instance.get_command("superstar")
         if not command:
             user = ctx.author
             await alerts_channel.send(f":warning: Could not apply superstar to {user.mention}: command not found.")
-            log.warning(f":warning: Could not apply superstar to {user.mention}: command not found.")
+            log.warning(":warning: Could not apply superstar to %s: command not found.", user.mention)
             ctx.action_descriptions.append("failed to superstar")
             return
 

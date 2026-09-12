@@ -60,7 +60,7 @@ class Stream(commands.Cog):
                 continue
 
             revoke_time = Arrow.utcfromtimestamp(value)
-            log.debug(f"Scheduling {member} ({member.id}) to have streaming permission revoked at {revoke_time}")
+            log.debug("Scheduling %s (%s) to have streaming permission revoked at %s", member, member.id, revoke_time)
             self.scheduler.schedule_at(
                 revoke_time,
                 key,
@@ -84,10 +84,10 @@ class Stream(commands.Cog):
 
             # Notify.
             await ctx.send(f"{member.mention}'s stream has been suspended!")
-            log.debug(f"Successfully suspended stream from {member} ({member.id}).")
+            log.debug("Successfully suspended stream from %s (%s).", member, member.id)
             return
 
-        log.debug(f"No stream found to suspend from {member} ({member.id}).")
+        log.debug("No stream found to suspend from %s (%s).", member, member.id)
 
     @commands.command(aliases=("streaming",))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -127,7 +127,7 @@ class Stream(commands.Cog):
         already_allowed = any(Roles.video == role.id for role in member.roles)
         if already_allowed:
             await ctx.send(f"{Emojis.cross_mark} {member.mention} can already stream.")
-            log.debug(f"{member} ({member.id}) already has permission to stream.")
+            log.debug("%s (%s) already has permission to stream.", member, member.id)
             return
 
         # Schedule task to remove streaming permission from Member and add it to task cache
@@ -142,9 +142,9 @@ class Stream(commands.Cog):
         humanized_duration = time.humanize_delta(duration, arrow.utcnow(), max_units=2)
         end_time = duration.strftime("%Y-%m-%d %H:%M:%S")
         log.debug(
-            f"Successfully gave {member} ({member.id}) permission "
-            f"to stream for {humanized_duration} (until {end_time})."
-        )
+            "Successfully gave %s (%s) permission "
+            "to stream for %s (until %s).",
+        member, member.id, humanized_duration, end_time)
 
     @commands.command(aliases=("pstream",))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -161,17 +161,17 @@ class Stream(commands.Cog):
 
                 await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
                 log.debug(
-                    f"Successfully upgraded temporary streaming permission for {member} ({member.id}) to permanent."
-                )
+                    "Successfully upgraded temporary streaming permission for %s (%s) to permanent.",
+                member, member.id)
                 return
 
             await ctx.send(f"{Emojis.cross_mark} This member can already stream.")
-            log.debug(f"{member} ({member.id}) already had permanent streaming permission.")
+            log.debug("%s (%s) already had permanent streaming permission.", member, member.id)
             return
 
         await member.add_roles(discord.Object(Roles.video), reason="Permanent streaming access granted")
         await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
-        log.debug(f"Successfully gave {member} ({member.id}) permanent streaming permission.")
+        log.debug("Successfully gave %s (%s) permanent streaming permission.", member, member.id)
 
     @commands.command(aliases=("unstream", "rstream"))
     @commands.has_any_role(*MODERATION_ROLES)
@@ -188,11 +188,11 @@ class Stream(commands.Cog):
             await self._revoke_streaming_permission(member)
 
             await ctx.send(f"{Emojis.check_mark} Revoked the permission to stream from {member.mention}.")
-            log.debug(f"Successfully revoked streaming permission from {member} ({member.id}).")
+            log.debug("Successfully revoked streaming permission from %s (%s).", member, member.id)
 
         else:
             await ctx.send(f"{Emojis.cross_mark} This member doesn't have video permissions to remove!")
-            log.debug(f"{member} ({member.id}) didn't have the streaming permission to remove!")
+            log.debug("%s (%s) didn't have the streaming permission to remove!", member, member.id)
 
         await self._suspend_stream(ctx, member)
 

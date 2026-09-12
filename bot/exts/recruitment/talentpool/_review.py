@@ -235,7 +235,7 @@ class Reviewer:
         guild = self.bot.get_guild(Guild.id)
         channel = guild.get_channel(Channels.nomination_voting)
 
-        log.info(f"Posting the review of {nominee} ({nominee.id})")
+        log.info("Posting the review of %s (%s)", nominee, nominee.id)
         vote_message = await channel.send(review)
 
         if reviewed_emoji:
@@ -325,7 +325,7 @@ class Reviewer:
             try:
                 nomination_thread = await message.guild.fetch_channel(message.id)
             except NotFound:
-                log.warning(f"Could not find a thread linked to {message.channel.id}-{message.id}")
+                log.warning("Could not find a thread linked to %s-%s", message.channel.id, message.id)
 
         # We assume that the first user mentioned is the user that we are voting on
         user_id = int(NOMINATION_MESSAGE_REGEX.search(message.content).group(1))

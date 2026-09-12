@@ -144,12 +144,12 @@ class Branding(commands.Cog):
 
         Return a boolean indicating whether the application was successful.
         """
-        log.info(f"Applying '{asset_type.value}' asset to the guild.")
+        log.info("Applying '%s' asset to the guild.", asset_type.value)
 
         try:
             file = await self.repository.fetch_file(download_url)
         except Exception:
-            log.exception(f"Failed to fetch '{asset_type.value}' asset.")
+            log.exception("Failed to fetch '%s' asset.", asset_type.value)
             return False
 
         await self.bot.wait_until_guild_available()
@@ -163,7 +163,7 @@ class Branding(commands.Cog):
             log.exception("Asset upload to Discord failed.")
             return False
         except TimeoutError:
-            log.error(f"Asset upload to Discord timed out after {timeout} seconds.")
+            log.error("Asset upload to Discord timed out after %s seconds.", timeout)
             return False
         else:
             log.trace("Asset uploaded successfully.")
@@ -182,17 +182,17 @@ class Branding(commands.Cog):
 
         Return a boolean indicating whether a new asset was applied successfully.
         """
-        log.debug(f"Rotating {asset_type.value}s.")
+        log.debug("Rotating %ss.", asset_type.value)
 
         state = await self.asset_caches[asset_type].to_dict()
         log.trace(f"Total {asset_type.value}s in rotation: {len(state)}.")
 
         if not state:  # This would only happen if rotation not initiated, but we can handle gracefully.
-            log.warning(f"Attempted {asset_type.value} rotation with an empty cache. This indicates wrong logic.")
+            log.warning("Attempted %s rotation with an empty cache. This indicates wrong logic.", asset_type.value)
             return False
 
         if len(state) == 1 and 1 in state.values():
-            log.debug(f"Aborting {asset_type.value} rotation: only 1 asset is available and has already been applied.")
+            log.debug("Aborting %s rotation: only 1 asset is available and has already been applied.", asset_type.value)
             return False
 
         current_iteration = min(state.values())  # Choose iteration to draw from.
@@ -219,7 +219,7 @@ class Branding(commands.Cog):
         is work to be done before the timestamp is read and written, the next read will likely commence slightly
         under 24 hours after the last write.
         """
-        log.debug(f"Checking whether it's time for {asset_type.value}s to rotate.")
+        log.debug("Checking whether it's time for %ss to rotate.", asset_type.value)
 
         last_rotation_timestamp = await self.cache_information.get(f"last_{asset_type.value}_rotation_timestamp")
 
@@ -245,7 +245,7 @@ class Branding(commands.Cog):
 
         This function does not upload a new asset!
         """
-        log.debug(f"Initiating new {asset_type.value} rotation.")
+        log.debug("Initiating new %s rotation.", asset_type.value)
 
         await self.asset_caches[asset_type].clear()
 
@@ -265,13 +265,17 @@ class Branding(commands.Cog):
         We read event information from `cache_information`. The caller is therefore responsible for making
         sure that the cache is up-to-date before calling this function.
         """
-        log.debug(f"Sending event information event to channel: {channel_id} ({is_notification=}).")
+        log.debug(
+            "Sending event information event to channel: %s (is_notification=%r).",
+            channel_id,
+            is_notification,
+        )
 
         await self.bot.wait_until_guild_available()
         channel: discord.TextChannel | None = self.bot.get_channel(channel_id)
 
         if channel is None:
-            log.warning(f"Cannot send event information: channel {channel_id} not found!")
+            log.warning("Cannot send event information: channel %s not found!", channel_id)
             return
 
         log.trace(f"Destination channel: #{channel.name}.")
@@ -304,7 +308,7 @@ class Branding(commands.Cog):
 
         Return a 2-tuple indicating whether the banner, and the icon, were applied successfully.
         """
-        log.info(f"Entering event: '{event.path}'.")
+        log.info("Entering event: '%s'.", event.path)
 
         # Prepare and apply new icon and banner rotations
         await self.initiate_rotation(AssetType.ICON, event.icons)
@@ -571,7 +575,7 @@ class Branding(commands.Cog):
         first_25 = list(available_events.items())[:25]
 
         if len(first_25) != len(available_events):  # Alert core devs that a paginating solution is now necessary.
-            log.warning(f"There are {len(available_events)} events, but the calendar view can only display 25.")
+            log.warning("There are %s events, but the calendar view can only display 25.", len(available_events))
 
         for name, duration in first_25:
             embed.add_field(name=name[:256], value=duration[:1024])
