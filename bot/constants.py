@@ -128,11 +128,15 @@ class _Channels(EnvConfig, env_prefix="channels_"):
 
     rules: int = 693837295685730335
 
+    ban_appeal_logs: int = 891680793351553068
+
 
 Channels = _Channels()
 
 
 class _Roles(EnvConfig, env_prefix="roles_"):
+
+    ban_appeal_server_staff: int = 890273013671526481
 
     # Self-assignable roles, see the Subscribe cog
     advent_of_code: int = 518565788744024082
@@ -197,6 +201,7 @@ class _Guild(EnvConfig, env_prefix="guild_"):
 
     id: int = 267624335836053506
     invite: str = "https://discord.gg/python"
+    ban_appeal_id: int = 890261951979061298
 
     moderation_categories: tuple[int, ...] = (
         Categories.moderators,
@@ -449,6 +454,9 @@ class _BaseURLs(EnvConfig, env_prefix="urls_"):
     # Site
     site_api: str = "http://site.web.svc.cluster.local/api"
     paste_url: str = "https://paste.pythondiscord.com"
+
+    # Polonium (modmail)
+    polonium_api: str = "http://polonium-api.modmail.svc.cluster.local/api"
 
 
 BaseURLs = _BaseURLs()
