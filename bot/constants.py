@@ -181,6 +181,7 @@ class _Categories(EnvConfig, env_prefix="categories_"):
     logs: int = 468520609152892958
     moderators: int = 749736277464842262
     modmail: int = 714494672835444826
+    new_modmail: int = 1533613940318146702
     appeals: int = 890331800025563216
     appeals_2: int = 895417395261341766
     voice: int = 356013253765234688
@@ -201,6 +202,7 @@ class _Guild(EnvConfig, env_prefix="guild_"):
     moderation_categories: tuple[int, ...] = (
         Categories.moderators,
         Categories.modmail,
+        Categories.new_modmail,
         Categories.logs,
         Categories.appeals,
         Categories.appeals_2
