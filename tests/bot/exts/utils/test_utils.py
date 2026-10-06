@@ -85,6 +85,19 @@ class ZenTests(unittest.IsolatedAsyncioTestCase):
                 await self.cog.zen.callback(self.cog, ctx, search_value=input_slice)
                 ctx.send.assert_called_once_with(embed = self.template_embed)
 
+    async def test_zen_with_exact_word_ignores_punctuation(self):
+        """ Tests if the `!zen` command matches an exact word that has punctuation next to it. """
+        expected_results = {"ugly": 0, "silenced": 10, "obvious": 12, "RIGHT": 15}
+
+        for word, line in expected_results.items():
+            self.template_embed.title = f"The Zen of Python (line {line}):"
+            self.template_embed.description = self.zen_list[line]
+
+            ctx = MockContext()
+            with self.subTest(word=word, line=line):
+                await self.cog.zen.callback(self.cog, ctx, search_value=word)
+                ctx.send.assert_called_once_with(embed=self.template_embed)
+
     async def test_zen_with_invalid_slices(self):
         """ Tests if the `!zen` command reacts properly to invalid slices for indexing as an argument. """
         slices= ["19:18", "10:9", "-1:-2", "0:-100", "::0", "1:2:-1", "-5:-4:-1"]

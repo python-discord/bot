@@ -164,8 +164,9 @@ class Utils(Cog):
         # Try to handle first exact word due difflib.SequenceMatched may use some other similar word instead
         # exact word.
         for i, line in enumerate(zen_lines):
-            for word in line.split():
-                if word.lower() == search_value.lower():
+            # Only compare the word itself, so "ugly" matches "ugly."
+            for word in re.findall(r"[\w']+", line.lower()):
+                if word == search_value.lower():
                     embed.title += f" (line {i}):"
                     embed.description = line
                     await ctx.send(embed=embed)
