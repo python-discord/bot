@@ -29,8 +29,8 @@ from bot.errors import LockedResourceError
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
+from bot.utils.async_utils import lock_arg
 from bot.utils.checks import has_any_role_check, has_no_roles_check
-from bot.utils.lock import lock_arg
 from bot.utils.messages import send_denial
 
 log = get_logger(__name__)

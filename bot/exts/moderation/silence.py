@@ -14,7 +14,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.converters import HushDurationConverter
 from bot.log import get_logger
-from bot.utils.lock import LockedResourceError, lock, lock_arg
+from bot.utils.async_utils import LockedResourceError, lock, lock_arg
 
 log = get_logger(__name__)
 
