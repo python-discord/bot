@@ -122,22 +122,22 @@ class UserInfractionHelperMethodTests(unittest.IsolatedAsyncioTestCase):
             },
         )
 
-        for test_value in test_values:
+        for i, test_value in enumerate(test_values):
             helper_method = test_value["helper_method"]
             endpoint, params = test_value["expected_args"]
 
-            with self.subTest(method=helper_method, endpoint=endpoint, params=params):
+            with self.subTest(test_case=i, endpoint=endpoint):
                 await helper_method(self.member)
                 self.bot.api_client.get.assert_called_once_with(endpoint, params=params)
                 self.bot.api_client.get.reset_mock()
 
     async def _method_subtests(self, method, test_values, default_header):
         """Helper method that runs the subtests for the different helper methods."""
-        for test_value in test_values:
+        for i, test_value in enumerate(test_values):
             api_response = test_value["api response"]
             expected_lines = test_value["expected_lines"]
 
-            with self.subTest(method=method, api_response=api_response, expected_lines=expected_lines):
+            with self.subTest(test_case=i):
                 self.bot.api_client.get.return_value = api_response
 
                 expected_output = "\n".join(expected_lines)
