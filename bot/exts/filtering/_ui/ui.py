@@ -21,7 +21,7 @@ from bot.constants import Colours
 from bot.exts.filtering._filter_context import Event, FilterContext
 from bot.exts.filtering._filter_lists import FilterList
 from bot.exts.filtering._utils import FakeContext, normalize_type
-from bot.utils.lock import lock_arg
+from bot.utils.async_utils import lock_arg
 from bot.utils.messages import format_channel, format_user, upload_log
 
 log = get_logger(__name__)

@@ -32,7 +32,7 @@ from bot.exts.utils.snekbox._constants import (
 from bot.exts.utils.snekbox._eval import EvalJob, EvalResult
 from bot.exts.utils.snekbox._io import FileAttachment
 from bot.log import get_logger
-from bot.utils.lock import LockedResourceError, lock_arg
+from bot.utils.async_utils import LockedResourceError, lock_arg
 
 if TYPE_CHECKING:
     from bot.exts.filtering.filtering import Filtering

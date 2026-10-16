@@ -5,7 +5,7 @@ import time
 from async_rediscache.types.base import RedisObject
 
 from bot.log import get_logger
-from bot.utils.lock import lock
+from bot.utils.async_utils import lock
 
 from ._doc_item import DocItem
 
