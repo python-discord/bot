@@ -177,8 +177,8 @@ class TestMessageCache(unittest.TestCase):
             for msg in messages:
                 cache.append(msg)
 
-            for slice_ in slices:
-                with self.subTest(current_loop=(size, slice_)):
+            for i, slice_ in enumerate(slices):
+                with self.subTest(size=size, slice_index=i):
                     self.assertListEqual(cache[slice_], messages[slice_])
 
     def test_slicing_with_overfilled_cache(self):
@@ -199,8 +199,8 @@ class TestMessageCache(unittest.TestCase):
                 cache.append(msg)
             messages = messages[size // 2:]
 
-            for slice_ in slices:
-                with self.subTest(current_loop=(size, slice_)):
+            for i, slice_ in enumerate(slices):
+                with self.subTest(size=size, slice_index=i):
                     self.assertListEqual(cache[slice_], messages[slice_])
 
     def test_length(self):

@@ -191,8 +191,8 @@ class ConverterTests(unittest.IsolatedAsyncioTestCase):
 
         converter = ISODateTime()
 
-        for datetime_string, expected_dt in test_values:
-            with self.subTest(datetime_string=datetime_string, expected_dt=expected_dt):
+        for i, (datetime_string, expected_dt) in enumerate(test_values):
+            with self.subTest(test_case=i, datetime_string=datetime_string):
                 converted_dt = await converter.convert(self.context, datetime_string)
                 self.assertEqual(converted_dt, expected_dt)
 

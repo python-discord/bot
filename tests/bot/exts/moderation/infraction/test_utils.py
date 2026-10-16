@@ -66,13 +66,13 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             }
         ]
 
-        for case in test_cases:
+        for i, case in enumerate(test_cases):
             user = case["user"]
             post_result = case["post_result"]
             raise_error = case["raise_error"]
             payload = case["payload"]
 
-            with self.subTest(user=user, post_result=post_result, raise_error=raise_error, payload=payload):
+            with self.subTest(test_case=i, has_error=raise_error is not None):
                 self.bot.api_client.post.reset_mock(side_effect=True)
                 self.ctx.bot.api_client.post.return_value = post_result
 
@@ -235,8 +235,8 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             }
         ]
 
-        for case in test_cases:
-            with self.subTest(args=case["args"], expected=case["expected_output"], send=case["send_result"]):
+        for i, case in enumerate(test_cases):
+            with self.subTest(test_case=i, send=case["send_result"]):
                 send_private_embed_mock.reset_mock()
 
                 send_private_embed_mock.return_value = case["send_result"]
@@ -259,7 +259,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
             test_case((self.user, "Test title", "Example content", Icons.user_update), Icons.user_update, False)
         ]
 
-        for case in test_cases:
+        for i, case in enumerate(test_cases):
             expected = Embed(
                 description="Example content",
                 colour=Colours.soft_green
@@ -268,7 +268,7 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
                 icon_url=case.icon
             )
 
-            with self.subTest(args=case.args, expected=expected):
+            with self.subTest(test_case=i):
                 send_private_embed_mock.reset_mock()
 
                 send_private_embed_mock.return_value = case.send_result
@@ -288,13 +288,13 @@ class ModerationUtilsTests(unittest.IsolatedAsyncioTestCase):
         test_case = namedtuple("test_case", ["expected_output", "raised_exception"])
         test_cases = [
             test_case(True, None),
-            test_case(False, HTTPException(AsyncMock(), AsyncMock())),
-            test_case(False, Forbidden(AsyncMock(), AsyncMock())),
-            test_case(False, NotFound(AsyncMock(), AsyncMock()))
+            test_case(False, HTTPException(AsyncMock(), "test error")),
+            test_case(False, Forbidden(AsyncMock(), "test error")),
+            test_case(False, NotFound(AsyncMock(), "test error"))
         ]
 
-        for case in test_cases:
-            with self.subTest(expected=case.expected_output, raised=case.raised_exception):
+        for i, case in enumerate(test_cases):
+            with self.subTest(test_case=i, expected=case.expected_output):
                 self.user.send.reset_mock(side_effect=True)
                 self.user.send.side_effect = case.raised_exception
 

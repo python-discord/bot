@@ -260,8 +260,8 @@ class SilenceArgumentParserTests(unittest.IsolatedAsyncioTestCase):
         ctx = MockContext()
         parser_mock.return_value = (ctx.channel, 10)
 
-        for case in test_cases:
-            with self.subTest("Test command converters", args=case):
+        for i, case in enumerate(test_cases):
+            with self.subTest(msg="Test command converters", test_case=i):
                 await cog.silence.callback(cog, ctx, *case)
 
                 try:
@@ -433,10 +433,10 @@ class SilenceTests(SilenceTest):
 
         targets = (MockTextChannel(), MockVoiceChannel(), None)
 
-        for (duration, message, was_silenced), target in itertools.product(test_cases, targets):
+        for i, ((duration, message, was_silenced), target) in enumerate(itertools.product(test_cases, targets)):
             with (
                 mock.patch.object(self.cog, "_set_silence_overwrites", return_value=was_silenced),
-                self.subTest(was_silenced=was_silenced, target=target, message=message),
+                self.subTest(test_case=i, was_silenced=was_silenced, has_target=target is not None),
                 mock.patch.object(self.cog, "send_message") as send_message
             ):
                 ctx = MockContext()
@@ -525,8 +525,8 @@ class SilenceTests(SilenceTest):
             (True, MockVoiceChannel(), PermissionOverwrite(connect=False, speak=False)),
         )
 
-        for contains, channel, overwrite in subtests:
-            with self.subTest(contains=contains, is_text=isinstance(channel, MockTextChannel), overwrite=overwrite):
+        for i, (contains, channel, overwrite) in enumerate(subtests):
+            with self.subTest(test_case=i, contains=contains, is_text=isinstance(channel, MockTextChannel)):
                 self.cog.scheduler.__contains__.return_value = contains
                 channel.overwrites_for.return_value = overwrite
 
@@ -702,7 +702,7 @@ class UnsilenceTests(SilenceTest):
 
         targets = (None, MockTextChannel())
 
-        for (was_unsilenced, message, overwrite), target in itertools.product(test_cases, targets):
+        for i, ((was_unsilenced, message, overwrite), target) in enumerate(itertools.product(test_cases, targets)):
             ctx = MockContext()
             ctx.channel.overwrites_for.return_value = overwrite
             if target:
@@ -711,7 +711,7 @@ class UnsilenceTests(SilenceTest):
             with (
                 mock.patch.object(self.cog, "_unsilence", return_value=was_unsilenced),
                 mock.patch.object(self.cog, "send_message") as send_message,
-                self.subTest(was_unsilenced=was_unsilenced, overwrite=overwrite, target=target),
+                self.subTest(test_case=i, was_unsilenced=was_unsilenced, has_target=target is not None),
             ):
                 await self.cog.unsilence.callback(self.cog, ctx, channel=target)
 
@@ -722,8 +722,8 @@ class UnsilenceTests(SilenceTest):
         """Permissions were not set and `False` was returned for an already unsilenced channel."""
         self.cog.scheduler.__contains__.return_value = False
 
-        for channel in (MockVoiceChannel(), MockTextChannel()):
-            with self.subTest(channel=channel):
+        for i, channel in enumerate((MockVoiceChannel(), MockTextChannel())):
+            with self.subTest(test_case=i):
                 self.assertFalse(await self.cog._unsilence(channel))
                 channel.set_permissions.assert_not_called()
 
@@ -811,8 +811,8 @@ class UnsilenceTests(SilenceTest):
 
     async def test_preserved_other_overwrites_text(self):
         """Text channel's other unrelated overwrites were not changed, including cache misses."""
-        for overwrite_json in ('{"send_messages": true, "add_reactions": null}', None):
-            with self.subTest(overwrite_json=overwrite_json):
+        for i, overwrite_json in enumerate(('{"send_messages": true, "add_reactions": null}', None)):
+            with self.subTest(test_case=i, has_overwrite=overwrite_json is not None):
                 if overwrite_json is None:
                     await self.cog.previous_overwrites.delete(self.text_channel.id)
                 else:
@@ -832,8 +832,8 @@ class UnsilenceTests(SilenceTest):
 
     async def test_preserved_other_overwrites_voice(self):
         """Voice channel's other unrelated overwrites were not changed, including cache misses."""
-        for overwrite_json in ('{"connect": true, "speak": true}', None):
-            with self.subTest(overwrite_json=overwrite_json):
+        for i, overwrite_json in enumerate(('{"connect": true, "speak": true}', None)):
+            with self.subTest(test_case=i, has_overwrite=overwrite_json is not None):
                 if overwrite_json is None:
                     await self.cog.previous_overwrites.delete(self.voice_channel.id)
                 else:
@@ -858,8 +858,8 @@ class UnsilenceTests(SilenceTest):
             (MockVoiceChannel(), self.cog.bot.get_guild(Guild.id).get_role(Roles.voice_verified))
         )
 
-        for channel, role in test_cases:
-            with self.subTest(channel=channel, role=role):
+        for i, (channel, role) in enumerate(test_cases):
+            with self.subTest(test_case=i):
                 await self.cog._unsilence_wrapper(channel, MockContext())
                 channel.overwrites_for.assert_called_with(role)
 
