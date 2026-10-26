@@ -16,7 +16,7 @@ dependencies = [
     "markdownify==1.2.0",
     "pydantic==2.12.3",
     "pydantic-settings==2.11.0",
-    "python-dateutil==2.9.0.post0",
+    "python-dateutil==3.0.0",
     "python-frontmatter==1.1.0",
     "rapidfuzz==3.14.1",
     "regex==2026.3.32",
