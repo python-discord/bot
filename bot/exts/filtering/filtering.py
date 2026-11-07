@@ -129,17 +129,8 @@ class Filtering(Cog):
         self.filter_match_menu = app_commands.ContextMenu(
             name="Filter match", callback=self._filter_match_menu_callback
         )
-        self.filter_imagehash_menu = app_commands.ContextMenu(
-            name="Filter imagehash", callback=self._filter_imagehash_menu_callback
-        )
-        for menu in self.context_menus:
-            menu.default_permissions = discord.Permissions.none()
-            menu.error(context_menu_error_handler)
-
-    @property
-    def context_menus(self) -> tuple[app_commands.ContextMenu, ...]:
-        """The context menus of this cog."""
-        return self.filter_match_menu, self.filter_imagehash_menu
+        self.filter_match_menu.default_permissions = discord.Permissions.none()
+        self.filter_match_menu.error(context_menu_error_handler)
 
     async def cog_load(self) -> None:
         """
@@ -147,8 +138,7 @@ class Filtering(Cog):
 
         Additionally, fetch the alerting webhook.
         """
-        for menu in self.context_menus:
-            self.bot.tree.add_command(menu, guild=discord.Object(Guild.id))
+        self.bot.tree.add_command(self.filter_match_menu, guild=discord.Object(Guild.id))
 
         await self.bot.wait_until_guild_available()
 
@@ -752,16 +742,12 @@ class Filtering(Cog):
                 await ctx.reply(":x: Attach an image (or reply to a message with an image attachment).")
                 return
 
-        await self._reply_with_image_hash(ctx, attachment.url, attachment.size)
-
-    async def _reply_with_image_hash(self, ctx: Context, url: str, size: int | None) -> None:
-        """Hash the image at `url`, of `size` bytes if known, and reply with its hash and the closest known filter."""
-        if size is not None and size > MAX_IMAGE_HASH_SIZE:
+        if attachment.size > MAX_IMAGE_HASH_SIZE:
             await ctx.reply(":x: The image must be 5 MB or smaller.")
             return
 
         try:
-            image_hash = await get_image_hash(url)
+            image_hash = await get_image_hash(attachment.url)
         except aiohttp.ClientError:
             log.exception("Unhandled aiohttp exception while getting image hash")
             await ctx.reply(":x: Failed to reach the image hashing service.")
@@ -863,26 +849,6 @@ class Filtering(Cog):
         if len(description) > MATCH_MENU_MAX_LENGTH:
             description = description[:MATCH_MENU_MAX_LENGTH] + "\n... (truncated, use `/filter match` for all)"
         await ctx.send(embed=Embed(colour=Colour.blue(), title="Match results", description=description))
-
-    @app_commands.guild_only()
-    async def _filter_imagehash_menu_callback(self, interaction: Interaction, message: Message) -> None:
-        """Hash the first image of the message, as `filter imagehash` does."""
-        # Gated in the same way as the `filter imagehash` command.
-        ctx = await authorise_command(interaction, "filter imagehash")
-        await ctx.defer(ephemeral=True)
-
-        attachment = next(
-            (a for a in message.attachments if a.content_type and a.content_type.startswith("image")), None
-        )
-        if attachment is not None:
-            url, size = attachment.url, attachment.size
-        elif (url := self._first_embed_image_url(message)) is not None:
-            size = None
-        else:
-            await ctx.send(":x: That message has no image.")
-            return
-
-        await self._reply_with_image_hash(ctx, url, size)
 
     @filter.command(name="search", description="Find filters with the provided settings.")
     @app_commands.describe(
@@ -1363,16 +1329,6 @@ class Filtering(Cog):
         return None
 
     @staticmethod
-    def _first_embed_image_url(message: Message) -> str | None:
-        """Return the URL of the first image in the embeds of the message, such as a linked image."""
-        for embed in message.embeds:
-            if embed.image:
-                return embed.image.url
-            if embed.type == "image" and embed.thumbnail:
-                return embed.thumbnail.url
-        return None
-
-    @staticmethod
     def _first_attached_image(message: Message) -> discord.Attachment | None:
         """Return the first image attachment from the invoking or replied-to message."""
         attachments = list(message.attachments)
@@ -1824,8 +1780,11 @@ class Filtering(Cog):
         """Cancel the weekly auto-infraction filter report and deletion scheduling on cog unload."""
         self.weekly_auto_infraction_report_task.cancel()
         self.delete_scheduler.cancel_all()
-        for menu in self.context_menus:
-            self.bot.tree.remove_command(menu.name, guild=discord.Object(Guild.id), type=menu.type)
+        self.bot.tree.remove_command(
+            self.filter_match_menu.name,
+            guild=discord.Object(Guild.id),
+            type=self.filter_match_menu.type,
+        )
 
 
 async def setup(bot: Bot) -> None:
