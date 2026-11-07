@@ -515,6 +515,8 @@ class MockContext(CustomMockMixin, unittest.mock.MagicMock):
         self.guild = kwargs.get("guild", self.channel.guild)
 
         self.invoked_from_error_handler = kwargs.get("invoked_from_error_handler", False)
+        self.interaction = kwargs.get("interaction")
+        self.prefix = kwargs.get("prefix", "")
 
 
 class MockInteraction(CustomMockMixin, unittest.mock.MagicMock):
