@@ -24,7 +24,7 @@ from bot.converters import Expiry
 from bot.log import get_logger
 from bot.pagination import LinePaginator
 from bot.utils import time
-from bot.utils.hybrid import hybrid_command
+from bot.utils.hybrid import hybrid_group
 
 log = get_logger(__name__)
 
@@ -91,7 +91,7 @@ class Stream(commands.Cog):
 
         log.debug("No stream found to suspend from %s (%s).", member, member.id)
 
-    @hybrid_command(aliases=("streaming",))
+    @hybrid_group(aliases=("streaming",), fallback="grant")
     @app_commands.describe(
         member="The member to grant the streaming permission to",
         duration="How long the permission lasts, e.g. 1h, or an ISO 8601 timestamp. Defaults to the usual duration",
@@ -153,7 +153,7 @@ class Stream(commands.Cog):
             "to stream for %s (until %s).",
         member, member.id, humanized_duration, end_time)
 
-    @hybrid_command(aliases=("pstream",))
+    @stream.command(name="permanent", root_aliases=("permanentstream", "pstream"))
     @app_commands.describe(member="The member to permanently grant the streaming permission to")
     @commands.has_any_role(*MODERATION_ROLES)
     async def permanentstream(self, ctx: commands.Context, member: discord.Member) -> None:
@@ -182,7 +182,7 @@ class Stream(commands.Cog):
         await ctx.send(f"{Emojis.check_mark} Permanently granted {member.mention} the permission to stream.")
         log.debug("Successfully gave %s (%s) permanent streaming permission.", member, member.id)
 
-    @hybrid_command(aliases=("unstream", "rstream"))
+    @stream.command(name="revoke", root_aliases=("revokestream", "unstream", "rstream"))
     @app_commands.describe(member="The member to revoke the streaming permission from")
     @commands.has_any_role(*MODERATION_ROLES)
     async def revokestream(self, ctx: commands.Context, member: discord.Member) -> None:
@@ -207,7 +207,7 @@ class Stream(commands.Cog):
 
         await self._suspend_stream(ctx, member)
 
-    @hybrid_command(aliases=("lstream",))
+    @stream.command(name="list", root_aliases=("liststream", "lstream"))
     @commands.has_any_role(*MODERATION_ROLES)
     async def liststream(self, ctx: commands.Context) -> None:
         """Lists all users who aren't staff or members of the python community and have stream permissions."""
